@@ -12903,6 +12903,10 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   line-height: 1;
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
+  /* Кадры зовут остаток моноцифрами (класс `n`): «Динамика · E график 2×2 ·
+     04», «G сброшено и кривая · 04», «Смена вида · удержание · 15». Число
+     меняется на месте — без табличных цифр строка дёргается. */
+  font-variant-numeric: tabular-nums;
 }
 
 .widget-wd__side-delta {
@@ -12939,6 +12943,52 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   font-weight: 600;
   line-height: 1.2;
   color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+}
+
+/* Вид «График» 2×2 — кадр «Динамика · E график 2×2».
+   05: число с единицей по базовой линии, зазор 4 px, отступ сверху 8 px. */
+.widget-wd__chart-value {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+/* `.widget-v4-mini__value` прижимается к низу своей плитки автоотступом; в этом
+   ряду он ломает выравнивание по базовой линии — авто-margin в флексе её
+   отключает. */
+.widget-wd__chart-value .widget-v4-mini__value {
+  margin-top: 0;
+}
+
+/* 07: график прижат к нижнему краю плитки. */
+.widget-wd__chart {
+  display: flex;
+  margin-top: auto;
+}
+
+/* рисунок 01: поле 100 % × 54. */
+.widget-wd__chart-svg {
+  display: block;
+  width: 100%;
+  height: 54px;
+}
+
+/* Линия и заливка — не текст: тон берётся заливочной ролью, как у спарклайна
+   2×1 (правило дизайнера «роли заливки текст не красят»). */
+.widget-wd__chart.widget-v4-val--good {
+  color: var(--v4-sand-ok-fill, #7a8a5e);
+}
+
+/* Запасное — песочное значение самой роли (#b4442a), а не #a8382b соседних
+   правил: того литерала нет ни в одном наборе, и без палитры он покрасил бы
+   экран чужой системой. Старые места — долг гейта запасных значений. */
+.widget-wd__chart.widget-v4-val--bad {
+  color: var(--v4-bad-text, #b4442a);
+}
+
+.widget-wd__chart.widget-v4-val--neutral {
+  color: var(--v4-ink, #201e1d);
 }
 
 .widget-wd__spark {

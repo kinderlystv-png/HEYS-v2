@@ -7106,6 +7106,64 @@
     );
   }
 
+  /**
+   * Вид «График» 2×2 — кадр «Динамика · E график 2×2 · рисунок 01–03»: поле
+   * 100 % × 54 при viewBox 0 0 121 54, заливка под кривой currentColor .12,
+   * линия 2 px с non-scaling-stroke.
+   *
+   * Линия здесь не дорисовывается штрихом, как спарклайн 2×1: при
+   * preserveAspectRatio="none" длина пути считается в единицах viewBox, а
+   * толщина — в экранных, и dash-узор разъезжается с самой линией. Проявление
+   * даёт .widget-wd__el--chart, оно же и в остальных видах.
+   */
+  function WeightDynamicsChartSvg({ chart, stateClass, compact, playEntrance = widgetV4ShouldAnimateSparkDraw() }) {
+    const pathD = React.useMemo(() => weightDynamicsPointsToPath(chart?.points), [chart?.points]);
+    if (!pathD) return null;
+
+    return React.createElement('span', {
+      className: 'widget-wd__chart ' + (stateClass || '')
+        + (compact ? '' : ' ' + wdElClass('chart', true, playEntrance))
+    },
+      React.createElement('svg', {
+        className: 'widget-wd__chart-svg',
+        width: '100%',
+        height: 54,
+        viewBox: '0 0 121 54',
+        preserveAspectRatio: 'none',
+        fill: 'none',
+        'aria-hidden': 'true'
+      },
+        chart?.area ? React.createElement('path', {
+          className: 'widget-wd__chart-area',
+          d: chart.area,
+          fill: 'currentColor',
+          opacity: 0.12
+        }) : null,
+        React.createElement('path', {
+          className: 'widget-wd__chart-line',
+          d: pathD,
+          fill: 'none',
+          stroke: 'currentColor',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          vectorEffect: 'non-scaling-stroke'
+        })
+      )
+    );
+  }
+
+  // Кадр «Динамика · E график 2×2 · 03»: ключ «Динамика · 30 дней». Окно у
+  // виджета растёт само (7 / 14 / 21 / 30 по числу подтверждённых взвешиваний,
+  // решение 20 августа), поэтому число берётся у окна, а не печатается 30
+  // всегда: иначе плитка обещала бы месяц, показывая неделю.
+  function weightDynamicsChartKicker(dyn) {
+    const days = dyn?.window?.windowDays;
+    const n = Number.isFinite(days) && days > 0 ? days : 30;
+    if (n % 10 === 1 && n % 100 !== 11) return `Динамика · ${n} день`;
+    return `Динамика · ${n} дней`;
+  }
+
   function WeightDynamicsProgressBar({ pct, stateClass, compact, playEntrance = widgetV4ShouldAnimateSparkDraw() }) {
     const width = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
     const trackClass = compact
@@ -7302,6 +7360,33 @@
       );
     }
 
+    // Кадр «Динамика · E график 2×2»: шапка «Динамика · N дней» и остаток
+    // (01–04), под ней число с единицей через 8 px (05–06), график прижат к
+    // низу (07).
+    if (variant === 'chart') {
+      const head = React.createElement('div', { className: 'widget-wd__head' },
+        React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) },
+          weightDynamicsChartKicker(dyn)),
+        headerRight
+      );
+      if (!dyn?.hasDynamics) {
+        return React.createElement(React.Fragment, null, head, deltaLine);
+      }
+      return React.createElement(React.Fragment, null,
+        head,
+        React.createElement('div', { className: 'widget-wd__chart-value ' + wdElClass('value', isTile, playEntrance) },
+          React.createElement('span', { className: 'widget-v4-mini__value ' + stateClass }, delta.sign, delta.text),
+          React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
+        ),
+        React.createElement(WeightDynamicsChartSvg, {
+          chart: dyn.chart,
+          stateClass,
+          compact,
+          playEntrance
+        })
+      );
+    }
+
     // curve (default)
     return React.createElement(React.Fragment, null,
       React.createElement('div', { className: 'widget-wd__head' },
@@ -7336,17 +7421,10 @@
     const stateClass = v4ValueStateClass(v4WeightDeltaStateFromDynamics(dyn));
 
     let inner;
-    if (variantId === 'chart' && size === '2x2') {
-      inner = React.createElement('div', { className: 'widget-wd widget-v4-stack' },
-        v4Kicker('Динамика'),
-        WeightDynamicsSparkSvg({
-          sparkline: dyn?.sparkline,
-          stateClass,
-          compact: false,
-          playEntrance: playSceneEntrance
-        })
-      );
-    } else if (variantId === 'compact' && size === '1x1') {
+    // Вид «График» 2×2 идёт общим путём сцены: у него те же движение числа и
+    // поэлементное проявление, что у остальных видов. Отдельная ветка рисовала
+    // спарклайн 2×1 под ключом «Динамика» — ни то, ни другое кадру не отвечало.
+    if (variantId === 'compact' && size === '1x1') {
       const delta = motion?.delta != null
         ? formatAnimDeltaKg(motion.delta)
         : formatAnimDeltaKg(dyn?.deltaKg ?? 0);
@@ -11936,6 +12014,10 @@
   // продукт»): зоны 8 / 25 % вниз и 110 / 130 % вверх, первый час после
   // подъёма и конец окна руками на живом дне не собрать.
   HEYS.Widgets.v4PaceState = v4PaceState;
+  // Экспорт ради смоука видов «Динамики веса»: тело вида рисуется и на плитке,
+  // и карточкой листа, а живьём для вида «График» нужны тридцать взвешиваний
+  // подряд — руками такой день не собрать.
+  HEYS.Widgets.renderWeightDynamicsBody = renderWeightDynamicsBody;
   // Экспорт ради смоука строки «формат чисел · правило продукта»: разделитель
   // разрядов — невидимый символ, и глазами U+202F от U+00A0 не отличить.
   HEYS.Widgets.formatRuNumber = formatRuNumber;

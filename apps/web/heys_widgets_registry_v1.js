@@ -680,7 +680,10 @@
       optional: true,
       description: 'Темп потери/набора веса, зона прогресса, прогноз до цели',
       defaultSize: '2x1',
-      availableSizes: ['2x1'],
+      // 2×2 — вид «График» (кадр «Динамика · E график 2×2»), включён решением
+      // владельца 3 сентября: «должно быть как в макете». Дефолт остаётся 2×1
+      // «Кривая» — строка контракта «состав дефолта» не менялась.
+      availableSizes: ['2x1', '2x2'],
       dataKeys: ['day.weightMorning', 'weightTrend', 'profile.goalWeight'],
       component: 'WidgetCrashRisk',
       scalableElements: SCALABLE_ELEMENTS.crashRisk,

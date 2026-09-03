@@ -204,6 +204,39 @@
     };
   }
 
+  // Вид «График» 2×2, кадр «Динамика · E график 2×2 · рисунок 01–03»: поле
+  // 121 × 54, кривая ложится в полосу 9…38, заливка под ней уходит вниз до
+  // нижнего края поля. Спарклайн 2×1 (58 × 24) остаётся своим — у него другая
+  // роль и другой кегль, сводить их в одну функцию нечего.
+  const CHART_VIEW = { width: 121, height: 54, padX: 2, top: 9, bottom: 38 };
+
+  function buildChartPoints(windowSeries) {
+    const pts = (windowSeries || []).filter((d) => d.smoothed != null);
+    if (pts.length < 2) return { points: '', area: '', last: null, days: pts.length };
+
+    const values = pts.map((d) => d.smoothed);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min;
+    const band = CHART_VIEW.bottom - CHART_VIEW.top;
+    const mid = CHART_VIEW.top + band / 2;
+    const usableX = CHART_VIEW.width - CHART_VIEW.padX * 2;
+
+    const mapped = pts.map((p, i) => {
+      const x = CHART_VIEW.padX + (i / (pts.length - 1)) * usableX;
+      // Больший вес — выше: то же направление, что у спарклайна 2×1.
+      const y = span > 0 ? CHART_VIEW.top + ((max - p.smoothed) / span) * band : mid;
+      return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+    });
+
+    const line = mapped.map((p) => `${p.x},${p.y}`).join(' ');
+    const area = `M${mapped[0].x} ${mapped[0].y} `
+      + mapped.slice(1).map((p) => `L${p.x} ${p.y}`).join(' ')
+      + ` V${CHART_VIEW.height} H${CHART_VIEW.padX} Z`;
+
+    return { points: line, area, last: mapped[mapped.length - 1], days: pts.length };
+  }
+
   function computeGoalMeta(profile, smoothedCurrent) {
     const goalWeight = profile?.weightGoal || profile?.goalWeight || null;
     if (!goalWeight || !Number.isFinite(smoothedCurrent)) {
@@ -307,6 +340,7 @@
       smoothedCurrent,
       windowSeries,
       sparkline,
+      chart: buildChartPoints(windowSeries),
       weeklyBars,
       monthRateKg,
       weighDayCount,
@@ -380,7 +414,9 @@
   HEYS.Widgets.WeightDynamicsV4 = {
     DEAD_ZONE_KG,
     MA_WINDOW,
+    CHART_VIEW,
     compute: computeWeightDynamicsV4,
+    buildChartPoints,
     trendForWindow,
     trendForSeries,
     deltaStateForGoal,
