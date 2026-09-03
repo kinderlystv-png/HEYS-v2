@@ -54,29 +54,12 @@ const BARE_SKIP_FILES = new Set([
 // Каждая строка — незакрытый долг. Убирать записи можно и нужно; добавлять —
 // только вместе с решением, почему роль остаётся необъявленной.
 const BASELINE = {
-  'v4-accent': ['styles/modules/000-base-and-gamification.css'],
-  'v4-act-line': [
-    'styles/modules/733-ui-v4-reports.css',
-    'styles/modules/734-ui-v4-insights.css',
-  ],
-  'v4-bad': ['styles/modules/730-widgets-dashboard.css'],
   'v4-card-bg': ['styles/modules/000-base-and-gamification.css'],
-  'v4-card-border': [
-    'styles/modules/000-base-and-gamification.css',
-    'styles/modules/400-water-and-hydration.css',
-  ],
-  'v4-ink-1': ['styles/modules/000-base-and-gamification.css'],
   'v4-ok': [
     'heys_widgets_ui_v1.js',
     'styles/modules/730-widgets-dashboard.css',
   ],
-  'v4-sand-green-ink': ['styles/modules/715-yesterday-verify.css'],
-  'v4-sand-ok-bg': ['styles/modules/611-aps-product-card.css'],
-  'v4-sand-tint-green': ['styles/modules/715-yesterday-verify.css'],
-  'v4-sand-water': ['styles/modules/730-widgets-dashboard.css'],
   'v4-sand-wave': ['styles/modules/730-widgets-dashboard.css'],
-  'v4-surface-2': ['styles/modules/000-base-and-gamification.css'],
-  'v4-warn': ['styles/modules/730-widgets-dashboard.css'],
   'v4-warn-fill': ['styles/modules/733-ui-v4-reports.css'],
 };
 

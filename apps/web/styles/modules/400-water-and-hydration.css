@@ -22,7 +22,7 @@
   --wr-dim: #6b5f4f;
   --wr-track: rgba(0, 0, 0, 0.1);
   --wr-divider: rgba(0, 0, 0, 0.07);
-  --wr-alarm: #b4442a;
+  --wr-alarm: #a83c22;
   --wr-ok: #7a8a5e;
 }
 
@@ -321,6 +321,9 @@ html[data-theme-id="blue-dark"] .water-review {
 }
 
 .water-review__chip--quick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   min-width: 0;
   height: 1.875rem;
@@ -1086,7 +1089,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
 .advice-group--ews {
   gap: 4px;
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--v4-card-border, rgba(0, 0, 0, 0.08));
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   margin-bottom: 4px;
 }
 .advice-group-header--ews {
@@ -1576,6 +1579,9 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 
 .water-fab-vol {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 30px;
   padding: 0 12px;
   border: none;

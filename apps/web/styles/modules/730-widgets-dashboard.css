@@ -4753,6 +4753,17 @@ body:has(.page-reports) .hdr::after {
   background: rgba(236, 72, 153, 0.1);
 }
 
+.widget-weight__stat-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ac, var(--v4-act-text, #c67139));
+}
+
+.widget-weight__stat--pink .widget-weight__stat-icon {
+  color: currentColor;
+}
+
 /* ===== Layout Helpers ===== */
 .widget-weight__top {
   display: flex;
@@ -6907,8 +6918,24 @@ body:has(.page-reports) .hdr::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
   flex-shrink: 0;
+  color: var(--ac, var(--v4-act-text, #c67139));
+}
+
+.widgets-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ac, var(--v4-act-text, #c67139));
+  flex-shrink: 0;
+}
+
+.widgets-catalog__category-glyph {
+  margin-right: 2px;
+}
+
+.widgets-catalog__category.active .widgets-glyph {
+  color: currentColor;
 }
 
 .widgets-catalog__item-info {
@@ -13831,7 +13858,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 .widget-v4-delta.widget-v4-val--warn,
 .widget-v4-kv__row .widget-v4-val--warn,
 .widget-v4-mini__value.widget-v4-val--warn {
-  color: var(--v4-warn, #d99a63);
+  color: var(--v4-warn-1, #d99a63);
 }
 
 .widget-v4-macro-bars {
@@ -13868,7 +13895,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   display: block;
   height: 5px;
   border-radius: 999px;
-  background: var(--v4-ok, #7a8a5e);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 /* Кадр «Шторка · Кольца БЖУ», полоса вида 2×1: заполнение красится тем же
@@ -13941,19 +13968,19 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   display: block;
   height: 5px;
   border-radius: 999px;
-  background: var(--v4-ok, #7a8a5e);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-factor-cols__bar--good {
-  background: var(--v4-ok, #7a8a5e);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-factor-cols__bar--warn {
-  background: var(--v4-warn, #d99a63);
+  background: var(--v4-warn-1, #d99a63);
 }
 
 .widget-v4-factor-cols__bar--bad {
-  background: var(--v4-bad, #a8382b);
+  background: var(--v4-val-bad, #a8382b);
 }
 
 .widget-v4-factor-cols__label {
@@ -14036,7 +14063,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   top: 0;
   bottom: 0;
   border-radius: 999px;
-  background: var(--v4-sand-water, #7d98a6);
+  background: var(--v4-water, #7d98a6);
 }
 
 .widget-v4-sleep-window__labels {
@@ -14296,7 +14323,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__weight-trend {
-  color: var(--v4-ok, #7a8a5e);
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-bd-sheet__water-profile {

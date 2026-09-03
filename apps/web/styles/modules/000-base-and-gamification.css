@@ -4498,7 +4498,7 @@ html[data-theme-id="blue-dark"] {
   padding: 10px 12px;
   border-radius: 12px;
   background: var(--v4-card-bg, rgba(0, 0, 0, 0.04));
-  border: 1px solid var(--v4-card-border, rgba(0, 0, 0, 0.08));
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 12.5px;
   line-height: 1.35;
 }
@@ -4520,13 +4520,13 @@ html[data-theme-id="blue-dark"] {
   border: 1px solid transparent;
 }
 .push-first-day-prompt__btn--accept {
-  background: var(--v4-accent, #c67139);
+  background: var(--v4-act, #c67139);
   color: #fff;
 }
 .push-first-day-prompt__btn--decline {
   background: transparent;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  border-color: var(--v4-card-border, rgba(0, 0, 0, 0.12));
+  border-color: var(--v4-track, rgba(0, 0, 0, 0.12));
 }
 [data-theme$="dark"] .push-first-day-prompt {
   background: rgba(255, 255, 255, 0.06);
@@ -8996,7 +8996,7 @@ svg.date-picker-icon {
 
 @media (hover: hover) {
   .date-picker-sheet .date-picker-sheet-month-nav:hover:not(:disabled) {
-    background: var(--v4-surface-2, #efe3cf);
+    background: var(--v4-chip, #efe3cf);
   }
 }
 
@@ -10566,7 +10566,7 @@ body:has(:is(
 
 .hdr-settings-sheet__title {
   font: 700 20px/1.2 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-1, #201e1d);
+  color: var(--v4-ink, #201e1d);
 }
 
 /* Контракт settings-system, «шапка шторки»: крестик — круг 34 px фоном ПЕРВОЙ
@@ -10612,7 +10612,7 @@ body:has(:is(
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__label {
   font: 700 13px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-1, #201e1d);
+  color: var(--v4-ink, #201e1d);
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint {
@@ -10722,7 +10722,7 @@ body:has(:is(
 .hdr-settings-sheet__label {
   flex: 1 1 auto;
   min-width: 0;
-  color: var(--v4-ink-1, #201e1d);
+  color: var(--v4-ink, #201e1d);
 }
 
 .hdr-settings-sheet__meta {
@@ -10733,7 +10733,7 @@ body:has(:is(
   margin-left: auto;
   font: 600 0.75rem/1.2 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__meta-text--accent {
@@ -10830,7 +10830,7 @@ body:has(:is(
   border-radius: 999px;
   padding: 9px 12px;
   background: #efe3cf;
-  color: var(--v4-ink-1, #201e1d);
+  color: var(--v4-ink, #201e1d);
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   cursor: pointer;
 }
@@ -11572,7 +11572,7 @@ body:has(:is(
 .tab-settings-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--v4-ink-1, #0f172a) 34%, transparent);
+  background: color-mix(in srgb, var(--v4-ink, #0f172a) 34%, transparent);
   backdrop-filter: blur(7px) saturate(0.92);
   -webkit-backdrop-filter: blur(7px) saturate(0.92);
   z-index: 1001;
@@ -18213,6 +18213,11 @@ html.heys-bg-paused *::after {
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
+.game-v4-sheet__card-sub--mult {
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
 /* Строка «области нажатия»: полоса прогресса не нажимается вовсе. */
 .game-v4-sheet__bar {
   height: 6px;
@@ -18501,27 +18506,29 @@ html.heys-bg-paused *::after {
   border-bottom: 0;
 }
 
-.game-v4-sheet__ladder-num {
+.game-v4-sheet__ladder-mark {
   flex: none;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--v4-sand-ink, #201e1d);
+  width: 12px;
+  height: 12px;
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.game-v4-sheet__ladder-mark--spacer {
+  display: block;
 }
 
 .game-v4-sheet__ladder-title {
   flex: 1;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
-.game-v4-sheet__ladder-row.is-current .game-v4-sheet__ladder-num,
 .game-v4-sheet__ladder-row.is-current .game-v4-sheet__ladder-title {
   font-weight: 700;
   color: var(--v4-sand-ink, #201e1d);
 }
 
-.game-v4-sheet__ladder-row.is-past .game-v4-sheet__ladder-num,
 .game-v4-sheet__ladder-row.is-past .game-v4-sheet__ladder-title {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }

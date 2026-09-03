@@ -879,7 +879,7 @@
 }
 
 .yv-slider-value--norm {
-  color: var(--v4-sand-green-ink, #5c6a45);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .yv-slider-value--under {
@@ -926,7 +926,7 @@
 }
 
 .yv-slider-tick--norm {
-  color: var(--v4-sand-green-ink, #5c6a45);
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: 700;
 }
 
@@ -948,7 +948,7 @@
   top: 0;
   height: 26px;
   border-radius: 999px;
-  background: var(--v4-sand-tint-green, #eaefe0);
+  background: var(--v4-ok-tint, #eaefe0);
   pointer-events: none;
   z-index: 0;
 }
@@ -960,7 +960,7 @@
   width: 2px;
   margin-left: -1px;
   border-radius: 1px;
-  background: color-mix(in srgb, var(--v4-sand-green-ink, #5c6a45) 35%, transparent);
+  background: color-mix(in srgb, var(--v4-ok-text, #5c6a45) 35%, transparent);
   pointer-events: none;
   z-index: 1;
 }

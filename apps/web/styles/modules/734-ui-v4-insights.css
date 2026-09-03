@@ -56,7 +56,7 @@
 
 .insights-v4-period-pill.is-active {
   color: var(--v4-act-text, #8a4a20);
-  box-shadow: inset 0 -2px 0 0 var(--v4-act-line, #c67139);
+  box-shadow: inset 0 -2px 0 0 var(--v4-act, #c67139);
 }
 
 .insights-v4-period-pill.is-disabled {

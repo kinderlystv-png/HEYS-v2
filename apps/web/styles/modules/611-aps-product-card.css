@@ -990,7 +990,7 @@
 .aps-v4-harm-calc-card {
   border-radius: 22px;
   padding: 18px;
-  background: var(--v4-sand-ok-bg, #eaefe0);
+  background: var(--v4-ok-bg, #eaefe0);
 }
 
 .aps-v4-harm-calc-card__head {
