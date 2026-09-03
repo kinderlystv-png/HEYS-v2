@@ -3228,7 +3228,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .tab.tab-switch.active .tab-icon--tasks {
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   filter: none !important;
   text-shadow: 0 2px 10px rgba(34, 197, 94, 0.32);
 }
@@ -4255,7 +4255,7 @@ body:has(.insights-tab) .hdr::after {
 
 .risk-traffic-light__light--green {
   background: rgba(34, 197, 94, 0.2);
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 .risk-traffic-light__light--green.active {
@@ -4387,7 +4387,7 @@ body:has(.insights-tab) .hdr::after {
 
 .data-completeness-card__extended-badge {
   font-size: 10px;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   margin-left: 2px;
 }
 
@@ -4553,7 +4553,7 @@ body:has(.insights-tab) .hdr::after {
 .metabolic-quick-status__lipolysis {
   font-size: 10px;
   font-weight: 600;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   margin-top: 4px;
 }
 
@@ -4640,7 +4640,7 @@ body:has(.insights-tab) .hdr::after {
 .metabolic-quick-status__empty-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
   margin-top: 4px;
 }
 
