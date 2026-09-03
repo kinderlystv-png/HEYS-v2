@@ -17,25 +17,36 @@ describe('strength builder · Б1 empty v4 canvas contract', () => {
   it('keeps the exact empty-state copy and hierarchy without decorative noise', () => {
     expect(source).toContain("'Силовая'");
     expect(source).toContain("'пусто · 0 подходов'");
+    expect(source).toContain("'план на день · 0 подходов'");
     expect(source).toContain("'Пустая тренировка'");
+    expect(source).toContain("'План на сегодня готов'");
     expect(source).toContain("'Добавляйте упражнения по ходу — план не обязан быть готов заранее.'");
+    expect(source).toContain("'Можно начать по плану куратора или собрать свою — план не обязателен.'");
     expect(source).toContain("'Начать по плану' + (planLabel ? ' · ' + planLabel : '')");
     expect(source).toContain("emptyActionPending ? 'Начинаем…' : 'Собрать свою'");
     expect(source).toContain("'Повторить ' + repeatDateLabel(last.dateKey)");
+    expect(source).toContain("className: 'sb-empty-plan-preview'");
     expect(source).not.toContain("h('div', { className: 'sb-empty-emoji' }");
+    expect(source).not.toMatch(/Из шаблона/);
   });
 
   it('uses the canvas geometry for scroll, card, actions, options and note', () => {
     expect(css).toMatch(/\.sb-root\s*\{[\s\S]*font-family: Figtree, -apple-system, system-ui, sans-serif;/);
-    expect(css).toMatch(/\.sb-head\.is-empty\s*\{[\s\S]*position: relative;/);
-    expect(css).toMatch(/\.sb-head\.is-empty \.sb-icon-btn\s*\{[\s\S]*position: absolute;[\s\S]*top: 16px;[\s\S]*right: 18px;/);
+    expect(css).toMatch(/\.sb-head\.is-empty\s*\{[\s\S]*padding: 16px 18px 0;/);
+    expect(css).toMatch(/\.sb-head\.is-empty \.sb-icon-btn--close\s*\{[\s\S]*width: 44px;[\s\S]*height: 44px;[\s\S]*margin: -10px 2px -10px -10px;/);
     expect(css).toMatch(/\.sb-empty-scroll\s*\{[\s\S]*padding: 7px 18px 18px;/);
     expect(css).toMatch(/\.sb-empty-card\s*\{[\s\S]*margin-top: 12px;[\s\S]*border-radius: 20px;/);
     expect(css).toMatch(/\.sb-empty-card b\s*\{[\s\S]*font-size: 15px;[\s\S]*line-height: 1\.32;[\s\S]*font-weight: 700;/);
     expect(css).toMatch(/\.sb-empty-action\s*\{[\s\S]*min-height: 48px;[\s\S]*margin-top: 10px;[\s\S]*border-radius: 999px;/);
     expect(css).toMatch(/\.sb-empty-action:not\(\.is-primary\)\s*\{[\s\S]*font-weight: 700;/);
+    // Кадр рисует вторичную кнопку .btn2c на --c2 чернилами 58 %, а сноску —
+    // 56 %. Сторожим роли, а не литералы: перевод роли на другое значение
+    // палитры не должен ронять эту проверку.
+    expect(css).toMatch(/\.sb-empty-action\s*\{[\s\S]*background: var\(--v4-hero/);
+    expect(css).toMatch(/\.sb-empty-action\s*\{[\s\S]*color: var\(--v4-muted/);
     expect(css).toMatch(/\.sb-empty-options\s*\{[\s\S]*margin-top: 10px;[\s\S]*padding: 2px 16px;[\s\S]*border-radius: 20px;/);
     expect(css).toMatch(/\.sb-empty-note\s*\{[\s\S]*margin: 12px 0 0;[\s\S]*font-size: 11px;[\s\S]*line-height: 1\.55;/);
+    expect(css).toMatch(/\.sb-empty-note\s*\{[\s\S]*color: var\(--v4-ink-data/);
   });
 
   it('does not let the OS dark preference override an explicit v4 palette', () => {

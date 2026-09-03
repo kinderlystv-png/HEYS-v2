@@ -713,7 +713,11 @@ describe('пустая тренировка (экран 02)', () => {
       onClose: () => {},
     }));
     expect(screen.getByText('Начать по плану · День B')).toBeTruthy();
+    expect(screen.getByText('план на день · 0 подходов')).toBeTruthy();
+    expect(screen.getByText('План на сегодня готов')).toBeTruthy();
     expect(screen.getByText('2 упражнения · назначил Артём')).toBeTruthy();
+    expect(screen.getByText('Жим')).toBeTruthy();
+    expect(screen.getByText('Тяга')).toBeTruthy();
     fireEvent.click(screen.getByText('Начать по плану · День B'));
     expect(onStartPlan).toHaveBeenCalledWith({ id: 'pl_1', assignedAt: 1000 });
     await waitFor(() => expect(screen.getByText('Жим')).toBeTruthy());
@@ -734,8 +738,8 @@ describe('пустая тренировка (экран 02)', () => {
       onClose: () => {},
     }));
     fireEvent.click(screen.getByText('Начать по плану · День B'));
-    await waitFor(() => expect(screen.getByText('Пустая тренировка')).toBeTruthy());
-    expect(screen.queryByText('Жим')).toBeNull();
+    await waitFor(() => expect(screen.getByText('План на сегодня готов')).toBeTruthy());
+    expect(screen.queryByLabelText('Отметить выполненным')).toBeNull();
   });
 
   it('собственная тренировка из назначенного draft открывает каталог только после owner acknowledgement', async () => {
@@ -784,7 +788,7 @@ describe('пустая тренировка (экран 02)', () => {
       onClose: () => {},
     }));
     fireEvent.click(screen.getByText('Собрать свою'));
-    await waitFor(() => expect(screen.getByText('Пустая тренировка')).toBeTruthy());
+    await waitFor(() => expect(screen.getByText('План на сегодня готов')).toBeTruthy());
     expect(screen.queryByText('Каталог упражнений')).toBeNull();
   });
 
@@ -1335,7 +1339,7 @@ describe('lifecycle силовой сессии', () => {
       expect(screen.getByText('Последняя отметка')).toBeTruthy();
       expect(screen.getByText('Сейчас')).toBeTruthy();
       expect(screen.getByText('20:51')).toBeTruthy();
-      expect(screen.getByText('Всё, что отмечено, на месте. Таймер отдыха не был запущен — продолжите с нужного подхода.')).toBeTruthy();
+      expect(screen.getByText('Всё, что отмечено, на месте. Таймер отдыха вы не запускали — ждать нечего.')).toBeTruthy();
       expect(screen.queryByRole('button', { name: 'Ещё' })).toBeNull();
       expect(screen.queryByLabelText('Добавить упражнение')).toBeNull();
       expect(screen.queryByLabelText('Отметить выполненным')).toBeNull();
@@ -1430,6 +1434,35 @@ describe('lifecycle силовой сессии', () => {
       fireEvent.click(screen.getByText('Продолжить'));
       expect(patches).toHaveLength(0);
       expect(screen.queryByLabelText(/Отдых/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('при сохранившемся таймере называет остаток и возвращает к нему по «Продолжить»', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T20:51:00'));
+    try {
+      const lastMarkAt = new Date('2026-08-09T19:47:00').getTime();
+      const startedAt = new Date('2026-08-09T20:50:08').getTime();
+      render(React.createElement(SB.BuilderScreen, {
+        training: {
+          ...training([{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }]),
+          workoutLog: {
+            startedAt: new Date('2026-08-09T19:40:00').getTime(),
+            lastMarkAt,
+            activeRest: { startedAt, total: 90, exName: 'Жим' },
+            exercises: [{ name: 'Жим', approaches: [work(75, 8, true), work(75, 8, false)] }],
+          },
+        },
+        dateKey: '2026-08-09', profile: {}, onPatch: () => {},
+        onPatchSession: () => {}, onClose: () => {},
+      }));
+
+      expect(screen.getByText('Всё, что отмечено, на месте. Таймер отдыха ещё идёт — осталось 0:38.')).toBeTruthy();
+      fireEvent.click(screen.getByText('Продолжить'));
+      expect(screen.queryByText('Тренировка на паузе')).toBeNull();
+      expect(screen.getByLabelText(/Отдых 0:38/)).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }
