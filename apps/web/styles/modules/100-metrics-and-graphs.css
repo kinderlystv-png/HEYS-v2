@@ -2727,7 +2727,7 @@
 }
 
 .week-heatmap-day.perfect .week-heatmap-cell:not([style*="background"]) {
-  background: var(--color-emerald-500);
+  background: var(--v4-good, #7a8a5e);
 }
 
 .week-heatmap-day.yellow .week-heatmap-cell:not([style*="background"]) {
@@ -4778,7 +4778,7 @@
 /* ⭐ Pulse на "Идеально" (ratio 0.9-1.1) */
 .goal-progress-bar.pulse-perfect {
   animation: pulsePerfect 2s ease-in-out infinite;
-  border-color: var(--color-emerald-500);
+  border-color: var(--v4-ok-fill, #7a8a5e);
   box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
 }
 
@@ -4787,7 +4787,7 @@
   0%,
   100% {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-    border-color: var(--color-emerald-500);
+    border-color: var(--v4-ok-fill, #7a8a5e);
   }
 
   50% {

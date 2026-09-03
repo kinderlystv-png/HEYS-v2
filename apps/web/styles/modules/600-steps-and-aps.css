@@ -160,7 +160,7 @@
 
 .mc-progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--v4-act, #2563eb), var(--color-emerald-500));
+  background: linear-gradient(90deg, var(--v4-act, #2563eb), var(--v4-ok-fill, #7a8a5e));
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -195,7 +195,7 @@
 }
 
 .mc-progress-dot.completed {
-  background: var(--color-emerald-500);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 [data-theme$='dark'] .mc-progress-dot {

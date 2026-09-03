@@ -3332,8 +3332,8 @@ button.sleep-breakdown-item:focus-visible {
 
 .day-score-preset-good.active {
   background: rgba(16, 185, 129, 0.1);
-  color: var(--color-emerald-500);
-  border-color: var(--color-emerald-500);
+  color: var(--v4-ok-text, #5c6a45);
+  border-color: var(--v4-ok-text, #5c6a45);
 }
 
 .day-score-slider-container {
