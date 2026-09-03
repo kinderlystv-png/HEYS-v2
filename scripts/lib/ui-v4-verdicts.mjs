@@ -139,7 +139,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [462, '2df42bb9abe312ed'],
   }),
   'undo-bar': Object.freeze({
-    mismatch: [3, 'c6f0356cffa5528e'],
+    // 03.09: пакет привёл кадры к продукту — во всех трёх «Отмена · … · 09»
+    // кнопка теперь «Вернуть», как в коде. Два ≠ сняты, база 3 → 1.
+    mismatch: [1, 'e79b034f829f4aa3'],
     notApplicable: [27, '35eb1b183e2143b5'],
   }),
   'water-add': Object.freeze({
