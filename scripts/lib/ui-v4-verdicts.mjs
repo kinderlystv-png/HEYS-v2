@@ -67,8 +67,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [271, '8cd18417a00fbfe4'],
   }),
   'food-meal': Object.freeze({
-    mismatch: [40, 'c48fed9f2bdbf9ce'],
-    notApplicable: [90, '6a63a2f0e841fe63'],
+    // 03.09: пакет снял четыре отступления разом — «четыре вкладки», квадрат
+    // камеры в подвале, требование убрать «Повторить сегодня», а свайп из
+    // строки состава убран кодом. ≠ 40 → 31, «—» 90 → 89.
+    mismatch: [31, 'ebe55f14c13e1f59'],
+    notApplicable: [89, '8dd592c87e33356d'],
   }),
   gamification: Object.freeze({
     // 03.09: пакет перерисовал четыре кадра церемонии и лист уровней — 60 строк
