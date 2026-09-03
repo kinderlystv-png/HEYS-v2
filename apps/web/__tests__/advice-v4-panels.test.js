@@ -141,7 +141,8 @@ describe('advice v4 panels from canvas', () => {
     expect(adviceUiSource).toContain("renderAdviceV4Icon(React, 'close')");
     expect(adviceUiSource).toMatch(/Технические детали',\s*renderAdviceV4Icon\(React,\s*'chevron-right'\)/);
     expect(cssSource).toMatch(/\.advice-v4-detail-overlay[\s\S]*?background:\s*var\(--v4-bg/);
-    expect(cssSource).toMatch(/\.advice-v4-detail__close[\s\S]*?background:\s*#f7efe2/);
+    const close = cssSource.match(/\.advice-v4-detail__close \{([^}]*)\}/)[1];
+    expect(close).toMatch(/background:\s*(?:var\(--v4-c1,\s*#f7efe2\)|#f7efe2)/);
 
     // Строка «деталь» и кадр «Совет · деталь» (элемент 07): герой — вторая
     // поверхность --c2 радиусом 22 с полями 18. Соседняя строка «вид детали
@@ -154,7 +155,7 @@ describe('advice v4 panels from canvas', () => {
     expect(hero).toMatch(/padding:\s*18px/);
 
     const science = cssSource.match(/\.advice-v4-detail__science-box \{([^}]*)\}/)[1];
-    expect(science).toMatch(/background:\s*(?:var\(--v4-sand-surface,\s*#f7efe2\)|#f7efe2)/);
+    expect(science).toMatch(/background:\s*(?:var\(--v4-c1,\s*#f7efe2\)|var\(--v4-sand-surface,\s*#f7efe2\)|#f7efe2)/);
     expect(science).toMatch(/border-radius:\s*18px/);
 
     const detailsText = cssSource.match(/\.advice-v4-detail__text \{([^}]*)\}/)[1];
