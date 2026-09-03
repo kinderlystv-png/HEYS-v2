@@ -1898,10 +1898,16 @@
 }
 
 .aps-v4-portions-subtitle {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+}
+
+/* Кадр «Продукт · порции · 13»: отступ сверху 16 px — родительский gap 12,
+   добираем 4. */
+.aps-v4-portions-subtitle + .aps-v4-portions-list {
+  margin-top: 4px;
 }
 
 .aps-v4-portions-product {
@@ -2071,4 +2077,9 @@
 
 .aps-v4-portions-add {
   margin-top: 8px;
+}
+
+/* Кадр «Продукт · порции · 20»: подвал с зазором 8 и отступом сверху 18 px. */
+.aps-v4-portions-step > .aps-v4-footer {
+  margin: 18px -4px 0;
 }
