@@ -418,8 +418,14 @@ if (process.argv.includes('--buckets')) {
   }
   const roleExact = new Set();
   const roleHue = new Set();
-  for (const m of roleSrc.matchAll(/--[\w-]+\s*:\s*([^;{}]+);/g)) {
-    const v = m[1].trim();
+  // Роль с именем набора (--v4-sand-*) — предмет ПЕРВОЙ описи, а не роль
+  // набора: она держит песочное значение и в синих. Считать «равно роли» по
+  // ней значит записывать легаси-остаток в механически заменимое. Так ведро 1
+  // забирало себе все 80 мест #fef3c7 — это --v4-sand-warn-bg, и одновременно
+  // тон янтарной лестницы, которого в наборе нет.
+  for (const m of roleSrc.matchAll(/(--[\w-]+)\s*:\s*([^;{}]+);/g)) {
+    if (/^--v4-sand-/.test(m[1])) continue;
+    const v = m[2].trim();
     if (!/^(#[0-9a-fA-F]{3,8}|(rgba?|hsla?)\([^()]*\))$/.test(v)) continue;
     const a = keyA(v);
     const h = key(v);
@@ -465,6 +471,27 @@ if (process.argv.includes('--buckets')) {
   console.log(
     `    из них тон роли при другой прозрачности: ${alphaOnly.length} — механически не заменяются, роль не даёт этой альфы`,
   );
+
+  // Ведро 1 раздаётся в работу, поэтому по нему нужен файл и сами значения:
+  // замена механическая, но роль у каждого значения своя.
+  console.log('');
+  console.log('Ведро 1 по файлам (мест — файл — значения):');
+  const f1 = new Map();
+  for (const p of B[1]) {
+    if (!f1.has(p.file)) f1.set(p.file, { n: 0, vals: new Map(), zones: p.zones });
+    const d = f1.get(p.file);
+    d.n++;
+    const v = p.v.toLowerCase();
+    d.vals.set(v, (d.vals.get(v) || 0) + 1);
+  }
+  for (const [n, d] of [...f1.entries()].sort((a, b) => b[1].n - a[1].n)) {
+    const vals = [...d.vals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([v, c]) => `${v}×${c}`)
+      .join(' ');
+    console.log(`  ${String(d.n).padStart(4)}  ${n.padEnd(34)} ${vals}`);
+  }
 
   // Ведро 2 решается зоной, поэтому по нему нужен список зон, а не мест.
   const z2 = new Map();
