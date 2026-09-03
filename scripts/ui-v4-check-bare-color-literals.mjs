@@ -81,7 +81,7 @@ const BASELINE = {
   // 160 -> 159: заморозка отставала на единицу ещё до правок 2 сентября —
   // тот же счёт даёт и версия файла из коммита. Реальный долг не менялся.
   '730-widgets-dashboard.css': 159,
-  '733-ui-v4-login-theme.css': 94,
+  '733-ui-v4-login-theme.css': 47,
   '740-cascade-card.css': 23,
   '750-strength-builder.css': 6,
   'critical.css': 34,
