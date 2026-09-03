@@ -266,6 +266,13 @@
       "path": "scripts/db/migrations/2026-09-03_shared_products_macro_mass_rule.sql",
       "description": "Shared catalog mass: separate CHECK for macronutrients without fiber, so a breach names the guilty field",
       "destructive": false
+    },
+    {
+      "id": "2026-09-03_rls_policies_heys_rpc_auth",
+      "order": 36,
+      "path": "scripts/db/migrations/2026-09-03_rls_policies_heys_rpc_auth.sql",
+      "description": "RLS policies for heys_rpc on the eight tables heys-api-auth touches: RLS is on with zero policies, so any non-owner role sees nothing",
+      "destructive": false
     }
   ]
 }

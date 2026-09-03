@@ -492,12 +492,26 @@ build_env_flags() {
     # heys-mcp работает только через HTTP /rpc и в БД не ходит — креды ему не выдаём,
     # чтобы прямой путь записи в client_kv_store остался физически недоступен.
     if [[ ! "$func_name" =~ (health|sms|mcp) ]]; then
+        # heys-api-auth ходит под собственной ролью heys_rpc, а не под владельцем
+        # таблиц (heys/e96718). Под владельцем построчная защита не применяется
+        # вовсе, поэтому точечные гранты роли ни на что не влияли. Переключена
+        # первой 3 сентября: у неё все гранты уже были, а восьми её таблицам
+        # дописаны политики миграцией 2026-09-03_rls_policies_heys_rpc_auth.
+        #
+        # Пароль роли лежит в отдельном секрете, чтобы общий heys-database с
+        # админским паролем не трогать: он один на все остальные функции.
+        local db_secret_id="$LOCKBOX_DB_ID"
         local k
         for k in PG_HOST PG_PORT PG_DATABASE PG_USER PG_SSL; do
+            if [[ "$func_name" == "heys-api-auth" && "$k" == "PG_USER" ]]; then continue; fi
             _add_required "$k"
         done
+        if [[ "$func_name" == "heys-api-auth" ]]; then
+            db_secret_id="e6qp2vdmcmvm5fl5ckg2"
+            env_flags+=" --environment PG_USER=heys_rpc"
+        fi
         env_flags+=" --environment PG_PASSWORD=__IN_LOCKBOX__heys-database__"
-        env_flags+=" --environment LOCKBOX_DB_SECRET_ID=$LOCKBOX_DB_ID"
+        env_flags+=" --environment LOCKBOX_DB_SECRET_ID=$db_secret_id"
     fi
 
     # LOCKBOX_APP_SECRET_ID — для всех функций кроме health (initSecrets
