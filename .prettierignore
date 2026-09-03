@@ -85,6 +85,13 @@ docs/legal/subprocessors.md
 docs/legal/warning-intake.md
 apps/web/public/docs/**/*.md
 
+# Пакет дизайна: поставка, а не наш исходник. Листы ACCEPTANCE-* выводит из
+# разметки скрипт дизайнера (contract-snapshot.js) и руками они не правятся, а
+# канвасы — то, с чем сверяются гейты. Prettier переносил в них строки при
+# каждом коммите: содержимое не менялось, но следующий пакет приходил с diff'ом
+# на двадцать тысяч строк, где настоящей правки не видно.
+docs/ui/handoff-v4/**
+
 # Auto-generated
 auto-imports.d.ts
 components.d.ts

@@ -7,7 +7,9 @@
     "workingSets": 23,
     "tonnageKg": 10870,
     "estimatedMaxBenchKg": 95,
-    "uncounted": ["Планка"],
+    "uncounted": [
+      "Планка"
+    ],
     "muscleVolumeKg": {
       "бицепс": 3039,
       "грудь": 2980,
@@ -25,7 +27,10 @@
       "name": "Жим лёжа",
       "unit": "weight",
       "primary": "грудь",
-      "synergists": ["трицепс", "плечи"],
+      "synergists": [
+        "трицепс",
+        "плечи"
+      ],
       "sets": [
         {
           "type": "warmup",
@@ -86,7 +91,10 @@
       "name": "Тяга штанги в наклоне",
       "unit": "weight",
       "primary": "спина",
-      "synergists": ["бицепс", "поясница"],
+      "synergists": [
+        "бицепс",
+        "поясница"
+      ],
       "sets": [
         {
           "type": "work",
@@ -122,7 +130,9 @@
       "name": "Жим гантелей сидя",
       "unit": "weight",
       "primary": "плечи",
-      "synergists": ["трицепс"],
+      "synergists": [
+        "трицепс"
+      ],
       "sets": [
         {
           "type": "work",
@@ -152,7 +162,9 @@
       "unit": "bodyweight",
       "bodyweightShare": 1,
       "primary": "спина",
-      "synergists": ["бицепс"],
+      "synergists": [
+        "бицепс"
+      ],
       "supersetId": "A",
       "sets": [
         {
@@ -185,7 +197,9 @@
       "name": "Тяга блока",
       "unit": "weight",
       "primary": "спина",
-      "synergists": ["бицепс"],
+      "synergists": [
+        "бицепс"
+      ],
       "supersetId": "A",
       "sets": [
         {
@@ -273,7 +287,10 @@
   "supersets": [
     {
       "id": "A",
-      "members": ["Подтягивания", "Тяга блока"],
+      "members": [
+        "Подтягивания",
+        "Тяга блока"
+      ],
       "rounds": 3,
       "restSec": 120,
       "note": "Отдых равен максимуму из значений участников: 120 и 90 → 120. Раунд в схеме не хранится, поле round здесь — подсказка для чтения."
