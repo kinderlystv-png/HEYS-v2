@@ -69,7 +69,7 @@ const ALIAS = { '733-login-theme.css': '733-ui-v4-login-theme.css' };
 // Долг на 31 августа 2026. Список может только уменьшаться.
 const BASELINE = {
   '000-base-and-gamification.css': 347,
-  '100-metrics-and-graphs.css': 207,
+  '100-metrics-and-graphs.css': 197,
   '300-modals-and-day.css': 163,
   '400-water-and-hydration.css': 0,
   '500-pwa-and-offline.css': 115,
