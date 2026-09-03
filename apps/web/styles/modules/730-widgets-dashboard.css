@@ -33,12 +33,12 @@
     0 2px 4px rgba(0, 0, 0, 0.04);
   --widget-shadow-card:
     0 2px 8px rgba(0, 0, 0, 0.06),
-    0 8px 24px rgba(0, 0, 0, 0.08);
+    0 8px 24px var(--v4-line, rgba(0, 0, 0, 0.08));
   --widget-shadow-elevated:
-    0 4px 16px rgba(0, 0, 0, 0.08),
-    0 12px 40px rgba(0, 0, 0, 0.12);
+    0 4px 16px var(--v4-line, rgba(0, 0, 0, 0.08)),
+    0 12px 40px var(--v4-track, rgba(0, 0, 0, 0.12));
   --widget-shadow-floating:
-    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 8px 32px var(--v4-track, rgba(0, 0, 0, 0.12)),
     0 24px 64px rgba(0, 0, 0, 0.14);
 
   /* Typography Scale (Apple-like) */
@@ -2261,7 +2261,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .widget {
-  --widget-control-ring: rgba(0, 0, 0, 0.45);
+  --widget-control-ring: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .widget--editing .widget__settings-btn {
@@ -2855,7 +2855,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-quick-sheet__row-icon {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .widgets-quick-sheet__icon {
@@ -2931,11 +2931,11 @@ body:has(.page-reports) .hdr::after {
   min-height: 34px;
   border-radius: 999px;
   border: none;
-  background: #efe3cf;
+  background: var(--v4-hero, #efe3cf);
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -2960,7 +2960,7 @@ body:has(.page-reports) .hdr::after {
 .widgets-quick-sheet__divider {
   height: 1px;
   margin: 11px 0;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 [data-theme$="dark"] .widgets-quick-sheet__divider {
@@ -3044,8 +3044,8 @@ body:has(.page-reports) .hdr::after {
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: #f6e6dd;
-  color: #8a4a20;
+  background: var(--v4-tint, #f6e6dd);
+  color: var(--v4-act-text, #8a4a20);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3093,7 +3093,7 @@ body:has(.page-reports) .hdr::after {
   border: none;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -3141,8 +3141,8 @@ body:has(.page-reports) .hdr::after {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: #efe3cf;
-  color: #8a4a20;
+  background: var(--v4-hero, #efe3cf);
+  color: var(--v4-act-text, #8a4a20);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3158,9 +3158,9 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-quick-pencil.is-editing {
-  background: #f6e6dd;
+  background: var(--v4-tint, #f6e6dd);
   box-shadow:
-    inset 0 0 0 2px #c67139,
+    inset 0 0 0 2px var(--v4-act, #c67139),
     0 1px 2px rgba(80, 50, 20, 0.1),
     0 6px 16px rgba(80, 50, 20, 0.14);
 }
@@ -3300,7 +3300,7 @@ body:has(.page-reports) .hdr::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   color: #2b1608;
   box-shadow:
     0 2px 4px rgba(80, 50, 20, 0.14),
@@ -3546,7 +3546,7 @@ body:has(.page-reports) .hdr::after {
   width: 36px;
   height: 36px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -4304,8 +4304,8 @@ body:has(.page-reports) .hdr::after {
 
 /* Кадр красит само число тоном --gr, темнее дельты рядом (--gr2). */
 .widget-weight__number-week-val/* Тон «хорошего» значения берётся текстовой ролью, а не заливочной.
-   У шалфея их две: --v4-sand-ok-text #5c6a45 для текста и --v4-sand-ok-fill
-   #7a8a5e для заливок и полос. На песочном фоне первая даёт контраст 5,11,
+   У шалфея их две: --v4-sand-ok-text var(--v4-ok-text, #5c6a45) для текста и --v4-sand-ok-fill
+   var(--v4-ok-fill, #7a8a5e) для заливок и полос. На песочном фоне первая даёт контраст 5,11,
    вторая — 3,27 при норме 4,5 для мелкого текста; подпись волны набрана
    9,5 px, и заливочным тоном она читалась плохо. Замер снимка 2 сентября:
    кадр даёт «3 приёма» цветом rgb(92,106,69), продукт отдавал
@@ -5445,7 +5445,7 @@ body:has(.page-reports) .hdr::after {
   align-self: center;
   /* Объём: внешняя тень + подсветка */
   filter:
-    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.14)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.08));
+    drop-shadow(0 2px 6px rgba(0, 0, 0, 0.14)) drop-shadow(0 1px 2px var(--v4-line, rgba(0, 0, 0, 0.08)));
 }
 
 .widget-calories__info-bar {
@@ -7082,7 +7082,7 @@ body:has(.page-reports) .hdr::after {
   display: flex;
   gap: 4px;
   padding: 6px 8px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 20px;
 }
 
@@ -7264,7 +7264,7 @@ body:has(.page-reports) .hdr::after {
 
 @media (hover: hover) {
   .widget-crash-risk__factor:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 }
 
@@ -8338,7 +8338,7 @@ body:has(.page-reports) .hdr::after {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .widget-crash-risk__popup-title {
@@ -8623,7 +8623,7 @@ body:has(.page-reports) .hdr::after {
 .widget-crash-risk__ews-preview {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 11px;
 }
 
@@ -10583,7 +10583,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 0.9;
   letter-spacing: -0.035em;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
 }
 
@@ -10629,7 +10629,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-calories__hero-bar-fill {
   height: 6px;
   border-radius: 999px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   transition: width var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
 }
 
@@ -10735,7 +10735,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .widget-v4-row__value--sm {
@@ -10743,7 +10743,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-v4-row__value.widget-v4-ok {
-  color: #5c6a45;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .widget-v4-row__value.widget-v4-val--good,
@@ -10855,14 +10855,14 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-ok {
-  color: #5c6a45;
+  color: var(--v4-ok-text, #5c6a45);
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
 }
 
 .widget-v4-warn {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
@@ -10888,7 +10888,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-val--act {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .widget-v4-val--neutral {
@@ -11048,11 +11048,11 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-hero-num__val.widget-v4-ok {
-  color: #5c6a45;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .widget-v4-hero-num__val.widget-v4-warn {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .widget-v4-hero-num__val.widget-v4-val--good {
@@ -11068,7 +11068,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-hero-num__val.widget-v4-val--act {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Тёплая метка нахлёста (строка контракта «волна · пересечение») терялась на
@@ -11089,7 +11089,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-row__value.widget-v4-val--act {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .widget-v4-row__value.widget-v4-val--neutral {
@@ -11109,7 +11109,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-stack__footer .widget-v4-val--act {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .widget-v4-stack__footer .widget-v4-val--bad {
@@ -11173,7 +11173,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-mini__value.widget-v4-val--act {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .widget-v4-mini__bar {
@@ -11190,7 +11190,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-mini__bar-fill--water {
-  background: #7d98a6;
+  background: var(--v4-water, #7d98a6);
 }
 
 /* === Вода 1×1 — канвас water-add v4, ветка В₃ + раскладка nrmB === */
@@ -11198,10 +11198,10 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
    карточку и задаёт containing block для absolute. Без height:100% flex-центр
    1×1 схлопывает контейнер и склеивает подпись с числом. */
 .widget-water--v4 {
-  --water-tone: #7d98a6;
+  --water-tone: var(--v4-water, #7d98a6);
   --water-tone-deep: #4e6d7a;
   --water-submerge-text: #fffaf1;
-  --water-ink-text: #201e1d;
+  --water-ink-text: var(--v4-ink, #201e1d);
   --water-dim-text: #6b5f4f;
   --water-cream-text: var(--water-submerge-text);
   --water-drop-travel: 21px;
@@ -11695,7 +11695,7 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
 
 body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-water__bar--v4 {
-  background: #7d98a6;
+  background: var(--v4-water, #7d98a6);
 }
 
 .widget-v4-macros {
@@ -11832,7 +11832,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-macro__ring-fill {
-  stroke: #7a8a5e;
+  stroke: var(--v4-ok-fill, #7a8a5e);
   transition: stroke-dasharray var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
 }
 
@@ -11901,8 +11901,8 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-periods__btn.is-active {
-  color: #8a4a20;
-  border-bottom: 2px solid #c67139;
+  color: var(--v4-act-text, #8a4a20);
+  border-bottom: 2px solid var(--v4-act, #c67139);
 }
 
 .widget-v4-periods__suffix {
@@ -11913,22 +11913,22 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widget-v4-spark--ok .widget-v4-spark__line,
 .widget-v4-spark--ok polyline {
-  stroke: #7a8a5e;
+  stroke: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-spark--ok .widget-v4-spark__dot,
 .widget-v4-spark--ok circle {
-  fill: #7a8a5e;
+  fill: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-v4-spark--act .widget-v4-spark__line,
 .widget-v4-spark--act polyline {
-  stroke: #c67139;
+  stroke: var(--v4-act, #c67139);
 }
 
 .widget-v4-spark--act .widget-v4-spark__dot,
 .widget-v4-spark--act circle {
-  fill: #c67139;
+  fill: var(--v4-act, #c67139);
 }
 
 /* Ломаная тренда по состоянию — кадры «Тренд здоровья · падение» и
@@ -12180,7 +12180,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: #a8382b;
+  color: var(--v4-val-bad, #a8382b);
   text-wrap: pretty;
 }
 
@@ -12259,7 +12259,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 11px;
   padding: 13px 15px;
   border-radius: 18px;
-  background: #201e1d;
+  background: var(--v4-ink, #201e1d);
   box-shadow: 0 10px 26px -10px rgba(17, 24, 39, 0.55);
   color: #f8fafc;
 }
@@ -12301,7 +12301,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Подтверждение смены вида — тот же силуэт, другой тон: кадр «Смена вида ·
@@ -12363,7 +12363,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   padding: 12px 20px;
   border: none;
   border-radius: 999px;
-  background: #c67139;
+  background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   font-size: 12px;
   font-weight: 700;
@@ -12725,8 +12725,8 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widgets-tab--editing .widget--drag-over {
-  background: color-mix(in srgb, #c67139 14%, transparent);
-  border: 2px solid #c67139;
+  background: color-mix(in srgb, var(--v4-act, #c67139) 14%, transparent);
+  border: 2px solid var(--v4-act, #c67139);
   box-shadow: none;
 }
 
@@ -13028,7 +13028,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   color: var(--v4-sand-ok-fill); /* v4-intentional */
 }
 
-/* Запасное — песочное значение самой роли (#a83c22), а не #a8382b соседних
+/* Запасное — песочное значение самой роли (var(--v4-bad-text, #a83c22)), а не var(--v4-val-bad, #a8382b) соседних
    правил: того литерала нет ни в одном наборе, и без палитры он покрасил бы
    экран чужой системой. Старые места — долг гейта запасных значений. */
 .widget-wd__chart.widget-v4-val--bad {
@@ -13074,7 +13074,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   flex-shrink: 0;
   height: 5px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
   margin-top: 7px;
   overflow: hidden;
 }
@@ -13083,7 +13083,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: #7a8a5e;
+  background: var(--v4-ok-fill, #7a8a5e);
   transform-origin: left center;
   width: var(--wd-bar-pct, 0%);
   transform: scaleX(0);
@@ -13158,7 +13158,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
 }
 
 .widget-wd__week-col.widget-v4-val--good {
-  background: #7a8a5e;
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-wd__goal-main {
@@ -13572,7 +13572,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   height: auto;
   aspect-ratio: 1;
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 /* Строка контракта «тепловая карта»: клетка не носит роль состояния — только
@@ -13678,7 +13678,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 }
 
 /* В канвасе слово и активный сегмент риск-радара стоят на тёмном шалфее
-   #5c6a45, а не на общем светлом тоне заливок #7a8a5e. */
+   var(--v4-ok-text, #5c6a45), а не на общем светлом тоне заливок var(--v4-ok-fill, #7a8a5e). */
 .widget-relapse-risk .widget-v4-hero-num__val--risk.widget-v4-val--good,
 .widget-risk-level.widget-v4-val--good,
 .widget-relapse-risk .widget-v4-kv__row .widget-v4-val--good {
@@ -14033,7 +14033,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 }
 
 .widget-water--2x1.widget-v4-stack {
-  --water-tone: #7d98a6;
+  --water-tone: var(--v4-water, #7d98a6);
 }
 
 /* Кадр «Шторка · Вода», вид «К этому часу»: число с полосой стоят внизу
@@ -14306,7 +14306,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   left: 0;
   right: 0;
   height: 1px;
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--v4-edge, rgba(0, 0, 0, 0.18));
   bottom: 62%;
   pointer-events: none;
 }
@@ -14651,7 +14651,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 /* Роли --v4-bad в наборе нет: писалось запасное #c45c4a, и «плохо» в листе
    рисовалось третьим красным — светлее и столбика, и подписи рядом. Красный
-   набора один, --v4-bad-text (#a83c22 = --red канваса). */
+   набора один, --v4-bad-text (var(--v4-bad-text, #a83c22) = --red канваса). */
 .widget-bd-sheet__hero-track-fill.is-bad {
   background: var(--v4-bad-text, #a83c22);
 }
@@ -14841,11 +14841,11 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__factor-bar.is-good > i {
-  background: #7a8a5e;
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-bd-sheet__factor-bar.is-warn > i {
-  background: #c9922e;
+  background: var(--v4-warn-soft, #c9922e);
 }
 
 .widget-bd-sheet__factor-bar.is-bad > i {
@@ -14863,7 +14863,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   height: 20px;
   flex: none;
   border-radius: 999px;
-  background: #c9922e;
+  background: var(--v4-warn-soft, #c9922e);
 }
 
 .widget-bd-sheet__driver-row.is-bad .widget-bd-sheet__driver-mark {
@@ -14871,7 +14871,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__driver-row.is-warn .widget-bd-sheet__driver-mark {
-  background: #c9922e;
+  background: var(--v4-warn-soft, #c9922e);
 }
 
 .widget-bd-sheet__driver {
@@ -14911,7 +14911,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   flex: 1;
   height: 5px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
   position: relative;
 }
 
@@ -14923,7 +14923,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__contrib-bar.is-good {
-  background: #7a8a5e;
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-bd-sheet__contrib-bar.is-bad {
@@ -14940,7 +14940,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__contrib-val.is-good {
-  color: #7a8a5e;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .widget-bd-sheet__contrib-val.is-bad {
@@ -15051,7 +15051,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   height: 5px;
   margin-top: 5px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .widget-bd-sheet__source-bar > i {
@@ -15127,7 +15127,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widget-bd-sheet__stack-seg.is-empty {
   height: 4px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 /* Циферблат суток — кадр «Разбор · Ритм приёмов», элемент 83. */
@@ -15187,7 +15187,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   flex: 1;
   height: 5px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .widget-bd-sheet__evening-fill {
