@@ -88,8 +88,8 @@
 
 .sleep-quality-preset-bad.active {
   background: rgba(239, 68, 68, 0.1);
-  color: var(--color-red-500);
-  border-color: var(--color-red-500);
+  color: var(--v4-bad-text, #a83c22);
+  border-color: var(--v4-bad-text, #a83c22);
 }
 
 .sleep-quality-preset-ok.active {
@@ -3874,7 +3874,7 @@
 
 .mood-diff.diff-down {
   background: rgba(239, 68, 68, 0.15);
-  color: var(--color-red-500);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .mood-diff.diff-same {
@@ -3913,8 +3913,8 @@
 
 .mood-preset-bad.active {
   background: rgba(239, 68, 68, 0.15);
-  color: var(--color-red-500);
-  border-color: var(--color-red-500);
+  color: var(--v4-bad-text, #a83c22);
+  border-color: var(--v4-bad-text, #a83c22);
 }
 
 .mood-preset-ok.active {
@@ -4103,7 +4103,7 @@
 }
 
 .mood-journal-wrapper.negative .mood-journal-btn {
-  background: var(--color-red-500);
+  background: var(--v4-val-bad, #a8382b);
 }
 
 .mood-journal-btn:active {

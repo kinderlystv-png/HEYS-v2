@@ -4208,8 +4208,8 @@
 
 @media (hover: hover) {
   .household-time-skip:hover {
-  border-color: var(--color-red-300, #fca5a5);
-  color: var(--color-red-500, #ef4444);
+  border-color: var(--v4-wgt-danger-text, #a1471c);
+  color: var(--v4-wgt-danger-text, #a1471c);
   background: rgba(239, 68, 68, 0.05);
 }
 }
@@ -4252,7 +4252,7 @@
   border-radius: 8px;
   border: 1px solid rgba(239, 68, 68, 0.2);
   background: rgba(239, 68, 68, 0.05);
-  color: var(--color-red-500, #ef4444);
+  color: var(--v4-wgt-danger-text, #a1471c);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -4404,8 +4404,8 @@
 
 @media (hover: hover) {
   .household-time-clear:hover {
-  background: var(--color-red-100, #fee2e2);
-  color: var(--color-red-500, #ef4444);
+  background: var(--v4-wgt-danger-bg, #f0dcc6);
+  color: var(--v4-wgt-danger-text, #a1471c);
 }
 }
 
@@ -4879,7 +4879,7 @@
   padding: 6px 10px;
   font-size: 16px;
   background: rgba(239, 68, 68, 0.1);
-  border: 1px dashed var(--color-red-500);
+  border: 1px dashed var(--v4-bad-text, #a83c22);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -5571,7 +5571,7 @@
 }
 
 .mc-steps-slider-label-health {
-  color: var(--color-red-500);
+  color: var(--v4-bad-text, #a83c22);
   font-weight: 600;
 }
 
