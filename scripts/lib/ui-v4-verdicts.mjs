@@ -39,6 +39,13 @@ export const ALLOWED_NA_KINDS = Object.freeze([
 // зона (`verdictSchema: "typed-v1"`) больше не может вернуться к legacy-строкам.
 // При типизации зоны числа здесь только уменьшают; после полного сведения зоны
 // ставят `verdictSchema: "typed-v1"` в её собственном verdict-файле.
+// 3 сентября четыре зоны опущены после пересъёмки отпечатков под пакет от
+// 15:18: nutrition-tab 34→31, product-card 67→58 и 76→74, tab-activity 63→62,
+// tips 462→447. Это НЕ прогресс, и читать так нельзя: строки не типизировали —
+// дизайнер их переписал, вердикт снялся в «?», и untyped-долг ушёл из счёта
+// вместе со знанием. Не «у ≠ появился reasonCode», а «самого ≠ больше нет».
+// Настоящий долг при этом вырос: 3279 строк без вердикта в двадцати зонах.
+// Затянуть заморозку всё равно обязаны — храповик считает текущее состояние.
 export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'app-splash': Object.freeze({
     mismatch: [4, 'b3d70a6cb7d03136'],
@@ -100,12 +107,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [37, '3f2cfeaa0a205b26'],
   }),
   'nutrition-tab': Object.freeze({
-    mismatch: [34, 'ebbd9f2d98f04491'],
+    mismatch: [31, 'ab6e75925fa26a10'],
     notApplicable: [168, '8c3144d10251c301'],
   }),
   'product-card': Object.freeze({
-    mismatch: [67, '271da61309679fe2'],
-    notApplicable: [76, 'ea3054255c5fd126'],
+    mismatch: [58, 'fe58a8ef1a7107cf'],
+    notApplicable: [74, '0c0055c6816e265a'],
   }),
   'pwa-update': Object.freeze({
     mismatch: [10, '5e473419ff0364c9'],
@@ -145,11 +152,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   'tab-activity': Object.freeze({
     mismatch: [53, '54f0e457232e23d2'],
-    notApplicable: [63, 'e6dd8ca1409490b5'],
+    notApplicable: [62, 'b3191bb9fbbd6910'],
   }),
   tips: Object.freeze({
     mismatch: [10, '4a80df6f080e4d6b'],
-    notApplicable: [462, '2df42bb9abe312ed'],
+    notApplicable: [447, 'cd19fa7f6929c851'],
   }),
   'undo-bar': Object.freeze({
     // 03.09: пакет привёл кадры к продукту — во всех трёх «Отмена · … · 09»
