@@ -402,7 +402,7 @@
 .yv-option-check {
   font-size: 18px;
   font-weight: 700;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* Кнопка "Назад" */

@@ -664,7 +664,7 @@
 .nutrition-v4-quality__check {
   display: flex;
   flex: none;
-  color: var(--v4-ok-fill, #22c55e);
+  color: var(--v4-ok-text, #16a34a);
 }
 
 /* === Чип-зависимые блоки ============================================== */
