@@ -315,9 +315,11 @@ const FORK_FRAMES = [
     a: 18, b: 19, wide: '.yv-pack-row .yv-pack-secondary--feelings', later: 20,
   })],
   // Пустой день меняет ширины местами: подтверждение «ничего не ел» длиннее.
+  // Нумерация на единицу больше, чем у дня с едой: во второй строке карточки
+  // пакет 3 сентября развёл норму и подпись на два разбора вместо одного.
   ['Чек-ин · пустой день из пачки', forkSummary({
-    title: 6, sub: 7, card: 8, row: 9, row2: 12, note: 14, foot: 15, row3: 17,
-    a: 19, b: 18, wide: '.yv-pack-row .yv-pack-secondary--confirm-empty', later: 20,
+    title: 6, sub: 7, card: 8, row: 9, row2: 12, note: 15, foot: 16, row3: 18,
+    a: 20, b: 19, wide: '.yv-pack-row .yv-pack-secondary--confirm-empty', later: 21,
   })],
   ['Чек-ин · пачка незакрытых дней', forkList({
     title: 5, sub: 6, days: 7, day: 8, note: 9, foot: 10,
@@ -749,6 +751,13 @@ describe('«Утренний чек-ин» · разбор кадров канв
     expect(block).toMatch(/background: '#f7efe2', borderRadius: 20, padding: '15px 17px', marginTop: 22/);
     // Ряд строк среднего — один отступ на все строки.
     expect(block).toMatch(/justifyContent: 'space-between', marginTop: 11, fontSize: 12, fontWeight: 600/);
+    // Строка «вторичные тоны» (уточнение 2 сентября): строки прошлых
+    // взвешиваний подняты с 50 % до дна тона — 56 %. Сторожим роль, а не
+    // литерал: в песочном наборе у неё то же значение, но в тёмных она
+    // считается от чернил набора, а литерал остался бы чёрным.
+    expect(block).toMatch(
+      /fontWeight: 600, lineHeight: 1, color: 'var\(--v4-ink-data, rgba\(0,0,0,\.56\)\)'/,
+    );
   });
 
   it('три кадра развилки совпадают с экраном оценки по ощущениям', () => {

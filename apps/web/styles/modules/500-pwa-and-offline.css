@@ -1869,7 +1869,10 @@
   background: var(--v4-bg, #fffaf1);
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: rgba(0, 0, 0, 0.5);
+  /* Тот же элемент 11: номер невыбранного дня — тон данных (56 % чернил).
+     Стоял литералом 50 %: своей ступени у него нет, и в тёмных наборах он
+     не следовал за чернилами вовсе. */
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
