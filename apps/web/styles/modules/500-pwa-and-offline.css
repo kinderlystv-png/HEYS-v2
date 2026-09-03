@@ -421,7 +421,7 @@
 
 .ios-home-install-modal__btn--ok {
   background: var(--v4-wgt-link, #c67139);
-  color: #2b1608;
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .ios-home-install-modal__btn--ok:active {
@@ -444,7 +444,7 @@
 }
 
 [data-theme$="dark"] .ios-home-install-modal__phone {
-  color: #cf8144;
+  color: var(--v4-act, #cf8144);
 }
 
 [data-theme$="dark"] .ios-home-install-modal__title {
@@ -461,8 +461,8 @@
 }
 
 [data-theme$="dark"] .ios-home-install-modal__num {
-  background: #2f2820; /* вторая поверхность тёмного ряда */
-  color: #cf8144;
+  background: var(--v4-chip, #2f2820); /* вторая поверхность тёмного ряда */
+  color: var(--v4-act, #cf8144);
 }
 
 [data-theme$="dark"] .ios-home-install-modal__step-title {
@@ -482,13 +482,13 @@
 }
 
 [data-theme$="dark"] .ios-home-install-modal__btn--later {
-  background: #23201b;
+  background: var(--v4-c1, #23201b);
   color: rgba(242, 237, 230, 0.6);
 }
 
 [data-theme$="dark"] .ios-home-install-modal__btn--ok {
-  background: #cf8144;
-  color: #201509;
+  background: var(--v4-act, #cf8144);
+  color: var(--on-acs, #201509);
 }
 
 /* ========================================
@@ -847,7 +847,7 @@
 
 [data-theme$="dark"] .mc-recorded-row__kcal,
 [data-theme$="dark"] .mc-recorded-row__mark {
-  color: #e2a468;
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$="dark"] .mc-recorded .mc-recorded-hint {
@@ -6823,13 +6823,13 @@ html[data-theme-id="sand-dark"] .ca-modal__more-products,
 [data-theme="sand-dark"] .ca-modal__date-kcal,
 [data-theme="sand-dark"] .ca-modal__type-count,
 [data-theme="sand-dark"] .ca-modal__more-products {
-  color: #e2a468;
+  color: var(--v4-act-text, #e2a468);
 }
 html[data-theme-id="sand-dark"] .ca-modal__item,
 html[data-theme-id="sand-dark"] .ca-modal__meal-card,
 [data-theme="sand-dark"] .ca-modal__item,
 [data-theme="sand-dark"] .ca-modal__meal-card {
-  background: #23201b;
+  background: var(--v4-c1, #23201b);
 }
 html[data-theme-id="sand-dark"] .ca-modal__meal-divider,
 [data-theme="sand-dark"] .ca-modal__meal-divider {
@@ -6837,18 +6837,18 @@ html[data-theme-id="sand-dark"] .ca-modal__meal-divider,
 }
 html[data-theme-id="sand-dark"] .ca-modal__later-btn,
 [data-theme="sand-dark"] .ca-modal__later-btn {
-  background: #23201b;
+  background: var(--v4-c1, #23201b);
   color: rgba(242, 237, 230, 0.6);
 }
 html[data-theme-id="sand-dark"] .ca-modal__ack-btn,
 [data-theme="sand-dark"] .ca-modal__ack-btn {
-  background: #cf8144;
-  color: #201509;
+  background: var(--v4-act, #cf8144);
+  color: var(--on-acs, #201509);
 }
 html[data-theme-id="sand-dark"] .ca-tab-dot-mark,
 [data-theme="sand-dark"] .ca-tab-dot-mark {
-  background: #cf8144;
-  box-shadow: 0 0 0 2px #141210;
+  background: var(--v4-act, #cf8144);
+  box-shadow: 0 0 0 2px var(--v4-bg, #141210);
 }
 
 html[data-theme-id="blue"] .ca-modal-backdrop--visible,
