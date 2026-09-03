@@ -172,7 +172,7 @@ input[type="password"] {
   --card-bg: var(--card);
   --text: var(--v4-ink, #111827);
   --muted: var(--color-gray-500);
-  --border: var(--color-slate-200);
+  --border: var(--v4-line, #e5e7eb);
   --acc: var(--v4-act, #2563eb);
   --acc-contrast: var(--v4-bg, var(--color-white));
 
@@ -785,7 +785,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 /* === 06. COMPACT CARDS (SaaS style) === */
 .compact-card {
   background: var(--color-white);
-  border: 1px solid var(--v4-line, #e5e7eb);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: var(--heys-diary-card-padding, 14px 16px);
   margin-bottom: var(--heys-diary-stack-gap, 18px);
@@ -915,7 +915,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .compact-input {
-  border: 1px solid var(--v4-line, #e5e7eb);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 8px 12px;
   font-size: 14px;
@@ -968,13 +968,13 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .compact-stat span {
   font-weight: 600;
-  color: var(--color-slate-700);
+  color: var(--v4-ink-prose) /* v4-intentional */;
 }
 
 .compact-note {
   width: 100%;
   margin-top: 10px;
-  border: 1px solid var(--v4-line, #e5e7eb);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 14px;
@@ -1007,7 +1007,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   justify-content: center;
   gap: 8px;
   padding: 12px 16px;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary) /* v4-intentional */;
   font-size: 13px;
 }
 
@@ -1206,7 +1206,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-slate-700);
+  color: var(--v4-ink-prose) /* v4-intentional */;
   margin-bottom: 8px;
 }
 
@@ -1324,7 +1324,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 .compact-zone-label {
   font-size: 10px;
   font-weight: 600;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary) /* v4-intentional */;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
@@ -1370,7 +1370,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   margin-top: 8px;
   border: 1px dashed #cbd5e1;
   background: transparent;
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2) /* v4-intentional */;
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -1433,7 +1433,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   display: flex;
   gap: 12px;
   font-size: 13px;
-  color: var(--color-slate-600);
+  color: var(--v4-ink-prose) /* v4-intentional */;
 }
 
 .household-detail {
@@ -1443,7 +1443,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .household-detail.muted {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary) /* v4-intentional */;
   font-size: 11px;
 }
 
@@ -1459,7 +1459,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .household-value-info {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary) /* v4-intentional */;
   font-size: 12px;
   margin-left: 4px;
 }
@@ -1475,7 +1475,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .compact-train--minimal .compact-train-title {
   font-weight: 600;
-  color: var(--color-slate-700);
+  color: var(--v4-ink-prose) /* v4-intentional */;
 }
 
 /* Силовая: карточка конструктора (дневник в блоке активности) */
@@ -1523,7 +1523,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .ct-wb-dur-hint {
   font-size: 11px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .ct-wb-zones-for-kcal {
@@ -1674,7 +1674,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 .ct-wb-ex-ss-arrows {
   font-size: 15px;
   letter-spacing: 0.06em;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .ct-wb-ex-ss-break {
@@ -1777,7 +1777,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   border-radius: 6px;
   border: 1px solid #cbd5e1;
   background: var(--v4-hero, #f1f5f9);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   font-size: 13px;
   line-height: 1;
   cursor: grab;
@@ -1834,7 +1834,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 .ct-wb-ex-num {
   font-size: 11px;
   font-weight: 700;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-transform: uppercase;
 }
 
@@ -1904,7 +1904,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 700;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   white-space: nowrap;
   padding: 3px 0 0;
   letter-spacing: 0.01em;
@@ -2130,7 +2130,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 .ct-wb-ex-rpe-label {
   font-size: 10px;
   font-weight: 700;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   min-width: 28px;
@@ -2297,7 +2297,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .ct-wb-rest-watch-btn--stop {
   border-color: rgba(148, 163, 184, 0.55);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   background: rgba(248, 250, 252, 0.85);
   min-width: 36px;
   padding: 0;
@@ -2627,12 +2627,12 @@ color: var(--v4-sand-ink-slate, #1f2937);
   align-items: center;
   gap: 4px;
   margin-left: auto;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .ct-wb-ex-sparkline.is-up { color: #15803d; }
 .ct-wb-ex-sparkline.is-down { color: #b91c1c; }
-.ct-wb-ex-sparkline.is-flat { color: var(--v4-ink-2, #64748b); }
+.ct-wb-ex-sparkline.is-flat { color: var(--v4-ink-2) /* v4-intentional */; }
 
 .ct-wb-ex-sparkline-svg {
   display: block;
@@ -2708,7 +2708,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   gap: 8px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-transform: uppercase;
   text-align: center;
   align-items: center;
@@ -2735,7 +2735,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   gap: 8px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-transform: uppercase;
   align-items: center;
   background: transparent;
@@ -2837,7 +2837,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   letter-spacing: 0.02em;
   line-height: 1.25;
 }
@@ -2892,7 +2892,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   margin: 8px 0 0;
   padding: 6px 8px;
   font-size: 13px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   background: rgba(248, 250, 252, 0.95);
   border: 1px dashed rgba(148, 163, 184, 0.45);
   border-radius: 8px;
@@ -2977,7 +2977,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .ct-wb-ex-ap-row {
@@ -3234,7 +3234,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   min-width: 76px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-transform: uppercase;
   display: flex;
   flex-direction: column;
@@ -3669,7 +3669,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   white-space: nowrap;
   font-size: 10px;
   font-weight: 700;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-transform: uppercase;
 }
 
@@ -3790,7 +3790,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .hdr-backup-time {
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 /* === 10. calendar.css === */
@@ -4701,7 +4701,7 @@ color: var(--v4-sand-ink, #201e1d);
   height: 8px;
   /* Дорожка была полупрозрачным белым — читалась только поверх синей шапки.
      После смены фона на грунт нужна своя линия набора. */
-  background: var(--v4-line, #e5e7eb);
+  background: var(--border);
   border-radius: 4px;
   overflow: hidden;
   min-width: 0;
@@ -6384,7 +6384,8 @@ color: var(--v4-sand-ink, #201e1d);
   top: 100%;
   left: 8px;
   right: 8px;
-  background: linear-gradient(135deg, #1e293b 0%, var(--color-slate-700) 100%);
+  /* v4-intentional */
+  background: linear-gradient(135deg, #1e293b 0%, var(--v4-hero) 100%);
   border-radius: 12px;
   padding: 12px 16px;
   display: flex;
@@ -6434,7 +6435,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 /* Achievement rarity styles */
 .game-notification.rarity-common {
-  border-left: 4px solid var(--color-slate-400);
+  border-left: 4px solid var(--v4-edge) /* v4-intentional */;
 }
 
 .game-notification.rarity-rare {
@@ -6523,7 +6524,8 @@ color: var(--v4-sand-ink, #201e1d);
   left: 12px;
   width: min(560px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
-  background: linear-gradient(180deg, #2d3a4f 0%, #1e293b 15%, var(--color-slate-700) 100%);
+  /* v4-intentional */
+  background: linear-gradient(180deg, #2d3a4f 0%, #1e293b 15%, var(--v4-hero) 100%);
   border-radius: 16px;
   padding: 12px 16px 16px;
   z-index: 1050;
@@ -7295,7 +7297,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .cloud-sync-indicator.syncing {
   background: rgba(107, 114, 128, 0.08);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .cloud-sync-indicator.syncing .cloud-icon.syncing {
@@ -7305,7 +7307,7 @@ color: var(--v4-sand-ink, #201e1d);
 @keyframes cloudSyncShimmer {
   0%,
   100% {
-    color: var(--v4-ink-2, #64748b);
+    color: var(--v4-ink-2) /* v4-intentional */;
     opacity: 0.48;
   }
 
@@ -7808,7 +7810,7 @@ body:has(.offline-banner) .wrap {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-wrap: pretty;
 }
 
@@ -7923,7 +7925,7 @@ body:has(.offline-banner) .wrap {
   font-size: 12px;
   font-weight: 500;
   border-radius: 8px;
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--border);
   background: white;
   color: #374151;
   cursor: pointer;
@@ -7980,7 +7982,7 @@ body:has(.offline-banner) .wrap {
 .hdr-divider {
   width: 1px;
   height: 24px;
-  background: var(--color-slate-200);
+  background: var(--border);
   margin: 0 2px;
   flex-shrink: 0;
 }
@@ -8724,7 +8726,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   width: 44px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--v4-surface, #fff);
   color: var(--v4-sand-ink-slate, #1f2937);
@@ -8764,7 +8766,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   padding: 0 13px;
   height: 34px;
   background: white;
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--border);
   border-radius: 10px;
   cursor: pointer;
   transition: background-color, border-color 0.15s ease;
@@ -8889,7 +8891,7 @@ svg.date-picker-icon {
   position: fixed;
   z-index: 101;
   background: white;
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px;
   min-width: 280px;
@@ -9008,7 +9010,7 @@ svg.date-picker-icon {
 
 @media (hover: hover) {
   .date-picker-sheet .date-picker-sheet-month-nav:hover:not(:disabled) {
-    background: var(--v4-chip, #efe3cf);
+    background: var(--v4-chip) /* v4-intentional */;
   }
 }
 
@@ -9059,7 +9061,7 @@ svg.date-picker-icon {
 
 @media (hover: hover) {
   .date-picker-nav:hover {
-  background: var(--color-slate-200);
+  background: var(--v4-chip) /* v4-intentional */;
 }
 }
 
@@ -11230,7 +11232,7 @@ body:has(:is(
   height: 4px;
   margin: 0 auto 14px;
   border-radius: 999px;
-  background: var(--v4-track, rgba(0, 0, 0, 0.12));
+  background: var(--v4-track) /* v4-intentional */;
 }
 
 .notify-detail__head {
@@ -11320,7 +11322,7 @@ body:has(:is(
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  background: var(--v4-track, rgba(0, 0, 0, 0.12));
+  background: var(--v4-track) /* v4-intentional */;
 }
 
 .notify-detail__switch.is-on {
@@ -11424,7 +11426,7 @@ body:has(:is(
 
 .tab-settings-diary-card__status {
   min-width: 0;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   font-size: 10.5px;
   font-weight: 750;
   line-height: 1.1;
@@ -11475,7 +11477,7 @@ body:has(:is(
 
 .tab-settings-diary-toggle__hint {
   overflow: hidden;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   font-size: 10.5px;
   font-weight: 650;
   line-height: 1.15;
@@ -12050,7 +12052,7 @@ body:has(:is(
   display: inline-block;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--color-slate-200);
+  background: var(--v4-chip) /* v4-intentional */;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.5px;
@@ -12434,7 +12436,7 @@ body:has(:is(
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: var(--color-slate-700);
+  color: var(--v4-ink-prose) /* v4-intentional */;
   opacity: 0.9;
   text-transform: uppercase;
   display: flex;
@@ -12573,7 +12575,7 @@ body:has(:is(
 /* Подсказка "изменить" рядом с типом приёма */
 .meal-type-hint {
   font-size: 9px;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary) /* v4-intentional */;
   font-weight: 400;
   margin-left: 4px;
   text-transform: none;
@@ -12593,7 +12595,7 @@ body:has(:is(
 
 .meal-type-preview-label {
   font-size: 13px;
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .meal-type-preview-value {
@@ -12982,7 +12984,7 @@ body:has(:is(
   padding: 4px 9px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
@@ -13279,7 +13281,7 @@ body:has(:is(
   padding: 8px 10px 6px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border-bottom: 1px solid var(--color-slate-100);
@@ -13559,7 +13561,7 @@ body:has(:is(
 
 .cal-nav {
   border: none;
-  background: var(--color-slate-200);
+  background: var(--v4-chip) /* v4-intentional */;
   width: 28px;
   height: 28px;
   border-radius: 8px;
@@ -13713,7 +13715,7 @@ body:has(:is(
 .cal-dow div {
   font-size: 11px;
   font-weight: 600;
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2) /* v4-intentional */;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -13729,7 +13731,7 @@ body:has(:is(
 }
 
 .cal-cell.today {
-  outline: 2px solid var(--color-slate-400);
+  outline: 2px solid var(--v4-edge) /* v4-intentional */;
   outline-offset: 0;
   font-weight: 600;
 }
@@ -13930,7 +13932,7 @@ body:has(:is(
 
 @media (hover: hover) {
   *::-webkit-scrollbar-thumb:hover {
-  background: var(--color-slate-400);
+  background: var(--v4-track) /* v4-intentional */;
 }
 }
 
@@ -14214,7 +14216,7 @@ body:has(:is(
   /* Product card - 2 rows only */
   .mpc {
     background: var(--color-white);
-    border: 1px solid var(--v4-line, #e5e7eb);
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 6px 8px;
   }
@@ -14453,7 +14455,7 @@ body:has(:is(
 
   .tone-slate .mpc-totals-wrap .mpc-header,
   .tone-slate .mpc-totals-wrap .mpc-totals-values {
-    color: var(--color-slate-500);
+    color: var(--v4-ink-2) /* v4-intentional */;
   }
 
   .mpc-totals-wrap .mpc-header {
@@ -14616,7 +14618,7 @@ body:has(:is(
     background: var(--v4-bg, #ffffff);
     border: 1px solid #cbd5e1;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-    color: var(--v4-ink-2, #64748b);
+    color: var(--v4-ink-2) /* v4-intentional */;
     transition: transform 0.3s ease;
     transform: rotate(0deg);
     line-height: 1;
@@ -14649,7 +14651,7 @@ body:has(:is(
   /* Серый фон для прошедших приёмов (legacy) */
   .tone-slate .mpc-totals {
     background: var(--v4-hero, #f8fafc);
-    color: var(--color-slate-500);
+    color: var(--v4-ink-2) /* v4-intentional */;
   }
 
   /* Meal meta row - SaaS compact style */
@@ -14676,7 +14678,7 @@ body:has(:is(
   /* Мобильная кнопка редактирования времени */
   .mobile-time-btn {
     background: var(--v4-hero, #f3f4f6);
-    border: 1px solid var(--v4-line, #e5e7eb);
+    border: 1px solid var(--border);
     border-radius: 6px;
     padding: 6px 12px;
     font-size: 15px;
@@ -15252,7 +15254,7 @@ body:has(:is(
   }
 
   .confirm-modal-btn--fill.confirm-modal-btn--neutral {
-    background: var(--v4-line, #e5e7eb);
+    background: var(--border);
     color: var(--v4-ink, #111827);
   }
 
@@ -15842,7 +15844,7 @@ body:has(:is(
 }
 
 .measurements-card__edit {
-  border: 1px solid var(--v4-line, #e5e7eb);
+  border: 1px solid var(--border);
   background: var(--v4-hero, #f8fafc);
   color: var(--v4-ink, #0f172a);
   padding: 6px 10px;
@@ -16058,7 +16060,7 @@ body:has(:is(
 .measurements-card__button {
   padding: 8px 12px;
   border-radius: 12px;
-  border: 1px solid var(--v4-line, #e5e7eb);
+  border: 1px solid var(--border);
   background: var(--color-white);
   font-weight: 700;
   cursor: pointer;
@@ -16271,13 +16273,13 @@ body:has(:is(
 .profile-section__title {
   font-weight: 600;
   font-size: 14px;
-  color: var(--v4-ink, var(--color-slate-800));
+  color: var(--v4-ink, #1e293b);
   line-height: 1.25;
 }
 
 .profile-section__subtitle {
   font-size: 11px;
-  color: var(--v4-ink-2, var(--color-slate-500));
+  color: var(--v4-ink-2) /* v4-intentional */;
   margin-top: 2px;
   line-height: 1.35;
 }
@@ -16295,12 +16297,12 @@ body:has(:is(
   font-size: 10px;
   font-weight: 600;
   background: rgba(0, 0, 0, 0.04);
-  color: var(--v4-ink-2, var(--color-slate-600));
+  color: var(--v4-ink-prose) /* v4-intentional */;
 }
 
 .profile-section__chevron {
   font-size: 11px;
-  color: var(--v4-ink-3, var(--color-slate-400));
+  color: var(--v4-ink-secondary) /* v4-intentional */;
   transition: transform 0.2s ease;
   width: 18px;
   text-align: center;
@@ -17887,7 +17889,7 @@ html.heys-bg-paused *::after {
 
 .mpc-action-sheet__title {
   padding: 4px 8px 8px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2) /* v4-intentional */;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.25;
