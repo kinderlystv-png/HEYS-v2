@@ -16,7 +16,7 @@
   border-radius: 50%;
   border: none;
   background: var(--v4-float, #fffaf1);
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08),
               0 6px 16px rgba(15, 23, 42, 0.14),
               inset 0 1px 0 rgba(255, 255, 255, 0.22);
@@ -1477,7 +1477,7 @@ button.messenger-day-checklist__chip:active {
 .msg-bubble-theirs .msg-edit-textarea {
   border-color: rgba(0, 0, 0, 0.15);
   background: rgba(255, 255, 255, 0.85);
-  color: var(--heys-text-primary, #111827);
+  color: var(--v4-ink, #201e1d);
 }
 
 .msg-edit-actions {
@@ -1566,7 +1566,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-reply-preview-text {
   font-size: 13px;
-  color: var(--heys-text-primary, #111827);
+  color: var(--v4-ink, #201e1d);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1575,7 +1575,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-reply-preview-close {
   background: transparent;
   border: none;
-  color: var(--heys-text-secondary, #6b7280);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-size: 16px;
   cursor: pointer;
   padding: 0 4px;
