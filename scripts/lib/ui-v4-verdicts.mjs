@@ -136,8 +136,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [33, '2f00fa5302804302'],
   }),
   'strength-builder': Object.freeze({
+    // 3 сентября: notApplicable 98 -> 97. Строка «отношение к канону называет
+    // сам кадр» типизирована naKind: 'handoff' — она про разметку пакета и его
+    // собственную проверку, а не про продукт; новая строка того же долга
+    // канваса заведена сразу типизированной.
     mismatch: [226, '28c24a4244192529'],
-    notApplicable: [98, 'c10b7d88a606402e'],
+    notApplicable: [97, '65b097f314a63ea6'],
   }),
   'tab-activity': Object.freeze({
     mismatch: [53, '54f0e457232e23d2'],

@@ -349,6 +349,7 @@
   }
 
   Parts.planExerciseSummary = planExerciseSummary;
+  Parts.planPreviewRows = planPreviewRows;
 
   // ——— Строка подхода (экраны 07, 13, 24) ———
 

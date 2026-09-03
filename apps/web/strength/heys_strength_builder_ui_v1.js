@@ -79,6 +79,32 @@
     return String(+m[3]) + ' ' + months[+m[2] - 1];
   }
 
+  function restRemainingSec(activeRestObj, now) {
+    const raw = activeRestObj && typeof activeRestObj === 'object' ? activeRestObj : null;
+    const startedAt = raw && Number.isFinite(+raw.startedAt) ? +raw.startedAt : 0;
+    const total = raw && Number.isFinite(+raw.total) ? +raw.total : 0;
+    if (!startedAt || !total) return 0;
+    return Math.max(0, Math.ceil((startedAt + total * 1000 - (now || Date.now())) / 1000));
+  }
+
+  function closeIconButton(onClose, label) {
+    return h('button', {
+      type: 'button',
+      className: 'sb-icon-btn sb-icon-btn--close',
+      onClick: onClose,
+      'aria-label': label || 'Закрыть'
+    }, h('svg', {
+      width: 16,
+      height: 16,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      'aria-hidden': 'true'
+    }, h('path', { d: 'M6 6l12 12M18 6L6 18' })));
+  }
+
   function exerciseCountLabel(count) {
     const n = Math.max(0, Math.round(+count || 0));
     const mod100 = n % 100;
@@ -628,18 +654,25 @@
     }
 
     if (showInterrupted) {
-      const restMessage = wl.activeRest
-        ? (rest
-          ? 'Всё, что отмечено, на месте. Таймер отдыха продолжает идти и заново не запускается.'
-          : 'Всё, что отмечено, на месте. Таймер отдыха истёк, пока вас не было, и заново не запускается.')
-        : 'Всё, что отмечено, на месте. Таймер отдыха не был запущен — продолжите с нужного подхода.';
+      const hadRestTimer = !!wl.activeRest;
+      const restRunning = !!rest;
+      let restMessage;
+      let interruptedNote;
+      if (!hadRestTimer) {
+        restMessage = 'Всё, что отмечено, на месте. Таймер отдыха вы не запускали — ждать нечего.';
+        interruptedNote = 'Пауза больше 45 минут бывает и без таймера: тогда экран не говорит про истечение, потому что истекать было нечему. Кнопки те же.';
+      } else if (restRunning) {
+        restMessage = 'Всё, что отмечено, на месте. Таймер отдыха ещё идёт — осталось '
+          + fmtClock(restRemainingSec(rest, Date.now())) + '.';
+        interruptedNote = 'Редкий случай: таймер сохранился и не истёк. «Продолжить» возвращает к нему, не сбрасывая; предлагать закрыть тренировку всё равно можно — разрыв уже больше 45 минут.';
+      } else {
+        restMessage = 'Всё, что отмечено, на месте. Таймер отдыха истёк, пока вас не было, и заново не запускается.';
+        interruptedNote = 'Разрыв больше 45 минут — и второй кнопкой предлагаем закрыть тренировку временем последней отметки, а не текущим: иначе в истории останется тренировка на два часа, из которых час человек ехал домой. Длительность в итогах всегда считается от первой отметки до последней.';
+      }
 
       return h('div', { className: 'sb-root sb-root--interrupted' },
         h('div', { className: 'sb-head sb-interrupted-head' },
-          h('button', {
-            type: 'button', className: 'sb-icon-btn',
-            onClick: onClose, 'aria-label': 'Закрыть конструктор'
-          }, '✕'),
+          closeIconButton(onClose, 'Закрыть конструктор'),
           h('div', { className: 'sb-head-title' },
             h('b', null, 'Тренировка на паузе'),
             h('div', { className: 'sb-head-sub' },
@@ -674,8 +707,7 @@
               }
             }, 'Завершить в ' + fmtTime(lastMarkAt))
           ),
-          h('p', { className: 'sb-interrupted-note' },
-            'Разрыв больше 45 минут — и второй кнопкой предлагаем закрыть тренировку временем последней отметки, а не текущим: иначе в истории останется тренировка на два часа, из которых час человек ехал домой. Длительность в итогах всегда считается от первой отметки до последней.')
+          h('p', { className: 'sb-interrupted-note' }, interruptedNote)
         )
       );
     }
@@ -789,20 +821,34 @@
       const plan = canStartPlan ? candidatePlan : null;
       const planLabel = plan && String(plan.dayLabel || '').trim();
       const assignedBy = plan && String(plan.assignedBy || 'куратор').trim();
+      const builderParts = HEYS.StrengthBuilderParts || {};
+      const planPreviewRows = canStartPlan && typeof builderParts.planPreviewRows === 'function'
+        ? builderParts.planPreviewRows(planExercises)
+        : [];
       return h('div', { className: 'sb-root' },
         h('div', { className: 'sb-head is-empty' },
-          h('button', {
-            type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть'
-          }, '✕'),
+          closeIconButton(onClose, 'Закрыть конструктор'),
           h('div', { className: 'sb-head-title' },
             h('b', null, 'Силовая'),
-            h('div', { className: 'sb-head-sub' }, 'пусто · 0 подходов')
+            h('div', { className: 'sb-head-sub' },
+              canStartPlan ? 'план на день · 0 подходов' : 'пусто · 0 подходов')
           )
         ),
         h('div', { className: 'sb-empty-scroll' },
           h('div', { className: 'sb-empty-card' },
-            h('b', null, 'Пустая тренировка'),
-            h('p', null, 'Добавляйте упражнения по ходу — план не обязан быть готов заранее.')
+            h('b', null, canStartPlan ? 'План на сегодня готов' : 'Пустая тренировка'),
+            h('p', null, canStartPlan
+              ? 'Можно начать по плану куратора или собрать свою — план не обязателен.'
+              : 'Добавляйте упражнения по ходу — план не обязан быть готов заранее.'),
+            planPreviewRows.length > 0 && h('ol', {
+              className: 'sb-empty-plan-preview',
+              'aria-label': 'Состав плана'
+            }, planPreviewRows.map(function (row) {
+              return h('li', { key: row.key },
+                h('span', null, row.name),
+                row.summary ? h('i', null, row.summary) : null
+              );
+            }))
           ),
           canStartPlan && h(React.Fragment, null,
             h('button', {
