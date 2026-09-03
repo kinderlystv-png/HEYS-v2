@@ -152,6 +152,11 @@ jobs:
       - name: Install Chromium for geometry suites
         run: pnpm exec playwright install chromium
       - name: Run apps/web unit suite shard ${{ matrix.shard }}/2
+        # Гейты сведения с кадрами дизайна сюда не входят: они краснеют, когда
+        # дизайнер прислал новые кадры, а экран под них ещё не сведён, и держать
+        # на этом выкатку исправного продукта нечем. Их гоняет ui-v4-design-gates.yml.
+        env:
+          HEYS_DESIGN_GATES: skip
         run: cd apps/web && pnpm exec vitest run --retry=1 --shard=${{ matrix.shard }}/2
       - name: Run migration safety gate
         if: matrix.shard == 1

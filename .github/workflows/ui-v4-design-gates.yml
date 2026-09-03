@@ -1,0 +1,81 @@
+name: UI v4 design gates
+
+# Сверка экранов с кадрами пакета дизайна — свой контур, отдельный от выкатки.
+#
+# Эти тесты краснеют, когда дизайнер прислал новые кадры, а экран под них ещё
+# не сведён. Это состояние работы, а не поломка продукта, поэтому они больше не
+# стоят в «Unit tests (deploy gate)»: 3 сентября обновление пакета остановило
+# выкатку исправного приложения, зелёного на остальных семи тысячах тестов.
+#
+# Обязательными они быть не перестали. Красный прогон здесь означает «пакет
+# приехал, зоны под него не сведены» и ведёт к работе по сведению, а не к
+# правке чисел под зелёный цвет.
+#
+# Набор выбирается именем файла (*-canvas-razbor / -geometry / -copy) —
+# HEYS_DESIGN_GATES=only в apps/web/vitest.config.ts.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "docs/ui/**"
+      - "scripts/lib/ui-v4-*.mjs"
+      - ".github/workflows/ui-v4-design-gates.yml"
+  pull_request:
+    paths:
+      - "apps/web/**"
+      - "docs/ui/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ui-v4-design-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  design-gates:
+    name: Сверка с кадрами дизайна
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          filter: blob:none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          package-manager-cache: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Часть сверок меряет живой макет в Chromium и без браузера падает в
+      # beforeAll, а не пропускается — пропущенная геометрия читалась бы как
+      # сошедшаяся.
+      - name: Install Chromium for geometry suites
+        run: pnpm exec playwright install chromium
+
+      - name: Гейты сведения с кадрами
+        env:
+          HEYS_DESIGN_GATES: only
+        run: cd apps/web && pnpm exec vitest run --retry=1
+
+      # Только дрейф контракта: полный ui:v4:check тянет ещё и проверку
+      # frames/evidence, которая сегодня красна в трёх зонах по своей причине.
+      # Заводить заведомо красный гейт нельзя — такие выключают в первый день.
+      - name: Дрейф контракта
+        run: node scripts/ui-v4-check-contract-drift.mjs

@@ -1,7 +1,7 @@
 import path from 'path';
 
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { defaultExclude, defineConfig } from 'vitest/config';
 
 // Скрипты из scripts/ — исполняемые файлы с шебангом, и тесты импортируют их
 // как модули, чтобы проверить экспортированные помощники. Vite шебанг не
@@ -25,6 +25,22 @@ const stripShebang = {
   },
 };
 
+// Гейты сведения с кадрами отделены от проверок продукта.
+//
+// Эти тесты сверяют экран с кадром пакета дизайна, поэтому краснеют, когда
+// дизайнер прислал новые кадры, а экран под них ещё не сведён. Это состояние
+// работы, а не поломка продукта: 3 сентября обновление пакета так остановило
+// выкатку исправного приложения — сам продукт был зелёным на остальных семи
+// тысячах тестов. Деплойный гейт их пропускает (HEYS_DESIGN_GATES=skip),
+// отдельный workflow гоняет только их (HEYS_DESIGN_GATES=only) и выкатку не
+// держит; обязательными они быть не перестают, но в своём контуре.
+//
+// Набор задаётся именем, а не перечнем файлов: перечень пришлось бы вести
+// руками, и новый гейт молча оказался бы вне обоих контуров. Названный иначе
+// тест остаётся в деплойном гейте — ошибка в строгую сторону.
+const DESIGN_GATES = '__tests__/**/*-canvas-{razbor,geometry,copy}.test.js';
+const designGates = process.env.HEYS_DESIGN_GATES;
+
 export default defineConfig({
   plugins: [react(), stripShebang],
   resolve: {
@@ -36,7 +52,11 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     // setupFiles: ['./vitest.setup.ts'], // Отключено - импорт в тестах
-    include: ['src/**/*.{test,spec}.{ts,tsx}', '__tests__/**/*.{test,spec}.{ts,tsx,js}'],
+    include:
+      designGates === 'only'
+        ? [DESIGN_GATES]
+        : ['src/**/*.{test,spec}.{ts,tsx}', '__tests__/**/*.{test,spec}.{ts,tsx,js}'],
+    exclude: designGates === 'skip' ? [...defaultExclude, DESIGN_GATES] : defaultExclude,
     // Каждый файл — свой fork (default vitest), isolate:true → чистые globals.
     // Раньше было isolate:false / singleFork:true как preventive OOM mitigation,
     // но это вызывало flake-тесты из-за shared global.HEYS между файлами
