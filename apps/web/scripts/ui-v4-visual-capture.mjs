@@ -677,7 +677,7 @@ async function openCase(browser, item, snapshot) {
       await page.addScriptTag({
         path: path.join(ROOT, 'apps', 'web', 'heys_weekly_reports_v2.js'),
       });
-      await page.evaluate((themeId) => {
+      await page.evaluate(({ themeId, evidenceKind }) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
         const NC = window.HEYS.NormCorrection;
         const result = NC.compute({
@@ -705,12 +705,16 @@ async function openCase(browser, item, snapshot) {
             normBefore: 2112,
             normAfter: 2049,
             deficitPct: -12,
-            evidence: {
-              kind: 'stable_girths',
-              spanDays: 21,
-              waistPoints: 5,
-              observedGirths: ['waist', 'biceps'],
-            },
+            // Кадр «без обхватов» — тот же экран в ветке, где замеров не было:
+            // отличаются проза, первая строка фактов и их число.
+            evidence: evidenceKind === 'missing'
+              ? { kind: 'missing' }
+              : {
+                kind: 'stable_girths',
+                spanDays: 21,
+                waistPoints: 5,
+                observedGirths: ['waist', 'biceps'],
+              },
           },
           expenditure: 2400,
           deficitPct: -12,
@@ -742,7 +746,7 @@ async function openCase(browser, item, snapshot) {
         window.__uiV4NormCorrectionLoweredRoot =
           window.__uiV4NormCorrectionLoweredRoot || window.ReactDOM.createRoot(host);
         window.__uiV4NormCorrectionLoweredRoot.render(component);
-      }, item.themeId || null);
+      }, { themeId: item.themeId || null, evidenceKind: item.evidenceKind || 'stable_girths' });
       await page.locator('#ui-v4-norm-correction-lowered-host .weekly-wrap-correction--lowered')
         .waitFor({ state: 'visible', timeout: 45_000 });
     }
@@ -2265,13 +2269,20 @@ async function openCase(browser, item, snapshot) {
       });
       const near = (actual, expected, tolerance = 0.02) =>
         Number.isFinite(actual) && Math.abs(actual - expected) <= tolerance;
+      // Два кадра одного экрана: «Сверка · норма снизилась» и «· без обхватов».
+      // Отличаются проза (строка 07), первая строка фактов (13 и 14) и их
+      // число — геометрия общая, поэтому и стенд один.
+      const noGirths = item.evidenceKind === 'missing';
       const expectedTextAtoms = [
         'Неделя закрыта',
         '24–30 авг',
         'Норму подстроили под факт',
-        'Три недели вес и обхваты держатся на месте. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.',
+        noGirths
+          ? 'Три недели вес держится на месте. Замеров обхватов не было — проверить перестройку по ним нельзя. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.'
+          : 'Три недели вес и обхваты держатся на месте. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.',
         '2 049',
         '−63 ккал',
+        ...(noGirths ? ['Замер талии', 'не было'] : []),
         'Дефицит остался тем же',
         'как договаривались',
         'Дальше шагов',
@@ -2283,11 +2294,14 @@ async function openCase(browser, item, snapshot) {
       if (
         JSON.stringify(visualChecks.textAtoms) !== JSON.stringify(expectedTextAtoms)
         || visualChecks.summaryChildCount !== 3
-        || visualChecks.factCount !== 2
+        || visualChecks.factCount !== (noGirths ? 3 : 2)
         || !near(visualChecks.card?.x, 18)
         || !near(visualChecks.card?.y, 49)
         || !near(visualChecks.card?.width, 339)
-        || !near(visualChecks.card?.height, 160.89)
+        // Единственное число, которое ветки не делят: проза «без обхватов»
+        // на строку длиннее, и карточка выше на 18,59. Оба значения сняты
+        // прогоном стенда, не посчитаны на бумаге.
+        || !near(visualChecks.card?.height, noGirths ? 179.48 : 160.89)
         || visualChecks.card?.padding !== '16px'
         || visualChecks.card?.marginTop !== '12px'
         || visualChecks.card?.background !== 'rgb(247, 239, 226)'

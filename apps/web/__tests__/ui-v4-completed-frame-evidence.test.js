@@ -13,9 +13,11 @@ describe('восемь завершённых кадров: построчное
   const materialized = materializeCompletedFrameEvidence(canvasRows);
 
   it('покрывает каждую строку восьми кадров без пакетного вердикта по статусу кадра', () => {
-    expect(COMPLETED_FRAME_EVIDENCE.map((frame) => frame.oid)).toEqual(['REG1', 'А1б', 'Б2', 'И3', 'А2', 'З1', 'Б3', 'NC5']);
-    expect(materialized).toHaveLength(281);
-    expect(new Set(materialized.map((row) => row.rowIdentity)).size).toBe(281);
+    // NC5 стоит дважды: пакет 3 сентября развёл экран на две ветки, «норма
+    // снизилась» и «· без обхватов», и у каждой свой кадр при общем oid.
+    expect(COMPLETED_FRAME_EVIDENCE.map((frame) => frame.oid)).toEqual(['REG1', 'А1б', 'Б2', 'И3', 'А2', 'З1', 'Б3', 'NC5', 'NC5']);
+    expect(materialized).toHaveLength(301);
+    expect(new Set(materialized.map((row) => row.rowIdentity)).size).toBe(301);
     expect(materialized.every((row) => row.evidence.length > 0)).toBe(true);
   });
 

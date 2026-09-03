@@ -510,6 +510,28 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     },
   },
   {
+    // Тот же экран в ветке «замеров обхватов не было»: кадр отдельный, потому
+    // что отличаются проза и состав фактов, а не вёрстка.
+    id: 'norm-correction-lowered-no-girths-sand',
+    zone: 'norm-correction',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-norm-correction-lowered',
+    evidenceKind: 'missing',
+    themeId: 'sand',
+    viewport: { width: 375, height: 620 },
+    rootSelector: '#ui-v4-norm-correction-lowered-host > .norm-correction-screen',
+    captureSelector: '#ui-v4-norm-correction-lowered-host > .norm-correction-screen',
+    canvasFrame: {
+      file: 'norm-correction.v4.dc.html',
+      label: 'Сверка · норма снизилась · без обхватов',
+      oid: 'NC5',
+      palette: 'sand',
+      pixelAlign: true,
+      clipRoundedCorners: 28,
+    },
+  },
+  {
     id: 'norm-correction-lowered-sand',
     zone: 'norm-correction',
     status: 'automated',

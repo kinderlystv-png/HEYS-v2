@@ -8,6 +8,7 @@ const TESTS = Object.freeze({
   normCard: 'apps/web/__tests__/norm-correction-weekly-card.test.js',
   normOwner: 'apps/web/__tests__/norm-correction-owner-flow.test.js',
   normVisual: 'apps/web/scripts/ui-v4-visual-capture.mjs',
+  normUnit: 'apps/web/__tests__/norm-correction.test.js',
   registration: 'apps/web/__tests__/registration-v4-contract-sweep.test.js',
   builderCalm: 'apps/web/__tests__/strength-builder-calm-canvas-contract.test.js',
 });
@@ -56,6 +57,7 @@ const COLLAPSED_LABEL = 'Конструктор · список свёрнут';
 const SUPERSET_LABEL = 'Связка · создание';
 const FINISH_LABEL = 'Конструктор · итоги';
 const LOWERED_LABEL = 'Сверка · норма снизилась';
+const LOWERED_NO_GIRTHS_LABEL = 'Сверка · норма снизилась · без обхватов';
 const REGISTRATION_PERSONAL_LABEL = 'Регистрация · персональные данные';
 const ACTIVE_CALM_LABEL = 'Конструктор · тренировка идёт · спокойнее';
 const CATALOG_LABEL = 'Конструктор · каталог';
@@ -153,6 +155,51 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
     rows: FINISH_ROWS,
   }),
   Object.freeze({
+    // Вторая ветка того же экрана: замеров обхватов не было. Кадр приехал
+    // пакетом 3 сентября как ответ на находку «применённое Pro-снижение без
+    // замеров»; стенд снимает его отдельным сценарием, поэтому computed-style
+    // здесь — про эту ветку, а не перенесённый с соседней.
+    zoneId: 'norm-correction', label: LOWERED_NO_GIRTHS_LABEL, oid: 'NC5',
+    rows: Object.freeze({
+      ...suffixRows(LOWERED_NO_GIRTHS_LABEL, {
+        '01': 'Live Canvas pair checks the exact header geometry and contents.',
+        '02': 'Live Canvas pair checks the exact screen title text and typography.',
+        '03': 'Live Canvas pair checks the exact range text and tabular-number typography.',
+        '04': 'Live Canvas pair checks the scroll area padding.',
+        '05': 'Live Canvas pair checks the summary card; its height differs from the sibling branch by one prose line.',
+        '06': 'Live Canvas pair checks the exact title and its typography.',
+        '08': 'Live Canvas pair checks baseline alignment, 10px gap and 14px top offset.',
+        '09': 'Live Canvas pair checks the exact hero value and 30px/800 typography.',
+        '10': 'Live Canvas pair checks the exact delta, 12px/700 typography and bad-value color.',
+        '11': 'Live Canvas pair checks the facts card and its 12px top offset.',
+        '12': 'Live Canvas pair checks the exact facts row geometry and typography.',
+        '15': 'Live Canvas pair checks that the last facts row has no divider.',
+        '16': 'Live Canvas pair checks the final fact text and typography.',
+        '17': 'Live Canvas pair checks the primary action and 14px top offset.',
+        '18': 'Live Canvas pair checks the secondary action and 9px top offset.',
+        '19': 'Live Canvas pair checks the exact footnote text, offset and typography.',
+      }, 'computed-style', TESTS.normVisual),
+      // Три строки, где ветка отличается содержанием, а не вёрсткой: стенд
+      // меряет их типографику, unit-тест держит саму копию дословно.
+      [`${LOWERED_NO_GIRTHS_LABEL} · 07`]: exactMany([
+        `computed-style: ${TESTS.normVisual}`,
+        `semantic-test: ${TESTS.normUnit}`,
+      ], 'The missing-girths branch says what was and was not observed; nothing has to be proven here.'),
+      [`${LOWERED_NO_GIRTHS_LABEL} · 13`]: exactMany([
+        `computed-style: ${TESTS.normVisual}`,
+        `semantic-test: ${TESTS.normUnit}`,
+      ], 'The absent measurement is stated as the first fact row.'),
+      [`${LOWERED_NO_GIRTHS_LABEL} · 14`]: exactMany([
+        `computed-style: ${TESTS.normVisual}`,
+        `semantic-test: ${TESTS.normUnit}`,
+      ], 'The quiet value pairs with the label so the screen implies no unobserved data.'),
+      [`${LOWERED_NO_GIRTHS_LABEL} · текст`]: exactMany([
+        `computed-style: ${TESTS.normVisual}`,
+        `semantic-test: ${TESTS.normUnit}`,
+      ], 'Live Canvas pair checks all 15 text atoms; the unit test pins the branch copy verbatim.'),
+    }),
+  }),
+  Object.freeze({
     zoneId: 'norm-correction', label: LOWERED_LABEL, oid: 'NC5',
     rows: Object.freeze({
       ...suffixRows(LOWERED_LABEL, {
@@ -209,7 +256,20 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
 export function materializeCompletedFrameEvidence(canvasRows) {
   const byIdentity = new Map(canvasRows.map((row) => [row.identity, row]));
   return COMPLETED_FRAME_EVIDENCE.flatMap((frame) => {
-    const rows = canvasRows.filter((row) => row.identity.startsWith(`${frame.label} · `));
+    // Кадр забирает строку только если его метка — САМЫЙ ДЛИННЫЙ подходящий
+    // префикс. Иначе кадр-уточнение («… · без обхватов») уезжает в родителя
+    // целиком: у него та же метка плюс хвост, и строки считаются дважды
+    // родительскими. Так 3 сентября двадцать строк новой ветки молча стали
+    // строками соседнего кадра.
+    const rows = canvasRows.filter((row) => {
+      const own = `${frame.label} · `;
+      if (!row.identity.startsWith(own)) return false;
+      return !COMPLETED_FRAME_EVIDENCE.some(
+        (other) =>
+          other.label.length > frame.label.length
+          && row.identity.startsWith(`${other.label} · `),
+      );
+    });
     return rows.map((row) => ({
       zoneId: frame.zoneId,
       frame: frame.label,

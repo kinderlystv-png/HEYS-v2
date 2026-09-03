@@ -564,9 +564,30 @@ describe('поправка на факт · кадры недельной све
       recomposition: { noWaistEvidence: true }
     });
     expect(c.frame).toBe('lowered');
-    expect(c.copy.body).toContain('замеров обхватов не было');
+    // Дословно кадр «Сверка · норма снизилась · без обхватов», строка 07.
+    expect(c.copy.body).toBe(
+      'Три недели вес держится на месте. Замеров обхватов не было — проверить '
+      + 'перестройку по ним нельзя. Значит, наш расчёт расхода для вас завышен '
+      + '— мы поправили его, а не вас.'
+    );
     expect(c.copy.body).not.toContain('обхваты держатся на месте');
+    // Строки 13 и 14 того же кадра: отсутствие замера названо фактом и стоит
+    // первым, до неизменного дефицита.
+    expect(c.facts[0]).toEqual({ label: 'Замер талии', value: 'не было', tone: 'quiet' });
+    expect(c.facts.map((f) => f.label)).toEqual([
+      'Замер талии', 'Дефицит остался тем же', 'Дальше шагов'
+    ]);
     expect(c.copy.evidenceNote).toBeNull();
+  });
+
+  it('ветка с обхватами лишней строки факта не заводит', () => {
+    const c = NC.buildWeeklySyncCard({
+      result: down(),
+      tariff: 'pro',
+      appliedDecision: appliedDownDecision('stable_girths')
+    });
+    expect(c.frame).toBe('lowered');
+    expect(c.facts.map((f) => f.label)).toEqual(['Дефицит остался тем же', 'Дальше шагов']);
   });
 
   it('на Self снижение требует согласия клиента', () => {
