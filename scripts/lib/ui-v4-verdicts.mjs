@@ -51,9 +51,13 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     mismatch: [4, 'b3d70a6cb7d03136'],
     notApplicable: [21, '281f90ac6ab91423'],
   }),
+  // 3 сентября (вечер): числа те же, отпечаток другой. Пакет перевёл четыре
+  // значения развилки на роль --ac2, они перестали нумероваться отдельно, и в
+  // трёх кадрах сдвинулись номера — тот же долг переехал на другие строки.
+  // Это не послабление: 19 и 47 не изменились.
   'checkin-morning': Object.freeze({
     mismatch: [19, '5ecfe313700e55d6'],
-    notApplicable: [47, '7835c224a4ff3f10'],
+    notApplicable: [47, '19522329f4fb6522'],
   }),
   'curator-cabinet': Object.freeze({
     mismatch: [36, '7db49fa8901a80cd'],
