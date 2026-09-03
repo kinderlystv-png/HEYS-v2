@@ -1350,7 +1350,7 @@
 
 .aps-create-prompt-note {
   font-size: 11px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .aps-create-barcode-field {
@@ -1585,7 +1585,7 @@
 
 .aps-create-example-note {
   font-size: 11px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .aps-create-error {

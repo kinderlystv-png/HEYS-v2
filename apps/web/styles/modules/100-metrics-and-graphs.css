@@ -6292,7 +6292,7 @@
   border: none;
   border-radius: 50%;
   background: rgba(107, 114, 128, 0.2);
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
@@ -7680,7 +7680,7 @@
 .training-card-rating-label {
   font-size: 10px;
   font-weight: 500;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }

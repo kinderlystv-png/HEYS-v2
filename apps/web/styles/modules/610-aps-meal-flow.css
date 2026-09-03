@@ -816,7 +816,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-bottom: 2px;
 }
 
@@ -1194,7 +1194,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .meal-mood-sparkline {
@@ -1231,7 +1231,7 @@
 
 .meal-mood-history-name {
   font-size: 10px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;

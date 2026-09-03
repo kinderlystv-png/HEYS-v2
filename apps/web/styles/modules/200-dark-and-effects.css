@@ -25,7 +25,7 @@
   --color-slate-800: var(--v4-hero, #1e293b);
   --color-slate-900: var(--v4-bg, #0f172a);
 
-  --color-gray-400: #9ca3af;
+  --color-gray-400: var(--v4-ink-4, #9ca3af);
   --color-gray-500: #6b7280;
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
@@ -3204,7 +3204,7 @@ button.sleep-breakdown-item:focus-visible {
 
 .day-score-manual-hint {
   font-size: 11px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-left: 8px;
   padding: 2px 6px;
   background: rgba(107, 114, 128, 0.1);
@@ -3223,7 +3223,7 @@ button.sleep-breakdown-item:focus-visible {
    значением и не мешает клиенту ввести своё. */
 .curator-authored-hint {
   font-size: 11px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-left: 8px;
   padding: 2px 6px;
   background: rgba(107, 114, 128, 0.1);

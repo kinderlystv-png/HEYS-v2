@@ -1072,7 +1072,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-tertiary, var(--color-gray-400));
+  color: var(--text-tertiary, var(--v4-ink-data, rgba(0, 0, 0, 0.56)));
   padding: 8px 12px 4px;
   margin-top: 4px;
   /* Контракт «язык, выделение, часовой пояс» (tips): подписи категорий не
@@ -1430,7 +1430,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
   gap: 8px;
   padding: 12px;
   font-size: 11px;
-  color: var(--text-tertiary, var(--color-gray-400));
+  color: var(--text-tertiary, var(--v4-ink-data, rgba(0, 0, 0, 0.56)));
   border-top: 1px solid var(--border, #e5e7eb);
   flex-wrap: wrap;
 }
@@ -1862,7 +1862,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   white-space: nowrap;
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   letter-spacing: 0.02em;
 }
 
