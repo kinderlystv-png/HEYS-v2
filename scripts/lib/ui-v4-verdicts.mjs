@@ -71,8 +71,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [90, '6a63a2f0e841fe63'],
   }),
   gamification: Object.freeze({
-    mismatch: [52, 'e702b616d44c1544'],
-    notApplicable: [74, 'e25cf3e3560a00f1'],
+    // 03.09: пакет перерисовал четыре кадра церемонии и лист уровней — 60 строк
+    // ушли в «?» на пересмотр, 21 строка исчезла из контракта вовсе. Долг упал
+    // сам собой: ≠ 52 → 25, «—» 74 → 38. База опущена вслед за ним.
+    mismatch: [25, '945d98113bf9c558'],
+    notApplicable: [38, '6acb02521938cd4f'],
   }),
   'home-widgets': Object.freeze({
     // 2 сентября: 128 -> 110. Восемнадцать строк «Разбор · … · 78» стояли
