@@ -145,7 +145,6 @@ input[type="password"] {
   --color-slate-700: #334155;
   --color-blue-500: var(--v4-water, #3b82f6);
   --color-emerald-500: #10b981;
-  --color-red-500: var(--v4-warn-1, #ef4444);
   --color-gray-400: var(--v4-ink-4, #9ca3af);
   --color-blue-ios: #007aff;
 
@@ -195,11 +194,16 @@ input[type="password"] {
   --success: #22c55e;
   --success-dark: #16a34a;
   --warning: #f59e0b;
-  --danger: var(--color-red-500);
+  --danger: var(--v4-bad-text, #a83c22);
   --info: #0ea5e9;
 
-  /* Macro rings */
-  --protein: var(--color-red-500);
+  /* Macro rings — КБЖУ ≠ ошибка (F2 A) */
+  --v4-macro-protein: var(--v4-warn-1, #ff453a);
+  --protein: var(--v4-macro-protein, #ff453a);
+
+  /* Календарь / геймификация — не harm-scale (F3 C, F5 C) */
+  --v4-cal-weekend: #ef4444;
+  --v4-gam-rarity-mythic: #ef4444;
   --fat: #f59e0b;
   --carbs: #22c55e;
 }
@@ -5630,7 +5634,7 @@ color: var(--v4-sand-ink, #201e1d);
 .floating-xp-text .combo-text {
   display: block;
   font-size: 12px;
-  color: var(--color-red-500);
+  color: var(--v4-gam-rarity-mythic, #ef4444);
   animation: comboPop 0.3s ease-out;
 }
 
@@ -6455,7 +6459,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-notification.rarity-mythic {
-  border-left: 4px solid var(--color-red-500);
+  border-left: 4px solid var(--v4-gam-rarity-mythic, #ef4444);
   box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.4);
   animation: gameNotifSlideDown 0.3s ease-out forwards, mythicNotifPulse 1.5s ease-in-out infinite;
 }
@@ -7370,8 +7374,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .cloud-sync-indicator.offline {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-red-500);
+  background: var(--v4-wgt-danger-bg, #f0dcc6);
+  color: var(--v4-wgt-danger-text, #a1471c);
   position: relative;
 }
 
@@ -7391,7 +7395,7 @@ color: var(--v4-sand-ink, #201e1d);
   position: absolute;
   top: -4px;
   right: -4px;
-  background: var(--color-red-500);
+  background: var(--v4-wgt-danger-text, #a1471c);
   color: white;
   font-size: 9px;
   font-weight: 600;
@@ -7588,8 +7592,8 @@ color: var(--v4-sand-ink, #201e1d);
   left: 0;
   right: 0;
   z-index: var(--v4-z-offline-banner, 14000);
-  background: linear-gradient(135deg, var(--color-red-500) 0%, #dc2626 100%);
-  color: white;
+  background: var(--v4-wgt-danger-bg, #f0dcc6);
+  color: var(--v4-wgt-danger-text, #a1471c);
   padding: 8px 16px;
   display: flex;
   align-items: center;
@@ -7760,8 +7764,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .sync-toast.error {
-  background: var(--color-red-500);
-  color: white;
+  background: var(--v4-wgt-danger-bg, #f0dcc6);
+  color: var(--v4-wgt-danger-text, #a1471c);
 }
 
 .sync-toast-icon {
@@ -9342,7 +9346,7 @@ svg.date-picker-icon {
 }
 
 .legend-item.bad {
-  color: var(--color-red-500);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .legend-item.cycle {
@@ -14149,7 +14153,7 @@ body:has(:is(
     display: flex;
     align-items: stretch;
     justify-content: flex-end;
-    background: var(--color-red-500);
+    background: var(--v4-bad-text, #a83c22);
     border-radius: 6px;
     pointer-events: none;
     overflow: hidden;
@@ -14174,7 +14178,7 @@ body:has(:is(
   }
 
   .swipeable-background--multi .swipeable-delete-btn {
-    background: var(--color-red-500);
+    background: var(--v4-bad-text, #a83c22);
   }
 
   .swipeable-action-btn {
@@ -14283,7 +14287,7 @@ body:has(:is(
 
   .mpc-grams-btn.grams-danger {
     background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    border-color: var(--color-red-500);
+    border-color: var(--v4-bad-text, #a83c22);
     color: #991b1b;
   }
 

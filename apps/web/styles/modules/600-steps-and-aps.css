@@ -857,7 +857,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 @media (hover: hover) {
   .aps-delete-btn:hover {
     background: #fee2e2;
-    color: var(--color-red-500);
+    color: var(--v4-wgt-danger-text) /* v4-intentional */;
     opacity: 1;
   }
 }

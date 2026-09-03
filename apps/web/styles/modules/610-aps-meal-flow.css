@@ -2665,7 +2665,7 @@
   height: 8px;
   -webkit-appearance: none;
   appearance: none;
-  background: linear-gradient(to right, #22c55e, #eab308, var(--color-red-500));
+  background: linear-gradient(to right, #22c55e, #eab308, var(--v4-val-bad, #a8382b));
   border-radius: 4px;
   outline: none;
   margin: 8px 0;

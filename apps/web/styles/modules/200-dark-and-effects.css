@@ -38,8 +38,6 @@
   --color-blue-ios: var(--v4-act-text, #60a5fa);
   --color-emerald-500: var(--v4-ok-text, #4ade80);
   /* Green 400 */
-  --color-red-500: #f87171;
-  /* Red 400 */
 
   /* ══════════════════════════════════════════════════════════════
    * SEMANTIC UI TOKENS
@@ -3321,9 +3319,9 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 .day-score-preset-bad.active {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-red-500);
-  border-color: var(--color-red-500);
+  background: var(--v4-wgt-danger-bg, #f0dcc6);
+  color: var(--v4-bad-text, #a83c22);
+  border-color: var(--v4-bad-text, #a83c22);
 }
 
 .day-score-preset-ok.active {

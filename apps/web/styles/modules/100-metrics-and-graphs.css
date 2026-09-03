@@ -632,7 +632,7 @@
 }
 
 .sparkline-dot-over {
-  fill: var(--color-red-500);
+  fill: var(--v4-val-bad, #a8382b);
   /* красный — сильно превышено */
 }
 
@@ -674,7 +674,7 @@
 
 .sparkline-goal-badge.goal-critical {
   --goal-badge-bg: rgba(239, 68, 68, 0.15);
-  --goal-badge-color: var(--color-red-500);
+  --goal-badge-color: var(--v4-bad-text, #a83c22);
 }
 
 @keyframes pulseDot {
@@ -1225,7 +1225,7 @@
 }
 
 .sparkline-popup-value.bad {
-  color: var(--color-red-500);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .sparkline-popup-btn {
@@ -1504,7 +1504,7 @@
 
 /* 115-130% */
 .sparkline-heatmap-day.level-6 {
-  background: var(--color-red-500);
+  background: var(--v4-val-bad, #a8382b);
 }
 
 /* >130% */
@@ -2171,7 +2171,7 @@
 
 /* Выходные и праздники — красный */
 .sparkline-day-weekend {
-  fill: var(--color-red-500);
+  fill: var(--v4-cal-weekend, #ef4444);
 }
 
 /* Дельта (отклонение от нормы) под каждым днём — синхронизирована с точкой */
@@ -2194,7 +2194,7 @@
 }
 
 .sparkline-min-label {
-  fill: var(--color-red-500);
+  fill: var(--v4-val-bad, #a8382b);
 }
 
 .sparkline-max-label {
@@ -2735,7 +2735,7 @@
 }
 
 .week-heatmap-day.red .week-heatmap-cell:not([style*="background"]) {
-  background: var(--color-red-500);
+  background: var(--v4-val-bad, #a8382b);
 }
 
 .week-heatmap-day.empty .week-heatmap-cell {
@@ -4799,7 +4799,7 @@
 /* 🔔 Shake на превышение (ratio > 1.25) */
 .goal-progress-bar.shake-excess {
   animation: shakeExcess 0.5s ease-in-out;
-  border-color: var(--color-red-500);
+  border-color: var(--v4-bad-text, #a83c22);
   background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
 }
 
@@ -5055,7 +5055,7 @@
 }
 
 .goal-progress-fill.over {
-  background: linear-gradient(90deg, #f97316 0%, var(--color-red-500) 100%);
+  background: linear-gradient(90deg, #f97316 0%, var(--v4-val-bad, #a8382b) 100%);
 }
 
 /* Красная часть — перебор калорий */
@@ -5063,7 +5063,7 @@
   position: absolute;
   top: 0;
   height: 100%;
-  background: linear-gradient(90deg, var(--color-red-500) 0%, #dc2626 100%);
+  background: linear-gradient(90deg, var(--v4-val-bad, #a8382b) 0%, #dc2626 100%);
   border-radius: 0 12px 12px 0;
   z-index: 2;
 }
@@ -5336,7 +5336,7 @@
 }
 
 .goal-over b {
-  color: var(--color-red-500);
+  color: var(--v4-bad-text, #a83c22);
   font-weight: 700;
   font-size: 16px;
 }
@@ -7803,9 +7803,9 @@
   margin: 8px auto;
   padding: 6px 12px;
   font-size: 12px;
-  color: var(--color-red-500);
+  color: var(--v4-wgt-danger-text, #a1471c);
   background: rgba(239, 68, 68, 0.1);
-  border: 1px dashed var(--color-red-500);
+  border: 1px dashed var(--v4-wgt-danger-text, #a1471c);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -7846,8 +7846,8 @@
 
 @media (hover: hover) {
   .dev-clear-weight-btn-mini:hover {
-  color: var(--color-red-500);
-  border-color: var(--color-red-500);
+  color: var(--v4-wgt-danger-text, #a1471c);
+  border-color: var(--v4-wgt-danger-text, #a1471c);
   background: rgba(239, 68, 68, 0.1);
   opacity: 1;
 }
@@ -8081,7 +8081,7 @@
 
 /* Цвета по типу */
 .macro-toast-protein {
-  border-left: 4px solid var(--color-red-500);
+  border-left: 4px solid var(--v4-macro-protein, #ff453a);
 }
 
 .macro-toast-fat {
