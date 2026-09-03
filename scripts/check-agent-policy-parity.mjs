@@ -29,6 +29,7 @@ const SHARED_SECTIONS = [
     id: 'product-sync-architecture',
     heading: 'Architecture invariants (read first when touching products/sync)',
   },
+  { id: 'shared-tree-writes', heading: 'Запись в общее дерево' },
   { id: 'diagnostics', heading: 'Diagnostics' },
 ];
 
