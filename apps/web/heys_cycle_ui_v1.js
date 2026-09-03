@@ -272,6 +272,29 @@
     return diff >= 0 && diff <= limit;
   }
 
+  // Инсайт баланса показывается «не чаще одного раза в день» (контракт
+  // cycle.v4.dc.html, кадр «Цикл · инсайт баланса»). Отметка хранит дату
+  // последнего показа; ключ клиентский — его скоупит store, как и ключи дней.
+  const CYCLE_INSIGHT_SEEN_KEY = 'heys_cycle_insight_seen_v1';
+
+  function readCycleInsightSeen(lsGet) {
+    const getter = lsGet || HEYS.utils?.lsGet;
+    if (!getter) return '';
+    try {
+      return String(getter(CYCLE_INSIGHT_SEEN_KEY, '') || '');
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function markCycleInsightSeen(dateKey, lsSet) {
+    const setter = lsSet || HEYS.utils?.lsSet;
+    if (!setter || !dateKey) return;
+    try {
+      setter(CYCLE_INSIGHT_SEEN_KEY, dateKey);
+    } catch (_) { /* noop */ }
+  }
+
   function getCycleCountDayForDate(dateKey, lsGet) {
     if (Cycle.getCycleCountDay) return Cycle.getCycleCountDay(dateKey, lsGet);
     return null;
@@ -382,6 +405,31 @@
       const countDay = getCycleCountDayForDate(dateKey, getter);
       const phase = cyclePhase || Cycle.getCyclePhase?.(countDay || storedDay);
       const phaseLabel = phase?.shortName || 'Особый период';
+
+      // Надбавка к норме за сегодняшний день счёта. Множитель приходит извне
+      // (вкладка считает его вместе с бюджетом), а при прямом вызове карточки
+      // берётся из фазы — чтобы карточка не зависела от того, кто её открыл.
+      const kcalMultiplier = Number(cycleKcalMultiplier) || Number(phase?.kcalMultiplier) || 1;
+      const kcalPct = kcalMultiplier > 1 ? Math.round((kcalMultiplier - 1) * 100) : 0;
+
+      // Дни счёта с ненулевой надбавкой показывают карточку и без отметки 1–7.
+      // Отметка живёт только на первой неделе (контракт «модель данных»), а
+      // надбавка — на днях 15–28, и до 03.09 карточка на них показывала пустое
+      // «Указать день»: и пометка «+N %» в строке «Нужно съесть», и инсайт были
+      // недостижимы ровно там, где они про эти дни. Кадры «Норма дня · день 22»
+      // и «Инсайт в балансе» рисуют именно это состояние.
+      const hasCountedNorm = !hasStoredDay && Number.isFinite(countDay) && kcalPct > 0;
+      const displayDay = hasStoredDay ? storedDay : countDay;
+
+      // Решение о показе принимается один раз на монтирование: иначе отметка,
+      // поставленная эффектом, спрятала бы инсайт прямо под взглядом на первой
+      // же перерисовке. В следующий заход того же дня он уже не покажется.
+      const [insightVisible] = React.useState(
+        () => kcalPct > 0 && readCycleInsightSeen(getter) !== dateKey,
+      );
+      React.useEffect(() => {
+        if (insightVisible) markCycleInsightSeen(dateKey, setter);
+      }, [insightVisible, dateKey]);
       const showDay29 = !hasStoredDay && !editMode && shouldShowDay29Question(dateKey, getter);
 
       const commitSelection = React.useCallback((markDay, markDate) => {
@@ -532,7 +580,7 @@
           : day29Card;
       }
 
-      if (!hasStoredDay || editMode) {
+      if ((!hasStoredDay && !hasCountedNorm) || editMode) {
         const emptyBody = React.createElement(React.Fragment, null,
           !editMode && React.createElement('button', {
             type: 'button',
@@ -578,7 +626,7 @@
           onClick: () => { if (!isReadOnly && backdateAllowed) setEditMode(true); },
         },
           React.createElement('span', { className: 'cycle-card-v4__phase' }, phaseLabel),
-          React.createElement('span', { className: 'cycle-card-v4__day' }, `День ${storedDay}`)
+          React.createElement('span', { className: 'cycle-card-v4__day' }, `День ${displayDay}`)
         ),
         phase && React.createElement('div', { className: 'cycle-card-v4__badges' },
           phase.kcalMultiplier !== 1 && React.createElement('span', { className: 'cycle-card-v4__badge' },
@@ -591,10 +639,16 @@
             `+${Math.round((phase.insulinWaveMultiplier - 1) * 100)} % волна`
           )
         ),
-        React.createElement('div', { className: 'cycle-card-v4__insight' },
-          React.createElement('div', { className: 'cycle-card-v4__insight-title' }, 'Особый период'),
+        // Заголовок несёт число: цена поправки должна читаться цифрой, иначе
+        // пересчёт 26 августа остаётся невидимым (контракт «средняя надбавка»).
+        // Показывается только в дни с ненулевым множителем — в сами особые дни
+        // калории на базе, там растёт вода, а не расход.
+        insightVisible && React.createElement('div', { className: 'cycle-card-v4__insight' },
+          React.createElement('div', { className: 'cycle-card-v4__insight-title' },
+            `Норма выше на ${kcalPct} %`
+          ),
           React.createElement('div', { className: 'cycle-card-v4__insight-text' },
-            phase?.name ? `${phase.shortName || 'Особый период'}. Нормы дня уже подстроены.` : 'Нормы дня подстроены под особые дни.'
+            `${phase?.name || 'Особый период'}. Лёгкий перебор в эти дни — норма, а не срыв: организм тратит больше и держит воду.`
           )
         )
       );
@@ -604,7 +658,7 @@
           React.createElement('div', { className: 'nutrition-v4-block__head' },
             React.createElement('b', null, 'Особый период'),
             React.createElement('span', { className: 'nutrition-v4-block__meta is-ok' },
-              formatCycleWeekBadge(storedDay)
+              formatCycleWeekBadge(displayDay)
             )
           ),
           filled,

@@ -57,7 +57,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [29, 'f7ac9fda9e37b790'],
   }),
   cycle: Object.freeze({
-    mismatch: [34, '45502debb389a861'],
+    // 03.09: два ≠ сняты — заголовок инсайта понёс число, карточка стала
+    // достижима на днях счёта. База опущена 34 → 32.
+    mismatch: [32, '83f258b17e3aa10f'],
     notApplicable: [20, '3b7bbcb8dd0c379a'],
   }),
   'date-remainders': Object.freeze({
