@@ -1926,7 +1926,6 @@
   registerStep('weight', {
     title: 'Вес',
     hint: 'Взвесьтесь натощак',
-    icon: '',
     component: WeightStepComponent,
     secondaryLabelWhen: (data) => (data && data.estimated ? 'Ввести вес' : 'Не взвешивался'),
     applySecondary: (data) => {
@@ -2191,7 +2190,6 @@
   registerStep('sleepTime', {
     title: 'Сон',
     hint: 'Во сколько легли и встали',
-    icon: '🛏️',
     component: SleepTimeStepComponent,
     getInitialData: (context) => {
       const dateKey = resolveDateKey(context?.dateKey);
@@ -2327,7 +2325,6 @@
   registerStep('daySleep', {
     title: 'Дневной сон',
     hint: 'Добавь досып за день, если он был',
-    icon: '😴',
     component: DaySleepStepComponent,
     getInitialData: (context) => {
       const dateKey = resolveDateKey(context?.dateKey);
@@ -2536,7 +2533,6 @@
   registerStep('sleepQuality', {
     title: 'Как выспались?',
     hint: '',
-    icon: '✨',
     component: SleepQualityStepComponent,
     getInitialData: (context) => {
       const dateKey = resolveDateKey(context?.dateKey);
@@ -2764,7 +2760,6 @@
   registerStep('sleep', {
     title: 'Сон',
     hint: '',
-    icon: '',
     component: CombinedSleepStepComponent,
     getInitialData: (context) => {
       const dateKey = resolveDateKey(context?.dateKey);
@@ -3334,7 +3329,6 @@
   registerStep('stepsGoal', {
     title: 'Шаги',
     hint: 'Какой день тебя ждёт?',
-    icon: '👟',
     component: StepsGoalStepComponent,
     getInitialData: (context, allStepData) => {
       const profile = lsGet('heys_profile', {});
@@ -3490,7 +3484,6 @@
   registerStep('deficit', {
     title: 'Дефицит',
     hint: 'Цель калорийности относительно нормы дня; устойчивый дефицит обычно переносится легче экстремального',
-    icon: '📊',
     component: DeficitStepComponent,
     getInitialData: (ctx) => {
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
@@ -3867,7 +3860,6 @@
   registerStep('household_minutes', {
     title: 'Бытовая активность',
     hint: 'Сколько минут?',
-    icon: '🏠',
     component: HouseholdMinutesComponent,
     getInitialData: (ctx) => {
       console.log('[Household getInitialData] ctx:', ctx);
@@ -3963,7 +3955,6 @@
   registerStep('household_stats', {
     title: 'Статистика',
     hint: 'Ваш прогресс',
-    icon: '📊',
     component: HouseholdStatsComponent,
     canSkip: true,
     skipLabel: 'Готово',
@@ -3983,7 +3974,6 @@
   registerStep('household', {
     title: 'Бытовая активность',
     hint: 'Время на ногах помимо тренировок',
-    icon: '🏠',
     component: HouseholdMinutesComponent,  // Показываем только минуты в старом режиме
     getInitialData: (ctx) => {
       const dateKey = ctx?.dateKey || new Date().toISOString().slice(0, 10);
@@ -4228,7 +4218,6 @@
   registerStep('cycle', {
     title: 'Особый период',
     hint: 'Адаптация норм',
-    icon: '',
     component: CycleStepComponent,
     canSkip: true,
     // shouldShow — проверяем, включён ли tracking в профиле
@@ -4599,7 +4588,6 @@
   registerStep('measurements', {
     title: 'Замеры тела',
     hint: 'Еженедельный контроль',
-    icon: '📏',
     component: MeasurementsStepComponent,
     canSkip: true,  // Можно пропустить
     getInitialData: (context = {}) => {
@@ -4885,7 +4873,6 @@
   registerStep('cold_exposure', {
     title: 'Холодовое воздействие',
     hint: 'Был ли холодный душ?',
-    icon: '🧊',
     canSkip: true,
     component: ColdExposureStepComponent,
     getInitialData: () => {
@@ -5108,7 +5095,6 @@
   registerStep('morning_mood', {
     title: 'Утреннее настроение',
     hint: 'Как себя чувствуешь?',
-    icon: '😊',
     canSkip: false, // Обязательный шаг!
     component: MorningMoodStepComponent,
     getInitialData: () => {
@@ -5628,7 +5614,6 @@
   registerStep('supplements', {
     title: 'Добавки',
     hint: 'Что планируете принять?',
-    icon: '💊',
     canSkip: true,
     component: SupplementsStepComponent,
     getInitialData: () => {
@@ -5764,7 +5749,6 @@
   registerStep('morningRoutine', {
     title: 'Утренний фокус',
     hint: 'Резинки + мини-растяжка',
-    icon: '💪',
     canSkip: true,
     hideHeaderNext: true,
     component: MorningRoutineStepComponent,
@@ -5787,7 +5771,6 @@
   registerStep('morning_activation_followup', {
     title: 'Зарядка после 1-го приёма',
     hint: 'Статус привычки',
-    icon: '✅',
     canSkip: true,
     hideHeaderNext: true,
     component: MorningActivationFollowupStepComponent,
@@ -5802,7 +5785,6 @@
   registerStep('morning_activation_skip_reason', {
     title: 'Зарядка',
     hint: 'Почему не в плане сегодня?',
-    icon: '💬',
     canSkip: true,
     hideHeaderNext: true,
     component: MorningActivationSkipReasonStepComponent,
@@ -7262,7 +7244,6 @@
   registerStep('morningRest', {
     title: 'Остальное',
     hint: '',
-    icon: '',
     canSkip: false,
     nextLabel: 'Готово',
     component: MorningRestStepComponent,
@@ -7524,7 +7505,6 @@
   registerStep('checkinRecorded', {
     title: 'Записано',
     hint: '',
-    icon: '',
     hideProgressDots: true,
     hiddenFromProgress: true,
     nextLabel: 'На главную',

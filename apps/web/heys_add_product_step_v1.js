@@ -2264,7 +2264,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           id: 'portions',
           title: 'Порции',
           hint: 'Настройте порции',
-          icon: '🥣',
           component: HEYS.AddProductStep.PortionsStep,
           validate: () => true,
           hideHeaderNext: true,
@@ -10699,7 +10698,6 @@ NOVA: 1
           id: 'edit_basic',
           title: 'Основные',
           hint: 'Название, КБЖУ и порции',
-          icon: '✏️',
           component: ProductEditBasicStep,
           validate: () => true,
           hideHeaderNext: true,
@@ -10709,7 +10707,6 @@ NOVA: 1
           id: 'edit_extra',
           title: 'Дополнительно',
           hint: 'Расширенные значения',
-          icon: '🧬',
           component: ProductEditExtraStep,
           validate: () => true,
           hideHeaderNext: true
@@ -10718,7 +10715,6 @@ NOVA: 1
           id: 'portions',
           title: 'Порции',
           hint: 'Настройте порции',
-          icon: '🥣',
           component: PortionsStep,
           validate: () => true,
           hideHeaderNext: true
@@ -11304,7 +11300,6 @@ NOVA: 1
           id: 'search',
           title: searchStepTitle,
           hint: '',
-          icon: '',
           component: ProductSearchStep,
           getInitialData: () => ({
             selectedProduct: null,
@@ -11318,7 +11313,6 @@ NOVA: 1
           id: 'create',
           title: 'Новый продукт',
           hint: 'Вставьте строку с макросами',
-          icon: '➕',
           component: CreateProductStep,
           validate: () => true,
           hidden: true, // Скрытый шаг — не отображается в progress dots
@@ -11328,7 +11322,6 @@ NOVA: 1
           id: 'portions',
           title: 'Порции',
           hint: 'Добавьте удобные порции',
-          icon: '🥣',
           component: PortionsStep,
           validate: () => true,
           hidden: true,
@@ -11338,7 +11331,6 @@ NOVA: 1
           id: 'harm',
           title: 'Вредность',
           hint: 'Проверьте или измените',
-          icon: '🧪',
           component: HarmSelectStep,
           validate: () => true,
           hidden: true, // Скрытый шаг — показывается только при создании нового продукта
@@ -11348,7 +11340,6 @@ NOVA: 1
           id: 'grams',
           title: '',
           hint: '',
-          icon: '⚖️',
           component: GramsStep,
           validate: (data, stepData) => (data?.grams || stepData?.search?.grams || 0) > 0,
           hideHeaderNext: true // Скрываем кнопку в хедере — есть большая зелёная кнопка внизу
@@ -11565,7 +11556,6 @@ NOVA: 1
           id: 'grams',
           title: product?.name || 'Граммы',
           hint: '',
-          icon: '⚖️',
           component: GramsStep,
           validate: (data) => (data?.grams || 0) > 0,
           hideHeaderNext: true, // Скрываем кнопку в хедере — используем большую кнопку внизу

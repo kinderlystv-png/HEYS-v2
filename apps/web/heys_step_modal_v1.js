@@ -166,7 +166,7 @@
   }
 
   // === WheelPicker (переиспользуемый) ===
-  function WheelPicker({ values, value, onChange, label, suffix = '', currentSuffix = null, formatValue = null, wrap = true, height = null, compact = false }) {
+  function WheelPicker({ values, value, onChange, label, suffix = '', currentSuffix = null, formatValue = null, wrap = true, height = null, compact = false, large = false }) {
     const containerRef = useRef(null);
     const currentIndex = values.indexOf(value);
     const len = values.length;
@@ -174,9 +174,6 @@
     const displaySuffix = currentSuffix !== null ? currentSuffix : suffix;
     // formatValue — функция форматирования (например, для ведущего нуля)
     const fmt = formatValue || ((v) => v);
-
-    // Компактный режим (3 значения вместо 5)
-    const showFar = !compact && !height;
 
     // Циклический индекс
     const wrapIndex = (i) => ((i % len) + len) % len;
@@ -238,34 +235,20 @@
       if (newIndex !== currentIndex) onChange(values[newIndex]);
     }, [values, currentIndex, onChange, wrap, len]);
 
-    const handleClickPrev2 = useCallback(() => {
-      const newIndex = wrap ? wrapIndex(currentIndex - 2) : Math.max(0, currentIndex - 2);
-      if (newIndex !== currentIndex) onChange(values[newIndex]);
-    }, [values, currentIndex, onChange, wrap]);
-
-    const handleClickNext2 = useCallback(() => {
-      const newIndex = wrap ? wrapIndex(currentIndex + 2) : Math.min(len - 1, currentIndex + 2);
-      if (newIndex !== currentIndex) onChange(values[newIndex]);
-    }, [values, currentIndex, onChange, wrap, len]);
-
     // Индексы для отображения (с циклом)
-    const prev2Index = wrap ? wrapIndex(currentIndex - 2) : Math.max(0, currentIndex - 2);
     const prevIndex = wrap ? wrapIndex(currentIndex - 1) : Math.max(0, currentIndex - 1);
     const nextIndex = wrap ? wrapIndex(currentIndex + 1) : Math.min(len - 1, currentIndex + 1);
-    const next2Index = wrap ? wrapIndex(currentIndex + 2) : Math.min(len - 1, currentIndex + 2);
 
-    // Показывать ли соседние значения (для не-циклического режима скрываем края)
-    const showPrev2 = (wrap || currentIndex > 1) && showFar;
+    // На краю шкалы слот остаётся пустым — без иллюзии замыкания.
     const showPrev = wrap || currentIndex > 0;
     const showNext = wrap || currentIndex < len - 1;
-    const showNext2 = (wrap || currentIndex < len - 2) && showFar;
 
-    // Стиль для компактного режима
     const containerStyle = height ? { height: `${height}px` } : {};
+    const sizeClass = large ? 'mc-wheel-picker--large' : 'mc-wheel-picker--row';
     const compactClass = (compact || height) ? 'mc-wheel-picker--compact' : '';
 
     return React.createElement('div', {
-      className: `mc-wheel-picker ${compactClass}`.trim(),
+      className: `mc-wheel-picker ${sizeClass} ${compactClass}`.trim(),
       ref: containerRef,
       style: containerStyle,
       onTouchStart: handleTouchStart,
@@ -275,31 +258,20 @@
     },
       React.createElement('div', { className: 'mc-wheel-label' }, label),
       React.createElement('div', { className: 'mc-wheel-values' },
-        // Far prev (только если не compact)
-        showFar && React.createElement('div', {
-          className: 'mc-wheel-value mc-wheel-value--far',
-          onClick: handleClickPrev2
-        }, showPrev2 ? fmt(values[prev2Index]) + suffix : ''),
-        // Prev
         React.createElement('div', {
-          className: 'mc-wheel-value mc-wheel-value--prev',
-          onClick: handleClickPrev
+          className: 'mc-wheel-value mc-wheel-value--prev n',
+          onClick: showPrev ? handleClickPrev : undefined,
+          'data-dim': showPrev ? undefined : 'edge'
         }, showPrev ? fmt(values[prevIndex]) + suffix : ''),
-        // Current
-        React.createElement('div', { className: 'mc-wheel-value mc-wheel-value--current' },
+        React.createElement('div', { className: 'mc-wheel-value mc-wheel-value--current n' },
           fmt(value),
           displaySuffix && React.createElement('span', { className: 'mc-wheel-suffix' }, displaySuffix)
         ),
-        // Next
         React.createElement('div', {
-          className: 'mc-wheel-value mc-wheel-value--next',
-          onClick: handleClickNext
-        }, showNext ? fmt(values[nextIndex]) + suffix : ''),
-        // Far next (только если не compact)
-        showFar && React.createElement('div', {
-          className: 'mc-wheel-value mc-wheel-value--far',
-          onClick: handleClickNext2
-        }, showNext2 ? fmt(values[next2Index]) + suffix : '')
+          className: 'mc-wheel-value mc-wheel-value--next n',
+          onClick: showNext ? handleClickNext : undefined,
+          'data-dim': showNext ? undefined : 'edge'
+        }, showNext ? fmt(values[nextIndex]) + suffix : '')
       )
     );
   }
@@ -457,10 +429,6 @@
       id,
       title: config.title || id,
       hint: config.hint || '',
-      // Шапка иконку больше не рисует (см. mc-header-title ниже). Поле
-      // оставлено: его заполняют 600 с лишним регистраций шагов, и снос
-      // самих литералов — отдельная уборка, а не часть правки шапки.
-      icon: Object.prototype.hasOwnProperty.call(config, 'icon') ? (config.icon || '') : '',
       component: config.component,
       shouldShow: config.shouldShow || null,
       getInitialData: config.getInitialData || (() => ({})),

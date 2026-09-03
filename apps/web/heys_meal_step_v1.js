@@ -1065,7 +1065,6 @@
     registerStep('mealTime', {
       title: 'Новый приём',
       hint: '',
-      icon: '',
       component: MealTimeStepComponent,
       getInitialData: (ctx) => {
         // При редактировании берём начальные значения из context
@@ -1092,7 +1091,6 @@
     registerStep('mealMood', {
       title: 'Как вы сейчас',
       hint: '',
-      icon: '',
       allowSwipe: false,
       hideHeaderNext: true,
       component: MealMoodStepComponent,
@@ -1325,7 +1323,6 @@
       chevronBack: true,
       steps: ['mealTime'],  // Только 1 шаг — время и тип
       title: '',  // Без заголовка
-      icon: '',   // Без иконки
       showProgress: false,
       showStreak: false,
       showGreeting: false,
@@ -1397,7 +1394,6 @@
       chevronBack: true,
       steps: ['mealMood'],  // Только 1 шаг — оценки
       title: '',  // Без заголовка
-      icon: '',   // Без иконки
       showProgress: false,
       showStreak: false,
       showGreeting: false,
