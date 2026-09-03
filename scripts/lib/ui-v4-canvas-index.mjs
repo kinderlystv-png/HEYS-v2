@@ -122,7 +122,17 @@ export function resolveCanvasFrame(canvas, { label, oid } = {}) {
   if (expectedOid !== null) {
     const sameOid = frames.filter((frame) => frame.oid === expectedOid);
     if (sameOid.length > 1) {
-      throw new Error(`Canvas data-oid «${expectedOid}» is duplicated (${sameOid.length} frames).`);
+      const match = sameOid.filter((frame) => frame.identity === normalizedLabel);
+      if (match.length === 1) return match[0];
+      if (match.length > 1) {
+        throw new Error(
+          `Canvas data-oid «${expectedOid}» and label «${normalizedLabel}» is ambiguous (${match.length} frames).`,
+        );
+      }
+      const availableLabels = sameOid.map((frame) => frame.identity).join('», «');
+      throw new Error(
+        `Canvas data-oid «${expectedOid}» has no frame with label «${normalizedLabel}». Available: «${availableLabels}».`,
+      );
     }
     if (sameOid.length === 1) {
       const frame = sameOid[0];

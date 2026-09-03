@@ -468,7 +468,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     captureSelector: '#ui-v4-strength-builder-empty-host > .sb-root',
     canvasFrame: {
       file: 'strength-builder.v4.dc.html',
-      label: 'Конструктор · пусто',
+      label: 'Конструктор · пусто · плана нет',
       oid: 'Б1',
       palette: 'sand',
     },
