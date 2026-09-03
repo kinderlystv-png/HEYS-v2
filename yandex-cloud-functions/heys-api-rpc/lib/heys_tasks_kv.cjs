@@ -527,6 +527,227 @@ function mergeIndexValues(incoming, current) {
 }
 
 /**
+ * Предыдущий текст файла хранится рядом с текущим — одна версия, не история.
+ *
+ * Без него сервер умеет только выбрать победителя: две правки в разные места
+ * одного файла превращались в потерю одной из них, хотя спорить им не о чем.
+ * База даёт третью точку — общего предка, — и тогда непересекающиеся правки
+ * сливаются молча, а спорные по-прежнему отбиваются.
+ *
+ * Порог по размеру не для экономии места, а честности ради: без базы слияние
+ * недоступно, и файл ведёт себя ровно как до этой правки — отказ по ревизии.
+ * Активные файлы держатся ниже TASKS_ROTATE_TARGET_BYTES ротацией, так что
+ * порог задевает только то, что и без него слить не удалось бы.
+ */
+const TASKS_BASE_MAX_BYTES = 256 * 1024;
+
+/**
+ * Потолок на построчное сравнение: строк базы × строк стороны.
+ *
+ * Общие начало и конец отрезаются до сравнения, поэтому в живом файле сюда
+ * попадают десятки строк. Потолок стоит на патологию (файл переписан целиком),
+ * где точное сравнение стоило бы гигабайт: такой случай честнее отбить.
+ */
+const TASKS_MERGE_MAX_CELLS = 4 * 1000 * 1000;
+
+/**
+ * Текущее значение файла + предыдущий текст. Базу пишет только сервер: то,
+ * что прислал клиент, здесь снимается — иначе базой стало бы что угодно, и
+ * трёхстороннее слияние потеряло бы смысл.
+ */
+function withTasksBase(fileValue, currentValue) {
+  const next = { ...fileValue };
+  delete next.base;
+  const prevText = currentValue && typeof currentValue.text === 'string' ? currentValue.text : null;
+  const prevRev = Number(currentValue && currentValue.rev) || 0;
+  if (prevText !== null && prevRev > 0 && utf8ByteLength(prevText) <= TASKS_BASE_MAX_BYTES) {
+    next.base = { text: normalizeNewlines(prevText), rev: prevRev };
+  }
+  return next;
+}
+
+/**
+ * Построчная разница база → сторона как список замен `base[start..end)`.
+ *
+ * @returns {null|Array<{start:number,end:number,lines:string[]}>} null — если
+ *   расхождение слишком велико для точного сравнения.
+ */
+function diffLineOps(base, side) {
+  let head = 0;
+  const maxHead = Math.min(base.length, side.length);
+  while (head < maxHead && base[head] === side[head]) head += 1;
+  let tail = 0;
+  while (
+    tail < base.length - head
+    && tail < side.length - head
+    && base[base.length - 1 - tail] === side[side.length - 1 - tail]
+  ) tail += 1;
+  const a = base.slice(head, base.length - tail);
+  const b = side.slice(head, side.length - tail);
+  if (!a.length && !b.length) return [];
+  if (!a.length) return [{ start: head, end: head, lines: b }];
+  if (!b.length) return [{ start: head, end: head + a.length, lines: [] }];
+  if (a.length * b.length > TASKS_MERGE_MAX_CELLS) return null;
+
+  // Наибольшая общая подпоследовательность: длины суффиксов в одной матрице.
+  const w = b.length + 1;
+  const dp = new Int32Array((a.length + 1) * w);
+  for (let i = a.length - 1; i >= 0; i -= 1) {
+    for (let j = b.length - 1; j >= 0; j -= 1) {
+      dp[i * w + j] = a[i] === b[j]
+        ? dp[(i + 1) * w + (j + 1)] + 1
+        : Math.max(dp[(i + 1) * w + j], dp[i * w + (j + 1)]);
+    }
+  }
+
+  const ops = [];
+  let pendStart = -1;
+  let pendEnd = -1;
+  let pendLines = null;
+  const flush = () => {
+    if (pendStart < 0) return;
+    ops.push({ start: head + pendStart, end: head + pendEnd, lines: pendLines });
+    pendStart = -1;
+    pendLines = null;
+  };
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    if (i < a.length && j < b.length && a[i] === b[j]) {
+      flush();
+      i += 1;
+      j += 1;
+      continue;
+    }
+    if (pendStart < 0) {
+      pendStart = i;
+      pendEnd = i;
+      pendLines = [];
+    }
+    if (j < b.length && (i >= a.length || dp[i * w + (j + 1)] >= dp[(i + 1) * w + j])) {
+      pendLines.push(b[j]);
+      j += 1;
+    } else {
+      i += 1;
+      pendEnd = i;
+    }
+  }
+  flush();
+  return ops;
+}
+
+function sameLines(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+/**
+ * Трёхстороннее слияние markdown построчно.
+ *
+ * Сливается только то, где слияние однозначно: стороны правили разные куски
+ * базы либо сделали одну и ту же правку. Любое пересечение — отказ, а не
+ * маркеры конфликта в тексте: файл задачника читает не человек с git, а
+ * пуллер и инструменты, и `<<<<<<<` в нём хуже потери.
+ *
+ * Правки, начинающиеся в одной точке базы, считаются спорными, даже если
+ * формально не перекрываются: вставка перед переписанным блоком и сама
+ * перезапись дают два разных осмысленных результата, а выбирать между ними
+ * не наше дело.
+ */
+function mergeTasksText(baseText, currentText, incomingText) {
+  if (currentText === incomingText) return { ok: true, text: currentText };
+  if (baseText === currentText) return { ok: true, text: incomingText };
+  if (baseText === incomingText) return { ok: true, text: currentText };
+
+  const base = String(baseText).split('\n');
+  const ours = diffLineOps(base, String(currentText).split('\n'));
+  const theirs = diffLineOps(base, String(incomingText).split('\n'));
+  if (!ours || !theirs) return { ok: false, reason: 'merge_too_large' };
+
+  const out = [];
+  let pos = 0;
+  const copyUntil = (upto) => {
+    while (pos < upto) {
+      out.push(base[pos]);
+      pos += 1;
+    }
+  };
+  let oi = 0;
+  let ti = 0;
+  while (oi < ours.length || ti < theirs.length) {
+    const o = oi < ours.length ? ours[oi] : null;
+    const t = ti < theirs.length ? theirs[ti] : null;
+    if (o && t && o.start === t.start && o.end === t.end && sameLines(o.lines, t.lines)) {
+      copyUntil(o.start);
+      out.push(...o.lines);
+      pos = o.end;
+      oi += 1;
+      ti += 1;
+      continue;
+    }
+    if (o && t && (o.start === t.start || (o.start < t.end && t.start < o.end))) {
+      return { ok: false, reason: 'merge_conflict' };
+    }
+    const takeOurs = !t || (o && o.start < t.start);
+    const op = takeOurs ? o : t;
+    if (op.start < pos) return { ok: false, reason: 'merge_conflict' };
+    copyUntil(op.start);
+    out.push(...op.lines);
+    pos = op.end;
+    if (takeOurs) oi += 1; else ti += 1;
+  }
+  copyUntil(base.length);
+  return { ok: true, text: out.join('\n') };
+}
+
+/**
+ * Слияние целиковой записи с облачной, когда ревизии разошлись.
+ *
+ * Условие ровно одно и проверяется буквально: у нас есть предыдущая версия, и
+ * присланное сделано именно от неё. Сохранённая база — это текст ревизии
+ * `current.rev - 1`; клиент считал следующей ревизией `incoming.rev`, значит
+ * его предком была `incoming.rev - 1`. Общий предок есть только когда эти два
+ * числа совпали, то есть облако ушло вперёд ровно на одну запись.
+ *
+ * Отставание на две записи и больше сливать нельзя: база тогда новее предка
+ * клиента, и его правка, сделанная до базы, прочиталась бы как удаление —
+ * слияние молча выкинуло бы чужие строки. Такой случай отбивается, как и до
+ * появления базы.
+ *
+ * @returns {{ok:true,value:object}|{ok:false,reason:string}}
+ */
+function mergeTasksFileValue(incoming, current, nowMs) {
+  const currentRev = Number(current && current.rev) || 0;
+  const incomingRev = Number(incoming && incoming.rev) || 0;
+  if (currentRev <= 0 || incomingRev !== currentRev) return { ok: false, reason: 'no_common_base' };
+  const base = current && current.base;
+  const baseRev = Number(base && base.rev) || 0;
+  if (!base || typeof base.text !== 'string' || baseRev !== currentRev - 1) {
+    return { ok: false, reason: 'no_common_base' };
+  }
+  const currentText = typeof current.text === 'string' ? current.text : '';
+  const incomingText = typeof incoming.text === 'string' ? incoming.text : '';
+  const merged = mergeTasksText(
+    normalizeNewlines(base.text),
+    normalizeNewlines(currentText),
+    normalizeNewlines(incomingText),
+  );
+  if (!merged.ok) return merged;
+  const stamp = Number(nowMs) || Math.max(Number(incoming.updatedAt) || 0, Number(current.updatedAt) || 0);
+  return {
+    ok: true,
+    baseRev,
+    value: withTasksBase({
+      path: normalizePath(incoming.path || current.path),
+      text: merged.text,
+      rev: currentRev + 1,
+      updatedAt: stamp,
+    }, current),
+  };
+}
+
+/**
  * Основа слова: у длинных слов отбрасываются два последних символа.
  *
  * Это нужно для русского. Человек ищет «версия», а в журнале записано
@@ -5978,6 +6199,12 @@ module.exports = {
   isTasksFileKey,
   tasksWriteConflict,
   mergeIndexValues,
+  TASKS_BASE_MAX_BYTES,
+  TASKS_MERGE_MAX_CELLS,
+  withTasksBase,
+  diffLineOps,
+  mergeTasksText,
+  mergeTasksFileValue,
   searchFiles,
   RANK_WEIGHTS: {
     WORD_WEIGHT, SOURCE_MAX, RECENCY_MAX, RECENCY_HALFLIFE_DAYS, EXACT_BONUS, LINK_BONUS,

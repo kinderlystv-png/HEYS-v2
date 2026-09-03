@@ -802,16 +802,28 @@ function mergeBatchHungerExistingRows(items, currentByKey) {
  * пуша зеркала задачника (ревизия 789 → 790).
  *
  * Правила решаются модулем задачника, здесь только применение: файл с чужой
- * ревизией отбрасывается (fail closed — облако побеждает, локальная копия
- * переживёт потерю в git), индекс сливается по старшей ревизии на путь, текст
- * приводится к LF на этом входе так же, как на дельта-пути.
+ * ревизией сливается с облачным по сохранённой предыдущей версии, а если
+ * слияние неоднозначно — отбрасывается (fail closed — облако побеждает,
+ * локальная копия переживёт потерю в git); индекс сливается по старшей
+ * ревизии на путь, текст приводится к LF так же, как на дельта-пути.
+ *
+ * Индекс обрабатывается после файлов намеренно: слитый файл получает ревизию
+ * на единицу выше облачной, а присланный индекс знает только ту, что посчитал
+ * клиент. Оставить его как есть — значит записать файл, о котором пуллер
+ * узнает с ревизией ниже фактической.
  */
-function mergeBatchTasksExistingRows(items, currentByKey) {
-  const empty = { blocked: [], kept: Array.isArray(items) ? items : [], indexMerged: 0, normalized: 0 };
+function mergeBatchTasksExistingRows(items, currentByKey, nowMs) {
+  const empty = {
+    blocked: [], merged: [], kept: Array.isArray(items) ? items : [], indexMerged: 0, normalized: 0,
+  };
   if (!Array.isArray(items) || !currentByKey || typeof currentByKey.get !== 'function') return empty;
   const tasksKv = require('./lib/heys_tasks_kv.cjs');
+  const stamp = Number(nowMs) || Date.now();
   const blocked = [];
+  const merged = [];
   const kept = [];
+  let indexItem = null;
+  let indexCurrent = null;
   let indexMerged = 0;
   let normalized = 0;
   for (const it of items) {
@@ -822,10 +834,8 @@ function mergeBatchTasksExistingRows(items, currentByKey) {
     const current = currentByKey.get(it.k);
     const currentValue = current && current.v;
     if (it.k === tasksKv.INDEX_KEY) {
-      if (currentValue) {
-        it.v = tasksKv.mergeIndexValues(it.v, currentValue);
-        indexMerged += 1;
-      }
+      indexItem = it;
+      indexCurrent = currentValue;
       kept.push(it);
       continue;
     }
@@ -835,12 +845,27 @@ function mergeBatchTasksExistingRows(items, currentByKey) {
     }
     const conflict = tasksKv.tasksWriteConflict(it.v, currentValue);
     if (conflict) {
-      blocked.push({
+      const threeWay = tasksKv.mergeTasksFileValue(it.v, currentValue, stamp);
+      if (!threeWay.ok) {
+        blocked.push({
+          k: it.k,
+          reason: conflict.reason,
+          merge: threeWay.reason,
+          current_rev: conflict.currentRev,
+          incoming_rev: conflict.incomingRev,
+        });
+        continue;
+      }
+      it.v = threeWay.value;
+      merged.push({
         k: it.k,
-        reason: conflict.reason,
-        current_rev: conflict.currentRev,
+        path: it.v.path,
+        rev: it.v.rev,
+        base_rev: threeWay.baseRev,
         incoming_rev: conflict.incomingRev,
+        value: it.v,
       });
+      kept.push(it);
       continue;
     }
     const lf = tasksKv.normalizeNewlines(it.v.text);
@@ -848,9 +873,22 @@ function mergeBatchTasksExistingRows(items, currentByKey) {
       it.v = { ...it.v, text: lf };
       normalized += 1;
     }
+    it.v = tasksKv.withTasksBase(it.v, currentValue);
     kept.push(it);
   }
-  return { blocked, kept, indexMerged, normalized };
+  if (indexItem) {
+    if (indexCurrent) {
+      indexItem.v = tasksKv.mergeIndexValues(indexItem.v, indexCurrent);
+      indexMerged += 1;
+    }
+    if (merged.length) {
+      let next = tasksKv.ensureIndex(indexItem.v);
+      for (const m of merged) next = tasksKv.withIndexEntry(next, m.value, stamp);
+      indexItem.v = next;
+    }
+  }
+  for (const m of merged) delete m.value;
+  return { blocked, merged, kept, indexMerged, normalized };
 }
 
 /**
@@ -877,7 +915,7 @@ function blockTasksFileWrites(items) {
     }
     kept.push(it);
   }
-  return { blocked, kept, indexMerged: 0, normalized: 0 };
+  return { blocked, merged: [], kept, indexMerged: 0, normalized: 0 };
 }
 
 /** След отбитой записи задачника в data_loss_audit — вне транзакции батча. */
@@ -891,11 +929,35 @@ function logTasksStaleRevFireAndForget(clientId, blocked) {
       [
         clientId,
         blocked.map((b) => b.k),
-        blocked.map((b) => `batch_upsert_by_curator ${b.reason} cloud_rev=${b.current_rev} incoming_rev=${b.incoming_rev}`),
+        blocked.map((b) => `batch_upsert_by_curator ${b.reason} cloud_rev=${b.current_rev} incoming_rev=${b.incoming_rev}`
+          + (b.merge ? ` merge=${b.merge}` : '')),
       ]
     ).catch((e) => console.warn('[batch_upsert] tasks stale-rev audit insert failed:', e.message));
   } catch (e) {
     console.warn('[batch_upsert] tasks stale-rev audit insert failed:', e.message);
+  }
+}
+
+/**
+ * След слитой записи. Отдельной строкой и с allowed=TRUE: слияние проходит
+ * молча, а значит единственное место, где потом видно, что текст на проде
+ * собран из двух правок, а не прислан целиком, — этот журнал.
+ */
+function logTasksMergedFireAndForget(clientId, merged) {
+  if (!clientId || !Array.isArray(merged) || merged.length === 0) return;
+  try {
+    getPool('heys-api-rpc').query(
+      `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+       SELECT $1::uuid, t.k, 'tasks_three_way_merge', TRUE, t.r
+       FROM unnest($2::text[], $3::text[]) AS t(k, r)`,
+      [
+        clientId,
+        merged.map((m) => m.k),
+        merged.map((m) => `batch_upsert_by_curator base_rev=${m.base_rev} incoming_rev=${m.incoming_rev} saved_rev=${m.rev}`),
+      ]
+    ).catch((e) => console.warn('[batch_upsert] tasks merge audit insert failed:', e.message));
+  } catch (e) {
+    console.warn('[batch_upsert] tasks merge audit insert failed:', e.message);
   }
 }
 
@@ -3732,7 +3794,10 @@ async function handleRpcRequest(event, context) {
         }
 
         const applied = tasksKv.applyDeltaToFile(currentFile, mode, block, nowMs);
-        mergedFile = applied.file;
+        // Предыдущий текст кладём и здесь: без этого база отставала бы после
+        // каждой дельта-записи, и целиковая запись рядом теряла бы право на
+        // слияние ровно там, где задачник пишут чаще всего.
+        mergedFile = tasksKv.withTasksBase(applied.file, byKey[fileKey]);
         archivePaths = applied.archives.map((f) => f.path);
 
         let nextIndex = currentIndex;
@@ -4301,6 +4366,7 @@ async function handleRpcRequest(event, context) {
         console.warn('[batch_upsert_client_kv_by_curator] insights_feedback_merged:', insightsFeedbackMerged);
       }
       const tasksBlockedKeys = [];
+      const tasksMergedKeys = [];
       if (hasTasksBatchKey) {
         // Без текущих значений сверять ревизию не с чем, и «строки нет» здесь
         // значит «не смогли прочитать», а не «файла в облаке нет». Пропустить
@@ -4314,15 +4380,18 @@ async function handleRpcRequest(event, context) {
         items.length = 0;
         items.push(...tasksGuard.kept);
         tasksBlockedKeys.push(...tasksGuard.blocked);
-        if (tasksGuard.blocked.length || tasksGuard.indexMerged || tasksGuard.normalized) {
+        tasksMergedKeys.push(...tasksGuard.merged);
+        if (tasksGuard.blocked.length || tasksGuard.merged.length || tasksGuard.indexMerged || tasksGuard.normalized) {
           console.warn('[batch_upsert_client_kv_by_curator] tasks_guard:',
-            `blocked=${tasksGuard.blocked.length} index_merged=${tasksGuard.indexMerged} lf_normalized=${tasksGuard.normalized}`);
+            `blocked=${tasksGuard.blocked.length} merged=${tasksGuard.merged.length}`
+            + ` index_merged=${tasksGuard.indexMerged} lf_normalized=${tasksGuard.normalized}`);
         }
         // Аудит пишется отдельным соединением намеренно. Внутри транзакции он
         // не переживает ROLLBACK — а откатываемся мы ровно тогда, когда отбито
         // всё и записывать больше нечего: след потери исчезал бы в том самом
         // случае, ради которого его и заводили.
         logTasksStaleRevFireAndForget(targetClientId, tasksBlockedKeys);
+        logTasksMergedFireAndForget(targetClientId, tasksMergedKeys);
       }
       if (items.length === 0) {
         if (dayv2BatchTxStarted) {
@@ -4458,6 +4527,10 @@ async function handleRpcRequest(event, context) {
         // Задачник: часть файлов не записана — их ревизия разошлась с облачной.
         // Молча вернуть success нельзя: пишущий решит, что правка на месте.
         if (tasksBlockedKeys.length > 0) responseBody = { ...responseBody, tasks_blocked: tasksBlockedKeys };
+        // Слитые файлы: текст на проде не тот, что прислали, и ревизия ушла
+        // на единицу дальше ожидаемой. Пишущий обязан узнать об этом от нас —
+        // иначе его следующая запись пойдёт от текста, которого в облаке нет.
+        if (tasksMergedKeys.length > 0) responseBody = { ...responseBody, tasks_merged: tasksMergedKeys };
       }
       return {
         statusCode: 200,
