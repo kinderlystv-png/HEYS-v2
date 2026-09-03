@@ -1573,7 +1573,7 @@
 @media (hover: hover) {
   .aps-create-example-btn:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 10px var(--v4-line, rgba(0, 0, 0, 0.08));
     background: var(--v4-hero, #efe3cf);
   }
 }
