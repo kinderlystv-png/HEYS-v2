@@ -649,6 +649,37 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
   }
 
   /**
+   * Правка существующей карточки общей базы куратором.
+   *
+   * Тот же путь, которым это делает кураторский UI приложения
+   * (updateSharedProduct в apps/web/heys_add_product_step_v1.js): upsert по `id`
+   * с кураторским JWT. Через очередь модерации он не идёт и не должен —
+   * `shared_products_pending` это вход для клиентских публикаций
+   * (create_pending_product_by_session), а куратор в этой очереди разбирающий,
+   * а не подающий. Правка карточки, уже стоящей в каталоге, модерацией не
+   * гейтится нигде в продукте.
+   *
+   * Колонки обязаны быть из белого списка REST-шлюза, иначе ответ
+   * `invalid_insert_column` — payload собирает products.buildSharedProductPayload.
+   */
+  async function updateSharedProduct(bearer, productData) {
+    if (!productData || !productData.id) return { ok: false, error: 'shared_product_id_required' };
+    const query = new URLSearchParams({ upsert: 'true', on_conflict: 'id', select: 'id,name' });
+    const res = await measured(`${apiUrl}/rest/shared_products?${query.toString()}`, {
+      method: 'POST',
+      body: productData,
+      headers: { Authorization: `Bearer ${bearer}` },
+      timeoutMs,
+    });
+    if (res.status < 200 || res.status >= 300) {
+      const message = (res.json && (res.json.error || res.json.message)) || `shared_update_http_${res.status}`;
+      return { ok: false, error: String(message), status: res.status };
+    }
+    const rows = Array.isArray(res.json) ? res.json : [];
+    return { ok: true, row: rows[0] || null };
+  }
+
+  /**
    * Approve/reject. Ownership проверяет SQL, `p_curator_id` подставляется из
    * JWT на стороне функции. Ответ `status: 'race'` означает, что заявку уже
    * разобрали — это нормальный исход, а не ошибка.
@@ -836,6 +867,7 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     getTrialQueue, getQueueStats, activateTrial, rejectTrialRequest,
     getLeads, updateLeadStatus, getClientObservability,
     getPendingSharedProducts, moderatePendingProduct, publishSharedProduct, setSharedProductHidden,
+    updateSharedProduct,
   };
 }
 

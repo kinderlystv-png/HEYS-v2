@@ -2102,7 +2102,9 @@ test('правка продукта общей базы заводит личн�
   assert.equal(saved[0].overrides.name, undefined, 'ничего лишнего в overrides не попало');
   assert.equal(saved[0].in_my_list, true);
   assert.equal(res.structured.mode, 'linked');
-  assert.match(res.text, /общая карточка не изменилась/);
+  assert.equal(res.structured.scope, 'client');
+  assert.match(res.text, /личной версией этого клиента/);
+  assert.match(res.text, /Общая карточка не изменилась/);
 });
 
 test('правка без изменений и с неизвестными полями не пишет в облако', async () => {

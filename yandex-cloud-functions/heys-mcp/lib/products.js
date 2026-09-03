@@ -1400,6 +1400,67 @@ function computeProductBrandFingerprint(product) {
 }
 
 /**
+ * Колонки `shared_products`, которые принимает REST-шлюз.
+ *
+ * Список повторяет ALLOWED_COLUMNS.shared_products в heys-api-rest/index.js:
+ * колонка вне него отбивается там как `invalid_insert_column`, поэтому
+ * собирать payload «как получится» из карточки нельзя — у карточки есть и
+ * `kcal100`, и `carbs100`, и `recipe`, которых в таблице нет вовсе.
+ *
+ * `created_at`/`updated_at` сюда не входят намеренно: время правки ставит сам
+ * шлюз, и присланное значение затёрло бы его.
+ */
+const SHARED_PRODUCT_COLUMNS = [
+  'id', 'name', 'brand', 'brand_fingerprint', 'name_norm', 'fingerprint',
+  'barcode', 'barcodes', 'variant_of',
+  'simple100', 'complex100', 'protein100', 'badfat100', 'goodfat100', 'trans100', 'fiber100',
+  'gi', 'harm', 'category', 'portions', 'description',
+  'sodium100', 'omega3_100', 'omega6_100', 'nova_group', 'additives', 'nutrient_density',
+  'is_organic', 'is_whole_grain', 'is_fermented', 'is_raw',
+  'vitamin_a', 'vitamin_c', 'vitamin_d', 'vitamin_e', 'vitamin_k',
+  'vitamin_b1', 'vitamin_b2', 'vitamin_b3', 'vitamin_b6', 'vitamin_b9', 'vitamin_b12',
+  'calcium', 'iron', 'magnesium', 'phosphorus', 'potassium', 'zinc', 'selenium', 'iodine',
+];
+
+/** Колонка таблицы → поле карточки, если они называются по-разному. */
+const SHARED_COLUMN_SOURCE = { badfat100: 'badFat100', goodfat100: 'goodFat100' };
+
+/** Та же нормализация, что normalizeName в кураторском UI приложения. */
+function normalizeProductNameNorm(name) {
+  return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/ё/g, 'е');
+}
+
+/**
+ * Строка общей базы после правки — под upsert по `id`.
+ *
+ * Основа берётся из самой общей карточки, а не из объединённой с личными
+ * правками клиента: иначе правка общей карточки заодно опубликовала бы
+ * персональные overrides этого клиента всем остальным.
+ *
+ * Отпечатки пересчитываются, как это делает кураторский UI: по ним общая база
+ * отсекает дубликаты, и оставить их от прежних нутриентов значит завести
+ * второй такой же продукт при следующей публикации.
+ *
+ * Колонки, которых нет в исходной строке, в payload не попадают: upsert
+ * трогает только перечисленные, поэтому не пришедшее из базы остаётся как
+ * было, а не обнуляется.
+ */
+function buildSharedProductPayload(baseRow, patch) {
+  const merged = { ...(baseRow || {}), ...(patch || {}) };
+  const row = {};
+  for (const column of SHARED_PRODUCT_COLUMNS) {
+    const source = SHARED_COLUMN_SOURCE[column];
+    const value = source !== undefined && merged[source] !== undefined ? merged[source] : merged[column];
+    if (value !== undefined) row[column] = value;
+  }
+  row.name_norm = normalizeProductNameNorm(merged.name);
+  row.fingerprint = computeProductFingerprint(merged);
+  row.brand_fingerprint = computeProductBrandFingerprint(merged) || null;
+  if (row.brand === undefined) row.brand = merged.brand || null;
+  return row;
+}
+
+/**
  * Похож ли продукт на промышленный. Бренд или штрихкод — признак того, что
  * такую же упаковку купит и другой клиент, значит карточке место в общей базе.
  * Домашнее блюдо этих признаков не имеет, и в общий каталог ему не нужно:
@@ -1708,6 +1769,9 @@ module.exports = {
   applyProductPatchToOverlay,
   computeProductFingerprint,
   computeProductBrandFingerprint,
+  SHARED_PRODUCT_COLUMNS,
+  normalizeProductNameNorm,
+  buildSharedProductPayload,
   looksIndustrial,
   computeRecipeNutrients,
   normalizeRecipe,

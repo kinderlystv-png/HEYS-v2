@@ -286,6 +286,25 @@ function createTools({
   }
 
   /**
+   * Исходная строка общей базы — та, что лежит в каталоге, без личных правок
+   * клиента поверх неё.
+   *
+   * Карточка из `loadCatalog` для Type A уже объединена с `overrides`, и
+   * править общую базу от неё нельзя: личное уехало бы всем. Справочник тут
+   * же в кеше инстанса, поэтому отдельного круга это не стоит.
+   */
+  async function loadSharedBaseRow(sharedId) {
+    if (!sharedId) return null;
+    const res = await sharedCatalog.loadSharedProducts(api, { nowMs });
+    if (res.error) {
+      throw new ToolError('upstream_error', `Не удалось прочитать общую базу продуктов: ${res.error.message}`);
+    }
+    const wanted = String(sharedId);
+    const row = (res.rows || []).find((r) => r && String(r.id) === wanted);
+    return row ? products.normalizeSharedRow(row) : null;
+  }
+
+  /**
    * Контекст клиента одним куском — приложением к чтению, а не отдельным кругом.
    *
    * По трейсам 22.08: из 50 дневниковых вызовов 25 были чтением, и 13 из них —
@@ -3178,8 +3197,55 @@ function createTools({
       );
 
       const {
-        product_id: _id, query: _query, recipe: recipeArg, recipe_patch: recipePatchArg, ...fields
+        product_id: _id, query: _query, recipe: recipeArg, recipe_patch: recipePatchArg,
+        scope: scopeArg, ...fields
       } = args;
+
+      // ── Какую базу правим ────────────────────────────────────────────
+      // Куратор ведёт обе, и «всегда личная копия» было не осторожностью, а
+      // тихой потерей смысла: он исправляет ошибку в карточке продукта, а
+      // исправление видит один клиент — у остальных остаётся неверное число.
+      //
+      // По умолчанию правится та база, где ошибка и живёт: карточка общей базы,
+      // которую этот клиент не переписывал под себя, — общая. Есть личная
+      // версия (`user_modified`) — значит клиент сознательно держит своё, и
+      // правка общей до него всё равно не дойдёт: правим личную и говорим, как
+      // добраться до общей.
+      //
+      // Модерация этим не обходится: `shared_products_pending` — вход для
+      // клиентских публикаций, куратор в той очереди разбирающий, а не
+      // подающий. Правка карточки, уже стоящей в каталоге, не гейтится
+      // модерацией нигде в продукте — кураторский UI приложения делает ровно
+      // это тем же upsert'ом.
+      const scopeInput = scopeArg === undefined || scopeArg === null || scopeArg === ''
+        ? 'auto'
+        : String(scopeArg);
+      if (!['auto', 'client', 'shared'].includes(scopeInput)) {
+        throw new ToolError('invalid_scope', 'scope принимает auto, client или shared.');
+      }
+      const sharedId = target._custom
+        ? null
+        : (target.shared_origin_id || (target._source === 'shared' ? target.id : null));
+      // Клиентская сессия общую базу не пишет в принципе — REST-шлюз требует
+      // curator-JWT. Для неё «сама выбери базу» означает личную карточку, а не
+      // отказ на ровном месте.
+      const canEditShared = byCurator && typeof api.updateSharedProduct === 'function';
+      const scope = scopeInput === 'auto'
+        ? (canEditShared && sharedId && !target.user_modified ? 'shared' : 'client')
+        : scopeInput;
+      if (scope === 'shared' && !sharedId) {
+        throw new ToolError(
+          'not_a_shared_product',
+          `«${target.name}» — личная карточка клиента, в общей базе её нет, править там нечего. В общую базу попадают карточки, заведённые с публикацией: heys_create_product(share:true).`,
+        );
+      }
+      if (scope === 'shared' && !canEditShared) {
+        throw new ToolError(
+          'shared_edit_forbidden',
+          'Править общую базу может только куратор — из клиентской сессии доступна личная карточка (scope:"client").',
+        );
+      }
+
       if (recipeArg && recipePatchArg) {
         throw new ToolError(
           'recipe_and_patch',
@@ -3294,16 +3360,61 @@ function createTools({
         };
       }
 
+      // Сверяемся с той карточкой, которую и правим: у общей базы свои
+      // значения, и «уже содержит эти значения» по объединённой карточке
+      // отказало бы там, где общую как раз и надо дотянуть до личной.
+      const sharedBase = scope === 'shared' ? await loadSharedBaseRow(sharedId) : null;
+      if (scope === 'shared' && !sharedBase) {
+        throw new ToolError(
+          'shared_product_missing',
+          `Карточки ${sharedId} в общей базе сейчас нет — возможно, справочник ответил не полностью. Повтори запрос.`,
+        );
+      }
+      const editBase = sharedBase || target;
+
       let built;
       try {
-        built = products.buildProductPatch(target, fields, nowMs);
+        built = products.buildProductPatch(editBase, fields, nowMs);
       } catch (e) {
         throw new ToolError('invalid_field', `Не могу применить правку: ${e.message}.`);
       }
       if (!built.changed.length) {
         throw new ToolError('nothing_to_update', built.ignored.length
           ? `Эти поля у продукта не хранятся: ${built.ignored.join(', ')}.`
-          : `Карточка «${target.name}» уже содержит эти значения.`);
+          : `${scope === 'shared' ? 'Общая карточка' : 'Карточка'} «${editBase.name}» уже содержит эти значения.`);
+      }
+
+      const usedInRecipes = products.findRecipesUsingProduct(catalog, target);
+      const usedRecipesNote = usedInRecipes.length
+        ? ` Продукт входит в блюда: ${usedInRecipes.map((row) => `«${row.name}» (${row.product_id}, ${row.grams} г)`).join(', ')} — их КБЖУ считались при сохранении и сами не пересчитаются. Обнови каждое: heys_update_product(product_id=…, recipe_patch:{}).`
+        : '';
+
+      if (scope === 'shared') {
+        const payload = products.buildSharedProductPayload(sharedBase, built.patch);
+        const saved = await api.updateSharedProduct(payload);
+        if (!saved.ok) {
+          throw new ToolError('save_failed', `Сервер отклонил правку общей карточки: ${saved.error}`);
+        }
+        // Справочник кешируется на инстанс: без сброса следующий поиск в этом
+        // же вызове отдал бы старые числа и выглядел бы как несохранённая правка.
+        sharedCatalog.reset();
+        catalogPromise = null;
+        const shadowNote = target.user_modified
+          ? ` У этого клиента поверх карточки лежит своя версия — он изменения НЕ увидит, пока она есть. Поправить и её: scope:"client".`
+          : '';
+        return {
+          text: `Поправил ОБЩУЮ карточку «${editBase.name}»: ${built.changed.join('; ')}. Изменение видят все клиенты, у кого этот продукт из общей базы; личные копии, если их кто-то завёл, остаются прежними. Уже записанные приёмы не меняются — у них свой слепок нутриентов.${shadowNote}${usedRecipesNote}`,
+          structured: {
+            product_id: sharedBase.id,
+            name: built.patch.name || sharedBase.name,
+            scope: 'shared',
+            mode: 'shared',
+            updated: built.changed,
+            ignored: built.ignored,
+            client_override_shadows: target.user_modified ? true : undefined,
+            used_in_recipes: usedInRecipes.length ? usedInRecipes : undefined,
+          },
+        };
       }
 
       // Правка по имени — самый опасный вход: «поправь молоко» при трёх видах
@@ -3319,24 +3430,24 @@ function createTools({
       if (!saveRes.ok) throw new ToolError('save_failed', `Сервер отклонил правку продукта: ${saveRes.error}`);
       catalogPromise = null;
 
-      const note = mode === 'linked'
-        ? ' Продукт был из общей базы — правка сохранена как личная версия, общая карточка не изменилась.'
-        : mode === 'override'
-          ? ' Правка сохранена поверх карточки общей базы, у других клиентов она не изменится.'
-          : '';
-      const usedIn = products.findRecipesUsingProduct(catalog, target);
-      const usedNote = usedIn.length
-        ? ` Продукт входит в блюда: ${usedIn.map((row) => `«${row.name}» (${row.product_id}, ${row.grams} г)`).join(', ')} — их КБЖУ считались при сохранении и сами не пересчитаются. Обнови каждое: heys_update_product(product_id=…, recipe_patch:{}).`
+      const sharedHint = sharedId
+        ? ` Общая карточка не изменилась — если ошибка в ней самой, поправь её у всех: scope:"shared".`
         : '';
+      const note = mode === 'linked'
+        ? ` Продукт был из общей базы — правка сохранена личной версией этого клиента.${sharedHint}`
+        : mode === 'override'
+          ? ` Правка сохранена поверх карточки общей базы и видна только этому клиенту.${sharedHint}`
+          : '';
       return {
-        text: `Поправил «${target.name}»: ${built.changed.join('; ')}.${note}${usedNote}`,
+        text: `Поправил «${target.name}»: ${built.changed.join('; ')}.${note}${usedRecipesNote}`,
         structured: {
           product_id: target.id,
           name: built.patch.name || target.name,
+          scope: 'client',
           mode,
           updated: built.changed,
           ignored: built.ignored,
-          used_in_recipes: usedIn.length ? usedIn : undefined,
+          used_in_recipes: usedInRecipes.length ? usedInRecipes : undefined,
           catalog_size: catalog.all.length,
         },
       };
@@ -4664,11 +4775,16 @@ const TOOL_SCHEMAS = [
   },
   {
     name: 'heys_update_product',
-    description: 'Поправить карточку продукта в списке клиента: нутриенты, название, бренд, штрихкод, порции, гликемический индекс, вредность. Составное блюдо: recipe заводит или заменяет состав целиком, recipe_patch правит названные позиции («убери кукурузу», «положи 4 яйца», «замени майонез на сметану»), пустой recipe_patch пересчитывает КБЖУ по текущим карточкам ингредиентов. Перед правкой состава — heys_get_recipe: пересобирать items по памяти нельзя, теряются ингредиенты. КБЖУ пересчитаются из состава, rev поднимется, прошлые записи в дневнике не изменятся (это не ретро). Продукт из общей базы правится только для этого клиента: общая карточка не меняется. Калорийность пересчитывается сама. Клетчатка (fiber100) — отдельная от углеводов масса: в complex100 её включать не нужно.',
+    description: 'Поправить карточку продукта: нутриенты, название, бренд, штрихкод, порции, гликемический индекс, вредность. Куратор правит обе базы, и по умолчанию инструмент сам выбирает ту, где ошибка и живёт: карточка общей базы, которую этот клиент не переписывал под себя, правится в ОБЩЕЙ — исправление увидят все; личная карточка и карточка, у которой у клиента уже есть своя версия, правятся лично. Выбор всегда назван в ответе; переопределяется аргументом scope. Составное блюдо: recipe заводит или заменяет состав целиком, recipe_patch правит названные позиции («убери кукурузу», «положи 4 яйца», «замени майонез на сметану»), пустой recipe_patch пересчитывает КБЖУ по текущим карточкам ингредиентов. Перед правкой состава — heys_get_recipe: пересобирать items по памяти нельзя, теряются ингредиенты. КБЖУ пересчитаются из состава, rev поднимется, прошлые записи в дневнике не изменятся (это не ретро). Калорийность пересчитывается сама. Клетчатка (fiber100) — отдельная от углеводов масса: в complex100 её включать не нужно.',
     inputSchema: {
       type: 'object',
       properties: {
         product_id: { type: 'string', description: 'Точный id продукта из heys_search_products.' },
+        scope: {
+          type: 'string',
+          enum: ['auto', 'client', 'shared'],
+          description: 'Какую базу править. auto (по умолчанию) — общую, если продукт из неё и у клиента нет своей версии; иначе личную. client — только карточку этого клиента, общая не меняется. shared — общую карточку, её видят все клиенты; личные копии, если они у кого-то есть, остаются прежними, и уже записанные приёмы тоже (у них свой слепок). Рецепт (recipe/recipe_patch) в общей базе не живёт — только на личной карточке.',
+        },
         query: { type: 'string', description: 'Название продукта, если id неизвестен. При нескольких похожих инструмент попросит уточнить.' },
         name: { type: 'string', description: 'Новое название.' },
         brand: { type: 'string', description: 'Бренд. «нет» — очистить.' },
