@@ -46,7 +46,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   'checkin-morning': Object.freeze({
     mismatch: [19, '5ecfe313700e55d6'],
-    notApplicable: [49, '83426bd81e5dc908'],
+    notApplicable: [47, '7835c224a4ff3f10'],
   }),
   'curator-cabinet': Object.freeze({
     mismatch: [36, '7db49fa8901a80cd'],
@@ -65,7 +65,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [271, '8cd18417a00fbfe4'],
   }),
   'food-meal': Object.freeze({
-    mismatch: [42, 'b2f6f39764333217'],
+    mismatch: [40, 'c48fed9f2bdbf9ce'],
     notApplicable: [90, '6a63a2f0e841fe63'],
   }),
   gamification: Object.freeze({
