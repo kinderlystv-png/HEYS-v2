@@ -1865,7 +1865,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-ex-remove:hover {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   border-color: #fbbf24;
   color: #92400e;
 }
@@ -2036,7 +2036,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-ex-name-header-fav.is-on:hover {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
 }
 }
 
@@ -2759,7 +2759,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-ex-grid--inline .ct-wb-stepper-row>button.ct-wb-stepper-btn:first-of-type:hover:not(:disabled) {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   border-color: #fbbf24;
   color: #92400e;
 }
@@ -3175,7 +3175,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-stepper--ap-reps .ct-wb-stepper-row>button.ct-wb-stepper-btn:first-of-type:hover:not(:disabled) {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   border-color: #fbbf24;
   color: #92400e;
 }
@@ -4330,7 +4330,7 @@ html[data-theme-id="blue-dark"] {
 
 .game-streak-chip__icon {
   flex-shrink: 0;
-  color: #c67139;
+  color: var(--v4-tint-warm, #c67139);
 }
 
 .game-streak-chip__text {
@@ -4550,7 +4550,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 [data-theme$="dark"] .game-level-number {
-  color: #e2a468;
+  color: var(--v4-sand-act-soft, #e2a468);
 }
 
 [data-theme$="dark"] .game-rank-title,
@@ -4571,7 +4571,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 [data-theme$="dark"] .tabs--v4-primary .tab.tab-primary-nav.active {
-  color: #e2a468;
+  color: var(--v4-sand-act-soft, #e2a468);
   background: #2f2820;
   box-shadow: none;
 }
@@ -7072,7 +7072,7 @@ color: var(--v4-sand-ink, #201e1d);
   font-size: 13px;
   font-weight: 700;
   line-height: 1;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   text-align: center;
   flex: 1;
 }
@@ -7214,7 +7214,7 @@ color: var(--v4-sand-ink, #201e1d);
 .hdr-client-name {
   font-size: 12px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7223,7 +7223,7 @@ color: var(--v4-sand-ink, #201e1d);
 .hdr-client-firstname {
   font-size: 12px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
@@ -7249,7 +7249,7 @@ color: var(--v4-sand-ink, #201e1d);
 .hdr-client-tab-title-text {
   font-size: 22px;
   font-weight: 700;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   line-height: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -8268,7 +8268,7 @@ body:has(.offline-banner) .wrap {
    тем же --v4-tint, что и подсказки. Прошлый день — приглушённая версия той же
    капсулы, а не отдельное состояние со своим цветом; сиреневый #e4e0f2 в синем
    наборе никто не назначал, он получился. В песочных разница почти нулевая
-   (#f3e0d2 против #f6e6dd) — поэтому расхождение и прожило так долго.
+   (var(--v4-sand-tint, #f3e0d2) против var(--v4-tint, #f6e6dd)) — поэтому расхождение и прожило так долго.
 
    Контракт «вид чужого дня»: заливка капсулы И ОБОИХ КРУЖКОВ меняется на тинт.
    Кружки — соседи капсулы, поэтому тон ставится модификатором корня
@@ -8590,7 +8590,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
    База пикера даёт 8/12 и 12 — дореформенные числа, из-за них кнопка выходила
    заметно мельче кадра. */
 .date-picker-sheet .date-picker-btn.today-btn {
-  background: #c67139;
+  background: var(--v4-tint-warm, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   border-radius: 999px;
   padding: 15px;
@@ -8690,14 +8690,14 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   gap: 12px;
   padding: 13px 15px;
   border-radius: 18px;
-  background: #f3e0d2;
+  background: var(--v4-sand-tint, #f3e0d2);
 }
 
 .past-day-banner__text {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .past-day-banner__today {
@@ -8705,7 +8705,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   border: none;
   padding: 9px 14px;
   border-radius: 999px;
-  background: #c67139;
+  background: var(--v4-tint-warm, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   font-size: 11.5px;
   font-weight: 700;
@@ -8727,7 +8727,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   border: 1px solid var(--color-slate-200);
   border-radius: 10px;
   background: var(--v4-surface, #fff);
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   font-size: 20px;
   font-weight: 600;
   line-height: 1;
@@ -8821,7 +8821,7 @@ svg.date-picker-icon {
 /* Парный жёлтый фон для любой НЕ-сегодняшней даты (визуально согласован
    с капсулой «НЕ СЕГОДНЯ» слева и yesterday-quick-btn). */
 .date-picker:not(.date-picker--v4) .date-picker-trigger--not-today {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   border-color: #fde68a;
 }
 
@@ -8852,7 +8852,7 @@ svg.date-picker-icon {
 .date-picker-sub.date-picker-sub--today {
   font-size: 12px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   line-height: 1.1;
   white-space: nowrap;
 }
@@ -8868,7 +8868,7 @@ svg.date-picker-icon {
 .date-picker-main {
   font-size: 14px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   line-height: 1.2;
 }
 
@@ -8997,7 +8997,7 @@ svg.date-picker-icon {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: #f7efe2;
+  background: var(--v4-surface, #f7efe2);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   display: flex;
@@ -9034,7 +9034,7 @@ svg.date-picker-icon {
   text-align: center;
   font-size: 15px;
   font-weight: 600;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   text-transform: capitalize;
 }
 
@@ -9066,7 +9066,7 @@ svg.date-picker-icon {
 .date-picker-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   text-transform: capitalize;
 }
 
@@ -9181,7 +9181,7 @@ svg.date-picker-icon {
 .date-picker-tooltip {
   position: fixed;
   transform: translateX(-50%) translateY(-100%);
-  background: #1f2937;
+  background: var(--v4-sand-ink-slate, #1f2937);
   color: white;
   padding: 6px 10px;
   border-radius: 6px;
@@ -9199,7 +9199,7 @@ svg.date-picker-icon {
   left: 50%;
   transform: translateX(-50%);
   border: 5px solid transparent;
-  border-top-color: #1f2937;
+  border-top-color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 @keyframes tooltipFade {
@@ -9300,7 +9300,7 @@ svg.date-picker-icon {
   padding: 12px 14px;
   margin: 10px 0 6px;
   border-radius: 18px;
-  background: #f3e0d2;
+  background: var(--v4-sand-tint, #f3e0d2);
   font-size: 12px;
   font-weight: 600;
   line-height: 1.35;
@@ -9310,7 +9310,7 @@ svg.date-picker-icon {
 
 [data-theme$="dark"] .date-picker-sheet .date-picker-streak--v4 {
   background: #3a2620;
-  color: #e2a468;
+  color: var(--v4-sand-act-soft, #e2a468);
 }
 
 /* Легенда цветов */
@@ -10583,7 +10583,7 @@ body:has(:is(
 }
 
 /* Контракт settings-system, «шапка шторки»: крестик — круг 34 px фоном ПЕРВОЙ
-   поверхности (--c1). Стоял #f6e6dd — это --tint, подложка-подсказка. */
+   поверхности (--c1). Стоял var(--v4-tint, #f6e6dd) — это --tint, подложка-подсказка. */
 .hdr-settings-sheet__close {
   flex: none;
   width: 34px;
@@ -10618,7 +10618,7 @@ body:has(:is(
   min-height: 44px;
   padding: 13px 15px;
   border-radius: 18px;
-  background: #f6e6dd;
+  background: var(--v4-tint, #f6e6dd);
   border: 0;
   box-shadow: none;
 }
@@ -10639,11 +10639,11 @@ body:has(:is(
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .hdr-settings-sheet__group {
-  background: #f7efe2;
+  background: var(--v4-surface, #f7efe2);
   border-radius: 18px;
   overflow: hidden;
 }
@@ -10750,7 +10750,7 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__meta-text--accent {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .hdr-settings-sheet__dots {
@@ -10842,7 +10842,7 @@ body:has(:is(
   border: 0;
   border-radius: 999px;
   padding: 9px 12px;
-  background: #efe3cf;
+  background: var(--v4-hero, #efe3cf);
   color: var(--v4-ink, #201e1d);
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   cursor: pointer;
@@ -10916,8 +10916,8 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__chips--fab .hdr-settings-sheet__fab-chip.is-on {
-  background: #c67139;
-  color: #2b1608;
+  background: var(--v4-tint-warm, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
   box-shadow: none;
 }
 
@@ -10936,7 +10936,7 @@ body:has(:is(
 
 .hdr-settings-sheet__fab-ok {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .hdr-settings-sheet__fab-notice {
@@ -10946,13 +10946,13 @@ body:has(:is(
   margin-top: 12px;
   padding: 11px 13px;
   border-radius: 16px;
-  background: #f6e6dd;
+  background: var(--v4-tint, #f6e6dd);
 }
 
 .hdr-settings-sheet__fab-notice-icon {
   flex: none;
   display: flex;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .hdr-settings-sheet__fab-notice-text {
@@ -10984,11 +10984,11 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__diag-toggle.is-open {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .hdr-settings-sheet__diag-toggle.is-open .hdr-settings-sheet__chevron {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Контракт settings-system, «вид диагностики»: створка стоит вне ярусов,
@@ -10999,7 +10999,7 @@ body:has(:is(
   margin-top: 2px;
   padding: 14px 15px;
   border-radius: 18px;
-  background: #f7efe2;
+  background: var(--v4-surface, #f7efe2);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -11017,7 +11017,7 @@ body:has(:is(
   width: 100%;
   border: 0;
   border-radius: 999px;
-  background: #fffaf1;
+  background: var(--v4-bg, #fffaf1);
   box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.14);
   font: 700 12px/1 Figtree, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.62);
@@ -11070,7 +11070,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__tier {
-  color: #e2a468;
+  color: var(--v4-sand-act-soft, #e2a468);
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__group {
@@ -11094,7 +11094,7 @@ body:has(:is(
 [data-theme$="dark"] .hdr-settings-sheet__meta-text--accent,
 [data-theme$="dark"] .hdr-settings-sheet__diag-toggle.is-open,
 [data-theme$="dark"] .hdr-settings-sheet__diag-toggle.is-open .hdr-settings-sheet__chevron {
-  color: #e2a468;
+  color: var(--v4-sand-act-soft, #e2a468);
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__chevron {
@@ -11102,7 +11102,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__row--exit .hdr-settings-sheet__label {
-  color: #e2a468;
+  color: var(--v4-sand-act-soft, #e2a468);
 }
 
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__panel,
@@ -11130,8 +11130,8 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__chips--fab .hdr-settings-sheet__fab-chip.is-on {
-  background: #c67139;
-  color: #2b1608;
+  background: var(--v4-tint-warm, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-count {
@@ -11714,9 +11714,9 @@ body:has(:is(
    счётчика»). Была роль --v4-warn-2, а в песочном наборе она равна #c67139 —
    ровно тон обычного бейджа: критичный счётчик был визуально неотличим от
    обычного. Красный, который в продукте определён во всех шести наборах, —
-   --v4-bad-text; он на волос темнее канвасного --red (#a8382b против #b4442a,
+   --v4-bad-text; он на волос темнее канвасного --red (var(--v4-val-bad, #a8382b) против #b4442a,
    это канвасный --val-bad), своей роли под --red в палитре нет.
-   Классика при этом меняет тон с #dc2626 на #a8382b — названо вслух. */
+   Классика при этом меняет тон с #dc2626 на var(--v4-val-bad, #a8382b) — названо вслух. */
 .hdr-header-icon-btn--advice-critical .tab-advice-badge,
 .tab-advice-badge.is-critical {
   /* v4-intentional */
@@ -11750,7 +11750,7 @@ body:has(:is(
 
 [data-theme$="dark"] .tab-pending-badge {
   background: #f87171;
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   box-shadow: 0 4px 10px -8px rgba(248, 113, 113, 0.8);
 }
 
@@ -12495,7 +12495,7 @@ body:has(:is(
 
 /* Время приёма — ВЫДЕЛЕННОЕ */
 .meal-time-badge {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #92400e;
   font-weight: 700;
   font-size: 13px;
@@ -12715,7 +12715,7 @@ body:has(:is(
 
 /* Время приёма внутри карточки */
 .meal-time-badge-inside {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #92400e;
   font-weight: 600;
   font-size: 12px;
@@ -12912,7 +12912,7 @@ body:has(:is(
   border: 1px solid rgba(226, 232, 240, 0.85);
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.96) 100%);
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
   cursor: pointer;
   text-align: left;
@@ -12967,7 +12967,7 @@ body:has(:is(
 
 .meal-collapsed-plaque__type {
   min-width: 0;
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   font-size: 15px;
   font-weight: 800;
   line-height: 1.2;
@@ -13085,7 +13085,7 @@ body:has(:is(
   transition: opacity 200ms ease;
   font-size: 13px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--v4-sand-ink-slate, #1f2937);
   cursor: default;
 }
 
@@ -13105,7 +13105,7 @@ body:has(:is(
 
 .meal-sticky-bar__time {
   flex-shrink: 0;
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #b45309;
   padding: 4px 10px;
   border-radius: 8px;
@@ -13179,7 +13179,7 @@ body:has(:is(
 .meal-sticky-bar.meal-type-snack2 .meal-sticky-bar__time,
 .meal-sticky-bar.meal-type-snack3 .meal-sticky-bar__time,
 .meal-sticky-bar.meal-type-snack .meal-sticky-bar__time {
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #b45309;
 }
 
@@ -13580,7 +13580,7 @@ body:has(:is(
    мягкий жёлтый фон, чтобы визуально парно с голубым today-триггером. */
 .yesterday-quick-btn {
   border: 1px solid #fde68a;
-  background: #fef3c7;
+  background: var(--v4-sand-warn-bg, #fef3c7);
   color: #78350f;
   min-width: 33px;
   height: 33px;
@@ -14194,7 +14194,7 @@ body:has(:is(
 
   .swipeable-action-btn--move {
     background: #f59e0b;
-    color: #1f2937;
+    color: var(--v4-sand-ink-slate, #1f2937);
   }
 
   .swipeable-action-btn--copy {
@@ -16803,7 +16803,7 @@ body:has(:is(
 
 .profile-push-status__title {
   font-weight: 600;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .profile-push-status__meta {
@@ -16846,7 +16846,7 @@ body:has(:is(
   border-radius: 8px;
   border: 1px solid rgba(138, 74, 32, 0.16);
   background: var(--v4-bg, #fffaf1);
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .profile-push-input--num {
@@ -16929,8 +16929,8 @@ body:has(:is(
 }
 
 .profile-message--err {
-  background: #f7efe2;
-  color: #a1471c;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-warn-text, #a1471c);
   border-color: rgba(161, 71, 28, 0.18);
 }
 
@@ -16968,7 +16968,7 @@ body:has(:is(
 .profile-subscription-card__title {
   font-size: 17px;
   font-weight: 600;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .profile-subscription-card__days {
@@ -17001,7 +17001,7 @@ body:has(:is(
 .profile-goal-panel__title {
   font-weight: 600;
   font-size: 14px;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .profile-goal-panel__badge {
@@ -17050,7 +17050,7 @@ body:has(:is(
 .profile-goal-metric__val {
   font-size: 18px;
   font-weight: 700;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .profile-goal-metric__lbl {
@@ -17068,7 +17068,7 @@ body:has(:is(
 }
 
 .profile-goal-warn--high {
-  color: #a1471c;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .profile-hr-zone {
@@ -17199,7 +17199,7 @@ body:has(:is(
 }
 
 .profile-accordion .sound-settings-card__label--strong {
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
   font-weight: 500;
 }
 
@@ -17235,7 +17235,7 @@ body:has(:is(
 
 .profile-goal-progress__label {
   font-weight: 500;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .profile-goal-progress__status {
@@ -17279,7 +17279,7 @@ body:has(:is(
 .profile-advice-stats__count {
   font-weight: 600;
   font-size: 18px;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .profile-advice-stats__meta {
@@ -17307,7 +17307,7 @@ body:has(:is(
 .profile-weight-diff--up {
   margin-left: 8px;
   font-size: 13px;
-  color: #a1471c;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .profile-consent-row {
@@ -17414,7 +17414,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .profile-section td input:focus {
-  border-color: #e2a468;
+  border-color: var(--v4-sand-act-soft, #e2a468);
   box-shadow: 0 0 0 3px rgba(226, 164, 104, 0.14);
   background: rgba(255, 255, 255, 0.12);
 }
