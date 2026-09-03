@@ -133,8 +133,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [28, '1a861974e2dfd0f8'],
   }),
   'reports-insights': Object.freeze({
+    // 03.09 (вечер): две строки получили naKind handoff — «сведение зоны ·
+    // вердикт» и «канон в чужом файле», обе про состояние разбора, а не про
+    // продукт. Долг типизирован на две: «—» 136 → 134.
     mismatch: [127, '84410b3594ff4c7e'],
-    notApplicable: [136, '8d334efef1c9bb8a'],
+    notApplicable: [134, '0fcd6b63be04a0c0'],
   }),
   'service-curator': Object.freeze({
     mismatch: [2, 'b360becf15443345'],
