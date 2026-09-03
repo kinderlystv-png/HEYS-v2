@@ -77,7 +77,7 @@ const BASELINE = {
   '610-aps-meal-flow.css': 73,
   '611-aps-product-card.css': 19,
   '715-yesterday-verify.css': 37,
-  '720-predictive-insights.css': 210,
+  '720-predictive-insights.css': 209,
   // 160 -> 159: заморозка отставала на единицу ещё до правок 2 сентября —
   // тот же счёт даёт и версия файла из коммита. Реальный долг не менялся.
   '730-widgets-dashboard.css': 111,
