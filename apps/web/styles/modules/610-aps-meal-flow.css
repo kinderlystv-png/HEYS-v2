@@ -4485,6 +4485,65 @@ button.meal-quality-badge:active {
   text-wrap: pretty;
 }
 
+/* Кадр «Действие · копировать · чего не знаем». Непосчитанный продукт не
+   красится ошибкой: пустое — это ещё не введённые граммы, а не дефект. */
+.meal-transfer-v4__product--defect {
+  opacity: 0.62;
+}
+
+.meal-transfer-v4__product-reason {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--v4-ink-data); /* v4-intentional */
+}
+
+.meal-transfer-v4__product--defect .meal-transfer-v4__product-reason,
+.meal-transfer-v4__product--defect .meal-transfer-v4__product-meta {
+  color: var(--v4-val-bad); /* v4-intentional */
+}
+
+/* «Заполнить» ведёт в карточку продукта — там дефект и живёт. */
+.meal-transfer-v4__product-fix {
+  flex: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--v4-act); /* v4-intentional */
+  background: transparent;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act-text); /* v4-intentional */
+  cursor: pointer;
+}
+
+/* Выключенная галочка — та же рамка 2 px, но чернилами 20 %: элемент 19 кадра.
+   Своей тени не заводим — у базовой галочки уже есть border, и inset поверх
+   него дал бы двойное кольцо. */
+.meal-transfer-v4__native-control:disabled + .meal-transfer-v4__check {
+  border-color: rgba(var(--v4-ink-rgb), 0.2); /* v4-intentional */
+  background: transparent;
+  color: transparent;
+}
+
+/* Строка полноты под списком: появляется только при непосчитанном. */
+.meal-transfer-v4__completeness {
+  margin-top: 5px;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--v4-ink-3); /* v4-intentional */
+  text-wrap: pretty;
+}
+
 .meal-transfer-v4__product-meta {
   flex: 0 0 auto;
   color: var(--v4-ink-data); /* v4-intentional */

@@ -246,7 +246,25 @@
             .map((m, i) => ({ meal: m, index: i }))
             .filter(({ index }) => !sameDay || index !== sourceMealIndex);
 
-        const [selectedIds, setSelectedIds] = React.useState(() => new Set(allItems.map((it) => it.id)));
+        // Строка «ноль, пустое и дефект — три состояния, не одно». Number(x) || 0
+        // склеивал их в одно число, и «нет данных» показывалось нулём — то есть
+        // враньём. Настоящий ноль (вода, чёрный кофе, взвешено 0 г) остаётся
+        // обычным значением и копируется как все.
+        const itemState = React.useCallback((it) => {
+            const kcal100 = Number(it.kcal100);
+            if (!Number.isFinite(kcal100)) return 'defect';
+            const raw = it.grams;
+            const hasGrams = raw !== null && raw !== undefined && raw !== ''
+                && Number.isFinite(Number(raw));
+            return hasGrams ? 'ok' : 'empty';
+        }, []);
+
+        const copyableIds = React.useMemo(
+            () => allItems.filter((it) => itemState(it) === 'ok').map((it) => it.id),
+            [allItems, itemState],
+        );
+
+        const [selectedIds, setSelectedIds] = React.useState(() => new Set(copyableIds));
         const [targetType, setTargetType] = React.useState(candidateMeals.length > 0 ? 'existing' : 'new');
         const [dstMealIndex, setDstMealIndex] = React.useState(candidateMeals.length > 0 ? candidateMeals[0].index : null);
         const [itemGrams, setItemGrams] = React.useState(() => {
@@ -262,14 +280,17 @@
             });
         }, []);
 
-        const allSelected = selectedIds.size === allItems.length && allItems.length > 0;
+        // «Выбрать всё» — про то, что вообще можно скопировать: непосчитанное в
+        // набор не входит, иначе кнопка обещала бы то, чего не сделает.
+        const allSelected = selectedIds.size === copyableIds.length && copyableIds.length > 0;
 
         const toggleAll = () => {
             if (allSelected) setSelectedIds(new Set());
-            else setSelectedIds(new Set(allItems.map((it) => it.id)));
+            else setSelectedIds(new Set(copyableIds));
         };
 
         const toggleItem = (id) => {
+            if (!copyableIds.includes(id)) return;
             const next = new Set(selectedIds);
             if (next.has(id)) next.delete(id);
             else next.add(id);
@@ -310,6 +331,14 @@
         );
 
         // === Items section ===
+        const uncountable = allItems.length - copyableIds.length;
+        const pluralProducts = (n) => {
+            const mod10 = n % 10;
+            const mod100 = n % 100;
+            if (mod10 === 1 && mod100 !== 11) return 'продукт';
+            if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'продукта';
+            return 'продуктов';
+        };
         const itemsSection = React.createElement('div', { className: 'meal-transfer-v4__items' },
             React.createElement('div', { className: 'meal-transfer-v4__tier-row' },
                 React.createElement('span', null, `Продукты ${selectedIds.size}/${allItems.length}`),
@@ -321,23 +350,57 @@
             ),
             React.createElement('div', { className: 'meal-transfer-v4__product-list' },
                 allItems.map((it) => {
-                    const isSelected = selectedIds.has(it.id);
+                    const state = itemState(it);
+                    const isSelected = state === 'ok' && selectedIds.has(it.id);
                     const currentGrams = itemGrams[it.id] ?? Number(it.grams) ?? 0;
-                    const kcal = Math.round(((Number(it.kcal100) || 0) * currentGrams) / 100);
+                    const kcal = Math.round((Number(it.kcal100) * currentGrams) / 100);
+                    // Правая колонка называет состояние, а не подставляет ноль:
+                    // пустое — прочерками, дефект — словами и тоном плохого
+                    // значения (строка «вид · неизвестное в листе копирования»).
+                    const metaText = state === 'empty'
+                        ? '— г · — ккал'
+                        : (state === 'defect'
+                            ? `${currentGrams} г · нет калорийности`
+                            : `${currentGrams} г · ${kcal} ккал`);
+                    const reasonText = state === 'empty'
+                        ? 'Граммы ещё не введены — не копируется'
+                        : (state === 'defect'
+                            ? 'В карточке продукта нет калорийности — не копируется'
+                            : null);
                     return React.createElement('div', {
                         key: it.id,
-                        className: `meal-transfer-v4__product${isSelected ? ' is-selected' : ''}`,
+                        className: `meal-transfer-v4__product${isSelected ? ' is-selected' : ''}`
+                            + (state === 'empty' ? ' meal-transfer-v4__product--empty' : '')
+                            + (state === 'defect' ? ' meal-transfer-v4__product--defect' : ''),
                     },
                         React.createElement('label', { className: 'meal-transfer-v4__product-main' },
                             React.createElement('input', {
                                 type: 'checkbox',
                                 checked: isSelected,
                                 onChange: () => toggleItem(it.id),
+                                disabled: state !== 'ok',
                                 className: 'meal-transfer-v4__native-control',
                             }),
                             React.createElement('span', { className: 'meal-transfer-v4__check', 'aria-hidden': 'true' }, '✓'),
                             React.createElement('span', { className: 'meal-transfer-v4__product-name' }, it.name || 'Без названия'),
-                            React.createElement('span', { className: 'meal-transfer-v4__product-meta' }, `${currentGrams} г · ${kcal} ккал`),
+                            React.createElement('span', { className: 'meal-transfer-v4__product-meta' }, metaText),
+                        ),
+                        reasonText && React.createElement('div', {
+                            className: 'meal-transfer-v4__product-reason',
+                        },
+                            React.createElement('span', null, reasonText),
+                            // «Заполнить» ведёт туда, где дефект и чинится: калорийности
+                            // нет в карточке продукта, а не в этом приёме.
+                            state === 'defect' && React.createElement('button', {
+                                type: 'button',
+                                className: 'meal-transfer-v4__product-fix',
+                                onClick: (e) => {
+                                    e.stopPropagation();
+                                    const api = HEYS.AddProductStep;
+                                    if (api?.showEditProduct) api.showEditProduct(it);
+                                    else HEYS.Toast?.warning?.('Редактор продукта недоступен');
+                                },
+                            }, 'Заполнить'),
                         ),
                         isSelected && React.createElement('div', {
                             className: 'meal-transfer-v4__grams',
@@ -358,6 +421,13 @@
                     );
                 }),
             ),
+            // Строка «сумма не имеет права занижать»: число под списком всегда
+            // посчитано целиком, потому что непосчитанное отметить нельзя. Строка
+            // полноты появляется только когда что-то осталось за бортом — при
+            // полном списке её нет.
+            uncountable > 0 && React.createElement('div', {
+                className: 'meal-transfer-v4__completeness',
+            }, `${uncountable} ${pluralProducts(uncountable)} из ${allItems.length} не копируются — сумма считает только отмеченные`),
         );
 
         // === Targets section ===
@@ -411,10 +481,13 @@
             if (!dstMeal) return null;
             const dstKcal = (dstMeal.items || []).reduce((s, it) =>
                 s + Math.round(((Number(it.kcal100) || 0) * (Number(it.grams) || 0)) / 100), 0);
+            // Отмечено может быть только посчитанное, поэтому kcal100 здесь
+            // заведомо число и подстраховка «|| 0» больше не нужна: она бы
+            // вернула ту же ложь, от которой ушли в списке.
             const addedKcal = allItems.reduce((s, it) => {
                 if (!selectedIds.has(it.id)) return s;
                 const g = itemGrams[it.id] ?? Number(it.grams) ?? 0;
-                return s + Math.round(((Number(it.kcal100) || 0) * g) / 100);
+                return s + Math.round((Number(it.kcal100) * g) / 100);
             }, 0);
             return { dstName: dstMeal.name || 'Приём', dstKcal, addedKcal, totalKcal: dstKcal + addedKcal };
         }, [targetType, dstMealIndex, targetMeals, selectedIds, itemGrams, allItems]);
