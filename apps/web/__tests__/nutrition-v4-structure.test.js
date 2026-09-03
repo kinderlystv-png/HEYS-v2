@@ -99,11 +99,20 @@ describe('Nutrition tab v4 structure', () => {
 
   it('лист правки приёма собран из существующих обработчиков дневника', () => {
     expect(nutritionSource).toContain('function MealEditSheet');
+    // Контракт 03.09: свайп и copyItem/moveItem на строке продукта сняты;
+    // копирование/перенос продукта — отдельными листами из блока действий приёма.
     ['openTimeEditor', 'openEditGramsModal', 'openCopyMealModal',
       'openMoveMealModal', 'saveAsPreset', 'repeatTodayMeal', 'repeatYesterdayMeal',
-      'removeMeal', 'removeItem', 'copyItem', 'moveItem'].forEach((handler) => {
+      'removeMeal', 'removeItem'].forEach((handler) => {
       expect(nutritionSource, handler).toContain(handler);
     });
+    expect(nutritionSource).not.toMatch(/actions\.copyItem/);
+    expect(nutritionSource).not.toMatch(/actions\.moveItem/);
+    expect(nutritionSource).not.toContain('nutrition-v4-sheet__swipe');
+    expect(cssSource).not.toContain('nutrition-v4-sheet__swipe');
+    expect(nutritionSource).toContain('nutrition-v4-sheet__row-remove');
+    expect(nutritionSource).toMatch(/onRemove:\s*\(it\)\s*=>\s*actions\.removeItem/);
+    expect(nutritionSource).not.toMatch(/onCopy:|onMove:/);
     // Контракт nutrition-tab «действия приёма»: четыре строки подряд после
     // опциональных «Советы · N»; «Оценки приёма» сняты из листа.
     expect(nutritionSource).toContain('Повторить сегодня');
@@ -220,10 +229,24 @@ describe('Nutrition tab v4 structure', () => {
   });
 
   it('вторичный тон сплошной, чип выключен обводкой 2 px', () => {
-    expect(cssSource).toMatch(/--nut-dim: #6b5f4f;/);
-    expect(cssSource).toMatch(/--nut-dim: #5a6474;/);
-    expect(cssSource).toMatch(/--nut-dim: rgba\(242, 237, 230, 0\.62\);/);
-    expect(cssSource).toMatch(/--nut-dim: rgba\(232, 238, 246, 0\.62\);/);
+    const canvas = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/nutrition-tab.v4.dc.html',
+      ),
+      'utf8',
+    );
+    const canvasDim = /--dim:\s*(#[0-9a-f]{6})/i.exec(canvas)?.[1]?.toLowerCase();
+    const nutDimFor = (themeId) => {
+      const m = new RegExp(
+        `\\[data-theme-id='${themeId}'\\][\\s\\S]*?--nut-dim:\\s*([^;]+);`,
+      ).exec(cssSource);
+      return m?.[1]?.trim();
+    };
+    expect(nutDimFor('sand').toLowerCase()).toBe(canvasDim);
+    expect(nutDimFor('blue')).toMatch(/^#[0-9a-f]{6}$/i);
+    expect(nutDimFor('sand-dark')).toMatch(/^rgba\(/);
+    expect(nutDimFor('blue-dark')).toMatch(/^rgba\(/);
     expect(cssSource).toMatch(/\.nutrition-v4-chip\.is-off \{[^}]*inset 0 0 0 2px var\(--v4-act[,)]/);
   });
 

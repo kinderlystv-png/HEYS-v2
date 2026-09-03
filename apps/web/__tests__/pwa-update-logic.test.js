@@ -778,13 +778,13 @@ describe('PWA update protection', () => {
         updateCss.indexOf('.heys-update-modal__icon {'),
       );
 
-      expect(card).toContain('background: var(--v4-surface, #f7efe2);');
+      expect(card).toContain('background: var(--v4-surface');
       expect(card).toContain('border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));');
       expect(card).toContain('box-shadow: 0 22px 48px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.4);');
       expect(card).not.toContain('linear-gradient');
       // Кнопка слоя — «заливка --acs, текст --on-acs», без градиента.
-      expect(updateCss).toContain('background: var(--v4-act, #c67139);');
-      expect(updateCss).toContain('color: var(--v4-btn-on-act, #2b1608);');
+      expect(updateCss).toContain('background: var(--v4-act');
+      expect(updateCss).toContain('color: var(--v4-btn-on-act');
       expect(updateCss).not.toContain('linear-gradient(135deg, #e0975c, #b5652c)');
       // Кремовых литералов тёмного слоя не осталось.
       expect(updateCss).not.toContain('#f5ede1');

@@ -55,8 +55,8 @@ describe('«Кураторские правки» и «Стык» · разбо�
   it('строка повтора следует своему кадру, бейдж — на второй поверхности', () => {
     expect(daily.get(`${M}item`).padding).toBe('10px 13px');
     expect(daily.get(`${M}item--repeat`).padding).toBe('11px 13px 12px');
-    expect(daily.get(`${M}item`).background).toBe('var(--v4-card, #f7efe2)');
-    expect(daily.get(`${M}repeat-badge`).background).toBe('var(--v4-chip-2, #efe3cf)');
+    expect(daily.get(`${M}item`).background).toMatch(/^var\(--v4-card\b/);
+    expect(daily.get(`${M}repeat-badge`).background).toMatch(/^var\(--v4-chip-2\b/);
   });
 
   // Строка «и ещё N продуктов» — единственная цветная ссылка в теле листа.

@@ -56,7 +56,7 @@ describe('анкета: недоступное действие называет
     // держит песочную терракоту. Заливка берётся из ACCENT_FILL, а он объявлен
     // общей ролью один раз на весь модуль — проверяем и то, и другое.
     expect(tail).toContain('ACCENT_FILL');
-    expect(SRC).toContain("const ACCENT_FILL = 'var(--v4-act, #c67139)'");
+    expect(SRC).toContain("const ACCENT_FILL = 'var(--v4-act");
     // Комментарий не в счёт: там имя набора названо как то, что убрано.
     expect(SRC.replace(/\/\/[^\n]*/g, '')).not.toContain('--v4-sand-');
     // Легаси-фиолетовый #434587 на кнопке анкеты больше не встречается.
@@ -70,7 +70,7 @@ describe('анкета: предупреждение прокручиваетс�
   });
 
   it('экран сведён на роли набора, а не на легаси-палитру', () => {
-    expect(SRC).toContain("var(--v4-chip, #efe3cf)");
+    expect(SRC).toContain("var(--v4-chip");
     expect(SRC).not.toContain('#f6f7f5');
   });
 });

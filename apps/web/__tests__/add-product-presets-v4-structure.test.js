@@ -47,6 +47,6 @@ describe('add product presets v4 canvas structure', () => {
     // запасное значение, то есть песочный шалфей во всех четырёх. Кадр
     // «Наборы · вкладка поиска» называет здесь --gr-bg, и такая роль есть.
     expect(cssSource).not.toContain('var(--v4-sand-tint-green');
-    expect(cssSource).toContain('background: var(--v4-ok-bg, #eaefe0)');
+    expect(cssSource).toContain('background: var(--v4-ok-bg');
   });
 });

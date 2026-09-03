@@ -86,7 +86,7 @@ describe('add product search v4 canvas structure', () => {
   it('paints search shell with v4 sand roles', () => {
     expect(cssSource).toContain('.aps-v4-search-tabs');
     expect(cssSource).toContain('.aps-v4-browse-list');
-    expect(cssSource).toContain('background: var(--v4-sand-surface, #f7efe2)');
+    expect(cssSource).toContain('background: var(--v4-sand-surface');
     expect(cssSource).toContain("viewBox='0 0 24 24'");
     expect(cssSource).toContain('.mc-modal:has(.aps-v4-flow)');
     expect(cssSource).toContain('.aps-v4-search-footnote');

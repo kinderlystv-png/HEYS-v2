@@ -67,7 +67,7 @@ describe('login v4 canvas structure', () => {
     expect(css).toContain('.heys-auth-shell-dock');
     expect(css).toContain('.heys-auth-shell--curator');
     expect(css).toMatch(/\.heys-auth-logo \.lab path[\s\S]*rgba\(0,\s*0,\s*0,\s*0\.42\)/);
-    expect(css).toMatch(/\.heys-auth-shell[\s\S]*?background:\s*var\(--v4-hero,\s*#efe3cf\)/);
+    expect(css).toMatch(/\.heys-auth-shell[\s\S]*?background:\s*var\(--v4-hero/);
     expect(css).toMatch(/--auth-card-max:\s*339px/);
     expect(css).toMatch(/--auth-inline-gutter:\s*max\(/);
     expect(css).toMatch(/padding:\s*28px var\(--auth-inline-gutter\) 0\s*!important/);

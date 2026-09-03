@@ -119,7 +119,7 @@ describe('«Вход» · разбор кадров канваса', () => {
     // идти набором. До 31 августа здесь стоял голый #f7efe2, и тест его
     // же и сторожил — то есть закреплял песочную клавишу на синем наборе.
     expect(rules.get('html .heys-auth-key.heys-auth-key--delete').background)
-      .toBe('var(--v4-surface, #f7efe2)');
+      .toMatch(/^var\(--v4-surface\b/);
     // «вид слота ошибки»: одна строка 11,5 px/600, без заливки и обводки.
     expect(rules.get('.heys-auth-error')['font-size']).toBe('11.5px');
     expect(rules.get('.heys-auth-error')['font-weight']).toBe('600');

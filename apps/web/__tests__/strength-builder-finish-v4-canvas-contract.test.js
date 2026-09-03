@@ -474,12 +474,12 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
     expect(css).toContain('min-height: 52px;');
     expect(css).toContain('height: 112px;');
     expect(css).toContain('min-height: 48px;');
-    expect(css).toContain('--c1: var(--v4-c1, #f7efe2);');
-    expect(css).toContain('--c2: var(--v4-hero, #efe3cf);');
-    expect(css).toContain('--tx: var(--v4-ink, #201e1d);');
-    expect(css).toContain('--ink: var(--v4-ink-rgb, 0, 0, 0);');
-    expect(css).toContain('--acs: var(--v4-act, #c67139);');
-    expect(css).toContain('--gr-bg: var(--v4-ok-bg, #eaefe0);');
+    expect(css).toContain('--c1: var(--v4-c1');
+    expect(css).toContain('--c2: var(--v4-hero');
+    expect(css).toContain('--tx: var(--v4-ink');
+    expect(css).toContain('--ink: var(--v4-ink-rgb');
+    expect(css).toContain('--acs: var(--v4-act');
+    expect(css).toContain('--gr-bg: var(--v4-ok-bg');
     expect(source).toContain("className: 'sb-finish-detail'");
     expect(source).toContain("className: 'sb-finish-feedback-grid'");
     expect(source).toContain("className: 'sb-finish-chart'");

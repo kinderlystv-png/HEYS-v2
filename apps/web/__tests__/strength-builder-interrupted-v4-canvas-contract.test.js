@@ -33,15 +33,24 @@ describe('strength builder · M7 interrupted-session v4 canvas contract', () => 
     expect(source).toContain("h('span', null, 'Сейчас')");
     expect(source).toContain("}, 'Продолжить')");
     expect(source).toContain("'Завершить в ' + fmtTime(lastMarkAt)");
+    expect(source).toContain('Таймер отдыха вы не запускали — ждать нечего.');
+    expect(source).toContain('Таймер отдыха ещё идёт — осталось ');
+    expect(source).toContain('Таймер отдыха истёк, пока вас не было, и заново не запускается.');
+    expect(source).toContain('Пауза больше 45 минут бывает и без таймера:');
+    expect(source).toContain('Редкий случай: таймер сохранился и не истёк.');
     expect(source).toContain('Разрыв больше 45 минут — и второй кнопкой предлагаем закрыть тренировку временем последней отметки, а не текущим:');
     expect(source).toContain('Длительность в итогах всегда считается от первой отметки до последней.');
     expect(source).toContain('breakSec > 45 * 60');
+    expect(source).toContain('closeIconButton(onClose, \'Закрыть конструктор\')');
   });
 
   it('uses canvas geometry and palette tokens for the decision surface', () => {
     expect(cssRule('.sb-interrupted-scroll')).toContain('padding: 6px 18px 18px;');
     expect(cssRule('.sb-interrupted-copy')).toContain('font: 600 12.5px/1.55 Figtree');
     expect(cssRule('.sb-interrupted-head .sb-head-sub')).toContain('color: var(--v4-ink-data,');
+    expect(cssRule('.sb-interrupted-head .sb-icon-btn--close')).toContain('width: 44px;');
+    expect(cssRule('.sb-interrupted-head .sb-icon-btn--close')).toContain('height: 44px;');
+    expect(cssRule('.sb-interrupted-head .sb-icon-btn--close')).toContain('margin: -10px 2px -10px -10px;');
     expect(cssRule('.sb-interrupted-meta')).toContain('margin-top: 12px;');
     expect(cssRule('.sb-interrupted-meta')).toContain('padding: 2px 16px;');
     expect(cssRule('.sb-interrupted-meta')).toContain('border-radius: 20px;');
@@ -51,7 +60,7 @@ describe('strength builder · M7 interrupted-session v4 canvas contract', () => 
     expect(cssRule('.sb-interrupted-actions')).toContain('gap: 7px;');
     expect(cssRule('.sb-interrupted-actions')).toContain('margin-top: 12px;');
     expect(cssRule('.sb-interrupted-actions .sb-btn')).toContain('flex: 1;');
-    expect(cssRule('.sb-interrupted-actions .sb-btn')).toContain('background: var(--v4-chip-2, #efe3cf);');
+    expect(cssRule('.sb-interrupted-actions .sb-btn')).toMatch(/background:\s*var\(--v4-chip-2\b/);
     expect(cssRule('.sb-interrupted-actions .sb-btn')).toContain('color: var(--v4-muted, rgba(var(--v4-ink-rgb), .58));');
     expect(css).not.toContain('var(--v4-c2');
     expect(cssRule('.sb-interrupted-actions .sb-btn.is-accent')).toContain('background: var(--acs,');

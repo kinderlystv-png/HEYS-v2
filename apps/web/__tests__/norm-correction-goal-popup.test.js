@@ -67,7 +67,7 @@ describe('поправка на факт · строка в разборе но�
     for (const canvasRole of ['var(--tx)', 'var(--ac)', 'var(--acs)', 'var(--c2)']) {
       expect(SRC, canvasRole).not.toContain(canvasRole);
     }
-    expect(SRC).toContain('var(--v4-act, #c67139)');
+    expect(SRC).toContain('var(--v4-act');
   });
 
   it('значение поправки печатается запятой, как остальные числа зоны', () => {

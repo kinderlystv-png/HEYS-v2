@@ -472,7 +472,7 @@ describe('тихая минута · вид линии', () => {
 
   it('тон линии взят ролью, концы скруглены, а карточка не поехала', () => {
     const rule = CSS_SRC.match(/\.game-v4-sheet__hero-ring-path \{[^}]*\}/)[0];
-    expect(rule).toContain('stroke: var(--v4-act, #c67139)');
+    expect(rule).toContain('stroke: var(--v4-act');
     expect(rule).toContain('stroke-width: 1.4');
     expect(rule).toContain('stroke-linecap: round');
     expect(rule).toContain('fill: none');

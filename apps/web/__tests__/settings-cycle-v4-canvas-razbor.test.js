@@ -60,9 +60,11 @@ const SETTINGS_LIST = [
 const SETTINGS_CHIPS = [
   [16, `${H}fab-card`, ['radius', 'padding']],
   [17, `${H}fab-lead`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [21, `${H}fab-count`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [23, `${H}fab-notice`, ['align', 'gap', 'background', 'radius', 'padding', 'marginTop']],
-  [25, `${H}fab-notice-text`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [21, `${H}fab-meta`, ['align', 'justify', 'gap', 'marginTop']],
+  [22, `${H}fab-count`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [23, `${H}fab-ok`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [24, `${H}fab-notice`, ['align', 'gap', 'background', 'radius', 'padding', 'marginTop']],
+  [26, `${H}fab-notice-text`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 const SETTINGS_DIAGNOSTICS = [
@@ -94,7 +96,7 @@ const CYCLE_CARD = [
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 22;
+const COVERAGE_FLOOR = 24;
 
 describe('«Настройки» и «Цикл» · разбор кадров канваса', () => {
   const settingsRazbor = readRazbor(fs.readFileSync(path.join(PACK, 'settings-system.v4.dc.html'), 'utf8'));
@@ -141,11 +143,11 @@ describe('«Настройки» и «Цикл» · разбор кадров к
     })).toEqual([]);
   });
 
-  // Строка «вид · карточка дня»: «пустая — фон --c1… заполненная — фон --c2».
-  // Заполненная стояла на фоне экрана и выходила светлее пустой.
-  it('заполненная карточка периода темнее пустой, а не светлее', () => {
-    expect(dailyRules.get(C).background).toBe('var(--v4-sand-surface, #f7efe2)');
-    expect(dailyRules.get(`${C}--filled`).background).toBe('var(--v4-chip-2, #efe3cf)');
+  // Строка «вид · карточка дня» (2 сентября): пустая и заполненная на одной
+  // поверхности --c1, иначе бейдж «+10 % вода» сливается с --c2.
+  it('заполненная карточка периода на той же поверхности, что и пустая', () => {
+    expect(dailyRules.get(C).background).toMatch(/^var\(--v4-sand-surface\b/);
+    expect(dailyRules.get(`${C}--filled`).background).toMatch(/^var\(--v4-sand-surface\b/);
   });
 
   // Кадр «Настройки · чипы быстрых действий», элемент 22.

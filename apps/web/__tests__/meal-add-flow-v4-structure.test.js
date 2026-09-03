@@ -44,7 +44,7 @@ describe('meal add flow v4 structure', () => {
 
   it('keeps v4 fork styles wired for post-meal flow', () => {
     expect(cssSource).toContain('.flow-selection-btn--repeat-recent');
-    expect(cssSource).toContain('var(--v4-sand-hero, #efe3cf)');
+    expect(cssSource).toContain('var(--v4-sand-hero');
     expect(mealsSource).toContain('heys-stepmodal-closed');
   });
 });

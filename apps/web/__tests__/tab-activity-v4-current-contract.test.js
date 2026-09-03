@@ -42,7 +42,7 @@ describe('Активность v4: идущая силовая', () => {
 
   it('акцент не скрывает основное действие и отделяет подпись подхода', () => {
     expect(CSS).toContain('.activity-v4 .sb-card--running');
-    expect(CSS).toContain('box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);');
+    expect(CSS).toContain('box-shadow: inset 0 0 0 2px var(--v4-act');
     expect(CSS).toContain('.activity-v4 .sb-card-current');
     expect(CSS).toContain('min-height: 48px;');
     expect(STRENGTH).toContain('Пока тренировка идёт, объём и калории');

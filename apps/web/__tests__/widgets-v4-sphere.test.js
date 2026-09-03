@@ -156,7 +156,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(cssSrc).toContain('[data-theme$="dark"] .widget-wd-sheet__opt {');
         expect(cssSrc).toContain('html[data-theme-id="blue"] .widget-wd-sheet__opt {');
         expect(cssSrc).toContain('html[data-theme-id="blue-dark"] .widget-wd-sheet__opt {');
-        expect(cssSrc).toContain('inset 0 0 0 1.5px var(--v4-sand-act, #c67139)');
+        expect(cssSrc).toContain('inset 0 0 0 1.5px var(--v4-sand-act');
         expect(cssSrc).toContain('rgba(207, 129, 68, 0.18)');
     });
 

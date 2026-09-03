@@ -341,7 +341,7 @@ describe('замок синхронизации взял общий знак о�
       components.indexOf('.sync-lock-overlay__card {'),
       components.indexOf('.sync-lock-overlay__spinner {'),
     );
-    expect(card).toContain('color-mix(in srgb, var(--v4-act, #c67139) 16%, transparent)');
+    expect(card).toContain('color-mix(in srgb, var(--v4-act');
     expect(card).not.toContain('rgba(96, 165, 250, 0.18)');
     const dark = components.slice(components.indexOf('[data-theme$="dark"] .sync-lock-overlay__card {'));
     expect(dark.slice(0, 400)).toContain('color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent)');

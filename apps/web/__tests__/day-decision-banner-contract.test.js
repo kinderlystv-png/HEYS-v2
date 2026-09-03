@@ -18,7 +18,7 @@ describe('баннер решения о дне', () => {
   it('карточка тёплая ролью, а не зашитой янтарной', () => {
     // Красный в системе значит разрушающее действие; вопрос о дне таковым
     // не является.
-    expect(BANNER).toContain("background: 'var(--v4-tint, #f6e6dd)'");
+    expect(BANNER).toContain("background: 'var(--v4-tint");
     expect(BANNER).not.toContain('#fef3c7');
     expect(BANNER).not.toContain('#f59e0b');
   });

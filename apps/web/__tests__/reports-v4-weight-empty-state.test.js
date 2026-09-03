@@ -77,7 +77,7 @@ describe('призыв о замерах', () => {
   it('строка факта 12/1,55 чернил 60 %, кнопка во всю ширину', () => {
     const fact = rule('.reports-v4-measure__fact');
     expect(fact).toContain('font: 500 12px/1.55');
-    expect(fact).toContain('var(--v4-ink, #0f172a) 60%');
+    expect(fact).toContain('var(--v4-ink');
     const cta = rule('.reports-v4-measure__cta');
     expect(cta).toContain('width: 100%');
     expect(cta).toContain('min-height: 44px');

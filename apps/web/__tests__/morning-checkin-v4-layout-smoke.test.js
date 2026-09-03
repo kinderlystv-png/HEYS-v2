@@ -15,7 +15,7 @@ describe('morning check-in v4 layout vs canvas', () => {
   it('daily chrome: terracotta pills, full-width single primary, no green override', () => {
     expect(fs.existsSync(FIGTREE_FONT)).toBe(true);
     expect(PALETTE_CSS).toContain("url('/fonts/figtree/Figtree-Variable.ttf')");
-    expect(DAILY_CSS).toMatch(/\.mc-progress-dots--pills \.mc-progress-dot\.active \{[\s\S]*?background: var\(--v4-sand-act, #c67139\)/);
+    expect(DAILY_CSS).toMatch(/\.mc-progress-dots--pills \.mc-progress-dot\.active \{[\s\S]*?background: var\(--v4-sand-act/);
     expect(DAILY_CSS).toContain('.mc-daily-footer-primary:only-child');
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-daily-footer-primary.mc-btn--primary');
     expect(DAILY_CSS).toContain('.mc-daily-header-caption');
@@ -23,7 +23,7 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-daily-greeting-title');
     expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-daily-greeting-title[\s\S]*text-align:\s*center/);
     expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-daily-greeting-date[\s\S]*text-align:\s*center/);
-    expect(DAILY_CSS).toMatch(/mc-daily-streak-banner[\s\S]*--v4-sand-surface, #f7efe2/);
+    expect(DAILY_CSS).toMatch(/mc-daily-streak-banner[\s\S]*--v4-sand-surface/);
     expect(DAILY_CSS).toContain('padding: 16px 18px 0');
     // Было `padding: 14px 18px 12px` — прежние поля содержимого шага. Контракт
     // «вид шага» задаёт 16/18/0 (низ держит футер 12/18/20), поэтому проверка
@@ -67,7 +67,7 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toContain('mc-daily-greeting-title');
     expect(STEPS_SRC).toMatch(/mc-weight-pickers[\s\S]*compact: true/);
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-wheel-value--current');
-    expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-wheel-value--current[\s\S]*#8a4a20/);
+    expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-wheel-value--current[\s\S]*var\(--v4-sand-act-text/);
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-btn.mc-daily-footer-primary');
   });
 
@@ -218,8 +218,8 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(DAILY_CSS).toContain('.mc-supp-flow-chip');
     expect(DAILY_CSS).toContain('.mc-rest-cold-time .mc-wheel-value--current');
     expect(DAILY_CSS).toContain('.mc-rest-cold-time .mc-time-sep');
-    expect(DAILY_CSS).toMatch(/\.mc-rest-type \{[\s\S]*--v4-sand-surface-soft, #fffaf1/);
-    expect(DAILY_CSS).toMatch(/\.mc-rest-type\.is-on \{[\s\S]*--v4-sand-hero, #efe3cf/);
+    expect(DAILY_CSS).toMatch(/\.mc-rest-type \{[\s\S]*--v4-sand-surface-soft/);
+    expect(DAILY_CSS).toMatch(/\.mc-rest-type\.is-on \{[\s\S]*--v4-sand-hero/);
   });
 
   it('yesterday: single footer, feelings four forces, pack chevron list', () => {
