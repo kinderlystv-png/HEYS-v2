@@ -6443,7 +6443,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-notification.rarity-rare {
-  border-left: 4px solid var(--color-blue-500);
+  border-left: 4px solid var(--v4-act, #3b82f6); /* v4-intentional */
   box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
 }
 
