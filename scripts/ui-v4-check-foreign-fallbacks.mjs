@@ -46,7 +46,7 @@ const PALETTE_ROLE_BASELINE = 582;
 
 // Долг на 31 августа 2026. Список может только уменьшаться.
 const BASELINE = {
-  '000-base-and-gamification.css': 291,
+  '000-base-and-gamification.css': 281,
   '001-design-tokens.css': 22,
   '100-metrics-and-graphs.css': 127,
   '1000-messenger.css': 147,
@@ -61,12 +61,12 @@ const BASELINE = {
   '612-training-step.css': 12,
   '613-cycle-ui.css': 8,
   '710-refeed.css': 25,
-  '715-yesterday-verify.css': 37,
+  '715-yesterday-verify.css': 36,
   '720-predictive-insights.css': 219,
   '725-metabolic-intelligence.css': 189,
   '730-widgets-dashboard.css': 205,
   '731-ui-v4-activity.css': 8,
-  '732-ui-v4-nutrition.css': 77,
+  '732-ui-v4-nutrition.css': 65,
   '733-ui-v4-login-theme.css': 4,
   '733-ui-v4-reports.css': 19,
   '734-ui-v4-curator-panel.css': 7,

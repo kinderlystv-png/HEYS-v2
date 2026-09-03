@@ -1731,7 +1731,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-row--ss.ct-wb-ss-g3 {
-  border-left-color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  border-left-color: var(--v4-ok-text);
   background: linear-gradient(90deg, rgba(34, 197, 94, 0.08) 0%, #f8fafc 12px);
 }
 
@@ -5583,7 +5584,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .roadmap-check {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   font-size: 12px;
 }
 
@@ -5798,7 +5800,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-weekly-card.completed .weekly-subtitle {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   font-weight: 600;
 }
 
@@ -5905,7 +5908,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-weekly-card.completed .weekly-percent {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   text-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
 }
 
@@ -6007,7 +6011,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .weekly-percent.completed {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   font-weight: bold;
   animation: completedBounce 0.5s ease-out;
 }
@@ -6037,7 +6042,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .weekly-reward-preview .reward-xp {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   font-weight: 600;
 }
 
@@ -6102,7 +6108,8 @@ color: var(--v4-sand-ink, #201e1d);
 .xp-history-bar.today .xp-bar-day {
   opacity: 1;
   font-weight: 600;
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
 }
 
 .xp-bar-value {
@@ -6122,7 +6129,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .xp-history-bar.today .xp-bar-value {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   opacity: 1;
 }
 
@@ -6789,7 +6797,8 @@ color: var(--v4-sand-ink, #201e1d);
   transform: translateX(-50%);
   font-size: 14px;
   font-weight: bold;
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   animation: floatUp 0.8s ease-out forwards;
   pointer-events: none;
 }
@@ -7084,7 +7093,8 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .hdr-tab-meta__sync {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   font-weight: 600;
 }
 
@@ -9319,7 +9329,8 @@ svg.date-picker-icon {
 }
 
 .legend-item.good {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
 }
 
 .legend-item.warn {
@@ -16895,7 +16906,8 @@ body:has(:is(
 }
 
 .profile-hint--saved {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  /* v4-intentional */
+  color: var(--v4-sand-ok-text);
 }
 
 .profile-message {

@@ -1501,7 +1501,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--weight .widget__trend--down {
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
   background: rgba(34, 197, 94, 0.1);
 }
 
@@ -5123,7 +5124,8 @@ body:has(.page-reports) .hdr::after {
 
 .widget-insulin__status--soon {
   background: rgba(34, 197, 94, 0.12);
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
 }
 
 .widget-insulin__status--lipolysis {
@@ -6725,7 +6727,8 @@ body:has(.page-reports) .hdr::after {
 /* Dynamic Colors for Percentage Badges */
 .pct-badge--green {
   background: rgba(34, 197, 94, 0.12);
-  color: var(--v4-ok-fill, #22c55e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
 }
 
 .pct-badge--yellow {
@@ -13011,10 +13014,10 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   height: 54px;
 }
 
-/* Линия и заливка — не текст: тон берётся заливочной ролью, как у спарклайна
-   2×1 (правило дизайнера «роли заливки текст не красят»). */
+/* Линия и заливка — currentColor для SVG; тон берётся текстовой ролью ok. */
 .widget-wd__chart.widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  /* v4-intentional */
+  color: var(--v4-sand-ok-text);
 }
 
 /* Запасное — песочное значение самой роли (#a83c22), а не #a8382b соседних
@@ -13035,7 +13038,8 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
 }
 
 .widget-wd__spark.widget-v4-val--good {
-  color: var(--v4-sand-ok-fill, #7a8a5e);
+  /* v4-intentional */
+  color: var(--v4-sand-ok-text);
 }
 
 .widget-wd__spark.widget-v4-val--bad {
@@ -14323,7 +14327,8 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__weight-trend {
-  color: var(--v4-ok-fill, #7a8a5e);
+  /* v4-intentional */
+  color: var(--v4-ok-text);
 }
 
 .widget-bd-sheet__water-profile {
