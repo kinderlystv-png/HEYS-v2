@@ -5023,10 +5023,10 @@
     const AnalyticsBlock = () => {
       const items = [];
       if (showAnalytics && monthChange) {
-        items.push({ icon: '📊', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${formatRuUnit(formatRuDecimal(monthChange, 1), 'кг/мес')}` });
+        items.push({ icon: 'barChart', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${formatRuUnit(formatRuDecimal(monthChange, 1), 'кг/мес')}` });
       }
       if (showAnalytics && hasCleanTrend) {
-        items.push({ icon: '🌸', text: 'Чистый тренд', cls: 'widget-weight__stat--pink' });
+        items.push({ icon: 'flower', text: 'Чистый тренд', cls: 'widget-weight__stat--pink' });
       }
       if (items.length === 0) return null;
       return React.createElement('div', { className: 'widget-weight__stats' },
@@ -5034,7 +5034,7 @@
           key: i,
           className: `widget-weight__stat ${item.cls || ''}`
         },
-          React.createElement('span', { className: 'widget-weight__stat-icon' }, item.icon),
+          React.createElement(WidgetGlyph, { glyph: item.icon, className: 'widget-weight__stat-icon' }),
           React.createElement('span', null, item.text)
         ))
       );
@@ -9434,6 +9434,27 @@
     );
   }
 
+  /** 15×15 outline icon for catalog/category/chips — тон --ac, обводка 2,75. */
+  function WidgetGlyph({ glyph, className }) {
+    const paths = HEYS.Widgets?.GLYPHS?.[glyph];
+    if (!paths || !paths.length) return null;
+    return React.createElement('span', {
+      className: className || 'widgets-glyph',
+      'aria-hidden': 'true'
+    },
+      React.createElement('svg', {
+        width: 15,
+        height: 15,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 2.75,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round'
+      }, paths.map((d, i) => React.createElement('path', { key: i, d })))
+    );
+  }
+
   /** Одна кнопка «+» 52 px с раскрывающейся карточкой быстрых действий (канвас v4). */
   /**
    * Быстрые действия: состав, порядок и крайние случаи — строки контракта
@@ -10356,7 +10377,7 @@
               key: cat.id,
               className: `widgets-catalog__category ${selectedCategory === cat.id ? 'active' : ''}`,
               onClick: () => setSelectedCategory(cat.id)
-            }, cat.icon, ' ', cat.label)
+            }, React.createElement(WidgetGlyph, { glyph: cat.icon, className: 'widgets-catalog__category-glyph' }), ' ', cat.label)
           )
         ),
 
@@ -10369,7 +10390,9 @@
               className: `widgets-catalog__item ${isAlreadyAdded ? 'widgets-catalog__item--disabled' : ''}`,
               onClick: () => handleSelect(type)
             },
-              React.createElement('div', { className: 'widgets-catalog__item-icon' }, type.icon),
+              React.createElement('div', { className: 'widgets-catalog__item-icon' },
+                React.createElement(WidgetGlyph, { glyph: type.icon })
+              ),
               React.createElement('div', { className: 'widgets-catalog__item-info' },
                 React.createElement('div', { className: 'widgets-catalog__item-name' }, type.name),
                 React.createElement('div', { className: 'widgets-catalog__item-desc' }, type.description)

@@ -12,36 +12,64 @@
   const HEYS = global.HEYS = global.HEYS || {};
   HEYS.Widgets = HEYS.Widgets || {};
 
+  // Значки каталога и чипов веса · контракт home-widgets «иконки»: 15×15
+  // обводкой 2,75, тоном --ac. Эмодзи в наборе не используются — только ключ
+  // глифа; пути SVG живут здесь, рендер в heys_widgets_ui_v1.js.
+  const WIDGET_GLYPHS = {
+    apple: ['M12 20c-3.5 0-6.5-2.5-6.5-6.5C5.5 10 8 7 12 4c4 3 6.5 6 6.5 9.5 0 4-3 6.5-6.5 6.5z', 'M12 4v3'],
+    heart: ['M12 21s-6.5-4.35-6.5-10A4 4 0 0112 8a4 4 0 016.5 3c0 5.65-6.5 10-6.5 10z'],
+    target: ['M12 21a9 9 0 100-18 9 9 0 000 18z', 'M12 16a4 4 0 100-8 4 4 0 000 8z'],
+    barChart: ['M4 20V10', 'M10 20V4', 'M16 20v-7'],
+    flower: ['M12 7.5a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z', 'M12 3v4.5', 'M12 16.5V21'],
+    flame: ['M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 003.5 0z'],
+    salad: ['M7 21h10', 'M12 3c-2 4-4 7.5-4 11a4 4 0 008 0c0-3.5-2-7-4-11z'],
+    trendingUp: ['M3 17l6-6 4 4 8-8', 'M14 7h7v7'],
+    wave: ['M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0', 'M2 17c2-2 4-2 6 0s4 2 6 0 4-2 6 0'],
+    leaf: ['M11 20A7 7 0 019 6c4 0 6 2 6 6 0 6-4 8-8', 'M11 20v-9'],
+    star: ['M12 2l2.9 6.9L22 9.8l-5.5 4.8L18.2 22 12 18.1 5.8 22l1.7-7.4L2 9.8l7.1-.9z'],
+    moon: ['M21 12.8A9 9 0 1111.2 3a7 7 0 109.8 9.8z'],
+    droplet: ['M12 3s6 6.5 6 10.5a6 6 0 01-12 0C6 9.5 12 3 12 3z'],
+    scale: ['M12 3v17', 'M5 20h14', 'M7 16l5-5 5 5'],
+    wheat: ['M4 14a4 4 0 014-4', 'M4 10a4 4 0 014 4', 'M12 2v20', 'M16 14a4 4 0 014-4', 'M16 10a4 4 0 014 4'],
+    egg: ['M12 3c-3 4-5 8-5 11a5 5 0 0010 0c0-3-3-2-7-5-11z'],
+    utensils: ['M6 3v8', 'M10 3v5', 'M10 3a2 2 0 104 0', 'M6 3a2 2 0 100 4', 'M18 3v12', 'M16 15h4'],
+    bed: ['M2 9V5a2 2 0 012-2h16a2 2 0 012 2v4', 'M2 11v9', 'M22 11v9', 'M2 15h20'],
+    footprint: ['M4 16v-2.5a2.5 2.5 0 015 0V16', 'M11 16v-3a3 3 0 116 0v3', 'M18 16v-2.5a2.5 2.5 0 015 0V16'],
+    calendar: ['M8 2v4', 'M16 2v4', 'M3 10h18', 'M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z'],
+    zap: ['M13 2L3 14h9l-1 8 10-12h-9z'],
+    shield: ['M12 3l8 3.5v6.2c0 4.6-3.2 7.6-8 8.8-4.8-1.2-8-4.2-8-8.8V6.5L12 3z']
+  };
+
   // === Widget Categories ===
   const CATEGORIES = {
     nutrition: {
       id: 'nutrition',
       label: 'Питание',
-      icon: '🍎',
+      icon: 'apple',
       color: '#f97316'
     },
     health: {
       id: 'health',
       label: 'Здоровье',
-      icon: '❤️',
+      icon: 'heart',
       color: '#8b5cf6'
     },
     motivation: {
       id: 'motivation',
       label: 'Мотивация',
-      icon: '🎯',
+      icon: 'target',
       color: '#10b981'
     },
     advanced: {
       id: 'advanced',
       label: 'Продвинутые',
-      icon: '📊',
+      icon: 'barChart',
       color: 'var(--v4-water, #3b82f6)'
     },
     cycle: {
       id: 'cycle',
       label: 'Цикл',
-      icon: '🌸',
+      icon: 'flower',
       color: '#ec4899'
     }
   };
@@ -195,7 +223,7 @@
       type: 'calories',
       name: 'Калории',
       category: 'nutrition',
-      icon: '🔥',
+      icon: 'flame',
       description: 'Текущие калории и норма',
       defaultSize: '2x2',
       availableSizes: ['2x1', '2x2'],
@@ -212,7 +240,7 @@
       type: 'macros',
       name: 'БЖУ',
       category: 'nutrition',
-      icon: '🥗',
+      icon: 'salad',
       description: 'Баланс белков, жиров, углеводов',
       defaultSize: '4x2',
       availableSizes: ['3x1', '3x2', '4x2'],
@@ -248,7 +276,7 @@
       // его данные целиком показывает вид «Инсулиновая волна · Текущая волна».
       retired: true,
       category: 'nutrition',
-      icon: '📈',
+      icon: 'trendingUp',
       description: 'Таймер инсулиновой волны',
       defaultSize: '2x2',
       availableSizes: ALL_SIZES_4X4,
@@ -267,7 +295,7 @@
       type: 'insulinWave',
       name: 'Инсулиновая волна',
       category: 'health',
-      icon: '🌊',
+      icon: 'wave',
       description: 'Текущая инсулиновая волна: идёт ли липолиз или инсулин ещё высокий. График волны с текущим положением.',
       defaultSize: '2x2',
       availableSizes: ['2x2', '2x1'],
@@ -286,7 +314,7 @@
       needsHistoryDays: 3,
       name: 'Тренд здоровья',
       category: 'health',
-      icon: '🌿',
+      icon: 'leaf',
       description: 'Health Score из инсайтов (7-30 дней): питание, активность, восстановление, тайминг, метаболизм',
       defaultSize: '2x2',
       availableSizes: ['2x2', '2x1'],
@@ -306,7 +334,7 @@
       type: 'dayScore',
       name: 'Оценка дня',
       category: 'health',
-      icon: '⭐',
+      icon: 'star',
       description: 'Единая оценка дня 0-100: факторы (9 параметров) + субъективная + momentum',
       defaultSize: '1x1',
       availableSizes: ['1x1', '2x1'],
@@ -322,7 +350,7 @@
       type: 'status',
       name: 'Статус (в Оценке дня)',
       category: 'health',
-      icon: '🎯',
+      icon: 'target',
       description: 'Объединён с Оценкой дня — используйте виджет «Оценка дня»',
       hidden: true,
       deprecated: true,
@@ -345,7 +373,7 @@
       type: 'sleep',
       name: 'Сон',
       category: 'health',
-      icon: '😴',
+      icon: 'moon',
       description: 'Часы сна и качество',
       defaultSize: '1x1',
       availableSizes: ['1x1'],
@@ -366,7 +394,7 @@
       type: 'water',
       name: 'Вода',
       category: 'health',
-      icon: '💧',
+      icon: 'droplet',
       description: 'Выпито воды и норма',
       defaultSize: '2x2',
       availableSizes: ['1x1', '2x1', '2x2'],
@@ -405,7 +433,7 @@
       type: 'weight',
       name: 'Вес',
       category: 'health',
-      icon: '⚖️',
+      icon: 'scale',
       description: 'Текущий вес и тренд',
       defaultSize: '4x2',
       availableSizes: ALL_SIZES_4X4,
@@ -479,7 +507,7 @@
       type: 'fiber',
       name: 'Клетчатка',
       category: 'nutrition',
-      icon: '🌾',
+      icon: 'wheat',
       description: 'Клетчатка за день против нормы',
       defaultSize: '1x1',
       availableSizes: ['1x1', '2x1', '2x2'],
@@ -496,7 +524,7 @@
       type: 'protein',
       name: 'Белок',
       category: 'nutrition',
-      icon: '🥚',
+      icon: 'egg',
       description: 'Белок за день против нормы',
       defaultSize: '1x1',
       availableSizes: ['1x1', '2x1', '2x2'],
@@ -508,7 +536,7 @@
       type: 'sleepWindow',
       name: 'Окно до сна',
       category: 'health',
-      icon: '🌙',
+      icon: 'moon',
       description: 'Сколько времени от последнего приёма до отбоя',
       defaultSize: '1x1',
       availableSizes: ['1x1', '2x1'],
@@ -520,7 +548,7 @@
       type: 'foodQuality',
       name: 'Качество еды',
       category: 'nutrition',
-      icon: '🥗',
+      icon: 'salad',
       description: 'Индекс качества еды за день',
       defaultSize: '1x1',
       availableSizes: ['1x1', '2x1', '2x2'],
@@ -532,7 +560,7 @@
       type: 'mealRhythm',
       name: 'Ритм приёмов',
       category: 'nutrition',
-      icon: '🍽️',
+      icon: 'utensils',
       description: 'Когда были приёмы и какие между ними промежутки',
       defaultSize: '2x1',
       availableSizes: ['2x1', '2x2'],
@@ -544,7 +572,7 @@
       type: 'sleepReady',
       name: 'Готовность ко сну',
       category: 'health',
-      icon: '🛏️',
+      icon: 'bed',
       description: 'Вода, еда до сна и шаги к вечеру',
       defaultSize: '2x1',
       availableSizes: ['2x1', '2x2'],
@@ -556,7 +584,7 @@
       type: 'steps',
       name: 'Шаги',
       category: 'health',
-      icon: '👟',
+      icon: 'footprint',
       description: 'Шаги за неделю и месяц',
       defaultSize: '2x1',
       availableSizes: ALL_SIZES_4X4,
@@ -581,7 +609,7 @@
       // показывает вид «Тепловая карта · Серия» 1×1.
       retired: true,
       category: 'motivation',
-      icon: '🔥',
+      icon: 'flame',
       description: 'Серия дней в норме',
       defaultSize: '1x1',
       availableSizes: ['1x1'],
@@ -600,7 +628,7 @@
       type: 'heatmap',
       name: 'Тепловая карта',
       category: 'motivation',
-      icon: '📅',
+      icon: 'calendar',
       description: 'Активность за неделю/месяц',
       defaultSize: '4x1',
       availableSizes: ['2x1', '3x1', '4x1'],
@@ -628,7 +656,7 @@
       // блок «Инсайтов», на Главную не переезжает.
       retired: true,
       category: 'motivation',
-      icon: '⚡',
+      icon: 'zap',
       description: 'Позитивный каскад: точки событий и badge с динамикой CRS',
       defaultSize: '4x1',
       availableSizes: ['3x1', '4x1'],
@@ -643,7 +671,7 @@
       type: 'cycle',
       name: 'Цикл',
       category: 'cycle',
-      icon: '🌸',
+      icon: 'flower',
       description: 'День менструального цикла',
       defaultSize: '2x2',
       availableSizes: ALL_SIZES_4X4,
@@ -676,7 +704,7 @@
       type: 'crashRisk',
       name: 'Динамика веса',
       category: 'analytics',
-      icon: '📊',
+      icon: 'barChart',
       optional: true,
       description: 'Темп потери/набора веса, зона прогресса, прогноз до цели',
       defaultSize: '2x1',
@@ -703,7 +731,7 @@
       type: 'relapseRisk',
       name: 'Риск-радар',
       category: 'health',
-      icon: '🛡️',
+      icon: 'shield',
       description: 'Единый риск: max(relapse, crash) + источник + спидометр',
       defaultSize: '2x2',
       availableSizes: ['1x1', '2x1', '2x2', '3x2', '4x2'],
@@ -946,6 +974,7 @@
   HEYS.Widgets.LEGACY_SIZE_ALIASES = LEGACY_SIZE_ALIASES;
   HEYS.Widgets.WIDGET_TYPES = WIDGET_TYPES;
   HEYS.Widgets.SCALABLE_ELEMENTS = SCALABLE_ELEMENTS;
+  HEYS.Widgets.GLYPHS = WIDGET_GLYPHS;
 
   // Verbose init log removed
 

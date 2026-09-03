@@ -197,20 +197,15 @@ describe('cycle v4 · on-screen words', () => {
     expect(cycleWidget).not.toContain('🌸');
   });
 
-  // Гейт обязан отличать «сошлось» от «не смотрели»: перечисляем ВСЕ оставшиеся
-  // 🌸 в файлах Главной поимённо. Появится новый — проверка упадёт и потребует
-  // решения, а не пройдёт молча. Три нынешних — не метка фазы, а члены общего
-  // эмодзи-набора (значок виджета в каталоге, значок его категории, чип рядом с
-  // 📊), и снимать их поштучно нельзя: останется дыра среди соседей. Вынесено
-  // дизайнеру 03.09 отдельным вопросом.
-  it('оставшиеся 🌸 на Главной пересчитаны поимённо и заморожены', () => {
-    const uiHits = (WIDGETS_UI_SRC.match(/🌸/g) || []).length;
-    const registryHits = (WIDGETS_REGISTRY_SRC.match(/🌸/g) || []).length;
-    // heys_widgets_ui_v1.js: ровно один — чип «Чистый тренд».
-    expect(uiHits).toBe(1);
-    expect(WIDGETS_UI_SRC).toContain("{ icon: '🌸', text: 'Чистый тренд'");
-    // heys_widgets_registry_v1.js: значок категории «Цикл» и значок типа виджета.
-    expect(registryHits).toBe(2);
+  // Главная (каталог, чипы веса): эмодзи сняты 03.09 — outline SVG 15×15
+  // тоном --ac, ключи глифов в heys_widgets_registry_v1.js.
+  it('home-widgets registry and weight chips avoid emoji icons', () => {
+    expect(WIDGETS_UI_SRC).not.toMatch(/icon: '[\u{1F300}-\u{1F9FF}]/u);
+    expect(WIDGETS_REGISTRY_SRC).not.toMatch(/icon: '[\u{1F300}-\u{1F9FF}]/u);
+    expect(WIDGETS_UI_SRC).toContain("{ icon: 'barChart', text:");
+    expect(WIDGETS_UI_SRC).toContain("{ icon: 'flower', text: 'Чистый тренд'");
+    expect(WIDGETS_REGISTRY_SRC).toContain('HEYS.Widgets.GLYPHS = WIDGET_GLYPHS');
+    expect(WIDGETS_UI_SRC).toContain('function WidgetGlyph');
   });
 
   it('v4 cycle UI and legacy registerStep avoid 🌸', () => {
