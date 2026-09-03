@@ -365,6 +365,13 @@ class SASTScanner {
               const lineText = this.getLineText(content, match.index);
               if (/\bconsole\.(log|info|warn|error|debug)\b/.test(lineText)) continue;
               if (/https?:\/\//i.test(lineText)) continue;
+              // URL, собранный из переменной: `${apiUrl}/rest/...`. Литерала
+              // http:// в такой строке нет, и прежний фильтр её не видел — 3
+              // сентября «критической SQL-инъекцией» стал обычный POST в
+              // REST-шлюз, где параметры собраны через URLSearchParams. SQL
+              // так не пишут: путь с косой чертой сразу после интерполяции —
+              // признак адреса, а не запроса.
+              if (/`\$\{[A-Za-z_$][\w$]*\}\//.test(lineText)) continue;
               if (/\b(?:search|query|param)Query\b|\bqueryString\b|\brule\.key\b/.test(lineText)) {
                 continue;
               }
