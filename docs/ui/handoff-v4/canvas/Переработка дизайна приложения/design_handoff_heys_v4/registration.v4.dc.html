@@ -53,6 +53,8 @@
 
     <div class="ctrH">Общие правила слоя</div>
     <div class="spec"><b>герой</b><span data-v="герой есть только на первом шаге профиля — там значение одно и очевидно. На шагах 2–4 героя нет: на втором два равных числа, на третьем и четвёртом чисел нет вовсе, и выносить нечего"></span><i>прежняя редакция требовала героя на каждом шаге, но числа для шагов 2–4 не называла — реализовать это значило выдумать, что выносить. Кадры и код совпали между собой, контракт остался один против них</i></div>
+    <div class="spec"><b>одно слово, два разных элемента</b><span data-v="слово «Цель» стоит ярлыком дважды и означает разное: на шаге регистрации под ним ряд выбора — три пилюли 46 радиусом 14 с кружком-переключателем; в профиле под ним группа настроек — строки 40 без радиуса кеглем 13. Это не два вида одного элемента, а два элемента с одинаковой подписью, и переименовывать их нельзя: «Цель» — верное слово в обоих местах. Поэтому кадр «Профиль · верх» помечен data-nouni, и девятнадцатая проверка сверки его не сравнивает — иначе она держала бы канвас красным на правильной копии. Проверка остаётся включённой на всех остальных кадрах зоны"></span><i>адресация, а не отключение: помечен один кадр, а не проверка</i></div>
+    <div class="spec"><b>вид колеса значений</b><span data-v="колесо роста, веса, цели и даты рождения: обёртка шириной 140 по центру карточки --c1 радиусом 18 полями 13/0/14, подпись .flab по центру. Выбранное значение — 22 px/700 тоном --ac; соседние сверху и снизу — 13 px/600 тоном чернил 22 % и интерлиньяжем 1,75. У даты рождения колесо тройное — день, месяц, год тремя колонками с зазором 6 по центру: выбранное 15,5 px/700 тоном --tx, соседние 12,5 px/600 тоном чернил 40 % с интерлиньяжем 2,1. Под выбранным лежит капсула --c2 высотой 32 радиусом 999, вписанная с отступом 8 слева и справа. Приглушение соседей — решение, а не дефект: их не читают, а видят как направление вращения, и мишень у них та же, что у выбранного. Ряды помечены data-dim и адресуют эту строку — шестнадцатая проверка сверки давала на них 19 находок контраста (1,68 у роста, 2,80 у даты рождения), то есть краснела на объявленном. Строка написана 3 сентября: колесо стояло в кадрах с первых сборок, ни одним решением не менялось и вида в контракте не имело вовсе — тот самый пропуск на унаследованном элементе"></span><i>вид, которого не было: элемент рисовался, числа его жили только в разметке</i></div>
     <div class="spec"><b>вид шага</b><span data-v="заголовок 20 px/700 чернилами с отступом сверху 6, под ним через 8 пояснение 12 px/500 тоном чернил 55 %; содержимое через 16, карточки внутри с зазором 8. Поля экрана и футер — общие для слоя (.sc и .foot)"></span><i>заголовок 20 px, а не 24: на шаге профиля рядом стоит крупное значение, и два героя на экране спорят</i></div>
     <div class="spec"><b>выход, удаление данных, производительность</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «выход и удаление данных · правило продукта» и «производительность · правило продукта». Местное отличие: незаконченная регистрация при выходе стирается локально, но записанные шаги остаются в профиле"></span></div>
     <div class="spec"><b>уведомления и точки входа</b><span data-v="общие правила — home-widgets.v4.dc.html, строки «уведомления · правило продукта» и «точки входа · правило продукта». Местное отличие: согласие на уведомления спрашивается на последнем шаге, а не при первом уведомлении; вход на шаги — только после первого входа по коду"></span></div>
@@ -116,7 +118,7 @@
     <div class="spec"><b>пояснение под заголовком шага</b><span data-v="есть у всех четырёх шагов, одна строка 12 px/500 тоном чернил 55 % через 9 px под заголовком. Дословно: шаг 1 — «Имя увидит только ваш куратор» · шаг 2 — «Вес будете уточнять каждое утро, здесь только точка отсчёта» · шаг 3 — «Цель можно поменять в любой момент» · шаг 4 — «По этим двум числам считается окно приёмов». Больше пояснений на шаге нет: подписи полей объясняют себя сами"></span><i>текст назван дословно 25 августа — раньше строка требовала пояснение у каждого шага, а копия была только у второго, и дописать её за дизайнера кодер не имеет права. Каждая фраза отвечает на «зачем вы это спрашиваете», а не пересказывает заголовок</i></div>
     <div class="spec"><b>особый период в профиле</b><span data-v="тумблер «Особый период» — пятая строка группы «Нормы», между «Сном» и «Инсулиновой волной»; дорожка 40×24, ползунок 18, включённый — заливка --acs. Строка видна только при поле «Женский»; включение без подтверждения, выключение спрашивает и удаляет отметки"></span><i>он меняет нормы дня, поэтому живёт рядом с ними, а не в «Медицинском»: отдельного согласия у функции больше нет. Вид карточки периода, ряда дней и множителей — cycle.v4.dc.html</i></div>
     <div class="spec" style="border-bottom:none"><b>профиль в настройках</b><span data-v="экран профиля — три группы: «Обо мне» (имя, пол, дата рождения, рост, базовый вес, текущий вес) · «Нормы и цели» со вторым уровнем заголовков (цель, нормы, пульсовые зоны) · «Медицинское» (ограничения, добавки, документы, отзыв согласия). Экран прокручивается: содержимое выше высоты экрана, поэтому на канвасе оно нарисовано двумя кадрами одной прокрутки — «Профиль · верх» и «Профиль · низ»; шапка и полка с «Сохранить» закреплены и стоят в обоих. Раскладку регистрации экран повторяет значением в значение только внутри «Обо мне». Главный для состава групп и адресов вынесенного — settings-system.v4.dc.html, строки «профиль — три группы вместо восьми» и «адреса вынесенного из профиля»; своих чисел для них этот файл не заводит"></span><i>решение владельца 25 августа, вариант А: три группы с названным адресом для каждого вынесенного блока. Прежняя редакция несла вариант Б («остальные аккордеоны остаются как есть») и спорила с решением, а до неё требовала три плоские группы из двенадцати строк, не говоря, куда девать пульсовые зоны, нормы БЖУ и безопасность. Кадров два, потому что 814 px содержимого в экран 706 не укладываются ни при какой обрезке отступов — обрезалась ровно группа «Медицинское», ради которой перерисовка и делалась</i></div>
-                                          <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Регистрация · согласия · 01</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Регистрация · согласия · 02</b><span data-v="«Согласия и условия» — шрифт 700 20px/1.3 Figtree, цвет var(--tx), отступ сверху 6px"></span></div>
@@ -781,7 +783,7 @@
         <div style="background:var(--c1);border-radius:18px;padding:12px 10px 13px;margin-top:8px;">
           <div style="position:relative;">
           <div style="position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(var(--c1),var(--fade0));z-index:2;pointer-events:none;"></div><div style="position:absolute;left:0;right:0;bottom:0;height:14px;background:linear-gradient(var(--fade0),var(--c1));z-index:2;pointer-events:none;"></div>
-          <div style="position:relative;display:flex;gap:6px;text-align:center;">
+          <div data-dim="вид колеса значений" style="position:relative;display:flex;gap:6px;text-align:center;">
             <div style="flex:1;"><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">31</div><div class="n" style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac);">01</div><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">02</div></div>
             <div style="flex:1.3;"><div style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">дек</div><div style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac);">янв</div><div style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">фев</div></div>
             <div style="flex:1;"><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">2000</div><div class="n" style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac);">2001</div><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">2002</div></div>
@@ -802,7 +804,7 @@
         <div style="display:flex;gap:10px;margin-top:18px;">
           <div style="flex:1;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
           <div class="flab" style="display:flex;justify-content:center;">Рост, см</div>
-          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+          <div data-dim="вид колеса значений" style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
             <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
             <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">167</div>
             <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">168</div>
@@ -811,7 +813,7 @@
         </div></div>
           <div style="flex:1;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
           <div class="flab" style="display:flex;justify-content:center;">Вес сейчас, кг</div>
-          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+          <div data-dim="вид колеса значений" style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
             <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
             <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">73</div>
             <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">74</div>
@@ -821,7 +823,7 @@
         </div>
         <div style="margin-top:10px;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
           <div class="flab" style="display:flex;justify-content:center;">Желаемый вес, кг</div>
-          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+          <div data-dim="вид колеса значений" style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
             <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
             <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">63</div>
             <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">64</div>
@@ -985,7 +987,7 @@
         <div style="background:var(--c1);border-radius:18px;padding:12px 10px 13px;margin-top:8px;box-shadow:inset 0 0 0 2px var(--ac2);">
           <div style="position:relative;">
           <div style="position:absolute;left:0;right:0;top:0;height:14px;background:linear-gradient(var(--c1),var(--fade0));z-index:2;pointer-events:none;"></div><div style="position:absolute;left:0;right:0;bottom:0;height:14px;background:linear-gradient(var(--fade0),var(--c1));z-index:2;pointer-events:none;"></div>
-          <div style="position:relative;display:flex;gap:6px;text-align:center;">
+          <div data-dim="вид колеса значений" style="position:relative;display:flex;gap:6px;text-align:center;">
             <div style="flex:1;"><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">11</div><div class="n" style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac2);">12</div><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">13</div></div>
             <div style="flex:1.3;"><div style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">фев</div><div style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac2);">мар</div><div style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">апр</div></div>
             <div style="flex:1;"><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">2007</div><div class="n" style="font:700 26px/1.4 Figtree,sans-serif;color:var(--ac2);">2008</div><div class="n" style="font:600 12.5px/2.1 Figtree,sans-serif;color:rgba(var(--ink),.4);">—</div></div>
@@ -1009,7 +1011,7 @@
         <div style="display:flex;gap:10px;margin-top:16px;">
           <div style="flex:1;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
           <div class="flab" style="display:flex;justify-content:center;">Рост, см</div>
-          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+          <div data-dim="вид колеса значений" style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
             <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
             <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">167</div>
             <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">168</div>
@@ -1018,7 +1020,7 @@
         </div></div>
           <div style="flex:1;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
           <div class="flab" style="display:flex;justify-content:center;">Вес сейчас, кг</div>
-          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+          <div data-dim="вид колеса значений" style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
             <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
             <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">73</div>
             <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">74</div>
@@ -1028,7 +1030,7 @@
         </div>
         <div style="margin-top:10px;"><div style="background:var(--c1);border-radius:18px;padding:13px 0 14px;text-align:center;">
           <div class="flab" style="display:flex;justify-content:center;">Желаемый вес, кг</div>
-          <div style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
+          <div data-dim="вид колеса значений" style="position:relative;margin-top:4px;max-width:140px;margin-left:auto;margin-right:auto;">
             <div style="position:absolute;left:8px;right:8px;top:50%;transform:translateY(-50%);height:32px;background:var(--c2);border-radius:999px;"></div>
             <div class="n" style="position:relative;font:600 13px/1.75 Figtree,sans-serif;color:rgba(var(--ink),.22);">49</div>
             <div class="n" style="position:relative;font:700 22px/1.35 Figtree,sans-serif;color:var(--ac);">48</div>
@@ -1103,7 +1105,7 @@
     </div></div>
 
     <div><div class="lab"><b>Профиль в настройках · верх</b><span>три группы; экран прокручивается</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Профиль · верх">
+    <div class="ph" data-demo="stop" data-screen-label="Профиль · верх" data-nouni>
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Профиль</span><span style="width:44px;"></span></div>
       <div class="sc"><div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:6px 0 7px;">Обо мне</div><div style="background:var(--c1);border-radius:18px;padding:0 15px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Имя</span><span style="color:var(--tx);">Александра</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Пол</span><span style="color:var(--tx);">Женский</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Дата рождения</span><span style="color:var(--tx);">14 марта 2000</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Рост</span><span style="color:var(--tx);">168 см</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Базовый вес</span><span style="color:var(--tx);">74 кг</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Текущий вес</span><span style="color:rgba(var(--ink),.42);font-weight:500;">73,4 кг · из чек-ина</span></div></div><div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:12px 0 7px;">Нормы и цели</div><div style="font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.56);margin:10px 0 6px;">Цель</div><div style="background:var(--c1);border-radius:18px;padding:0 15px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Цель и темп</span><span style="color:var(--tx);">Снизить · умеренно</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Желаемый вес</span><span style="color:var(--tx);">64 кг</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:40px;font:600 12.5px/1 Figtree,sans-serif;"><span style="color:rgba(var(--ink),.55);">Дефицит</span><span style="color:var(--tx);">15 %</span></div></div><div style="height:8px"></div></div>
       <div class="foot"><div class="btn">Сохранить</div></div>
