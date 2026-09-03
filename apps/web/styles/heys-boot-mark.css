@@ -10,7 +10,7 @@ html {
 html[data-theme="sand"], html[data-theme-id="sand"],
 html[data-theme="light"] { background: #fffaf1; }
 html[data-theme="sand-dark"], html[data-theme-id="sand-dark"],
-html[data-theme="dark"] { background: #141210; }
+html[data-theme="dark"] { background: var(--v4-bg, #141210); }
 html[data-theme="blue"], html[data-theme-id="blue"] { background: #ffffff; }
 html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1a26; }
 
@@ -33,21 +33,21 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
 
 .heys-boot-mark,
 .heys-wait-mark {
-    --boot-disc: #efe3cf;
-    --boot-stroke: #c67139;
-    --boot-letter: #8a4a20;
+    --boot-disc: var(--v4-hero, #efe3cf);
+    --boot-stroke: var(--v4-act, #c67139);
+    --boot-letter: var(--v4-act-text, #8a4a20);
     --boot-ink: #201e1d;
     --boot-muted: rgba(0, 0, 0, .55);
     --boot-ink-50: rgba(0, 0, 0, .5);
     --boot-ink-58: rgba(0, 0, 0, .58);
-    --boot-fail-disc: #f6e6dd;
-    --boot-fail-stroke: #a1471c;
+    --boot-fail-disc: var(--v4-tint, #f6e6dd);
+    --boot-fail-stroke: var(--v4-warn-3, #a1471c);
     --boot-ok-disc: #eaefe0;
     --boot-ok-stroke: #5c6a45;
     --boot-morph-disc: #eef0e6;
     --boot-morph-stroke: #8f9668;
-    --boot-btn: #c67139;
-    --boot-btn-ink: #2b1608;
+    --boot-btn: var(--v4-act, #c67139);
+    --boot-btn-ink: var(--v4-btn-on-act, #2b1608);
 }
 .heys-boot-mark {
     box-sizing: border-box;
@@ -96,7 +96,7 @@ body:has(> .heys-boot-mark.is-fail) {
 html[data-heys-session="0"] .heys-boot-mark { display: none !important; }
 html[data-theme-id="sand-dark"] #heys-boot-visual-guard,
 html[data-theme-id="sand-dark"] .heys-boot-visual-guard,
-html[data-theme="sand-dark"] #heys-boot-visual-guard { background: #141210; }
+html[data-theme="sand-dark"] #heys-boot-visual-guard { background: var(--v4-bg, #141210); }
 html[data-theme-id="blue"] #heys-boot-visual-guard,
 html[data-theme-id="blue"] .heys-boot-visual-guard,
 html[data-theme="blue"] #heys-boot-visual-guard { background: #ffffff; }
@@ -107,21 +107,21 @@ html[data-theme-id="sand-dark"] .heys-boot-mark,
 html[data-theme-id="sand-dark"] .heys-wait-mark,
 html[data-theme="sand-dark"] .heys-boot-mark,
 html[data-theme="sand-dark"] .heys-wait-mark {
-    --boot-disc: #2f2820;
-    --boot-stroke: #cf8144;
-    --boot-letter: #e2a468;
+    --boot-disc: var(--v4-hero, #2f2820);
+    --boot-stroke: var(--v4-act, #cf8144);
+    --boot-letter: var(--v4-act-text, #e2a468);
     --boot-ink: #f2ede6;
     --boot-muted: rgba(242, 237, 230, .55);
     --boot-ink-50: rgba(242, 237, 230, .5);
     --boot-ink-58: rgba(242, 237, 230, .58);
-    --boot-fail-disc: #3a241a;
-    --boot-fail-stroke: #d07d4e;
+    --boot-fail-disc: var(--v4-tint, #3a241a);
+    --boot-fail-stroke: var(--v4-warn-2, #d07d4e);
     --boot-ok-disc: #2a3224;
     --boot-ok-stroke: #b4c094;
     --boot-morph-disc: #2c2d22;
     --boot-morph-stroke: #a8b07a;
-    --boot-btn: #cf8144;
-    --boot-btn-ink: #201509;
+    --boot-btn: var(--v4-act, #cf8144);
+    --boot-btn-ink: var(--on-acs, #201509);
 }
 html[data-theme-id="blue"] .heys-boot-mark,
 html[data-theme-id="blue"] .heys-wait-mark,
@@ -167,7 +167,7 @@ html[data-theme="blue-dark"] .heys-wait-mark {
     --boot-btn-ink: #0b1621;
 }
 html[data-theme-id="sand-dark"] .heys-wait-mark-overlay,
-html[data-theme="sand-dark"] .heys-wait-mark-overlay { background-color: #141210; }
+html[data-theme="sand-dark"] .heys-wait-mark-overlay { background-color: var(--v4-bg, #141210); }
 html[data-theme-id="blue"] .heys-wait-mark-overlay,
 html[data-theme="blue"] .heys-wait-mark-overlay { background-color: #ffffff; }
 html[data-theme-id="blue-dark"] .heys-wait-mark-overlay,

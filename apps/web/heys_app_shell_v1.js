@@ -4917,7 +4917,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const renderPaletteDots = (paletteId) => {
             const dots = paletteId === 'blue'
                 ? ['#2e7cc0', '#3e9a6b', '#e2edf7']
-                : ['#c67139', '#7a8a5e', '#efe3cf'];
+                : ['var(--v4-act, #c67139)', '#7a8a5e', 'var(--v4-hero, #efe3cf)'];
             return React.createElement('span', {
                 className: 'hdr-settings-sheet__dots',
                 'aria-hidden': 'true',
@@ -5476,7 +5476,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             React.createElement('div', { className: 'hdr-settings-sheet__panel-label' }, 'Палитра'),
                             React.createElement('div', { className: 'hdr-settings-sheet__soft-row' },
                                 [
-                                    { id: 'sand', label: 'Бежево-зелёная', act: '#c67139', hero: '#efe3cf', ok: '#7a8a5e' },
+                                    { id: 'sand', label: 'Бежево-зелёная', act: 'var(--v4-act, #c67139)', hero: 'var(--v4-hero, #efe3cf)', ok: '#7a8a5e' },
                                     { id: 'blue', label: 'Синяя', act: '#2e7cc0', hero: '#e2edf7', ok: '#3e9a6b' },
                                 ].map((palette) => React.createElement('button', {
                                     key: palette.id,

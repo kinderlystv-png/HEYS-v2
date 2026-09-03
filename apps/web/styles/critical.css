@@ -782,7 +782,7 @@ body.board-dark-nav .heys-tab-skeleton {
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   font-size: 12.5px;
   font-weight: 700;
 }
@@ -792,11 +792,11 @@ body.board-dark-nav .heys-tab-skeleton {
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger {
-  background: #23201b;
+  background: var(--v4-surface, #23201b);
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger--today {
-  background: #23201b;
+  background: var(--v4-surface, #23201b);
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger--today .date-picker-main--today {
@@ -804,11 +804,11 @@ body.board-dark-nav .heys-tab-skeleton {
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past {
-  color: #e2a468;
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
-  background: #3a2620;
+  background: var(--v4-accent-bg, #3a2620);
 }
 
 @media (max-width: 640px) {
@@ -1028,7 +1028,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr {
-  background: #141210;
+  background: var(--v4-bg, #141210);
 }
 
 [data-theme$="dark"] .hdr-top {
@@ -1131,11 +1131,11 @@ body:has(.page-day) {
 
 [data-theme$="dark"] html:has(.page-day),
 [data-theme$="dark"] body:has(.page-day) {
-  background: #141210;
+  background: var(--v4-bg, #141210);
 }
 
 [data-theme$="dark"] .page-day {
-  background-color: #141210;
+  background-color: var(--v4-bg, #141210);
   background-image: none;
 }
 
