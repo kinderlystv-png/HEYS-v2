@@ -93,23 +93,37 @@ describe('UI v4 reverse coverage index', () => {
     );
   });
 
-  it('resolves a frame by exact label + oid and fails closed on missing or duplicated oid', () => {
+  // Строгость здесь стоит на метке, а не на атрибуте.
+  //
+  // До fc9aa5ff2 кадр без data-oid ронял сверку. Но oid проставляет пакет
+  // дизайна, и он приезжает своими коммитами: привязка к атрибуту ломалась на
+  // каждом обновлении пакета. Теперь кадр берётся по метке, когда она в канвасе
+  // ровно одна, а fail-closed переехал на неоднозначность: две одинаковые
+  // метки и два одинаковых oid роняют сверку, как раньше роняло его отсутствие.
+  it('берёт кадр по уникальной метке и падает на любой неоднозначности', () => {
     const canvas = parseCanvasHtml(`
       <div data-demo="stop" data-screen-label="Unique" data-oid="A1"></div>
       <div data-demo="stop" data-screen-label="Missing oid"></div>
       <div data-demo="stop" data-screen-label="Duplicate one" data-oid="D1"></div>
       <div data-demo="stop" data-screen-label="Duplicate two" data-oid="D1"></div>
+      <div data-demo="stop" data-screen-label="Twin"></div>
+      <div data-demo="stop" data-screen-label="Twin"></div>
     `);
 
     expect(resolveCanvasFrame(canvas, { label: 'Unique', oid: 'A1' })).toBe(canvas.frames[0]);
-    expect(() => resolveCanvasFrame(canvas, { label: 'Unique' }))
-      .toThrow(/requires an explicit data-oid/);
-    expect(() => resolveCanvasFrame(canvas, { label: 'Missing oid', oid: 'M1' }))
-      .toThrow(/is missing data-oid/);
+    // Метка одна на канвас — oid не нужен ни с какой стороны.
+    expect(resolveCanvasFrame(canvas, { label: 'Unique' })).toBe(canvas.frames[0]);
+    expect(resolveCanvasFrame(canvas, { label: 'Missing oid' })).toBe(canvas.frames[1]);
+    // Две одинаковые метки — выбора нет, и молча взять первый хуже падения.
+    expect(() => resolveCanvasFrame(canvas, { label: 'Twin' }))
+      .toThrow(/is ambiguous \(2 frames/);
     expect(() => resolveCanvasFrame(canvas, { label: 'Duplicate one', oid: 'D1' }))
       .toThrow(/data-oid «D1» is duplicated/);
+    // oid есть с обеих сторон — разъехавшаяся пара по-прежнему ловится.
     expect(() => resolveCanvasFrame(canvas, { label: 'Wrong label', oid: 'A1' }))
       .toThrow(/belongs to «Unique»/);
+    expect(() => resolveCanvasFrame(canvas, { label: 'Nothing like this' }))
+      .toThrow(/was not found/);
   });
 
   it('does not infer frame evidence from similarly named row verdicts', () => {
@@ -146,11 +160,11 @@ describe('UI v4 reverse coverage index', () => {
     expect(canvases.some((canvas) => canvas.file.includes('history'))).toBe(false);
     expect(report.totals).toMatchObject({
       canvases: 25,
-      contractRows: 15574,
-      productFrames: 748,
+      contractRows: 16462,
+      productFrames: 755,
       duplicateContractIdentities: 0,
       duplicateFrameIdentities: 10,
-      frameScope: { stop: 672, none: 76, protocol: 39, loop: 23 },
+      frameScope: { stop: 679, none: 76, protocol: 39, loop: 23 },
     });
 
     for (const canvas of canvases) {

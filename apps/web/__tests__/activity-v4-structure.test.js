@@ -41,7 +41,14 @@ describe('Activity tab v4 structure', () => {
     expect(calendarSource).toContain('ma-habit-cal--activity-v4');
     expect(calendarSource).toContain('Зарядка ·');
     expect(calendarSource).toContain('ma-habit-cal-grid--dot');
-    expect(calendarSource).toContain('!isActivityV4 && React.createElement(\'div\', { className: \'ma-habit-cal-weekdays\'');
+    // Строку дней недели прячет не только v4: точечную сетку рисует и шторка,
+    // поэтому условие переехало с isActivityV4 на общий isDotGrid. Правило для
+    // v4 от этого не изменилось — оно входит в isDotGrid; сторожим само правило,
+    // а не форму записи условия, иначе тест упадёт на следующем же переносе.
+    expect(calendarSource).toMatch(/const isDotGrid = isActivityV4 \|\|/);
+    expect(calendarSource).toMatch(
+      /!isDotGrid && React\.createElement\('div', \{ className: 'ma-habit-cal-weekdays'/,
+    );
   });
 
   it('три строки яруса стоят до «Действия» и «Истории»', () => {

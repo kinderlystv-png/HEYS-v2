@@ -525,7 +525,7 @@ const EXCEPTIONS = new Map([
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 415;
+const COVERAGE_FLOOR = 428;
 
 describe('каркас листа разбора против разбора кадров канваса', () => {
   const source = fs.readFileSync(CANVAS, 'utf8');

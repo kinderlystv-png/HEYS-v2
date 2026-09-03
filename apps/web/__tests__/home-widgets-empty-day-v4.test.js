@@ -87,11 +87,29 @@ describe('пустой день на Главной · контракт Canvas v
     );
 
     expect(calories).toContain("if (data?.hasData !== true)");
-    expect(calories).toContain("return v4EmptyTile('Калории')");
+    // Пустой день у калорий рисуется не универсальной плиткой, а своими кадрами
+    // «Калории · пустой день · 2×2» и «· 2×1»: норма считается из профиля и известна
+    // с утра, поэтому она остаётся на плитке, а прочерк ставится только факту.
+    // Сторожим правило — у ветки своё представление и она выходит из функции
+    // на каждом размере, — а не имя вызова: именем тест упал бы на починке.
+    const emptyAt = calories.indexOf('if (data?.hasData !== true)');
+    const emptyFrames = [...calories.slice(emptyAt).matchAll(/return React\.createElement\([^;]*?widget-calories--empty/gs)];
+    expect(emptyFrames, 'пустой день возвращает свои кадры 2×2 и 2×1').toHaveLength(2);
     expect(calories.indexOf('const animActivity = useWidgetMotionValue(activityKcal'))
       .toBeLessThan(calories.indexOf("if (data?.hasData !== true)"));
     expect(macros).toContain("if (data?.hasData !== true)");
-    expect(macros).toContain("['Белки', 'Жиры', 'Углеводы']");
-    expect(macros).toContain("widget-v4-macro--empty");
+    // Кадр «Кольца БЖУ · пустой день»: кольца остаются на месте с нормой под
+    // каждым, помеченные пустыми, — прежде здесь стоял голый прочерк, а норма
+    // известна с утра. Ниже 3×2 кольца не помещаются, и там пустой день
+    // отдаётся универсальной плиткой; этим срез ветки и ограничен.
+    const macrosEmpty = macros.slice(
+      macros.indexOf('if (data?.hasData !== true)'),
+      macros.indexOf("return v4EmptyTile('БЖУ')"),
+    );
+    expect(macrosEmpty, 'малые размеры падают на общую пустую плитку').not.toBe('');
+    for (const label of ['Белки', 'Жиры', 'Углеводы']) {
+      expect(macrosEmpty, `кольцо «${label}» пропало с пустого дня`).toContain(`label: '${label}'`);
+    }
+    expect([...macrosEmpty.matchAll(/empty: true/g)], 'все три кольца помечены пустыми').toHaveLength(3);
   });
 });
