@@ -340,7 +340,7 @@
     },
     "каноничная палитра снята": {
       "v": "=",
-      "f": "Пятой палитры выбрать нельзя: heys_theme_v1.js:90-93 migrateClassicThemeId переводит classic → sand и classic-dark → sand-dark, :96-103 переписывает сохранённый ключ при старте; в 002-ui-v4-palette-roles.css наборов ровно четыре, classic среди них нет. Гейт снят: package.json:133 ui:v4:check зовёт только undefined-roles и contract-drift, скрипта ui-v4-check-classic-drift в scripts/ нет. Оговорка: селекторы data-theme-id=\"classic\" остались мёртвыми в продуктовом CSS (91 вхождение в styles/modules) — выбрать эту тему нельзя, но код не подчищен",
+      "f": "Пятой палитры выбрать нельзя: heys_theme_v1.js:90-93 migrateClassicThemeId переводит classic → sand и classic-dark → sand-dark, :96-103 переписывает сохранённый ключ при старте; в 002-ui-v4-palette-roles.css наборов ровно четыре, classic среди них нет. Гейт снят коммитом 1452f87b4: скрипта ui-v4-check-classic-drift в scripts/ нет, package.json ui:v4:check его не зовёт. Поправка 03.09: прежняя оговорка про «91 мёртвый селектор data-theme-id=\"classic\" в styles/modules» неверна — пересчитано двумя способами, в styles/modules слово classic встречается трижды и только в комментариях, самого селектора нет ни в одном написании, а git log -S по нему в apps/web/styles/ не находит ни одного коммита. Хвостов классики в CSS нет",
       "h": "7b7964f1cc2f"
     },
     "адреса вынесенного из профиля": {

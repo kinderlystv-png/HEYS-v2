@@ -149,7 +149,7 @@ apps/web/heys_iw_config_loader.js:151
 apps/web/heys_iw_lipolysis.js:68
 apps/web/heys_iw_lipolysis.js:105
 apps/web/heys_leaderboard_v1.js:129
-apps/web/heys_meal_optimizer_v1.js:1827
+apps/web/heys_meal_optimizer_v1.js:1871
 apps/web/heys_meal_step_v1.js:30
 apps/web/heys_meal_step_v1.js:54
 apps/web/heys_metabolic_intelligence_v1.js:1256
