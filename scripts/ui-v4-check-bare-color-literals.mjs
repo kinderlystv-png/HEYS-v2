@@ -80,7 +80,7 @@ const BASELINE = {
   '720-predictive-insights.css': 210,
   // 160 -> 159: заморозка отставала на единицу ещё до правок 2 сентября —
   // тот же счёт даёт и версия файла из коммита. Реальный долг не менялся.
-  '730-widgets-dashboard.css': 159,
+  '730-widgets-dashboard.css': 111,
   '733-ui-v4-login-theme.css': 47,
   '740-cascade-card.css': 23,
   '750-strength-builder.css': 6,
