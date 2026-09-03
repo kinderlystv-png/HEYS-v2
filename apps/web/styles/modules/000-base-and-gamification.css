@@ -137,6 +137,9 @@ input[type="password"] {
 
   /* Color palette */
   --color-white: #ffffff;
+  /* Читается ещё 16 раз в 300-modals и 610: снимать объявление,
+     когда мест станет ноль, иначе скелетоны остаются без фона. */
+  --color-slate-100: #f1f5f9;
   --color-slate-200: #e2e8f0;
   --color-slate-400: #94a3b8;
   --color-slate-500: var(--v4-ink-2, #64748b);
