@@ -18,6 +18,14 @@
  * — единственный способ молча затереть правку соседней сессии, и он закрыт
  * тем, что такого аргумента у инструментов просто нет.
  *
+ * От инструментов закрыт, но не от KV: сам файл всё равно уходит наверх
+ * целиком (`batch_upsert_client_kv_by_curator`) — и инструментом, и мостом
+ * задачника, который выкладывает зеркало на диск. Ревизию там считает клиент
+ * между своим чтением и записью, поэтому 02.09 пуш зеркала унёс задачу,
+ * заведённую из чата получасом раньше (789 → 790). Отсюда `tasksWriteConflict`
+ * и `mergeIndexValues` ниже: ту же сверку делает сервер, единственное место,
+ * которое видит обе стороны.
+ *
  * Модуль не делает сетевых вызовов: всё тестируется без прод-доступа.
  */
 
@@ -454,6 +462,68 @@ function withIndexEntry(index, file, nowMs) {
     files: { ...index.files, [file.path]: { rev: file.rev, updatedAt: file.updatedAt } },
     updatedAt: nowMs,
   };
+}
+
+/**
+ * Файл задачника среди прочих ключей `heys_tasks_*`.
+ *
+ * Индекс и память прохода лежат в том же пространстве имён, но файлами не
+ * являются: ни текста, ни ревизии у них нет, и проверять их как файлы значит
+ * запретить их запись навсегда. Форма значения входит в признак намеренно —
+ * следующий служебный ключ с этим префиксом не должен попасть под проверку
+ * молча, только потому что его имя начинается так же.
+ */
+function isTasksFileKey(key, value) {
+  if (typeof key !== 'string' || !key.startsWith(KEY_PREFIX)) return false;
+  if (key === INDEX_KEY || key === STATE_KEY) return false;
+  return !!value && typeof value === 'object' && !Array.isArray(value) && typeof value.text === 'string';
+}
+
+/**
+ * Можно ли положить целиковый текст файла поверх облачного.
+ *
+ * Дельта-запись сверяет ревизию на сервере и отвечает 409 (`stale_rev`), а
+ * целиковая приходит из моста задачника и от пишущих инструментов — там
+ * ревизию проверяет клиент, между его чтением и записью успевает пройти
+ * чужая правка, и она исчезает без следа: истории у KV нет. Отсюда та же
+ * проверка на сервере, единственном месте, которое видит обе стороны.
+ *
+ * Победитель при расхождении — облако. Не потому что оно правее, а потому что
+ * локальный файл переживёт потерю в git, а облачная правка не переживёт нигде:
+ * 02.09 так пропала задача, заведённая через MCP за полчаса до пуша зеркала
+ * (ревизия 789 → 790).
+ *
+ * @returns {null|{reason:string, currentRev:number, incomingRev:number}}
+ */
+function tasksWriteConflict(incoming, current) {
+  const currentRev = Number(current && current.rev) || 0;
+  if (currentRev <= 0) return null;   // файла в облаке ещё нет — затирать нечего
+  const incomingRev = Number(incoming && incoming.rev) || 0;
+  if (incomingRev === currentRev + 1) return null;
+  return { reason: 'tasks_stale_rev', currentRev, incomingRev };
+}
+
+/**
+ * Индекс задачника сливается, а не заменяется целиком.
+ *
+ * Индекс один на весь задачник, и за него дерутся даже записи в РАЗНЫЕ файлы:
+ * пишущий кладёт свою копию, собранную при чтении, и уносит чужой свежий след.
+ * Файл при этом цел, но пуллер о правке не узнает — ключ в KV есть, записи в
+ * индексе нет. Файлов, заведённых облаком позже (ротация в archive/*_partN), в
+ * присланной копии нет вовсе.
+ *
+ * Слияние здесь однозначно и продуктового выбора не требует: индекс —
+ * производные данные, у каждой записи есть ревизия, и старшая всегда права.
+ */
+function mergeIndexValues(incoming, current) {
+  const next = ensureIndex(current);
+  const from = ensureIndex(incoming);
+  for (const [path, meta] of Object.entries(from.files)) {
+    const prev = next.files[path];
+    if (!prev || meta.rev > prev.rev) next.files[path] = meta;
+  }
+  next.updatedAt = Math.max(from.updatedAt, next.updatedAt);
+  return next;
 }
 
 /**
@@ -5902,8 +5972,12 @@ module.exports = {
   emptyFile,
   ensureFile,
   bumpFile,
+  normalizeNewlines,
   ensureIndex,
   withIndexEntry,
+  isTasksFileKey,
+  tasksWriteConflict,
+  mergeIndexValues,
   searchFiles,
   RANK_WEIGHTS: {
     WORD_WEIGHT, SOURCE_MAX, RECENCY_MAX, RECENCY_HALFLIFE_DAYS, EXACT_BONUS, LINK_BONUS,

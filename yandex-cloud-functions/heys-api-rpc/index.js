@@ -790,6 +790,115 @@ function mergeBatchHungerExistingRows(items, currentByKey) {
   return mergedCount;
 }
 
+/**
+ * Задачник: целиковая запись файла не ложится поверх чужой правки, а индекс
+ * сливается вместо замены.
+ *
+ * Дельта-путь (`append_heys_tasks_file_by_curator`) сверяет ревизию под
+ * `FOR UPDATE` и отвечает 409. Целиковая запись шла сюда без единой проверки:
+ * `rev` считал клиент между своим чтением и записью, и всё, что успевало лечь
+ * в облако в этом промежутке, исчезало молча — истории у KV нет, аудита не
+ * было тоже. 02.09 так пропала задача, заведённая через MCP за полчаса до
+ * пуша зеркала задачника (ревизия 789 → 790).
+ *
+ * Правила решаются модулем задачника, здесь только применение: файл с чужой
+ * ревизией отбрасывается (fail closed — облако побеждает, локальная копия
+ * переживёт потерю в git), индекс сливается по старшей ревизии на путь, текст
+ * приводится к LF на этом входе так же, как на дельта-пути.
+ */
+function mergeBatchTasksExistingRows(items, currentByKey) {
+  const empty = { blocked: [], kept: Array.isArray(items) ? items : [], indexMerged: 0, normalized: 0 };
+  if (!Array.isArray(items) || !currentByKey || typeof currentByKey.get !== 'function') return empty;
+  const tasksKv = require('./lib/heys_tasks_kv.cjs');
+  const blocked = [];
+  const kept = [];
+  let indexMerged = 0;
+  let normalized = 0;
+  for (const it of items) {
+    if (!it || typeof it.k !== 'string' || !it.k.startsWith(tasksKv.KEY_PREFIX)) {
+      kept.push(it);
+      continue;
+    }
+    const current = currentByKey.get(it.k);
+    const currentValue = current && current.v;
+    if (it.k === tasksKv.INDEX_KEY) {
+      if (currentValue) {
+        it.v = tasksKv.mergeIndexValues(it.v, currentValue);
+        indexMerged += 1;
+      }
+      kept.push(it);
+      continue;
+    }
+    if (!tasksKv.isTasksFileKey(it.k, it.v)) {
+      kept.push(it);
+      continue;
+    }
+    const conflict = tasksKv.tasksWriteConflict(it.v, currentValue);
+    if (conflict) {
+      blocked.push({
+        k: it.k,
+        reason: conflict.reason,
+        current_rev: conflict.currentRev,
+        incoming_rev: conflict.incomingRev,
+      });
+      continue;
+    }
+    const lf = tasksKv.normalizeNewlines(it.v.text);
+    if (lf !== it.v.text) {
+      it.v = { ...it.v, text: lf };
+      normalized += 1;
+    }
+    kept.push(it);
+  }
+  return { blocked, kept, indexMerged, normalized };
+}
+
+/**
+ * Текущие значения прочитать не удалось — задачник не пишем вовсе.
+ *
+ * Ни сверить ревизию, ни слить индекс без облачной копии нельзя, а пропустить
+ * запись — это ровно та потеря, ради которой проверка и стоит: индекс тут
+ * опаснее файла, он один на весь задачник, и целиковая замена стирает следы
+ * всех файлов разом.
+ */
+function blockTasksFileWrites(items) {
+  const tasksKv = require('./lib/heys_tasks_kv.cjs');
+  const blocked = [];
+  const kept = [];
+  for (const it of Array.isArray(items) ? items : []) {
+    if (it && (tasksKv.isTasksFileKey(it.k, it.v) || it.k === tasksKv.INDEX_KEY)) {
+      blocked.push({
+        k: it.k,
+        reason: 'current_value_unavailable',
+        current_rev: 0,
+        incoming_rev: Number(it.v && it.v.rev) || 0,
+      });
+      continue;
+    }
+    kept.push(it);
+  }
+  return { blocked, kept, indexMerged: 0, normalized: 0 };
+}
+
+/** След отбитой записи задачника в data_loss_audit — вне транзакции батча. */
+function logTasksStaleRevFireAndForget(clientId, blocked) {
+  if (!clientId || !Array.isArray(blocked) || blocked.length === 0) return;
+  try {
+    getPool('heys-api-rpc').query(
+      `INSERT INTO data_loss_audit (client_id, key, action, allowed, reason)
+       SELECT $1::uuid, t.k, 'tasks_stale_rev', FALSE, t.r
+       FROM unnest($2::text[], $3::text[]) AS t(k, r)`,
+      [
+        clientId,
+        blocked.map((b) => b.k),
+        blocked.map((b) => `batch_upsert_by_curator ${b.reason} cloud_rev=${b.current_rev} incoming_rev=${b.incoming_rev}`),
+      ]
+    ).catch((e) => console.warn('[batch_upsert] tasks stale-rev audit insert failed:', e.message));
+  } catch (e) {
+    console.warn('[batch_upsert] tasks stale-rev audit insert failed:', e.message);
+  }
+}
+
 function mergeBatchInsightsFeedbackExistingRows(items, currentByKey) {
   if (!Array.isArray(items) || !currentByKey || typeof currentByKey.get !== 'function') return 0;
   let mergedCount = 0;
@@ -4042,18 +4151,22 @@ async function handleRpcRequest(event, context) {
       const hasCriticalBatchKey = keysList.some((key) => !!classifyCriticalKey(key));
       const hasHungerBatchKey = keysList.some(isHungerStatusEventsKey);
       const hasInsightsFeedbackBatchKey = keysList.some(isInsightsFeedbackKey);
+      // Задачник тоже требует транзакции с FOR UPDATE: без блокировки строки
+      // сверка ревизии ничего не гарантирует — между SELECT и UPSERT успевает
+      // пройти чужая запись, и проверка отвечает про уже устаревшее значение.
+      const hasTasksBatchKey = keysList.some((key) => key.startsWith('heys_tasks_'));
       let dayv2BatchTxStarted = false;
       let oldByKey = new Map();
       let oldUpdatedAtByKey = new Map();
       let oldSelectOk = true;
       if (keysList.length > 0) {
         try {
-          if (hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey) {
+          if (hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey || hasTasksBatchKey) {
             await client.query('BEGIN');
             dayv2BatchTxStarted = true;
           }
           const oldRows = await client.query(
-            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + ((hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey) ? ' FOR UPDATE' : ''),
+            'SELECT k, v, updated_at FROM client_kv_store WHERE client_id = $1::uuid AND k = ANY($2::text[])' + ((hasDayv2BatchKey || hasCriticalBatchKey || hasHungerBatchKey || hasInsightsFeedbackBatchKey || hasTasksBatchKey) ? ' FOR UPDATE' : ''),
             [targetClientId, keysList]
           );
           for (const row of oldRows.rows) {
@@ -4187,6 +4300,30 @@ async function handleRpcRequest(event, context) {
       if (insightsFeedbackMerged > 0) {
         console.warn('[batch_upsert_client_kv_by_curator] insights_feedback_merged:', insightsFeedbackMerged);
       }
+      const tasksBlockedKeys = [];
+      if (hasTasksBatchKey) {
+        // Без текущих значений сверять ревизию не с чем, и «строки нет» здесь
+        // значит «не смогли прочитать», а не «файла в облаке нет». Пропустить
+        // такую запись — ровно та потеря, ради которой проверка и стоит.
+        const tasksGuard = oldSelectOk
+          ? mergeBatchTasksExistingRows(
+            items,
+            new Map(Array.from(oldByKey.entries()).map(([k, v]) => [k, { v }]))
+          )
+          : blockTasksFileWrites(items);
+        items.length = 0;
+        items.push(...tasksGuard.kept);
+        tasksBlockedKeys.push(...tasksGuard.blocked);
+        if (tasksGuard.blocked.length || tasksGuard.indexMerged || tasksGuard.normalized) {
+          console.warn('[batch_upsert_client_kv_by_curator] tasks_guard:',
+            `blocked=${tasksGuard.blocked.length} index_merged=${tasksGuard.indexMerged} lf_normalized=${tasksGuard.normalized}`);
+        }
+        // Аудит пишется отдельным соединением намеренно. Внутри транзакции он
+        // не переживает ROLLBACK — а откатываемся мы ровно тогда, когда отбито
+        // всё и записывать больше нечего: след потери исчезал бы в том самом
+        // случае, ради которого его и заводили.
+        logTasksStaleRevFireAndForget(targetClientId, tasksBlockedKeys);
+      }
       if (items.length === 0) {
         if (dayv2BatchTxStarted) {
           try { await client.query('ROLLBACK'); } catch (_) { /* noop */ }
@@ -4202,9 +4339,14 @@ async function handleRpcRequest(event, context) {
             rejected: rejectedKeys.length,
             payload_blocked: payloadBlockedKeys,
             identity_blocked: guardBlockedKeys,
+            tasks_blocked: tasksBlockedKeys,
             error: payloadBlockedKeys.length
               ? 'critical_payload_rejected'
-              : (guardBlockedKeys.length ? 'identity_guard_blocked' : (rejectedKeys.length ? 'not_client_data' : undefined)),
+              : (guardBlockedKeys.length
+                ? 'identity_guard_blocked'
+                : (tasksBlockedKeys.length
+                  ? 'tasks_stale_rev'
+                  : (rejectedKeys.length ? 'not_client_data' : undefined))),
           })
         };
       }
@@ -4313,6 +4455,9 @@ async function handleRpcRequest(event, context) {
       if (upsertResult && typeof upsertResult === 'object') {
         if (payloadBlockedKeys.length > 0) responseBody = { ...responseBody, payload_blocked: payloadBlockedKeys };
         if (guardBlockedKeys.length > 0) responseBody = { ...responseBody, identity_blocked: guardBlockedKeys };
+        // Задачник: часть файлов не записана — их ревизия разошлась с облачной.
+        // Молча вернуть success нельзя: пишущий решит, что правка на месте.
+        if (tasksBlockedKeys.length > 0) responseBody = { ...responseBody, tasks_blocked: tasksBlockedKeys };
       }
       return {
         statusCode: 200,

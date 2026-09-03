@@ -435,6 +435,12 @@ function createApiClient({ apiUrl, timeoutMs = DEFAULT_TIMEOUT_MS, fetchImpl = r
     if (data && Array.isArray(data.identity_blocked) && data.identity_blocked.length) {
       return { ok: false, error: 'identity_blocked' };
     }
+    // Задачник: сервер отбил файл, чья ревизия разошлась с облачной. Молча
+    // вернуть ok нельзя — инструмент решит, что текст сохранён, и скажет это
+    // куратору. Ровно так 02.09 пропала правка, сделанная из чата.
+    if (data && Array.isArray(data.tasks_blocked) && data.tasks_blocked.length) {
+      return { ok: false, error: 'tasks_stale_rev', currentRev: Number(data.tasks_blocked[0].current_rev) || 0 };
+    }
     return { ok: true, data };
   }
 

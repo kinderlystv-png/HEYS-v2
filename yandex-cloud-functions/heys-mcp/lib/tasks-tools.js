@@ -939,6 +939,13 @@ function createTasksTools({
         { k: tasks.keyForPath(next.path), v: next },
         { k: tasks.INDEX_KEY, v: nextIndex },
       ], contextId);
+      // Сервер отбил запись по ревизии: пока мы собирали текст, файл переписали
+      // из другой сессии. Это тот же случай, что и расхождение baseRev выше, —
+      // следующий круг перечитает файл и наложит правку на свежий текст.
+      if (!res.ok && res.error === 'tasks_stale_rev') {
+        if (!rebase) throw staleWriteError(file.path, baseRev, Number(res.currentRev) || 0);
+        continue;   // baseRev не трогаем: круг выше сам увидит расхождение и пересоберёт текст
+      }
       if (!res.ok) throw new ToolError('save_failed', `Сервер отклонил запись ${next.path}: ${res.error}`);
 
       const after = await readForWrite(file.path);
