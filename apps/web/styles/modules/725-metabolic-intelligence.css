@@ -614,8 +614,8 @@
 }
 
 .crash-risk-alert--medium {
-  border-color: var(--v4-warn-soft, #eab308);
-  background: linear-gradient(135deg, #ffffff 0%, #fefce8 100%);
+  border-color: var(--v4-warn-soft, #c9922e);
+  background: linear-gradient(135deg, #ffffff 0%, var(--v4-accent-bg, #f0dcc6) 100%);
 }
 
 .crash-risk-alert--high {
@@ -881,8 +881,8 @@
 
 [data-theme$="dark"] .crash-risk-alert--medium,
 .dark .crash-risk-alert--medium {
-  background: linear-gradient(135deg, #1e293b 0%, #422006 100%);
-  border-color: #eab308;
+  background: linear-gradient(135deg, var(--v4-hero, #1e293b) 0%, var(--v4-accent-bg, #3a2620) 100%);
+  border-color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .crash-risk-alert--high,
@@ -1514,7 +1514,7 @@
 }
 
 .dual-risk-panel__status--medium .dual-risk-panel__status-text {
-  color: #f59e0b;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .dual-risk-panel__status--high .dual-risk-panel__status-text {
@@ -1646,7 +1646,7 @@
 }
 
 .dual-risk-panel__status-warn {
-  color: #f59e0b;
+  color: var(--v4-warn-text, #a1471c);
   font-weight: 600;
 }
 
