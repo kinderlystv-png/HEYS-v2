@@ -6831,7 +6831,7 @@ body.tour-active .ios-pwa-banner {
   height: 26px;
   border: none;
   background: transparent;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   font-size: 14px;
   cursor: pointer;
   transition: all 0.15s ease;

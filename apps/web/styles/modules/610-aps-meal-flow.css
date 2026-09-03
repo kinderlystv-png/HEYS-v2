@@ -841,17 +841,17 @@
 
 .meal-rating-max {
   font-size: 12px;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .meal-rating-text {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   margin-left: 6px;
 }
 
 [data-theme$='dark'] .meal-rating-text {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Пресеты справа */
@@ -881,7 +881,7 @@
 
 .meal-preset-btn.active {
   background: var(--v4-accent-bg, #dbeafe);
-  border-color: var(--color-blue-500);
+  border-color: var(--v4-act, #2563eb);
 }
 
 [data-theme$='dark'] .meal-preset-btn {
@@ -891,7 +891,7 @@
 
 [data-theme$='dark'] .meal-preset-btn.active {
   background: #1e40af;
-  border-color: var(--color-blue-500);
+  border-color: var(--v4-act, #2563eb);
 }
 
 /* Слайдер внизу карточки */
@@ -1088,11 +1088,11 @@
 
 .meal-comment-input:focus {
   outline: none;
-  border-color: var(--color-blue-500);
+  border-color: var(--v4-act, #2563eb);
 }
 
 .meal-comment-input::placeholder {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 [data-theme$='dark'] .meal-comment-input {
@@ -1240,7 +1240,7 @@
 }
 
 [data-theme$='dark'] .meal-mood-history-name {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .meal-mood-history-avg {
@@ -2488,7 +2488,7 @@
   height: 24px;
   border: none;
   background: var(--v4-line, #e5e7eb);
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   border-radius: 50%;
   cursor: pointer;
   font-size: 16px;
@@ -2974,7 +2974,7 @@
 
 [data-theme$='dark'] .aps-open-btn {
   background: linear-gradient(135deg, #1e3a5f 0%, #312e81 100%);
-  border-color: var(--color-blue-500);
+  border-color: var(--v4-act, #2563eb);
   color: #93c5fd;
 }
 

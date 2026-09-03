@@ -1040,7 +1040,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary, var(--color-gray-500));
+  color: var(--text-secondary, var(--v4-ink-label, rgba(0, 0, 0, 0.45)));
   transition: background 0.15s ease;
 }
 
@@ -1403,7 +1403,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
 .advice-list-details {
   font-size: 12px;
   line-height: 1.5;
-  color: var(--text-secondary, var(--color-gray-500));
+  color: var(--text-secondary, var(--v4-ink-label, rgba(0, 0, 0, 0.45)));
   padding: 8px 12px;
   background: var(--bg-tertiary, #f3f4f6);
   border-radius: 8px;
@@ -1922,7 +1922,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .cell-empty {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   background: var(--v4-tint) /* v4-intentional */;
 }
 
@@ -1936,7 +1936,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .data-overview-hint {
   text-align: center;
   font-size: 12px;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   margin-top: 12px;
   padding: 8px;
 }
@@ -1960,13 +1960,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .data-overview-empty-text {
   font-size: 16px;
   font-weight: 500;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   margin-bottom: 8px;
 }
 
 .data-overview-empty-hint {
   font-size: 13px;
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 /* Dark theme */
@@ -1999,20 +1999,20 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 [data-theme$="dark"] .cell-empty {
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   background: var(--v4-tint) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .data-overview-hint {
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 [data-theme$="dark"] .data-overview-empty-text {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 [data-theme$="dark"] .data-overview-empty-hint {
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 /* === UI v4: советы — оценка после свайпа, отмена, sync, служебное === */

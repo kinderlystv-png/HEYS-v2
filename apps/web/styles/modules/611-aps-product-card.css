@@ -1476,7 +1476,7 @@
 [data-theme$='dark'] .aps-create-barcode-scan {
   background: var(--v4-surface, #1f2937);
   border-color: var(--v4-line, #374151);
-  color: var(--color-gray-200);
+  color: var(--v4-ink, #111827);
 }
 
 [data-theme$='dark'] .aps-create-barcode-note,
@@ -1506,17 +1506,17 @@
 [data-theme$='dark'] .aps-create-prompt-btn {
   background: var(--v4-surface, #1f2937);
   border-color: var(--v4-line, #374151);
-  color: var(--color-gray-200);
+  color: var(--v4-ink, #111827);
 }
 
 @media (hover: hover) {
   [data-theme$='dark'] .aps-create-prompt-btn:hover {
-    border-color: var(--color-blue-400, #60a5fa);
+    border-color: var(--v4-act-text, #1d4ed8);
   }
 }
 
 [data-theme$='dark'] .aps-create-prompt-note {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .aps-create-textarea {
@@ -1543,7 +1543,7 @@
 }
 
 .aps-create-textarea::placeholder {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   font-size: 12px;
 }
 
@@ -1606,17 +1606,17 @@
 [data-theme$='dark'] .aps-create-example-btn {
   background: var(--v4-surface, #1f2937);
   border-color: var(--v4-line, #374151);
-  color: var(--color-gray-200);
+  color: var(--v4-ink, #111827);
 }
 
 @media (hover: hover) {
   [data-theme$='dark'] .aps-create-example-btn:hover {
-    border-color: var(--color-blue-400, #60a5fa);
+    border-color: var(--v4-act-text, #1d4ed8);
   }
 }
 
 [data-theme$='dark'] .aps-create-example-note {
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 /* Блок «Распознано» по кадру: тинт «идёт хорошо» радиусом 16 полями 12/14, без
@@ -1666,12 +1666,12 @@
 
 [data-theme$='dark'] .aps-create-btn {
   background: #374151;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 .aps-create-tip {
   font-size: 12px;
-  color: var(--color-gray-500);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   text-align: center;
   padding: 8px;
   background: var(--v4-hero, #f9fafb);
@@ -1680,7 +1680,7 @@
 
 [data-theme$='dark'] .aps-create-tip {
   background: var(--v4-surface, #1f2937);
-  color: var(--color-gray-400);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 /* Подсказка о поисковом запросе */
@@ -1699,7 +1699,7 @@
 
 [data-theme$='dark'] .aps-create-search-hint {
   background: var(--v4-accent-bg, #1e3a5f);
-  border-color: var(--color-blue-500);
+  border-color: var(--v4-act, #2563eb);
   color: #93c5fd;
 }
 
