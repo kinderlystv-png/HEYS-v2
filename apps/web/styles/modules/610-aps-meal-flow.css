@@ -1098,7 +1098,8 @@
 [data-theme$='dark'] .meal-comment-input {
   background: var(--v4-hero, #1e293b);
   border-color: var(--v4-ink-4, #475569);
-  color: var(--color-slate-100);
+  /* Тон текста в тёмной теме — чернила набора, а не ступень прежней системы. */
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$='dark'] .meal-comment-input::placeholder {
@@ -2544,7 +2545,8 @@
 
 @media (hover: hover) {
   .aps-grams-hero-btn:hover {
-    background: var(--color-slate-100);
+    /* Наведение у кнопки — фишечная поверхность набора. */
+    background: var(--v4-chip, #efe3cf);
     border-color: var(--v4-ink-4, #9ca3af);
   }
 }
@@ -2626,7 +2628,7 @@
 
 @media (hover: hover) {
   .aps-grams-btn:hover {
-    background: var(--color-slate-100);
+    background: var(--v4-chip, #efe3cf);
     border-color: var(--acc);
   }
 }

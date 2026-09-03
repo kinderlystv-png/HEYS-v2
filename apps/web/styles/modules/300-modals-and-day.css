@@ -2757,7 +2757,8 @@
 }
 
 [data-theme$="dark"] .app-loader-title {
-  color: var(--color-slate-100);
+  /* Заголовок загрузчика в тёмной теме — чернила набора. */
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .app-loader-subtitle {
@@ -3013,7 +3014,8 @@
   font-size: 12px;
   color: var(--color-slate-500);
   padding: 6px 0;
-  border-top: 1px solid var(--color-slate-100);
+  /* Отбивка — линия набора, а не ступень прежней системы. */
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .compact-activity-stats b {
