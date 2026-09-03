@@ -7,7 +7,7 @@
    apps/web/__tests__/aps-css-zones.test.js. */
 
 .ts-section {
-  background: var(--color-slate-50, #f8fafc);
+  background: var(--v4-float, #fffaf1);
   border-radius: 12px;
   padding: 10px 12px;
 }
@@ -20,7 +20,7 @@
 .ts-strength-mode-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-slate-800, #1e293b);
+  color: var(--v4-ink, #201e1d);
   text-align: center;
   margin-bottom: 12px;
 }
@@ -38,7 +38,7 @@
   gap: 4px;
   padding: 12px 10px;
   background: var(--v4-bg, #fff);
-  border: 2px solid var(--color-slate-200, #e2e8f0);
+  border: 2px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 12px;
   cursor: pointer;
   text-align: left;
@@ -65,13 +65,13 @@
 .ts-sm-label {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-slate-800, #1e293b);
+  color: var(--v4-ink, #201e1d);
 }
 
 .ts-sm-hint {
   font-size: 11px;
   line-height: 1.35;
-  color: var(--color-slate-500, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .ts-strength-mode-footnote {
@@ -79,7 +79,7 @@
   padding: 8px 10px;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--color-slate-600, #475569);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   background: rgba(59, 130, 246, 0.06);
   border-radius: 10px;
   border: 1px solid rgba(59, 130, 246, 0.15);
@@ -99,14 +99,14 @@
 .ts-wb-head {
   font-size: 15px;
   font-weight: 600;
-  color: var(--color-slate-800, #1e293b);
+  color: var(--v4-ink, #201e1d);
   margin-bottom: 6px;
 }
 
 .ts-wb-lead {
   font-size: 12px;
   line-height: 1.45;
-  color: var(--color-slate-600, #475569);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   margin: 0 0 12px;
 }
 
@@ -120,24 +120,24 @@
 
 .ts-wb-label {
   font-size: 13px;
-  color: var(--color-slate-700, #334155);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
 }
 
 .ts-wb-duration-input {
   width: 88px;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 16px;
   font-weight: 600;
   text-align: center;
   background: var(--v4-bg, #fff);
-  color: var(--color-slate-900, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .ts-wb-exercise {
   background: var(--v4-bg, #fff);
-  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 12px;
   padding: 10px;
   margin-bottom: 10px;
@@ -153,13 +153,13 @@
 .ts-wb-ex-num {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-slate-600, #475569);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
 }
 
 .ts-wb-ex-remove {
   border: none;
   background: var(--color-slate-100, #f1f5f9);
-  color: var(--color-slate-600, #475569);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   width: 28px;
   height: 28px;
   border-radius: 8px;
@@ -173,7 +173,7 @@
   box-sizing: border-box;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 14px;
   margin-bottom: 8px;
 }
@@ -189,7 +189,7 @@
   flex: 1;
   min-width: 72px;
   font-size: 11px;
-  color: var(--color-slate-600, #475569);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -200,7 +200,7 @@
   box-sizing: border-box;
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 14px;
 }
 
@@ -209,7 +209,7 @@
   box-sizing: border-box;
   padding: 6px 8px;
   border-radius: 8px;
-  border: 1px solid var(--color-slate-200, #e2e8f0);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font-size: 13px;
 }
 
@@ -218,7 +218,7 @@
   margin-top: 4px;
   padding: 10px;
   border-radius: 10px;
-  border: 1px dashed var(--color-slate-300, #cbd5e1);
+  border: 1px dashed var(--v4-edge, rgba(0, 0, 0, 0.18));
   background: transparent;
   color: var(--acc, #3b82f6);
   font-size: 13px;
@@ -260,7 +260,7 @@
   gap: 4px;
   padding: 10px 8px;
   background: var(--v4-bg, #fff);
-  border: 2px solid var(--color-slate-200, #e2e8f0);
+  border: 2px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -283,7 +283,7 @@
 .ts-type-label {
   font-size: 12px;
   font-weight: 500;
-  color: var(--color-slate-600, #475569);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
 }
 
 .ts-type-btn.active .ts-type-label {
@@ -297,7 +297,7 @@
 
 .ts-time-wheel-label {
   font-size: 14px;
-  color: var(--color-slate-600);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   text-align: center;
   margin-bottom: 8px;
 }
@@ -316,7 +316,7 @@
 .ts-time-wheel-sep {
   font-size: 28px;
   font-weight: 700;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
   line-height: 1;
   padding: 0 4px;
 }
@@ -335,7 +335,7 @@
 
 .ts-time-label {
   font-size: 14px;
-  color: var(--color-slate-600);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
 }
 
 .ts-time-picker {
@@ -356,7 +356,7 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  color: var(--color-slate-600);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   transition: all 0.15s ease;
 }
 
@@ -370,13 +370,13 @@
   font-weight: 600;
   min-width: 28px;
   text-align: center;
-  color: var(--color-slate-800);
+  color: var(--v4-ink, #201e1d);
 }
 
 .ts-time-sep {
   font-size: 18px;
   font-weight: 600;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 /* === Зоны пульса === */
@@ -395,7 +395,7 @@
 
 .ts-zones-total {
   font-size: 12px;
-  color: var(--color-slate-500);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   background: var(--color-slate-100);
   padding: 3px 8px;
   border-radius: 6px;
@@ -412,7 +412,7 @@
   background: var(--v4-bg, #fff);
   border-radius: 12px;
   padding: 8px;
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .ts-zone-wheel-header {
@@ -426,12 +426,12 @@
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-slate-700);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
 }
 
 .ts-zone-wheel-range {
   font-size: 10px;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 .ts-zone-wheel-picker {
@@ -478,12 +478,12 @@
 .ts-zone-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-slate-700);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
 }
 
 .ts-zone-range {
   font-size: 10px;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 .ts-zone-input {
@@ -504,7 +504,7 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  color: var(--color-slate-600);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   transition: all 0.15s ease;
 }
 
@@ -519,10 +519,10 @@
   text-align: center;
   font-size: 14px;
   font-weight: 600;
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 6px;
   background: var(--v4-bg, #fff);
-  color: var(--color-slate-800);
+  color: var(--v4-ink, #201e1d);
 }
 
 .ts-zone-value:focus {
@@ -532,7 +532,7 @@
 
 .ts-zone-unit {
   font-size: 11px;
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
   min-width: 24px;
 }
 
@@ -549,10 +549,10 @@
   font-size: 12px;
   font-weight: 500;
   background: var(--v4-bg, #fff);
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 16px;
   cursor: pointer;
-  color: var(--color-slate-600);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
   transition: all 0.15s ease;
 }
 
@@ -600,7 +600,7 @@
 .ts-rating-label {
   flex: 1;
   font-size: 13px;
-  color: var(--color-slate-600);
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
 }
 
 .ts-rating-value {
@@ -653,14 +653,14 @@
   width: 100%;
   padding: 10px 12px;
   font-size: 14px;
-  border: 1px solid var(--color-slate-200);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 10px;
   background: var(--v4-bg, #fff);
-  color: var(--color-slate-800);
+  color: var(--v4-ink, #201e1d);
 }
 
 .ts-comment-input::placeholder {
-  color: var(--color-slate-400);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 .ts-comment-input:focus {
@@ -670,12 +670,12 @@
 
 /* === Dark mode === */
 [data-theme$='dark'] .ts-section {
-  background: var(--color-slate-800);
+  background: var(--v4-hero, #2f2820);
 }
 
 [data-theme$='dark'] .ts-type-btn {
-  background: var(--color-slate-700);
-  border-color: var(--color-slate-600);
+  background: var(--v4-hero, #2f2820);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 [data-theme$='dark'] .ts-type-btn.active {
@@ -687,39 +687,39 @@
 [data-theme$='dark'] .ts-time-label,
 [data-theme$='dark'] .ts-zone-name,
 [data-theme$='dark'] .ts-rating-label {
-  color: var(--color-slate-300);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 [data-theme$='dark'] .ts-time-value,
 [data-theme$='dark'] .ts-zone-value {
   color: var(--color-slate-100);
-  background: var(--color-slate-700);
-  border-color: var(--color-slate-600);
+  background: var(--v4-hero, #2f2820);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 [data-theme$='dark'] .ts-time-btn,
 [data-theme$='dark'] .ts-zone-btn {
-  background: var(--color-slate-700);
-  color: var(--color-slate-300);
+  background: var(--v4-hero, #2f2820);
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 [data-theme$='dark'] .ts-zone-row {
-  background: var(--color-slate-700);
+  background: var(--v4-hero, #2f2820);
 }
 
 [data-theme$='dark'] .ts-quick-btn {
-  background: var(--color-slate-700);
-  border-color: var(--color-slate-600);
-  color: var(--color-slate-300);
+  background: var(--v4-hero, #2f2820);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
+  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
 }
 
 [data-theme$='dark'] .ts-zones-total {
-  background: var(--color-slate-700);
-  color: var(--color-slate-400);
+  background: var(--v4-hero, #2f2820);
+  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
 }
 
 [data-theme$='dark'] .ts-comment-input {
-  background: var(--color-slate-700);
-  border-color: var(--color-slate-600);
+  background: var(--v4-hero, #2f2820);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
   color: var(--color-slate-100);
 }
