@@ -1,0 +1,12 @@
+{
+  "processed": 9,
+  "converted": 8,
+  "left": 1,
+  "leftReasons": [
+    {
+      "file": "apps/web/styles/heys-components.css",
+      "line": 6582,
+      "reason": "rgba(42, 26, 12, 0.9) — scrim 90%: тон совпадает с --v4-modal-backdrop-dim, но альфа вдвое выше; color-mix/rgba(var(--v4-ink-rgb)) не даёт тот же тон на синем наборе (нужна вторая роль, см. комментарий в файле)"
+    }
+  ]
+}

@@ -61,7 +61,7 @@
   /* Apple Cyan */
 
   /* Градиенты для акцентов */
-  --widget-gradient-orange: linear-gradient(135deg, #FF9500 0%, #FF6B00 100%);
+  --widget-gradient-orange: linear-gradient(135deg, var(--v4-wgt-amber, #d99a63) 0%, var(--v4-wgt-orange, #c67139) 100%);
   --widget-gradient-purple: linear-gradient(135deg, #AF52DE 0%, #8944AB 100%);
   --widget-gradient-green: linear-gradient(135deg, #30D158 0%, #28A745 100%);
   --widget-gradient-blue: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
@@ -1615,8 +1615,8 @@ body:has(.page-reports) .hdr::after {
 
 /* Макросы 🥗 — Premium bar design */
 .widget--macros {
-  --widget-accent: rgba(255, 159, 10, 0.14);
-  --widget-accent-strong: rgba(255, 159, 10, 0.28);
+  --widget-accent: color-mix(in srgb, var(--v4-tint-warm, #ff9500) 14%, transparent);
+  --widget-accent-strong: color-mix(in srgb, var(--v4-tint-warm, #ff9500) 28%, transparent);
 }
 
 /* Каскад ⚡ — compact dots + CRS badge */
@@ -2702,7 +2702,7 @@ body:has(.page-reports) .hdr::after {
   color: #fff;
   box-shadow:
     0 10px 24px rgba(5, 150, 105, 0.42),
-    0 0 0 3px rgba(20, 18, 16, 0.85);
+    0 0 0 3px color-mix(in srgb, var(--v4-bg, #141210) 85%, transparent);
 }
 
 [data-theme$="dark"] .widgets-settings-fab {
@@ -2751,7 +2751,7 @@ body:has(.page-reports) .hdr::after {
   border: none;
   padding: 0;
   margin: 0;
-  background: rgba(43, 22, 8, 0.34);
+  background: color-mix(in srgb, var(--v4-on-fab, #2b1608) 34%, transparent);
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: 0;
@@ -12473,7 +12473,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   padding: 0 14px;
   min-height: 30px;
   border-radius: 999px;
-  background: rgba(198, 113, 57, 0.16);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 16%, transparent);
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1;
@@ -13966,7 +13966,7 @@ html[data-theme-id="blue"] .widget-wd-sheet__opt.is-active {
 
 [data-theme$="dark"] .widget-wd-sheet__opt.is-active,
 html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
-  background: rgba(207, 129, 68, 0.18);
+  background: color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent);
 }
 
 /* Превью 3×2 шириной 218 px не оставляет места подписи рядом: кадр «Шторка ·

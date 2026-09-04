@@ -157,7 +157,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(cssSrc).toContain('html[data-theme-id="blue"] .widget-wd-sheet__opt {');
         expect(cssSrc).toContain('html[data-theme-id="blue-dark"] .widget-wd-sheet__opt {');
         expect(cssSrc).toContain('inset 0 0 0 1.5px var(--v4-sand-act');
-        expect(cssSrc).toContain('rgba(207, 129, 68, 0.18)');
+        expect(cssSrc).toContain('color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent)');
     });
 
     it('цвет значения по состоянию — сон, вода, вес', () => {
