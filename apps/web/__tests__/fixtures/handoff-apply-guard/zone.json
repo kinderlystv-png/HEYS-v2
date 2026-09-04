@@ -1,0 +1,50 @@
+{
+  "canvas": "strength-builder.v4.dc.html",
+  "contractOnly": false,
+  "recorded": "2026-09-04",
+  "rows": {
+    "handoff-alpha": {
+      "v": "?",
+      "f": "Before apply alpha — keep until handoff runs.",
+      "h": "aaa111111111"
+    },
+    "handoff-beta": {
+      "v": "?",
+      "f": "Before apply beta — keep until handoff runs.",
+      "h": "bbb222222222"
+    },
+    "foreign-one": {
+      "v": "=",
+      "f": "FOREIGN_ONE_MUST_STAY_BYTE_IDENTICAL",
+      "h": "f111111111111"
+    },
+    "foreign-two": {
+      "v": "≠",
+      "f": "FOREIGN_TWO_MUST_STAY_BYTE_IDENTICAL",
+      "h": "f222222222222",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/UI_V4_HANDOFF_CODEX.md:1"
+    },
+    "foreign-three": {
+      "v": "—",
+      "f": "FOREIGN_THREE_MUST_STAY_BYTE_IDENTICAL",
+      "h": "f333333333333",
+      "naKind": "foreign-zone"
+    },
+    "Программа · цикл · 01": {
+      "v": "=",
+      "f": "G1 cycle 01 foreign block — must not move when catalog handoff applies.",
+      "h": "g100000000001"
+    },
+    "Программа · цикл · 02": {
+      "v": "=",
+      "f": "G1 cycle 02 foreign block — must not move when catalog handoff applies.",
+      "h": "g200000000002"
+    },
+    "Программа · цикл · 03": {
+      "v": "=",
+      "f": "G1 cycle 03 foreign block — must not move when catalog handoff applies.",
+      "h": "g300000000003"
+    }
+  }
+}

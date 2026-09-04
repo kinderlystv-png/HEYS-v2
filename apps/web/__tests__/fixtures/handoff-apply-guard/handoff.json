@@ -1,0 +1,17 @@
+{
+  "zone": "strength-builder",
+  "scope": "fixture handoff — only handoff-alpha and handoff-beta",
+  "generated": "2026-09-04",
+  "rows": [
+    {
+      "key": "handoff-alpha",
+      "verdict": "=",
+      "f": "Applied scoped fact for handoff-alpha."
+    },
+    {
+      "key": "handoff-beta",
+      "verdict": "=",
+      "f": "Applied scoped fact for handoff-beta."
+    }
+  ]
+}
