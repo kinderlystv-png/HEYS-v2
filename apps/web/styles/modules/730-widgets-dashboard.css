@@ -14450,6 +14450,10 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   color: var(--v4-ok-text, #5c6a45);
 }
 
+.widget-trend-compact__value.widget-v4-val--neutral {
+  color: var(--v4-ink, #201e1d);
+}
+
 .widget-trend-compact__spark {
   flex: none;
   margin-bottom: 2px;
@@ -14457,6 +14461,10 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 
 .widget-trend-compact__spark.widget-v4-spark--ok {
   color: var(--v4-ok-fill, #7a8a5e);
+}
+
+.widget-trend-compact__spark.widget-v4-spark--flat {
+  color: var(--v4-ink-mark) /* v4-intentional */;
 }
 
 /* Перебор красит число и его подпись — эти правила стоят после базовых цветов
