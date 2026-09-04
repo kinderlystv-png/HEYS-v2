@@ -1,0 +1,138 @@
+{
+  "zone": "strength-builder",
+  "scope": "В1 «Связка · раунды» · heys_strength_superset_ui_v1.js + 750-strength-builder.css",
+  "generated": "2026-09-04",
+  "agent": "superset v1 handoff from commit 33fdfbab0",
+  "sourceCommit": "33fdfbab0",
+  "summary": {
+    "rows": 25,
+    "block": "Связка · раунды · 01–25"
+  },
+  "rows": [
+    {
+      "key": "Связка · раунды · 01",
+      "verdict": "=",
+      "f": "Шапка кадра: .sb-ss-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:16px 18px 0 } — 750-strength-builder.css:513-519; finish_ui-паттерн шапки."
+    },
+    {
+      "key": "Связка · раунды · 02",
+      "verdict": "=",
+      "f": "Колонка заголовка: .sb-ss-title-col { flex:1; min-width:0; flex-direction:column; gap:3px } — 750:521-527; тест row 02."
+    },
+    {
+      "key": "Связка · раунды · 03",
+      "verdict": "=",
+      "f": "Имя «Связка · N упражнения»: title в SupersetBlock через ruPlural — heys_strength_superset_ui_v1.js:103-105, .sb-ss-ttl 750:529-532."
+    },
+    {
+      "key": "Связка · раунды · 04",
+      "verdict": "=",
+      "f": "Ключ «по X подхода · Y раунда»: .sb-ss-key из rounds.length + ruPlural — superset_ui:108-112, CSS 750:534-537."
+    },
+    {
+      "key": "Связка · раунды · 05",
+      "verdict": "=",
+      "f": "Пилюля «связка»: span.sb-ss-badge { background:var(--acs); color:var(--on-acs); font:700 10px/1 uppercase } — 750:539-548; superset_ui:114."
+    },
+    {
+      "key": "Связка · раунды · 06",
+      "verdict": "=",
+      "f": "Прокрутка: .sb-ss-scroll { display:flex; flex-direction:column; padding:6px 18px calc(18px+safe) } — 750:556-560."
+    },
+    {
+      "key": "Связка · раунды · 07",
+      "verdict": "=",
+      "f": "Карточка .grp: .sb-ss-grp { margin-top:12px } — 750:562-564; обёртка memberRow+roundRows."
+    },
+    {
+      "key": "Связка · раунды · 08",
+      "verdict": "=",
+      "f": "Ряд участников: .sb-ss-member-row { display:flex; gap:6px } — 750:566-569."
+    },
+    {
+      "key": "Связка · раунды · 09",
+      "verdict": "=",
+      "f": "Карточка участника: .sb-ss-member-card { flex:1; flex-direction:column; gap:2px; padding:8px 9px; border-radius:12px; background:var(--c2) } — 750:571-579."
+    },
+    {
+      "key": "Связка · раунды · 10",
+      "verdict": "=",
+      "f": "Буква «A»: .sb-ss-member-card i { font:700 10px/1; color:var(--ac) } — 750:581-585; memberLetter() superset_ui:59-61."
+    },
+    {
+      "key": "Связка · раунды · 11",
+      "verdict": "=",
+      "f": "Имя упражнения: .sb-ss-member-card span { font:600 11px/1.2; color:var(--tx) } — 750:587-590."
+    },
+    {
+      "key": "Связка · раунды · 12",
+      "verdict": "=",
+      "f": "Первая строка раунда: .sb-round--first { margin-top:12px; border-bottom:none } — 750:599-601."
+    },
+    {
+      "key": "Связка · раунды · 13",
+      "verdict": "=",
+      "f": "«Р1»: .sb-round-num { width:36px; font:700 10.5px/1 uppercase; color:rgba(var(--ink),.56) } — 750:607-613."
+    },
+    {
+      "key": "Связка · раунды · 14",
+      "verdict": "=",
+      "f": "Клетка «75 × 8»: .sb-cell { flex:1; min-height:44px; border-radius:999px; background:var(--bg); box-shadow:inset 0 0 0 1px rgba(var(--ink),.1); color:var(--tx) } — 750:619-632; roundCellLabel()."
+    },
+    {
+      "key": "Связка · раунды · 15",
+      "verdict": "=",
+      "f": "Следующий раунд: .sb-round--spaced { margin-top:6px; border-bottom:none } — 750:603-605."
+    },
+    {
+      "key": "Связка · раунды · 16",
+      "verdict": "=",
+      "f": "Текущий раунд «Р3»: .sb-round-num.is-current { color:var(--ac) } — 750:615-617; currentRoundIndex() superset_ui:78-94."
+    },
+    {
+      "key": "Связка · раунды · 17",
+      "verdict": "=",
+      "f": "Активная клетка: .sb-cell.is-current { box-shadow:inset 0 0 0 2px var(--acs) } — 750:634-636; activeCell в superset_ui:137-145."
+    },
+    {
+      "key": "Связка · раунды · 18",
+      "verdict": "=",
+      "f": "Прочерк: .sb-cell.is-blank { border:1.5px dashed rgba(var(--ink),.22); border-radius:999px; min-height:44px } — 750:645-651."
+    },
+    {
+      "key": "Связка · раунды · 19",
+      "verdict": "=",
+      "f": "Список .cd: .sb-ss-detail { margin-top:10px } — 750:653-655."
+    },
+    {
+      "key": "Связка · раунды · 20",
+      "verdict": "=",
+      "f": "Строка списка: .sb-ss-detail-row { display:flex; justify-content:space-between; padding:13px 0; border-bottom:1px solid rgba(var(--ink),.07) } — 750:657-665."
+    },
+    {
+      "key": "Связка · раунды · 21",
+      "verdict": "=",
+      "f": "«Разминка связки»: span в .sb-ss-detail-row, color var(--tx) — superset_ui:175-178 при group.warmupCount>0."
+    },
+    {
+      "key": "Связка · раунды · 22",
+      "verdict": "=",
+      "f": "«одной строкой, вне объёма»: .sb-ss-detail-note { font:600 11px/1; color:rgba(var(--ink),.56) } — 750:671-674."
+    },
+    {
+      "key": "Связка · раунды · 23",
+      "verdict": "=",
+      "f": "Строка без разделителя: .sb-ss-detail-row--last { border-bottom:none } — 750:667-669."
+    },
+    {
+      "key": "Связка · раунды · 24",
+      "verdict": "=",
+      "f": "«2:00» отдых: .sb-ss-detail-row b { font:700 12.5px/1 tabular-nums; color:var(--tx) } — 750:676-680; fmtClock(group.restSec) superset_ui:181."
+    },
+    {
+      "key": "Связка · раунды · 25",
+      "verdict": "=",
+      "f": "Сноска про равное число подходов: p.sb-ss-footnote { margin-top:10px; font:500 11px/1.55 rgba(var(--ink),.56) } — 750:682-686; текст superset_ui:184-187."
+    }
+  ]
+}

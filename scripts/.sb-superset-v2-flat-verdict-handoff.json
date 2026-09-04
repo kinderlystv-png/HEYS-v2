@@ -1,0 +1,87 @@
+{
+  "zone": "strength-builder",
+  "scope": "В2 «Связка · старая, без раундов» · heys_strength_superset_ui_v1.js + 750-strength-builder.css",
+  "generated": "2026-09-04",
+  "agent": "superset v2 flat handoff",
+  "summary": {
+    "rows": 15,
+    "block": "Связка · старая, без раундов · 01–15"
+  },
+  "rows": [
+    {
+      "key": "Связка · старая, без раундов · 01",
+      "verdict": "=",
+      "f": "Шапка кадра В2: .sb-ss-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:16px 18px 0 } — 750-strength-builder.css:513-519; ветка !rounds рендерит тот же head."
+    },
+    {
+      "key": "Связка · старая, без раундов · 02",
+      "verdict": "=",
+      "f": ".sb-ss-title-col { flex:1; min-width:0; flex-direction:column; gap:3px } — 750:521-527; колонка ttl+key в flat-ветке SupersetBlock."
+    },
+    {
+      "key": "Связка · старая, без раундов · 03",
+      "verdict": "=",
+      "f": "Имя «Связка · 12 июля»: supersetDateTitle(dateKey) из dateKey пропса — strength/heys_strength_superset_ui_v1.js:66-69, builder передаёт dateKey:954-958."
+    },
+    {
+      "key": "Связка · старая, без раундов · 04",
+      "verdict": "=",
+      "f": "Ключ «4 и 3 подхода»: flatApproachKey — числа через « и », слово подхода один раз в конце — superset_ui:94-105."
+    },
+    {
+      "key": "Связка · старая, без раундов · 05",
+      "verdict": "=",
+      "f": "Пилюля «история»: span.sb-ss-badge.sb-ss-badge--history { background:transparent; font:700 9px/1 ui-monospace; color:rgba(var(--ink),.62) } — 750:703-710; superset_ui:139-140."
+    },
+    {
+      "key": "Связка · старая, без раундов · 06",
+      "verdict": "=",
+      "f": "Область прокрутки: .sb-ss-scroll { display:flex; flex-direction:column; padding:6px 18px calc(18px+safe) } — 750:556-560."
+    },
+    {
+      "key": "Связка · старая, без раундов · 07",
+      "verdict": "=",
+      "f": "Карточка .grp: .sb-ss-grp { margin-top:12px } оборачивает .sb-ss-flat — 750:562-564; superset_ui flat branch."
+    },
+    {
+      "key": "Связка · старая, без раундов · 08",
+      "verdict": "=",
+      "f": "Ряд участника: .sb-ss-flat-head { display:flex; align-items:center; gap:8px } — 750:714-718."
+    },
+    {
+      "key": "Связка · старая, без раундов · 09",
+      "verdict": "=",
+      "f": "Буква «A»: .sb-ss-flat-letter { font:700 10.5px/1; color:rgba(var(--ink),.56) } — 750:720-724; memberLetter() без суффикса раунда."
+    },
+    {
+      "key": "Связка · старая, без раундов · 10",
+      "verdict": "=",
+      "f": "Имя упражнения: .sb-ss-flat-name { flex:1; font:700 12.5px/1.2; color:var(--tx) } — 750:726-731."
+    },
+    {
+      "key": "Связка · старая, без раундов · 11",
+      "verdict": "=",
+      "f": "Счёт «4 подхода»: .sb-ss-flat-count { font:600 11px/1; color:rgba(var(--ink),.56) } — 750:733-737; ruPlural в flat-ветке."
+    },
+    {
+      "key": "Связка · старая, без раундов · 12",
+      "verdict": "=",
+      "f": "Ряд чипов: .sb-ss-flat-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:8px } — 750:739-744."
+    },
+    {
+      "key": "Связка · старая, без раундов · 13",
+      "verdict": "=",
+      "f": "Чип «75 × 8»: .sb-ss-flat-chip { height:32px; padding:0 12px; border-radius:10px; background:var(--bg); box-shadow:inset 0 0 0 1px rgba(var(--ink),.1) } — 750:746-758; roundCellLabel()."
+    },
+    {
+      "key": "Связка · старая, без раундов · 14",
+      "verdict": "=",
+      "f": "Второй участник: .sb-ss-flat-member--spaced { margin-top:14px } — 750:710-712."
+    },
+    {
+      "key": "Связка · старая, без раундов · 15",
+      "verdict": "=",
+      "f": "Сноска: p.sb-ss-footnote с текстом канваса про «Историю не переписываем…» — superset_ui:178-181, 750:685-689."
+    }
+  ]
+}
