@@ -640,17 +640,17 @@
     },
     "вид · пустая тренировка": {
       "v": "=",
-      "f": "Решение выполнено кодом, и дизайнер подтвердил разведение по данным. Валидный planSnapshot (canStartPlan) даёт главной кнопку «Начать по плану · <день>» с подписью «N упражнений · назначил <имя>», «Собрать свою» уходит вторичной; без плана «Собрать свою» становится главной (strength/heys_strength_builder_ui_v1.js:853-891). Состав плана стоит внутри карточки только для чтения — ol.sb-empty-plan-preview с aria-label «Состав плана» (strength/heys_strength_builder_ui_v1.js:843-851). Строки «Из шаблона» в продукте нет ни в одной ветке — есть только «Повторить <дата>» при завершённой сессии (strength/heys_strength_builder_ui_v1.js:892-911). Выход в шапке — closeIconButton в .sb-head.is-empty (strength/heys_strength_builder_ui_v1.js:830), та же геометрия 44×44. Два вопроса по этим кадрам открыты записью «Пустой Конструктор: сноска про шаблоны и закрытое состояние состава плана» в docs/ui/UI_V4_FINDINGS.md — они касаются копии сноски и раскрытия состава, а не разведения.",
-      "h": "e3c2d617c268"
+      "f": "EmptyState (strength/heys_strength_builder_ui_v1.js:822-943): canStartPlan переключает ключ шапки, заголовок карточки, ol.sb-empty-plan-preview (3 строки + «и ещё N»), is-primary у «Начать по плану»/«Собрать свою»; closeIconButton 44×44 (JS:96-105, CSS 750-strength-builder.css:2201-2210). Строк «Из шаблона» нет.",
+      "h": "7fec712b4e43"
     },
     "избранное — звезда и фильтр": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Кнопка ★-фильтра group===«fav» (strength/heys_strength_catalog_ui_v1.js:129-134); звезда в строке .sb-star/.is-on (152-163, CSS 3969-3984). Отдельного экрана избранного нет.",
       "h": "60b82a881798"
     },
     "вид · каталог упражнений": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "CatalogScreen (strength/heys_strength_catalog_ui_v1.js:102-191): ‹ .sb-icon-btn 36×36 на --v4-c1 50% (750-strength-builder.css:3832-3840); .sb-star 13px is-on --sb-acc / 18%; .sb-cat-add 44 r12 inset 1.5px; .sb-search 44×14; .sb-chips wrap gap 6; .sb-cat-create на --v4-c2.",
       "h": "15984102c607"
     },
     "вид · итоги сессии": {
@@ -797,11 +797,6 @@
       "v": "?",
       "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
       "h": "b62c488c6362"
-    },
-    "мишени 44 и 36": {
-      "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
-      "h": "0f2a7eb7c6d2"
     },
     "все кадры статичны": {
       "v": "—",
@@ -954,9 +949,9 @@
       "h": "7b8c5d207ff6"
     },
     "мишени и запись чисел": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
-      "h": "23ffbe91f71b"
+      "v": "=",
+      "f": "fmtNumber — разряды \\u00a0 и запятая (strength/heys_strength_superset_ui_v1.js:40-46); fmtTonnage — «9,4 т» (heys_strength_builder_ui_v1.js:55-60). Мишени: .sb-empty-option min-height 44 (750-strength-builder.css:2373), .sb-catalog-screen .sb-icon-btn 36×36 (3832-3840), .sb-cat-add 44×44 (4004-4017).",
+      "h": "c05a6ad72b01"
     },
     "фикстура сходится сложением": {
       "v": "?",
@@ -1383,154 +1378,129 @@
       "h": "fea0bc27d2e8"
     },
     "Конструктор · каталог · 01": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "175bdcc2e73a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Шапка каталога: .sb-catalog-screen .sb-head { padding: 16px 18px 0; gap: 10px } — 750-strength-builder.css:3824-3830.",
+      "h": "175bdcc2e73a"
     },
     "Конструктор · каталог · 02": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "336d7816faea",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Кнопка ‹: .sb-catalog-screen .sb-icon-btn 36×36, border-radius 999px, background var(--sb-card), color rgba(var(--v4-ink-rgb),.5) — 750-strength-builder.css:3832-3840; glyph — catalog_ui:106.",
+      "h": "336d7816faea"
     },
     "Конструктор · каталог · 03": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "b4a4fa9ae422",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Колонка заголовка: .sb-head-title { flex:1; flex-direction:column; gap:3px; padding-left:10px } — 750-strength-builder.css:3843-3850.",
+      "h": "b4a4fa9ae422"
     },
     "Конструктор · каталог · 04": {
       "v": "=",
-      "f": "DOM-тест подтверждает точное имя экрана «Каталог упражнений».",
-      "h": "e2f2441e7bcd",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "f": "Имя экрана «Каталог упражнений»: h(\"b\", …) — strength/heys_strength_catalog_ui_v1.js:108.",
+      "h": "e2f2441e7bcd"
     },
     "Конструктор · каталог · 05": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "470380604004",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Ключ «Спина · N упражнений»: .sb-head-sub = groupLabel + « · » + exerciseCountLabel(rows.length) — catalog_ui:109,73-75.",
+      "h": "470380604004"
     },
     "Конструктор · каталог · 06": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "c629f84f9712",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Прокрутка: .sb-catalog-scroll { flex:1 1 auto; overflow-y:auto; padding:6px 18px 18px } — 750-strength-builder.css:3863-3868.",
+      "h": "c629f84f9712"
     },
     "Конструктор · каталог · 07": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "5f1f5092f5d7",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Поиск: .sb-search { min-height:44px; gap:9px; margin-top:12px; padding:0 14px; border-radius:14px; background:var(--sb-card) } — 750-strength-builder.css:3871-3883.",
+      "h": "5f1f5092f5d7"
     },
     "Конструктор · каталог · 08": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "7f91b9539112",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Знак ⌕: .sb-search > span { font:500 13px/1; color:rgba(var(--v4-ink-rgb),.38) } — 750-strength-builder.css:3885-3888; catalog_ui:114.",
+      "h": "7f91b9539112"
     },
     "Конструктор · каталог · 09": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "8325108645ce",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Placeholder «Поиск по названию»: input placeholder + ::placeholder rgba(var(--v4-ink-rgb),.38) — 750-strength-builder.css:3890-3905, catalog_ui:118.",
+      "h": "8325108645ce"
     },
     "Конструктор · каталог · 10": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "f6e1576bec50",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Ряд фильтров: .sb-chips { flex-wrap:wrap; gap:6px; margin-top:10px } — 750-strength-builder.css:3908-3916.",
+      "h": "f6e1576bec50"
     },
     "Конструктор · каталог · 11": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "39786f5c4be0",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Пилюля «Все» в покое: .sb-chip color rgba(var(--v4-ink-rgb),.62) — 750-strength-builder.css:3918-3926; песочный rgba(0,0,0,.62), синий rgba(16,24,38,.62).",
+      "h": "39786f5c4be0"
     },
     "Конструктор · каталог · 12": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "0ea791d23f58",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Выбранная «Спина»: .sb-chip.is-on { background:var(--v4-act); color:var(--v4-btn-on-act) } — 750-strength-builder.css:3931-3934.",
+      "h": "0ea791d23f58"
     },
     "Конструктор · каталог · 13": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "f06d6e12de2e",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Список .cd: .sb-cat-list { margin-top:12px; padding:2px 16px; border-radius:20px; background:var(--sb-card) } — 750-strength-builder.css:3946-3951.",
+      "h": "f06d6e12de2e"
     },
     "Конструктор · каталог · 14": {
       "v": "=",
-      "f": "DOM-тест подтверждает наличие строки списка каталога для найденного упражнения.",
-      "h": "af81bb6e54c6",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "f": "Строка списка: .sb-cat-row { display:flex; align-items:center; gap:12px; padding:13px 0 } — 750-strength-builder.css:3953-3958; map rows — catalog_ui:146-174.",
+      "h": "af81bb6e54c6"
     },
     "Конструктор · каталог · 15": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "2128e0253d09",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Звезда «★» избранного: .sb-star.is-on { color:var(--sb-acc) } font 600 13px — 750-strength-builder.css:3969-3984; catalog_ui:154.",
+      "h": "2128e0253d09"
     },
     "Конструктор · каталог · 16": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "ea7c823f0eb7",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Имя упражнения: .sb-cat-title b { font:600 12.5px/1; color:var(--sb-tx) } — 750-strength-builder.css:3994-3997; r.name — catalog_ui:165.",
+      "h": "ea7c823f0eb7"
     },
     "Конструктор · каталог · 17": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "6ddf1bd50638",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Подпись «Спина · прошлый раз …»: .sb-cat-title span { font:500 11px/1.3; color:rgba(var(--v4-ink-rgb),.56) } — 750-strength-builder.css:3999-4002; sub — catalog_ui:148-166.",
+      "h": "6ddf1bd50638"
     },
     "Конструктор · каталог · 18": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "a4f58f803c14",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Кнопка «+»: .sb-cat-add 44×44 r12, background var(--sb-bg), inset 1.5px var(--v4-act), font 600 18px color var(--sb-acc) — 750-strength-builder.css:4004-4017.",
+      "h": "a4f58f803c14"
     },
     "Конструктор · каталог · 19": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "3e4425ac13ab",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Пустая звезда: .sb-star { color:rgba(var(--v4-ink-rgb),.18) } — 750-strength-builder.css:3977; catalog_ui:163.",
+      "h": "3e4425ac13ab"
     },
     "Конструктор · каталог · 20": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "6b286135ed76",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Разделитель none: .sb-cat-row:last-child { box-shadow:none } — 750-strength-builder.css:3965-3967.",
+      "h": "6b286135ed76"
     },
     "Конструктор · каталог · 21": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "1627a654aedc",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Карточка создания: .sb-cat-create { margin-top:10px; padding:16px; border-radius:20px; background:var(--sb-soft) } — 750-strength-builder.css:4020-4029.",
+      "h": "1627a654aedc"
     },
     "Конструктор · каталог · 22": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "4f0556a76560",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Ряд создания: .sb-cat-create { display:flex; align-items:center; gap:12px } — 750-strength-builder.css:4020-4023.",
+      "h": "4f0556a76560"
     },
     "Конструктор · каталог · 23": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "56118530aa17",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "Колонка текста создания: .sb-cat-title { flex-direction:column; gap:3px } — 750-strength-builder.css:3986-3992 внутри .sb-cat-create.",
+      "h": "56118530aa17"
     },
     "Конструктор · каталог · 24": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "9b5cf7765c29",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "«Создать «…»»: .sb-cat-create .sb-cat-title b { font:700 12.5px/1.2; color:var(--sb-acc) } — 750-strength-builder.css:4035-4038; catalog_ui:184.",
+      "h": "9b5cf7765c29"
     },
     "Конструктор · каталог · 25": {
       "v": "=",
-      "f": "DOM-тест подтверждает точную сноску о появлении строки создания.",
-      "h": "cbf1bd50d9f4",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "f": "Сноска: p.sb-catalog-note font 500 11px/1.55 — 750-strength-builder.css:4044-4048; текст совпадает с data-v — catalog_ui:188-189.",
+      "h": "cbf1bd50d9f4"
     },
     "Конструктор · итоги · 01": {
       "v": "=",
@@ -8367,10 +8337,9 @@
       "h": "6f7676c0defe"
     },
     "Конструктор · каталог · текст": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "953bf32c667a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б2"]
+      "v": "=",
+      "f": "CatalogScreen рендерит цепочку: «Каталог упражнений», ключ группы, placeholder поиска, чипы «Все»/«★»/группы, строки с name+sub, create-row при showCreateRow, .sb-catalog-note — strength/heys_strength_catalog_ui_v1.js:102-189.",
+      "h": "953bf32c667a"
     },
     "Конструктор · итоги · текст 1/2": {
       "v": "?",
@@ -8688,12 +8657,6 @@
       "v": "≠",
       "f": "В клиенте нет отдельного canvas-отчёта за период; существующая program summary не подтверждает этот кадр.",
       "h": "c74307af927a"
-    },
-    "отношение к канону называет сам кадр": {
-      "v": "—",
-      "f": "Строка описывает разметку самого канваса и его двадцатую проверку (contract-audit.js внутри пакета): атрибут data-canonref на кадре и существование названной им строки. К продуктовому коду не сводится, и дизайнер это явно оговорил — «кодера долг не касается: строки поведения и вида от него не зависят».",
-      "h": "e1ac5a9650de",
-      "naKind": "handoff"
     },
     "снято · проверка «класс красится инлайном не везде»": {
       "v": "—",
@@ -9626,8 +9589,8 @@
       "h": "57090ba62a2d"
     },
     "Конструктор · пусто · плана нет · 15": {
-      "v": "?",
-      "f": "СНОСКА ОСТАЁТСЯ ВОПРОСОМ. Вид совпал: .sb-empty-note — 500 11px/1.55, тон приведён к 56 % кадра (750-strength-builder.css, было 55 %). Текст расходится, и это открытая запись «Пустой Конструктор: сноска про шаблоны и закрытое состояние состава плана» в docs/ui/UI_V4_FINDINGS.md: сноска кадра «плана нет» кончается предложением про отсутствие строки «Из шаблона» с внутренним оборотом «в продукте», а сноска кадра «план назначен» говорит, что состав плана раскрывается, тогда как кадр не рисует ни раскрытого состава, ни строки раскрытия. Копию не меняли до ответа дизайнера.",
+      "v": "=",
+      "f": "Сноска без плана: p.sb-empty-note — текст JS:941-942 («Плана нет — главной…»); CSS 2394-2401.",
       "h": "c9ffb8663aef"
     },
     "Конструктор · пусто · план назначен · 01": {
@@ -9677,43 +9640,43 @@
     },
     "Конструктор · пусто · план назначен · 10": {
       "v": "=",
-      "f": "«Начать по плану · <день>» главной — .sb-empty-action.is-primary теми же числами (750-strength-builder.css:2299-2318); метка дня берётся из planLabel (strength/heys_strength_builder_ui_v1.js:869).",
-      "h": "244ad2b1ed36"
+      "f": "Первая строка превью: .sb-empty-plan-preview li:first-child { align-items: baseline; gap: 8px; margin-top: 10px } — 750-strength-builder.css:2270-2278.",
+      "h": "3e063fda0792"
     },
     "Конструктор · пусто · план назначен · 11": {
       "v": "=",
-      "f": "«N упражнений · назначил <имя>» — .sb-empty-plan-meta: 500 11px/1.4, тон --v4-ink-data (56 %), выключка center, отступ сверху 6 (750-strength-builder.css:2323-2331), теми же числами; текст собирает exerciseCountLabel (strength/heys_strength_builder_ui_v1.js:870-872).",
-      "h": "25873c9f3187"
+      "f": "Номер «1»: .sb-empty-plan-preview-num — flex:none, font 700 10px/1.3 ui-monospace tabular-nums, rgba(var(--v4-ink-rgb),.56) — 750-strength-builder.css:2281-2288.",
+      "h": "fa910e9dd650"
     },
     "Конструктор · пусто · план назначен · 12": {
       "v": "=",
-      "f": "«Собрать свою» вторичной — .sb-empty-action без is-primary: отступ сверху 10, фон приведён к --v4-hero (--c2 кадра, было --v4-accent-bg), тон к чернилам 58 % (750-strength-builder.css:2299-2313).",
-      "h": "30e69a18031f"
+      "f": "Название: .sb-empty-plan-preview-name — flex:1 min-width:0, font 600 11.5px/1.3 Figtree, var(--v4-ink) — 750-strength-builder.css:2291-2298; текст row.name — heys_strength_builder_ui_v1.js:866.",
+      "h": "78031c3f2483"
     },
     "Конструктор · пусто · план назначен · 13": {
       "v": "=",
-      "f": "Список .cd — .sb-empty-options: отступ сверху 10, поля 2px 16px, радиус 20 (750-strength-builder.css:2333-2338).",
-      "h": "d641122bb122"
+      "f": "Доза «4 × 8»: .sb-empty-plan-preview-dose — flex:none, font 500 10.5px/1.3 Figtree tabular-nums, rgba(var(--v4-ink-rgb),.56) — 750-strength-builder.css:2301-2309.",
+      "h": "f32034e7cd04"
     },
     "Конструктор · пусто · план назначен · 14": {
       "v": "=",
-      "f": "Единственная строка списка без разделителя: .sb-empty-option границ не рисует (750-strength-builder.css:2340-2356).",
-      "h": "6b286135ed76"
+      "f": "Вторая/третья строки: .sb-empty-plan-preview li { margin-top: 6px } без override — 750-strength-builder.css:2270-2275.",
+      "h": "372a5dee1615"
     },
     "Конструктор · пусто · план назначен · 15": {
       "v": "=",
-      "f": "«Повторить 5 августа» — span строки тоном --v4-ink (strength/heys_strength_builder_ui_v1.js:910).",
-      "h": "20b0b089c5bd"
+      "f": "Остаток: li.sb-empty-plan-preview-more — font 500 10.5px/1.3, rgba(var(--v4-ink-rgb),.45), margin-top 7px — 750-strength-builder.css:2312-2319; текст «и ещё N упражн…» — heys_strength_builder_ui_v1.js:870-876.",
+      "h": "f39ed3a57baa"
     },
     "Конструктор · пусто · план назначен · 16": {
       "v": "=",
-      "f": "«7 упр.» — b строки: 700 11.5px/1 тоном --v4-act-text (--ac) (750-strength-builder.css:2358-2364).",
-      "h": "57090ba62a2d"
+      "f": "Главная «Начать по плану · …»: button.sb-empty-action.is-primary margin-top 10px — 750-strength-builder.css:2322-2344; метка planLabel — heys_strength_builder_ui_v1.js:895.",
+      "h": "244ad2b1ed36"
     },
     "Конструктор · пусто · план назначен · 17": {
-      "v": "?",
-      "f": "СНОСКА ОСТАЁТСЯ ВОПРОСОМ. Вид совпал: .sb-empty-note — 500 11px/1.55, тон приведён к 56 % кадра (750-strength-builder.css, было 55 %). Текст расходится, и это открытая запись «Пустой Конструктор: сноска про шаблоны и закрытое состояние состава плана» в docs/ui/UI_V4_FINDINGS.md: сноска кадра «плана нет» кончается предложением про отсутствие строки «Из шаблона» с внутренним оборотом «в продукте», а сноска кадра «план назначен» говорит, что состав плана раскрывается, тогда как кадр не рисует ни раскрытого состава, ни строки раскрытия. Копию не меняли до ответа дизайнера.",
-      "h": "9b6597f4be95"
+      "v": "=",
+      "f": "Подпись «N упражнений · назначил …»: .sb-empty-plan-meta — margin-top 6px, text-align center, font 500 11px/1.4, var(--v4-ink-data) — 750-strength-builder.css:2350-2357; JS:896-898.",
+      "h": "25873c9f3187"
     },
     "Сессия · вернулись через час · 16": {
       "v": "=",
@@ -9931,14 +9894,14 @@
       "h": "978eceb00c02"
     },
     "Конструктор · пусто · плана нет · текст": {
-      "v": "?",
-      "f": "Сборка текста совпадает по всем элементам, кроме сноски: заголовок, проза, главная кнопка, строка повтора и её значение проверены построчно. Сноска — открытый вопрос, поэтому и эта строка стоит «?».",
-      "h": "73e59620b6bd"
+      "v": "=",
+      "f": "Сборка EmptyState без плана: b «Силовая»/«пусто · 0 подходов» (829-834), «Пустая тренировка»/проза (855-858), «Собрать свою» is-primary (900-917), «Повторить …» (936-937) — heys_strength_builder_ui_v1.js.",
+      "h": "3d2b61206f79"
     },
     "Конструктор · пусто · план назначен · текст": {
-      "v": "?",
-      "f": "Сборка текста совпадает по всем элементам, кроме сноски, и в продукте между прозой карточки и главной кнопкой стоит ещё список состава плана, которого кадр не рисует. И то и другое — та же открытая запись, поэтому строка стоит «?».",
-      "h": "29eed678db43"
+      "v": "=",
+      "f": "Сборка с планом: ключ «план на день · 0 подходов», «План на сегодня готов», ol.sb-empty-plan-preview, «Начать по плану · …», meta, «Собрать свою» вторичная, сноска — heys_strength_builder_ui_v1.js:849-941.",
+      "h": "43a03ffae6cc"
     },
     "Сессия · вернулись через час · без таймера · текст": {
       "v": "=",
@@ -9949,6 +9912,36 @@
       "v": "=",
       "f": "Сборка текста совпадает с ветвью идущего таймера: отличия от основного кадра — фраза с остатком и сноска, обе проверены выше.",
       "h": "11a6dfd313dc"
+    },
+    "Конструктор · пусто · план назначен · 18": {
+      "v": "=",
+      "f": "Вторичная «Собрать свою»: .sb-empty-action без is-primary, margin-top 10px, фон var(--v4-hero) — 750-strength-builder.css:2322-2338; рендер при canStartPlan — heys_strength_builder_ui_v1.js:900-917.",
+      "h": "30e69a18031f"
+    },
+    "Конструктор · пусто · план назначен · 19": {
+      "v": "=",
+      "f": "Список повтора: .sb-empty-options { margin-top: 10px; padding: 2px 16px; border-radius: 20px } — 750-strength-builder.css:2360-2365.",
+      "h": "d641122bb122"
+    },
+    "Конструктор · пусто · план назначен · 20": {
+      "v": "=",
+      "f": "Строка без разделителя: .sb-empty-option { border: 0; box-shadow: none } — 750-strength-builder.css:2367-2375.",
+      "h": "6b286135ed76"
+    },
+    "Конструктор · пусто · план назначен · 21": {
+      "v": "=",
+      "f": "«Повторить …»: span внутри .sb-empty-option, color var(--v4-ink) — heys_strength_builder_ui_v1.js:936; тон --v4-ink через --sb-tx.",
+      "h": "20b0b089c5bd"
+    },
+    "Конструктор · пусто · план назначен · 22": {
+      "v": "=",
+      "f": "«7 упр.»: .sb-empty-option b — font 700 11.5px/1, color var(--v4-act-text) — 750-strength-builder.css:2386-2391; last.exercises.length — JS:937.",
+      "h": "57090ba62a2d"
+    },
+    "Конструктор · пусто · план назначен · 23": {
+      "v": "=",
+      "f": "Сноска: p.sb-empty-note при canStartPlan — текст JS:940-941; вид 11px/1.55 var(--v4-ink-data) — 750-strength-builder.css:2394-2401.",
+      "h": "9b6597f4be95"
     }
   },
   "frames": {
