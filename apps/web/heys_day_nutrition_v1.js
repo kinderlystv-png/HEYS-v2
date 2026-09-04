@@ -622,6 +622,9 @@
 
   // === Мелкая разметка ===============================================
 
+  // Кадр «Питание · лист правки приёма» рисунок 05: точка «i» и круг r=9 одной кривой.
+  var MEAL_TIPS_INFO_ICON = 'M12 16v-4M12 8h.01M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18';
+
   // Иконке бывает мало одной кривой: календарю нужна ещё рамка. Третий аргумент
   // принимает либо кривую строкой, как раньше, либо список частей, где часть —
   // строка (кривая) или объект-рамка {x, y, width, height, rx}. Больше видов
@@ -1561,7 +1564,7 @@
           onClick: () => setTipsOpen(!tipsOpen)
         },
           React.createElement('span', { className: 'nutrition-v4-sheet__tips-icon', 'aria-hidden': 'true' },
-            svgIcon(React, { width: 17, height: 17, strokeWidth: 2.4 }, ['M12 16v-4', 'M12 8h.01', 'M12 4a8 8 0 1 0 0 16 8 8 0 1 0 0-16'])),
+            svgIcon(React, { width: 17, height: 17, strokeWidth: 2.4 }, MEAL_TIPS_INFO_ICON)),
           React.createElement('b', null, 'Советы · ' + mealOptimizerCount),
           React.createElement('span', { className: 'nutrition-v4-sheet__chevron', 'aria-hidden': 'true' }, chevron(React, 15))
         ) : null,

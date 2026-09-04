@@ -94,7 +94,8 @@ describe('Date picker sheet v4 · вариант А', () => {
     expect(sheetBlock).toContain("navChevron('left')");
     expect(sheetBlock).not.toMatch(/className:\s*'date-picker-nav'/);
     expect(sheetCss).toContain('.date-picker-sheet .date-picker-sheet-month-nav');
-    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-sheet-month-nav[\s\S]*?background:\s*#f7efe2/);
+    // Кадр «Календарь · легенда · 06»: фон var(--c1), не --chip второго яруса.
+    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-sheet-month-nav[\s\S]*?background:\s*var\(--v4-c1/);
   });
 
   it('sheet streak banner uses v4 sand chip copy', () => {
@@ -103,6 +104,8 @@ describe('Date picker sheet v4 · вариант А', () => {
     expect(sheetBlock).toContain('Серия ·');
     expect(sheetBlock).not.toContain('дней подряд в норме');
     expect(sheetCss).toContain('.date-picker-sheet .date-picker-streak--v4');
-    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-streak--v4[\s\S]*?background:\s*#f3e0d2/);
+    // Светлое правило обязано жить рядом с [data-theme$="dark"]; роль --sand-tint.
+    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-streak--v4[\s\S]*?background:\s*var\(--v4-sand-tint/);
+    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-streak--v4[\s\S]*?\[data-theme\$="dark"\]/);
   });
 });

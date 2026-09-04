@@ -9006,7 +9006,7 @@ svg.date-picker-icon {
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: var(--v4-surface, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   display: flex;
@@ -9017,7 +9017,7 @@ svg.date-picker-icon {
 
 @media (hover: hover) {
   .date-picker-sheet .date-picker-sheet-month-nav:hover:not(:disabled) {
-    background: var(--v4-chip) /* v4-intentional */;
+    background: var(--v4-chip, #efe3cf) /* v4-intentional */;
   }
 }
 
