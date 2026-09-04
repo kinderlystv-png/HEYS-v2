@@ -1,0 +1,162 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/_kernel/heys_kernel_strength_v1.js + apps/web/heys_day_trainings_v1.js",
+  "generated": "2026-09-04",
+  "agent": "kernel subagent",
+  "summary": {
+    "mechanicsProcessed": 28,
+    "recommendEquals": 18,
+    "recommendNotEquals": 0,
+    "recommendDash": 3,
+    "recommendQuestion": 7,
+    "codeChanged": true,
+    "codeChange": "epleyOneRepMax + estimatedMaxFromExercise в ядре; тест fixture 95 кг"
+  },
+  "rows": [
+    {
+      "key": "границы",
+      "verdict": "—",
+      "f": "Служебная строка handoff; runtime-арифметика — HEYS.TrainingKernel.strength в apps/web/_kernel/heys_kernel_strength_v1.js:20–1290."
+    },
+    {
+      "key": "коэффициент своего веса — физический факт",
+      "verdict": "=",
+      "f": "Снимок ex.bodyweightFactor при добавлении; без factor или bodyWeightKg — unmeasuredExercises и totalVolume=0. apps/web/_kernel/heys_kernel_strength_v1.js:1108–1115, 1148–1150; тест «без массы тела или коэффициента» kernel-strength-approach-schema.test.js."
+    },
+    {
+      "key": "группы мышц — основная плюс синергисты",
+      "verdict": "—",
+      "f": "Веса групп — HEYS.exerciseMeta.groupWeights (SYNERGIST_SHARE=0.5) в apps/web/heys_exercise_catalog_v1.js:668–677; снимок primaryGroup/secondaryGroups тащит heys_day_trainings_v1.js:42 EXERCISE_CARRY_FIELDS. Ядро тоннажа группы не делит — потребитель heys_day_activity_v1.js:450 groupVolumesForTraining."
+    },
+    {
+      "key": "единица измерения даёт или не даёт тоннаж",
+      "verdict": "=",
+      "f": "unit time/distance → seconds/meters, totalVolume не растёт. apps/web/_kernel/heys_kernel_strength_v1.js:1132–1138; тест kernel-strength-approach-schema.test.js «время и метры копятся отдельно»."
+    },
+    {
+      "key": "тип подхода",
+      "verdict": "=",
+      "f": "approachType: пусто=work, warmup вне totalApproaches и тоннажа. apps/web/_kernel/heys_kernel_strength_v1.js:72–80, 1121–1127."
+    },
+    {
+      "key": "дроп-сет — продолжение подхода",
+      "verdict": "=",
+      "f": "approachStages + все ступени в plannedVolume/totalVolume; maxWeight только основная. apps/web/_kernel/heys_kernel_strength_v1.js:87–106, 1155–1157."
+    },
+    {
+      "key": "перенумерация пересчитывает тоннаж",
+      "verdict": "=",
+      "f": "warmup исключается из тоннажа при смене type; пересчёт через trainingTonnage. Ядро + UI writer; арифметика kernel-strength-approach-schema.test.js «разминка не идёт»."
+    },
+    {
+      "key": "инвариант · расчётный максимум — Эпли",
+      "verdict": "=",
+      "f": "epleyOneRepMax(w,r)=w×(1+r/30); estimatedMaxFromExercise(ex) от workingTopSet. apps/web/_kernel/heys_kernel_strength_v1.js:963–971, 989–994; fixture Math.round(epley(75,8))=95 — kernel-strength-approach-schema.test.js."
+    },
+    {
+      "key": "открыто · формулы Эпли в коде нет",
+      "verdict": "=",
+      "f": "Закрыто в этом заходе: epleyOneRepMax в ядре (см. инвариант выше). Дубликат в apps/web/strength/heys_strength_finish_ui_v1.js:40 — UI-writer может перевести на TK.strength.epleyOneRepMax отдельной задачей."
+    },
+    {
+      "key": "фикстура на 23 подхода",
+      "verdict": "=",
+      "f": "fixtures/workout-23-sets.json: workingSets=23, tonnageKg=10870, estimatedMaxBenchKg=95; kernel-strength-approach-schema.test.js прогон trainingTonnage + estimatedMaxFromExercise."
+    },
+    {
+      "key": "один повтор своего веса",
+      "verdict": "=",
+      "f": "(bodyWeightKg×factor+extraWeightKg)×reps; bodyWeightKg из opts на дату. apps/web/_kernel/heys_kernel_strength_v1.js:1148–1150; тест «свой вес считается по формуле» с (70×1+10)×10."
+    },
+    {
+      "key": "одиннадцать групп, список закрыт",
+      "verdict": "?",
+      "f": "Каталог MUSCLE_GROUPS — 14 id (apps/web/heys_exercise_catalog_v1.js:31–46), канвас/fixture называют 11 русских ярлыков. Сверить с дизайном: traps/forearms/addductors — лишние или скрытые в UI?"
+    },
+    {
+      "key": "объём назначенного и сделанного",
+      "verdict": "=",
+      "f": "Ядро: totalVolume (done) vs plannedVolume (all). apps/web/_kernel/heys_kernel_strength_v1.js:1073–1075, 1159–1160; day_trainings calcWorkoutBuilderVolumeKg → plannedVolume :361–368. Отображение двух строк — UI/program screen, вне kernel."
+    },
+    {
+      "key": "пропущенный день — выбор, а не упрёк",
+      "verdict": "?",
+      "f": "Kernel/dayTonnage: isPlanned пропускает assigned/skipped/moved (heys_kernel_strength_v1.js:36–38, 1186–1194). UX «перенести/отпустить», причина, пилюли — day_trainings ProgramPathScreen/UI; полный контракт не закрыт без UI-кадров."
+    },
+    {
+      "key": "план в ленте — назначение, а не факт",
+      "verdict": "?",
+      "f": "isPlannedWorkout/heys_day_trainings_v1.js:936–943 зеркалит kernel isPlanned; dayTonnage не считает план фактом. Early-start и mesocycle label — открытый product gap в f прежнего вердикта."
+    },
+    {
+      "key": "длительность — от первой отметки до последней",
+      "verdict": "=",
+      "f": "workoutLog.firstMarkAt/lastMarkAt пишутся при галочке (:2095–2096), duration = completedAt|now − startedAt (:1582, :2269). mergeWorkoutLifecyclePatch :724–735."
+    },
+    {
+      "key": "контекст подхода — числа",
+      "verdict": "=",
+      "f": "Прошлый раз/рекord: findExerciseLastSnapshot :266–347, findExerciseHistoricalRecord :646–711, historyFor API :4167–4172 heys_day_trainings_v1.js. Числа из истории LS, не из канваса."
+    },
+    {
+      "key": "рост рабочего веса",
+      "verdict": "=",
+      "f": "programGrowth по workingTopSet, порог GROWTH_STEP_KG=2.5, min 3 сессии. apps/web/_kernel/heys_kernel_strength_v1.js:980–1044; regression apps/web/__tests__/kernel-plan-edit.test.js describe programGrowth."
+    },
+    {
+      "key": "сравнение только с такой же",
+      "verdict": "=",
+      "f": "findLastWorkoutBuilderExercises с workoutCompositionKey :924–990 heys_day_trainings_v1.js — повтор только при том же составе упражнений."
+    },
+    {
+      "key": "связка — один объект любого размера",
+      "verdict": "=",
+      "f": "supersetGroups без лимита 2; restSec=max участников :403–412. kernel-strength-supersets.test.js."
+    },
+    {
+      "key": "шкала отдыха",
+      "verdict": "?",
+      "f": "Предложение 180/120/60/90 по hardness — логика в UI writer (heys_strength_builder_ui), не в kernel/day_trainings. REST_PRESETS [60,90,120,180] day_trainings :721 — только пресеты ручной правки."
+    },
+    {
+      "key": "4 · статус «пропущено» вне факта",
+      "verdict": "=",
+      "f": "plan.status skipped|assigned|moved → isPlanned → dayTonnage=0 для этой тренировки. kernel :36–38; day_trainings isPlannedWorkout :936–943."
+    },
+    {
+      "key": "6 · довес на подходе, индекс раунда не заводим",
+      "verdict": "=",
+      "f": "approachExtraWeight на подходе; раунд выводится supersetRounds из позиции. apps/web/_kernel/heys_kernel_strength_v1.js:121–124, 374–396."
+    },
+    {
+      "key": "пропущен сегодня и пропущен раньше — два разных случая",
+      "verdict": "?",
+      "f": "Различие статусов в program days — day_trainings ProgramPathScreen; kernel не различает «когда» пропуск, только isPlanned на training blob."
+    },
+    {
+      "key": "состав итогов",
+      "verdict": "?",
+      "f": "trainingTonnage отдаёт totalVolume, warmupApproaches, seconds, meters, unmeasuredExercises; состав экрана итогов — heys_strength_finish_ui_v1.js (UI scope)."
+    },
+    {
+      "key": "Программа · назначено против сделано · текст",
+      "verdict": "?",
+      "f": "plannedVolume/totalVolume в ядре готовы; экран «41 т / 26 т» и program aggregate — UI/program module, не найден в day_trainings grep."
+    },
+    {
+      "key": "перестановка — стрелками и за ручку",
+      "verdict": "=",
+      "f": "orderBlocks/moveBlock/moveSupersetGroup/insertRespectingGroups apps/web/_kernel/heys_kernel_strength_v1.js; UI рендер — strength-builder order tests."
+    },
+    {
+      "key": "у брошенной сессии три исхода",
+      "verdict": "?",
+      "f": "Lifecycle completedAt/activeRest mergeWorkoutLifecyclePatch day_trainings :724–753; три исхода UI — вне kernel."
+    }
+  ],
+  "outOfScope": {
+    "note": "737 из 772 «?» — кадры «вид · …», геометрия CSS, curator UI, finish/history screens. Писатель вердиктов закрывает их через strength-builder-*-canvas-contract.test.js и 750-strength-builder.css.",
+    "uiCssVerdictsRemaining": 744,
+    "kernelMechanicsRemaining": 7
+  }
+}

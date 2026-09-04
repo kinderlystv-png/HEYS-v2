@@ -960,6 +960,18 @@
   const GROWTH_MIN_SESSIONS = 3;
   const GROWTH_MAX_ROWS = 3;
 
+  /**
+   * Расчётный максимум по Эпли (контракт strength-builder, инвариант «95 кг из 75 × 8»):
+   *   1RM = вес × (1 + повторы / 30)
+   * Живёт в ядре, чтобы finish/history не разъехались с Бржицки или другой формулой.
+   */
+  function epleyOneRepMax(weightKg, reps) {
+    const w = toWeightNumber(weightKg);
+    const r = +reps || 0;
+    if (w === null || w <= 0 || r <= 0) return null;
+    return w * (1 + r / 30);
+  }
+
   /** Рабочий вес упражнения за тренировку: лучший закрытый рабочий подход. */
   function workingTopSet(ex) {
     const aps = ex && Array.isArray(ex.approaches) ? ex.approaches : [];
@@ -975,6 +987,13 @@
       }
     }
     return best;
+  }
+
+  /** Расчётный максимум упражнения за тренировку — Эпли от лучшего закрытого рабочего подхода. */
+  function estimatedMaxFromExercise(ex) {
+    const top = workingTopSet(ex);
+    if (!top) return null;
+    return epleyOneRepMax(top.weightKg, top.reps);
   }
 
   function programGrowth(sessions) {
@@ -1264,6 +1283,8 @@
     expirePlanProposal: expirePlanProposal,
     pendingPlanProposal: pendingPlanProposal,
     programGrowth: programGrowth,
-    workingTopSet: workingTopSet
+    workingTopSet: workingTopSet,
+    epleyOneRepMax: epleyOneRepMax,
+    estimatedMaxFromExercise: estimatedMaxFromExercise
   };
 })(typeof window !== 'undefined' ? window : globalThis);

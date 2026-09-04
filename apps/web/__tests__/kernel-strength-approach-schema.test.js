@@ -191,6 +191,10 @@ describe('TrainingKernel.strength — тоннаж по новой схеме', 
         expect(agg.warmupApproaches).toBe(2);
         expect(agg.totalVolume).toBe(fixture.expected.tonnageKg);
 
+        const bench = sourceTraining.workoutLog.exercises.find((ex) => /жим/i.test(ex.name));
+        expect(Math.round(ks.estimatedMaxFromExercise(bench))).toBe(fixture.expected.estimatedMaxBenchKg);
+        expect(Math.round(ks.epleyOneRepMax(75, 8))).toBe(95);
+
         let workingIndex = 0;
         sourceTraining.workoutLog.exercises.forEach((exercise) => {
             exercise.approaches.forEach((approach) => {
