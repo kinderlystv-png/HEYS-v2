@@ -1435,7 +1435,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--sleep .widget__star--filled {
-  color: var(--v4-wgt-yellow, #fbbf24);
+  color: var(--v4-wgt-yellow, #d99a63);
 }
 
 .widget--sleep .widget__star--empty {
@@ -1773,7 +1773,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__day-balance--warn {
-  background: var(--v4-wgt-amber, #f59e0b);
+  background: var(--v4-wgt-amber, #d99a63);
 }
 
 .widget-cascade__day-balance--bad {
@@ -7615,7 +7615,7 @@ body:has(.page-reports) .hdr::after {
   min-height: 0;
   padding: 0 22px 20px;
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--v4-wgt-yellow, #fbbf24) 8%, transparent), transparent 26%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--v4-wgt-yellow, #d99a63) 8%, transparent), transparent 26%),
     radial-gradient(circle at top left, rgba(248, 113, 113, 0.08), transparent 32%),
     linear-gradient(180deg, rgba(248, 250, 252, 0.86), rgba(255, 255, 255, 1));
 }
@@ -7855,9 +7855,9 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-relapse-risk__impact-chip {
-  --chip-accent: var(--v4-wgt-amber, #f59e0b);
-  --chip-bg: color-mix(in srgb, var(--v4-wgt-amber, #f59e0b) 12%, transparent);
-  --chip-border: color-mix(in srgb, var(--v4-wgt-amber, #f59e0b) 24%, transparent);
+  --chip-accent: var(--v4-wgt-amber, #d99a63);
+  --chip-bg: color-mix(in srgb, var(--v4-wgt-amber, #d99a63) 12%, transparent);
+  --chip-border: color-mix(in srgb, var(--v4-wgt-amber, #d99a63) 24%, transparent);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -7882,9 +7882,9 @@ body:has(.page-reports) .hdr::after {
   gap: 10px;
   padding: 14px 15px;
   border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--v4-wgt-yellow, #fbbf24) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v4-wgt-yellow, #d99a63) 22%, transparent);
   background: linear-gradient(135deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.98));
-  box-shadow: 0 14px 32px color-mix(in srgb, var(--v4-wgt-amber, #f59e0b) 10%, transparent);
+  box-shadow: 0 14px 32px color-mix(in srgb, var(--v4-wgt-amber, #d99a63) 10%, transparent);
 }
 
 .widget-relapse-risk__action-icon {
@@ -7895,11 +7895,11 @@ body:has(.page-reports) .hdr::after {
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--v4-wgt-amber, #f59e0b), var(--v4-wgt-yellow, #fbbf24));
+  background: linear-gradient(135deg, var(--v4-wgt-amber, #d99a63), var(--v4-wgt-yellow, #d99a63));
   color: var(--v4-bg, #fff);
   font-size: 13px;
   font-weight: 800;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--v4-wgt-amber, #f59e0b) 20%, transparent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--v4-wgt-amber, #d99a63) 20%, transparent);
 }
 
 .widget-relapse-risk__action-text {
@@ -8116,7 +8116,7 @@ body:has(.page-reports) .hdr::after {
 
 [data-theme$="dark"] .widget-relapse-risk__modal-content {
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--v4-wgt-yellow, #fbbf24) 8%, transparent), transparent 26%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--v4-wgt-yellow, #d99a63) 8%, transparent), transparent 26%),
     radial-gradient(circle at top left, rgba(248, 113, 113, 0.1), transparent 30%),
     linear-gradient(180deg, rgba(17, 24, 39, 0.96), rgba(31, 41, 55, 1));
 }
@@ -8258,11 +8258,11 @@ body:has(.page-reports) .hdr::after {
 [data-theme$="dark"] .widget-relapse-risk__action-card {
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--v4-wgt-amber, #f59e0b) 14%, transparent),
-    color-mix(in srgb, var(--v4-wgt-amber, #f59e0b) 7%, transparent)
+    color-mix(in srgb, var(--v4-wgt-amber, #d99a63) 14%, transparent),
+    color-mix(in srgb, var(--v4-wgt-amber, #d99a63) 7%, transparent)
   );
-  border-color: color-mix(in srgb, var(--v4-wgt-amber, #f59e0b) 22%, transparent);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--v4-wgt-amber, #f59e0b) 8%, transparent);
+  border-color: color-mix(in srgb, var(--v4-wgt-amber, #d99a63) 22%, transparent);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--v4-wgt-amber, #d99a63) 8%, transparent);
 }
 
 [data-theme$="dark"] .widget-crash-risk__factor {
