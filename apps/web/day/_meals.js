@@ -737,7 +737,7 @@
             case 'post':
                 return { background: '#3b82f633', color: '#2563eb', border: '#3b82f655' };
             case 'pre':
-                return { background: '#eab30833', color: '#ca8a04', border: '#eab30855' };
+                return { background: mixRole(WARN_SOFT, 20), color: WARN_TEXT, border: mixRole(WARN_SOFT, 33) };
             case 'steps':
                 return { background: '#10b9812b', color: '#047857', border: '#10b9814d' };
             case 'household':
@@ -2662,12 +2662,12 @@
                                         alignItems: 'center',
                                         padding: '2px 6px',
                                         borderRadius: '8px',
-                                        background: '#fef3c7',
+                                        background: mixRole(WARN_SOFT, 12),
                                         minWidth: '28px',
                                     },
                                 },
                                     React.createElement('span', { style: { fontSize: '12px' } }, moodEmoji),
-                                    React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: '#b45309' } }, moodVal),
+                                    React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: WARN_TEXT } }, moodVal),
                                 ),
                                 wellbeingEmoji && React.createElement('div', {
                                     style: {
