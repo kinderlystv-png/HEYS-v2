@@ -12523,8 +12523,14 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 /* Кадр «Клетчатка · Как сейчас · 03»: зазор 3 px у числа и «г».
-   Общий hero 4 px не трогал — им пользуются белок и 2×1 клетчатки. */
+   Общий hero 4 px не трогал — им пользуются 2×1 клетчатки и белок add. */
 .widget-v4-mini.widget-v4-fiber .widget-v4-goal-hero {
+  gap: 3px;
+}
+
+/* Кадр «Белок · Как сейчас · 03»: зазор 3 px у числа и «г».
+   Правило клетчатки 3 px не трогал. */
+.widget-v4-mini.widget-v4-protein .widget-v4-goal-hero {
   gap: 3px;
 }
 
