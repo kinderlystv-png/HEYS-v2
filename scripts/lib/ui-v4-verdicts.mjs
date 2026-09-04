@@ -175,12 +175,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // сам кадр» типизирована naKind: 'handoff' — она про разметку пакета и его
     // собственную проверку, а не про продукт; новая строка того же долга
     // канваса заведена сразу типизированной.
-    // 04.09: серия коммитов 4 сент (61f82b922 и ранее) — приёмка пакета, новые
-    // вердикты по кадрам A–E. Legacy «≠» 226 → 237; «—» без изменений.
-    // 04.09: typed-v1 gate — 14 typed «≠»; legacy 237 → 170, «—» 97 → 108.
-    mismatch: [170, '5471942ab6d1f4eb'],
-    typedMismatch: [14, 'bf0d0c2261fdd6dc'],
-    notApplicable: [108, 'ff528f60aa050913'],
+    // 04.09: Г1 CycleScreen — 34 строк «Программа · цикл · 01–33» + «вид · экран цикла»
+    // legacy ≠→=; typedMismatch 14→169 неверно в старом снимке — переснято;
+    // legacy mismatch 170→0; «—» 108→107.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [169, '7ce7d88d78e21b15'],
+    notApplicable: [107, '13d5a59f2d87bb7f'],
   }),
   'tab-activity': Object.freeze({
     mismatch: [51, '9beed0acfd026056'],

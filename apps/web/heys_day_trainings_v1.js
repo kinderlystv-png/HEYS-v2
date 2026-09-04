@@ -3189,11 +3189,30 @@
     function openPath() {
       const fs = HEYS.TrainingKernel && HEYS.TrainingKernel.fullscreen;
       if (!fs) return;
+      const Parts = HEYS.StrengthBuilderParts || {};
+      const today = todayDateKeyForPlan();
+      const snapshot = Parts.buildProgramCycleSnapshot
+        ? Parts.buildProgramCycleSnapshot(state.program, state.days, readDayFromStore, {
+          today: today,
+          mondayOfWeek: mondayOfWeek,
+          addDaysToKey: addDaysToKey
+        })
+        : null;
+      const Screen = Parts.CycleScreen || ProgramPathScreen;
       fs.mount({
         id: PROGRAM_PATH_ID,
-        ariaLabel: 'Программа',
-        render: (api) => React.createElement(ProgramPathScreen, {
-          program: state.program, days: state.days, onClose: api.close
+        ariaLabel: 'Программа · цикл',
+        render: (api) => React.createElement(Screen, {
+          program: state.program,
+          days: state.days,
+          snapshot: snapshot,
+          readDay: readDayFromStore,
+          snapshotOpts: {
+            today: today,
+            mondayOfWeek: mondayOfWeek,
+            addDaysToKey: addDaysToKey
+          },
+          onClose: api.close
         })
       });
     }

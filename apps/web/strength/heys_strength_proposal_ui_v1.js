@@ -576,7 +576,342 @@
     return v >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, '') + ' т' : v + ' кг';
   }
 
+  const MONTHS_GENITIVE = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+  const WEEKDAY_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+  const CYCLE_FOOTNOTE = 'Объём растёт три недели и падает на последней — это разгрузка, а не пропуск. Показываем её явно, иначе человек видит «недоделал» там, где всё по плану. Фаза недели — не украшение: от неё зависит, какой вес предложит конструктор, поэтому она названа числом, а не словом «тяжёлая».';
+
+  function fmtProgramStartDate(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!m) return '';
+    return (+m[3]) + ' ' + MONTHS_GENITIVE[(+m[2]) - 1];
+  }
+
+  function programTitleLine(program) {
+    const title = program && typeof program.title === 'string' ? program.title.trim() : '';
+    const weeks = program && program.weeks;
+    if (title && weeks) return title + ' · ' + weeks + ' недель';
+    return title || (weeks ? weeks + ' недель' : 'Программа');
+  }
+
+  function programKeyLine(program) {
+    const by = program && program.assignedBy ? String(program.assignedBy).trim() : '';
+    const start = program && program.startDate ? fmtProgramStartDate(program.startDate) : '';
+    if (by && start) return 'назначил ' + by + ' · с ' + start;
+    if (by) return 'назначил ' + by;
+    if (start) return 'с ' + start;
+    return '';
+  }
+
+  function weekDaysMap(days) {
+    const map = new Map();
+    (days || []).forEach(function (d) {
+      const w = d.weekIndex || 0;
+      if (!map.has(w)) map.set(w, []);
+      map.get(w).push(d);
+    });
+    return map;
+  }
+
+  function weekIsDone(weekDays) {
+    if (!weekDays || !weekDays.length) return false;
+    return weekDays.every(function (d) { return d.status === 'done'; });
+  }
+
+  function weekHasProgress(weekDays) {
+    if (!weekDays || !weekDays.length) return false;
+    return weekDays.some(function (d) { return d.status === 'done'; });
+  }
+
+  function defaultPhases(program, days) {
+    if (program && Array.isArray(program.phases) && program.phases.length) {
+      return program.phases.map(function (phase, index) {
+        return {
+          index: index + 1,
+          name: phase.name || ('Фаза ' + (index + 1)),
+          detail: phase.detail || phase.subtitle || '',
+          weeks: Array.isArray(phase.weeks) ? phase.weeks.slice() : [],
+          tonnageTargetKg: phase.tonnageTargetKg || phase.tonnageKg || 0
+        };
+      });
+    }
+    const weekNums = Array.from(new Set((days || []).map(function (d) {
+      return d.weekIndex || 0;
+    }).filter(function (w) { return w > 0; }))).sort(function (a, b) { return a - b; });
+    if (!weekNums.length) {
+      const total = program && program.weeks ? program.weeks : 1;
+      for (let i = 1; i <= total; i++) weekNums.push(i);
+    }
+    if (weekNums.length <= 3) {
+      return weekNums.map(function (w, i) {
+        return {
+          index: i + 1,
+          name: 'Неделя ' + w,
+          detail: '',
+          weeks: [w],
+          tonnageTargetKg: 0
+        };
+      });
+    }
+    const third = Math.ceil(weekNums.length / 3);
+    const names = ['Втягивание', 'Работа', 'Разгрузка'];
+    const chunks = [
+      weekNums.slice(0, third),
+      weekNums.slice(third, weekNums.length - 1),
+      weekNums.slice(weekNums.length - 1)
+    ].filter(function (c) { return c.length; });
+    return chunks.map(function (weeks, i) {
+      const first = weeks[0];
+      const last = weeks[weeks.length - 1];
+      const range = first === last ? ('Неделя ' + first) : ('Недели ' + first + '–' + last);
+      return {
+        index: i + 1,
+        name: names[i] || ('Фаза ' + (i + 1)),
+        detail: range,
+        weeks: weeks,
+        tonnageTargetKg: 0
+      };
+    });
+  }
+
+  function countSessionRecords(training) {
+    const log = training && training.workoutLog;
+    const snap = training && training.plan && training.plan.planSnapshot;
+    if (!log || !snap || !Array.isArray(log.exercises) || !Array.isArray(snap.exercises)) return 0;
+    const ks = kernel();
+    if (!ks || typeof ks.approachStages !== 'function') return 0;
+    let count = 0;
+    log.exercises.forEach(function (ex) {
+      if (!ex || !ex.name) return;
+      const planned = snap.exercises.find(function (p) { return p && p.name === ex.name; });
+      if (!planned) return;
+      let doneMaxW = 0;
+      let plannedMaxW = 0;
+      (ex.approaches || []).forEach(function (a) {
+        if (!ks.isApproachDone(a) || ks.isWarmupApproach(a)) return;
+        const base = ks.approachStages(a)[0] || {};
+        const w = parseFloat(String(base.weightKg || '').replace(',', '.')) || 0;
+        if (w > doneMaxW) doneMaxW = w;
+      });
+      (planned.approaches || []).forEach(function (a) {
+        const base = ks.approachStages(a)[0] || {};
+        const w = parseFloat(String(base.weightKg || '').replace(',', '.')) || 0;
+        if (w > plannedMaxW) plannedMaxW = w;
+      });
+      if (doneMaxW > plannedMaxW) count++;
+    });
+    return count;
+  }
+
+  /**
+   * Снимок для экрана цикла (Г1): прогресс, тоннаж, фазы и текущая неделя.
+   * readDay — функция чтения дня из LS (передаёт mount в day_trainings).
+   */
+  function buildProgramCycleSnapshot(program, days, readDay, opts) {
+    const o = opts || {};
+    const today = o.today || '';
+    const ks = kernel();
+    const doneDays = (days || []).filter(function (d) { return d.status === 'done'; });
+    const doneCount = doneDays.length;
+    const totalCount = (days || []).length;
+    let doneVolume = 0;
+    let plannedVolume = 0;
+    let recordCount = 0;
+    const byWeek = weekDaysMap(days);
+
+    (days || []).forEach(function (d) {
+      if (typeof readDay !== 'function') return;
+      let blob = null;
+      try { blob = readDay(d.date); } catch (_) { blob = null; }
+      const list = blob && Array.isArray(blob.trainings) ? blob.trainings : [];
+      const training = list.find(function (t) {
+        return t && (t.id === d.trainingId || (t.plan && t.plan.programId));
+      });
+      if (!training || !ks || typeof ks.trainingTonnage !== 'function') return;
+      const stats = ks.trainingTonnage(training, o.bodyWeightKg ? { bodyWeightKg: o.bodyWeightKg } : {});
+      plannedVolume += stats.plannedVolume || 0;
+      if (d.status === 'done') {
+        doneVolume += stats.totalVolume || 0;
+        recordCount += countSessionRecords(training);
+      }
+    });
+
+    const currentDay = (days || []).find(function (d) {
+      return d.date >= today && d.status !== 'done' && d.status !== 'skipped';
+    }) || (days || []).slice().reverse().find(function (d) { return d.date <= today; });
+    const currentWeek = currentDay && currentDay.weekIndex ? currentDay.weekIndex : null;
+
+    const phases = defaultPhases(program, days).map(function (phase) {
+      const weeks = phase.weeks || [];
+      const cells = weeks.map(function (w) {
+        const wd = byWeek.get(w) || [];
+        if (weekIsDone(wd)) return 'done';
+        if (weekHasProgress(wd)) return 'partial';
+        return 'plan';
+      });
+      const doneWeeks = cells.filter(function (c) { return c === 'done'; }).length;
+      const pct = weeks.length ? Math.round((doneWeeks / weeks.length) * 100) : 0;
+      const active = currentWeek && weeks.indexOf(currentWeek) >= 0;
+      const complete = weeks.length > 0 && doneWeeks === weeks.length;
+      return {
+        index: phase.index,
+        name: phase.name,
+        detail: phase.detail,
+        weeks: weeks,
+        cells: cells,
+        pct: complete ? 100 : (active && pct > 0 ? pct : null),
+        status: complete ? 'done' : (active ? 'active' : 'plan'),
+        tonnageLabel: phase.tonnageTargetKg
+          ? fmtVolume(phase.tonnageTargetKg)
+          : null
+      };
+    });
+
+    const weekDays = currentWeek
+      ? (days || []).filter(function (d) { return d.weekIndex === currentWeek; })
+      : (days || []).filter(function (d) {
+        if (!today) return false;
+        const start = o.mondayOfWeek ? o.mondayOfWeek(today) : '';
+        if (!start) return d.date >= today;
+        const end = o.addDaysToKey ? o.addDaysToKey(start, 6) : today;
+        return d.date >= start && d.date <= end;
+      });
+
+    const weekRows = weekDays.map(function (d) {
+      const parts = String(d.date).split('-').map(Number);
+      const dt = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+      const wd = WEEKDAY_SHORT[dt.getDay()] || '';
+      const label = (wd ? wd.charAt(0).toUpperCase() + wd.slice(1) : '')
+        + (d.dayLabel ? ' · ' + d.dayLabel : '');
+      let status = '';
+      let statusKind = 'muted';
+      if (d.date === today) {
+        status = 'сегодня';
+        statusKind = 'today';
+      } else if (d.status === 'done') {
+        status = 'сделано';
+        statusKind = 'done';
+      }
+      return { key: d.date, label: label, status: status, statusKind: statusKind };
+    });
+
+    return {
+      titleLine: programTitleLine(program),
+      keyLine: programKeyLine(program),
+      weekBadge: currentWeek ? ('неделя ' + currentWeek) : '',
+      doneCount: doneCount,
+      totalCount: totalCount,
+      doneVolume: doneVolume,
+      plannedVolume: plannedVolume,
+      recordCount: recordCount,
+      phases: phases,
+      weekRows: weekRows,
+      footnote: (program && program.cycleFootnote) || CYCLE_FOOTNOTE
+    };
+  }
+
+  /**
+   * Экран цикла (Г1): что назначено и где клиент в программе.
+   */
+  function CycleScreen(props) {
+    const program = props.program || {};
+    const days = props.days || [];
+    const snapshot = props.snapshot
+      || buildProgramCycleSnapshot(program, days, props.readDay, props.snapshotOpts || {});
+    const onClose = props.onClose;
+
+    return h('div', { className: 'sb-root program-cycle' },
+      h('div', { className: 'sb-cycle-top' },
+        h('button', {
+          type: 'button',
+          className: 'sb-icon-btn',
+          onClick: onClose,
+          'aria-label': 'Назад'
+        }, '‹'),
+        h('span', { className: 'sb-cycle-top-main' },
+          h('span', { className: 'sb-cycle-title' }, snapshot.titleLine),
+          snapshot.keyLine && h('span', { className: 'sb-cycle-key' }, snapshot.keyLine)
+        ),
+        snapshot.weekBadge && h('span', { className: 'sb-cycle-badge' }, snapshot.weekBadge)
+      ),
+      h('div', { className: 'sb-cycle-scroll' },
+        h('div', { className: 'sb-cycle-metrics' },
+          h('span', { className: 'sb-cycle-metric' },
+            h('span', { className: 'sb-cycle-metric-label' }, 'Выполнено'),
+            h('span', { className: 'sb-cycle-metric-value' },
+              snapshot.doneCount + ' / ' + snapshot.totalCount)
+          ),
+          h('span', { className: 'sb-cycle-metric' },
+            h('span', { className: 'sb-cycle-metric-label' }, 'Тоннаж'),
+            h('span', { className: 'sb-cycle-metric-value' },
+              fmtVolume(snapshot.doneVolume) + ' / ' + fmtVolume(snapshot.plannedVolume))
+          ),
+          h('span', { className: 'sb-cycle-metric is-accent' },
+            h('span', { className: 'sb-cycle-metric-label' }, 'Рекорды'),
+            h('span', { className: 'sb-cycle-metric-value is-accent' },
+              String(snapshot.recordCount))
+          )
+        ),
+        h('div', { className: 'sb-cycle-tier' }, 'Фазы недель'),
+        snapshot.phases.map(function (phase) {
+          const active = phase.status === 'active';
+          const done = phase.status === 'done';
+          return h('div', {
+            key: 'ph' + phase.index,
+            className: 'sb-cycle-phase' + (active ? ' is-active' : '')
+          },
+            h('div', { className: 'sb-cycle-phase-head' },
+              h('span', {
+                className: 'sb-cycle-phase-num' + (active || done ? ' is-active' : '')
+              }, String(phase.index)),
+              h('span', { className: 'sb-cycle-phase-copy' },
+                h('span', { className: 'sb-cycle-phase-name' }, phase.name),
+                phase.detail && h('span', { className: 'sb-cycle-phase-detail' }, phase.detail)
+              ),
+              phase.pct != null
+                ? h('span', { className: 'sb-cycle-phase-pct is-done' }, phase.pct + ' %')
+                : h('span', { className: 'sb-cycle-phase-pct' }, 'план')
+            ),
+            h('div', { className: 'sb-cycle-phase-weeks' },
+              phase.cells.map(function (cell, ci) {
+                const cls = cell === 'done'
+                  ? 'sb-cycle-week-cell is-done'
+                  : 'sb-cycle-week-cell is-plan';
+                return h('span', { key: ci, className: cls }, cell === 'done' ? '✓' : '·');
+              })
+            )
+          );
+        }),
+        weekRowsBlock(snapshot.weekRows),
+        snapshot.footnote && h('p', { className: 'sb-cycle-footnote' }, snapshot.footnote)
+      )
+    );
+  }
+
+  function weekRowsBlock(rows) {
+    if (!rows || !rows.length) return null;
+    return h(React.Fragment, null,
+      h('div', { className: 'sb-cycle-tier' }, 'Эта неделя'),
+      h('div', { className: 'sb-cycle-week-list' },
+        rows.map(function (row, index) {
+          const last = index === rows.length - 1;
+          return h('div', {
+            key: row.key,
+            className: 'sb-cycle-week-row' + (last ? ' is-last' : '')
+          },
+            h('span', { className: 'sb-cycle-week-label' }, row.label),
+            row.status && h('span', {
+              className: 'sb-cycle-week-status is-' + row.statusKind
+            }, row.status)
+          );
+        })
+      )
+    );
+  }
+
   Parts.ProgramDoneScreen = ProgramDoneScreen;
+  Parts.CycleScreen = CycleScreen;
+  Parts.buildProgramCycleSnapshot = buildProgramCycleSnapshot;
 
   const REVIEW_ID = 'strength-proposal-review';
 
