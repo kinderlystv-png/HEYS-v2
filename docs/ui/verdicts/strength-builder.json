@@ -654,8 +654,8 @@
       "h": "15984102c607"
     },
     "вид · итоги сессии": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "FinishScreen (strength/heys_strength_finish_ui_v1.js:301-409): шапка ✕ 36 + «Тренировка завершена» + sessionTitle·дата; hero .sb-finish-hero на --gr-bg с сеткой 2×2 метрик; .sb-finish-detail четыре строки; ярусы feedback/chart/day-total/other; «Готово» .sb-finish-done 48 на --acs. Смоук: strength-builder-finish-v4-canvas-contract.test.js.",
       "h": "d479483724e4"
     },
     "вид · связка раундами": {
@@ -1504,466 +1504,298 @@
     },
     "Конструктор · итоги · 01": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "175bdcc2e73a"
+      "h": "175bdcc2e73a",
+      "f": "Шапка финала: .sb-finish-screen .sb-finish-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 18px 0 } — 750-strength-builder.css:1713-1719; computed в тесте row 01."
     },
     "Конструктор · итоги · 02": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "dbd19d6c8f05"
+      "h": "dbd19d6c8f05",
+      "f": "Кнопка ✕: .sb-finish-head .sb-icon-btn 36×36, border-radius 999px, background var(--c1), font 600 13px/1, color rgba(var(--ink),.56) — 750:1722-1729; glyph finish_ui:303-305."
     },
     "Конструктор · итоги · 03": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "b4a4fa9ae422"
+      "h": "b4a4fa9ae422",
+      "f": "Колонка заголовка: .sb-head-title { flex:1; min-width:0; flex-direction:column; gap:3px; padding-left:10px } — 750:1732-1738; тест row 03."
     },
     "Конструктор · итоги · 04": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "5869247ca78e"
+      "h": "5869247ca78e",
+      "f": "Имя экрана «Тренировка завершена»: h(\"b\", …) — heys_strength_finish_ui_v1.js:307; текст совпадает с data-v."
     },
     "Конструктор · итоги · 05": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "0a9b59c671ec"
+      "h": "0a9b59c671ec",
+      "f": "Ключ «Силовая · грудь, спина, плечи · 8 августа»: Parts.sessionTitle(exercises) + « · » + humanDate без дня недели — finish_ui:308-310; Parts в builder."
     },
     "Конструктор · итоги · 06": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "c629f84f9712"
+      "h": "c629f84f9712",
+      "f": "Область прокрутки: .sb-finish-list { display:flex; flex-direction:column; overflow-y:auto; gap:0; padding:6px 18px calc(18px+safe) } — 750:1752-1755."
     },
     "Конструктор · итоги · 07": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "c5496a662a0b"
+      "h": "c5496a662a0b",
+      "f": "Карточка hero: section.sb-finish-hero { margin-top:12px; background:var(--gr-bg) } внутри padding 16/radius 20 общего блока — 750:1757-1768."
     },
     "Конструктор · итоги · 08": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "7c8059955d00"
+      "h": "7c8059955d00",
+      "f": "«Отличная работа»: .sb-finish-praise { font:700 14px/1.2 Figtree; color:var(--gr) } — 750:1770-1773; finish_ui:315."
     },
     "Конструктор · итоги · 09": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "2665113ba46b"
+      "h": "2665113ba46b",
+      "f": "Сетка метрик: .sb-finish-metrics { grid-template-columns:1fr 1fr; gap:8px; margin-top:10px } — 750:1775-1780."
     },
     "Конструктор · итоги · 10": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "79195002bcce"
+      "h": "79195002bcce",
+      "f": "Плитка метрики: .sb-finish-metric { flex-direction:column; gap:5px; padding:10px 11px; border-radius:14px; background:var(--bg) } — 750:1782-1789."
     },
     "Конструктор · итоги · 11": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "a4893ff4ee00"
+      "h": "a4893ff4ee00",
+      "f": "Ярус «Длительность»: .sb-finish-metric-label { font:600 9.5px/1; letter-spacing:.11em; text-transform:uppercase; color:rgba(var(--ink),.56) } — 750:1796-1801."
     },
     "Конструктор · итоги · 12": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "e15fa3cf74aa"
+      "h": "e15fa3cf74aa",
+      "f": "Строка значения: .sb-finish-metric-line { display:flex; align-items:baseline; gap:5px } — 750:1803-1807."
     },
     "Конструктор · итоги · 13": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "c5872848526b"
+      "h": "c5872848526b",
+      "f": "«54:30»: .sb-finish-metric-line b { font:800 17px/1; font-variant-numeric:tabular-nums; color:var(--tx) } — 750:1809-1813; fmtClock(elapsedSec) finish_ui:317."
     },
     "Конструктор · итоги · 14": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "00f49f637858"
+      "h": "00f49f637858",
+      "f": "«↑ 12 %»: .sb-finish-metric-line i { font:700 11px/1; color:var(--gr); font-variant-numeric:tabular-nums } — 750:1819-1824; formatPct(tonnageDeltaPct) finish_ui:318."
     },
     "Конструктор · итоги · 15": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "347808bc285c"
+      "h": "347808bc285c",
+      "f": "Акцентная плитка «Рекорды»: .sb-finish-metric.is-accent { background:var(--tint); box-shadow:inset 0 0 0 1.5px var(--acs) } — 750:1791-1794."
     },
     "Конструктор · итоги · 16": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "ffaeaf0d5ee5"
+      "h": "ffaeaf0d5ee5",
+      "f": "«1» в рекордах: .sb-finish-metric.is-accent .sb-finish-metric-line b { color:var(--ac); font:800 17px/1 } — 750:1815-1817; records.length finish_ui:320."
     },
     "Конструктор · итоги · 17": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "d641122bb122"
+      "h": "d641122bb122",
+      "f": "Список .cd: .sb-finish-detail { margin-top:10px } — 750:1830-1835; section.sb-finish-detail finish_ui:324."
     },
     "Конструктор · итоги · 18": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "af81bb6e54c6"
+      "h": "af81bb6e54c6",
+      "f": "Строка списка: .sb-finish-row { display:flex; justify-content:space-between; padding:13px 0; border-bottom:1px solid rgba(var(--ink),.07) } — 750:1837-1846."
     },
     "Конструктор · итоги · 19": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "e7cfa2fc7aa6"
+      "h": "e7cfa2fc7aa6",
+      "f": "«Рабочих подходов»: span в первой .sb-finish-row, color var(--tx) от родителя — finish_ui:326; тест row 19."
     },
     "Конструктор · итоги · 20": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "81d690c90603"
+      "h": "81d690c90603",
+      "f": "«19»: .sb-finish-row b { font:600 12.5px/1; font-variant-numeric:tabular-nums; color:var(--tx) } — 750:1853-1858; setCounts.working finish_ui:327."
     },
     "Конструктор · итоги · 21": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "72c160ead402"
+      "h": "72c160ead402",
+      "f": "«4 · вне объёма»: .sb-finish-row b.is-quiet { color:rgba(var(--ink),.55) } — 750:1861-1863; warmup+« · вне объёма» finish_ui:330."
     },
     "Конструктор · итоги · 22": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "b3e45ad60f71"
+      "h": "b3e45ad60f71",
+      "f": "«Жим лёжа · 75 × 8»: .sb-finish-row b.is-record { color:var(--gr); font-weight:700 } — 750:1865-1868; recordLabel(record) finish_ui:333."
     },
     "Конструктор · итоги · 23": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "6b286135ed76"
+      "h": "6b286135ed76",
+      "f": "Строка без разделителя: .sb-finish-row--reason { border-bottom:0 } — 750:1848-1851; класс finish_ui:334."
     },
     "Конструктор · итоги · 24": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "07ffbada0ee7"
+      "h": "07ffbada0ee7",
+      "f": "Колонка причины: .sb-finish-row--reason > span { display:flex; flex-direction:column; gap:3px } — 750:1875-1880."
     },
     "Конструктор · итоги · 25": {
-      "v": "?",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"],
-      "h": "7e59f99cc3ca"
+      "v": "=",
+      "h": "7e59f99cc3ca",
+      "f": "Текст причины «… — вес тела неизвестен»: small внутри .sb-finish-row--reason { font:500 11px/1.3; color:rgba(var(--ink),.56) } — 750:1882-1885; unmeasuredRows().reason finish_ui:337-338."
     },
     "Конструктор · итоги · 26": {
-      "v": "?",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"],
-      "h": "8bb5e99afca6"
+      "v": "=",
+      "h": "8bb5e99afca6",
+      "f": "«1 упр.»: .sb-finish-row--reason > b.is-quiet { font:600 12.5px/1; font-variant-numeric:tabular-nums; color:rgba(var(--ink),.56) } — 750:1887-1889; missing.length finish_ui:340."
     },
     "Конструктор · итоги · 27": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "aea9de12e541"
+      "h": "aea9de12e541",
+      "f": "Ярус «Как оно прошло»: .sb-finish-tier { margin:20px 0 10px; font:700 10px/1; letter-spacing:.16em; text-transform:uppercase; color:var(--ac) } — 750:1891-1897; finish_ui:351."
     },
     "Конструктор · итоги · 28": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "54643961e08d"
+      "h": "54643961e08d",
+      "f": "Карточка feedback: .sb-finish-feedback-card { padding:16px; border-radius:20px; background:var(--c1) } — 750:1757-1763."
     },
     "Конструктор · итоги · 29": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "3ad04027bbc9"
+      "h": "3ad04027bbc9",
+      "f": "Ряд плиток: .sb-finish-feedback-grid { display:flex; gap:7px } — 750:1895-1898."
     },
     "Конструктор · итоги · 30": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "e2912dc83a59"
+      "h": "e2912dc83a59",
+      "f": "Плитка настроения: .sb-finish-feedback.is-mood { flex:1; min-height:52px; justify-content:center; background:var(--gr-bg); border-radius:12px } — 750:1900-1915."
     },
     "Конструктор · итоги · 31": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "e287269cab62"
+      "h": "e287269cab62",
+      "f": "«7» настроение: .sb-finish-feedback.is-mood input { font:700 14px/1; color:var(--gr); font-variant-numeric:tabular-nums } — 750:1945-1947; feedback.mood finish_ui:354."
     },
     "Конструктор · итоги · 32": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "34e58040aab6"
+      "h": "34e58040aab6",
+      "f": "Подпись «настроение»: .sb-finish-feedback span { font:600 9.5px/1; color:rgba(var(--ink),.56) } — 750:1953-1956."
     },
     "Конструктор · итоги · 33": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "694255fee8b1"
+      "h": "694255fee8b1",
+      "f": "Плитка самочувствия: .sb-finish-feedback.is-wellbeing { min-height:52px; background:var(--c2); border-radius:12px } — 750:1917-1919."
     },
     "Конструктор · итоги · 34": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "a7f3763d1429"
+      "h": "a7f3763d1429",
+      "f": "«8» самочувствие: .sb-finish-feedback.is-wellbeing input { color:var(--ac); font:700 14px/1 } — 750:1925-1937; feedback.wellbeing."
     },
     "Конструктор · итоги · 35": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "fd18bd090aca"
+      "h": "fd18bd090aca",
+      "f": "Плитка стресса: .sb-finish-feedback.is-stress { min-height:52px; background:var(--tint); border-radius:12px } — 750:1921-1923."
     },
     "Конструктор · итоги · 36": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "4fdb2c243d2f"
+      "h": "4fdb2c243d2f",
+      "f": "«5» стресс: .sb-finish-feedback.is-stress input { color:var(--ac2); font:700 14px/1 } — 750:1949-1951; feedback.stress."
     },
     "Конструктор · итоги · 37": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "34b181335f8a"
+      "h": "34b181335f8a",
+      "f": "Поле заметки: .sb-finish-note { min-height:44px; margin-top:9px; padding:0 14px; border-radius:14px; background:var(--bg); box-shadow:inset 0 0 0 1px rgba(var(--ink),.1); font:500 12.5px/1; placeholder rgba(var(--ink),.38) } — 750:1958-1974."
     },
     "Конструктор · итоги · 38": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "c46890146dce"
+      "h": "c46890146dce",
+      "f": "Шапка графика: .sb-finish-chart-head { display:flex; align-items:baseline; gap:8px } — 750:1976-1980."
     },
     "Конструктор · итоги · 39": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "7df7dd449515"
+      "h": "7df7dd449515",
+      "f": "«по весу и повторам каждой тренировки»: .sb-finish-chart-head span { flex:1; font:600 11.5px/1.3; color:rgba(var(--ink),.56) } — 750:1982-1986; finish_ui:370."
     },
     "Конструктор · итоги · 40": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "4eb89dd57364"
+      "h": "4eb89dd57364",
+      "f": "Поле столбиков: .sb-finish-chart { display:flex; align-items:flex-end; gap:6px; height:112px; margin-top:12px } — 750:1994-2001."
     },
     "Конструктор · итоги · 41": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "23da33de2767"
+      "h": "23da33de2767",
+      "f": "Колонка графика: .sb-finish-chart-column { flex:1; flex-direction:column; align-items:center; gap:5px } — 750:2003-2011."
     },
     "Конструктор · итоги · 42": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "946b09c6ac0d"
+      "h": "946b09c6ac0d",
+      "f": "«88» над столбиком: .sb-finish-chart-column b { font:700 9.5px/1; font-variant-numeric:tabular-nums; color:rgba(var(--ink),.56) } — 750:2013-2018."
     },
     "Конструктор · итоги · 43": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "30e35c4d13f9"
+      "h": "30e35c4d13f9",
+      "f": "Столбик н1 высота 41px: .sb-finish-chart-column i { width:100%; border-radius:7px 7px 0 0; background:var(--c2) } — 750:2025-2029; chartHeight() finish_ui:293-298."
     },
     "Конструктор · итоги · 44": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "3ad83eaddc2e"
+      "h": "3ad83eaddc2e",
+      "f": "«н1»: .sb-finish-chart-column small { font:600 9px/1; color:rgba(var(--ink),.56) } — 750:2020-2023; finish_ui:378."
     },
     "Конструктор · итоги · 45": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "fb3e7f3476e1"
+      "h": "fb3e7f3476e1",
+      "f": "Столбик н2 высота 51px: nth-child(2) > i height 51px — тест row 45; chartHeight по series[1]."
     },
     "Конструктор · итоги · 46": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "e1e16f158dd2"
+      "h": "e1e16f158dd2",
+      "f": "Столбик н3 высота 46px: nth-child(3) > i — тест row 46."
     },
     "Конструктор · итоги · 47": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "e302148fd136"
+      "h": "e302148fd136",
+      "f": "Столбик н4 высота 67px: nth-child(4) > i — тест row 47."
     },
     "Конструктор · итоги · 48": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "c50e1b3ae5f3"
+      "h": "c50e1b3ae5f3",
+      "f": "Столбик н5 высота 62px: nth-child(5) > i — тест row 48."
     },
     "Конструктор · итоги · 49": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "599205dd752d"
+      "h": "599205dd752d",
+      "f": "«95» последний столбик: .sb-finish-chart-column.is-latest b { color:var(--ac) } — 750:2031-2034; Math.round(best.oneRm)."
     },
     "Конструктор · итоги · 50": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "506d4b5e2301"
+      "h": "506d4b5e2301",
+      "f": "Столбик н6 78px на --acs: .sb-finish-chart-column.is-latest i { background:var(--acs); height 78px в кадре } — 750:2036-2038."
     },
     "Конструктор · итоги · 51": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "48a631dc319a"
+      "h": "48a631dc319a",
+      "f": "«н6» акцент: .sb-finish-chart-column.is-latest small { color:var(--ac); font:600 9px/1 } — 750:2031-2034."
     },
     "Конструктор · итоги · 52": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "aee288085aea"
+      "h": "aee288085aea",
+      "f": "Сноска под графиком: .sb-finish-chart-card p { margin-top:10px; font:500 11px/1.55; color:rgba(var(--ink),.56) } — 750:2040-2044; текст finish_ui:382."
     },
     "Конструктор · итоги · 53": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "0aa733f23349"
+      "h": "0aa733f23349",
+      "f": "«14,2 т» день: .sb-finish-day-total .sb-finish-row b { font-weight:700; font:700 12.5px/1 tabular-nums var(--tx) } — 750:2056-2058; fmtTonnage(dayTonnageKg) finish_ui:389."
     },
     "Конструктор · итоги · 54": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "d9a337aab838"
+      "h": "d9a337aab838",
+      "f": "Список other: section.sb-finish-detail.sb-finish-other { padding:2px 16px; border-radius:20px; background:var(--c1) } — 750:1830-1835; otherRows finish_ui:392-400."
     },
     "Конструктор · итоги · 55": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "5770d2c092aa"
+      "h": "5770d2c092aa",
+      "f": "«3:00 под нагрузкой»: .sb-finish-other .sb-finish-row b { font:700 12px/1; color:rgba(var(--ink),.55) } — 750:2060-2063; unit time otherVolumeRows finish_ui:220."
     },
     "Конструктор · итоги · 56": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "efb9ecff5e94"
+      "h": "efb9ecff5e94",
+      "f": "«2 028 кг в тоннаже»: .sb-finish-other b без .is-quiet { font:700 12px/1; color:var(--tx) } — finish_ui:222; fmtExactKg bodyweight row."
     },
     "Конструктор · итоги · 57": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "79640b84d0fc"
+      "h": "79640b84d0fc",
+      "f": "Сноска other: .sb-finish-footnote после .sb-finish-other { margin-top:12px; font:500 11px/1.55 rgba(var(--ink),.56) } — 750:2046-2050; finish_ui:401."
     },
     "Конструктор · итоги · 58": {
       "v": "?",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for Б3"],
-      "h": "08f3b8ef67d3"
+      "h": "08f3b8ef67d3",
+      "f": "Кнопки «В шаблоны» в FinishScreen нет: в контракте кадра есть btn2c, но хранения/применения шаблонов в продукте нет (решение по «пусто» сняло «Из шаблона»). Тест row 58 намеренно исключён."
     },
     "Конструктор · итоги · 59": {
       "v": "=",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-finish-v4-canvas-contract.test.js"
-      ],
-      "h": "3abe656a79aa"
+      "h": "3abe656a79aa",
+      "f": "«Готово»: .sb-finish-done { width:100%; min-height:48px; margin-top:9px; border-radius:999px; background:var(--acs); color:var(--on-acs); font:700 13px/1 } — 750:2065-2078; finish_ui:404-407."
     },
     "Связка · раунды · 01": {
       "v": "?",
