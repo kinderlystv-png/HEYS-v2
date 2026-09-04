@@ -592,14 +592,7 @@
           h('div', { className: 'sb-finish-row is-last' },
             h('span', { style: { display: 'flex', flexDirection: 'column', gap: '3px' } },
               h('span', null, 'Оценка максимума'),
-              h('small', {
-                style: {
-                  fontSize: '11px',
-                  fontWeight: '500',
-                  lineHeight: '1.3',
-                  color: 'rgba(0, 0, 0, .56)'
-                }
-              }, 'расчёт по весу и повторам, не замер')
+              h('span', { className: 'sb-history-growth-note' }, 'расчёт по весу и повторам, не замер')
             ),
             h('b', { className: 'is-quiet' },
               oneRmNow > 0 ? Math.round(oneRmNow) + ' кг' : '—')

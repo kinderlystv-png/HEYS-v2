@@ -465,35 +465,29 @@
     const who = proposal.proposedBy || 'Куратор';
     return h('section', {
       className: 'sb-proposal-outcome',
-      style: { backgroundColor: V4.tint, borderRadius: '14px', padding: '12px' },
     },
       h('div', {
         className: 'sb-proposal-outcome-title',
-        style: { font: '700 12.5px/1.35 Figtree,sans-serif', color: V4.warnText },
       }, 'Правка ' + who + ' легла не полностью'),
       h('p', {
         className: 'sb-proposal-outcome-prose',
-        style: { margin: '6px 0 10px', font: '500 12px/1.5 Figtree,sans-serif', color: V4.ink56 },
       }, 'Эта же строка уйдёт ему. Без неё он будет думать, что вы правку проигнорировали, и повторит её на следующей неделе.'),
       h('ul', { className: 'sb-proposal-outcome-list' },
         applied.map(function (row, i) {
           const detail = REASONS[row.reason] || 'легло';
-          return h('li', { key: 'a' + i, className: 'sb-proposal-outcome-row' },
+          return h('li', { key: 'a' + i, className: 'sb-proposal-outcome-row is-applied' },
             h('div', { className: 'sb-proposal-outcome-main' },
-              h('b', { style: { font: '600 12.5px/1.2 Figtree,sans-serif', color: V4.tx } }, row.name),
-              h('span', {
-                style: { display: 'block', font: '500 11px/1.3 Figtree,sans-serif', color: V4.okText },
-              }, detail)),
-            h('span', { style: { font: '700 12px/1 Figtree,sans-serif', color: V4.okText } }, '✓')
+              h('b', null, row.name),
+              h('span', { className: 'sb-proposal-outcome-detail' }, detail)),
+            h('span', { className: 'sb-proposal-outcome-mark' }, '✓')
           );
         }).concat(rejected.map(function (row, i) {
-          return h('li', { key: 'r' + i, className: 'sb-proposal-outcome-row' },
+          return h('li', { key: 'r' + i, className: 'sb-proposal-outcome-row is-rejected' },
             h('div', { className: 'sb-proposal-outcome-main' },
-              h('b', { style: { font: '600 12.5px/1.2 Figtree,sans-serif', color: V4.tx } }, row.name),
-              h('span', {
-                style: { display: 'block', font: '500 11px/1.3 Figtree,sans-serif', color: V4.warnText },
-              }, REASONS[row.reason] || 'не легло · осталось как было')),
-            h('span', { style: { font: '700 12px/1 Figtree,sans-serif', color: V4.warnText } }, '—')
+              h('b', null, row.name),
+              h('span', { className: 'sb-proposal-outcome-detail' },
+                REASONS[row.reason] || 'не легло · осталось как было')),
+            h('span', { className: 'sb-proposal-outcome-mark' }, '—')
           );
         }))
       )
@@ -526,35 +520,11 @@
         )
       ),
       h('div', { className: 'sb-list' },
-        h('div', {
-          className: 'program-done-hero',
-          style: { backgroundColor: V4.okBg, borderRadius: '14px', padding: '12px' },
-        },
-          h('span', {
-            style: {
-              display: 'block',
-              font: '600 10.5px/1 Figtree,sans-serif',
-              letterSpacing: '.12em',
-              textTransform: 'uppercase',
-              color: V4.ink42,
-            },
-          }, 'Тренировок из назначенных'),
-          h('b', {
-            style: {
-              display: 'block',
-              marginTop: '6px',
-              font: '800 30px/1 Figtree,sans-serif',
-              fontVariantNumeric: 'tabular-nums',
-              color: V4.tx,
-            },
-          }, doneCount + ' из ' + totalCount),
-          h('p', {
-            style: {
-              margin: '4px 0 0',
-              font: '500 11.5px/1.35 Figtree,sans-serif',
-              color: V4.ink45,
-            },
-          }, 'и вот что за ними стоит')
+        h('div', { className: 'program-done-hero' },
+          h('span', { className: 'program-done-hero-label' },
+            'Тренировок из назначенных'),
+          h('b', null, doneCount + ' из ' + totalCount),
+          h('p', null, 'и вот что за ними стоит')
         ),
         growth && growth.kind === 'growth'
           ? h('section', { className: 'program-done-block' },
