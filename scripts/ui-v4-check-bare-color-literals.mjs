@@ -69,19 +69,15 @@ const ALIAS = { '733-login-theme.css': '733-ui-v4-login-theme.css' };
 // Долг на 31 августа 2026. Список может только уменьшаться.
 const BASELINE = {
   '000-base-and-gamification.css': 347,
-  '100-metrics-and-graphs.css': 197,
+  '100-metrics-and-graphs.css': 120,
   '300-modals-and-day.css': 163,
-  '400-water-and-hydration.css': 0,
-  '500-pwa-and-offline.css': 115,
+  '500-pwa-and-offline.css': 77,
   '600-steps-and-aps.css': 46,
   '610-aps-meal-flow.css': 73,
-  '611-aps-product-card.css': 19,
-  '715-yesterday-verify.css': 37,
-  '720-predictive-insights.css': 209,
-  // 160 -> 159: заморозка отставала на единицу ещё до правок 2 сентября —
-  // тот же счёт даёт и версия файла из коммита. Реальный долг не менялся.
-  '730-widgets-dashboard.css': 111,
-  '733-ui-v4-login-theme.css': 47,
+  '611-aps-product-card.css': 11,
+  '715-yesterday-verify.css': 35,
+  '730-widgets-dashboard.css': 106,
+  '733-ui-v4-login-theme.css': 9,
   '740-cascade-card.css': 23,
   '750-strength-builder.css': 6,
   'critical.css': 26,
