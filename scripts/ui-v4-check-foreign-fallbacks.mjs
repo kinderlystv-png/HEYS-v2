@@ -60,7 +60,6 @@ const BASELINE = {
   '610-aps-meal-flow.css': 45,
   '611-aps-product-card.css': 29,
   '612-training-step.css': 12,
-  '613-cycle-ui.css': 8,
   '710-refeed.css': 25,
   '715-yesterday-verify.css': 35,
   '720-predictive-insights.css': 229,
