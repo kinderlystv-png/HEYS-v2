@@ -253,7 +253,7 @@ describe('правка куратора: как она названа челов
     render(React.createElement(Parts.ProposalOutcome, { training }));
     expect(screen.getByText(/легла не полностью/)).toBeTruthy();
     expect(screen.getByText('Разведение')).toBeTruthy();
-    expect(screen.getByText(/убирал, но ты уже начал/)).toBeTruthy();
+    expect(screen.getByText(/не легло · упражнение выполнено/)).toBeTruthy();
   });
 
   it('полоска в идущей тренировке не перекрывает экран и ведёт в разбор', () => {
@@ -323,7 +323,8 @@ describe('программа пройдена (16e)', () => {
       onClose: () => {}, onWriteCurator: () => {},
     }));
 
-    expect(screen.getByText('Программа пройдена')).toBeTruthy();
+    expect(screen.getByText('9 из 12')).toBeTruthy();
+    expect(screen.getByText('Тренировок из назначенных')).toBeTruthy();
     expect(screen.getByText('Что выросло')).toBeTruthy();
     expect(screen.getByText('60 → 70 кг')).toBeTruthy();
     // Пропуски — одной строкой и без имён.

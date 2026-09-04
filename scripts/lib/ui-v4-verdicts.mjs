@@ -56,7 +56,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   // трёх кадрах сдвинулись номера — тот же долг переехал на другие строки.
   // Это не послабление: 19 и 47 не изменились.
   'checkin-morning': Object.freeze({
-    mismatch: [19, '5ecfe313700e55d6'],
+    // 04.09: одна legacy «≠» типизирована reasonCode — долг 19 → 18.
+    mismatch: [18, '479d797f9bb9c2e5'],
     notApplicable: [47, '19522329f4fb6522'],
   }),
   'curator-cabinet': Object.freeze({
@@ -149,7 +150,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [10, '1a79551c98be8a55'],
   }),
   'settings-system': Object.freeze({
-    mismatch: [13, '153d48d206363a26'],
+    // 04.09: ad762ae20 — 4 stale «≠» → «?», 2 «≠» typed reasonCode.
+    // Legacy untyped: 13 → 9 (11 total «≠», из них 2 typed-v1).
+    mismatch: [9, '10cb5edc5e12a1df'],
     notApplicable: [23, '93658b5f26c8caeb'],
   }),
   spinners: Object.freeze({

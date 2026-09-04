@@ -112,7 +112,7 @@ describe('Ответить можно с самой карточки', () => {
     let accepted = false;
     let reviewed = false;
     if (!renderCard({ onAccept: () => { accepted = true; }, onReview: () => { reviewed = true; } })) return;
-    fireEvent.click(screen.getByText('Принять'));
+    fireEvent.click(screen.getByText(/Принять/));
     expect(accepted).toBe(true);
     expect(reviewed).toBe(false);
   });

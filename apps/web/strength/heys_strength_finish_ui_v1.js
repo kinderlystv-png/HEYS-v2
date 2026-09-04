@@ -415,8 +415,65 @@
    * тренировки подходами. Данные приходят готовыми — сканы по дням делает день,
    * у конструктора доступа к хранилищу нет.
    */
+  function formatSetChip(weightKg, reps) {
+    const w = String(weightKg == null ? '' : weightKg).trim();
+    return (w || '—') + ' × ' + (reps == null || reps === '' ? '—' : reps);
+  }
+
+  function usageVolumeKg(usage) {
+    let volume = 0;
+    (usage && Array.isArray(usage.approaches) ? usage.approaches : []).forEach(function (approach) {
+      const w = asNumber(approach.weightKg);
+      const r = +approach.reps || 0;
+      if (w > 0 && r > 0) volume += w * r;
+    });
+    return volume;
+  }
+
+  function usageHasDiscomfort(usage) {
+    return (usage && Array.isArray(usage.approaches) ? usage.approaches : [])
+      .some(function (approach) { return approach && approach.discomfort; });
+  }
+
+  function bestRecordApproach(usages) {
+    let best = null;
+    (usages || []).forEach(function (usage) {
+      (usage.approaches || []).forEach(function (approach) {
+        const w = asNumber(approach.weightKg);
+        const r = +approach.reps || 0;
+        if (w <= 0 || r <= 0) return;
+        if (!best || w > best.w || (w === best.w && r > best.reps)) {
+          best = { weightKg: approach.weightKg, reps: r, w: w };
+        }
+      });
+    });
+    return best;
+  }
+
+  function historySessionTag(usage, recordApproach) {
+    if (usageHasDiscomfort(usage)) {
+      return { text: 'дискомфорт', className: 'is-warning' };
+    }
+    if (recordApproach) {
+      const hit = (usage.approaches || []).some(function (approach) {
+        const w = asNumber(approach.weightKg);
+        const r = +approach.reps || 0;
+        return w === recordApproach.w && r === recordApproach.reps;
+      });
+      if (hit) return { text: 'рекорд', className: 'is-record' };
+    }
+    return { text: 'по плану', className: 'is-quiet' };
+  }
+
+  function historyOneRmSeries(rows) {
+    return rows.slice().reverse()
+      .map(function (row) { return row.best; })
+      .filter(function (value) { return value > 0; })
+      .slice(-6);
+  }
+
   function HistoryScreen(props) {
-    const { name, usages, record, onBack } = props;
+    const { name, usages, onBack } = props;
     const TK = HEYS.TrainingKernel;
     const SK = (TK && TK.strength) ? TK.strength : null;
     const meta = HEYS.exerciseMeta;
@@ -426,68 +483,161 @@
         .map(function (g) { return meta.groupLabel(g); })).filter(Boolean).join(' · ')
       : '';
 
-    const rows = (usages || []).map(function (u) {
-      let volume = 0;
-      let best = 0;
-      (u.approaches || []).forEach(function (a) {
-        const w = parseFloat(String(a.weightKg || '').replace(',', '.')) || 0;
-        const r = +a.reps || 0;
-        if (w > 0 && r > 0) {
-          volume += w * r;
-          const oneRm = epley(w, r);
-          if (oneRm > best) best = oneRm;
-        }
-      });
-      return { u: u, volume: volume, best: best };
+    const rows = (usages || []).map(function (usage) {
+      return {
+        u: usage,
+        volume: usageVolumeKg(usage),
+        best: bestOneRmFromUsage(usage)
+      };
     });
 
+    const [visibleCount, setVisibleCount] = React.useState(3);
+    const visibleRows = rows.slice(0, visibleCount);
+    const hiddenCount = Math.max(0, rows.length - visibleCount);
+    const recordApproach = bestRecordApproach(usages);
+    const recordValue = recordApproach
+      ? formatSetChip(recordApproach.weightKg, recordApproach.reps)
+      : '—';
     const oneRmNow = rows.length ? rows[0].best : 0;
     const oneRmOld = rows.length > 1 ? rows[rows.length - 1].best : 0;
-    const delta = oneRmNow && oneRmOld ? Math.round(oneRmNow - oneRmOld) : 0;
+    const oneRmDelta = oneRmNow > 0 && oneRmOld > 0 ? Math.round(oneRmNow - oneRmOld) : 0;
+    const totalTonnage = rows.reduce(function (sum, row) { return sum + row.volume; }, 0);
+    const series = historyOneRmSeries(rows);
+    const sessionCount = rows.length;
 
-    return h('div', { className: 'sb-root sb-screen' },
-      h('div', { className: 'sb-head' },
+    function historyChartHeight(value) {
+      if (!series.length) return 41;
+      const min = Math.min.apply(null, series);
+      const max = Math.max.apply(null, series);
+      if (max <= min) return 60;
+      return Math.floor(41 + ((value - min) / (max - min)) * 37);
+    }
+
+    function approachChips(usage) {
+      const chips = [];
+      (usage.approaches || []).forEach(function (approach, index) {
+        const stages = SK ? SK.approachStages(approach) : [{ weightKg: approach.weightKg, reps: approach.reps }];
+        stages.forEach(function (stage, stageIndex) {
+          chips.push(h('span', {
+            className: 'sb-history-set',
+            key: index + '-' + stageIndex
+          }, formatSetChip(stage.weightKg, stage.reps)));
+        });
+      });
+      return chips;
+    }
+
+    return h('div', { className: 'sb-root sb-screen sb-finish-screen sb-history-screen' },
+      h('div', { className: 'sb-head sb-finish-head' },
         h('button', {
           type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
         }, '‹'),
         h('div', { className: 'sb-head-title' },
           h('b', null, name || 'Упражнение'),
           h('div', { className: 'sb-head-sub' },
-            (groups ? groups + ' · ' : '') + rows.length + ' тренировок в истории')
+            (groups ? groups + ' · ' : '') + sessionCount + ' тренировок')
         )
       ),
-      h('div', { className: 'sb-list' },
-        h('div', { className: 'sb-tiles' },
-          h(Tile, {
-            label: 'Рекорд',
-            value: record && record.maxW > 0 ? record.maxW + ' кг' : '—',
-            accent: true
+      h('div', { className: 'sb-list sb-finish-list' },
+        h('div', {
+          className: 'sb-finish-metrics sb-history-metrics',
+          style: { gridTemplateColumns: '1fr 1fr 1fr' }
+        },
+          h(MetricTile, { label: 'Рекорд', value: recordValue, accent: true }),
+          h(MetricTile, {
+            label: 'Максимум',
+            value: oneRmNow > 0 ? Math.round(oneRmNow) + ' кг' : '—'
           }),
-          h(Tile, {
-            label: 'Максимум · Эпли',
-            value: oneRmNow ? Math.round(oneRmNow) + ' кг' : '—'
+          h(MetricTile, {
+            label: 'Тоннаж',
+            value: totalTonnage > 0 ? fmtTonnage(totalTonnage) : '—'
           })
         ),
-        delta !== 0 && h('div', { className: 'sb-step-hint' },
-          (delta > 0 ? '+' : '') + delta + ' кг расчётного максимума за ' + rows.length + ' тренировок'),
 
-        h('div', { className: 'sb-step' }, h('span', null, 'Последние тренировки')),
+        h('div', { className: 'sb-finish-tier' }, 'Последние тренировки'),
         rows.length === 0 && h('div', { className: 'sb-empty' }, 'Это упражнение ещё не делали'),
-        rows.map(function (row) {
-          return h('div', { className: 'sb-block', key: row.u.dateKey },
-            h('div', { className: 'sb-line' },
-              h('span', null, row.u.label || row.u.dateKey),
-              h('b', null, row.volume > 0 ? Math.round(row.volume) + ' кг' : '—')
+        visibleRows.length > 0 && h('section', { className: 'sb-finish-detail sb-history-sessions' },
+          visibleRows.map(function (row, index) {
+            const tag = historySessionTag(row.u, recordApproach);
+            const volumeQuiet = tag.className === 'is-warning';
+            const isLast = index === visibleRows.length - 1 && hiddenCount === 0;
+            return h('div', {
+              className: 'sb-finish-row sb-history-session' + (isLast ? ' is-last' : ''),
+              key: row.u.dateKey || index
+            },
+              h('span', {
+                style: {
+                  flex: '1', minWidth: '0', display: 'flex', flexDirection: 'column', gap: '6px'
+                }
+              },
+                h('span', { style: { display: 'flex', alignItems: 'center', gap: '7px' } },
+                  h('span', null, row.u.label || row.u.dateKey),
+                  h('span', { className: 'sb-history-badge ' + tag.className }, tag.text)
+                ),
+                h('span', { style: { display: 'flex', gap: '5px', flexWrap: 'wrap' } }, approachChips(row.u))
+              ),
+              h('b', { className: volumeQuiet ? 'is-quiet' : '' },
+                row.volume > 0 ? fmtExactKg(row.volume) : '—')
+            );
+          })
+        ),
+
+        oneRmDelta !== 0 && h('section', { className: 'sb-finish-detail sb-history-growth' },
+          h('div', { className: 'sb-finish-row' },
+            h('span', null, oneRmDelta > 0 ? 'Расчётный максимум вырос' : 'Расчётный максимум снизился'),
+            h('b', { className: 'is-record' },
+              (oneRmDelta > 0 ? '+' : '') + oneRmDelta + ' кг за '
+              + Math.max(1, sessionCount - 1) + ' тренировок')
+          ),
+          h('div', { className: 'sb-finish-row is-last' },
+            h('span', { style: { display: 'flex', flexDirection: 'column', gap: '3px' } },
+              h('span', null, 'Оценка максимума'),
+              h('small', {
+                style: {
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  lineHeight: '1.3',
+                  color: 'rgba(0, 0, 0, .56)'
+                }
+              }, 'расчёт по весу и повторам, не замер')
             ),
-            h('div', { className: 'sb-hist' },
-              (row.u.approaches || []).map(function (a, i) {
-                const drops = SK ? SK.approachStages(a).filter(function (st) { return st.isDrop; }) : [];
-                return h('span', { key: i },
-                  (a.weightKg || 'свой') + '×' + (a.reps || '—') + (drops.length ? ' дроп' : ''));
+            h('b', { className: 'is-quiet' },
+              oneRmNow > 0 ? Math.round(oneRmNow) + ' кг' : '—')
+          )
+        ),
+
+        series.length > 0 && h(React.Fragment, null,
+          h('div', { className: 'sb-finish-tier' }, 'Расчётный максимум · Эпли'),
+          h('section', { className: 'sb-finish-chart-card sb-history-chart' },
+            h('div', { className: 'sb-finish-chart-head' },
+              h('span', null, 'шесть последних недель'),
+              h('b', null, (oneRmDelta > 0 ? '+' : '') + oneRmDelta + ' кг за ' + series.length + ' недель')
+            ),
+            h('div', { className: 'sb-finish-chart', 'aria-label': 'Динамика расчётного максимума' },
+              series.map(function (value, index) {
+                const latest = index === series.length - 1;
+                return h('span', {
+                  className: 'sb-finish-chart-column' + (latest ? ' is-latest' : ''),
+                  key: index
+                },
+                  h('b', null, String(Math.round(value))),
+                  h('i', { style: { height: historyChartHeight(value) + 'px' } }),
+                  h('small', null, 'н' + (index + 1))
+                );
               })
             )
-          );
-        })
+          )
+        ),
+
+        hiddenCount > 0 && h('button', {
+          type: 'button',
+          className: 'sb-finish-done sb-history-more',
+          style: { marginTop: '10px' },
+          onClick: function () { setVisibleCount(rows.length); }
+        }, 'Ещё ' + hiddenCount + ' тренировок'),
+
+        h('p', { className: 'sb-finish-footnote' },
+          'Рекорд — это подход, а не число: «75 × 8» вместе с датой. Оценка максимума считается из него формулой и подписана расчётом — на неё не выходят в зал, ею сравнивают недели.')
       )
     );
   }

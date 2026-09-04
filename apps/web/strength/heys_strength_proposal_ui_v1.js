@@ -220,6 +220,59 @@
 
   const KIND_SIGN = { added: '+', removed: '−', changed: '~', same: '·' };
 
+  const V4 = {
+    warnText: 'var(--v4-warn-text, #a1471c)',
+    okText: 'var(--v4-ok-text, #5c6a45)',
+    actText: 'var(--v4-act-text, #8a4a20)',
+    tint: 'var(--v4-tint, #f6e6dd)',
+    okBg: 'var(--v4-ok-bg, #eaefe0)',
+    ink56: 'rgba(var(--v4-ink-rgb, 0, 0, 0), .56)',
+    ink45: 'rgba(var(--v4-ink-rgb, 0, 0, 0), .45)',
+    ink42: 'rgba(var(--v4-ink-rgb, 0, 0, 0), .42)',
+    tx: 'var(--v4-ink, #201e1d)',
+  };
+
+  const SIGN_STYLE = {
+    added: { backgroundColor: V4.okBg, color: V4.okText },
+    removed: { backgroundColor: V4.tint, color: V4.warnText },
+    changed: { backgroundColor: V4.tint, color: V4.actText },
+    same: { backgroundColor: V4.tint, color: V4.ink56 },
+  };
+
+  function proposalSignEl(kind) {
+    const tone = SIGN_STYLE[kind] || SIGN_STYLE.same;
+    return h('span', {
+      className: 'sb-proposal-sign',
+      style: {
+        width: '22px', height: '22px', borderRadius: '7px',
+        backgroundColor: tone.backgroundColor, color: tone.color,
+      },
+    }, KIND_SIGN[kind] || '·');
+  }
+
+  function aheadOutcomeLabel(row) {
+    if (row.kind === 'changed') return row.before + ' → ' + row.after;
+    if (row.kind === 'added') return 'добавлено';
+    if (row.kind === 'removed') return 'снято';
+    if (row.kind === 'same') return 'без изменений';
+    return row.detail || '';
+  }
+
+  function pluralChanges(n) {
+    const t = Math.abs(n) % 100;
+    const d = t % 10;
+    if (t > 10 && t < 20) return 'изменений';
+    if (d === 1) return 'изменение';
+    if (d >= 2 && d <= 4) return 'изменения';
+    return 'изменений';
+  }
+
+  function acceptLabel(changeCount, started) {
+    if (!started) return 'Принять план';
+    if (changeCount > 0) return 'Принять · ' + changeCount + ' ' + pluralChanges(changeCount);
+    return 'Принять';
+  }
+
   /**
    * Карточка на дне (14a). Первым слоем — что именно поменял куратор, тремя
    * строками; решение живёт здесь, а не в переписке: одно решение в двух
@@ -251,23 +304,38 @@
       started ? 'Сделанное не тронется — только то, что впереди.' : null,
       proposal.note || null,
     ].filter(Boolean).join(' ');
+    const changeCount = diff.ahead.length;
+    const dayLabel = (training.plan && training.plan.dayLabel) || 'План на сегодня';
     return h('div', { className: 'sb-plan-card sb-proposal-card' },
-      h('b', null, who + ' поправил сегодняшнюю тренировку'),
+      !started && h('span', { className: 'sb-plan-badge' }, who + ' поменял план'),
+      h('b', null, started
+        ? who + ' поправил сегодняшнюю тренировку'
+        : 'Сегодня по плану · ' + dayLabel),
       h('span', { className: 'sb-plan-meta' },
-        prose || 'План на сегодня изменился — посмотрите, что стало.'),
-      h('ul', { className: 'sb-proposal-list' },
+        prose || (started
+          ? (changeCount > 0
+            ? changeCount + ' ' + pluralChanges(changeCount) + ' · ' + dayLabel
+            : 'План на сегодня изменился — посмотрите, что стало.')
+          : 'План на сегодня изменился — посмотрите, что стало.')),
+      h('ul', { className: 'sb-proposal-list sb-proposal-list--card' },
         diff.ahead.slice(0, 3).map(function (row, i) {
           return h('li', { key: i, className: 'sb-proposal-row is-' + row.kind },
-            h('span', { className: 'sb-proposal-sign' }, KIND_SIGN[row.kind] || '·'),
-            h('span', { className: 'sb-proposal-text' },
-              row.kind === 'changed' ? row.name + ' · ' + row.after : row.name)
+            proposalSignEl(row.kind),
+            h('span', { className: 'sb-proposal-text' }, row.name),
+            h('span', {
+              className: 'sb-proposal-outcome',
+              style: {
+                color: row.kind === 'added' ? V4.okText
+                  : row.kind === 'removed' ? V4.warnText : V4.tx,
+              },
+            }, aheadOutcomeLabel(row))
           );
         })
       ),
       h('div', { className: 'sb-plan-actions' },
         h('button', {
           type: 'button', className: 'sb-btn is-accent sb-plan-cta', onClick: onAccept || onReview
-        }, 'Принять'),
+        }, acceptLabel(changeCount, started)),
         h('button', {
           type: 'button', className: 'sb-btn sb-plan-skip', onClick: onDecline
         }, 'Оставить прежнюю')
@@ -333,11 +401,16 @@
           h('ul', { className: 'sb-proposal-ahead-list' },
             diff.ahead.map(function (row, i) {
               return h('li', { key: i, className: 'sb-proposal-row is-' + row.kind },
-                h('span', { className: 'sb-proposal-sign' }, KIND_SIGN[row.kind] || '·'),
+                proposalSignEl(row.kind),
                 h('div', { className: 'sb-proposal-body' },
                   h('b', null, row.name),
-                  h('span', { className: 'sb-proposal-detail' },
-                    row.kind === 'changed' ? row.before + ' → ' + row.after : row.detail)
+                  h('span', {
+                    className: 'sb-proposal-detail',
+                    style: {
+                      color: row.kind === 'added' ? V4.okText
+                        : row.kind === 'removed' ? V4.warnText : V4.tx,
+                    },
+                  }, aheadOutcomeLabel(row))
                 )
               );
             })
@@ -384,27 +457,43 @@
     if (!rejected.length) return null;
 
     const REASONS = {
-      started_cannot_remove: 'убирал, но ты уже начал',
-      superset_composition_frozen: 'связка начата, состав остался',
-      done_approaches_kept: 'сделанные подходы остались'
+      started_cannot_remove: 'не легло · упражнение выполнено',
+      superset_composition_frozen: 'не легло · связка начата',
+      done_approaches_kept: 'не легло · подходы уже закрыты',
+      approaches_changed: 'легло · подходы изменены',
     };
     const who = proposal.proposedBy || 'Куратор';
-    return h('section', { className: 'sb-proposal-outcome' },
-      h('div', { className: 'sb-proposal-section-title' }, 'Правка ' + who + ' легла не полностью'),
-      h('ul', { className: 'sb-proposal-ahead-list' },
+    return h('section', {
+      className: 'sb-proposal-outcome',
+      style: { backgroundColor: V4.tint, borderRadius: '14px', padding: '12px' },
+    },
+      h('div', {
+        className: 'sb-proposal-outcome-title',
+        style: { font: '700 12.5px/1.35 Figtree,sans-serif', color: V4.warnText },
+      }, 'Правка ' + who + ' легла не полностью'),
+      h('p', {
+        className: 'sb-proposal-outcome-prose',
+        style: { margin: '6px 0 10px', font: '500 12px/1.5 Figtree,sans-serif', color: V4.ink56 },
+      }, 'Эта же строка уйдёт ему. Без неё он будет думать, что вы правку проигнорировали, и повторит её на следующей неделе.'),
+      h('ul', { className: 'sb-proposal-outcome-list' },
         applied.map(function (row, i) {
-          return h('li', { key: 'a' + i, className: 'sb-proposal-row is-added' },
-            h('span', { className: 'sb-proposal-sign' }, '+'),
-            h('div', { className: 'sb-proposal-body' },
-              h('b', null, row.name),
-              h('span', { className: 'sb-proposal-detail' }, 'Легло'))
+          const detail = REASONS[row.reason] || 'легло';
+          return h('li', { key: 'a' + i, className: 'sb-proposal-outcome-row' },
+            h('div', { className: 'sb-proposal-outcome-main' },
+              h('b', { style: { font: '600 12.5px/1.2 Figtree,sans-serif', color: V4.tx } }, row.name),
+              h('span', {
+                style: { display: 'block', font: '500 11px/1.3 Figtree,sans-serif', color: V4.okText },
+              }, detail)),
+            h('span', { style: { font: '700 12px/1 Figtree,sans-serif', color: V4.okText } }, '✓')
           );
         }).concat(rejected.map(function (row, i) {
-          return h('li', { key: 'r' + i, className: 'sb-proposal-row is-removed' },
-            h('span', { className: 'sb-proposal-sign' }, '−'),
-            h('div', { className: 'sb-proposal-body' },
-              h('b', null, row.name),
-              h('span', { className: 'sb-proposal-detail' }, REASONS[row.reason] || 'осталось как было'))
+          return h('li', { key: 'r' + i, className: 'sb-proposal-outcome-row' },
+            h('div', { className: 'sb-proposal-outcome-main' },
+              h('b', { style: { font: '600 12.5px/1.2 Figtree,sans-serif', color: V4.tx } }, row.name),
+              h('span', {
+                style: { display: 'block', font: '500 11px/1.3 Figtree,sans-serif', color: V4.warnText },
+              }, REASONS[row.reason] || 'не легло · осталось как было')),
+            h('span', { style: { font: '700 12px/1 Figtree,sans-serif', color: V4.warnText } }, '—')
           );
         }))
       )
@@ -437,11 +526,35 @@
         )
       ),
       h('div', { className: 'sb-list' },
-        h('div', { className: 'program-done-hero' },
-          h('b', null, 'Программа пройдена'),
-          h('p', null,
-            doneCount + ' ' + pluralSessions(doneCount) + ' из ' + totalCount
-            + ' — и вот что за ними стоит.')
+        h('div', {
+          className: 'program-done-hero',
+          style: { backgroundColor: V4.okBg, borderRadius: '14px', padding: '12px' },
+        },
+          h('span', {
+            style: {
+              display: 'block',
+              font: '600 10.5px/1 Figtree,sans-serif',
+              letterSpacing: '.12em',
+              textTransform: 'uppercase',
+              color: V4.ink42,
+            },
+          }, 'Тренировок из назначенных'),
+          h('b', {
+            style: {
+              display: 'block',
+              marginTop: '6px',
+              font: '800 30px/1 Figtree,sans-serif',
+              fontVariantNumeric: 'tabular-nums',
+              color: V4.tx,
+            },
+          }, doneCount + ' из ' + totalCount),
+          h('p', {
+            style: {
+              margin: '4px 0 0',
+              font: '500 11.5px/1.35 Figtree,sans-serif',
+              color: V4.ink45,
+            },
+          }, 'и вот что за ними стоит')
         ),
         growth && growth.kind === 'growth'
           ? h('section', { className: 'program-done-block' },
