@@ -4918,104 +4918,99 @@
       "f": "Сноска листа: .sb-sheet-footnote — 750:5810-5815; текст builder_ui:1342-1344; menu-sheet test."
     },
     "План в ленте дня · 01": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "175bdcc2e73a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "v": "—",
+      "f": "visual-composite: шапка day shell вне #ui-v4-strength-plan-feed-host — PLAN_FEED_DOM_CONTRACTS ·01; ui-v4-dom-contracts.mjs:61-65.",
+      "h": "175bdcc2e73a"
     },
     "План в ленте дня · 02": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "07ffbada0ee7",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "v": "—",
+      "f": "visual-composite: column header day shell — PLAN_FEED ·02; ui-v4-dom-contracts.mjs:67-71.",
+      "h": "07ffbada0ee7"
     },
     "План в ленте дня · 03": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "b948a7bf7ffa",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "v": "—",
+      "f": "visual-composite: заголовок даты — day shell, не PlanCard — PLAN_FEED ·03; ui-v4-dom-contracts.mjs:73-77.",
+      "h": "b948a7bf7ffa"
     },
     "План в ленте дня · 04": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "79f2acd79e23",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "v": "—",
+      "f": "visual-composite: ключ дня недели — day shell — PLAN_FEED ·04; ui-v4-dom-contracts.mjs:79-83.",
+      "h": "79f2acd79e23"
     },
     "План в ленте дня · 05": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "c629f84f9712",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "v": "—",
+      "f": "visual-composite: scroll area day surface — PLAN_FEED ·05; ui-v4-dom-contracts.mjs:85-89.",
+      "h": "c629f84f9712"
     },
     "План в ленте дня · 06": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "margin-top 12px у .sb-plan-card--future: 750-strength-builder.css:5852-5854; dom-contract ·06 + day-feed contract test sand/blue.",
       "h": "81d6d8e40a85",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 07": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "summary row flex center gap 10px: 731-ui-v4-activity.css .sb-plan-summary; PLAN_FEED ·07 dom-contracts.test.js.",
       "h": "869d1e5dd696",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 08": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "letter B 34×34 r11 var(--v4-act-text): 731 .sb-plan-letter; day-feed test ·08 sand+blue color.",
       "h": "addb1ad16c00",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 09": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "summary-copy flex column gap 3px: 731 .sb-plan-summary-copy; PLAN_FEED ·09.",
       "h": "b4a4fa9ae422",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 10": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "«Запланировано куратором» 700 12.5px var(--v4-ink): 731 b + superset_ui; day-feed ·10.",
       "h": "00ceac024a98",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 11": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "meta rgba(ink,.56) 500 11px: 731 .sb-plan-meta; superset_ui meta string; day-feed ·11.",
       "h": "76deaf58abb7",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 12": {
       "v": "=",
-      "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "badge «план»: superset_ui PlanCard .sb-plan-badge; dom-contract ·12.",
       "h": "410f53ff185c",
       "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 13": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "exercises column gap 6 margin-top 12: 731 .sb-plan-exercises; ·13.",
       "h": "94a2209f25bb",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 14": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "li baseline gap 10: 731 .sb-plan-exercises > li; PLAN_FEED ·14 match all.",
       "h": "7df83bd94c9e",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 15": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "exercise name flex 1 600 12px: 731 li > span; superset_ui list; ·15.",
       "h": "f250c86095df",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 16": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "sets mono 600 11px ink-2: 731 li > i; day-feed ·16 sand ink56.",
       "h": "c0d7c8cb1544",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 17": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "future actions flex gap 7 margin-top 12: 731 .sb-plan-actions--future; ·17.",
       "h": "77e4b4025f38",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
@@ -5037,179 +5032,190 @@
     },
     "План в ленте дня · 20": {
       "v": "=",
-      "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "week label tier: superset_ui .sb-plan-week-label; dom ·20.",
       "h": "5cf087fff7b6",
       "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 21": {
       "v": "=",
-      "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "week grid card .sb-plan-week: superset_ui week block; dom ·21.",
       "h": "54643961e08d",
       "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 22": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "week-days flex gap 5: 731 .sb-plan-week-days; PLAN_FEED ·22.",
       "h": "0e0d875194db",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 23": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "is-done cell gr-bg r10 pad 8: 731 .is-done; ·23.",
       "h": "cbb5c1f8e50f",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 24": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "weekday label 600 9.5px ink-2: 731 .is-done > i; ·24.",
       "h": "2612a29a6aa6",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 25": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "checkmark var(--v4-ok-text): 731 .is-done > b; day-feed ·25 sand+blue.",
       "h": "0712125d3ac4",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 26": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "rest cell bg r10: 731 .is-rest; ·26 all.",
       "h": "ea40d5b7e5ed",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 27": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "rest dash 700 11px ink-2: 731 .is-rest > b; ·27.",
       "h": "c013a0005595",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 28": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "assigned cell c2 bg: 731 .is-assigned; ·28.",
       "h": "895d864e529b",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 29": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "assigned dot var(--v4-act-text): 731 .is-assigned > b; day-feed ·29 blue ac.",
       "h": "c5fea7338543",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 30": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "legend row wrap gap 12 margin-top 10: 731 .sb-plan-week-legend; PLAN_FEED ·30.",
       "h": "0ddbabb4c903",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 31": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "legend item flex gap 5: 731 .sb-plan-week-legend span; PLAN_FEED ·31.",
       "h": "d116851f82d0",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 32": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "legend swatch 9×9 r3: 731 .sb-plan-week-legend i; PLAN_FEED ·32.",
       "h": "d55c4db65a48",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 33": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "assigned swatch var(--v4-act): 731 i.is-assigned; day-feed ·33 sand+blue acs.",
       "h": "3c87cb21ff36",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 34": {
       "v": "=",
-      "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "footnote sm plan-not-fact: superset_ui .sb-plan-foot; dom ·34.",
       "h": "0b68cc8e46d1",
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 35": {
       "v": "=",
-      "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
+      "f": "PlanCard root .sb-plan-feed: superset_ui:2516; dom ·35 + host id in tests.",
       "h": "3e002c1a437f",
       "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "День не состоялся · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "—",
+      "f": "visual-composite: шапка day shell вне .sb-plan-missed — кадр И4 ·01.",
       "h": "175bdcc2e73a"
     },
     "День не состоялся · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "—",
+      "f": "visual-composite: column header day shell — И4 ·02.",
       "h": "07ffbada0ee7"
     },
     "День не состоялся · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "—",
+      "f": "visual-composite: title «День B не состоялся» — day shell — И4 ·03.",
       "h": "6784f571d484"
     },
     "День не состоялся · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "—",
+      "f": "visual-composite: subtitle «был назначен…» — day shell — И4 ·04.",
       "h": "9f23141f35b1"
     },
     "День не состоялся · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "—",
+      "f": "visual-composite: scroll area day surface — И4 ·05.",
       "h": "c629f84f9712"
     },
     "День не состоялся · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "4dc1038c279c"
+      "v": "=",
+      "f": "missed-card margin-top 12 bg var(--v4-tint): 750:5862-5867; missed contract test ·06 sand+blue.",
+      "h": "4dc1038c279c",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a3f73d848f56"
+      "v": "=",
+      "f": "lead copy 600 12.5px/1.55 var(--v4-ink): 750 .sb-plan-missed-lead + superset_ui:2413-2415; ·07.",
+      "h": "a3f73d848f56",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "77e4b4025f38"
+      "v": "=",
+      "f": "actions flex gap 7 margin-top 12: 750:5875-5878; missed test ·08.",
+      "h": "77e4b4025f38",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "ac8460364d67"
+      "v": "=",
+      "f": "move CTA flex 1 var(--v4-act): 750:5881-5889 + moveCtaLabel; missed test ·09 sand+blue.",
+      "h": "ac8460364d67",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "951a1639dbb1"
+      "v": "=",
+      "f": "release btn flex 1 var(--v4-bg): 750:5892-5899; superset_ui onSkip; ·10.",
+      "h": "951a1639dbb1",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "803feb5762c1"
+      "v": "=",
+      "f": "foot margin-top 9px ink-2: 750:5902-5905; superset_ui:2432-2433; ·11.",
+      "h": "803feb5762c1",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "ab81e71726e8"
+      "v": "=",
+      "f": "tier «Что помешало»: .sb-tier 750:5533-5538 + superset_ui:2435.",
+      "h": "ab81e71726e8",
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "День не состоялся · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "1a415932debe"
+      "v": "=",
+      "f": "chips flex gap 6 wrap: 750:5908-5912; MISSED_DAY_REASONS map; ·13.",
+      "h": "1a415932debe",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "34649efe3237"
+      "v": "=",
+      "f": "chip off-state pad 0 14 min-h 44: 750:5915-5925; ·14.",
+      "h": "34649efe3237",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a65e70485ed9"
+      "v": "=",
+      "f": "chip.is-on var(--v4-act): 750:5927-5929; toggle без sheet; missed test ·15 sand+blue.",
+      "h": "a65e70485ed9",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "54643961e08d"
+      "v": "=",
+      "f": "model card .sb-plan-missed-model sb-grp var(--v4-c1): 750:5936-5939 + superset_ui:2461-2464.",
+      "h": "54643961e08d",
+      "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 17": {
       "v": "≠",
@@ -8290,14 +8296,13 @@
       "f": "Сноска шторки дословно: .sb-sheet-footnote — builder_ui:1342-1344; menu-sheet test."
     },
     "План в ленте дня · текст": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "47c4373b8180",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "v": "—",
+      "f": "semantic aggregate prose кадра И3; построчно закрыты ·01–35 и dom-contract map PLAN_FEED_DOM_CONTRACTS.",
+      "h": "47c4373b8180"
     },
     "День не состоялся · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "—",
+      "f": "semantic aggregate кадра И4; runtime ·06–16 + intentional ·17 ≠ без dev-сноски в UI.",
       "h": "359d6e9d001a"
     },
     "Спорное · тап по закрытому во время отдыха · текст": {

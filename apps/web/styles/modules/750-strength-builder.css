@@ -5846,3 +5846,95 @@
   font: 500 12px/1.5 Figtree, sans-serif;
   color: var(--sb-mut);
 }
+
+/* ── И3 · План в ленте дня (дополнение к 731-ui-v4-activity.css) ─────────── */
+
+.activity-v4-program .sb-plan-feed > .sb-plan-card--future {
+  margin-top: 12px;
+}
+
+/* ── И4 · День не состоялся ─────────────────────────────────────────────── */
+
+.activity-v4-program .sb-plan-missed {
+  margin: 4px;
+}
+
+.activity-v4-program .sb-plan-missed-card.sb-grp {
+  margin-top: 12px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: var(--v4-tint, var(--sb-accbg, #f6e6dd));
+}
+
+.activity-v4-program .sb-plan-missed-lead {
+  margin: 0;
+  font: 600 12.5px/1.55 Figtree, sans-serif;
+  color: var(--v4-ink, var(--sb-tx, #201e1d));
+}
+
+.activity-v4-program .sb-plan-missed-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.activity-v4-program .sb-plan-missed-actions .sb-plan-cta {
+  flex: 1;
+  margin-top: 0;
+  min-height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-act, var(--sb-acc-strong, #c67139));
+  color: var(--v4-btn-on-act, #2b1608);
+  font: 700 12px/1 Figtree, sans-serif;
+}
+
+.activity-v4-program .sb-plan-missed-release {
+  flex: 1;
+  min-height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-bg, var(--sb-bg, #fffaf1));
+  color: var(--v4-ink, var(--sb-tx, #201e1d));
+  font: 700 12px/1 Figtree, sans-serif;
+}
+
+.activity-v4-program .sb-plan-missed-foot {
+  margin: 9px 0 0;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: var(--v4-ink-2, var(--sb-mut, rgba(0, 0, 0, 0.55)));
+}
+
+.activity-v4-program .sb-plan-missed-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0;
+}
+
+.activity-v4-program .sb-plan-missed-chip {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--v4-hero, var(--sb-soft, #efe3cf));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font: 700 12px/1 Figtree, sans-serif;
+  text-transform: lowercase;
+}
+
+.activity-v4-program .sb-plan-missed-chip.is-on {
+  background: var(--v4-act, var(--sb-acc-strong, #c67139));
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
+.activity-v4-program .sb-plan-missed-custom {
+  margin-top: 8px;
+}
+
+.activity-v4-program .sb-plan-missed-model.sb-grp {
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: var(--v4-c1, var(--sb-card, #f7efe2));
+}

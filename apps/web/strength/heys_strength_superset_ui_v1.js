@@ -2207,6 +2207,40 @@
    * читает те же данные, что SummaryCard, но показывает другое действие.
    */
   const SKIP_REASONS = ['Не было времени', 'Мало сил', 'Плохое самочувствие', 'Другие приоритеты'];
+  const MISSED_DAY_REASONS = [
+    'не было времени', 'мало сил', 'плохое самочувствие', 'другие приоритеты', 'своя причина'
+  ];
+
+  function trainingHasLiveMarks(training) {
+    if (!training || typeof training !== 'object') return false;
+    if (Array.isArray(training.z) && training.z.some(function (minutes) { return +minutes > 0; })) return true;
+    const wl0 = training.workoutLog;
+    if (!wl0 || typeof wl0 !== 'object') return false;
+    if (+wl0.startedAt > 0 || +wl0.firstMarkAt > 0 || +wl0.lastMarkAt > 0
+      || +wl0.completedAt > 0 || (wl0.activeRest && typeof wl0.activeRest === 'object')) return true;
+    if (Array.isArray(wl0.zoneMinutes) && wl0.zoneMinutes.some(function (minutes) { return +minutes > 0; })) {
+      return true;
+    }
+    return Array.isArray(wl0.exercises) && wl0.exercises.some(function (exercise) {
+      return Array.isArray(exercise && exercise.approaches) && exercise.approaches.some(function (approach) {
+        if (approach && approach.done) return true;
+        const drops = Array.isArray(approach && approach.drops) ? approach.drops : [];
+        const stages = Array.isArray(approach && approach.stages) ? approach.stages : [];
+        return drops.some(function (drop) { return !!(drop && drop.done); })
+          || stages.some(function (stage) { return !!(stage && stage.done); });
+      });
+    });
+  }
+
+  function moveCtaLabel(option) {
+    if (!option) return 'Перенести';
+    if (option.weekday && option.weekday.length > 3) return 'Перенести на ' + option.weekday;
+    const label = String(option.label || option.human || '').trim();
+    const match = label.match(/^(?:завтра,\s*)?([а-яё]+)/i);
+    if (match && match[1]) return 'Перенести на ' + match[1].toLowerCase();
+    if (option.weekday) return 'Перенести на ' + option.weekday;
+    return 'Перенести';
+  }
 
   /** Пропуск дня: отдельный исход, не маскирующий перенос. */
   function SkipSheet(props) {
@@ -2312,6 +2346,8 @@
     const [moveOpen, setMoveOpen] = React.useState(false);
     const [pendingAction, setPendingAction] = React.useState('');
     const [actionError, setActionError] = React.useState('');
+    const [missedReason, setMissedReason] = React.useState('');
+    const [missedCustom, setMissedCustom] = React.useState('');
     if (!plan) return null;
     function runPlanAction(actionName, action, onSuccess) {
       if (pendingAction || typeof action !== 'function') return;
@@ -2364,6 +2400,80 @@
           plan.movedTo ? 'Не пропуск — тренировка ждёт ' + humanDate(plan.movedTo) : 'Не пропуск — перенесён'),
         plan.movedTo && h('span', { className: 'sb-plan-trace' },
           humanDate(dateKey) + ' · откуда перенесли → ' + humanDate(plan.movedTo))
+      );
+    }
+
+    if (isPastDay && plan.status === 'assigned' && !trainingHasLiveMarks(training)) {
+      const moveTarget = moveOptions && moveOptions.find(function (option) { return !option.busy; });
+      const resolvedReason = missedReason === 'своя причина'
+        ? missedCustom.trim()
+        : missedReason;
+      return h('div', { className: 'sb-plan-missed' },
+        h('div', { className: 'sb-plan-missed-card sb-grp' },
+          h('p', { className: 'sb-plan-missed-lead' },
+            'Неделя ещё не закрыта — можно перенести на четверг или отпустить. '
+            + 'Пропуск не считается провалом: он просто не попадёт в объём.'),
+          h('div', { className: 'sb-plan-missed-actions' },
+            moveTarget && h('button', {
+              type: 'button',
+              className: 'sb-btn is-accent sb-plan-cta',
+              disabled: !!pendingAction,
+              onClick: function () { setMoveOpen(true); }
+            }, moveCtaLabel(moveTarget)),
+            h('button', {
+              type: 'button',
+              className: 'sb-btn sb-plan-missed-release',
+              disabled: !!pendingAction,
+              onClick: function () {
+                runPlanAction('skip', function () { return onSkip(resolvedReason, plan); });
+              }
+            }, pendingAction === 'skip' ? 'Отпускаю…' : 'Отпустить')
+          ),
+          h('p', { className: 'sb-plan-missed-foot' },
+            'Куратор увидит и решение, и причину, если укажете.')
+        ),
+        h('div', { className: 'sb-tier' }, 'Что помешало · необязательно'),
+        h('div', { className: 'sb-plan-missed-chips' },
+          MISSED_DAY_REASONS.map(function (reasonLabel) {
+            return h('button', {
+              key: reasonLabel,
+              type: 'button',
+              className: 'sb-chip sb-plan-missed-chip'
+                + (missedReason === reasonLabel ? ' is-on' : ''),
+              disabled: !!pendingAction,
+              onClick: function () {
+                if (pendingAction) return;
+                setMissedReason(missedReason === reasonLabel ? '' : reasonLabel);
+                if (reasonLabel !== 'своя причина') setMissedCustom('');
+              }
+            }, reasonLabel);
+          })
+        ),
+        missedReason === 'своя причина' && h('input', {
+          className: 'sb-ap-field sb-skip-reason-input sb-plan-missed-custom',
+          type: 'text',
+          placeholder: 'Своя причина',
+          value: missedCustom,
+          disabled: !!pendingAction,
+          onChange: function (e) { setMissedCustom(e.target.value); }
+        }),
+        h('div', { className: 'sb-tier' }, 'Как это влияет на модель'),
+        h('div', { className: 'sb-plan-missed-model sb-grp' },
+          h('p', { className: 'sb-plan-missed-lead' },
+            'Пропущенный день остаётся пустым: тоннажа нет, подходов нет, в отчёте недели '
+            + 'он не считается выполненным. Никаких упрёков — просто неделя короче на одну тренировку.')
+        ),
+        moveOpen && h(MoveSheet, {
+          options: moveOptions,
+          busy: pendingAction === 'move',
+          error: actionError,
+          onCancel: function () { setMoveOpen(false); },
+          onConfirm: function (toDate) {
+            runPlanAction('move', function () { return onMove(toDate, plan); }, function () { setMoveOpen(false); });
+          },
+          onSkipInstead: function () { setActionError(''); setMoveOpen(false); }
+        }),
+        actionError && h('p', { className: 'sb-confirm-text', role: 'alert' }, actionError)
       );
     }
 
