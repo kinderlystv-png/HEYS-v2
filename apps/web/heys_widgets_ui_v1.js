@@ -5987,7 +5987,8 @@
             React.createElement('span', {
               className: 'widget-v4-goalbar__fill ' + v4ValueStateClass(state),
               style: { width: fill + '%' }
-            })
+            }),
+            React.createElement('span', { className: 'widget-v4-goalbar__mark' })
           )
           : null
       );

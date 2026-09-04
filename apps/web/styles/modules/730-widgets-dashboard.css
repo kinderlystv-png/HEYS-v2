@@ -12620,6 +12620,46 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   background: var(--v4-ok-fill); /* v4-intentional */
 }
 
+/* Кадр «Окно до сна · Вечер»: полоса вечера, не «вид · полоса цели».
+   Дорожка --v4-line 8 % (data-v 07), не --v4-track 12 %. Общий goalbar
+   4 px / track / 7 px и mini sleep now не трогал. */
+.widget-v4-sleepwindow .widget-v4-goalbar--marked {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 5px;
+  margin-top: 6px;
+  overflow: hidden;
+  background: var(--v4-line); /* v4-intentional */
+}
+
+.widget-v4-sleepwindow .widget-v4-goalbar--marked .widget-v4-goalbar__fill {
+  flex: none;
+  height: 5px;
+  border-radius: 0;
+}
+
+.widget-v4-sleepwindow .widget-v4-goalbar--marked .widget-v4-goalbar__fill.widget-v4-val--good {
+  background: var(--v4-ok-fill); /* v4-intentional */
+}
+
+.widget-v4-sleepwindow .widget-v4-goalbar__mark {
+  flex: none;
+  width: 2px;
+  height: 5px;
+  background: var(--v4-ink); /* v4-intentional */
+}
+
+/* Кадр · 06: трекинг -.02em, как у mini; общий stack -.03em не трогал.
+   Шалфей — текстовая роль, не заливка --gr / #b7c29b кадра. */
+.widget-v4-stack.widget-v4-sleepwindow .widget-v4-goal-value {
+  letter-spacing: -0.02em;
+}
+
+.widget-v4-stack.widget-v4-sleepwindow .widget-v4-goal-value.widget-v4-val--good {
+  color: var(--v4-ok-text) /* v4-intentional */;
+}
+
 /* Подсказка «чем добрать»: строка не тянет плитку и обрезается по краю. */
 .widget-v4-hint {
   margin-top: 5px;
