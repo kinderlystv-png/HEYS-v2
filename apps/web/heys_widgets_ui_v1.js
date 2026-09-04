@@ -6076,7 +6076,7 @@
         }, hasData ? formatScoreRu(score) : '—'),
         hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'из 10') : null
       ),
-      hasData ? v4GoalBar((score / 10) * 100, state) : null
+      hasData ? v4GoalBar((score / 10) * 100) : null
     );
   }
 

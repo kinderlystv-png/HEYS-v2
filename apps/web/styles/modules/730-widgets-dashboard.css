@@ -12534,6 +12534,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 3px;
 }
 
+/* Кадр «Качество еды · Как сейчас · 03»: зазор 3 px у числа и «из 10».
+   Правила клетчатки и белка 3 px не трогал. */
+.widget-v4-mini.widget-v4-foodquality .widget-v4-goal-hero {
+  gap: 3px;
+}
+
 .widget-v4-goal-value {
   font-size: 17px;
   font-weight: 600;
@@ -12546,6 +12552,16 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-mini.widget-v4-fiber .widget-v4-goal-value,
 .widget-v4-mini.widget-v4-protein .widget-v4-goal-value {
   font-size: 21px;
+}
+
+.widget-v4-mini.widget-v4-foodquality .widget-v4-goal-value {
+  font-size: 21px;
+}
+
+/* Кадр · 04 пишет --tx; строка «качество еды · цвет» старше — шалфей от 5.
+   Глобальный val--good на синем остаётся песочным. */
+.widget-v4-mini.widget-v4-foodquality .widget-v4-goal-value.widget-v4-val--good {
+  color: var(--v4-ok-text) /* v4-intentional */;
 }
 
 /* Кадр «Клетчатка · нет данных · 04»: прочерк 21/600 тоном 42 %.
