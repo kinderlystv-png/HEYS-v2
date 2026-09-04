@@ -718,12 +718,16 @@
 
 .yv-pack-primary,
 .yv-pack-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 48px;
   border: 0;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
+  text-align: center;
   cursor: pointer;
 }
 

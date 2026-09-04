@@ -302,20 +302,22 @@ const forkList = (n) => [
 ];
 
 const FORK_FRAMES = [
+  // Пакет 3 сентября: между пояснением и подвалом появились строки «Дописать
+  // точно» (14) и «зазор 8px» (15) — сдвиг на +1 от note до later.
   ['Чек-ин · вчерашний день', forkSummary({
-    title: 5, sub: 6, card: 7, row: 8, row2: 11, note: 13, foot: 14, row3: 16,
-    a: 17, b: 18, wide: '.yv-pack-row .yv-pack-secondary--feelings', later: 19,
+    title: 5, sub: 6, card: 7, row: 8, row2: 11, note: 12, foot: 13, row3: 15,
+    a: 16, b: 17, wide: '.yv-pack-row .yv-pack-secondary--feelings', later: 18,
   })],
   ['Чек-ин · день из пачки', forkSummary({
-    title: 6, sub: 7, card: 8, row: 9, row2: 12, note: 14, foot: 15, row3: 17,
-    a: 18, b: 19, wide: '.yv-pack-row .yv-pack-secondary--feelings', later: 20,
+    title: 6, sub: 7, card: 8, row: 9, row2: 12, note: 13, foot: 14, row3: 16,
+    a: 17, b: 18, wide: '.yv-pack-row .yv-pack-secondary--feelings', later: 19,
   })],
   // Пустой день меняет ширины местами: подтверждение «ничего не ел» длиннее.
   // Нумерация на единицу больше, чем у дня с едой: во второй строке карточки
   // пакет 3 сентября развёл норму и подпись на два разбора вместо одного.
   ['Чек-ин · пустой день из пачки', forkSummary({
-    title: 6, sub: 7, card: 8, row: 9, row2: 12, note: 15, foot: 16, row3: 18,
-    a: 20, b: 19, wide: '.yv-pack-row .yv-pack-secondary--confirm-empty', later: 21,
+    title: 6, sub: 7, card: 8, row: 9, row2: 12, note: 13, foot: 14, row3: 16,
+    a: 18, b: 17, wide: '.yv-pack-row .yv-pack-secondary--confirm-empty', later: 19,
   })],
   ['Чек-ин · пачка незакрытых дней', forkList({
     title: 5, sub: 6, days: 7, day: 8, note: 9, foot: 10,
