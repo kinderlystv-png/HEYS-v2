@@ -60,7 +60,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [47, '19522329f4fb6522'],
   }),
   'curator-cabinet': Object.freeze({
-    mismatch: [36, '7db49fa8901a80cd'],
+    mismatch: [30, '5ccedfacff5f9596'],
     notApplicable: [17, '227a240a10a24074'],
   }),
   'curator-edits': Object.freeze({
