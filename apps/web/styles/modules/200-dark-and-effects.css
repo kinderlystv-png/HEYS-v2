@@ -335,7 +335,7 @@
  * ══════════════════════════════════════════════════════════════ */
 
 [data-theme$="dark"] .meal-sep.meal-type-breakfast {
-  color: #fb923c;
+  color: var(--v4-warn-1, #d99a63);
   /* Orange 400 */
 }
 
@@ -373,8 +373,8 @@
 }
 
 [data-theme$="dark"] .meal-sep.meal-type-breakfast .meal-kcal-badge {
-  background: rgba(251, 146, 60, 0.2);
-  color: #fde68a;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 20%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .meal-sep.meal-type-lunch .meal-kcal-badge {
@@ -438,13 +438,13 @@
 
 /* Dark стили по типам приёмов */
 [data-theme$="dark"] .meal-header-inside.meal-type-breakfast {
-  background: linear-gradient(135deg, #431407 0%, #7c2d12 50%, #1e293b 100%);
-  border-bottom-color: #9a3412;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-warn-3, #a1471c) 90%, var(--v4-hero, #2f2820)) 0%, color-mix(in srgb, var(--v4-warn-3, #a1471c) 55%, var(--v4-hero, #2f2820)) 50%, var(--v4-hero, #2f2820) 100%);
+  border-bottom-color: var(--v4-warn-3, #a1471c);
 }
 
 [data-theme$="dark"] .meal-header-inside.meal-type-breakfast .meal-kcal-badge-inside {
-  background: #431407;
-  color: #fb923c;
+  background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 85%, var(--v4-hero, #2f2820));
+  color: var(--v4-warn-1, #d99a63);
 }
 
 [data-theme$="dark"] .meal-header-inside.meal-type-lunch {
@@ -563,15 +563,15 @@
 }
 
 [data-theme$="dark"] .insulin-wave-indicator.insulin-almost {
-  --iw-bg-from: rgba(154, 52, 18, 0.2);
-  --iw-bg-mid: rgba(194, 65, 12, 0.17);
-  --iw-bg-to: rgba(251, 146, 60, 0.12);
+  --iw-bg-from: color-mix(in srgb, var(--v4-warn-3, #a1471c) 20%, transparent);
+  --iw-bg-mid: color-mix(in srgb, var(--v4-warn-2, #c67139) 17%, transparent);
+  --iw-bg-to: color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, transparent);
 }
 
 [data-theme$="dark"] .insulin-wave-indicator.insulin-soon {
-  --iw-bg-from: rgba(133, 77, 14, 0.2);
-  --iw-bg-mid: rgba(161, 98, 7, 0.17);
-  --iw-bg-to: rgba(250, 204, 21, 0.12);
+  --iw-bg-from: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 20%, transparent);
+  --iw-bg-mid: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 17%, transparent);
+  --iw-bg-to: color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, transparent);
 }
 
 [data-theme$="dark"] .insulin-wave-bg {
