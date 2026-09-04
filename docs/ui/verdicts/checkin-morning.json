@@ -1049,47 +1049,47 @@
     },
     "Чек-ин · день из пачки · 06": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
+      "f": "715-yesterday-verify.css:696-702 .yv-hero-title — font-weight 700 font-size 20px line-height 1.25 color var(--v4-sand-ink); гейт checkin-v4-canvas-razbor элемент 06",
       "h": "d8f005232dbe"
     },
     "Чек-ин · день из пачки · 07": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
+      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — font-weight 500 font-size 12px line-height 1.5 color var(--v4-ink-2); computed песочная/синяя rgba(0,0,0,.55); гейт элемент 07",
       "h": "f486feaa917f"
     },
     "Чек-ин · день из пачки · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
+      "f": "715-yesterday-verify.css:786-794 .yv-food-card — background var(--v4-card) border-radius 20px padding 14px 16px margin-top 16px; computed песочная rgb(247,239,226) синяя rgb(238,243,249); гейт элемент 08",
       "h": "7048784b4c9a"
     },
     "Чек-ин · день из пачки · 09": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
+      "f": "715-yesterday-verify.css:796-802 .yv-food-row — justify-content space-between align-items baseline font 600 12.5px/1 Figtree; гейт элемент 09",
       "h": "d02562cc473f"
     },
     "Чек-ин · день из пачки · 10": {
-      "v": "?",
-      "f": "сверено чтением при сведении экрана: элемент кадра сопоставлен с продуктовым CSS вручную. Гейт разбора checkin-v4-canvas-razbor.test.js эту строку в пары не берёт — он сверяет 281 строку из 753, и прежняя ссылка на него стояла здесь ошибочно: она обещала машинную проверку там, где её нет снято 4 сентября: обоснование не проверяемо, сверка не воспроизводима",
+      "v": "=",
+      "f": "715-yesterday-verify.css:801 .yv-food-row — color rgba(0,0,0,.55) на подписи «Еда»; computed песочная/синяя rgba(0,0,0,.55)",
       "h": "3669a679666e"
     },
     "Чек-ин · день из пачки · 11": {
-      "v": "?",
-      "f": "сверено чтением при сведении экрана: элемент кадра сопоставлен с продуктовым CSS вручную. Гейт разбора checkin-v4-canvas-razbor.test.js эту строку в пары не берёт — он сверяет 281 строку из 753, и прежняя ссылка на него стояла здесь ошибочно: она обещала машинную проверку там, где её нет снято 4 сентября: обоснование не проверяемо, сверка не воспроизводима",
+      "v": "=",
+      "f": "715-yesterday-verify.css:808-812 .yv-food-value — color var(--v4-warn-text) font-variant-numeric tabular-nums; computed песочная rgb(161,71,28) синяя rgb(176,58,36)",
       "h": "7c52c2353bc1"
     },
     "Чек-ин · день из пачки · 12": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
+      "f": "715-yesterday-verify.css:804-806 .yv-food-row + .yv-food-row — margin-top 13px; гейт элемент 12",
       "h": "6a4f9c4555d1"
     },
     "Чек-ин · день из пачки · 13": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js • Номер сместился: пакет 3 сентября (вечер) принял находку про значения развилки и перевёл их с ink-тонов на роль --ac2, после чего они перестали нумероваться отдельной строкой. Элемент тот же, вердикт перенесён со своего прежнего номера.",
+      "f": "715-yesterday-verify.css:762-767 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); computed песочная rgba(0,0,0,.56) синяя rgba(16,24,38,.64); гейт элемент 13",
       "h": "64e7dc742718"
     },
     "Чек-ин · день из пачки · 14": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js • Номер сместился: пакет 3 сентября (вечер) принял находку про значения развилки и перевёл их с ink-тонов на роль --ac2, после чего они перестали нумероваться отдельной строкой. Элемент тот же, вердикт перенесён со своего прежнего номера.",
+      "f": "715-yesterday-verify.css:1061-1067 .yv-canvas-foot — flex-direction column gap 8px margin-top auto padding-top 16px; гейт элемент 14",
       "h": "3303c9c89b4b"
     },
     "Чек-ин · день из пачки · 15": {
@@ -1099,22 +1099,22 @@
     },
     "Чек-ин · день из пачки · 16": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js • Номер сместился: пакет 3 сентября (вечер) принял находку про значения развилки и перевёл их с ink-тонов на роль --ac2, после чего они перестали нумероваться отдельной строкой. Элемент тот же, вердикт перенесён со своего прежнего номера.",
+      "f": "715-yesterday-verify.css:739-742 .yv-pack-row — display flex gap 8px; гейт элемент 16",
       "h": "523bb74c9dac"
     },
     "Чек-ин · день из пачки · 17": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js • Номер сместился: пакет 3 сентября (вечер) принял находку про значения развилки и перевёл их с ink-тонов на роль --ac2, после чего они перестали нумероваться отдельной строкой. Элемент тот же, вердикт перенесён со своего прежнего номера.",
+      "f": "715-yesterday-verify.css:755-759 .yv-pack-secondary — flex 1 min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 17",
       "h": "fdbf62fea33b"
     },
     "Чек-ин · день из пачки · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js • Номер сместился: пакет 3 сентября (вечер) принял находку про значения развилки и перевёл их с ink-тонов на роль --ac2, после чего они перестали нумероваться отдельной строкой. Элемент тот же, вердикт перенесён со своего прежнего номера.",
+      "f": "715-yesterday-verify.css:744-746 .yv-pack-row .yv-pack-secondary--feelings — flex 1.25; min-height 48px border-radius 999px background var(--v4-c1); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249); гейт элемент 18",
       "h": "a8d8da3970b8"
     },
     "Чек-ин · день из пачки · 19": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js • Номер сместился: пакет 3 сентября (вечер) принял находку про значения развилки и перевёл их с ink-тонов на роль --ac2, после чего они перестали нумероваться отдельной строкой. Элемент тот же, вердикт перенесён со своего прежнего номера.",
+      "f": "715-yesterday-verify.css:1069-1076 .yv-text-later — min-height 44px font 700 12px/1 color rgba(0,0,0,.45) background transparent; computed песочная/синяя rgba(0,0,0,.45); гейт элемент 19",
       "h": "939d9a04d849"
     },
     "Чек-ин · пустой день из пачки · 01": {
