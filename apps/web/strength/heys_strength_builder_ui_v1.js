@@ -188,6 +188,7 @@
     const [finishAtOverride, setFinishAtOverride] = React.useState(0);
     const [emptyActionPending, setEmptyActionPending] = React.useState(false);
     const [consumedPlanRevision, setConsumedPlanRevision] = React.useState(null);
+    const [renumberCtx, setRenumberCtx] = React.useState(null);
     const [rest, setRest] = React.useState(function () {
       return restoreActiveRest(wl.activeRest, Date.now());
     });
@@ -509,11 +510,22 @@
       }
     }
 
-    function toggleType(exIdx, apIdx) {
+    function cloneExercise(ex) {
+      return JSON.parse(JSON.stringify(ex || {}));
+    }
+
+    function toggleType(exIdx, apIdx, opts) {
       const ex = exercises[exIdx];
-      const a = (ex.approaches || [])[apIdx];
+      const a = (ex && ex.approaches || [])[apIdx];
+      if (!ex || !a) return;
       const warmup = SK ? SK.isWarmupApproach(a) : false;
+      const beforeEx = cloneExercise(ex);
       patchApproach(exIdx, apIdx, { type: warmup ? '' : 'warmup' });
+      if (!(opts && opts.skipRenumber)) {
+        setRenumberCtx({ exIdx: exIdx, beforeEx: beforeEx });
+        setOpenIdx(exIdx);
+        setView('renumber');
+      }
     }
 
     function addApproach(exIdx) {
@@ -728,10 +740,20 @@
         onClose: onClose,
         onOpenSheet: function () { setSheetOpen(true); },
         onPatchApproach: function (apIdx, patch) { patchApproach(warmupDropIdx, apIdx, patch); },
-        onToggleType: function (apIdx) { toggleType(warmupDropIdx, apIdx); },
+        onToggleType: function (apIdx) { toggleType(warmupDropIdx, apIdx, { skipRenumber: true }); },
         onAddDrop: function () { addDrop(warmupDropIdx); },
         onAddApproach: function () { addApproach(warmupDropIdx); },
         readOnly: false
+      });
+    }
+    if (view === 'renumber' && renumberCtx && exercises[renumberCtx.exIdx]) {
+      const rnEx = exercises[renumberCtx.exIdx];
+      return h((HEYS.StrengthBuilderParts || {}).RenumberScreen, {
+        ex: rnEx,
+        beforeEx: renumberCtx.beforeEx,
+        bodyWeightKg: profile && profile.weight,
+        onBack: function () { setView('list'); setRenumberCtx(null); },
+        onOpenSheet: function () { setSheetOpen(true); }
       });
     }
     if (view === 'catalog' && CatUI.CatalogScreen) {

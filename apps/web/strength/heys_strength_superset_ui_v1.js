@@ -56,6 +56,19 @@
     return many;
   }
 
+  function ruCountWord(n) {
+    const words = {
+      1: 'один', 2: 'два', 3: 'три', 4: 'четыре', 5: 'пять',
+      6: 'шесть', 7: 'семь', 8: 'восемь', 9: 'девять', 10: 'десять'
+    };
+    return words[n] || String(n);
+  }
+
+  function parseWeightKg(v) {
+    const n = parseFloat(String(v == null ? '' : v).replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  }
+
   function memberLetter(index) {
     return String.fromCharCode(65 + index);
   }
@@ -528,7 +541,9 @@
     const SK = kernel();
     if (!SK || !exercise) return 0;
     const unit = exercise.unit || 'weight_reps';
-    const factor = SK.toWeightNumber ? SK.toWeightNumber(exercise.bodyweightFactor) : null;
+    const factor = exercise.bodyweightFactor == null || exercise.bodyweightFactor === ''
+      ? null
+      : parseWeightKg(exercise.bodyweightFactor);
     const ownWeightKg = unit === 'bodyweight' && factor !== null && bodyWeightKg > 0
       ? bodyWeightKg * factor
       : null;
@@ -546,7 +561,7 @@
           if (ownWeightKg === null) return;
           w = ownWeightKg + (SK.approachExtraWeight ? SK.approachExtraWeight(approach) : 0);
         } else {
-          w = SK.toWeightNumber ? SK.toWeightNumber(stage.weightKg) : 0;
+          w = parseWeightKg(stage.weightKg);
         }
         if (w > 0) total += w * reps;
       });
@@ -759,6 +774,117 @@
   function formatVolumeKg(kg) {
     const n = Math.max(0, Math.round(+kg || 0));
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + ' кг';
+  }
+
+  function formatDeltaKg(delta) {
+    const n = Math.abs(Math.round(+delta || 0));
+    const sign = delta < 0 ? '−' : '+';
+    return sign + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + ' кг';
+  }
+
+  function renumberTierLabel(exercise) {
+    const SK = kernel();
+    const aps = Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [];
+    let warmups = 0;
+    let work = 0;
+    aps.forEach(function (approach) {
+      if (SK && SK.isBlankApproach(approach)) return;
+      if (SK && SK.isWarmupApproach(approach)) warmups += 1;
+      else work += 1;
+    });
+    const workLabel = ruCountWord(work) + ' ' + ruPlural(work, 'рабочий', 'рабочих', 'рабочих');
+    if (warmups > 0) {
+      return 'разминка и ' + workLabel;
+    }
+    return workLabel;
+  }
+
+  function renderRenumberGroup(exercise, bodyWeightKg, tierLabel, showDelta) {
+    const SK = kernel();
+    const aps = Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [];
+    let workNo = 0;
+    const rows = aps.map(function (approach, ai) {
+      if (SK && SK.isBlankApproach(approach)) return null;
+      const warmup = SK && SK.isWarmupApproach(approach);
+      if (!warmup) workNo += 1;
+      const stages = SK ? SK.approachStages(approach) : [];
+      const stage = stages[0] || {};
+      const isLast = ai === aps.length - 1;
+      return h('div', {
+        key: 'rr' + ai,
+        className: 'sb-renumber-row' + (isLast ? ' is-last' : '')
+      },
+        h('span', { className: 'sb-renumber-num' + (warmup ? ' is-warmup' : ' is-work') },
+          warmup ? 'Р' : String(workNo)),
+        h('span', { className: 'sb-renumber-val' + (warmup ? ' is-muted' : '') },
+          fmtNumber(stage.weightKg)),
+        h('span', { className: 'sb-renumber-val' + (warmup ? ' is-muted' : '') },
+          fmtNumber(stage.reps)),
+        h('span', {
+          className: 'sb-renumber-check'
+            + (warmup ? ' is-muted' : '')
+            + (approach.done && !warmup ? ' is-done' : '')
+        }, approach.done ? '✓' : (warmup ? '✓' : ''))
+      );
+    }).filter(Boolean);
+    const volumeKg = exerciseVolumeKg(exercise, bodyWeightKg);
+    return h('div', { className: 'sb-renumber-grp' },
+      h('div', { className: 'sb-renumber-tier' }, tierLabel),
+      rows,
+      h('div', { className: 'sb-renumber-tonnage' },
+        h('span', null, 'Тоннаж'),
+        showDelta
+          ? h('span', { className: 'sb-renumber-tonnage-values' },
+            h('b', null, formatVolumeKg(volumeKg)),
+            showDelta.delta !== 0 && h('span', { className: 'sb-renumber-delta' },
+              formatDeltaKg(showDelta.delta))
+          )
+          : h('b', null, formatVolumeKg(volumeKg))
+      )
+    );
+  }
+
+  function RenumberScreen(props) {
+    const { ex, beforeEx, bodyWeightKg, onBack, onOpenSheet } = props;
+    const beforeVol = exerciseVolumeKg(beforeEx, bodyWeightKg);
+    const afterVol = exerciseVolumeKg(ex, bodyWeightKg);
+    const beforeWork = renumberTierLabel(beforeEx);
+    const afterWork = renumberTierLabel(ex);
+    return h('div', { className: 'sb-root sb-renumber-screen' },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: onBack, 'aria-label': 'Назад к списку'
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, ex.name || 'Без названия'),
+          h('div', { className: 'sb-head-sub' }, 'ярлык подхода переключили тапом')
+        ),
+        h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: onOpenSheet, 'aria-label': 'Ещё'
+        }, '⋯')
+      ),
+      h('div', { className: 'sb-renumber-scroll' },
+        renderRenumberGroup(beforeEx, bodyWeightKg, 'Было · ' + beforeWork, null),
+        renderRenumberGroup(ex, bodyWeightKg, 'Стало · ' + afterWork, { delta: afterVol - beforeVol }),
+        h('p', { className: 'sb-renumber-footnote' },
+          'Номера соседей едут вверх, тоннаж уменьшается на объём разминки. Оба изменения продукт анимирует — цифра переезжает, сумма пересчитывается на глазах: мгновенная подмена читается как потеря подхода.')
+      )
+    );
+  }
+
+  /** Е4 · пуш «отдых закончился» в кармане: иконка HS и подпись подхода. */
+  function RestEndedPocket(props) {
+    const { title, subtitle, nowLabel } = props;
+    return h('div', { className: 'sb-rest-ended-pocket' },
+      h('span', { className: 'sb-rest-ended-icon', 'aria-hidden': 'true' }, 'HS'),
+      h('span', { className: 'sb-rest-ended-copy' },
+        h('b', null, title || 'Отдых закончился'),
+        h('span', null, subtitle || '')
+      ),
+      nowLabel && h('span', { className: 'sb-rest-ended-now' }, nowLabel)
+    );
   }
 
   function WarmupDropScreen(props) {
@@ -1147,6 +1273,8 @@
   Parts.ApproachRow = ApproachRow;
   Parts.ExerciseCard = ExerciseCard;
   Parts.WarmupDropScreen = WarmupDropScreen;
+  Parts.RenumberScreen = RenumberScreen;
+  Parts.RestEndedPocket = RestEndedPocket;
   Parts.exerciseVolumeKg = exerciseVolumeKg;
   Parts.warmupDropHeadKey = warmupDropHeadKey;
   Parts.startedAtMs = startedAtMs;

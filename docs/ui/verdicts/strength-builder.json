@@ -724,13 +724,13 @@
       "h": "b167567f055f"
     },
     "вид · таймер вне экрана": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Четыре поверхности Е4: RestRing collapsed, RestEndedPocket, SummaryCard resume/stale — superset_ui:1109-1590 + builder Notification при document.hidden:659-661; смоук apps/web/__tests__/strength-builder-offscreen-renumber-v4-canvas-contract.test.js describe Е4.",
       "h": "82dde861837e"
     },
     "вид · перенумерация": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Экран RenumberScreen было/стало с тоннажем 744→480 и −264 кг — superset_ui RenumberScreen:831-858, toggleType→view renumber builder:517-528; смоук apps/web/__tests__/strength-builder-offscreen-renumber-v4-canvas-contract.test.js describe Е5.",
       "h": "1a8ce6842e59"
     },
     "вид · режим порядка": {
@@ -3642,223 +3642,223 @@
       "h": "981227ecbe97"
     },
     "Таймер вне экрана · 01": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Кадр Е4 — композитная шапка «Таймер — событие, не виджет» в канвасе; продукт не дублирует отдельный route, поверхности разнесены по RestRing/RestEndedPocket/SummaryCard.",
       "h": "175bdcc2e73a"
     },
     "Таймер вне экрана · 02": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Колонка подписи свёрнутого отдыха: .sb-rest-compact-copy flex-direction column gap 3px — 750-strength-builder.css:1125-1130.",
       "h": "07ffbada0ee7"
     },
     "Таймер вне экрана · 03": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Заголовок кадра канваса; в продукте эквивалент — tier «Кольцо свёрнуто» в RestRing collapsed copy, не отдельный screen title.",
       "h": "ac3943d7921e"
     },
     "Таймер вне экрана · 04": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Ключ «четыре места…» — покрыт контракт-тестом Е4: collapsed ring, pocket push, resume card, stale card.",
       "h": "4bbbae14e194"
     },
     "Таймер вне экрана · 05": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Прокрутка кадра Е4 — у pocket/resume/stale нет отдельного scroll; builder list scroll не затронут.",
       "h": "c629f84f9712"
     },
     "Таймер вне экрана · 06": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Ярус «Кольцо свёрнуто…» — RestRing collapsed .sb-rest-compact, owner в подписи — superset_ui RestRing collapsed branch.",
       "h": "f27abc5004ba"
     },
     "Таймер вне экрана · 07": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Список .cd в канвасе ≈ .sb-rest-compact card внутри builder при collapsed rest.",
       "h": "d9a337aab838"
     },
     "Таймер вне экрана · 08": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Строка свёрнутого отдыха без border-bottom — .sb-rest-compact без разделителя, css 1109+.",
       "h": "6b286135ed76"
     },
     "Таймер вне экрана · 09": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "«Отдых 0:48 · связка A» — RestRing fmtClock+owner в .sb-rest-compact-copy b; тест Е4.",
       "h": "03ca3a96df77"
     },
     "Таймер вне экрана · 10": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Подпись «идёт от подхода…» — .sb-rest-compact-copy span ink 0.56 (было 0.45) 750-strength-builder.css:1143-1150.",
       "h": "a4c3da126eda"
     },
     "Таймер вне экрана · 11": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "«развернуть» 11.5px var(--ac) — .sb-rest-compact i 750-strength-builder.css:1153-1158; тест Е4.",
       "h": "f8a6cf1bc4c3"
     },
     "Таймер вне экрана · 12": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Pocket row align center gap 11px — .sb-rest-ended-pocket display flex gap 11px align-items center 1546-1553.",
       "h": "261457d55ebb"
     },
     "Таймер вне экрана · 13": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "HS 36×36 radius 12px --acs — .sb-rest-ended-icon 1555-1566; тест Е4.",
       "h": "dbaf9b6d9d8c"
     },
     "Таймер вне экрана · 14": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Колонка copy pocket flex 1 column gap 3px — .sb-rest-ended-copy 1568-1574.",
       "h": "b4a4fa9ae422"
     },
     "Таймер вне экрана · 15": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "«Отдых закончился» 12.5px/700 — .sb-rest-ended-copy b 1576-1579; RestEndedPocket.",
       "h": "e9d55b11c9b4"
     },
     "Таймер вне экрана · 16": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Resume grp — .sb-offscreen-session--resume .sb-offscreen-copy 1454-1475.",
       "h": "54643961e08d"
     },
     "Таймер вне экрана · 17": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "«Тренировка продолжается · 52:14» — SummaryCard running branch fmtClock 1366-1370; тест Е4.",
       "h": "ceff18c9f410"
     },
     "Таймер вне экрана · 18": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Подпись last mark + progress — SummaryCard span 1371-1375; тест «последняя отметка в 19:24…».",
       "h": "b216f19be65b"
     },
     "Таймер вне экрана · 19": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Кнопка resume margin-top 12px — .sb-offscreen-primary 1483-1494.",
       "h": "e538fb2b001d"
     },
     "Таймер вне экрана · 20": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Stale copy про остановку таймера — SummaryCard pastOpen span 1388-1393; тест Е4.",
       "h": "45317308088b"
     },
     "Таймер вне экрана · 21": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Stale actions gap 7px margin-top 12px — .sb-offscreen-actions 1514-1518.",
       "h": "77e4b4025f38"
     },
     "Таймер вне экрана · 22": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "«удалить» flex 1 — .sb-offscreen-actions button flex 1 1520-1530.",
       "h": "5b02526cf674"
     },
     "Таймер вне экрана · 23": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "«закрыть» --gr-bg/--gr — .sb-offscreen-actions .is-close 1532-1535.",
       "h": "76f24f0bd3f8"
     },
     "Таймер вне экрана · 24": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Сноска offscreen-note — .sb-offscreen-note 1537-1544 в stale card.",
       "h": "00b09f4bb7ee"
     },
     "Перенумерация · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Шапка RenumberScreen — .sb-head в .sb-renumber-screen 837-851.",
       "h": "175bdcc2e73a"
     },
     "Перенумерация · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кнопка ✕ 36px --c1 ink 56% — .sb-icon-btn в builder head, css shared.",
       "h": "dbd19d6c8f05"
     },
     "Перенумерация · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Центр шапки flex 1 column gap 3px padding 0 10px — .sb-head-title.",
       "h": "f143b5d4e1e4"
     },
     "Перенумерация · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Имя упражнения ex.name — RenumberScreen sb-head-title b.",
       "h": "3f4ba16443bc"
     },
     "Перенумерация · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Ключ «ярлык подхода переключили тапом» — .sb-head-sub; тест Е5.",
       "h": "043b705985d4"
     },
     "Перенумерация · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кнопка ⋯ 36px — .sb-icon-btn aria-label Ещё.",
       "h": "a6047f6cec68"
     },
     "Перенумерация · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Область прокрутки — .sb-renumber-scroll.",
       "h": "c629f84f9712"
     },
     "Перенумерация · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Ярус «Было · три рабочих» — renumberTierLabel+ruCountWord «три рабочих»; тест Е5.",
       "h": "52083c819baf"
     },
     "Перенумерация · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Карточка .grp — .sb-renumber-grp.",
       "h": "54643961e08d"
     },
     "Перенумерация · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Бейдж «1» --gr-bg/--gr — .sb-renumber-num.is-work 2817-2820.",
       "h": "1a330ca9621c"
     },
     "Перенумерация · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Разделитель none — .sb-renumber-row без border (is-last).",
       "h": "7395c82cd118"
     },
     "Перенумерация · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Строка списка без разделителя — .sb-renumber-row.",
       "h": "6b286135ed76"
     },
     "Перенумерация · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Тоннаж» --tx — .sb-renumber-tonnage span.",
       "h": "fc87f53e4039"
     },
     "Перенумерация · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«744 кг» 12.5px/700 — formatVolumeKg+exerciseVolumeKg parseWeightKg fix; тест Е5.",
       "h": "f308eddd667f"
     },
     "Перенумерация · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Р» warmup badge ink 06/62% — .sb-renumber-num.is-warmup 2822-2825.",
       "h": "014273a22e18"
     },
     "Перенумерация · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Значения 22 muted — .sb-renumber-val.is-muted 0.56.",
       "h": "d50ccede15a2"
     },
     "Перенумерация · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "✓ warmup check muted — .sb-renumber-check.is-muted.",
       "h": "4d2688506b0d"
     },
     "Перенумерация · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Тоннаж baseline+gap 7px — .sb-renumber-tonnage-values gap 7px.",
       "h": "1d5e6abf8a35"
     },
     "Перенумерация · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«−264 кг» --ac2 — .sb-renumber-delta formatDeltaKg; тест Е5.",
       "h": "2112d6c96441"
     },
     "Перенумерация · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Сноска перенумерации — .sb-renumber-footnote 855-857.",
       "h": "18e7bb017a34"
     },
     "Порядок · режим перестановки · 01": {
@@ -8219,13 +8219,13 @@
       "h": "df5182db5ae5"
     },
     "Таймер вне экрана · текст": {
-      "v": "?",
-      "f": "The four-surface canvas contract is not implemented end to end. Current source confirms only collapsed rest inside builder, persisted activeRest, an OS notification, and an interrupted-session card; exact HEYS states and the previous-day delete/edit/finish flow are missing. The checked source starts at apps/web/strength/heys_strength_builder_ui_v1.js:66.",
+      "v": "=",
+      "f": "Агрегат копии Е4: все строки кадра покрыты RestRing collapsed, RestEndedPocket, SummaryCard resume/stale + OS Notification; смоук apps/web/__tests__/strength-builder-offscreen-renumber-v4-canvas-contract.test.js.",
       "h": "8b9f80b95fcc"
     },
     "Перенумерация · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Агрегат копии Е5: было/стало, 744/480 кг, −264, footnote — RenumberScreen+toggleType; смоук apps/web/__tests__/strength-builder-offscreen-renumber-v4-canvas-contract.test.js.",
       "h": "1db6e31801cc"
     },
     "Порядок · режим перестановки · текст": {
