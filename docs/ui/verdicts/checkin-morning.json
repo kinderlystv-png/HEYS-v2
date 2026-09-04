@@ -488,8 +488,8 @@
       "h": "44759456dbab"
     },
     "режим куратора": {
-      "v": "=",
-      "f": "heys_morning_checkin_v1.js:1257-1259 HEYS.auth.isCuratorSession() → false; hasPartialCoreCheckinPrefill блокирует reopen при полном core (morning-checkin-flow-resume.test.js:889-899); isCuratorAuthored в heys_gamification_v1.js:4453 — стрик не от чужой руки",
+      "v": "?",
+      "f": "старая причина ≠ (явный гард не закреплён) снята: heys_morning_checkin_v1.js:1257-1259 isCuratorSession() → false; hasPartialCoreCheckinPrefill + isCuratorAuthored проверены. Промоут в = — отдельная сверка кадра, не в аудите ≠, 2026-09-04",
       "h": "42754c49e7d4"
     },
     "чек-ин не пройден до вечера": {
