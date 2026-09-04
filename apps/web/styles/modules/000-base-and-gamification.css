@@ -11765,11 +11765,6 @@ body:has(:is(
   box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
 }
 
-  background: var(--v4-val-bad, #a8382b); /* v4-intentional */
-  color: var(--v4-sand-ink-slate, #1f2937);
-  box-shadow: 0 4px 10px -8px rgba(248, 113, 113, 0.8);
-}
-
 /* === Индикатор вкладки по умолчанию в режиме редактирования === */
 .tab.tab-switch.default-tab-indicator,
 .tab.default-tab-indicator {
