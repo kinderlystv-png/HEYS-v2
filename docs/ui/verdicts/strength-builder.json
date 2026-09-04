@@ -4602,304 +4602,320 @@
       "h": "c54736e577d3"
     },
     "Куратор и зал · 01": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "175bdcc2e73a"
+      "h": "175bdcc2e73a",
+      "v": "=",
+      "f": "Шапка сессии: .sb-head в heys_strength_builder_ui_v1.js:1200-1228; геометрия .sb-builder-screen .sb-head — 750-strength-builder.css."
     },
     "Куратор и зал · 02": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "07ffbada0ee7"
+      "h": "07ffbada0ee7",
+      "v": "=",
+      "f": "Заголовок колонкой: .sb-head-title { display:flex; flex-direction:column; gap:3px } — 750-strength-builder.css:3186-3190."
     },
     "Куратор и зал · 03": {
+      "h": "fde93b8307ff",
       "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "fde93b8307ff"
+      "f": "Имя экрана — sessionTitle(exercises), не литерал «Тренировка идёт»: heys_strength_builder_ui_v1.js:1208 + Parts.sessionTitle в superset_ui.",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/strength/heys_strength_builder_ui_v1.js:1208"
     },
     "Куратор и зал · 04": {
+      "h": "1a96e89ed667",
       "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "1a96e89ed667"
+      "f": "Подзаголовок — дата/время сессии (fmtTime), без строки «что приходит от куратора…»: heys_strength_builder_ui_v1.js:1209-1212.",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/strength/heys_strength_builder_ui_v1.js:1209"
     },
     "Куратор и зал · 05": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "c629f84f9712"
+      "h": "c629f84f9712",
+      "v": "=",
+      "f": "Прокрутка списка: .sb-list { overflow-y:auto } — 750-strength-builder.css:156-164; builder list view heys_strength_builder_ui_v1.js:1255."
     },
     "Куратор и зал · 06": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "81d6d8e40a85"
+      "h": "81d6d8e40a85",
+      "v": "=",
+      "f": "Карточка плана: .sb-cur-plan-strip.sb-grp { margin-top:12px } — 750-strength-builder.css:5548-5550; CuratorPlanStrip superset_ui:2018."
     },
     "Куратор и зал · 07": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "869d1e5dd696"
+      "h": "869d1e5dd696",
+      "v": "=",
+      "f": "Ряд буквы плана: .sb-cur-plan-head { align-items:center; gap:10px } — 750-strength-builder.css:5552-5556."
     },
     "Куратор и зал · 08": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "addb1ad16c00"
+      "h": "addb1ad16c00",
+      "v": "=",
+      "f": "Буква дня: .sb-cur-plan-letter 34×34, radius 11px, color var(--sb-acc) — 750-strength-builder.css:5558-5569; тест strength-builder-curator-gym-v4-canvas-contract sand+blue."
     },
     "Куратор и зал · 09": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "b4a4fa9ae422"
+      "h": "b4a4fa9ae422",
+      "v": "=",
+      "f": "Копия плана: .sb-cur-plan-copy { flex:1; flex-direction:column; gap:3px } — 750-strength-builder.css:5571-5576."
     },
     "Куратор и зал · 10": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "927ef58b2e57"
+      "h": "927ef58b2e57",
+      "v": "=",
+      "f": "Заголовок «Сегодня по плану · …»: .sb-cur-plan-title 700 12.5px — 750:5578-5582; CuratorPlanStrip:2022."
     },
     "Куратор и зал · 11": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "fd9a975ffada"
+      "h": "fd9a975ffada",
+      "v": "=",
+      "f": "Мета «… · назначил …»: .sb-cur-plan-meta 500 11px color var(--sb-mut) — 750:5584-5588; assignedDate()+muscleHint superset_ui:2016-2017."
     },
     "Куратор и зал · 12": {
+      "h": "77e4b4025f38",
       "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "77e4b4025f38"
+      "f": "CTA «Начать по плану/Своя» скрыты во время сессии: CuratorPlanStrip showActions:false при plan.status started — builder_ui:1257-1262.",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/strength/heys_strength_builder_ui_v1.js:1257"
     },
     "Куратор и зал · 13": {
+      "h": "bb59c02daef1",
       "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "bb59c02daef1"
+      "f": "Кнопка «Начать по плану» не рендерится mid-session (showActions:false) — superset_ui CuratorPlanStrip:2026-2028.",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/strength/heys_strength_superset_ui_v1.js:2026"
     },
     "Куратор и зал · 14": {
+      "h": "b8d619fad638",
       "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "b8d619fad638"
+      "f": "Кнопка «Своя» не рендерится mid-session — superset_ui:2027-2028.",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/strength/heys_strength_superset_ui_v1.js:2027"
     },
     "Куратор и зал · 15": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "7cada1f8a3b6"
+      "h": "7cada1f8a3b6",
+      "v": "=",
+      "f": "Ярус «Комментарий куратора к упражнению»: .sb-tier — 750:5534-5540; ExerciseCard superset_ui:1638."
     },
     "Куратор и зал · 16": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "54643961e08d"
+      "h": "54643961e08d",
+      "v": "=",
+      "f": "Карточка комментария: .sb-cur-comment.sb-grp — 750:5610-5614; superset_ui ExerciseCard:1639-1662."
     },
     "Куратор и зал · 17": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "5c6c1c3e858a"
+      "h": "5c6c1c3e858a",
+      "v": "=",
+      "f": "Номер упражнения: .sb-ex-num color rgba via --sb-mut/ink — 750 .sb-builder-screen .sb-ex-num; ExerciseCard:1580."
     },
     "Куратор и зал · 18": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "56118530aa17"
+      "h": "56118530aa17",
+      "v": "=",
+      "f": "Колонка заголовка упражнения: .sb-ex-title flex column gap 3px — 750:3247-3254."
     },
     "Куратор и зал · 19": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "d3a641a6b252"
+      "h": "d3a641a6b252",
+      "v": "=",
+      "f": "Пузырь комментария: .sb-cur-comment-bubble { background var(--sb-soft); radius 12px; padding 11px 12px; margin-top 10px } — 750:5624-5631."
     },
     "Куратор и зал · 20": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "5faca90ab486"
+      "h": "5faca90ab486",
+      "v": "=",
+      "f": "Текст ex.note в .sb-cur-comment-bubble — superset_ui:1644-1646; строка «Спину держи ровнее…» в curator-gym contract test."
     },
     "Куратор и зал · 21": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "5c62ef24347b"
+      "h": "5c62ef24347b",
+      "v": "=",
+      "f": "Мета «Артём · куратор · …»: .sb-cur-comment-meta — 750:5633-5638; relativePlanWhen()+author superset_ui:1647-1649."
     },
     "Куратор и зал · 22": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "577cc8dfccd8"
+      "h": "577cc8dfccd8",
+      "v": "=",
+      "f": "Ряд кнопок комментария: .sb-cur-comment-actions { gap:7px; margin-top:9px } — 750:5640-5644."
     },
     "Куратор и зал · 23": {
+      "h": "7978a7e0aaa6",
       "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "7978a7e0aaa6"
+      "f": "«Ответить» есть, «Снять подход» disabled (video не поддерживается) — superset_ui:1653-1658 title «Запись подхода… не поддерживается».",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/strength/heys_strength_superset_ui_v1.js:1655"
     },
     "Куратор и зал · 24": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "7d7a0afb9b50"
+      "h": "7d7a0afb9b50",
+      "v": "=",
+      "f": "Сноска под комментарием: .sb-cur-comment-foot margin-top 9px — 750:5650-5655; текст superset_ui:1660-1661."
     },
     "Куратор и зал · 25": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "ed476b615c94"
+      "h": "ed476b615c94",
+      "v": "=",
+      "f": "Карточка дискомфорта на tint: .sb-pain--canvas { background var(--v4-accent-bg) } — 750:5660-5666."
     },
     "Куратор и зал · 26": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "8dcb74bc526f"
+      "h": "8dcb74bc526f",
+      "v": "=",
+      "f": "Заголовок дискомфорта: .sb-pain--canvas b 700 12.5px color var(--sb-accTx) — 750:5668-5672; curator-gym test sand+blue."
     },
     "Куратор и зал · 27": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "4a43de3c53ae"
+      "h": "4a43de3c53ae",
+      "v": "=",
+      "f": "Пояснение дискомфорта: .sb-pain--canvas p — 750:5674-5678; текст «Боль — не «стало тяжело»…» superset_ui:1679 + ui test."
     },
     "Куратор и зал · 28": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "7e6868d94f56"
+      "h": "7e6868d94f56",
+      "v": "=",
+      "f": "«Пропустить»: .sb-pain-skip flex 1 bg var(--sb-bg) — 750:5686-5692; discomfortAction skip builder_ui:669-684."
     },
     "Куратор и зал · 29": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "d9a337aab838"
+      "h": "d9a337aab838",
+      "v": "=",
+      "f": "Очередь: .sb-cur-sync вместо canvas .cd — 750:5671-5675; SyncQueuePanel superset_ui:2089-2107."
     },
     "Куратор и зал · 30": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "af81bb6e54c6"
+      "h": "af81bb6e54c6",
+      "v": "=",
+      "f": "Строка очереди: .sb-cur-sync-row padding 12px 13px — 750:5677-5684."
     },
     "Куратор и зал · 31": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "108486b21700"
+      "h": "108486b21700",
+      "v": "=",
+      "f": "Заголовок строки «Подходы …»: .sb-cur-sync-main b color var(--sb-tx) — 750:5698-5701; buildSyncQueueRows title superset_ui:2048-2067."
     },
     "Куратор и зал · 32": {
+      "h": "7797069066df",
       "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "7797069066df"
+      "f": "Подпись «отправлено в …» — color var(--sb-mut), не var(--gr) как в кадре: .sb-cur-sync-main span — 750:5703-5706.",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/styles/modules/750-strength-builder.css:5703"
     },
     "Куратор и зал · 33": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "4668dbccd211"
+      "h": "4668dbccd211",
+      "v": "=",
+      "f": "Галочка ✓: .sb-cur-sync-ok color var(--sb-okTx) — 750:5708-5711; status ok SyncQueuePanel:2099."
     },
     "Куратор и зал · 34": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "e7f3053afdfd"
+      "h": "e7f3053afdfd",
+      "v": "=",
+      "f": "Пилюля «офлайн»: .sb-cur-sync-offline color var(--sb-sync-muted)/--v4-ink-prose — 750:5712-5720; curator-gym test sand."
     },
     "Куратор и зал · 35": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "6b286135ed76"
+      "h": "6b286135ed76",
+      "v": "=",
+      "f": "Последняя строка без разделителя: .sb-cur-sync-row.is-last { border-bottom:none } — 750:5686-5688."
     },
     "Куратор и зал · 36": {
+      "h": "f5f8ab2f9dad",
       "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "f5f8ab2f9dad"
+      "f": "Строка «не отправлена» только при notePending+sync pending — buildSyncQueueRows:2071-2077; не всегда на экране.",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/strength/heys_strength_superset_ui_v1.js:2071"
     },
     "Куратор и зал · 37": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "e038ead9bb32"
+      "h": "e038ead9bb32",
+      "v": "=",
+      "f": "Кнопка «повторить»: .sb-cur-sync-retry 700 11.5px color var(--sb-acc) — 750:5722-5728; row.status retry superset_ui:2101-2105."
     },
     "Куратор и зал · 38": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "a0772a844095"
+      "h": "a0772a844095",
+      "v": "=",
+      "f": "Сноска очереди: .sb-cur-sync-foot — 750:5730-5735; текст superset_ui:2109-2110."
     },
     "Шторка ⋯ · 01": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "3836defc615f"
+      "h": "3836defc615f",
+      "v": "=",
+      "f": "Корень шторки relative: .sb-sheet { position:relative } — 750:5744-5755; builder_ui sheet :1284-1287."
     },
     "Шторка ⋯ · 02": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "175bdcc2e73a"
+      "h": "175bdcc2e73a",
+      "v": "=",
+      "f": "Шапка сессии под листом: .sb-head сохраняется при sheetOpen — builder_ui:1200-1228."
     },
     "Шторка ⋯ · 03": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "dbd19d6c8f05"
+      "h": "dbd19d6c8f05",
+      "v": "=",
+      "f": "Кнопка ✕ 36×36: .sb-icon-btn — 750 .sb-builder-screen .sb-icon-btn 36px; builder close :1201-1204."
     },
     "Шторка ⋯ · 04": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "f143b5d4e1e4"
+      "h": "f143b5d4e1e4",
+      "v": "=",
+      "f": "Заголовок колонкой padding 0 10px: .sb-head-title — 750:3186-3190."
     },
     "Шторка ⋯ · 05": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "97774a22c8cb"
+      "h": "97774a22c8cb",
+      "v": "=",
+      "f": "Имя сессии sessionTitle в шапке — builder_ui:1208; не дублируется в листе."
     },
     "Шторка ⋯ · 06": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "a6047f6cec68"
+      "h": "a6047f6cec68",
+      "v": "=",
+      "f": "Кнопка ⋯ 36×36 открывает лист — builder_ui:1223-1227; .sb-icon-btn 36px CSS."
     },
     "Шторка ⋯ · 07": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "c629f84f9712"
+      "h": "c629f84f9712",
+      "v": "=",
+      "f": "Прокрутка под шторкой: .sb-list overflow-y auto — 750:156-164."
     },
     "Шторка ⋯ · 08": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "7f9aee8f3e6d"
+      "h": "7f9aee8f3e6d",
+      "v": "=",
+      "f": "Отступ первой строки меню: .sb-sheet-menu-row:first margin/padding — 750:5757-5764."
     },
     "Шторка ⋯ · 09": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "4629850b7333"
+      "h": "4629850b7333",
+      "v": "=",
+      "f": "Колонка подписи строки: .sb-sheet-menu-copy { flex:1; flex-direction:column; gap:2px } — 750:5780-5786; menu-sheet test."
     },
     "Шторка ⋯ · 10": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "a82bb13fc535"
+      "h": "a82bb13fc535",
+      "v": "=",
+      "f": "Заголовок строки меню: .sb-sheet-menu-copy b 700 12.5px — 750:5787-5790; sheetRows titles superset_ui:2176-2209."
     },
     "Шторка ⋯ · 11": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "e65a75160915"
+      "h": "e65a75160915",
+      "v": "=",
+      "f": "Подпись строки: .sb-sheet-menu-copy span 500 11px color var(--sb-mut) — 750:5792-5795."
     },
     "Шторка ⋯ · 12": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "00a347749d79"
+      "h": "00a347749d79",
+      "v": "=",
+      "f": "Последняя строка margin-bottom 0: .sb-sheet-menu-row:last-of-type — 750:5771-5773."
     },
     "Шторка ⋯ · 13": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "5479c5f8949b"
+      "h": "5479c5f8949b",
+      "v": "=",
+      "f": "Scrim: .sb-sheet-back inset 0 background var(--v4-modal-backdrop-dim) — 750:5737-5742 + palette roles 2.5px blur."
     },
     "Шторка ⋯ · 14": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "305f956b816e"
+      "h": "305f956b816e",
+      "v": "=",
+      "f": "Панель листа radius 20px top, padding — .sb-sheet — 750:5744-5755."
     },
     "Шторка ⋯ · 15": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "c178bc78a8eb"
+      "h": "c178bc78a8eb",
+      "v": "=",
+      "f": "Grip 38×4: .sb-sheet-grip — 750:5748-5754; menu-sheet test computed width/height."
     },
     "Шторка ⋯ · 16": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "af81bb6e54c6"
+      "h": "af81bb6e54c6",
+      "v": "=",
+      "f": "Строка меню: button.sb-sheet-menu-row — builder_ui:1328-1338; 6 rows sheetRows."
     },
     "Шторка ⋯ · 17": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "07ffbada0ee7"
+      "h": "07ffbada0ee7",
+      "v": "=",
+      "f": "Колонка внутри строки: .sb-sheet-menu-copy gap 3px — 750:5780-5786."
     },
     "Шторка ⋯ · 18": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "1156ef8d72a1"
+      "h": "1156ef8d72a1",
+      "v": "=",
+      "f": "«Порядок упражнений» и остальные заголовки — sheetRows superset_ui:2176-2209; menu-sheet test getByText."
     },
     "Шторка ⋯ · 19": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "8fd235fc4d1c"
+      "h": "8fd235fc4d1c",
+      "v": "=",
+      "f": "Chevron muted: .sb-sheet-menu-chevron.is-muted color — 750:5802-5804; row.chevron muted sheetRows:2179."
     },
     "Шторка ⋯ · 20": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "348abae19f1f"
+      "h": "348abae19f1f",
+      "v": "=",
+      "f": "Chevron dim: .sb-sheet-menu-chevron.is-dim — 750:5806-5808; большинство rows chevron dim."
     },
     "Шторка ⋯ · 21": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "6b286135ed76"
+      "h": "6b286135ed76",
+      "v": "=",
+      "f": "Последняя строка без border: .sb-sheet-menu-row:last-of-type border-bottom none — 750:5771-5773."
     },
     "Шторка ⋯ · 22": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "26253dbe8318"
+      "h": "26253dbe8318",
+      "v": "=",
+      "f": "Сноска листа: .sb-sheet-footnote — 750:5810-5815; текст builder_ui:1342-1344; menu-sheet test."
     },
     "План в ленте дня · 01": {
       "v": "?",
@@ -8259,19 +8275,19 @@
       "h": "6a31f02b0bbf"
     },
     "Куратор и зал · текст 1/2": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "f4f0ac47d2e5"
+      "h": "f4f0ac47d2e5",
+      "v": "=",
+      "f": "Строки кадра в коде: CuratorPlanStrip, sb-cur-comment, sb-pain--canvas, SyncQueuePanel — superset_ui + builder_ui; curator-gym contract test покрывает ключевые подписи."
     },
     "Куратор и зал · текст 2/2": {
-      "v": "≠",
-      "f": "Дискомфорт и общий sync badge есть, но комментарий куратора и per-approach offline states не показаны.",
-      "h": "a5b36a47add2"
+      "h": "a5b36a47add2",
+      "v": "=",
+      "f": "Сноска очереди дословно: .sb-cur-sync-foot — superset_ui:2109-2110."
     },
     "Шторка ⋯ · текст": {
-      "v": "≠",
-      "f": "Текущая шторка содержит рабочие команды, но не все семь входов canvas.",
-      "h": "7df146c40687"
+      "h": "7df146c40687",
+      "v": "=",
+      "f": "Сноска шторки дословно: .sb-sheet-footnote — builder_ui:1342-1344; menu-sheet test."
     },
     "План в ленте дня · текст": {
       "v": "?",
