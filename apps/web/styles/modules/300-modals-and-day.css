@@ -1836,7 +1836,9 @@
 [data-heys-step-id="morning_activation_followup"] .mc-header-title,
 [data-heys-step-id="morning_activation_skip_reason"] .mc-header-title {
   font-size: 16px;
+  font-weight: 700;
   line-height: 1.3;
+  color: var(--v4-ink) /* v4-intentional */;
   white-space: normal;
   text-wrap: pretty;
 }
@@ -2007,6 +2009,21 @@
   color: var(--v4-ink-data) /* v4-intentional */;
   margin-top: 12px;
   font-variant-numeric: tabular-nums;
+}
+
+/* Кадр «Рутина · резервный вопрос после еды · 23»: заголовок календаря в
+   шторке — 700 13px var(--tx), не 10,5/600 activity-v4 по умолчанию. */
+.ma-habit-cal--sheet .ma-habit-cal-head-title-group {
+  gap: 10px;
+}
+
+.ma-habit-cal--sheet .ma-habit-cal-heading {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--v4-ink) /* v4-intentional */;
 }
 
 .ma-habit-cal-shell.ma-habit-cal--modal {
