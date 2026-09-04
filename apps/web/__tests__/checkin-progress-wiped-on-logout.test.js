@@ -43,6 +43,26 @@ describe('незаконченный чек-ин стирается при вы�
     expect(area).toContain('heys_morning_checkin_progress_v1_');
   });
 
+  it('чёрный список — 23 ключа, палитра в нём, раскладка Главной — regex', () => {
+    // home-widgets «выход · что стирается»: четыре переживания вайпа.
+    const area = blacklistArea();
+    const keys = [...area.matchAll(/'heys_[^']+'/g)].map((m) => m[0]);
+    expect(keys).toHaveLength(23);
+    expect(area).toContain("'heys_theme'");
+    expect(area).toContain("'heys_theme_pref'");
+    expect(area).toContain("'heys_theme_explicit'");
+    expect(storageSrc).toMatch(/if \(!?\/_widget_layout_\(\?:meta_\)\?v1\$\/i\.test\(k\)\)/);
+  });
+
+  it('isOurKey не считает своими sb-*, heys_ab_*, heys_predicted_risk_*', () => {
+    const start = storageSrc.indexOf('function isOurKey(k)');
+    expect(start).toBeGreaterThan(-1);
+    const body = storageSrc.slice(start, start + 500);
+    expect(body).toContain('isSensitiveSessionStorageKey(k)');
+    expect(body).toContain("k.indexOf('heys_ab_') === 0");
+    expect(body).toContain("k.indexOf('heys_predicted_risk_') === 0");
+  });
+
   it('signOut зовёт полную чистку без clientId', () => {
     const start = storageSrc.indexOf('cloud.signOut = function');
     expect(start).toBeGreaterThan(-1);

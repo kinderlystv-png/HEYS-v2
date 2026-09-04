@@ -246,6 +246,9 @@ describe('«Динамика веса» · вид «График» 2×2', () => 
     expect(line.getAttribute('stroke')).toBe('currentColor');
     expect(line.getAttribute('stroke-width')).toBe('2');
     expect(line.getAttribute('vector-effect')).toBe('non-scaling-stroke');
+    // Смена вида · лист выбора · рисунок 08: кадр-превью рисует точку r 3.5,
+    // продукт — ту же плитку без круга (кадр самой плитки точки не называет).
+    expect(svg.querySelector('circle')).toBeNull();
   });
 
   it('окно короче месяца не выдаёт себя за месяц', () => {
@@ -282,6 +285,11 @@ describe('«Динамика веса» · вид «График» 2×2', () => 
       'align-items': 'baseline',
       gap: '4px',
       'margin-top': '8px',
+    });
+    // Смена вида · лист выбора · 37: ряд «До цели» — те же baseline и зазор 4.
+    expect(ruleOf('.widget-wd__goal-main')).toMatchObject({
+      'align-items': 'baseline',
+      gap: '4px',
     });
     // 07: график прижат к низу плитки.
     expect(ruleOf('.widget-wd__chart')['margin-top']).toBe('auto');
