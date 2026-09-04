@@ -1,0 +1,138 @@
+{
+  "zone": "strength-builder",
+  "scope": "Д3 «Связка · границы правки» · heys_strength_superset_ui_v1.js SupersetBoundariesScreen/Body + heys_strength_proposal_ui_v1.js describeSupersetBoundaries + 750-strength-builder.css",
+  "generated": "2026-09-04",
+  "agent": "superset d3 boundaries handoff",
+  "summary": {
+    "rows": 24,
+    "block": "Связка · границы правки · 01–22 + текст + вид",
+    "codeChanged": false,
+    "testFile": "apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js",
+    "recommendEquals": 24,
+    "recommendNotEquals": 0,
+    "recommendDash": 0,
+    "recommendQuestion": 0
+  },
+  "rows": [
+    {
+      "key": "Связка · границы правки · 01",
+      "verdict": "=",
+      "f": "Шапка кадра: .sb-ss-bound-screen .sb-head с .sb-icon-btn и .sb-head-title — apps/web/strength/heys_strength_superset_ui_v1.js:2737-2745; стандартная sb-head из apps/web/styles/modules/750-strength-builder.css."
+    },
+    {
+      "key": "Связка · границы правки · 02",
+      "verdict": "=",
+      "f": "Колонка заголовка: .sb-ss-bound-head { flex-direction:column; gap:3px } — apps/web/styles/modules/750-strength-builder.css:4485-4488; computed row 02 в apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · границы правки · 03",
+      "verdict": "=",
+      "f": "Имя экрана «{who} заменил связку»: h('b', …) — apps/web/strength/heys_strength_superset_ui_v1.js:2743; DOM apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · границы правки · 04",
+      "verdict": "=",
+      "f": "Ключ «связка не начата»: .sb-head-sub из replacements[0].key — apps/web/strength/heys_strength_superset_ui_v1.js:2736,2744; apps/web/strength/heys_strength_proposal_ui_v1.js:211-214."
+    },
+    {
+      "key": "Связка · границы правки · 05",
+      "verdict": "=",
+      "f": "Прокрутка: .sb-list.sb-ss-bound-scroll { flex:1; overflow-y:auto } — apps/web/strength/heys_strength_superset_ui_v1.js:2747-2748; apps/web/styles/modules/750-strength-builder.css:4491-4493."
+    },
+    {
+      "key": "Связка · границы правки · 06",
+      "verdict": "=",
+      "f": "Карточка пары: .sb-ss-bound-grp { margin-top:12px } — apps/web/styles/modules/750-strength-builder.css:4495-4497."
+    },
+    {
+      "key": "Связка · границы правки · 07",
+      "verdict": "=",
+      "f": "Ряд было→станет: .sb-ss-bound-pair { display:flex; gap:9px; align-items:stretch } — apps/web/styles/modules/750-strength-builder.css:4499-4503."
+    },
+    {
+      "key": "Связка · границы правки · 08",
+      "verdict": "=",
+      "f": "Колонка «было»: .sb-ss-bound-col--was { flex:1; padding:10px; border-radius:12px; background:var(--sb-bg); inset border } — apps/web/styles/modules/750-strength-builder.css:4505-4515; computed row 08 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · границы правки · 09",
+      "verdict": "=",
+      "f": "Метка «было»: .sb-ss-bound-label--was { font:700 10px/1; letter-spacing:.04em; text-transform:uppercase; color:rgba(var(--ink),.56); margin-bottom:6px } — apps/web/styles/modules/750-strength-builder.css:4521-4531; apps/web/strength/heys_strength_superset_ui_v1.js:2696."
+    },
+    {
+      "key": "Связка · границы правки · 10",
+      "verdict": "=",
+      "f": "Строки A1… в «было»: .sb-ss-bound-col--was .sb-ss-bound-lines { font:600 11.5px/1.5; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:4537-4544; memberLines — apps/web/strength/heys_strength_superset_ui_v1.js:2697-2700."
+    },
+    {
+      "key": "Связка · границы правки · 11",
+      "verdict": "=",
+      "f": "Стрелка «→»: .sb-ss-bound-arrow { flex:none; align-items:center; font:700 14px/1; color:rgba(var(--ink),.35) } — apps/web/styles/modules/750-strength-builder.css:4550-4556; apps/web/strength/heys_strength_superset_ui_v1.js:2702; computed row 11 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · границы правки · 12",
+      "verdict": "=",
+      "f": "Колонка «станет»: .sb-ss-bound-col--will { flex:1; padding:10px; border-radius:12px; background:var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:4517-4519; computed row 12 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · границы правки · 13",
+      "verdict": "=",
+      "f": "Метка «станет»: .sb-ss-bound-label--will { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:4533-4535; apps/web/strength/heys_strength_superset_ui_v1.js:2704."
+    },
+    {
+      "key": "Связка · границы правки · 14",
+      "verdict": "=",
+      "f": "Строки A1… в «станет»: .sb-ss-bound-col--will .sb-ss-bound-lines { color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:4546-4548; computed row 14 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · границы правки · 15",
+      "verdict": "=",
+      "f": "Сноска про целый блок: .sb-ss-bound-note после пары — текст apps/web/strength/heys_strength_superset_ui_v1.js:2711-2712; margin-top:10px apps/web/styles/modules/750-strength-builder.css:4558-4562."
+    },
+    {
+      "key": "Связка · границы правки · 16",
+      "verdict": "=",
+      "f": "Ярус «Связка начата»: .sb-ss-bound-tier { margin:20px 0 10px; color:var(--sb-acc); font:700 10px/1; letter-spacing:.16em; text-transform:uppercase } — apps/web/styles/modules/750-strength-builder.css:4564-4570; apps/web/strength/heys_strength_superset_ui_v1.js:2715."
+    },
+    {
+      "key": "Связка · границы правки · 17",
+      "verdict": "=",
+      "f": "Список заморозки: .sb-ss-bound-list { border-radius:16px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:4572-4576; apps/web/strength/heys_strength_superset_ui_v1.js:2716-2725."
+    },
+    {
+      "key": "Связка · границы правки · 18",
+      "verdict": "=",
+      "f": "Строка без разделителя: .sb-ss-bound-row { padding:12px 14px } без border-bottom — apps/web/styles/modules/750-strength-builder.css:4578-4584; одна строка в кадре apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · границы правки · 19",
+      "verdict": "=",
+      "f": "«Связка A · раунд 2 из 3»: .sb-ss-bound-row-title { color:var(--sb-tx); font:600 12.5px/1.2 } — apps/web/styles/modules/750-strength-builder.css:4593-4596; title из currentSupersetRound — apps/web/strength/heys_strength_proposal_ui_v1.js:198-206."
+    },
+    {
+      "key": "Связка · границы правки · 20",
+      "verdict": "=",
+      "f": "«состав заморожен до конца»: .sb-ss-bound-row-sub { font:500 11px/1.3; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:4598-4601; apps/web/strength/heys_strength_superset_ui_v1.js:2721."
+    },
+    {
+      "key": "Связка · границы правки · 21",
+      "verdict": "=",
+      "f": "Пилюля «закрыта»: .sb-ss-bound-badge { background:var(--sb-okbg); color:var(--sb-okTx) } — apps/web/styles/modules/750-strength-builder.css:4603-4609; computed row 21 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · границы правки · 22",
+      "verdict": "=",
+      "f": "Нижняя сноска про начатую связку: .sb-ss-bound-note после списка — текст apps/web/strength/heys_strength_superset_ui_v1.js:2727-2728."
+    },
+    {
+      "key": "Связка · границы правки · текст",
+      "verdict": "=",
+      "f": "Полный текст кадра Д3: шапка, пара было/станет с раундами, две сноски, ярус и замороженная строка — apps/web/strength/heys_strength_superset_ui_v1.js:2686-2750; DOM-смоук apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "вид · замена связки",
+      "verdict": "=",
+      "f": "Кадр Д3: SupersetBoundariesScreen — .sb-ss-bound-pair с колонками was/will, .sb-ss-bound-tier, .sb-ss-bound-list и badge на --sb-okbg/--sb-okTx; в разборе правки тот же SupersetBoundariesBody в .sb-proposal-boundaries — apps/web/strength/heys_strength_superset_ui_v1.js:2686-2750, apps/web/strength/heys_strength_proposal_ui_v1.js:363-383, apps/web/styles/modules/750-strength-builder.css:4484-4610; геометрия+цвет apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js."
+    }
+  ]
+}
