@@ -2320,8 +2320,8 @@
       "h": "3a10bafed6ea"
     },
     "Программа · назначено против сделано · 01": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2327 — .sb-cycle-top.sb-plan-vs-top без .sb-icon-btn ‹/✕; vitest queryByLabelText null",
       "h": "175bdcc2e73a"
     },
     "Программа · назначено против сделано · 02": {
@@ -2330,13 +2330,13 @@
       "h": "07ffbada0ee7"
     },
     "Программа · назначено против сделано · 03": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2329 — заголовок «Назначено против сделано» (.sb-cycle-title), сравнение дня не отчёт цикла",
       "h": "73bfa3bf46c4"
     },
     "Программа · назначено против сделано · 04": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:534–546 — planVsDoneHeaderKey: dayLabel → «пн, 8 авг · N назначено» (.sb-cycle-key)",
       "h": "dcf98555d97b"
     },
     "Программа · назначено против сделано · 05": {
@@ -2345,33 +2345,33 @@
       "h": "c629f84f9712"
     },
     "Программа · назначено против сделано · 06": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1690–1694 — .sb-plan-vs-summary margin-top:12px background var(--gr-bg)",
       "h": "fc7be4d18780"
     },
     "Программа · назначено против сделано · 07": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1727–1731 — .sb-plan-vs-summary-head flex center gap 8px",
       "h": "b5aac2f109ce"
     },
     "Программа · назначено против сделано · 08": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1697–1701 — .sb-plan-vs-dot.is-summary 11×11 radius 999 var(--gr)",
       "h": "0914f80d5305"
     },
     "Программа · назначено против сделано · 09": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1722–1725 — «План выполнен на N %» 700 14px/1.2 var(--gr)",
       "h": "f325fcd4586f"
     },
     "Программа · назначено против сделано · 10": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2346 — summarySub «N подходов из M · K отклонений» (.sb-plan-vs-summary-sub)",
       "h": "087e88e16716"
     },
     "Программа · назначено против сделано · 11": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1744–1746 — .sb-plan-vs-list margin-top:10px",
       "h": "ba833af6a156"
     },
     "Программа · назначено против сделано · 12": {
@@ -2380,13 +2380,13 @@
       "h": "9211e74c81af"
     },
     "Программа · назначено против сделано · 13": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1764–1768 — .sb-plan-vs-row-head flex center gap 7px",
       "h": "e7e38fcb6a6f"
     },
     "Программа · назначено против сделано · 14": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1703–1719 — статусный dot 9px is-progress|is-match|is-under|is-skipped",
       "h": "8884e97f18d2"
     },
     "Программа · назначено против сделано · 15": {
@@ -2395,58 +2395,58 @@
       "h": "1d3d1c6a4c52"
     },
     "Программа · назначено против сделано · 16": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2366 — buildPlanVsDoneRow.note → .sb-plan-vs-note",
       "h": "db232c5a43b4"
     },
     "Программа · назначено против сделано · 17": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1781–1785 — .sb-plan-vs-cols flex gap 8px margin-top 9px",
       "h": "5f9058eb8995"
     },
     "Программа · назначено против сделано · 18": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1796–1799 — .sb-plan-vs-cell.is-assigned bg var(--bg) inset border radius 12px",
       "h": "e328ee4455bc"
     },
     "Программа · назначено против сделано · 19": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1814–1819 — «Назначено» .sb-plan-vs-cell-label 600 9px uppercase .11em",
       "h": "96b10cc7a622"
     },
     "Программа · назначено против сделано · 20": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:551 — planExerciseCellSummary assigned → «до N кг»; val 700 11.5px",
       "h": "3fb7dfd86373"
     },
     "Программа · назначено против сделано · 21": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1801–1803 — .sb-plan-vs-cell.is-done background var(--gr-bg)",
       "h": "6c6e43ed7b7d"
     },
     "Программа · назначено против сделано · 22": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1826–1828 — progress .is-positive .sb-plan-vs-cell-val color var(--gr)",
       "h": "13c97fed83b8"
     },
     "Программа · назначено против сделано · 23": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1709–1711 — is-match dot rgba(ink,.22) + .is-neutral done cell",
       "h": "954e0f4dbe05"
     },
     "Программа · назначено против сделано · 24": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1715–1717 — is-under border/dot var(--val-bad)",
       "h": "ede1f3b4bbd6"
     },
     "Программа · назначено против сделано · 25": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1810–1812 — is-skip cell background var(--tint)",
       "h": "331a73e77e6d"
     },
     "Программа · назначено против сделано · 26": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1830–1832 — actual «пропущено» color var(--ac2) when skipped",
       "h": "cefaa68959a5"
     },
     "Программа · назначено против сделано · 27": {
@@ -2455,23 +2455,23 @@
       "h": "6ae4a58f5cec"
     },
     "Программа · назначено против сделано · 28": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "750-strength-builder.css:6936–6938 — .sb-plan-vs-cd margin-top 10px",
       "h": "d641122bb122"
     },
     "Программа · назначено против сделано · 29": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2373–2380 — две строки объёма .sb-plan-vs-cd-row",
       "h": "af81bb6e54c6"
     },
     "Программа · назначено против сделано · 30": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1834–1836 — «Объём назначенного» .sb-plan-vs-cd-label color var(--tx)",
       "h": "a119368ddfcf"
     },
     "Программа · назначено против сделано · 31": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2375 — fmtPlanVolume(plannedVolume) .is-muted 600 12.5px",
       "h": "f11ef1c8597b"
     },
     "Программа · назначено против сделано · 32": {
@@ -2480,28 +2480,28 @@
       "h": "6b286135ed76"
     },
     "Программа · назначено против сделано · 33": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2379 — fmtPlanVolume(doneVolume) 700 12.5px var(--tx)",
       "h": "f68d35b8e75e"
     },
     "Программа · назначено против сделано · 34": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "731-ui-v4-activity.css:1848–1852 — .sb-plan-vs-actions gap 8px margin-top 12px",
       "h": "2bff45192fc0"
     },
     "Программа · назначено против сделано · 35": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2383–2387 — «Написать куратору» .sb-btn.sb-plan-cta flex 1",
       "h": "360ec188c412"
     },
     "Программа · назначено против сделано · 36": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2388–2392 — «Отчёт за неделю» .sb-btn.is-accent.sb-plan-cta flex 1",
       "h": "e0de6908271d"
     },
     "Программа · назначено против сделано · 37": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": "heys_strength_superset_ui_v1.js:2394 + :672 — PLAN_VS_DONE_FOOTNOTE → .sb-plan-vs-foot",
       "h": "e58e91e8da45"
     },
     "Перенос · след в обе стороны · 01": {
@@ -8867,13 +8867,13 @@
       "h": "88ee6c1df7ad"
     },
     "Упражнение · группы мышц · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Копия кадра М2 в catalog_ui ExerciseMuscleGroupsScreen: «· мышцы», «одна основная…», тиры, превью объёма, сноска — strength-builder-exercise-muscles-v4-canvas-contract.test.js; owner CSS 750:5780+.",
       "h": "bf911169d053"
     },
     "Упражнение · на что похоже · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Копия кадра М3 в catalog_ui ExerciseSimilarScreen: «· свой вес», «сколько тела…», опции bodyweightSimilarOptions, сноски — strength-builder-exercise-similar-v4-canvas-contract.test.js.",
       "h": "cef70f4b7fe5"
     },
     "Ввод · время под нагрузкой · текст": {
@@ -9796,8 +9796,8 @@
       "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Программа · назначено против сделано · текст": {
-      "v": "?",
-      "f": "plannedVolume/totalVolume в ядре готовы; экран «41 т / 26 т» и program aggregate — UI/program module, не найден в day_trainings grep.",
+      "v": "=",
+      "f": "strength-builder-plan-vs-done-v4-canvas-contract.test.js — полная цепочка copy Г2 на planSnapshot vs workoutLog дня",
       "h": "ff1ae87aa25f"
     },
     "Программа · отчёт за период · текст": {
