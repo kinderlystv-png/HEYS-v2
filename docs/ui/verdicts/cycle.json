@@ -100,7 +100,7 @@
     },
     "прокрутка на неделе периода": {
       "v": "=",
-      "f": "дни 1–7: cycleWeekTop переносит mc-rest-cycle-week-card наверх, measurementsDeferred, класс mc-rest-step--cycle-week heys_steps_v1.js:7054-7159; перебор 74 px — замер полной стопки на канвасе (кадр «период идёт»); padding-bottom 70px — запас прокрутки под «Готово» 500-pwa-and-offline.css:1794-1795, не то же число",
+      "f": "дни 1–7: cycleWeekTop переносит mc-rest-cycle-week-card наверх, measurementsDeferred, класс mc-rest-step--cycle-week heys_steps_v1.js:7054-7159; перебор 74 px — padding-bottom 74px у .mc-rest-step--cycle-week 500-pwa-and-offline.css:1794-1795 (пакет 35: 70px было исторической ошибкой CSS)",
       "h": "566c5a90adc4"
     },
     "замеры на днях 1–7": {
@@ -584,8 +584,8 @@
       "h": "2d9ca475519a"
     },
     "Цикл · профиль, выключение · 01": {
-      "v": "?",
-      "f": "аудит п.35: heys_user_tab_impl_v1.js:1385 + 500-pwa-and-offline.css:2337-2340 — заголовок и кегль 700 15px/1.35 совпали с кадром; прежний ≠ ссылался на 613-cycle-ui.css без правила; цвет --v4-ink vs var(--tx) не сверен computed",
+      "v": "=",
+      "f": "heys_user_tab_impl_v1.js:1385 + 500-pwa-and-offline.css:2337-2340 .cycle-v4-dialog__title — «Выключить особый период?»; font 700 15px/1.35 Figtree; color var(--v4-ink,#201e1d) = роль var(--tx) кадра на песочном (002-ui-v4-palette-roles.css:176)",
       "h": "fe205ede0e00"
     },
     "Цикл · профиль, выключение · 02": {
