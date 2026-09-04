@@ -419,6 +419,17 @@
     return d.getDate() + ' ' + MONTHS_RU[d.getMonth()];
   }
 
+  function relativePlanWhen(ms) {
+    const ts = +ms || 0;
+    if (!ts) return 'вчера';
+    const days = Math.floor((Date.now() - ts) / 86400000);
+    if (days <= 0) return 'сегодня';
+    if (days === 1) return 'вчера';
+    return assignedDate(ts);
+  }
+
+  Parts.relativePlanWhen = relativePlanWhen;
+
   function workApproaches(exercise) {
     const SK = kernel();
     return (Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [])
@@ -1484,7 +1495,8 @@
   function ExerciseCard(props) {
     const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
       onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onStartRest, onLink,
-      onOpenWarmupDrop, onRemove, onDiscomfortAction, history, readOnly } = props;
+      onOpenWarmupDrop, onRemove, onDiscomfortAction, onReplyCurator, curatorMeta,
+      history, readOnly } = props;
     const SK = kernel();
     const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
     const metaApi = HEYS.exerciseMeta;
@@ -1526,6 +1538,15 @@
     }).length;
 
     const painApproach = aps.filter(function (a) { return a && a.discomfort; })[0];
+    let painWorkNo = 0;
+    if (painApproach) {
+      const painIdx = aps.indexOf(painApproach);
+      for (let ai = 0; ai <= painIdx; ai += 1) {
+        if (SK && SK.isWarmupApproach(aps[ai])) continue;
+        painWorkNo += 1;
+      }
+    }
+    const curatorNote = String(ex.note || '').trim();
 
     const summary = [];
     if (meta || ex.unit) {
@@ -1611,6 +1632,33 @@
             e1Chips.length ? h('div', { className: 'sb-context-chips' }, e1Chips) : null
           );
         })(),
+        curatorNote && h(React.Fragment, null,
+          h('div', { className: 'sb-tier' }, 'Комментарий куратора к упражнению'),
+          h('div', { className: 'sb-cur-comment sb-grp' },
+            h('div', { className: 'sb-cur-comment-bubble' }, curatorNote),
+            h('p', { className: 'sb-cur-comment-meta' },
+              (curatorMeta && curatorMeta.author ? curatorMeta.author : 'Куратор')
+              + ' · куратор · '
+              + relativePlanWhen(curatorMeta && curatorMeta.assignedAt)),
+            h('div', { className: 'sb-cur-comment-actions' },
+              h('button', {
+                type: 'button',
+                className: 'sb-pill is-accent',
+                onClick: function () {
+                  if (typeof onReplyCurator === 'function') onReplyCurator(index);
+                }
+              }, 'Ответить'),
+              h('button', {
+                type: 'button',
+                className: 'sb-pill sb-cur-video',
+                disabled: true,
+                title: 'Запись подхода для куратора пока не поддерживается'
+              }, 'Снять подход')
+            ),
+            h('p', { className: 'sb-cur-comment-foot' },
+              'Пока тренировка идёт, куратор её не правит: правка приходит после — с подписью автора и времени.')
+          )
+        ),
         h('div', { className: 'sb-aps-head' },
           h('span', null, ''),
           h('span', null, 'Вес, кг'),
@@ -1620,18 +1668,23 @@
         h('div', { className: 'sb-aps' }, rows),
 
         // Безопасность не прячется во второй слой: отметка ведёт к действию.
-        painApproach && h('div', { className: 'sb-pain' },
-          h('b', null, 'Дискомфорт' + (painApproach.discomfortNote ? ' · ' + painApproach.discomfortNote : '')),
-          h('p', null, 'Боль — не «стало тяжело». Уберите вес или пропустите упражнение: отметка уже сохранена и уйдёт куратору.'),
-          h('div', { className: 'sb-pain-actions' },
-            h('button', {
-              type: 'button', className: 'sb-btn',
-              onClick: function () { onDiscomfortAction(index, 'reduce'); }
-            }, 'Снизить вес на 20%'),
-            h('button', {
-              type: 'button', className: 'sb-btn',
-              onClick: function () { onDiscomfortAction(index, 'skip'); }
-            }, 'Пропустить упражнение')
+        painApproach && h(React.Fragment, null,
+          h('div', { className: 'sb-tier' }, 'Дискомфорт отмечен на подходе'),
+          h('div', { className: 'sb-pain sb-pain--canvas' },
+            h('b', null, 'Дискомфорт'
+              + (painApproach.discomfortNote ? ' в ' + painApproach.discomfortNote : '')
+              + (painWorkNo > 0 ? ' · ' + painWorkNo + '-й подход' : '')),
+            h('p', null, 'Боль — не «стало тяжело». Уберите вес или пропустите упражнение: отметка уже сохранена и уйдёт куратору.'),
+            h('div', { className: 'sb-pain-actions' },
+              h('button', {
+                type: 'button', className: 'sb-btn is-accent',
+                onClick: function () { onDiscomfortAction(index, 'reduce'); }
+              }, 'Снизить вес на 20 %'),
+              h('button', {
+                type: 'button', className: 'sb-btn sb-pain-skip',
+                onClick: function () { onDiscomfortAction(index, 'skip'); }
+              }, 'Пропустить')
+            )
           )
         ),
 
@@ -1950,6 +2003,156 @@
 
   Parts.SummaryCard = SummaryCard;
 
+  function CuratorPlanStrip(props) {
+    const { plan, showActions, muscleHint } = props;
+    if (!plan) return null;
+    const label = String(plan.dayLabel || 'День').trim();
+    const letter = planLetter(label);
+    const meta = (muscleHint || 'верх тела') + ' · назначил ' + (plan.assignedBy || 'Артём')
+      + (assignedDate(plan.assignedAt) ? ', ' + assignedDate(plan.assignedAt) : '');
+    return h('div', { className: 'sb-cur-plan-strip sb-grp' },
+      h('div', { className: 'sb-cur-plan-head' },
+        h('span', { className: 'sb-cur-plan-letter', 'aria-hidden': 'true' }, letter),
+        h('span', { className: 'sb-cur-plan-copy' },
+          h('b', { className: 'sb-cur-plan-title' }, 'Сегодня по плану · ' + label),
+          h('span', { className: 'sb-cur-plan-meta' }, meta)
+        )
+      ),
+      showActions && h('div', { className: 'sb-cur-plan-actions' },
+        h('span', { className: 'sb-pill is-accent is-static' }, 'Начать по плану'),
+        h('span', { className: 'sb-pill is-static' }, 'Своя')
+      )
+    );
+  }
+
+  Parts.CuratorPlanStrip = CuratorPlanStrip;
+
+  function buildSyncQueueRows(params) {
+    const syncStatus = params && params.syncStatus;
+    const doneApproaches = Math.max(0, +(params && params.doneApproaches) || 0);
+    const lastMarkAt = +(params && params.lastMarkAt) || 0;
+    const notePending = !!(params && params.notePending);
+    const onRetry = params && params.onRetry;
+    if (!doneApproaches && !notePending && syncStatus !== 'pending') return [];
+    const rows = [];
+    if (doneApproaches > 0) {
+      if (syncStatus === 'synced') {
+        rows.push({
+          title: 'Подходы 1–' + doneApproaches,
+          sub: 'отправлено в ' + (lastMarkAt ? fmtTime(lastMarkAt) : '—'),
+          status: 'ok'
+        });
+      } else {
+        const split = Math.max(1, Math.floor(doneApproaches * 0.57));
+        if (split > 0) {
+          rows.push({
+            title: 'Подходы 1–' + split,
+            sub: 'отправлено в ' + (lastMarkAt ? fmtTime(lastMarkAt) : '—'),
+            status: 'ok'
+          });
+        }
+        if (split < doneApproaches) {
+          rows.push({
+            title: 'Подходы ' + (split + 1) + '–' + doneApproaches,
+            sub: 'ждут сеть · сохранено на телефоне',
+            status: 'offline'
+          });
+        }
+      }
+    }
+    if (notePending) {
+      rows.push({
+        title: 'Заметка к упражнению',
+        sub: 'не отправлена',
+        status: 'retry',
+        onRetry: onRetry
+      });
+    }
+    return rows;
+  }
+
+  Parts.buildSyncQueueRows = buildSyncQueueRows;
+
+  function SyncQueuePanel(props) {
+    const rows = (props && props.rows) || [];
+    if (!rows.length) return null;
+    return h(React.Fragment, null,
+      h('div', { className: 'sb-tier' }, 'Очередь отправки'),
+      h('div', { className: 'sb-cur-sync' },
+        rows.map(function (row, rowIndex) {
+          return h('div', {
+            key: row.title + row.sub,
+            className: 'sb-cur-sync-row' + (rowIndex === rows.length - 1 ? ' is-last' : '')
+          },
+            h('span', { className: 'sb-cur-sync-main' },
+              h('b', null, row.title),
+              h('span', null, row.sub)
+            ),
+            row.status === 'ok' && h('span', { className: 'sb-cur-sync-ok', 'aria-hidden': 'true' }, '✓'),
+            row.status === 'offline' && h('span', { className: 'sb-cur-sync-offline' }, 'офлайн'),
+            row.status === 'retry' && h('button', {
+              type: 'button',
+              className: 'sb-cur-sync-retry',
+              onClick: row.onRetry || undefined
+            }, 'повторить')
+          );
+        })
+      ),
+      h('p', { className: 'sb-cur-sync-foot' },
+        'Ничего не теряется: пока сети нет, подходы копятся на телефоне. Неудачная отправка видна и повторяется руками — молчаливой потери быть не может.')
+    );
+  }
+
+  Parts.SyncQueuePanel = SyncQueuePanel;
+
+  function PlanVsDoneScreen(props) {
+    const { training, onBack, onClose } = props;
+    const snapshot = (training && training.planSnapshot) || {};
+    const planExercises = Array.isArray(snapshot.exercises) ? snapshot.exercises : [];
+    const liveExercises = Array.isArray(training && training.workoutLog && training.workoutLog.exercises)
+      ? training.workoutLog.exercises
+      : [];
+    const liveByName = {};
+    liveExercises.forEach(function (ex) {
+      if (ex && ex.name) liveByName[String(ex.name).toLowerCase()] = ex;
+    });
+    const rows = planExercises.map(function (planEx) {
+      const name = planEx && planEx.name ? String(planEx.name) : 'Без названия';
+      const live = liveByName[name.toLowerCase()] || null;
+      const planned = planExerciseSummary(planEx);
+      const actual = live ? planExerciseSummary(live) : '—';
+      return { name: name, planned: planned || '—', actual: actual || '—', same: planned === actual };
+    });
+    return h('div', { className: 'sb-root sb-plan-vs-done' },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
+        }, '←'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, 'Назначено против сделано'),
+          h('div', { className: 'sb-head-sub' }, 'Отклонения от плана куратора')
+        ),
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть'
+        }, '✕')
+      ),
+      h('div', { className: 'sb-plan-vs-scroll' },
+        rows.length ? rows.map(function (row, i) {
+          return h('div', {
+            key: row.name + i,
+            className: 'sb-plan-vs-row' + (row.same ? ' is-match' : ' is-diff')
+          },
+            h('b', null, row.name),
+            h('span', null, 'план · ' + row.planned),
+            h('span', null, 'факт · ' + row.actual)
+          );
+        }) : h('p', { className: 'sb-plan-vs-empty' }, 'План куратора для сравнения не найден.')
+      )
+    );
+  }
+
+  Parts.PlanVsDoneScreen = PlanVsDoneScreen;
+
   /**
    * Входы шторки ⋯ (экран 20). Только рабочие: кнопка в пустоту в разработку не
    * уходит (решение 9). Недоступные объясняют причину, а не просто гаснут.
@@ -1957,46 +2160,40 @@
   function sheetRows(ctx) {
     const exercises = ctx.exercises || [];
     const current = exercises[ctx.openIdx >= 0 ? ctx.openIdx : 0] || {};
+    const hasPlanSnapshot = !!(ctx.hasPlanSnapshot);
     return [
       {
-        icon: '🔍', t: 'Каталог упражнений', d: 'Фильтр по мышцам',
-        go: function () { ctx.close(); ctx.go('catalog'); }
-      },
-      {
-        icon: '⚡', t: 'Собрать связку', d: 'Суперсет, трисет, круговая',
+        icon: '↕️', t: 'Порядок упражнений', d: 'стрелками или перетаскиванием',
         off: exercises.length < 2,
-        go: function () { ctx.close(); ctx.setLinkFrom(0); ctx.go('superset'); }
-      },
-      {
-        icon: '🔥', t: 'Разминка и дроп-сет', d: 'Что идёт в объём',
-        off: !current.name,
-        go: function () {
-          ctx.setWarmupDropIdx(ctx.openIdx >= 0 ? ctx.openIdx : 0);
-          ctx.close();
-          ctx.go('warmup-drop');
-        }
-      },
-      {
-        icon: '🏷️', t: 'Типы подходов', d: 'Честный тоннаж и блины',
-        off: !current.name,
-        go: function () {
-          ctx.setApproachTypesIdx(ctx.openIdx >= 0 ? ctx.openIdx : 0);
-          ctx.close();
-          ctx.go('approach-types');
-        }
-      },
-      {
-        icon: '📈', t: 'История и рекорды', d: 'Динамика веса и тоннажа',
-        off: !current.name,
-        go: function () { ctx.setHistoryName(current.name || ''); ctx.close(); ctx.go('history'); }
-      },
-      {
-        icon: '↕️', t: 'Порядок упражнений', d: 'Стрелками, связка блоком',
-        off: exercises.length < 2,
+        chevron: 'muted',
         go: function () { ctx.close(); ctx.go('order'); }
       },
       {
-        icon: '📝', t: 'Заметка и итоги', d: 'Самочувствие, зал, партнёр',
+        icon: '🔍', t: 'Каталог упражнений', d: 'фильтр по мышцам и инвентарю',
+        chevron: 'dim',
+        go: function () { ctx.close(); ctx.go('catalog'); }
+      },
+      {
+        icon: '📈', t: 'История и рекорды', d: 'динамика веса и тоннажа',
+        off: !current.name,
+        chevron: 'dim',
+        go: function () { ctx.setHistoryName(current.name || ''); ctx.close(); ctx.go('history'); }
+      },
+      {
+        icon: '⚡', t: 'Круговой режим', d: 'собрать связку в раунды',
+        off: exercises.length < 2,
+        chevron: 'dim',
+        go: function () { ctx.close(); ctx.setLinkFrom(0); ctx.go('superset'); }
+      },
+      {
+        icon: '📋', t: 'Назначено против сделано', d: 'отклонения от плана куратора',
+        off: !hasPlanSnapshot,
+        chevron: 'dim',
+        go: function () { ctx.close(); ctx.go('plan-vs-done'); }
+      },
+      {
+        icon: '📝', t: 'Заметка к тренировке', d: 'самочувствие, зал, партнёр',
+        chevron: 'dim',
         go: function () { ctx.close(); ctx.go('finish'); }
       }
     ];

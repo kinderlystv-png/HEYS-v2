@@ -612,9 +612,9 @@ describe('конструктор: безопасность не спрятана
       }]),
       dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
     }));
-    expect(screen.getByText(/Дискомфорт · плечо/)).toBeTruthy();
-    expect(screen.getByText('Снизить вес на 20%')).toBeTruthy();
-    expect(screen.getByText('Пропустить упражнение')).toBeTruthy();
+    expect(screen.getByText(/Дискомфорт в плечо · 2-й подход/)).toBeTruthy();
+    expect(screen.getByText('Снизить вес на 20 %')).toBeTruthy();
+    expect(screen.getByText('Пропустить')).toBeTruthy();
     expect(screen.getByText(/Боль — не «стало тяжело»/)).toBeTruthy();
   });
 
@@ -630,7 +630,7 @@ describe('конструктор: безопасность не спрятана
       }]),
       dateKey: '2026-08-09', profile: {}, onPatch: (n) => seen.push(n), onClose: () => {},
     }));
-    fireEvent.click(screen.getByText('Снизить вес на 20%'));
+    fireEvent.click(screen.getByText('Снизить вес на 20 %'));
     const aps = seen[0][0].approaches;
     expect(aps[0].weightKg).toBe('100');
     expect(aps[1].weightKg).toBe('80');

@@ -927,6 +927,13 @@
         onCancel: function () { setView('list'); }
       });
     }
+    if (view === 'plan-vs-done' && Parts.PlanVsDoneScreen) {
+      return h(Parts.PlanVsDoneScreen, {
+        training: training,
+        onBack: function () { setView('list'); },
+        onClose: onClose
+      });
+    }
     if (view === 'superset' && CatUI.SupersetScreen) {
       return h(CatUI.SupersetScreen, {
         exercises: exercises,
@@ -1079,6 +1086,26 @@
       );
     }
 
+    const planMeta = training && training.plan;
+    const curatorMeta = planMeta ? {
+      author: planMeta.assignedBy || 'Куратор',
+      assignedAt: planMeta.assignedAt || planMeta.updatedAt || 0
+    } : null;
+    const syncQueueRows = typeof Parts.buildSyncQueueRows === 'function'
+      ? Parts.buildSyncQueueRows({
+        syncStatus: syncStatus,
+        doneApproaches: agg ? agg.doneApproaches : 0,
+        lastMarkAt: wl.lastMarkAt || wl.startedAt || 0,
+        notePending: syncStatus === 'pending' && !!(wl.note && String(wl.note).trim()),
+        onRetry: function () {
+          try {
+            const cloud = HEYS.cloud;
+            if (cloud && typeof cloud.flushPending === 'function') cloud.flushPending();
+          } catch (_e) { /* retry best-effort */ }
+        }
+      })
+      : [];
+
     const rendered = [];
     const seenGroups = {};
     exercises.forEach(function (ex, i) {
@@ -1148,7 +1175,11 @@
           next[exIdx] = Object.assign({}, next[exIdx], { restManual: value });
           patchExercises(next);
         },
-        onDiscomfortAction: discomfortAction
+        onDiscomfortAction: discomfortAction,
+        curatorMeta: curatorMeta,
+        onReplyCurator: function () {
+          if (typeof onReviewProposal === 'function') onReviewProposal();
+        }
       }));
     });
 
@@ -1218,7 +1249,16 @@
         }
       }),
       h('div', { className: 'sb-list' },
-        rendered.length ? rendered : h('div', { className: 'sb-empty' }, 'Упражнений пока нет')
+        planMeta && planMeta.status === 'started' && startedAt > 0 && !completedAt
+          && Parts.CuratorPlanStrip && h(Parts.CuratorPlanStrip, {
+            plan: planMeta,
+            showActions: false,
+            muscleHint: (Parts.sessionTitle && typeof Parts.sessionTitle === 'function')
+              ? Parts.sessionTitle(exercises).replace(/^Силовая ·\s*/, '')
+              : 'верх тела'
+          }),
+        rendered.length ? rendered : h('div', { className: 'sb-empty' }, 'Упражнений пока нет'),
+        Parts.SyncQueuePanel && h(Parts.SyncQueuePanel, { rows: syncQueueRows })
       ),
       rest && h((HEYS.StrengthBuilderParts || {}).RestRing, {
         secondsLeft: secondsLeft,
@@ -1273,23 +1313,31 @@
             setLinkFrom: setLinkFrom,
             setHistoryName: setHistoryName,
             setWarmupDropIdx: setWarmupDropIdx,
-            setApproachTypesIdx: setApproachTypesIdx
+            setApproachTypesIdx: setApproachTypesIdx,
+            hasPlanSnapshot: !!(training && training.planSnapshot
+              && Array.isArray(training.planSnapshot.exercises)
+              && training.planSnapshot.exercises.length)
           }).map(function (row, i) {
             return h('button', {
               key: i,
               type: 'button',
-              className: 'sb-sheet-row',
+              className: 'sb-sheet-menu-row',
               disabled: !!row.off,
               onClick: row.go
             },
-              h('span', { className: 'sb-sheet-icon' }, row.icon),
-              h('div', { className: 'sb-cat-title' },
+              h('span', { className: 'sb-sheet-menu-copy' },
                 h('b', null, row.t),
-                h('span', null, row.off ? 'Нужно больше упражнений в тренировке' : row.d)
+                h('span', null, row.d)
               ),
-              h('span', { className: 'sb-ex-count' }, '›')
+              h('span', {
+                className: 'sb-sheet-menu-chevron'
+                  + (row.chevron === 'muted' ? ' is-muted' : ' is-dim')
+              }, '›')
             );
-          })
+          }),
+          h('p', { className: 'sb-sheet-footnote' },
+            'Всё, что не нужно посреди подхода, живёт здесь: шаблоны, каталог, история, отчёт куратора и заметка. '
+            + 'Шапка сессии несёт только время и счёт подходов — семь входов в ней превратили бы её в панель управления.')
         )
       ),
       // Осталось незакрытым: если это не сделано — лучше убрать, иначе тоннаж и

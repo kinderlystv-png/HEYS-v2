@@ -29,8 +29,7 @@
   --sb-warnbg: rgba(239, 68, 68, 0.1);
   --sb-warnBr: rgba(239, 68, 68, 0.5);
   --sb-warnTx: #b91c1c;
-
-  position: fixed;
+  --sb-sync-muted: var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
   inset: 0;
   z-index: 9000;
   display: flex;
@@ -5526,5 +5525,324 @@
 .sb-tw-footnote {
   margin-top: 12px;
   font: 500 11px/1.55 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+/* ── И1 · Куратор и зал ─────────────────────────────────────────────────── */
+
+.sb-tier {
+  margin: 14px 0 8px;
+  font: 600 10.5px/1 Figtree, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sb-mut);
+}
+
+.sb-grp {
+  border-radius: 14px;
+  background: var(--sb-card);
+  padding: 12px 13px;
+}
+
+.sb-cur-plan-strip.sb-grp {
+  margin-top: 12px;
+}
+
+.sb-cur-plan-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sb-cur-plan-letter {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--sb-soft);
+  font: 700 14px/1 Figtree, sans-serif;
+  color: var(--sb-acc);
+}
+
+.sb-cur-plan-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-cur-plan-title {
+  font: 700 12.5px/1.2 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-cur-plan-meta {
+  font: 500 11px/1.3 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-cur-plan-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.sb-cur-comment.sb-grp {
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 12px;
+  background: transparent;
+}
+
+.sb-cur-comment-bubble {
+  background: var(--sb-soft);
+  border-radius: 12px;
+  padding: 11px 12px;
+  margin-top: 10px;
+  font: 500 12px/1.5 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-cur-comment-meta {
+  margin: 7px 0 0;
+  font: 500 10.5px/1 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-cur-comment-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.sb-cur-comment-foot {
+  margin: 9px 0 0;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-pain--canvas {
+  margin-top: 0;
+  border: 0;
+  border-radius: 14px;
+  background: var(--v4-accent-bg, var(--sb-accbg));
+  padding: 12px 13px;
+}
+
+.sb-pain--canvas b {
+  font: 700 12.5px/1.35 Figtree, sans-serif;
+  color: var(--sb-accTx);
+}
+
+.sb-pain--canvas p {
+  margin: 6px 0 0;
+  font: 500 12px/1.5 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-pain--canvas .sb-pain-actions {
+  margin-top: 12px;
+}
+
+.sb-pain--canvas .sb-pain-skip {
+  flex: 1;
+  background: var(--sb-bg);
+}
+
+.sb-cur-sync {
+  border-radius: 14px;
+  background: var(--sb-card);
+  border: 1px solid var(--sb-br);
+  overflow: hidden;
+}
+
+.sb-cur-sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 13px;
+  border-bottom: 1px solid var(--sb-br);
+}
+
+.sb-cur-sync-row.is-last {
+  border-bottom: none;
+}
+
+.sb-cur-sync-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-cur-sync-main b {
+  font: 600 12px/1.3 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-cur-sync-main span {
+  font: 500 11px/1.3 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-cur-sync-ok {
+  flex: none;
+  font: 700 12px/1 Figtree, sans-serif;
+  color: var(--sb-okTx);
+}
+
+.sb-cur-sync-offline {
+  flex: none;
+  font: 600 10.5px/1 Figtree, sans-serif;
+  color: var(--sb-sync-muted);
+}
+
+.sb-cur-sync-retry {
+  flex: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: 700 11.5px/1 Figtree, sans-serif;
+  color: var(--sb-acc);
+  cursor: pointer;
+}
+
+.sb-cur-sync-foot {
+  margin: 9px 0 0;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+/* ── И2 · Шторка ⋯ (меню сессии) ───────────────────────────────────────── */
+
+.sb-builder-screen .sb-sheet-back {
+  background: var(--v4-modal-backdrop-dim, rgba(15, 23, 42, 0.45));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+}
+
+.sb-builder-screen .sb-sheet {
+  position: relative;
+  padding: 10px 14px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 20px 20px 0 0;
+  background: var(--v4-c1, var(--sb-card));
+}
+
+.sb-builder-screen .sb-sheet-grip {
+  width: 38px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.18);
+}
+
+.sb-sheet-menu-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--sb-br);
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sb-sheet-menu-row:first-of-type {
+  padding-top: 0;
+}
+
+.sb-sheet-menu-row:last-of-type {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.sb-sheet-menu-row:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.sb-sheet-menu-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-sheet-menu-copy b {
+  font: 700 12.5px/1.2 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-sheet-menu-copy span {
+  font: 500 11px/1.3 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-sheet-menu-chevron {
+  flex: none;
+  font: 600 14px/1 Figtree, sans-serif;
+}
+
+.sb-sheet-menu-chevron.is-muted {
+  color: var(--sb-mut);
+}
+
+.sb-sheet-menu-chevron.is-dim {
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.35);
+}
+
+.sb-sheet-footnote {
+  margin: 12px 0 0;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+/* ── И1 · Назначено против сделано ─────────────────────────────────────── */
+
+.sb-plan-vs-done .sb-plan-vs-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 24px;
+}
+
+.sb-plan-vs-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: var(--sb-card);
+  border: 1px solid var(--sb-br);
+}
+
+.sb-plan-vs-row.is-diff {
+  border-color: color-mix(in srgb, var(--sb-acc) 35%, var(--sb-br));
+}
+
+.sb-plan-vs-row b {
+  font: 700 12.5px/1.2 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-plan-vs-row span {
+  font: 500 11px/1.3 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-plan-vs-empty {
+  margin: 0;
+  font: 500 12px/1.5 Figtree, sans-serif;
   color: var(--sb-mut);
 }
