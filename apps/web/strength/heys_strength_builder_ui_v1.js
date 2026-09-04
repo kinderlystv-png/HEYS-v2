@@ -97,6 +97,19 @@
     return sec;
   }
 
+  function exerciseDistanceTotalM(ex) {
+    let meters = 0;
+    (ex && Array.isArray(ex.approaches) ? ex.approaches : []).forEach(function (a) {
+      if (a && a.done && Number.isFinite(+a.distanceM) && +a.distanceM > 0) meters += +a.distanceM;
+    });
+    return meters;
+  }
+
+  function formatDistanceM(meters) {
+    const n = Math.round(meters);
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' м';
+  }
+
   function pluralChanges(n) {
     const t = Math.abs(n) % 100;
     const d = t % 10;
@@ -1462,6 +1475,23 @@
           ),
           h('p', { className: 'sb-time-entry-footnote' },
             'Колонка «Вес» показывается по признаку «есть ли что взвешивать», а не по единице: у планки её нет, у фермерской переноски есть — обе меряются временем. Клавиатура времени — мм:сс, хранение в секундах.')
+        ),
+        ((ex.unit || 'weight_reps') === 'distance') && h('div', { className: 'sb-time-entry-block sb-distance-entry-block' },
+          h('div', { className: 'sb-time-summary' },
+            h('div', { className: 'sb-time-summary-row' },
+              h('span', null, 'Итого'),
+              h('b', { className: 'sb-time-summary-val' }, formatDistanceM(exerciseDistanceTotalM(ex)))
+            ),
+            h('div', { className: 'sb-time-summary-row is-muted' },
+              h('span', { className: 'sb-time-summary-copy' },
+                h('b', null, 'В тоннаж'),
+                h('span', null, 'не идёт · метры не умножаются на килограммы')
+              ),
+              h('span', { className: 'sb-time-summary-dash' }, '—')
+            )
+          ),
+          h('p', { className: 'sb-time-entry-footnote' },
+            'Метры и время устроены одинаково: одна колонка значений, свой итог в «Объёме другими величинами», в тоннаж не идут. Своя строка, а не пропуск — иначе человек решит, что работа потерялась.')
         )
       ));
     });

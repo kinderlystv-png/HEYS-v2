@@ -4749,11 +4749,33 @@
   margin-top: 12px;
 }
 
+.sb-builder-screen.is-distance-entry .sb-ex.is-open .sb-aps {
+  margin-top: 12px;
+}
+
 .sb-builder-screen.is-time-entry.is-exercise-open .sb-aps-head > span:nth-child(3) {
   text-align: center;
 }
 
+.sb-builder-screen.is-distance-entry.is-exercise-open .sb-aps-head > span:nth-child(3) {
+  text-align: center;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+}
+
+.sb-builder-screen.is-distance-entry.is-exercise-open .sb-aps-head > span:nth-child(3)::after {
+  content: 'Метры';
+  font: 600 11px/1.3 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+}
+
 .sb-builder-screen.is-time-entry.is-exercise-open .sb-aps-head > span:last-child {
+  justify-self: center;
+  color: var(--gr);
+}
+
+.sb-builder-screen.is-distance-entry.is-exercise-open .sb-aps-head > span:last-child {
   justify-self: center;
   color: var(--gr);
 }
@@ -4763,12 +4785,26 @@
   color: var(--gr);
 }
 
+.sb-builder-screen.is-distance-entry.is-exercise-open .sb-ap.is-done .sb-ap-num {
+  background: var(--gr-bg);
+  color: var(--gr);
+}
+
 .sb-builder-screen.is-time-entry.is-exercise-open .sb-ap.is-current .sb-ap-num {
   background: var(--acs);
   color: var(--on-acs);
 }
 
+.sb-builder-screen.is-distance-entry.is-exercise-open .sb-ap.is-current .sb-ap-num {
+  background: var(--acs);
+  color: var(--on-acs);
+}
+
 .sb-builder-screen.is-time-entry.is-exercise-open .sb-ap.is-current .sb-ap-field:not(.is-reps-missing) {
+  box-shadow: inset 0 0 0 1.5px var(--acs);
+}
+
+.sb-builder-screen.is-distance-entry.is-exercise-open .sb-ap.is-current .sb-ap-field:not(.is-reps-missing) {
   box-shadow: inset 0 0 0 1.5px var(--acs);
 }
 
