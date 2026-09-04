@@ -1891,8 +1891,7 @@
 
 /* Offline no-data overlay dark */
 [data-theme$="dark"] .offline-nodata-overlay {
-  background: var(--v4-surface, #2a3040);
-  border-color: var(--v4-line, #3a4555);
+  background: var(--v4-surface, #23201b);
 }
 
 /* Sync toast dark */
