@@ -1,0 +1,547 @@
+[
+  {
+    "key": "Визуал v4 · Отчёты · 14",
+    "selector": ".reports-v4-meta__title",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 15",
+    "selector": ".reports-v4-meta__range",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 17",
+    "selector": ".reports-v4-period-pill, .reports-v4-period-pill.is-active",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 18",
+    "selector": ".reports-v4-period-pill",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 20",
+    "selector": ".reports-v4-hero",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 25",
+    "selector": ".reports-v4-hero__phrase",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 35",
+    "selector": ".heys-score-tile__state, .reports-v4-score-slot .heys-score-tile__state",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 41",
+    "selector": ".reports-v4-summary-card__value, .reports-v4-summary-card--norm .reports-v4-summary-card__value",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 44",
+    "selector": ".reports-v4-summary-card__value, .reports-v4-summary-card--score .reports-v4-summary-card__value",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 46",
+    "selector": ".reports-v4-tier__note",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 49",
+    "selector": ".reports-v4-discipline__name",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 51",
+    "selector": ".reports-v4-discipline__bar-fill",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 52",
+    "selector": ".reports-v4-discipline__score",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 53",
+    "selector": ".reports-v4-discipline__delta, .reports-v4-discipline__delta.is-up",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 69",
+    "selector": ".reports-v4-dynamics-card__delta",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 86",
+    "selector": ".reports-v4-weeks__kcal",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 88",
+    "selector": ".reports-v4-weeks__score",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 89",
+    "selector": ".reports-v4-weeks__partial",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 95",
+    "selector": ".reports-v4-days__left",
+    "prop": "color"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 96",
+    "selector": ".reports-v4-days__dot, .reports-v4-days__dot--over",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 98",
+    "selector": ".reports-v4-days__dot, .reports-v4-days__dot--good",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Визуал v4 · Отчёты · 99",
+    "selector": ".reports-v4-days__dot, .reports-v4-days__dot--warn",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Инсайты · 14",
+    "selector": ".insights-v4-meta__title",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · 15",
+    "selector": ".insights-v4-meta__days",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · 17",
+    "selector": ".insights-v4-hero",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Инсайты · 19",
+    "selector": ".insights-v4-hero__phrase",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · 52",
+    "selector": ".insights-v4-attention__line",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · 72",
+    "selector": ".insights-v4-detail-link__text",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · день без заданий · 06",
+    "selector": ".insights-v4-hero",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Инсайты · день без заданий · 08",
+    "selector": ".insights-v4-hero__praise",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · день без заданий · 12",
+    "selector": ".insights-v4-attention__basis",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · метаболизм · 10",
+    "selector": ".insights-v4-pheno__dot",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Инсайты · не посчиталось · 06",
+    "selector": ".insights-v4-fail__title",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · новый пользователь · 06",
+    "selector": ".insights-v4-stub__hero",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Инсайты · новый пользователь · 12",
+    "selector": ".insights-v4-stub__count",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · персональные пороги · 07",
+    "selector": ".insights-v4-thresh__count",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · персональные пороги · 15",
+    "selector": ".insights-v4-thresh__mine",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · подробно · 03",
+    "selector": ".insights-v4-detail__title",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · подробно · 09",
+    "selector": ".insights-v4-weight__value",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · подробно · 10",
+    "selector": ".insights-v4-weight__pace",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · риск срыва · 10",
+    "selector": ".insights-v4-attention__risk-window",
+    "prop": "color"
+  },
+  {
+    "key": "Инсайты · риск срыва · 14",
+    "selector": ".insights-v4-attention__basis",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 08",
+    "selector": ".reports-v4-periods-sheet__legend-item",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 14",
+    "selector": ".reports-v4-periods-card__date",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 17",
+    "selector": ".reports-v4-periods-card__reliability-text",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 20",
+    "selector": ".reports-v4-periods-card__metric-value",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 21",
+    "selector": ".reports-v4-periods-card__metric-label",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 22",
+    "selector": ".reports-v4-periods-card__metric-value, .reports-v4-periods-card__metric-value.is-good",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 23",
+    "selector": ".reports-v4-periods-card__weight-note",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 25",
+    "selector": ".reports-v4-periods-card__days-label",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 26",
+    "selector": ".reports-v4-periods-card__days-chevron",
+    "prop": "color"
+  },
+  {
+    "key": "Лист периодов · 28",
+    "selector": ".reports-v4-periods-card__delta",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · подтверждение · 10",
+    "selector": ".kcal-realdata-card__title",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · подтверждение · 13",
+    "selector": ".kcal-realdata-card__badge",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Мало калорий · подтверждение · 13",
+    "selector": ".kcal-realdata-card__badge",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · подтверждение · 14",
+    "selector": ".kcal-realdata-card__meals",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · подтверждение · 15",
+    "selector": ".kcal-realdata-card__button",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Мало калорий · подтверждение · 15",
+    "selector": ".kcal-realdata-card__button",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · подтверждение · 16",
+    "selector": ".kcal-realdata-card__button, .kcal-realdata-card__button--secondary",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Мало калорий · подтверждение · 17",
+    "selector": ".kcal-realdata-card__recommendation",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · рекомендуем очистить · 05",
+    "selector": ".kcal-realdata-card",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Мало калорий · рекомендуем очистить · 06",
+    "selector": ".kcal-realdata-card__title",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · рекомендуем очистить · 09",
+    "selector": ".kcal-realdata-card__badge",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Мало калорий · рекомендуем очистить · 09",
+    "selector": ".kcal-realdata-card__badge",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · рекомендуем очистить · 10",
+    "selector": ".kcal-realdata-card__meals",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · рекомендуем очистить · 11",
+    "selector": ".kcal-realdata-card__button",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Мало калорий · рекомендуем очистить · 11",
+    "selector": ".kcal-realdata-card__button",
+    "prop": "color"
+  },
+  {
+    "key": "Мало калорий · рекомендуем очистить · 12",
+    "selector": ".kcal-realdata-card__button, .kcal-realdata-card__button--secondary",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Неделя к неделе · одна закрытая · 07",
+    "selector": ".reports-v4-tier__note",
+    "prop": "color"
+  },
+  {
+    "key": "Неделя к неделе · одна закрытая · 15",
+    "selector": ".reports-v4-weeks__date",
+    "prop": "color"
+  },
+  {
+    "key": "Неделя к неделе · одна закрытая · 16",
+    "selector": ".reports-v4-weeks__kcal",
+    "prop": "color"
+  },
+  {
+    "key": "Неделя к неделе · одна закрытая · 17",
+    "selector": ".reports-v4-weeks__weight",
+    "prop": "color"
+  },
+  {
+    "key": "Неделя к неделе · одна закрытая · 22",
+    "selector": ".reports-v4-weeks__partial",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Отчёты · мало данных · 06",
+    "selector": ".reports-v4-stub",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Отчёты · мало данных · 08",
+    "selector": ".reports-v4-stub__title",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · мало данных · 09",
+    "selector": ".reports-v4-stub__note",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · мало данных · 12",
+    "selector": ".reports-v4-stub__progress-fill",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Отчёты · мало данных · 13",
+    "selector": ".reports-v4-stub__count",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · мало данных · 17",
+    "selector": ".reports-v4-ready__name",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · мало данных · 18",
+    "selector": ".reports-v4-ready__state, .reports-v4-ready__state.is-on",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · мало данных · 19",
+    "selector": ".reports-v4-ready__state",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нет веса · 12",
+    "selector": ".reports-v4-dynamics-card__period",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нет веса · 15",
+    "selector": ".reports-v4-noplot__cta",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Отчёты · нет веса · 15",
+    "selector": ".reports-v4-noplot__cta",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 07",
+    "selector": ".reports-v4-tier__note",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 10",
+    "selector": ".reports-v4-discipline__name",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 12",
+    "selector": ".reports-v4-discipline__bar-fill",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 13",
+    "selector": ".reports-v4-discipline__score",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 14",
+    "selector": ".reports-v4-discipline__delta, .reports-v4-discipline__delta.is-up",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 17",
+    "selector": ".reports-v4-discipline__score, .reports-v4-discipline__score.is-zero",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 18",
+    "selector": ".reports-v4-discipline__avg",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 24",
+    "selector": ".reports-v4-discipline__delta",
+    "prop": "color"
+  },
+  {
+    "key": "Отчёты · нулевая строка матрицы · 26",
+    "selector": ".reports-v4-discipline__footnote",
+    "prop": "color"
+  },
+  {
+    "key": "Разбор Score · 03",
+    "selector": ".heys-score-screen__title",
+    "prop": "color"
+  },
+  {
+    "key": "Разбор Score · 05",
+    "selector": ".heys-score-screen__hero",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Разбор Score · 09",
+    "selector": ".heys-score-screen__delta.is-up",
+    "prop": "color"
+  },
+  {
+    "key": "Разбор Score · 13",
+    "selector": ".heys-score-screen__note",
+    "prop": "color"
+  },
+  {
+    "key": "Разбор Score · 17",
+    "selector": ".heys-score-screen__row-label",
+    "prop": "color"
+  },
+  {
+    "key": "Разбор Score · 18",
+    "selector": ".heys-score-screen__row-value",
+    "prop": "color"
+  },
+  {
+    "key": "Разбор Score · 20",
+    "selector": ".heys-score-screen__row-fill",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Раскрывашка · Как посчитано · 03",
+    "selector": ".insights-v4-sheet",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Раскрывашка · Как посчитано · 04",
+    "selector": ".insights-v4-sheet__title",
+    "prop": "color"
+  },
+  {
+    "key": "Раскрывашка · Как посчитано · 10",
+    "selector": ".insights-v4-sources__strength",
+    "prop": "color"
+  },
+  {
+    "key": "Раскрывашка · Как считается долг · 03",
+    "selector": ".insights-v4-sheet",
+    "prop": "backgroundColor"
+  },
+  {
+    "key": "Раскрывашка · Как считается долг · 04",
+    "selector": ".insights-v4-sheet__title",
+    "prop": "color"
+  },
+  {
+    "key": "Раскрывашка · Как считается долг · 10",
+    "selector": ".insights-v4-sources__strength",
+    "prop": "color"
+  },
+  {
+    "key": "Стоит внимания · голос куратора · 10",
+    "selector": ".insights-v4-attention__basis",
+    "prop": "color"
+  },
+  {
+    "key": "Стоит внимания · панель Ещё · 10",
+    "selector": ".insights-v4-attention__basis",
+    "prop": "color"
+  },
+  {
+    "key": "Ярус Питание · после последнего приёма · 17",
+    "selector": ".insights-v4-nutrition__rhythm-line",
+    "prop": "color"
+  }
+]
