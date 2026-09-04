@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -178,37 +177,11 @@ function countHandoffRows(handoff) {
     + (handoff.outOfScopeRuntimeRows?.length || 0);
 }
 
-function hashContractValue(value) {
-  return crypto.createHash('sha1').update(value).digest('hex').slice(0, 12);
-}
-
-/** Handoff-only keys absent from canvas contract — seed before row ingest. */
-function seedMetaContractKeys(source, handoff) {
-  const entries = handoff.meta?.contractKeys;
-  if (!Array.isArray(entries) || !entries.length) return 0;
-  let seeded = 0;
-  for (const entry of entries) {
-    const rowKey = entry.key;
-    if (!rowKey || rows[rowKey]) continue;
-    const dataV = entry.dataV || rowKey;
-    rows[rowKey] = {
-      v: '?',
-      f: `Handoff meta (${source}); verdict pending apply. ${entry.source || ''}`.trim(),
-      h: entry.h || hashContractValue(dataV),
-    };
-    if (entry.naKind) rows[rowKey].naKind = entry.naKind;
-    seeded += 1;
-  }
-  return seeded;
-}
-
 for (const filePath of handoffFiles) {
   const source = path.basename(filePath);
   const handoff = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   loadedHandoffs.push(source);
   handoffRowCounts[source] = countHandoffRows(handoff);
-  const seeded = seedMetaContractKeys(source, handoff);
-  if (seeded) console.log(`  ${source}: seeded ${seeded} meta contract keys`);
   const ingest = source === '.sb-neq-audit-handoff.json' ? ingestNeqAuditRow : ingestStandardRow;
   for (const row of handoff.rows || []) ingest(source, row);
   for (const row of handoff.outOfScopeCssRows || []) ingestOutOfScopeCssRow(source, row);

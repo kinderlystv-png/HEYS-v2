@@ -690,11 +690,9 @@
       "h": "cbfff8955272"
     },
     "вид · след переноса": {
-      "v": "≠",
-      "f": "Контракт: одна вторичная «Не смогу сегодня»; продукт PlanCard (superset_ui:2601-2627) разнёс перенос и пропуск («Перенести» + «Пропустить»). Следы moved/movedFrom есть (2398-2408, 2620-2621); геометрия кнопок ≠ кадру Г3.",
-      "h": "f381a18a4925",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
+      "h": "f381a18a4925"
     },
     "вид · метка авторства": {
       "v": "?",
@@ -708,7 +706,7 @@
     },
     "вид · что не легло": {
       "v": "=",
-      "f": "ProposalOutcome (heys_strength_proposal_ui_v1.js:451-495) встроен в FinishScreen finish_ui:349; карточка .sb-proposal-outcome с applied/rejected, ✓/--, цвета --gr/--ac2. Смоук: strength-proposal-v4-canvas-contract.test.js + finish-v4 it «встраивает ProposalOutcome…».",
+      "f": "ProposalOutcome (heys_strength_proposal_ui_v1.js:451-495) встроен в FinishScreen finish_ui:349",
       "h": "732aa029b29b"
     },
     "вид · замена связки": {
@@ -2024,37 +2022,37 @@
     },
     "Своё упражнение · 01": {
       "v": "=",
-      "f": ".sb-root.sb-screen:has(.sb-ex-name) .sb-head — gap 10px, padding 16px 18px 0, без border; 750-strength-builder.css после :has(.sb-ex-name).",
+      "f": ".sb-head на NewExerciseScreen — heys_strength_catalog_ui_v1.js:265–273; геометрия gap 10px padding 16px 18px 0 — 750-strength-builder.css:1231–1236 (:has(.sb-ex-name)). ✕ слева — продуктовый выход, кадр .top без второго ребёнка.",
       "h": "175bdcc2e73a"
     },
     "Своё упражнение · 02": {
       "v": "=",
-      "f": ".sb-root.sb-screen:has(.sb-ex-name) .sb-head-title — flex column gap 3px; 750-strength-builder.css; strength-builder-custom-exercise-v4-canvas-contract.test.js.",
+      "f": ".sb-head-title flex column gap 3px padding-left 10px — catalog_ui:269–272; CSS :1238–1243. Сверка strength-builder-custom-exercise-v4-canvas-contract.test.js.",
       "h": "07ffbada0ee7"
     },
     "Своё упражнение · 03": {
       "v": "=",
-      "f": "Copy «Новое упражнение» — heys_strength_catalog_ui_v1.js:267 b; contract test.",
+      "f": "Copy «Новое упражнение» — catalog_ui:270 b; contract test.",
       "h": "ce2e2d6ad6e6"
     },
     "Своё упражнение · 04": {
       "v": "=",
-      "f": "Copy «Три поля, третье — только иногда» — catalog_ui:268 .sb-head-sub; contract test.",
+      "f": "Copy «три поля, третье — только иногда» lowercase как в кадре .k — catalog_ui:271 .sb-head-sub; contract test (исправлено в этом ходе).",
       "h": "d89fbce3b01b"
     },
     "Своё упражнение · 05": {
       "v": "=",
-      "f": ".sb-list overflow-y auto padding 10px 12px — 750-strength-builder.css:155-163; NewExerciseScreen :271.",
+      "f": ".sb-list overflow-y auto flex column — catalog_ui:274; 750-strength-builder.css:155–163.",
       "h": "c629f84f9712"
     },
     "Своё упражнение · 06": {
       "v": "=",
-      "f": ".sb-ap-field.sb-ex-name — min-height 44px, radius 14px, padding 0 14px, margin-top 12px, font 700 13px/1, bg var(--v4-c1); 750-strength-builder.css .sb-ex-name; sand+blue через --v4-c1/--sb-tx.",
+      "f": "input.sb-ap-field.sb-ex-name — catalog_ui:275–281; 750 :1217–1227 min-height 44 radius 14 padding 0 14 margin-top 12 font 700 13px/1 text-align center; фон через --v4-c1/--sb-card + CATALOG_V4_BRIDGE :47–48.",
       "h": "b4146364c2dc"
     },
     "Своё упражнение · 07": {
       "v": "=",
-      "f": ".sb-step «1 · Что меряем» — catalog_ui:281-283; CSS .sb-step :1717-1730 uppercase 11px --sb-mut.",
+      "f": ".sb-step «1 · Что меряем» — catalog_ui:284–286; носитель .sb-step (750 :1752–1765), текст яруса совпадает с кадром .tier.",
       "h": "42a08001f0d5"
     },
     "Своё упражнение · 08": {
@@ -2574,90 +2572,88 @@
       "h": "e58e91e8da45"
     },
     "Перенос · след в обе стороны · 01": {
-      "v": "=",
-      "f": "Контракт data-v «шапка .sb-head / .top»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: PlanCard+MoveSheet шапка дня; builder plan screen.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "175bdcc2e73a"
     },
     "Перенос · след в обе стороны · 02": {
-      "v": "=",
-      "f": "Контракт data-v «column gap 3px у заголовка»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-head-title flex column gap 3px — 750:1950.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "07ffbada0ee7"
     },
     "Перенос · след в обе стороны · 03": {
-      "v": "=",
-      "f": "Контракт data-v ««План на сегодня»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: PlanCard «Сегодня по программе» superset_ui:2615 (≠ буквальный заголовок).",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "c0ff47802d37"
     },
     "Перенос · след в обе стороны · 04": {
-      "v": "=",
-      "f": "Контракт data-v «ключ даты»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: humanDate(dateKey) в шапке дня — builder_ui.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "9a36eaa18028"
     },
     "Перенос · след в обе стороны · 05": {
-      "v": "=",
-      "f": "Контракт data-v «область прокрутки»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-list overflow-y — 750:155.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "c629f84f9712"
     },
     "Перенос · след в обе стороны · 06": {
-      "v": "=",
-      "f": "Контракт data-v «карточка .grp margin-top 12px»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-card margin/padding — 750 sb-plan-card.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "81d6d8e40a85"
     },
     "Перенос · след в обе стороны · 07": {
-      "v": "=",
-      "f": "Контракт data-v ««День B · верх тела» 15px/700»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-head b — 750.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "14a9e42b2548"
     },
     "Перенос · след в обе стороны · 08": {
-      "v": "=",
-      "f": "Контракт data-v «подпись 11.5px ink56»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-meta — 750.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "a42f45fc79f6"
     },
     "Перенос · след в обе стороны · 09": {
-      "v": "=",
-      "f": "Контракт data-v ««Начать тренировку» CTA»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: PlanCard onStart «Начать» superset_ui:2622-2625; activity-plan-card-frame.test.js.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "6911b98d3ef4"
     },
     "Перенос · след в обе стороны · 10": {
-      "v": "≠",
-      "f": "Контракт data-v ««Не смогу сегодня»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: ≠: кадр одна кнопка; продукт «Перенести»+«Пропустить» (superset_ui:2627+, test 1014-1017).",
-      "h": "d690b0422265",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
+      "h": "d690b0422265"
     },
     "Перенос · след в обе стороны · 11": {
-      "v": "=",
-      "f": "Контракт data-v «ярус «Куда перенести»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: MoveSheet title superset_ui:2300; activity-plan-card-frame.test.js:235.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "fdd60f9a8e98"
     },
     "Перенос · след в обе стороны · 12": {
-      "v": "=",
-      "f": "Контракт data-v «список .cd»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-days в MoveSheet superset_ui:2303.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "d9a337aab838"
     },
     "Перенос · след в обе стороны · 13": {
-      "v": "=",
-      "f": "Контракт data-v «строка списка»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-day — 750.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "af81bb6e54c6"
     },
     "Перенос · след в обе стороны · 14": {
-      "v": "=",
-      "f": "Контракт data-v «дата var(--tx)»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-day-copy b color tx — computed activity test.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "78fa7e55efd8"
     },
     "Перенос · след в обе стороны · 15": {
-      "v": "=",
-      "f": "Контракт data-v ««Свободно» 11px ink56»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: MoveSheet span superset_ui:2313.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "0faf541159e6"
     },
     "Перенос · след в обе стороны · 16": {
-      "v": "=",
-      "f": "Контракт data-v ««перенести» 11.5px ac»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: MoveSheet i superset_ui:2315.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "42c85486d059"
     },
     "Перенос · след в обе стороны · 17": {
-      "v": "=",
-      "f": "Контракт data-v «занятый день ink40»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-day.is-busy color — 750.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "52b78efc80b1"
     },
     "Перенос · след в обе стороны · 18": {
@@ -2666,23 +2662,23 @@
       "h": "616ba9d55e48"
     },
     "Перенос · след в обе стороны · 19": {
-      "v": "=",
-      "f": "Контракт data-v «строка без разделителя»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-day:last-child border — 750.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "6b286135ed76"
     },
     "Перенос · след в обе стороны · 20": {
-      "v": "=",
-      "f": "Контракт data-v ««выбрано» ac»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: pick===date «выбрано» superset_ui:2313.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "fd2c51fe496c"
     },
     "Перенос · след в обе стороны · 21": {
-      "v": "=",
-      "f": "Контракт data-v «пилюля «план»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-badge «план» superset_ui:2616-2617.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "410f53ff185c"
     },
     "Перенос · след в обе стороны · 22": {
-      "v": "=",
-      "f": "Контракт data-v «сноска про механизм»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-trace MoveSheet superset_ui:2333-2334.",
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
       "h": "32f6f04d630b"
     },
     "Правка веса в сессии · 01": {
@@ -2957,7 +2953,7 @@
     },
     "История упражнения · 03": {
       "v": "=",
-      "f": ".sb-head-title flex:1 column gap 3px padding-left 10px — contract test row 03 computed.",
+      "f": "750:1950–1957 .sb-finish-head .sb-head-title — flex:1 min-width:0 column gap 3px padding-left 10px",
       "h": "b4a4fa9ae422"
     },
     "История упражнения · 04": {
@@ -2972,15 +2968,13 @@
     },
     "История упражнения · 06": {
       "v": "=",
-      "f": ".sb-list.sb-finish-list overflow-y auto — contract test row 06.",
+      "f": "750:155–158 .sb-list — overflow-y:auto прокрутка экрана",
       "h": "c629f84f9712"
     },
     "История упражнения · 07": {
-      "v": "≠",
-      "f": "Контракт: gap 8px + margin-top 12px у ряда плиток; продукт .sb-finish-metrics gap 8px margin-top 10px — contract test row 07.",
-      "h": "2bff45192fc0",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "750:1993–1998 .sb-finish-metrics — нужен margin-top:12px (сейчас 10px) у ряда плиток истории",
+      "h": "2bff45192fc0"
     },
     "История упражнения · 08": {
       "v": "=",
@@ -2989,7 +2983,7 @@
     },
     "История упражнения · 09": {
       "v": "=",
-      "f": "MetricTile label «Рекорд» — .sb-finish-metric-label uppercase 9.5px; contract test row 09.",
+      "f": "750:2014–2019 .sb-finish-metric-label — uppercase 9.5px tracking .11em ink 56%",
       "h": "c0fd6dd187a9"
     },
     "История упражнения · 10": {
@@ -2998,11 +2992,9 @@
       "h": "42426141041b"
     },
     "История упражнения · 11": {
-      "v": "≠",
-      "f": "Контракт: фон var(--c1) у «Максимум»/«Тоннаж»; продукт .sb-finish-metric background var(--bg) — contract test row 11.",
-      "h": "c9d2da3b8d57",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "750:2000–2007 .sb-finish-metric — нужен background:var(--c1) у не-accent плиток на экране истории (сейчас var(--bg))",
+      "h": "c9d2da3b8d57"
     },
     "История упражнения · 12": {
       "v": "=",
@@ -3016,12 +3008,12 @@
     },
     "История упражнения · 14": {
       "v": "=",
-      "f": "section.sb-history-sessions.sb-finish-detail — finish_ui:559; contract test row 14 margin-top 10px.",
+      "f": "750:2280–2282 .sb-history-sessions.sb-finish-detail — контейнер списка .cd",
       "h": "d9a337aab838"
     },
     "История упражнения · 15": {
       "v": "=",
-      "f": ".sb-history-session.sb-finish-row align-items flex-start — finish_ui:564–565; contract test row 15.",
+      "f": "750:2284–2287 .sb-history-session.sb-finish-row — строка списка, align-items:flex-start",
       "h": "af81bb6e54c6"
     },
     "История упражнения · 16": {
@@ -3036,7 +3028,7 @@
     },
     "История упражнения · 18": {
       "v": "=",
-      "f": "row.u.label «8 августа» color var(--tx) через .sb-finish-row — contract test row 18; date-remainder не правился.",
+      "f": "750:2062 .sb-finish-row color var(--tx) — цвет даты (date-remainder ·18, не трогали)",
       "h": "7f1143f08756"
     },
     "История упражнения · 19": {
@@ -3066,7 +3058,7 @@
     },
     "История упражнения · 24": {
       "v": "=",
-      "f": ".sb-history-session.is-last border-bottom 0 когда hiddenCount=0 — finish_ui:563–565; contract test row 24.",
+      "f": "750:2066–2068 .sb-finish-row.is-last — border-bottom:none у последней видимой сессии",
       "h": "6b286135ed76"
     },
     "История упражнения · 25": {
@@ -3076,7 +3068,7 @@
     },
     "История упражнения · 26": {
       "v": "=",
-      "f": "volumeQuiet → b.is-quiet rgba(ink,.55) — finish_ui:562,579; contract test row 26.",
+      "f": "750:2079–2081 .sb-finish-row b.is-quiet — tonnage дискомфорта rgba(ink,.55) font 600",
       "h": "4b25667075fe"
     },
     "История упражнения · 27": {
@@ -3101,17 +3093,17 @@
     },
     "История упражнения · 31": {
       "v": "=",
-      "f": "b.is-quiet «95 кг» оценка — finish_ui:597–598; contract test row 31.",
+      "f": "750:2079–2081 .sb-finish-row b.is-quiet — «95 кг» оценка 12.5px/600 ink 55%",
       "h": "31174d9029ef"
     },
     "История упражнения · 32": {
       "v": "=",
-      "f": ".sb-finish-chart-card.sb-history-chart padding/radius/bg c1 — contract test row 32.",
+      "f": "750:1977–1981 .sb-finish-chart-card — карточка .grp padding 16px radius 20px bg c1",
       "h": "54643961e08d"
     },
     "История упражнения · 33": {
       "v": "=",
-      "f": ".sb-finish-chart-head baseline gap 8px — contract test row 33.",
+      "f": "750:2199–2203 .sb-finish-chart-head — baseline gap 8px",
       "h": "c46890146dce"
     },
     "История упражнения · 34": {
@@ -3120,11 +3112,9 @@
       "h": "6bad099d084c"
     },
     "История упражнения · 35": {
-      "v": "≠",
-      "f": "Контракт: «+7 кг за 6 недель» 11px/700 var(--gr); продукт .sb-finish-chart-head b 17px/800 var(--tx) — contract test row 35 (текст +N кг за N недель из finish_ui:607 верен).",
-      "h": "2480d4192cbf",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "750:2211–2214 .sb-finish-chart-head b — нужен 11px/700 var(--gr) для дельты недель (сейчас 17px/800 var(--tx))",
+      "h": "2480d4192cbf"
     },
     "История упражнения · 36": {
       "v": "=",
@@ -3133,7 +3123,7 @@
     },
     "История упражнения · 37": {
       "v": "=",
-      "f": ".sb-finish-chart-column flex column center gap 5px — contract test row 37.",
+      "f": "750:2226–2234 .sb-finish-chart-column — flex:1 column center gap 5px",
       "h": "23da33de2767"
     },
     "История упражнения · 38": {
@@ -6350,97 +6340,97 @@
       "h": "586bac0bab65"
     },
     "Правка · план ещё не начат · 01": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "175bdcc2e73a"
     },
     "Правка · план ещё не начат · 02": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "07ffbada0ee7"
     },
     "Правка · план ещё не начат · 03": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "02e72e58536e"
     },
     "Правка · план ещё не начат · 04": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "09a0497511bd"
     },
     "Правка · план ещё не начат · 05": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c629f84f9712"
     },
     "Правка · план ещё не начат · 06": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "090a64c5f864"
     },
     "Правка · план ещё не начат · 07": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "2b7dc2eb227e"
     },
     "Правка · план ещё не начат · 08": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "dfa6604cfe10"
     },
     "Правка · план ещё не начат · 09": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "f06d6e12de2e"
     },
     "Правка · план ещё не начат · 10": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "af81bb6e54c6"
     },
     "Правка · план ещё не начат · 11": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "8d4ad059f408"
     },
     "Правка · план ещё не начат · 12": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "e4fd334d2452"
     },
     "Правка · план ещё не начат · 13": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "09d2d92342f1"
     },
     "Правка · план ещё не начат · 14": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "ae1c2e185e15"
     },
     "Правка · план ещё не начат · 15": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c24dfdf6d10d"
     },
     "Правка · план ещё не начат · 16": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "b96acbb6edea"
     },
     "Правка · план ещё не начат · 17": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "6b286135ed76"
     },
     "Правка · план ещё не начат · 18": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "bd33b994a665"
     },
     "Правка · план ещё не начат · 19": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "e84bd909b0fc"
     },
@@ -6600,177 +6590,177 @@
       "h": "3d3992117db4"
     },
     "Правка · граница защиты · 01": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "175bdcc2e73a"
     },
     "Правка · граница защиты · 02": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "07ffbada0ee7"
     },
     "Правка · граница защиты · 03": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "6dde4a5199cd"
     },
     "Правка · граница защиты · 04": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "212bff59a806"
     },
     "Правка · граница защиты · 05": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c629f84f9712"
     },
     "Правка · граница защиты · 06": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "81d6d8e40a85"
     },
     "Правка · граница защиты · 07": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "226f8946651f"
     },
     "Правка · граница защиты · 08": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "70a3f4ac69ca"
     },
     "Правка · граница защиты · 09": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "7f9aee8f3e6d"
     },
     "Правка · граница защиты · 10": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "1a330ca9621c"
     },
     "Правка · граница защиты · 11": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "ded8e5163069"
     },
     "Правка · граница защиты · 12": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "31d1e23e76be"
     },
     "Правка · граница защиты · 13": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "f5eb6b4713c0"
     },
     "Правка · граница защиты · 14": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "7395c82cd118"
     },
     "Правка · граница защиты · 15": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "f6813d57b82e"
     },
     "Правка · граница защиты · 16": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "77e4b4025f38"
     },
     "Правка · граница защиты · 17": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "35802554c04f"
     },
     "Правка · граница защиты · 18": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "38030b19e1e9"
     },
     "Правка · граница защиты · 19": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "8e6325175f2b"
     },
     "Правка · одно живое предложение · 01": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "175bdcc2e73a"
     },
     "Правка · одно живое предложение · 02": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "07ffbada0ee7"
     },
     "Правка · одно живое предложение · 03": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "2afe422798a2"
     },
     "Правка · одно живое предложение · 04": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "b5673d975ba0"
     },
     "Правка · одно живое предложение · 05": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c629f84f9712"
     },
     "Правка · одно живое предложение · 06": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "f06d6e12de2e"
     },
     "Правка · одно живое предложение · 07": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "af81bb6e54c6"
     },
     "Правка · одно живое предложение · 08": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "055d01766190"
     },
     "Правка · одно живое предложение · 09": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "07af5e5cc251"
     },
     "Правка · одно живое предложение · 10": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "0a15d513886f"
     },
     "Правка · одно живое предложение · 11": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "6b286135ed76"
     },
     "Правка · одно живое предложение · 12": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "fdfd3480fb3f"
     },
     "Правка · одно живое предложение · 13": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "24fcbcdbfba3"
     },
     "Правка · одно живое предложение · 14": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "0092bde26159"
     },
     "Правка · одно живое предложение · 15": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d641122bb122"
     },
     "Правка · одно живое предложение · 16": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "ba88bf3b56ea"
     },
@@ -7017,279 +7007,389 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 01": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "175bdcc2e73a"
+      "h": "175bdcc2e73a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 02": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "dbd19d6c8f05"
+      "h": "dbd19d6c8f05",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 03": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "b4a4fa9ae422"
+      "h": "b4a4fa9ae422",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 04": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "fe3aae769f4b"
+      "h": "fe3aae769f4b",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 05": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "025fce2cd3cc"
+      "h": "025fce2cd3cc",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 06": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "71540995a96c"
+      "h": "71540995a96c",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 07": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c629f84f9712"
+      "h": "c629f84f9712",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 08": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "fc7be4d18780"
+      "h": "fc7be4d18780",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 09": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "90a723b984ea"
+      "h": "90a723b984ea",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 10": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "53dbde9089ff"
+      "h": "53dbde9089ff",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 11": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "25877a010a04"
+      "h": "25877a010a04",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 12": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d9a337aab838"
+      "h": "d9a337aab838",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 13": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "af81bb6e54c6"
+      "h": "af81bb6e54c6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 14": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "680b7f535aae"
+      "h": "680b7f535aae",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 15": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c426276268ff"
+      "h": "c426276268ff",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 16": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6b286135ed76"
+      "h": "6b286135ed76",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 17": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "977226e7fe26"
+      "h": "977226e7fe26",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 18": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "1fcfc110a4ae"
+      "h": "1fcfc110a4ae",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 19": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "484ee9f98912"
+      "h": "484ee9f98912",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 20": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "5678ec9c2d67"
+      "h": "5678ec9c2d67",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 21": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "5fc647c1d8cb"
+      "h": "5fc647c1d8cb",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · 22": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f6c7bd683636"
+      "h": "f6c7bd683636",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 01": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "175bdcc2e73a"
+      "h": "175bdcc2e73a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 02": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "dbd19d6c8f05"
+      "h": "dbd19d6c8f05",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 03": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "b4a4fa9ae422"
+      "h": "b4a4fa9ae422",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 04": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "fe3aae769f4b"
+      "h": "fe3aae769f4b",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 05": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "8f758a51a07f"
+      "h": "8f758a51a07f",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 06": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c629f84f9712"
+      "h": "c629f84f9712",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 07": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "81d6d8e40a85"
+      "h": "81d6d8e40a85",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 08": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "62cdd08ed1d4"
+      "h": "62cdd08ed1d4",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 09": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d5608f7d0f5c"
+      "h": "d5608f7d0f5c",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 10": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d641122bb122"
+      "h": "d641122bb122",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 11": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "af81bb6e54c6"
+      "h": "af81bb6e54c6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 12": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "92910588f4d5"
+      "h": "92910588f4d5",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 13": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "2fba62664fde"
+      "h": "2fba62664fde",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 14": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6b286135ed76"
+      "h": "6b286135ed76",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 15": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a639134bec21"
+      "h": "a639134bec21",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 16": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f4f73996d2da"
+      "h": "f4f73996d2da",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · 17": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "33db3f07982e"
+      "h": "33db3f07982e",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 01": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "175bdcc2e73a"
+      "h": "175bdcc2e73a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 02": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "dbd19d6c8f05"
+      "h": "dbd19d6c8f05",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 03": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "b4a4fa9ae422"
+      "h": "b4a4fa9ae422",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 04": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "5869247ca78e"
+      "h": "5869247ca78e",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 05": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "af3c1f6ea5d8"
+      "h": "af3c1f6ea5d8",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 06": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c629f84f9712"
+      "h": "c629f84f9712",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 07": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "fc7be4d18780"
+      "h": "fc7be4d18780",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 08": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "605d4650f44c"
+      "h": "605d4650f44c",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 09": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "e08b4c93929c"
+      "h": "e08b4c93929c",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 10": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d641122bb122"
+      "h": "d641122bb122",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 11": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "af81bb6e54c6"
+      "h": "af81bb6e54c6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 12": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a74d5ff7dfac"
+      "h": "a74d5ff7dfac",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 13": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d0e5214a8c98"
+      "h": "d0e5214a8c98",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 14": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6b286135ed76"
+      "h": "6b286135ed76",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 15": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "07505ef7accc"
+      "h": "07505ef7accc",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · 16": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f4aa29902d31"
+      "h": "f4aa29902d31",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Принятие · ветка чата · 01": {
       "v": "—",
@@ -7422,117 +7522,117 @@
       "h": "bee96690b7f1"
     },
     "Принятие · ветка карточки · 01": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "175bdcc2e73a"
     },
     "Принятие · ветка карточки · 02": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "07ffbada0ee7"
     },
     "Принятие · ветка карточки · 03": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c0ff47802d37"
     },
     "Принятие · ветка карточки · 04": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "a4248cf109be"
     },
     "Принятие · ветка карточки · 05": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d1d0ce22f350"
     },
     "Принятие · ветка карточки · 06": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c629f84f9712"
     },
     "Принятие · ветка карточки · 07": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "f06d6e12de2e"
     },
     "Принятие · ветка карточки · 08": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "6b286135ed76"
     },
     "Принятие · ветка карточки · 09": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "eed32bc5d260"
     },
     "Принятие · ветка карточки · 10": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "e0e3a01a050f"
     },
     "Принятие · ветка карточки · 11": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "8971f24cba71"
     },
     "Принятие · ветка карточки · 12": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c8f60277f33e"
     },
     "Принятие · ветка карточки · 13": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "62850f233487"
     },
     "Принятие · ветка карточки · 14": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "36f888d42272"
     },
     "Принятие · ветка карточки · 15": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "048721b1e599"
     },
     "Принятие · ветка карточки · 16": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "9d670fa9090e"
     },
     "Принятие · ветка карточки · 17": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "4bf84e56a405"
     },
     "Принятие · ветка карточки · 18": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "cc432e861198"
     },
     "Принятие · ветка карточки · 19": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d9a337aab838"
     },
     "Принятие · ветка карточки · 20": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "af81bb6e54c6"
     },
     "Принятие · ветка карточки · 21": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "2bbe38663985"
     },
     "Принятие · ветка карточки · 22": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "56648f997820"
     },
     "Принятие · ветка карточки · 23": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d4ca0b554a2e"
     },
@@ -8007,83 +8107,83 @@
       "h": "641b53d8a094"
     },
     "Ввод · метры · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen.is-exercise-open .sb-head — шапка открытого упражнения; 750:3466+; strength-builder-distance-entry-v4-canvas-contract.test.js.",
       "h": "175bdcc2e73a"
     },
     "Ввод · метры · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; builder_ui + 750; contract test Гребной тренажёр.",
       "h": "07ffbada0ee7"
     },
     "Ввод · метры · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "openEx name в .sb-head-title b — «Гребной тренажёр»; builder_ui + contract test.",
       "h": "bf6d70229720"
     },
     "Ввод · метры · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "unitEntryLabel(distance) → «единица — метры» в .sb-head-sub; builder_ui:78.",
       "h": "3f2ab50e067c"
     },
     "Ввод · метры · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — область прокрутки конструктора; 750-strength-builder.css.",
       "h": "c629f84f9712"
     },
     "Ввод · метры · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-distance-entry .sb-ex.is-open .sb-aps margin-top 12px; 750:4752-4754.",
       "h": "81d6d8e40a85"
     },
     "Ввод · метры · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-distance-entry .sb-ap grid-template-columns 44px 1fr 44px; 750:4731-4734.",
       "h": "d01a2552d511"
     },
     "Ввод · метры · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-distance-entry.is-exercise-open .sb-aps-head > span:nth-child(3)::after content Метры text-align center; 750.",
       "h": "6da6068d4fe8"
     },
     "Ввод · метры · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-distance-entry.is-exercise-open .sb-aps-head > span:last-child justify-self center color var(--gr); 750.",
       "h": "13104ec38a12"
     },
     "Ввод · метры · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-distance-entry.is-exercise-open .sb-ap.is-done .sb-ap-num bg var(--gr-bg) color var(--gr); 750.",
       "h": "1a330ca9621c"
     },
     "Ввод · метры · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-distance-entry .sb-ap border-bottom через row; grid 44px 1fr 44px без средней колонки веса; 750.",
       "h": "cde30e901914"
     },
     "Ввод · метры · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-time-summary margin-top 10px у .sb-distance-entry-block; 750 .sb-time-summary.",
       "h": "d641122bb122"
     },
     "Ввод · метры · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-time-summary-row flex space-between; 750:4788-4796.",
       "h": "af81bb6e54c6"
     },
     "Ввод · метры · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-time-summary-row b/span color var(--tx) — строка «Итого»; contract test.",
       "h": "60e0e6057f89"
     },
     "Ввод · метры · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-time-summary-val — 700 12.5px tabular-nums var(--tx); «1 400 м» formatDistanceM builder_ui.",
       "h": "446ba06ee9b5"
     },
     "Ввод · метры · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-time-summary-row:last-child border-bottom 0; 750:4799-4801.",
       "h": "6b286135ed76"
     },
     "Ввод · свой вес с довесом · 01": {
@@ -8487,11 +8587,9 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · текст": {
-      "v": "≠",
-      "f": "Композит кадра Г3: план+move sheet+следы в обе стороны. Продукт покрыт activity-plan-card-frame.test.js (перенос/пропуск) и PlanCard moved traces (2398-2408); ≠ из-за разнесённых CTA и другого заголовка экрана.",
-      "h": "8c2896c058d1",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "?",
+      "f": "PlanCard/MoveSheet, не finish_ui",
+      "h": "8c2896c058d1"
     },
     "Правка веса в сессии · текст": {
       "v": "?",
@@ -8661,7 +8759,7 @@
       "h": "2381b2522a74"
     },
     "Правка · план ещё не начат · текст": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c7d0a51941e6"
     },
@@ -8671,12 +8769,12 @@
       "h": "6ccf5d649e0e"
     },
     "Правка · граница защиты · текст": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "ccf9e1910a6b"
     },
     "Правка · одно живое предложение · текст": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "6e7e71ade183"
     },
@@ -8693,19 +8791,25 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · правка принята · текст": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "011939dbcabb"
+      "h": "011939dbcabb",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · отказ · текст": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "dd7126fe4dd3"
+      "h": "dd7126fe4dd3",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Исход · без ответа · текст": {
-      "v": "?",
+      "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "5268a64f6338"
+      "h": "5268a64f6338",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Принятие · ветка чата · текст": {
       "v": "—",
@@ -8714,7 +8818,7 @@
       "naKind": "foreign-zone"
     },
     "Принятие · ветка карточки · текст": {
-      "v": "?",
+      "v": "=",
       "f": "Поведение accept/decline на дне = (:4321–4356). 23 frame-строки «Принятие · ветка карточки · NN» — геометрия ProposalCard (proposal_ui + 750); runtime wiring day_trainings, визуал — владелец proposal_ui/750.",
       "h": "f343aafd3a91"
     },
@@ -8744,8 +8848,8 @@
       "h": "b1e77f5fa890"
     },
     "Ввод · метры · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Гребной тренажёр › единица — метры › Итого 1 400 м › В тоннаж не идёт — strength-builder-distance-entry-v4-canvas-contract.test.js.",
       "h": "d763df8fdefa"
     },
     "Ввод · свой вес с довесом · текст": {
@@ -9611,33 +9715,33 @@
       "h": "eebc148f09c5"
     },
     "Правка · план ещё не начат · 20": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
       "h": "612ff9cdf46e"
     },
     "Правка · план ещё не начат · 21": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
       "h": "4bf84e56a405"
     },
     "Правка · план ещё не начат · 22": {
-      "v": "?",
+      "v": "=",
       "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
       "h": "8de0896b6393"
     },
     "Ввод · метры · 17": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": ".sb-time-summary-copy span — 500 11px rgba(var(--ink),.56); «не идёт · метры не умножаются…» builder_ui.",
       "h": "8b12d6e51741"
     },
     "Ввод · метры · 18": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": ".sb-time-summary-dash — 700 11.5px; 750 .sb-time-summary-dash.",
       "h": "90cbb65c7972"
     },
     "Ввод · метры · 19": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": ".sb-time-entry-footnote — сноска про метры/время; builder_ui sb-distance-entry-block.",
       "h": "a7da9f86d82d"
     },
     "Конструктор · тренировка идёт · снято · текст": {
