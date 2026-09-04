@@ -5,6 +5,11 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
+  // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, ведро 2)
+  const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const V4_ACT = 'var(--v4-act, #c67139)';
+  const V4_ACCENT_BG = 'var(--v4-accent-bg, #f0dcc6)';
+
   // Профиль и цели живут во вкладке 'user' (вкладки 'profile' не существует).
   // Переключатель регистрирует heys_app_tab_state_v1.js; HEYS.openProfileModal
   // не существует ни в одном модуле, поэтому прежний вызов был мёртвым.
@@ -2352,7 +2357,7 @@
         const point = sparklinePopupMeta.point || sparklinePopup.point;
         const ratio = sparklinePopupMeta.ratio || (point.kcal / point.target);
         const pct = sparklinePopupMeta.pct || Math.round(ratio * 100);
-        const color = sparklinePopupMeta.color || '#eab308';
+        const color = sparklinePopupMeta.color || V4_WARN_SOFT;
 
         // Позиционирование с защитой от выхода за экран
         const popupW = 260;
@@ -2367,7 +2372,7 @@
         const { left, top, arrowPos, showAbove } = pos;
 
         const diff = sparklinePopupMeta.diff;
-        const gradient = sparklinePopupMeta.gradient || 'linear-gradient(90deg, #eab308 0%, #22c55e 100%)';
+        const gradient = sparklinePopupMeta.gradient || ('linear-gradient(90deg, ' + V4_WARN_SOFT + ' 0%, #22c55e 100%)');
         const kcalStyles = sparklinePopupMeta.styles;
 
         // Swipe — используем хук
@@ -3782,7 +3787,7 @@
         const config = metricPopupMeta.config || { icon: '•', name: 'Метрика', unit: '', color: '#64748b', goal: 0 };
         const ratio = metricPopupMeta.ratio ?? (metricPopup.data.ratio || 0);
         const pct = metricPopupMeta.pct ?? Math.round(ratio * 100);
-        const gradient = metricPopupMeta.gradient || 'linear-gradient(90deg, #eab308 0%, #22c55e 100%)';
+        const gradient = metricPopupMeta.gradient || ('linear-gradient(90deg, ' + V4_WARN_SOFT + ' 0%, #22c55e 100%)');
         const metricPopupStyles = metricPopupMeta.styles;
         const metricSparkStyles = metricPopupMeta.sparkStyles;
 
@@ -4597,8 +4602,8 @@
                       id: 'macro-ring-gradient-fat',
                       x1: '0%', y1: '0%', x2: '100%', y2: '100%'
                     },
-                      React.createElement('stop', { offset: '0%', stopColor: '#fde68a' }),
-                      React.createElement('stop', { offset: '100%', stopColor: '#f59e0b' })
+                      React.createElement('stop', { offset: '0%', stopColor: V4_ACCENT_BG }),
+                      React.createElement('stop', { offset: '100%', stopColor: V4_ACT })
                     )
                   ),
                   React.createElement('circle', { className: 'macro-ring-bg', cx: 18, cy: 18, r: 15.5, pathLength: 100 }),
