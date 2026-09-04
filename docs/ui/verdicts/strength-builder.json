@@ -328,10 +328,9 @@
       "h": "661a3da2bfdd"
     },
     "случай 7 · запись куратора поверх вашей": {
-      "v": "—",
-      "f": "Curator stamp после finish — builder_ui/superset_ui, не proposal plan-edit flow. Исчерпано для proposal_ui.",
-      "h": "0905ca97150f",
-      "naKind": "foreign-zone"
+      "v": "=",
+      "f": "Curator edit after finish shows author stamp; no version picker — proposal/curator tests.",
+      "h": "0905ca97150f"
     },
     "случай 8 · в связке разное число подходов": {
       "v": "=",
@@ -768,8 +767,8 @@
       "h": "f75a710c47a1"
     },
     "вид · куратор в зале": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "ProposalStrip в идущей тренировке (proposal_ui :431–443); не модалка. Смоук strength-proposal-ui.test.js.",
       "h": "2ee6e3d76c83"
     },
     "вид · шторка": {
@@ -794,7 +793,7 @@
     },
     "вид · кадры правки куратора": {
       "v": "?",
-      "f": "ProposalCard/Review/Strip в proposal_ui; стили .sb-proposal-* в 750-strength-builder.css. Контрактный тест strength-proposal-v4-canvas-contract.test.js покрывает знаки/копию, не все 98+ frame-строк Л1–Л5. Перед = — построчная сверка кадров Л1–Л5 владельцем 750.",
+      "f": "ProposalCard/Review/Strip в proposal_ui; стили .sb-proposal-* в 750. Тест strength-proposal-v4-canvas-contract.test.js покрывает знаки/копию, не все 98+ frame Л1–Л5. Перед = — построчная сверка кадров владельцем 750.",
       "h": "f51a8a72eadd"
     },
     "вид · исходы предложения": {
@@ -864,7 +863,7 @@
     },
     "где живёт предложение куратора — решено": {
       "v": "=",
-      "f": "ProposalCard на дне до старта (proposalBlocksDay); полоска ProposalStrip в конструкторе после первого подхода. day_trainings :4316–4357; builder_ui :1277. Вердикт уже =; ветка чата снята протоколом.",
+      "f": "proposalBlocksDay + Parts.ProposalCard до старта (:4316–4357); accept/decline через TK.acceptPlanProposal/declinePlanProposal; ветка чата снята (:3831 комментарий). proposal_ui handoff покрывает карточку/Review.",
       "h": "390e8bdd1866"
     },
     "сторона куратора видит исход": {
@@ -2060,35 +2059,35 @@
     },
     "Своё упражнение · 08": {
       "v": "≠",
-      "f": "Кадр .cd badge-row; продукт — вертикальные .sb-radio (catalog_ui:288-301). Роли v4 через bridge; носитель ≠ pill — осознанное отклонение radio-list.",
+      "f": "Кадр .cd badge-row; продукт — вертикальные .sb-radio (heys_strength_catalog_ui_v1.js:288–301). Роли v4 через CATALOG_V4_BRIDGE; носитель ≠ pill.",
       "h": "d9a337aab838",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 09": {
       "v": "≠",
-      "f": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px (750:1782-1794). Форма radio-row ≠ badge-row.",
+      "f": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px — 750-strength-builder.css:1782–1794.",
       "h": "931b461e2c48",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 10": {
       "v": "≠",
-      "f": "Кадр gap 6px wrap badges; продукт column .sb-radio без wrap — layout catalog_ui, не 750.",
+      "f": "Кадр gap 6px wrap badges; продукт column .sb-radio без wrap — layout catalog_ui.",
       "h": "1a415932debe",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 11": {
       "v": "≠",
-      "f": "Выбранная .sb-radio.is-on --sb-accbg/--v4-act (750:1796-1799); кадр pill --acs/--on-acs — роли ок, форма ≠ badge.",
+      "f": "Выбранная .sb-radio.is-on --sb-accbg/--v4-act (750:1796–1799); кадр pill --acs/--on-acs — роли ok, форма ≠ badge.",
       "h": "3e8e3e3dd598",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 12": {
       "v": "≠",
-      "f": "Неактивная .sb-radio --sb-mut ≈ ink 62%; кадр badge rgba ink .62 — роль ok, контейнер ≠ pill.",
+      "f": "Неактивная .sb-radio --sb-mut ≈ ink 62%; кадр badge rgba ink .62.",
       "h": "f98a6986f686",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
@@ -2102,7 +2101,7 @@
     },
     "Своё упражнение · 14": {
       "v": "≠",
-      "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676-1680) — chip vs row.",
+      "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676–1680).",
       "h": "ecaed16b6441",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
@@ -2116,212 +2115,278 @@
     },
     "Своё упражнение · 16": {
       "v": "≠",
-      "f": "Кадр .cd divider none; продукт .sb-chips wrap без divider — layout chips.",
+      "f": "Кадр .cd divider none; продукт .sb-chips wrap без divider.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 17": {
       "v": "≠",
-      "f": "Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56% — близко по роли, layout chips.",
+      "f": "Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56%.",
       "h": "d5f325075b3e",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 18": {
       "v": "=",
-      "f": ".sb-block обёртка шага 3 — catalog_ui:328-331 (weight_reps) и :336-353 (bodyweight); 750 .sb-block :1879-1884; карточка .grp ≈ .sb-block.",
+      "f": ".sb-block обёртка шага 3 — heys_strength_catalog_ui_v1.js:328–331, 336–353; 750 .sb-block :1879–1884.",
       "h": "54643961e08d"
     },
     "Своё упражнение · 19": {
       "v": "=",
-      "f": "При !needsFactor copy «Для «вес × повторы» третий вопрос не задаётся.» в .sb-block .sb-step-hint — catalog_ui:328-330; роли через CATALOG_V4_BRIDGE.",
+      "f": "При !needsFactor copy «Для «вес × повторы» третий вопрос не задаётся.» — catalog_ui:328–330.",
       "h": "98393bbbef21"
     },
     "Своё упражнение · 20": {
       "v": "=",
-      "f": "Bodyweight сноска в .sb-block .sb-step-hint — catalog_ui:337-338; текст канваса «на что похоже — отжимания…»; margin через padding .sb-block.",
+      "f": "Bodyweight сноска в .sb-block .sb-step-hint — catalog_ui:337–338; текст канваса.",
       "h": "d18c851efcdf"
     },
     "Своё упражнение · 21": {
       "v": "=",
-      "f": ".sb-panel-column .sb-finish margin-top 12px «Создать упражнение» — 750 :has(.sb-ex-name) rule; catalog_ui:346-351.",
+      "f": ".sb-panel-column .sb-finish margin-top 12px «Создать упражнение» — catalog_ui:357–362; 750 :has(.sb-ex-name).",
       "h": "61c669a93a4f"
     },
     "Своё упражнение · 22": {
       "v": "=",
-      "f": ".sb-panel-column .sb-btn margin-top 9px «Создать · без тоннажа» — 750 :has(.sb-ex-name); catalog_ui:353-358 (copy «без объёма» ≈ контракт).",
+      "f": ".sb-panel-column .sb-btn margin-top 9px «Создать · без тоннажа» — catalog_ui:364–369.",
       "h": "7638993b90bb"
     },
     "Своё упражнение · 23": {
       "v": "=",
-      "f": "Нижняя сноска .sb-catalog-note под кнопками — catalog_ui:370-371; copy совпадает с кадром .sm.",
+      "f": "Нижняя сноска .sb-catalog-note — catalog_ui:370–371.",
       "h": "88e598cbe64b"
     },
     "Программа · цикл · 01": {
-      "v": "=",
-      "f": ".sb-cycle-top + back .sb-icon-btn — шапка экрана; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "175bdcc2e73a"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "175bdcc2e73a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 02": {
-      "v": "=",
-      "f": ".sb-cycle-top-main flex column gap 3px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "07ffbada0ee7"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "07ffbada0ee7",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 03": {
-      "v": "=",
-      "f": ".sb-cycle-title — program.title · weeks; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "ff887629869e"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "ff887629869e",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 04": {
-      "v": "=",
-      "f": ".sb-cycle-key — assignedBy · startDate; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "6564b1096382"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "6564b1096382",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 05": {
-      "v": "=",
-      "f": ".sb-cycle-badge — неделя N; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "408ad5afab65"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "408ad5afab65",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 06": {
-      "v": "=",
-      "f": ".sb-cycle-scroll — прокрутка; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "c629f84f9712"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "c629f84f9712",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 07": {
-      "v": "=",
-      "f": ".sb-cycle-metrics gap 8px margin-top 12px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "2bff45192fc0"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "2bff45192fc0",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 08": {
-      "v": "=",
-      "f": ".sb-cycle-metric c1 radius 14 pad 10/11; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "c9d2da3b8d57"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "c9d2da3b8d57",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 09": {
-      "v": "=",
-      "f": ".sb-cycle-metric-label uppercase 9.5px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "64069e4a2476"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "64069e4a2476",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 10": {
-      "v": "=",
-      "f": ".sb-cycle-metric-value 17/800 done/total; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "36d225f4a2a5"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "36d225f4a2a5",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 11": {
-      "v": "=",
-      "f": ".sb-cycle-metric.is-accent tint inset acs; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "fa0912aa4180"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "fa0912aa4180",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 12": {
-      "v": "=",
-      "f": ".sb-cycle-metric-value.is-accent — recordCount; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "8d57a164224b"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "8d57a164224b",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 13": {
-      "v": "=",
-      "f": ".sb-cycle-tier «Фазы недель»; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "e7692761d16d"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "e7692761d16d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 14": {
-      "v": "=",
-      "f": ".sb-cycle-phase.is-active inset acs radius 16; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "f0c294cf743f"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "f0c294cf743f",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 15": {
-      "v": "=",
-      "f": ".sb-cycle-phase-head gap 9px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "4f95fa757d2e"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "4f95fa757d2e",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 16": {
-      "v": "=",
-      "f": ".sb-cycle-phase-num.is-active 26×26 acs; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "c8323a8b26cb"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "c8323a8b26cb",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 17": {
-      "v": "=",
-      "f": ".sb-cycle-phase-copy column gap 2px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "7590f4699d43"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "7590f4699d43",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 18": {
-      "v": "=",
-      "f": ".sb-cycle-phase-name 12.5/700; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "9e043e358931"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "9e043e358931",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 19": {
-      "v": "=",
-      "f": ".sb-cycle-phase-detail 11/500 mut; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "dd5472b124cf"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "dd5472b124cf",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 20": {
-      "v": "=",
-      "f": ".sb-cycle-phase-pct.is-done gr; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "84794a68154a"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "84794a68154a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 21": {
-      "v": "=",
-      "f": ".sb-cycle-phase-weeks gap 5 margin-top 9px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "964292fe9ce4"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "964292fe9ce4",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 22": {
-      "v": "=",
-      "f": ".sb-cycle-week-cell.is-done gr-bg ✓; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "b86b0476705d"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "b86b0476705d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 23": {
-      "v": "=",
-      "f": ".sb-cycle-week-cell.is-plan bg inset ·; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "02410b689bf7"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "02410b689bf7",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 24": {
-      "v": "=",
-      "f": ".sb-cycle-phase radius 16 mb 8; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "5d044c8296c8"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "5d044c8296c8",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 25": {
-      "v": "=",
-      "f": ".sb-cycle-phase-num plan 26×26; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "db178f5ba8c1"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "db178f5ba8c1",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 26": {
-      "v": "=",
-      "f": ".sb-cycle-phase-pct «план»; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "19c917d09e53"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "19c917d09e53",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 27": {
-      "v": "=",
-      "f": ".sb-cycle-week-list cd; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "d9a337aab838"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "d9a337aab838",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 28": {
-      "v": "=",
-      "f": ".sb-cycle-week-row; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "af81bb6e54c6"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "af81bb6e54c6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 29": {
-      "v": "=",
-      "f": ".sb-cycle-week-label tx; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "d735669c1ee3"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "d735669c1ee3",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 30": {
-      "v": "=",
-      "f": ".sb-cycle-week-status.is-done gr; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "b57d6c61a777"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "b57d6c61a777",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 31": {
-      "v": "=",
-      "f": ".sb-cycle-week-row.is-last border none; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "6b286135ed76"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "6b286135ed76",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 32": {
-      "v": "=",
-      "f": ".sb-cycle-week-status.is-today ac; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "5f0b3e3988e9"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "5f0b3e3988e9",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · цикл · 33": {
-      "v": "=",
-      "f": ".sb-cycle-footnote sm prose; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "3a10bafed6ea"
+      "v": "≠",
+      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
+      "h": "3a10bafed6ea",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа · назначено против сделано · 01": {
       "v": "?",
@@ -6386,7 +6451,7 @@
     },
     "Правка · клиент уже начал · 02": {
       "v": "=",
-      "f": ".sb-builder-screen .sb-icon-btn — 36×36, radius 999px, bg var(--c1), font 600 13px, color rgba(var(--ink),.56); 750:3278-3291.",
+      "f": ".sb-builder-screen .sb-icon-btn — 36×36, radius 999px, bg var(--c1), font 600 13px; 750:3278-3291.",
       "h": "dbd19d6c8f05"
     },
     "Правка · клиент уже начал · 03": {
@@ -6475,23 +6540,23 @@
       "h": "f44330ed5850"
     },
     "Правка · клиент уже начал · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-started-detail — flex gap 8px, margin 9px 0 0 33px, padding 8px 10px, radius 11px, bg var(--c2); 750-strength-builder.css.",
       "h": "f8273b6af684"
     },
     "Правка · клиент уже начал · 21": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-started-detail-label — flex 1, 600 11px/1.3 var(--tx); ProposalStartedScreen heys_strength_builder_ui_v1.js.",
       "h": "9cabdfa6ccae"
     },
     "Правка · клиент уже начал · 22": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-started-detail-old — 700 11px tabular-nums rgba(var(--ink),.56) line-through; 750-strength-builder.css.",
       "h": "1fcfc110a4ae"
     },
     "Правка · клиент уже начал · 23": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-started-detail-new — 700 11.5px tabular-nums var(--ac); 750-strength-builder.css.",
       "h": "484ee9f98912"
     },
     "Правка · клиент уже начал · 24": {
@@ -6505,13 +6570,13 @@
       "h": "7a669e67c254"
     },
     "Правка · клиент уже начал · 26": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-started-card.is-plain — padding 11px 12px, radius 14px, bg transparent; 750-strength-builder.css.",
       "h": "a8ed9b6a6a4e"
     },
     "Правка · клиент уже начал · 27": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-started-card.is-plain .sb-proposal-started-num — inset rgba(var(--ink),.1), color rgba(var(--ink),.62); 750.",
       "h": "d3feda590f16"
     },
     "Правка · клиент уже начал · 28": {
@@ -6520,8 +6585,8 @@
       "h": "d2a78c3f9e44"
     },
     "Правка · клиент уже начал · 29": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-started-tag.is-empty — 700 9.5px/.1em uppercase rgba(var(--ink),.56); 750-strength-builder.css.",
       "h": "ca4df59108f3"
     },
     "Правка · клиент уже начал · 30": {
@@ -6711,97 +6776,97 @@
     },
     "Правка · пропущен сегодня · 01": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "175bdcc2e73a"
     },
     "Правка · пропущен сегодня · 02": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "07ffbada0ee7"
     },
     "Правка · пропущен сегодня · 03": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "c7e8324693fd"
     },
     "Правка · пропущен сегодня · 04": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "b6f9c8ffba68"
     },
     "Правка · пропущен сегодня · 05": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "c629f84f9712"
     },
     "Правка · пропущен сегодня · 06": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "53b3a815d90d"
     },
     "Правка · пропущен сегодня · 07": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "d3a641a6b252"
     },
     "Правка · пропущен сегодня · 08": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "c070cfc1c99f"
     },
     "Правка · пропущен сегодня · 09": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "3eb1bb786d33"
     },
     "Правка · пропущен сегодня · 10": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "d641122bb122"
     },
     "Правка · пропущен сегодня · 11": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "af81bb6e54c6"
     },
     "Правка · пропущен сегодня · 12": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "52817c64fcd9"
     },
     "Правка · пропущен сегодня · 13": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "862d232ff710"
     },
     "Правка · пропущен сегодня · 14": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "65712ab5513a"
     },
     "Правка · пропущен сегодня · 15": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "6b286135ed76"
     },
     "Правка · пропущен сегодня · 16": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "77e4b4025f38"
     },
     "Правка · пропущен сегодня · 17": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "09819a9fc6cb"
     },
     "Правка · пропущен сегодня · 18": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "a0c9b0235255"
     },
     "Правка · пропущен сегодня · 19": {
       "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "a633acd39bd6"
     },
     "Правка · пропущен раньше · 01": {
@@ -7867,18 +7932,18 @@
       "h": "d01a2552d511"
     },
     "Ввод · время под нагрузкой · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-time-entry.is-exercise-open .sb-aps-head > span:nth-child(3) text-align center; 750-strength-builder.css.",
       "h": "dc8a06a71931"
     },
     "Ввод · время под нагрузкой · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-time-entry.is-exercise-open .sb-aps-head > span:last-child color var(--gr); 750-strength-builder.css.",
       "h": "13104ec38a12"
     },
     "Ввод · время под нагрузкой · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-time-entry.is-exercise-open .sb-ap.is-done .sb-ap-num bg var(--gr-bg) color var(--gr); 750.",
       "h": "1a330ca9621c"
     },
     "Ввод · время под нагрузкой · 11": {
@@ -7887,18 +7952,18 @@
       "h": "cde30e901914"
     },
     "Ввод · время под нагрузкой · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-time-entry.is-exercise-open .sb-ap.is-current .sb-ap-num bg var(--acs) color var(--on-acs); 750.",
       "h": "61464eb844e9"
     },
     "Ввод · время под нагрузкой · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-time-entry.is-exercise-open .sb-ap.is-current .sb-ap-field box-shadow inset 1.5px var(--acs); 750.",
       "h": "780e640d6e1e"
     },
     "Ввод · время под нагрузкой · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-exercise-open .sb-ap-check.is-blocked — rgba ink .06/.24 inset 1px; 750-strength-builder.css:3653.",
       "h": "f5eb6b4713c0"
     },
     "Ввод · время под нагрузкой · 15": {
@@ -7937,8 +8002,8 @@
       "h": "90cbb65c7972"
     },
     "Ввод · время под нагрузкой · 22": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-time-entry-footnote — copy про колонку «Вес»; heys_strength_builder_ui_v1.js + 750-strength-builder.css.",
       "h": "641b53d8a094"
     },
     "Ввод · метры · 01": {
@@ -8354,18 +8419,18 @@
       "h": "b3a1a99d07a8"
     },
     "Правка · клиент уже начал · рисунок 01": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "proposalLockIcon svg 11×11 viewBox 0 0 24 24 — heys_strength_builder_ui_v1.js; strength-builder-proposal-started-v4-canvas-contract.test.js.",
       "h": "56fd9b649297"
     },
     "Правка · клиент уже начал · рисунок 02": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "proposalLockIcon rect 16×10 rx 2.5 — heys_strength_builder_ui_v1.js proposalLockIcon().",
       "h": "3f59cedc736e"
     },
     "Правка · клиент уже начал · рисунок 03": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "proposalLockIcon path M8 11V7a4 4 0 0 1 8 0v4 — heys_strength_builder_ui_v1.js proposalLockIcon().",
       "h": "26b2aa96ea13"
     },
     "как читать текст": {
@@ -8617,7 +8682,7 @@
     },
     "Правка · пропущен сегодня · текст": {
       "v": "?",
-      "f": "Proposal flow при skipped+правка куратора — proposal_ui + builder strip; day_trainings только монтирует ProposalCard и onFinishProposal expire (:4136–4141).",
+      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
       "h": "600d05c9f6b0"
     },
     "Правка · пропущен раньше · текст": {
