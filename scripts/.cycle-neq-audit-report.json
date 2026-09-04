@@ -1,0 +1,302 @@
+{
+  "zone": "cycle",
+  "generated": "2026-09-04",
+  "driftGate": "no drift — ui-v4-check-contract-drift cycle exit 0, all 24 h match canvas",
+  "package35": "contract lines unchanged since recorded 2026-09-04; no rehash needed",
+  "summary": {
+    "total": 24,
+    "confirmed": 24,
+    "stale": 0,
+    "weak": 0
+  },
+  "rows": [
+    {
+      "contractLine": "Цикл · шаг 5, строка в стопке · 07",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "500-pwa:1770-1775 radius 16 padding 13/14; фон sand-surface ≠ --c1 кадра",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · шаг 5, строка в стопке · 10",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_steps_v1.js:7163 — карточка добавок без свёрнутого «2 пункта»",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · шаг 5, строка в стопке · 11",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "500-pwa:1787-1791 cycle row sand-surface ≠ --c1",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · шаг 5, строка в стопке · 14",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "500-pwa:1770-1776 min-height 44 padding 13/14; sand-surface ≠ --c1",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · шаг 5, выбор дня · 01",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "500-pwa:1813-1818 expanded card sand-surface ≠ --c1",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · профиль, выключение · 02",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_user_tab_impl_v1.js:1386-1387 — продуктовый текст диалога",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · карточка дня, заполнено · 08",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_cycle_ui_v1.js:622-653 — нет ссылки «Сбросить неделю»",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · график калорий · 01",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "733-ui-v4-reports.css:291-295 radius 20 padding 16 vs кадр 18/15-16",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · график веса · 01",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "733-ui-v4-reports.css:291-295 — тот же класс dynamics-card",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · график веса · 02",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_day_stats_v1.js:4132 — «Вес · 30 дней» ≠ «Вес и тренд»",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · инсайт баланса · 01",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "500-pwa:2226-2230 ok-bg ≠ --gr-bg кадра",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · закончились раньше · 01",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "500-pwa:1770-1791 + heys_steps_v1.js:6548 cycle-ended row",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · прошлый день, отметка задним числом · 04",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_cycle_ui_v1.js:607,616 — без надстроки «Питание · блок…»",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · прошлый день, отметка задним числом · 10",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_cycle_ui_v1.js:254-259 formatWeekRangeForMark — короткая фраза",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · день выбран, подтверждение даты · 01",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_cycle_ui_v1.js:607,616 — заголовок без префикса Питание",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · день выбран, подтверждение даты · 07",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_cycle_ui_v1.js:500-501 date-confirm-sub — «Период встанет на…»",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · тултип задержки · 02",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_day_stats_v1.js:4132 — тот же заголовок карточки",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · профиль, выключение · текст",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_user_tab_impl_v1.js:1385-1387 — строка текста кадра",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · карточка дня, заполнено · текст",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_cycle_ui_v1.js:628-629 «День N»; «Сбросить неделю» не рендерится",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · график веса · текст",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "heys_day_stats_v1.js:4132 — заголовок; подпись «Пустые точки» — пояснение канваса",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · копия шага 5, канон · 08",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "cycle.v4.dc.html data-flow/контракт ·08: 14px 18px 0; 500-pwa:743-746 mc-step-content: 16px 18px 0; reasonCode canvas-conflict",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · копия шага 5, с карточкой · 08",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "cycle.v4.dc.html data-flow/контракт ·08: 14px 18px 0; 500-pwa:743-746 mc-step-content: 16px 18px 0; reasonCode canvas-conflict",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · копия шага 5, период идёт · 08",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "cycle.v4.dc.html data-flow/контракт ·08: 14px 18px 0; 500-pwa:743-746 mc-step-content: 16px 18px 0; reasonCode canvas-conflict",
+      "recommendation": "keep ≠"
+    },
+    {
+      "contractLine": "Цикл · копия шага 5, строка · 08",
+      "verdict": "≠",
+      "status": "CONFIRMED",
+      "checks": {
+        "factInF": true,
+        "aliveInCode": true,
+        "frameUnchanged": true
+      },
+      "notes": "cycle.v4.dc.html data-flow/контракт ·08: 14px 18px 0; 500-pwa:743-746 mc-step-content: 16px 18px 0; reasonCode canvas-conflict",
+      "recommendation": "keep ≠"
+    }
+  ]
+}
