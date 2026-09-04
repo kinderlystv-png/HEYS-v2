@@ -1882,8 +1882,16 @@ function createTasksTools({
       const headingError = tasks.transcriptHeadingError(args.path, block);
       if (headingError) throw new ToolError('invalid_transcript_heading', headingError);
       const file = await readFile(args.path);
-      const put = (text) => tasks.appendBlock(text, block);
-      const saved = await writeFile(file, put(file.text), { rebase: put, delta: { mode: 'append', block } });
+      // Стенограмма обязана лежать по времени, кем бы ни была записана: она
+      // пишется несколькими сессиями сразу, и запись, начатая раньше, приходит
+      // позже. tasks_checkpoint это делал (insertBlockByTime), а tasks_append —
+      // нет, хотя заголовок стенограммы проверяет прямо выше и точно знает,
+      // куда пишет. Итог на 04.09: 29 файлов из 35 лежали вразнобой, до 23
+      // разрывов в дне. Порядок — свойство файла, а не следствие того, каким
+      // путём блок пришёл.
+      const chrono = tasks.isTranscriptCorpusPath(args.path);
+      const put = (text) => (chrono ? tasks.insertBlockByTime(text, block) : tasks.appendBlock(text, block));
+      const saved = await writeFile(file, put(file.text), { rebase: put, delta: { mode: chrono ? 'chrono' : 'append', block } });
       return {
         text: `Дописал в ${saved.path} (${block.split('\n').length} строк).`,
         structured: { path: saved.path, rev: saved.rev, lines: block.split('\n').length },

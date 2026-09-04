@@ -4584,7 +4584,13 @@ function timeToMinutes(value) {
  * ночной слот численно оказывается «раньше» вечернего, и пересечение с ним
  * не находится вовсе.
  */
-const DAY_TAIL_BEFORE = 5 * 60;
+// Граница дня одна на оба решения. Раньше их было две: запись меняла день в
+// 03:00 (DAY_START_HOUR), а сортировка считала ночной хвост до 05:00 — блок,
+// написанный между тремя и пятью, ложился в новый день, но сортировался как
+// хвост прошлого и уезжал в конец файла вместо начала. Поймано вживую
+// 04.09 в 03:20. Значение взято по правилу владельца: «до 3 ночи если пишу,
+// это ещё прошлый день».
+const DAY_TAIL_BEFORE = DAY_START_HOUR * 60;
 
 function slotMinutes(from, to, dayStart = DAY_TAIL_BEFORE) {
   let start = timeToMinutes(from);
@@ -6077,6 +6083,13 @@ function applyDeltaToFile(file, mode, block, nowMs) {
   const cleanBlock = String(block || '').trim();
   if (!cleanBlock) throw new Error('empty_block');
   if (mode !== 'prepend' && mode !== 'append' && mode !== 'chrono') throw new Error('invalid_mode');
+  // Стенограмма обязана лежать по времени, кем бы ни была записана: она
+  // пишется несколькими сессиями сразу, и запись, начатая раньше, приходит
+  // позже. 04.09 нашлось, что tasks_checkpoint писал chrono, а tasks_append —
+  // append, и 29 файлов из 35 лежали вразнобой, до 23 разрывов в дне.
+  // Правило держится здесь, а не дисциплиной вызывающих: инвариант нельзя
+  // обмануть формой кода, в отличие от проверки по исходнику.
+  if (mode === 'append' && isTranscriptCorpusPath(path)) throw new Error('transcript_requires_chrono');
 
   const rotatedBefore = rotateFileText(path, file.text);
   let text = rotatedBefore.active;
