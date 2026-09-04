@@ -82,7 +82,7 @@ const BASELINE = {
   '750-strength-builder.css': 6,
   'critical.css': 26,
   'heys-boot-mark.css': 1,
-  'heys-components.css': 414,
+  'heys-components.css': 410,
 };
 
 /** Файлы, на которые ссылаются вердикты, — то есть сведённые. */
