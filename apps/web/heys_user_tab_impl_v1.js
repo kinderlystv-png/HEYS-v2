@@ -6,6 +6,15 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     const React = global.React;
     const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
 
+    // v4 roles для cycle, registration, settings-system (смысл, не оттенок — UI_V4_BARE_LITERALS_DECISION.md).
+    const V4_WARN_TEXT = 'var(--v4-warn-text, #a1471c)';
+    const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+    const V4_WARN_SURFACE = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, transparent)';
+    const V4_WARN_BORDER = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 35%, transparent)';
+    const V4_ACCENT_BORDER_8 = 'color-mix(in srgb, var(--v4-act-text, #8a4a20) 8%, transparent)';
+    const V4_ACCENT_BORDER_10 = 'color-mix(in srgb, var(--v4-act-text, #8a4a20) 10%, transparent)';
+    const V4_ACCENT_BORDER_12 = 'color-mix(in srgb, var(--v4-act-text, #8a4a20) 12%, transparent)';
+
     // 🔍 DEBUG: Проверяем что HEYS.utils загружен
     if (!HEYS.utils || !HEYS.utils.lsGet) {
         console.error('[heys_user_v12] ❌ HEYS.utils.lsGet не определён! Это приведёт к сбросу профиля');
@@ -870,8 +879,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         // Пресеты дефицита/профицита калорий
         const DEFICIT_PRESETS = [
             { value: -20, label: 'Агрессивное похудение', emoji: '🔥🔥', color: '#ef4444' },
-            { value: -15, label: 'Активное похудение', emoji: '🔥', color: '#f97316' },
-            { value: -10, label: 'Умеренное похудение', emoji: '🎯', color: '#eab308' },
+            { value: -15, label: 'Активное похудение', emoji: '🔥', color: V4_WARN_TEXT },
+            { value: -10, label: 'Умеренное похудение', emoji: '🎯', color: V4_WARN_SOFT },
             { value: 0, label: 'Поддержание веса', emoji: '⚖️', color: '#22c55e' },
             { value: 10, label: 'Умеренный набор', emoji: '💪', color: '#3b82f6' },
             { value: 15, label: 'Активный набор', emoji: '💪💪', color: '#3b82f6' }
@@ -882,7 +891,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             if (preset) return preset;
             // Для кастомных значений
             if (val < -10) return { emoji: '🔥🔥', color: '#ef4444', label: 'Агрессивный дефицит' };
-            if (val < 0) return { emoji: '🔥', color: '#f97316', label: 'Дефицит' };
+            if (val < 0) return { emoji: '🔥', color: V4_WARN_TEXT, label: 'Дефицит' };
             if (val === 0) return { emoji: '⚖️', color: '#22c55e', label: 'Поддержание' };
             if (val <= 10) return { emoji: '💪', color: '#3b82f6', label: 'Профицит' };
             return { emoji: '💪💪', color: '#3b82f6', label: 'Агрессивный набор' };
@@ -1210,7 +1219,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                         )
                                     ),
 
-                                    React.createElement('div', { className: 'muted', style: { marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(138, 74, 32, 0.08)', fontSize: '11px' } },
+                                    React.createElement('div', { className: 'muted', style: { marginTop: '10px', paddingTop: '8px', borderTop: `1px solid ${V4_ACCENT_BORDER_8}`, fontSize: '11px' } },
                                         `Формула: TDEE ${tdee} ккал × ${Math.abs(deficitPct)}% дефицит = ${dailyDeficit} ккал/день. `,
                                         `Жир 7700 ккал/кг, мышцы 1100 ккал/кг.`
                                     )
@@ -1269,9 +1278,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                 : round1(10 * w + 6.25 * (h * 100) - 5 * a + (profile.gender === 'Женский' ? -161 : 5));
                             // BMI категория
                             let bmiCat = '', bmiColor = '#6b7280';
-                            if (bmi < 18.5) { bmiCat = 'недовес'; bmiColor = '#eab308'; }
+                            if (bmi < 18.5) { bmiCat = 'недовес'; bmiColor = V4_WARN_SOFT; }
                             else if (bmi < 25) { bmiCat = 'норма'; bmiColor = '#22c55e'; }
-                            else if (bmi < 30) { bmiCat = 'избыток'; bmiColor = '#f97316'; }
+                            else if (bmi < 30) { bmiCat = 'избыток'; bmiColor = V4_WARN_TEXT; }
                             else { bmiCat = 'ожирение'; bmiColor = '#ef4444'; }
 
                             // Норма воды: 30 мл на кг веса
@@ -1581,7 +1590,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                         ),
                         pinMessage && React.createElement('div', {
                             className: 'muted',
-                            style: { marginTop: '6px', color: pinStatus === 'error' ? '#a1471c' : undefined }
+                            style: { marginTop: '6px', color: pinStatus === 'error' ? V4_WARN_TEXT : undefined }
                         }, pinMessage)
                     )
                 )
@@ -2026,7 +2035,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                             width: '50px',
                             padding: '4px 6px',
                             borderRadius: '6px',
-                            border: '1px solid rgba(138, 74, 32, 0.12)',
+                            border: `1px solid ${V4_ACCENT_BORDER_12}`,
                             textAlign: 'center',
                             fontSize: '13px',
                             background: 'var(--v4-bg, #fffaf1)'
@@ -3036,9 +3045,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                         style: {
                                             fontSize: 12, padding: '4px 10px',
                                             ...(isRequired ? {
-                                                background: '#f7efe2',
-                                                color: '#a1471c',
-                                                border: '1px solid rgba(161, 71, 28, 0.22)'
+                                                background: V4_WARN_SURFACE,
+                                                color: V4_WARN_TEXT,
+                                                border: `1px solid ${V4_WARN_BORDER}`
                                             } : {})
                                         }
                                     }, busy === c.type ? 'Отзываю…' : ('Отозвать' + (c.type === 'user_agreement' ? ' (= удалить аккаунт)' : '')))
@@ -3049,7 +3058,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Toggle: marketing ───────────────────────────────────────
             React.createElement('div', {
-                style: { marginTop: 16, padding: '12px 0 0', borderTop: '1px solid rgba(138, 74, 32, 0.1)' }
+                style: { marginTop: 16, padding: '12px 0 0', borderTop: `1px solid ${V4_ACCENT_BORDER_10}` }
             },
                 React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
                     React.createElement('div', null,
@@ -3070,7 +3079,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
             // ── Actions: DSAR / restriction / revoke curator ────────────
             React.createElement('div', {
-                style: { marginTop: 16, padding: '12px 0 0', borderTop: '1px solid rgba(138, 74, 32, 0.1)', display: 'flex', flexDirection: 'column', gap: 8 }
+                style: { marginTop: 16, padding: '12px 0 0', borderTop: `1px solid ${V4_ACCENT_BORDER_10}`, display: 'flex', flexDirection: 'column', gap: 8 }
             },
                 React.createElement('button', {
                     className: 'btn btn--secondary btn--full',
@@ -3249,9 +3258,9 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     style: {
                         padding: '8px 14px',
                         borderRadius: '8px',
-                        border: '1px solid #f59e0b',
-                        background: '#fffbeb',
-                        color: '#92400e',
+                        border: `1px solid ${V4_WARN_BORDER}`,
+                        background: V4_WARN_SURFACE,
+                        color: V4_WARN_TEXT,
                         cursor: revokeBusy ? 'wait' : 'pointer',
                         fontWeight: 500,
                         opacity: revokeBusy ? 0.7 : 1
