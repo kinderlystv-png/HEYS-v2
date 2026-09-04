@@ -437,13 +437,8 @@ describe('конструктор: спокойная нижняя панель',
       }));
 
       fireEvent.click(screen.getByRole('button', { name: /Тяга/ }));
-      fireEvent.click(screen.getByRole('button', { name: /Развернуть/ }));
 
-      expect(document.querySelector('.sb-rest-ring')).toBeTruthy();
-      expect(document.querySelector('.sb-ex--collapsed.is-complete .sb-ex-head')).toBeTruthy();
-
-      fireEvent.click(screen.getByRole('button', { name: /Жим/ }));
-      expect(sessionPatches.at(-1).activeRest).toMatchObject({ collapsed: true, owner: 'Жим' });
+      expect(document.querySelector('.sb-ex--collapsed.is-rest-editing .sb-ex-state.is-editing')?.textContent).toBe('правится');
       expect(document.querySelector('.sb-rest--collapsed')).toBeTruthy();
       expect(document.querySelector('.sb-rest-ring')).toBeNull();
 
@@ -471,7 +466,7 @@ describe('конструктор: спокойная нижняя панель',
     const view = render(React.createElement(SB.BuilderScreen, props));
     expect(screen.getByRole('button', { name: 'Завершить тренировку' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: '+ Подход' }));
+    fireEvent.click(screen.getByRole('button', { name: '+ подход' }));
     expect(sessionPatches).toContainEqual({ completedAt: null });
     expect(exercisePatches.at(-1)[0].approaches).toHaveLength(2);
 
@@ -485,6 +480,8 @@ describe('конструктор: спокойная нижняя панель',
     const reopened = screen.getByRole('button', { name: 'Завершить тренировку · 1 не закрыто' });
     expect(reopened).toBeTruthy();
     expect(screen.getByText('1 / 2 ✓')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /Жим/ }));
+    expect(screen.getByText('было 1 из 1 · стало 1 из 2')).toBeTruthy();
   });
 });
 
