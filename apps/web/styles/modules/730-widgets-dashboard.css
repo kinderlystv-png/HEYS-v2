@@ -11161,6 +11161,13 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   font-variant-numeric: tabular-nums;
 }
 
+/* Кадр «Сон · К норме · 03»: число и единица — ряд, не пробел в одном узле. */
+.widget-v4-mini__value--pair {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+
 .widget-v4-mini__value.widget-v4-val--good {
   color: var(--v4-sand-ok-text, #5c6a45);
 }

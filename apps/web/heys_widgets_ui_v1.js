@@ -4602,11 +4602,11 @@
       return React.createElement('div', { className: 'widget-sleep widget-sleep--micro widget-v4-mini' },
         v4Kicker('Сон · к норме'),
         React.createElement('div', {
-          className: 'widget-v4-mini__value ' + v4ValueStateClass(sleepState)
+          className: 'widget-v4-mini__value widget-v4-mini__value--pair ' + v4ValueStateClass(sleepState)
         },
           sign,
           formatRuDecimal(Math.abs(delta), 1),
-          React.createElement('span', { className: 'widget-v4-unit' }, ' ч')
+          React.createElement('span', { className: 'widget-v4-unit' }, 'ч')
         )
       );
     }
