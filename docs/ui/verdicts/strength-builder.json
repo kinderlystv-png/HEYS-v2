@@ -634,8 +634,8 @@
       "h": "27d50ec315ae"
     },
     "вид · разминка и дроп-сет": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "WarmupDropScreen (strength/heys_strength_superset_ui_v1.js): сетка 56/1fr/1fr/44, разм. 10px ink 56%, дроп padding-left 34px и .sb-wd-drop-tag на --c2/--ac; объём .sb-wd-volume; вход view=warmup-drop из шторки и карточки. Смоук: strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "5f9ecc0d36e9"
     },
     "вид · пустая тренировка": {
@@ -709,8 +709,8 @@
       "h": "df752e8f5407"
     },
     "вид · таблица ввода": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Раскрытая ExerciseCard: таблица .sb-aps-head/.sb-ap без разминки и дроп-ступеней; пилюли .sb-approach-pills; контрактные слои .sb-context-chips/.sb-rest-cd/.sb-ex-footnote в DOM (скрыты, А1б держит .sb-hist/.sb-rest-copy). Смоук: strength-builder-approach-table-v4-canvas-contract.test.js + calm A1б.",
       "h": "40a08c4650a1"
     },
     "вид · галочка и пустые поля": {
@@ -1258,123 +1258,123 @@
       ]
     },
     "Конструктор · разминка и дроп-сет · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 1 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "175bdcc2e73a"
     },
     "Конструктор · разминка и дроп-сет · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 2 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "dbd19d6c8f05"
     },
     "Конструктор · разминка и дроп-сет · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 3 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "f143b5d4e1e4"
     },
     "Конструктор · разминка и дроп-сет · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 4 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "c098ce750809"
     },
     "Конструктор · разминка и дроп-сет · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 5 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "6114466e5f74"
     },
     "Конструктор · разминка и дроп-сет · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 6 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "a6047f6cec68"
     },
     "Конструктор · разминка и дроп-сет · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 7 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "c629f84f9712"
     },
     "Конструктор · разминка и дроп-сет · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 8 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "81d6d8e40a85"
     },
     "Конструктор · разминка и дроп-сет · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 9 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "a6d3ae4893d8"
     },
     "Конструктор · разминка и дроп-сет · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 10 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "bfd3546362c0"
     },
     "Конструктор · разминка и дроп-сет · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 11 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "13104ec38a12"
     },
     "Конструктор · разминка и дроп-сет · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 12 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "57dbb2db3da7"
     },
     "Конструктор · разминка и дроп-сет · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 13 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "0891a5bd6473"
     },
     "Конструктор · разминка и дроп-сет · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 14 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "1a330ca9621c"
     },
     "Конструктор · разминка и дроп-сет · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 15 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "43db44b8b304"
     },
     "Конструктор · разминка и дроп-сет · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 16 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "2d6fa86e818e"
     },
     "Конструктор · разминка и дроп-сет · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 17 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "d641122bb122"
     },
     "Конструктор · разминка и дроп-сет · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 18 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "af81bb6e54c6"
     },
     "Конструктор · разминка и дроп-сет · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 19 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "5c52468b28a1"
     },
     "Конструктор · разминка и дроп-сет · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 20 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "8acc718bd14c"
     },
     "Конструктор · разминка и дроп-сет · 21": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 21 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "c951dc77e059"
     },
     "Конструктор · разминка и дроп-сет · 22": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 22 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "6b286135ed76"
     },
     "Конструктор · разминка и дроп-сет · 23": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 23 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "298042f9ad1e"
     },
     "Конструктор · разминка и дроп-сет · 24": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 24 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "fea0bc27d2e8"
     },
     "Конструктор · каталог · 01": {
@@ -3237,168 +3237,168 @@
       "h": "48c244229e17"
     },
     "Подход · таблица ввода · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 1 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "175bdcc2e73a"
     },
     "Подход · таблица ввода · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 2 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "dbd19d6c8f05"
     },
     "Подход · таблица ввода · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 3 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "f143b5d4e1e4"
     },
     "Подход · таблица ввода · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Кадр Е1 рисует шапку упражнения и бейдж «3 из 3»; в проде список А1б держит шапку сессии и счётчик в .sb-ex-count (2/4) — heys_strength_builder_ui_v1.js .sb-head.",
       "h": "3f4ba16443bc"
     },
     "Подход · таблица ввода · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Кадр Е1 рисует шапку упражнения и бейдж «3 из 3»; в проде список А1б держит шапку сессии и счётчик в .sb-ex-count (2/4) — heys_strength_builder_ui_v1.js .sb-head.",
       "h": "3cbe60569836"
     },
     "Подход · таблица ввода · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Кадр Е1 рисует шапку упражнения и бейдж «3 из 3»; в проде список А1б держит шапку сессии и счётчик в .sb-ex-count (2/4) — heys_strength_builder_ui_v1.js .sb-head.",
       "h": "2c445e6f5f43"
     },
     "Подход · таблица ввода · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 7 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "a6047f6cec68"
     },
     "Подход · таблица ввода · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 8 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "c629f84f9712"
     },
     "Подход · таблица ввода · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Плитки контекста: .sb-context-chips/.sb-context-chip на --c1/--c2 в ExerciseCard; в UI скрыты, геометрия в 750-strength-builder.css — strength-builder-approach-table-v4-canvas-contract.test.js.",
       "h": "77e4b4025f38"
     },
     "Подход · таблица ввода · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Плитки контекста: .sb-context-chips/.sb-context-chip на --c1/--c2 в ExerciseCard; в UI скрыты, геометрия в 750-strength-builder.css — strength-builder-approach-table-v4-canvas-contract.test.js.",
       "h": "576e1634fe0f"
     },
     "Подход · таблица ввода · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Плитки контекста: .sb-context-chips/.sb-context-chip на --c1/--c2 в ExerciseCard; в UI скрыты, геометрия в 750-strength-builder.css — strength-builder-approach-table-v4-canvas-contract.test.js.",
       "h": "17b24c9c0115"
     },
     "Подход · таблица ввода · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Плитки контекста: .sb-context-chips/.sb-context-chip на --c1/--c2 в ExerciseCard; в UI скрыты, геометрия в 750-strength-builder.css — strength-builder-approach-table-v4-canvas-contract.test.js.",
       "h": "081421791c21"
     },
     "Подход · таблица ввода · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Плитки контекста: .sb-context-chips/.sb-context-chip на --c1/--c2 в ExerciseCard; в UI скрыты, геометрия в 750-strength-builder.css — strength-builder-approach-table-v4-canvas-contract.test.js.",
       "h": "f5499a9df9d7"
     },
     "Подход · таблица ввода · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 14 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "c8f60277f33e"
     },
     "Подход · таблица ввода · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 15 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "bfd3546362c0"
     },
     "Подход · таблица ввода · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 16 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "13104ec38a12"
     },
     "Подход · таблица ввода · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 17 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "1a330ca9621c"
     },
     "Подход · таблица ввода · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 18 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "7395c82cd118"
     },
     "Подход · таблица ввода · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 19 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "61464eb844e9"
     },
     "Подход · таблица ввода · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 20 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "7bc4b2bf3f50"
     },
     "Подход · таблица ввода · 21": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 21 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "71dce3128745"
     },
     "Подход · таблица ввода · 22": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 22 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "0c9356cf95bc"
     },
     "Подход · таблица ввода · 23": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Отдых в карточке — строка А1б .sb-rest-copy; кадр Е1 документирует .sb-rest-cd колонкой «Отдых/из тяжести/вручную» — разметка .sb-rest-cd есть, видимость А1б.",
       "h": "d641122bb122"
     },
     "Подход · таблица ввода · 24": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Отдых в карточке — строка А1б .sb-rest-copy; кадр Е1 документирует .sb-rest-cd колонкой «Отдых/из тяжести/вручную» — разметка .sb-rest-cd есть, видимость А1б.",
       "h": "6b286135ed76"
     },
     "Подход · таблица ввода · 25": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Отдых в карточке — строка А1б .sb-rest-copy; кадр Е1 документирует .sb-rest-cd колонкой «Отдых/из тяжести/вручную» — разметка .sb-rest-cd есть, видимость А1б.",
       "h": "07ffbada0ee7"
     },
     "Подход · таблица ввода · 26": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Отдых в карточке — строка А1б .sb-rest-copy; кадр Е1 документирует .sb-rest-cd колонкой «Отдых/из тяжести/вручную» — разметка .sb-rest-cd есть, видимость А1б.",
       "h": "bd065d2633a1"
     },
     "Подход · таблица ввода · 27": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Отдых в карточке — строка А1б .sb-rest-copy; кадр Е1 документирует .sb-rest-cd колонкой «Отдых/из тяжести/вручную» — разметка .sb-rest-cd есть, видимость А1б.",
       "h": "ff2157e24e0e"
     },
     "Подход · таблица ввода · 28": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "≠",
+      "f": "Отдых в карточке — строка А1б .sb-rest-copy; кадр Е1 документирует .sb-rest-cd колонкой «Отдых/из тяжести/вручную» — разметка .sb-rest-cd есть, видимость А1б.",
       "h": "0e262d6e01f8"
     },
     "Подход · таблица ввода · 29": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 29 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "8b136eb810a9"
     },
     "Подход · таблица ввода · 30": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 30 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "f99bfb59c5bc"
     },
     "Подход · таблица ввода · 31": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 31 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "b6bbb46500b8"
     },
     "Подход · таблица ввода · 32": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 32 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "8547e896c32d"
     },
     "Подход · таблица ввода · 33": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 33 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
       "h": "91db564053be"
     },
     "Таблица · галочка не ставится · 01": {
@@ -8134,8 +8134,8 @@
       "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Конструктор · разминка и дроп-сет · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Составная строка А3: WarmupDropScreen рендер с Приседания, №/тип, разм., дроп, объём и сноска — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
       "h": "6f7676c0defe"
     },
     "Конструктор · каталог · текст": {
@@ -8204,8 +8204,8 @@
       "h": "2934320fb407"
     },
     "Подход · таблица ввода · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Составной текст Е1: таблица без разминки, пилюли + подход/связать/2:00, сноска .sb-ex-footnote — strength-builder-approach-table-v4-canvas-contract.test.js.",
       "h": "8dc6ca41daa5"
     },
     "Таблица · галочка не ставится · текст": {

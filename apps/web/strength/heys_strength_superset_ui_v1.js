@@ -524,10 +524,63 @@
 
   // ——— Строка подхода (экраны 07, 13, 24) ———
 
+  function exerciseVolumeKg(exercise, bodyWeightKg) {
+    const SK = kernel();
+    if (!SK || !exercise) return 0;
+    const unit = exercise.unit || 'weight_reps';
+    const factor = SK.toWeightNumber ? SK.toWeightNumber(exercise.bodyweightFactor) : null;
+    const ownWeightKg = unit === 'bodyweight' && factor !== null && bodyWeightKg > 0
+      ? bodyWeightKg * factor
+      : null;
+    let total = 0;
+    (Array.isArray(exercise.approaches) ? exercise.approaches : []).forEach(function (approach) {
+      if (SK.isWarmupApproach(approach) || SK.isBlankApproach(approach)) return;
+      if (!SK.isApproachDone(approach)) return;
+      if (unit === 'time' || unit === 'distance') return;
+      const stages = SK.approachStages(approach);
+      stages.forEach(function (stage) {
+        const reps = stage.reps;
+        if (!(reps > 0)) return;
+        let w;
+        if (unit === 'bodyweight') {
+          if (ownWeightKg === null) return;
+          w = ownWeightKg + (SK.approachExtraWeight ? SK.approachExtraWeight(approach) : 0);
+        } else {
+          w = SK.toWeightNumber ? SK.toWeightNumber(stage.weightKg) : 0;
+        }
+        if (w > 0) total += w * reps;
+      });
+    });
+    return Math.round(total);
+  }
+
+  function warmupDropHeadKey(exercise) {
+    const SK = kernel();
+    const aps = Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [];
+    let warmups = 0;
+    let work = 0;
+    aps.forEach(function (approach) {
+      if (SK && SK.isBlankApproach(approach)) return;
+      if (SK && SK.isWarmupApproach(approach)) warmups += 1;
+      else work += 1;
+    });
+    const total = warmups + work;
+    const totalLabel = total + ' ' + ruPlural(total, 'подход', 'подхода', 'подходов');
+    if (warmups > 0) {
+      return totalLabel + ' · ' + warmups + ' ' + ruPlural(warmups, 'разминочный', 'разминочных', 'разминочных');
+    }
+    return totalLabel;
+  }
+
   function ApproachRow(props) {
-    const { approach, index, workNumber, onPatch, onToggleType, readOnly, unit, isCurrent } = props;
+    const {
+      approach, index, workNumber, onPatch, onToggleType, readOnly, unit, isCurrent,
+      tableVariant
+    } = props;
+    const variant = tableVariant || 'exercise';
     const SK = kernel();
     const warmup = SK ? SK.isWarmupApproach(approach) : false;
+    const warmupLabel = 'разм.';
 
     // Время/дистанция — не про ступени сброса (это про вес), поэтому у них
     // своя однострочная ветка вместо approachStages: та же сетка из 4 колонок
@@ -550,7 +603,7 @@
             onClick: function () { if (!readOnly) onToggleType(index); },
             title: warmup ? 'Разминка — вне тоннажа. Нажмите, чтобы сделать рабочим' : 'Рабочий подход. Нажмите, чтобы сделать разминочным',
             'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
-          }, warmup ? 'разм' : String(workNumber || '—')),
+          }, warmup ? warmupLabel : String(workNumber || '—')),
           approach.done
             ? h('span', { className: 'sb-ap-field sb-ap-value' }, fmtNumber(approach.weightKg) || 'свой')
             : h('input', {
@@ -596,7 +649,10 @@
       return h(React.Fragment, { key: 'ap' + index }, rows);
     }
 
-    const stages = SK ? SK.approachStages(approach) : [];
+    let stages = SK ? SK.approachStages(approach) : [];
+    if (variant === 'exercise') {
+      stages = stages.length ? [stages[0]] : [];
+    }
     const blank = SK ? SK.isBlankApproach(approach) : false;
     const base = stages[0] || { weightKg: '', reps: 0, done: false };
 
@@ -622,19 +678,23 @@
     stages.forEach(function (stage, si) {
       const isDrop = stage.isDrop;
       const rowState = stage.done ? ' is-done' : (isCurrent && si === firstPendingStage && !warmup ? ' is-current' : '');
+      const rowClass = (isDrop ? 'sb-drop' : 'sb-ap')
+        + (blank && !isDrop ? ' is-blank' : '')
+        + rowState
+        + (warmup && variant === 'warmup-drop' ? ' is-warmup-row' : '');
       rows.push(h('div', {
         key: 'st' + si,
-        className: (isDrop ? 'sb-drop' : 'sb-ap') + (blank && !isDrop ? ' is-blank' : '') + rowState
+        className: rowClass
       },
         isDrop
-          ? h('span', { className: 'sb-drop-tag' }, 'дроп')
+          ? h('span', { className: variant === 'warmup-drop' ? 'sb-wd-drop-tag' : 'sb-drop-tag' }, 'дроп')
           : h('button', {
             type: 'button',
             className: 'sb-ap-num' + (warmup ? ' is-warmup' : ''),
             onClick: function () { if (!readOnly) onToggleType(index); },
             title: warmup ? 'Разминка — вне тоннажа. Нажмите, чтобы сделать рабочим' : 'Рабочий подход. Нажмите, чтобы сделать разминочным',
             'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
-          }, warmup ? 'разм' : String(workNumber || '—')),
+          }, warmup ? warmupLabel : String(workNumber || '—')),
         stage.done
           ? h('span', { className: 'sb-ap-field sb-ap-value' }, fmtNumber(stage.weightKg) || 'свой')
           : h('input', {
@@ -682,42 +742,143 @@
 
   // ——— Упражнение (экран 04) ———
 
-  function ExerciseCard(props) {
-    const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
-      onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onRemove, onDiscomfortAction,
-      onLink, history, readOnly } = props;
+  function formatVolumeKg(kg) {
+    const n = Math.max(0, Math.round(+kg || 0));
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + ' кг';
+  }
+
+  function WarmupDropScreen(props) {
+    const {
+      ex, index, exercises, bodyWeightKg, onBack, onClose, onOpenSheet,
+      onPatchApproach, onToggleType, onAddDrop, onAddApproach, readOnly
+    } = props;
     const SK = kernel();
     const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
     const metaApi = HEYS.exerciseMeta;
     const meta = (metaApi && typeof metaApi.get === 'function') ? metaApi.get(ex.name) : null;
     const unit = (ex.unit || (meta && meta.unit) || 'weight_reps');
 
-    const firstPendingIndex = aps.findIndex(function (a) {
-      return !(SK ? SK.isApproachDone(a) : !!a.done);
-    });
-    const visibleApproaches = firstPendingIndex < 0 ? aps : aps.slice(0, firstPendingIndex + 1);
     let workNo = 0;
-    const rows = visibleApproaches.map(function (a, ai) {
-      const warmup = SK ? SK.isWarmupApproach(a) : false;
+    const rows = aps.map(function (approach, ai) {
+      const warmup = SK ? SK.isWarmupApproach(approach) : false;
       if (!warmup) workNo += 1;
       return h(ApproachRow, {
-        key: 'a' + ai,
-        approach: a,
+        key: 'wd' + ai,
+        approach: approach,
         index: ai,
         workNumber: warmup ? 0 : workNo,
+        onPatch: function (apIdx, patch) { onPatchApproach(apIdx, patch); },
+        onToggleType: onToggleType,
+        readOnly: readOnly,
+        unit: unit,
+        isCurrent: false,
+        tableVariant: 'warmup-drop'
+      });
+    });
+
+    const volumeKg = exerciseVolumeKg(ex, bodyWeightKg);
+    const hasDrops = aps.some(function (approach) {
+      const stages = SK ? SK.approachStages(approach) : [];
+      return stages.length > 1;
+    });
+
+    return h('div', { className: 'sb-root sb-warmup-drop-screen' },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: onBack, 'aria-label': 'Назад к списку'
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, ex.name || 'Без названия'),
+          h('div', { className: 'sb-head-sub' }, warmupDropHeadKey(ex))
+        ),
+        h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: onOpenSheet, 'aria-label': 'Ещё'
+        }, '⋯')
+      ),
+      h('div', { className: 'sb-wd-scroll' },
+        h('div', { className: 'sb-wd-grp' },
+          h('div', { className: 'sb-aps-head sb-wd-aps-head' },
+            h('span', null, '№ / тип'),
+            h('span', null, 'Вес, кг'),
+            h('span', null, unit === 'time' ? 'Время, сек' : (unit === 'distance' ? 'Дистанция, м' : 'Повторы')),
+            h('span', null, '✓')
+          ),
+          h('div', { className: 'sb-aps sb-wd-aps' }, rows),
+          !readOnly && (unit === 'weight_reps' || unit === 'bodyweight') && h('div', { className: 'sb-wd-actions' },
+            h('button', {
+              type: 'button', className: 'sb-btn',
+              onClick: function () { onAddApproach(index); }
+            }, '+ Подход'),
+            h('button', {
+              type: 'button', className: 'sb-btn',
+              onClick: function () { onAddDrop(index); }
+            }, '+ Сброс')
+          )
+        ),
+        h('div', { className: 'sb-wd-volume' },
+          h('div', { className: 'sb-wd-volume-row' },
+            h('span', null, 'Объём упражнения'),
+            h('b', null, formatVolumeKg(volumeKg))
+          ),
+          h('div', { className: 'sb-wd-volume-row' },
+            h('span', null, 'Разминка в объём'),
+            h('span', { className: 'sb-wd-muted' }, 'не идёт')
+          ),
+          h('div', { className: 'sb-wd-volume-row is-last' },
+            h('span', null, 'Ступени дроп-сета'),
+            h('span', { className: 'sb-wd-ok' }, hasDrops ? 'идут все' : '—')
+          )
+        ),
+        h('p', { className: 'sb-wd-footnote' },
+          'Дроп-сет — продолжение подхода, а не новые подходы: ступени сдвинуты вправо и считаются в объём целиком, работа сделана вся. Рекорд берётся только с основной ступени, иначе сброс становился бы рекордом.')
+      )
+    );
+  }
+
+  function ExerciseCard(props) {
+    const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
+      onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onStartRest, onLink,
+      onOpenWarmupDrop, onRemove, onDiscomfortAction, history, readOnly } = props;
+    const SK = kernel();
+    const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
+    const metaApi = HEYS.exerciseMeta;
+    const meta = (metaApi && typeof metaApi.get === 'function') ? metaApi.get(ex.name) : null;
+    const unit = (ex.unit || (meta && meta.unit) || 'weight_reps');
+
+    const indexedWork = [];
+    aps.forEach(function (approach, ai) {
+      if (SK && SK.isWarmupApproach(approach)) return;
+      indexedWork.push({ approach: approach, index: ai });
+    });
+    const firstPendingIndex = indexedWork.findIndex(function (row) {
+      return !(SK ? SK.isApproachDone(row.approach) : !!row.approach.done);
+    });
+    const visibleWork = firstPendingIndex < 0
+      ? indexedWork
+      : indexedWork.slice(0, firstPendingIndex + 1);
+    let workNo = 0;
+    const rows = visibleWork.map(function (row) {
+      workNo += 1;
+      return h(ApproachRow, {
+        key: 'a' + row.index,
+        approach: row.approach,
+        index: row.index,
+        workNumber: workNo,
         onPatch: onPatchApproach,
         onToggleType: onToggleType,
         readOnly: readOnly,
         unit: unit,
-        isCurrent: ai === firstPendingIndex
+        isCurrent: row.index === (visibleWork[firstPendingIndex] || {}).index
       });
     });
 
-    const doneCount = aps.filter(function (a) {
-      return SK ? SK.isApproachDone(a) && !SK.isBlankApproach(a) : !!a.done;
+    const doneCount = indexedWork.filter(function (row) {
+      return SK ? SK.isApproachDone(row.approach) && !SK.isBlankApproach(row.approach) : !!row.approach.done;
     }).length;
-    const totalCount = aps.filter(function (a) {
-      return SK ? !SK.isBlankApproach(a) : true;
+    const totalCount = indexedWork.filter(function (row) {
+      return SK ? !SK.isBlankApproach(row.approach) : true;
     }).length;
 
     const painApproach = aps.filter(function (a) { return a && a.discomfort; })[0];
@@ -785,7 +946,26 @@
             chips.push(h('span', { key: 'rec', className: 'is-record' },
               'Рекорд · ' + fmtNumber(rec.maxW) + (recordReps > 0 ? ' × ' + fmtNumber(recordReps) : ' кг')));
           }
-          return chips.length ? h('div', { className: 'sb-hist' }, chips) : null;
+          const lastUsage = history && history.usages && history.usages[0];
+          const lastAp = lastUsage && lastUsage.approaches && lastUsage.approaches[0];
+          const e1Chips = [];
+          if (lastAp && (lastAp.weightKg || lastAp.reps)) {
+            e1Chips.push(h('div', { key: 'last', className: 'sb-context-chip' },
+              h('span', { className: 'sb-context-chip-key' }, 'Прошлый раз'),
+              h('b', null, fmtNumber(lastAp.weightKg) + ' × ' + fmtNumber(lastAp.reps))
+            ));
+          }
+          if (rec && rec.maxW > 0) {
+            const recordReps = rec.maxSet > 0 ? Math.round(rec.maxSet / rec.maxW) : 0;
+            e1Chips.push(h('div', { key: 'rec', className: 'sb-context-chip is-record' },
+              h('span', { className: 'sb-context-chip-key' }, 'Рекорд'),
+              h('b', null, fmtNumber(rec.maxW) + (recordReps > 0 ? ' × ' + fmtNumber(recordReps) : ' кг'))
+            ));
+          }
+          return h(React.Fragment, null,
+            chips.length ? h('div', { className: 'sb-hist' }, chips) : null,
+            e1Chips.length ? h('div', { className: 'sb-context-chips' }, e1Chips) : null
+          );
         })(),
         h('div', { className: 'sb-aps-head' },
           h('span', null, ''),
@@ -833,8 +1013,6 @@
           )
         ),
         h('div', { className: 'sb-rest-line' },
-          // Без оценки тяжести это значение по умолчанию, а не вывод из неё: подпись,
-          // называющая источником незаполненное поле, врёт.
           h('span', { className: 'sb-rest-copy' },
             '⏱ Отдых ' + fmtClock(+ex.restSec || 90) + ' '
             + (ex.restManual
@@ -846,6 +1024,45 @@
             onClick: function () { onRestManual(index, !ex.restManual); }
           }, ex.restManual ? 'Авто' : 'Вручную')
         ),
+        h('div', { className: 'sb-rest-cd', 'aria-hidden': 'true' },
+          h('div', { className: 'sb-rest-cd-row' },
+            h('div', { className: 'sb-rest-cd-copy' },
+              h('b', null, 'Отдых ' + fmtClock(+ex.restSec || 90)),
+              h('span', null, ex.restManual
+                ? 'вручную'
+                : (+ex.rpe > 0 ? 'из тяжести ' + ex.rpe : 'по умолчанию'))
+            ),
+            h('button', {
+              type: 'button',
+              className: 'sb-rest-manual sb-rest-manual--e1',
+              tabIndex: -1
+            }, 'вручную')
+          )
+        ),
+        h('div', { className: 'sb-approach-pills' },
+          h('button', {
+            type: 'button', className: 'sb-pill is-accent',
+            onClick: function () { onAddApproach(index); },
+            disabled: readOnly
+          }, '+ подход'),
+          h('button', {
+            type: 'button', className: 'sb-pill',
+            onClick: function () { onLink(index); },
+            disabled: readOnly
+          }, 'связать'),
+          h('button', {
+            type: 'button', className: 'sb-pill sb-pill-time',
+            onClick: function () { if (typeof onStartRest === 'function') onStartRest(index); },
+            disabled: readOnly
+          }, fmtClock(+ex.restSec || 90))
+        ),
+        typeof onOpenWarmupDrop === 'function' && h('button', {
+          type: 'button',
+          className: 'sb-ex-warmup-drop',
+          onClick: function () { onOpenWarmupDrop(index); }
+        }, 'Разминка и дроп-сет'),
+        h('p', { className: 'sb-ex-footnote' },
+          'Вес и повторы стоят столбцами, а не полями подряд: три подхода одного упражнения читаются вертикально, и чужое число видно на месте. Заполненные подходы показывают значения текстом, открытый — полями 48 px: правится только тот подход, который делают сейчас.'),
         h('div', { className: 'sb-ex-actions' },
           h('button', {
             type: 'button', className: 'sb-btn is-accent',
@@ -915,6 +1132,9 @@
 
   Parts.ApproachRow = ApproachRow;
   Parts.ExerciseCard = ExerciseCard;
+  Parts.WarmupDropScreen = WarmupDropScreen;
+  Parts.exerciseVolumeKg = exerciseVolumeKg;
+  Parts.warmupDropHeadKey = warmupDropHeadKey;
   Parts.startedAtMs = startedAtMs;
 
   /**
@@ -1092,6 +1312,15 @@
         icon: '⚡', t: 'Собрать связку', d: 'Суперсет, трисет, круговая',
         off: exercises.length < 2,
         go: function () { ctx.close(); ctx.setLinkFrom(0); ctx.go('superset'); }
+      },
+      {
+        icon: '🔥', t: 'Разминка и дроп-сет', d: 'Что идёт в объём',
+        off: !current.name,
+        go: function () {
+          ctx.setWarmupDropIdx(ctx.openIdx >= 0 ? ctx.openIdx : 0);
+          ctx.close();
+          ctx.go('warmup-drop');
+        }
       },
       {
         icon: '📈', t: 'История и рекорды', d: 'Динамика веса и тоннажа',

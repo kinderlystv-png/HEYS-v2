@@ -4338,3 +4338,253 @@
   color: var(--sb-mut);
   font: 500 11px/1.55 Figtree, sans-serif;
 }
+
+/* A3 · разминка и дроп-сет */
+.sb-warmup-drop-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.sb-wd-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 18px 18px;
+}
+
+.sb-wd-grp {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--sb-card);
+}
+
+.sb-warmup-drop-screen .sb-aps-head,
+.sb-warmup-drop-screen .sb-ap,
+.sb-warmup-drop-screen .sb-drop {
+  grid-template-columns: 56px 1fr 1fr 44px;
+  gap: 8px;
+}
+
+.sb-warmup-drop-screen .sb-aps-head {
+  margin-top: 0;
+  padding: 0;
+  font: 700 10px/1 Figtree, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(var(--ink), 0.42);
+}
+
+.sb-warmup-drop-screen .sb-aps-head > span:nth-child(2),
+.sb-warmup-drop-screen .sb-aps-head > span:nth-child(3),
+.sb-warmup-drop-screen .sb-aps-head > span:nth-child(4) {
+  text-align: center;
+}
+
+.sb-warmup-drop-screen .sb-aps-head > span:last-child {
+  color: var(--sb-okTx);
+}
+
+.sb-warmup-drop-screen .sb-aps {
+  margin-top: 8px;
+}
+
+.sb-warmup-drop-screen .sb-drop {
+  margin-left: 0;
+  padding-left: 34px;
+  border-left: none;
+}
+
+.sb-warmup-drop-screen .sb-ap.is-warmup-row .sb-ap-field,
+.sb-warmup-drop-screen .sb-ap.is-warmup-row .sb-ap-value {
+  color: rgba(var(--ink), 0.56);
+}
+
+.sb-warmup-drop-screen .sb-ap-num.is-warmup {
+  width: auto;
+  min-height: auto;
+  height: auto;
+  padding: 0 7px;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(var(--ink), 0.56);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sb-wd-drop-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-height: auto;
+  height: auto;
+  padding: 0 7px;
+  border-radius: 0;
+  background: var(--sb-soft);
+  color: var(--sb-acc);
+  font: 700 10px/1 Figtree, sans-serif;
+}
+
+.sb-wd-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sb-wd-volume {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--sb-card);
+}
+
+.sb-wd-volume-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(var(--ink), 0.07);
+  color: var(--sb-tx);
+  font: 600 12px/1.3 Figtree, sans-serif;
+}
+
+.sb-wd-volume-row.is-last {
+  border-bottom: 0;
+}
+
+.sb-wd-volume-row > b,
+.sb-wd-volume-row > .n {
+  font: 700 12.5px/1 Figtree, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-wd-muted {
+  font: 600 11px/1 Figtree, sans-serif;
+  color: rgba(var(--ink), 0.56);
+}
+
+.sb-wd-ok {
+  font: 700 11px/1 Figtree, sans-serif;
+  color: var(--sb-okTx);
+}
+
+.sb-wd-footnote {
+  margin: 12px 0 0;
+  color: var(--sb-mut);
+  font: 500 11px/1.55 Figtree, sans-serif;
+}
+
+/* E1 · таблица ввода — пилюли и контрактные слои */
+.sb-context-chips,
+.sb-rest-cd,
+.sb-ex-footnote,
+.sb-ex-warmup-drop {
+  display: none;
+}
+
+.sb-context-chips {
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.sb-context-chip {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: var(--sb-card);
+}
+
+.sb-context-chip.is-record {
+  background: var(--sb-soft);
+}
+
+.sb-context-chip-key {
+  font: 600 10px/1 Figtree, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(var(--ink), 0.56);
+}
+
+.sb-context-chip.is-record .sb-context-chip-key {
+  color: var(--sb-acc);
+}
+
+.sb-context-chip b {
+  font: 700 12.5px/1 Figtree, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--sb-tx);
+}
+
+.sb-rest-cd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--sb-card);
+}
+
+.sb-rest-cd-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-rest-cd-copy b {
+  color: var(--sb-tx);
+  font: 600 12px/1.3 Figtree, sans-serif;
+}
+
+.sb-rest-cd-copy span {
+  color: rgba(var(--ink), 0.56);
+  font: 500 11px/1.3 Figtree, sans-serif;
+}
+
+.sb-rest-manual--e1 {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sb-acc);
+  font: 700 11.5px/1 Figtree, sans-serif;
+}
+
+.sb-builder-screen.is-exercise-open .sb-approach-pills {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.sb-builder-screen.is-exercise-open .sb-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--sb-soft);
+  color: var(--sb-tx);
+  font: 700 11.5px/1 Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.sb-builder-screen.is-exercise-open .sb-pill.is-accent {
+  flex: 1;
+  background: var(--sb-accbg);
+  color: var(--sb-acc);
+}
+
+.sb-builder-screen.is-exercise-open .sb-pill.sb-pill-time {
+  flex: none;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11.5px;
+}

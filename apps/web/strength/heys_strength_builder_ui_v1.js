@@ -178,6 +178,7 @@
     const wl = (training && training.workoutLog) || {};
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
+    const [warmupDropIdx, setWarmupDropIdx] = React.useState(-1);
     const [draftName, setDraftName] = React.useState('');
     const [linkFrom, setLinkFrom] = React.useState(0);
     const [sheetOpen, setSheetOpen] = React.useState(false);
@@ -716,6 +717,23 @@
 
     const CatUI = HEYS.StrengthCatalogUI || {};
     function FinUIRef() { return HEYS.StrengthFinishUI || {}; }
+    if (view === 'warmup-drop' && warmupDropIdx >= 0 && exercises[warmupDropIdx]) {
+      const wdEx = exercises[warmupDropIdx];
+      return h((HEYS.StrengthBuilderParts || {}).WarmupDropScreen, {
+        ex: wdEx,
+        index: warmupDropIdx,
+        exercises: exercises,
+        bodyWeightKg: profile && profile.weight,
+        onBack: function () { setView('list'); },
+        onClose: onClose,
+        onOpenSheet: function () { setSheetOpen(true); },
+        onPatchApproach: function (apIdx, patch) { patchApproach(warmupDropIdx, apIdx, patch); },
+        onToggleType: function (apIdx) { toggleType(warmupDropIdx, apIdx); },
+        onAddDrop: function () { addDrop(warmupDropIdx); },
+        onAddApproach: function () { addApproach(warmupDropIdx); },
+        readOnly: false
+      });
+    }
     if (view === 'catalog' && CatUI.CatalogScreen) {
       return h(CatUI.CatalogScreen, {
         onPick: addExercise,
@@ -986,6 +1004,23 @@
         onRpe: setRpe,
         onRename: renameExercise,
         onLink: function (exIdx) { setLinkFrom(exIdx); setView('superset'); },
+        onOpenWarmupDrop: function (exIdx) { setWarmupDropIdx(exIdx); setView('warmup-drop'); },
+        onStartRest: function (exIdx) {
+          const restEx = exercises[exIdx];
+          if (!restEx) return;
+          const total = +restEx.restSec || 90;
+          patchRest({
+            total: total,
+            startedAt: Date.now(),
+            exName: restEx.name || '',
+            owner: restEx.name || 'Упражнение',
+            source: restEx.rpe > 0 ? 'тяжесть ' + restEx.rpe + ' → ' + fmtClock(total) : 'по умолчанию · ' + fmtClock(total),
+            closedLabel: restEx.name ? restEx.name + ' закрыт' : 'Подход закрыт',
+            contextNextLabel: 'дальше · следующий подход',
+            notificationLabel: approachProgressLabel(restEx, 0),
+            nextLabel: 'Следующий подход'
+          });
+        },
         onRemove: function (exIdx) {
           const next = exercises.slice();
           next.splice(exIdx, 1);
@@ -1119,7 +1154,8 @@
             close: function () { setSheetOpen(false); },
             go: setView,
             setLinkFrom: setLinkFrom,
-            setHistoryName: setHistoryName
+            setHistoryName: setHistoryName,
+            setWarmupDropIdx: setWarmupDropIdx
           }).map(function (row, i) {
             return h('button', {
               key: i,
