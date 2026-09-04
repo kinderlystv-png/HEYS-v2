@@ -189,7 +189,12 @@ describe('UI v4 reverse coverage index', () => {
     // стал, проверено сравнением множеств, а не только числа.
     expect(report.totals).toMatchObject({
       canvases: 25,
-      contractRows: 17311,
+      // Пакет 35 (35a7ef09d): +7 −1. cycle 442→445 — «высота шага» разложена
+      // на три строки по кадрам плюс «переснимок замеров · 4 сентября»;
+      // date-remainders 379→381 — «порог прилипания», «зазор под липкой
+      // подложкой»; home-widgets 4975→4976 — «затемнение под слоем ·
+      // правило продукта». Считано по личностям строк, потерь нет.
+      contractRows: 17317,
       productFrames: 771,
       duplicateContractIdentities: 0,
       duplicateFrameIdentities: 10,

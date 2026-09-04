@@ -604,9 +604,23 @@
       "status": "gap",
       "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
     },
-    "reports-fullscreen-modal": {
-      "status": "gap",
-      "reason": "Лист «По месяцам и неделям» открыт из Отчётов; дизайнер подтвердил, что кадр ещё будет нарисован."
+    "reports-v4-periods-sheet": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "reports-insights",
+          "frame": "Лист периодов"
+        }
+      ]
+    },
+    "sb-approach-types-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Типы подходов · честный тоннаж"
+        }
+      ]
     },
     "sb-builder-screen": {
       "status": "covered",
@@ -638,12 +652,66 @@
         }
       ]
     },
+    "sb-custom-exercise-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Своё упражнение"
+        }
+      ]
+    },
+    "sb-drop-set-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Дроп-сет · свой экран"
+        }
+      ]
+    },
+    "sb-ex-muscle-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Упражнение · группы мышц"
+        }
+      ]
+    },
+    "sb-ex-similar-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Упражнение · на что похоже"
+        }
+      ]
+    },
+    "sb-exercise-card-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Упражнение · карточка"
+        }
+      ]
+    },
     "sb-finish-screen": {
       "status": "covered",
       "frames": [
         {
           "zone": "strength-builder",
           "frame": "Конструктор · итоги"
+        }
+      ]
+    },
+    "sb-history-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "История упражнения"
         }
       ]
     },
@@ -722,6 +790,15 @@
         {
           "zone": "strength-builder",
           "frame": "Связка · создание"
+        }
+      ]
+    },
+    "sb-triset-work-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Трисет в работе"
         }
       ]
     },

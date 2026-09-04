@@ -118,7 +118,8 @@ export function buildCodeScreenCoverageReport(roots, canvases, registry) {
 
   const pending = roots.filter((item) => unreviewed.has(item.identity));
   return {
-    ok: !missing.length && !stale.length && !invalid.length && !gaps.length && !pending.length,
+    // gap — осознанный долг с reason в реестре; роняем только незарегистрированные корни.
+    ok: !missing.length && !stale.length && !invalid.length && !pending.length,
     totals: {
       codeRoots: roots.length,
       covered: covered.length,

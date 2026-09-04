@@ -69,7 +69,12 @@ describe('Путь к вердиктам знает один модуль', () =
 
   it('простановка вердикта тоже пишет одну зону', () => {
     const setter = fs.readFileSync(path.join(ROOT, 'scripts/ui-v4-set-verdict.mjs'), 'utf8');
-    expect(setter).toContain('writeZone(zone, zoneData)');
+    // Сеттер пишет через setVerdictKey из lib (d0e5b1f14): один ключ, свежий
+    // read, запись одной зоны. Сторожим инвариант, а не литерал — прежняя
+    // запись падала на починке, когда запись вынесли в общий эталон.
+    expect(setter).toContain('setVerdictKey(');
+    const lib = fs.readFileSync(path.join(ROOT, 'scripts/lib/ui-v4-verdicts.mjs'), 'utf8');
+    expect(lib).toContain('writeZone(zoneId, zone)');
     expect(setter).not.toContain('ui-v4-contract-verdicts.json');
   });
 
