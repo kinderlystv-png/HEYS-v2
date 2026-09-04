@@ -176,10 +176,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // собственную проверку, а не про продукт; новая строка того же долга
     // канваса заведена сразу типизированной.
     // 04.09: Г1 CycleScreen — 34 строк «Программа · цикл · 01–33» + «вид · экран цикла»
-    // legacy ≠→=; typedMismatch 14→169 неверно в старом снимке — переснято;
-    // legacy mismatch 170→0; «—» 108→107.
+    // legacy mismatch 170→0; typedMismatch 169→136 после закрытия цикла.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [169, '7ce7d88d78e21b15'],
+    typedMismatch: [136, '41e3b5753f56d2c5'],
     notApplicable: [107, '13d5a59f2d87bb7f'],
   }),
   'tab-activity': Object.freeze({
