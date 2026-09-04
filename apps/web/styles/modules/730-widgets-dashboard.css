@@ -15296,7 +15296,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__wave-week-seg.is-active {
-  background: color-mix(in srgb, var(--v4-tint, #c67139) 65%, transparent);
+  background: color-mix(in srgb, var(--v4-tint, #f6e6dd) 65%, transparent);
 }
 
 .widget-bd-sheet__wave-week-empty {
@@ -15321,7 +15321,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__wave-seg.is-active {
-  background: color-mix(in srgb, var(--v4-tint, #c67139) 65%, transparent);
+  background: color-mix(in srgb, var(--v4-tint, #f6e6dd) 65%, transparent);
 }
 
 .widget-bd-sheet__hero-tracks {
