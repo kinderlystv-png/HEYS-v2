@@ -3291,7 +3291,9 @@
       const compactState = v4HealthTrendState(compactDelta);
       const compactTone = v4ValueStateClass(compactState);
       return React.createElement('div', { className: 'widget-v4-stack widget-trend-compact' },
-        v4Kicker(`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`),
+        React.createElement('div', { className: 'widget-trend-compact__head' },
+          v4Kicker(`Тренд · ${formatRuUnit(periodDays, 'дней')}`)
+        ),
         React.createElement('div', { className: 'widget-trend-compact__row' },
           React.createElement('span', {
             className: 'widget-trend-compact__value ' + compactTone

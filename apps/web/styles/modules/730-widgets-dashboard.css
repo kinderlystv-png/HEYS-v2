@@ -11960,10 +11960,9 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   fill: var(--v4-ink-mark) /* v4-intentional */);
 }
 
-/* Ломаная роста в 2×1 тона себе не задаёт: кадр «Главная · дефолтная
-   раскладка» рисует её тем же --gr, что и число, и она его наследует через
-   currentColor. Строка контракта просит --gr2, а стенд сверяется с кадром —
-   расхождение двух представлений одной плитки ведётся в UI_V4_FINDINGS.md. */
+/* Кадр «Тренд здоровья · рост»: ломаная 2×1 несёт --gr2 через
+   .widget-v4-spark--ok (stroke/fill и color на обёртке). Число — --gr,
+   текстовая роль --v4-ok-text, не sand-ok. Семь прогонов и ±2 не трогал. */
 
 .widget-v4-stack--spark-hold {
   visibility: hidden;
@@ -14424,7 +14423,14 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-variant-numeric: tabular-nums;
 }
 
-/* Тренд здоровья 2×1 «Компакт» — канвас: дельта слева, мини-линия справа. */
+/* Тренд здоровья 2×1 «Компакт» — кадр «Тренд здоровья · рост». */
+.widget-trend-compact__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .widget-trend-compact__row {
   display: flex;
   align-items: flex-end;
@@ -14433,18 +14439,24 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   margin-top: auto;
 }
 
-/* Цвет несёт тон-класс (--good/--bad/--neutral), поэтому здесь только метрика. */
 .widget-trend-compact__value {
-  font-size: 21px;
+  font-size: 26px;
   font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
+}
+
+.widget-trend-compact__value.widget-v4-val--good {
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .widget-trend-compact__spark {
   flex: none;
   margin-bottom: 2px;
+}
+
+.widget-trend-compact__spark.widget-v4-spark--ok {
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 /* Перебор красит число и его подпись — эти правила стоят после базовых цветов
