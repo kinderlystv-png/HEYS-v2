@@ -6032,20 +6032,20 @@
 
     if (variantId === 'week') {
       const week = Array.isArray(data?.week) ? data.week : [];
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-foodquality' },
+      const max = Math.max(10, ...week.map((item) => Number(item?.value) || 0), 1);
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-foodquality widget-v4-foodquality-week' },
         v4Kicker('Качество · 7 дней'),
-        React.createElement('div', { className: 'widget-v4-goal-hero' },
+        React.createElement('div', { className: 'widget-v4-foodquality-week__head' },
           React.createElement('span', {
-            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+            className: 'widget-v4-foodquality-week__value'
+              + (hasData ? ' ' + v4ValueStateClass('neutral') : '')
           }, hasData ? formatScoreRu(score) : '—'),
-          // Шкала уходит в подпись, как «г сегодня» у клетчатки: крупным идёт
-          // только балл (кадр «Качество еды · Неделя»).
-          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'из 10 сегодня') : null
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'из 10 сегодня') : null,
+          data?.avgWeek != null
+            ? React.createElement('span', { className: 'widget-v4-foodquality-week__avg' }, `в среднем ${formatScoreRu(data.avgWeek)}`)
+            : null
         ),
-        v4WeekBars(week, 10),
-        data?.avgWeek != null
-          ? React.createElement('span', { className: 'widget-v4-muted' }, `в среднем ${formatScoreRu(data.avgWeek)}`)
-          : null
+        v4WeekBars(week, max, 'widget-v4-foodquality-week__bars', { plotPx: 40 })
       );
     }
 

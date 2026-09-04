@@ -68,7 +68,7 @@ describe('Клетчатка · Неделя — сведённый кусок',
       .toBe('39 › Клетчатка · 7 дней › 18 › г сегодня › норма 26');
   });
 
-  it('держит вид 2×2: шапка, норма справа, plotPx 40 и пунктир; качество еды без opts', () => {
+  it('держит вид 2×2: шапка, норма справа, plotPx 40 и пунктир; качество еды без нормы', () => {
     expect(variantsSrc).toMatch(/fiber:\s*\[[\s\S]*?id:\s*'week'[\s\S]*?title:\s*'Неделя'[\s\S]*?size:\s*'2x2'/);
     expect(week).toContain("v4Kicker('Клетчатка · 7 дней')");
     expect(week).toContain('widget-v4-fiber-week__head');
@@ -81,8 +81,8 @@ describe('Клетчатка · Неделя — сведённый кусок',
     expect(week).not.toContain('widget-v4-muted');
     expect(barsFn).toContain('widget-v4-weekbars__norm');
     expect(barsFn).toContain('plotPx');
-    expect(foodWeek).toContain('v4WeekBars(week, 10)');
-    expect(foodWeek).not.toContain('plotPx');
+    expect(foodWeek).toContain("v4WeekBars(week, max, 'widget-v4-foodquality-week__bars', { plotPx: 40 })");
+    expect(foodWeek).not.toContain('plotPx: 40, norm');
   });
 
   it('держит числа шапки и поля; общий weekbars 34 px и mini 3 px живы', () => {

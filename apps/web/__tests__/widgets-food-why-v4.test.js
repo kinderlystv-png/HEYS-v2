@@ -76,7 +76,7 @@ describe('Качество еды · Что снизило — сведённы�
     expect(why).toContain("'приёмов не было'");
     expect(now).toContain("v4Kicker('Качество')");
     expect(now).toContain('v4GoalBar((score / 10) * 100)');
-    expect(week).toContain('v4WeekBars(week, 10)');
+    expect(week).toContain("v4WeekBars(week, max, 'widget-v4-foodquality-week__bars', { plotPx: 40 })");
     expect(proteinAdd).toContain('widget-v4-protein-add__head');
   });
 

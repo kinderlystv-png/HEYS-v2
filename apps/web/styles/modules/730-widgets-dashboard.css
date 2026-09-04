@@ -12858,6 +12858,53 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   background: var(--v4-ok-fill, #7a8a5e);
 }
 
+/* Качество еды · Неделя · 03: число, «из 10 сегодня» и среднее в одном ряду. */
+.widget-v4-foodquality-week__head {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+/* Кадр · 04: 26/.9/-.03em, не mini 21 px и не общий stack 19 px. */
+.widget-v4-foodquality-week__value {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Кадр · 05: «в среднем N» 9/600 тоном данных, прижато вправо. */
+.widget-v4-foodquality-week__avg {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Кадр · 06: поле 44, сюжет 40; пунктира нормы нет — шкала 0–10. */
+.widget-v4-weekbars.widget-v4-foodquality-week__bars {
+  height: 44px;
+  margin-top: auto;
+}
+
+/* Кадры · 07–11: прошлые #b7c29b. Кадр · 12: сегодня --gr2 (= --v4-ok-fill). */
+.widget-v4-foodquality-week__bars .widget-v4-weekbars__bar {
+  border-radius: 3px 3px 0 0;
+  background: #b7c29b;
+  opacity: 1;
+}
+
+.widget-v4-foodquality-week__bars .widget-v4-weekbars__bar.is-today {
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
 /* Строки «по приёмам» и «интервалы»: время слева, полоса, число справа. */
 .widget-v4-mealbars {
   display: flex;
