@@ -105,7 +105,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 3 сентября: notApplicable 1358 -> 1356. Строки «Смена вида · лист выбора»
     // 33 и 36 стояли «—» как адресация разметки кадра; после пересъёмки кадра
     // они называют числа превью 2×2 и карточки «До цели» и сведены с кодом.
-    mismatch: [110, '019406feea2773db'],
+    mismatch: [72, 'c72c87c0eb292e47'],
     notApplicable: [1356, 'b439428088a4c3d6'],
   }),
   login: Object.freeze({
