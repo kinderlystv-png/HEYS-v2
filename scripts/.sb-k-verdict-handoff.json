@@ -1,0 +1,1129 @@
+{
+  "zone": "strength-builder",
+  "scope": "K1–K12 dispute frames · builder_ui + 750-strength-builder.css",
+  "generated": "2026-09-04",
+  "agent": "K geometry pass",
+  "summary": {
+    "rows": 209,
+    "blocks": 12
+  },
+  "rows": [
+    {
+      "key": "случай 1 · тап по закрытому во время отдыха",
+      "verdict": "=",
+      "f": "Тап по закрытому → .sb-rest--collapsed, ring скрыт, таймер идёт — strength-builder-dispute-k + ui.test.js."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 10",
+      "verdict": "=",
+      "f": ".sb-rest-compact i «развернуть» — 700 11.5px var(--ac); dispute-k test K1."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 11",
+      "verdict": "=",
+      "f": ".sb-ex--collapsed margin-top через .sb-list gap 8px."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 12",
+      "verdict": "=",
+      "f": ".sb-ex-head — align-items center gap 10px; 750-strength-builder.css:3311-3315."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 13",
+      "verdict": "=",
+      "f": ".sb-ex.is-complete .sb-ex-num — bg var(--bg) inset var(--gr-bg) color var(--gr); sand+blue dispute-k."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 14",
+      "verdict": "=",
+      "f": ".sb-ex--collapsed .sb-ex-title b — 700 12.5px/1.2 var(--tx); builder_ui collapsedExerciseRow."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 15",
+      "verdict": "=",
+      "f": ".sb-ex-state.is-editing «правится» — 700 11px var(--ac); rest owner + openIdx≠index."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 16",
+      "verdict": "=",
+      "f": "Таблица подходов открытого упражнения — .sb-aps margin-top 10px (open card body)."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 17",
+      "verdict": "=",
+      "f": ".sb-ap.is-done .sb-ap-num — bg var(--gr-bg) color var(--gr)."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 18",
+      "verdict": "=",
+      "f": "Последняя строка подхода border-bottom none — .sb-ap:last-child."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 19",
+      "verdict": "=",
+      "f": ".sb-rest-note / collapsed ring — таймер не сбрасывается; strength-builder-ui.test.js K1."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 06",
+      "verdict": "=",
+      "f": ".sb-list padding-top 12px — 750-strength-builder.css:3301."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 07",
+      "verdict": "=",
+      "f": "Карточки .sb-ex без border-bottom между строками — .sb-ex-head border 0."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 08",
+      "verdict": "=",
+      "f": ".sb-rest-compact-copy b — color var(--tx), tabular-nums; RestRing collapsed superset_ui."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · 09",
+      "verdict": "=",
+      "f": ".sb-rest-compact-copy span — 500 11px/1.3 rgba(var(--ink),.56); 750-strength-builder.css:1142-1149."
+    },
+    {
+      "key": "Спорное · тап по закрытому во время отдыха · текст",
+      "verdict": "=",
+      "f": "Тап по закрытому → .sb-rest--collapsed, ring скрыт, таймер идёт — strength-builder-dispute-k + ui.test.js."
+    },
+    {
+      "key": "случай 2 · подход добавлен к закрытому упражнению",
+      "verdict": "=",
+      "f": "«Завершить · 1 не закрыто» + reopen label — dispute-k + ui.test.js."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 10",
+      "verdict": "=",
+      "f": ".sb-ex-head gap 10px align center."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 11",
+      "verdict": "=",
+      "f": ".sb-ex-num accent при текущем упражнении после reopen."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 12",
+      "verdict": "=",
+      "f": ".sb-ex-title column gap 2px."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 13",
+      "verdict": "=",
+      "f": ".sb-ex-title b — 700 12.5px var(--tx)."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 14",
+      "verdict": "=",
+      "f": ".sb-ex-sub.is-reopened «было N из N · стало N из M» — builder_ui collapsedExerciseRow + ex.reopened после addApproach на закрытом."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 15",
+      "verdict": "=",
+      "f": "Новая строка подхода margin-top 10px — .sb-aps."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 16",
+      "verdict": "=",
+      "f": ".sb-ap-num pending — bg rgba(var(--ink),.06) color rgba(var(--ink),.62)."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 17",
+      "verdict": "=",
+      "f": ".sb-ap-check empty — bg rgba(.06) color rgba(.24) inset border."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 18",
+      "verdict": "=",
+      "f": ".sb-finish «Завершить · N не закрыто» margin-top 9px — 750-strength-builder.css:3384-3398."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 19",
+      "verdict": "=",
+      "f": "completedAt:null on +Подход — strength-builder-ui.test.js K2."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 06",
+      "verdict": "=",
+      "f": ".sb-stats gap 6px margin-top 18px — счётчик дня обновляется live, без двойной пилюли демо."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 07",
+      "verdict": "=",
+      "f": "Демо «23 подхода» зачёркнуто — продукт: один .sb-stat с актуальным «N из M подходов»."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 08",
+      "verdict": "=",
+      "f": ".sb-stat:nth-child(2) после +Подход — bg var(--gr-bg) color var(--gr); dispute-k K2."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · 09",
+      "verdict": "=",
+      "f": ".sb-ex.is-current .sb-ex-num — bg var(--acs) color var(--on-acs) при reopened."
+    },
+    {
+      "key": "Спорное · подход добавлен к закрытому · текст",
+      "verdict": "=",
+      "f": "«Завершить · 1 не закрыто» + reopen label — dispute-k + ui.test.js."
+    },
+    {
+      "key": "случай 3 · рабочий подход переключили в разминку",
+      "verdict": "=",
+      "f": "toggleType→RenumberScreen: working count −1, tonnage delta, warmup label Р — ui.test.js + offscreen-renumber test."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 10",
+      "verdict": "=",
+      "f": ".sb-renumber-delta — color var(--ac2); tonnage drop animation row."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 11",
+      "verdict": "=",
+      "f": ".sb-renumber-row.is-last border-bottom 0."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 12",
+      "verdict": "=",
+      "f": ".sb-renumber-footnote — 500 11px rgba(var(--ink),.56); renumber copy."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 13",
+      "verdict": "=",
+      "f": ".sb-renumber-footnote — transition on .sb-renumber-num 0.22s ease CSS."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 06",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 07",
+      "verdict": "=",
+      "f": "RenumberScreen .sb-renumber-row — grid 44px 1fr 1fr 44px."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 08",
+      "verdict": "=",
+      "f": ".sb-renumber-tonnage b — color var(--tx); sand+blue dispute-k K3."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · 09",
+      "verdict": "=",
+      "f": ".sb-renumber-tonnage b — 700 12.5px tabular-nums var(--tx)."
+    },
+    {
+      "key": "Спорное · рабочий стал разминкой · текст",
+      "verdict": "=",
+      "f": "toggleType→RenumberScreen: working count −1, tonnage delta, warmup label Р — ui.test.js + offscreen-renumber test."
+    },
+    {
+      "key": "случай 4 · вес правят после галочки",
+      "verdict": "=",
+      "f": "Weight edit after check recalculates tonnage, clears record badge — strength-builder-ui.test.js max/record."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 10",
+      "verdict": "=",
+      "f": ".sb-aps margin-top 10px list."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 11",
+      "verdict": "=",
+      "f": ".sb-ap-row flex list item."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 12",
+      "verdict": "=",
+      "f": "Tonnage recalc label color var(--tx) — kernel trainingTonnage live."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 13",
+      "verdict": "=",
+      "f": "«пересчитаны» — bold 11.5px var(--tx) in finish/stats feedback."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 14",
+      "verdict": "=",
+      "f": "Record row separator none."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 15",
+      "verdict": "=",
+      "f": "Record stays on historical date — historyFor, not sticky on approach."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 16",
+      "verdict": "=",
+      "f": "Record badge removed — 700 11.5px var(--ac2) «снят» when weight drops."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 17",
+      "verdict": "=",
+      "f": "Marked approach edit allowed — patchApproach without readOnly; dispute-k K4 behavior."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 06",
+      "verdict": "=",
+      "f": ".sb-ex.is-open margin-top 12px — open exercise card."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 07",
+      "verdict": "=",
+      "f": ".sb-ap-row border-bottom none on marked approach."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 08",
+      "verdict": "=",
+      "f": ".sb-ap.is-done .sb-ap-num — bg var(--gr-bg) color var(--gr)."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · 09",
+      "verdict": "=",
+      "f": "lastMarkAt caption — 500 11px rgba(var(--ink),.56) margin-top 8px in approach meta."
+    },
+    {
+      "key": "Спорное · вес правят после галочки · текст",
+      "verdict": "=",
+      "f": "Weight edit after check recalculates tonnage, clears record badge — strength-builder-ui.test.js max/record."
+    },
+    {
+      "key": "случай 5 · дроп или разминка внутри связки",
+      "verdict": "=",
+      "f": "Warmup allowed as row above rounds; drop button absent in link — ui.test.js «не предлагает сброс»."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 10",
+      "verdict": "=",
+      "f": "Drop row border-bottom none."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 11",
+      "verdict": "=",
+      "f": ".sb-at-drop-tag / drop denied — bg var(--tint) color var(--ac2) 44×26."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 12",
+      "verdict": "=",
+      "f": "Drop denied mark — — color var(--ac2)."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 13",
+      "verdict": "=",
+      "f": "No drop button in superset — queryByRole +Сброс null ui.test.js."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 06",
+      "verdict": "=",
+      "f": "Superset card margin-top 12px — .sb-round margin."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 07",
+      "verdict": "=",
+      "f": ".sb-warmup-tag / warmup row — 44×26px uppercase 9.5px rgba(var(--ink),.56); warmup-drop CSS."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 08",
+      "verdict": "=",
+      "f": "Warmup row prose — 600 11.5px rgba(var(--ink),.56) flex 1."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · 09",
+      "verdict": "=",
+      "f": "Warmup done check — 700 12px var(--gr)."
+    },
+    {
+      "key": "Спорное · дроп или разминка в связке · текст",
+      "verdict": "=",
+      "f": "Warmup allowed as row above rounds; drop button absent in link — ui.test.js «не предлагает сброс»."
+    },
+    {
+      "key": "случай 6 · галочка при пустых полях",
+      "verdict": "=",
+      "f": "Empty reps blocks check, highlights field — strength-builder-validation-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 10",
+      "verdict": "=",
+      "f": ".sb-ap-check.is-blocked — rgba(.24) disabled; no modal."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 11",
+      "verdict": "=",
+      "f": "Validation footnote — blocked check without dialog; validation-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 06",
+      "verdict": "=",
+      "f": "Open exercise card margin-top 12px."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 07",
+      "verdict": "=",
+      "f": "Approach row border-bottom none."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 08",
+      "verdict": "=",
+      "f": ".sb-ap.is-current .sb-ap-num — bg var(--acs) color var(--on-acs)."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · 09",
+      "verdict": "=",
+      "f": ".sb-ap-field.is-reps-missing — inset 1.5px var(--val-bad); validation CSS."
+    },
+    {
+      "key": "Спорное · галочка при пустых полях · текст",
+      "verdict": "=",
+      "f": "Empty reps blocks check, highlights field — strength-builder-validation-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "случай 7 · запись куратора поверх вашей",
+      "verdict": "=",
+      "f": "Curator edit after finish shows author stamp; no version picker — proposal/curator tests."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 10",
+      "verdict": "=",
+      "f": ".sb-curator-edit / meta «Артём поставил…» — 500 10.5px var(--ac)."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 11",
+      "verdict": "=",
+      "f": "Curator values muted rgba(var(--ink),.55) tabular."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 12",
+      "verdict": "=",
+      "f": "Meta list margin-top 10px."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 13",
+      "verdict": "=",
+      "f": "Policy row list item."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 14",
+      "verdict": "=",
+      "f": "«куратор её не правит» — 600 11px rgba(var(--ink),.56) during session."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 15",
+      "verdict": "=",
+      "f": "Policy row separator none."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 16",
+      "verdict": "=",
+      "f": "Merge dialog deferred — prose 500 11px muted."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 17",
+      "verdict": "=",
+      "f": "«отложен» — 700 11.5px var(--ac2)."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 18",
+      "verdict": "=",
+      "f": "Author+time stamp on curator edit, no silent overwrite — builder curator meta."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 06",
+      "verdict": "=",
+      "f": "Approach card after session complete — read-only or meta strip."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 07",
+      "verdict": "=",
+      "f": "Approach row border none."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 08",
+      "verdict": "=",
+      "f": "Approach num column gap 3px."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · 09",
+      "verdict": "=",
+      "f": "Approach number color var(--tx)."
+    },
+    {
+      "key": "Спорное · запись куратора поверх вашей · текст",
+      "verdict": "=",
+      "f": "Curator edit after finish shows author stamp; no version picker — proposal/curator tests."
+    },
+    {
+      "key": "случай 8 · в связке разное число подходов",
+      "verdict": "=",
+      "f": "No per-member approach button; +Раунд adds full round — ui.test.js superset section."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 10",
+      "verdict": "=",
+      "f": "«нельзя» — 700 11.5px var(--ac2)."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 11",
+      "verdict": "=",
+      "f": "Separator none."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 12",
+      "verdict": "=",
+      "f": "«+ Раунд» symmetric — 700 11.5px var(--gr); addSupersetRound kernel."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 13",
+      "verdict": "=",
+      "f": "New links enforce equal rounds — superset create + ui.test.js."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 06",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 07",
+      "verdict": "=",
+      "f": "Policy list row."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 08",
+      "verdict": "=",
+      "f": "«Подход одному участнику» — color var(--tx) policy copy."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · 09",
+      "verdict": "=",
+      "f": "«кнопки нет» — 500 11px muted; per-member add absent."
+    },
+    {
+      "key": "Спорное · в связке разное число подходов · текст",
+      "verdict": "=",
+      "f": "No per-member approach button; +Раунд adds full round — ui.test.js superset section."
+    },
+    {
+      "key": "случай 9 · тяжесть не отмечена",
+      "verdict": "=",
+      "f": "RPE 0 → rest 1:30 default; 7-8→2:00, 9+→3:00 — ui.test.js rest dock."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 10",
+      "verdict": "=",
+      "f": "Rest timer row baseline gap 8px margin-top 12px."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 11",
+      "verdict": "=",
+      "f": ".sb-rest-timer / ring time — 800 26px var(--tx) default 1:30."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 12",
+      "verdict": "=",
+      "f": "«по умолчанию» — 600 11.5px muted."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 13",
+      "verdict": "=",
+      "f": "RPE scale list margin-top 10px."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 14",
+      "verdict": "=",
+      "f": "Scale row item."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 15",
+      "verdict": "=",
+      "f": "«Тяжесть 9 и выше» — color var(--tx)."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 16",
+      "verdict": "=",
+      "f": "«3:00» — 600 12px rgba(var(--ink),.55) coarse scale."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 17",
+      "verdict": "=",
+      "f": "Scale row separator none."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 18",
+      "verdict": "=",
+      "f": "Default rest 90s when rpe=0 — patchRest source «по умолчанию» builder_ui:498-507."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 06",
+      "verdict": "=",
+      "f": "Rest dock card margin-top 12px."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 07",
+      "verdict": "=",
+      "f": "RPE row flex center gap 7px wrap."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 08",
+      "verdict": "=",
+      "f": ".sb-rpe-label — 700 9.5px uppercase rgba(var(--ink),.56)."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · 09",
+      "verdict": "=",
+      "f": "«не отмечена» — 600 10.5px rgba(var(--ink),.56)."
+    },
+    {
+      "key": "Спорное · тяжесть не отмечена · текст",
+      "verdict": "=",
+      "f": "RPE 0 → rest 1:30 default; 7-8→2:00, 9+→3:00 — ui.test.js rest dock."
+    },
+    {
+      "key": "случай 10 · старая связка с неравным числом подходов",
+      "verdict": "=",
+      "f": "Uneven legacy link: flat approaches, no round grid rewrite — ui.test.js legacy superset."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 10",
+      "verdict": "=",
+      "f": "«как было» — 700 11.5px var(--gr) preserve history."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 11",
+      "verdict": "=",
+      "f": "Separator none."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 12",
+      "verdict": "=",
+      "f": "Tonnage/count as flat list — 600 11px muted."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 13",
+      "verdict": "=",
+      "f": "No retroactive round UI for legacy ssGroup — kernel counts flat."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · старая связка неравная · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · старая связка неравная · 06",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 07",
+      "verdict": "=",
+      "f": "Legacy superset list row."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 08",
+      "verdict": "=",
+      "f": "«Раунды» policy — color var(--tx)."
+    },
+    {
+      "key": "Спорное · старая связка неравная · 09",
+      "verdict": "=",
+      "f": "«не строим» — 700 11.5px var(--ac2) for legacy flat list."
+    },
+    {
+      "key": "Спорное · старая связка неравная · текст",
+      "verdict": "=",
+      "f": "Uneven legacy link: flat approaches, no round grid rewrite — ui.test.js legacy superset."
+    },
+    {
+      "key": "случай 11 · участник добавлен в связку по ходу",
+      "verdict": "=",
+      "f": "Blank dash cell disabled, excluded from count — ui.test.js прочерк + finish remainder."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 10",
+      "verdict": "=",
+      "f": "Round row border none."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 11",
+      "verdict": "=",
+      "f": "Current round label accent var(--ac)."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 12",
+      "verdict": "=",
+      "f": "Active member values var(--tx)."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 13",
+      "verdict": "=",
+      "f": "Dash policy list margin-top 10px."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 14",
+      "verdict": "=",
+      "f": "Dash policy separator none."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 15",
+      "verdict": "=",
+      "f": "«Прочерк в прошлых раундах» — color var(--tx)."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 16",
+      "verdict": "=",
+      "f": "Dash not in count/tonnage — 500 11px muted policy."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 17",
+      "verdict": "=",
+      "f": "Mid-link member gets dash in past rounds — ui.test.js «прочерк участника»."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 06",
+      "verdict": "=",
+      "f": "Round card margin-top 12px."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 07",
+      "verdict": "=",
+      "f": ".sb-round-label «Р1» — 700 10.5px uppercase rgba(var(--ink),.56) width 36px."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 08",
+      "verdict": "=",
+      "f": "Member values flex 1 rgba(var(--ink),.55)."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · 09",
+      "verdict": "=",
+      "f": "Blank member cell «—» flex 1 not closable."
+    },
+    {
+      "key": "Спорное · участник добавлен по ходу · текст",
+      "verdict": "=",
+      "f": "Blank dash cell disabled, excluded from count — ui.test.js прочерк + finish remainder."
+    },
+    {
+      "key": "случай 12 · свой вес без коэффициента",
+      "verdict": "=",
+      "f": "No default bodyweight factor; unmeasured stat — ui.test.js bodyweight unit test."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 10",
+      "verdict": "=",
+      "f": ".sb-stat unmeasured count — 600 12.5px rgba(var(--ink),.56)."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 11",
+      "verdict": "=",
+      "f": "Warning card margin-top 10px bg var(--tint)."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 12",
+      "verdict": "=",
+      "f": "«Почему без дефолта» — 700 12.5px var(--ac2)."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 13",
+      "verdict": "=",
+      "f": "Prose why no 1.0 default — finish footnote / unmeasured copy."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 14",
+      "verdict": "=",
+      "f": "unmeasuredExercises in agg + finish line — kernel bodyweightFactor null."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 01",
+      "verdict": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 02",
+      "verdict": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 05",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 03",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 04",
+      "verdict": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "options": {
+        "na-kind": "demo-only"
+      }
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 06",
+      "verdict": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 07",
+      "verdict": "=",
+      "f": "Stats list row separator none."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 08",
+      "verdict": "=",
+      "f": "«Без объёма» stat — color var(--tx)."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · 09",
+      "verdict": "=",
+      "f": "Exercise hint — 500 11px muted why unmeasured."
+    },
+    {
+      "key": "Спорное · свой вес без коэффициента · текст",
+      "verdict": "=",
+      "f": "No default bodyweight factor; unmeasured stat — ui.test.js bodyweight unit test."
+    }
+  ]
+}

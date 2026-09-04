@@ -116,9 +116,11 @@
       "h": "c01cfd63ee34"
     },
     "каталог": {
-      "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
-      "h": "7f47f0ab839a"
+      "v": "≠",
+      "f": "Поведение =: поиск, фильтр мышц (.sb-chip is-on), прошлый результат в sub (heys_strength_catalog_ui_v1.js:78–89, 164–167), строка создания showCreateRow (:100–101, 177–187), «+» .sb-cat-add (:168–173). Формат прошлого: контракт пишет «60 кг × 8», кадр «Конструктор · каталог · текст» и строка 17 — «60 × 8» без кг; код и strength-builder-ui.test.js:512 следуют текстовому блоку. Расхождение только в общей строке «каталог».",
+      "h": "7f47f0ab839a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2208"
     },
     "таблица, а не поля подряд": {
       "v": "=",
@@ -297,62 +299,62 @@
     },
     "случай 1 · тап по закрытому во время отдыха": {
       "v": "=",
-      "f": "К1: collapsedExerciseRow onClick setOpenIdx+patchRest({collapsed:true}) heys_strength_builder_ui_v1.js:380-382.",
+      "f": "Тап по закрытому → .sb-rest--collapsed, ring скрыт, таймер идёт — strength-builder-dispute-k + ui.test.js.",
       "h": "a72e1d6037ab"
     },
     "случай 2 · подход добавлен к закрытому упражнению": {
       "v": "=",
-      "f": "К2: addApproach + session completedAt:null — heys_strength_builder_ui_v1.js addApproach/finishRemainderLabel.",
+      "f": "«Завершить · 1 не закрыто» + reopen label — dispute-k + ui.test.js.",
       "h": "2074037db30c"
     },
     "случай 3 · рабочий подход переключили в разминку": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "toggleType→RenumberScreen: working count −1, tonnage delta, warmup label Р — ui.test.js + offscreen-renumber test.",
       "h": "11e6734ff5e9"
     },
     "случай 4 · вес правят после галочки": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Weight edit after check recalculates tonnage, clears record badge — strength-builder-ui.test.js max/record.",
       "h": "a30dd333aa9d"
     },
     "случай 5 · дроп или разминка внутри связки": {
       "v": "=",
-      "f": "Дроп внутри связки закрыт двумя независимыми границами: кнопки нет в DOM и addDrop прекращает запись по groupByIndex. Evidence apps/web/strength/heys_strength_builder_ui_v1.js:287.",
+      "f": "Warmup allowed as row above rounds; drop button absent in link — ui.test.js «не предлагает сброс».",
       "h": "76441d414a59"
     },
     "случай 6 · галочка при пустых полях": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Empty reps blocks check, highlights field — strength-builder-validation-v4-canvas-contract.test.js.",
       "h": "661a3da2bfdd"
     },
     "случай 7 · запись куратора поверх вашей": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Curator edit after finish shows author stamp; no version picker — proposal/curator tests.",
       "h": "0905ca97150f"
     },
     "случай 8 · в связке разное число подходов": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "No per-member approach button; +Раунд adds full round — ui.test.js superset section.",
       "h": "b150acfb0e56"
     },
     "случай 9 · тяжесть не отмечена": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "RPE 0 → rest 1:30 default; 7-8→2:00, 9+→3:00 — ui.test.js rest dock.",
       "h": "79b6207d679f"
     },
     "случай 10 · старая связка с неравным числом подходов": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Uneven legacy link: flat approaches, no round grid rewrite — ui.test.js legacy superset.",
       "h": "a5e35197cf37"
     },
     "случай 11 · участник добавлен в связку по ходу": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "Blank dash cell disabled, excluded from count — ui.test.js прочерк + finish remainder.",
       "h": "57ca12a76912"
     },
     "случай 12 · свой вес без коэффициента": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "No default bodyweight factor; unmeasured stat — ui.test.js bodyweight unit test.",
       "h": "9f7ab94b31d0"
     },
     "три поля, которых требует схема": {
@@ -647,12 +649,12 @@
     },
     "избранное — звезда и фильтр": {
       "v": "=",
-      "f": "Кнопка ★-фильтра group===«fav» (strength/heys_strength_catalog_ui_v1.js:129-134); звезда в строке .sb-star/.is-on (152-163, CSS 3969-3984). Отдельного экрана избранного нет.",
+      "f": "★ в строке .sb-star/.is-on (:152–163) + фильтр «★» group==='fav' (:129–134); отдельного экрана избранного нет. HEYS.toggleExerciseFavorite.",
       "h": "60b82a881798"
     },
     "вид · каталог упражнений": {
       "v": "=",
-      "f": "CatalogScreen (strength/heys_strength_catalog_ui_v1.js:102-191): ‹ .sb-icon-btn 36×36 на --v4-c1 50% (750-strength-builder.css:3832-3840); .sb-star 13px is-on --sb-acc / 18%; .sb-cat-add 44 r12 inset 1.5px; .sb-search 44×14; .sb-chips wrap gap 6; .sb-cat-create на --v4-c2.",
+      "f": "Разметка и классы: ‹ .sb-icon-btn, .sb-search с ⌕, .sb-chips, .sb-cat-row/.sb-cat-create, сноска .sb-catalog-note. Цвета — CATALOG_V4_BRIDGE (:37–55) + 750-strength-builder.css:4722–4962 (вне scope правки); v4-роли на корне, не голые литералы в JS.",
       "h": "15984102c607"
     },
     "вид · итоги сессии": {
@@ -1381,127 +1383,127 @@
     },
     "Конструктор · каталог · 01": {
       "v": "=",
-      "f": "Шапка каталога: .sb-catalog-screen .sb-head { padding: 16px 18px 0; gap: 10px } — 750-strength-builder.css:3824-3830.",
+      "f": ".sb-head в CatalogScreen heys_strength_catalog_ui_v1.js:125–133; CSS .sb-catalog-screen .sb-head :4738–4744.",
       "h": "175bdcc2e73a"
     },
     "Конструктор · каталог · 02": {
       "v": "=",
-      "f": "Кнопка ‹: .sb-catalog-screen .sb-icon-btn 36×36, border-radius 999px, background var(--sb-card), color rgba(var(--v4-ink-rgb),.5) — 750-strength-builder.css:3832-3840; glyph — catalog_ui:106.",
+      "f": "Кнопка ‹ .sb-icon-btn 36×36 radius 999 — heys_strength_catalog_ui_v1.js:127–129; CSS :4746–4755 color rgba(var(--v4-ink-rgb),.5).",
       "h": "336d7816faea"
     },
     "Конструктор · каталог · 03": {
       "v": "=",
-      "f": "Колонка заголовка: .sb-head-title { flex:1; flex-direction:column; gap:3px; padding-left:10px } — 750-strength-builder.css:3843-3850.",
+      "f": ".sb-head-title flex column gap 3px padding-left 10px — JS :130–132; CSS :4757–4764.",
       "h": "b4a4fa9ae422"
     },
     "Конструктор · каталог · 04": {
       "v": "=",
-      "f": "Имя экрана «Каталог упражнений»: h(\"b\", …) — strength/heys_strength_catalog_ui_v1.js:108.",
+      "f": "Текст «Каталог упражнений» — heys_strength_catalog_ui_v1.js:131 b.",
       "h": "e2f2441e7bcd"
     },
     "Конструктор · каталог · 05": {
       "v": "=",
-      "f": "Ключ «Спина · N упражнений»: .sb-head-sub = groupLabel + « · » + exerciseCountLabel(rows.length) — catalog_ui:109,73-75.",
+      "f": "Подзаголовок groupLabel + exerciseCountLabel — :109, 73–76, 132 .sb-head-sub; формат «Спина · 4 упражнения».",
       "h": "470380604004"
     },
     "Конструктор · каталог · 06": {
       "v": "=",
-      "f": "Прокрутка: .sb-catalog-scroll { flex:1 1 auto; overflow-y:auto; padding:6px 18px 18px } — 750-strength-builder.css:3863-3868.",
+      "f": ".sb-catalog-scroll overflow-y auto — :135; CSS :4777–4783.",
       "h": "c629f84f9712"
     },
     "Конструктор · каталог · 07": {
       "v": "=",
-      "f": "Поиск: .sb-search { min-height:44px; gap:9px; margin-top:12px; padding:0 14px; border-radius:14px; background:var(--sb-card) } — 750-strength-builder.css:3871-3883.",
+      "f": ".sb-search min-height 44 radius 14 padding 0 14 margin-top 12 — :136–144; CSS :4785–4797 фон --sb-card/--v4-c1.",
       "h": "5f1f5092f5d7"
     },
     "Конструктор · каталог · 08": {
       "v": "=",
-      "f": "Знак ⌕: .sb-search > span { font:500 13px/1; color:rgba(var(--v4-ink-rgb),.38) } — 750-strength-builder.css:3885-3888; catalog_ui:114.",
+      "f": "⌕ span aria-hidden — :137; CSS .sb-search>span :4799–4802 ink 38%.",
       "h": "7f91b9539112"
     },
     "Конструктор · каталог · 09": {
       "v": "=",
-      "f": "Placeholder «Поиск по названию»: input placeholder + ::placeholder rgba(var(--v4-ink-rgb),.38) — 750-strength-builder.css:3890-3905, catalog_ui:118.",
+      "f": "placeholder «Поиск по названию» input search — :138–144; CSS placeholder :4817–4820.",
       "h": "8325108645ce"
     },
     "Конструктор · каталог · 10": {
       "v": "=",
-      "f": "Ряд фильтров: .sb-chips { flex-wrap:wrap; gap:6px; margin-top:10px } — 750-strength-builder.css:3908-3916.",
+      "f": ".sb-chips flex wrap gap 6 margin-top 10 — :146–165; CSS :4822–4830.",
       "h": "f6e1576bec50"
     },
     "Конструктор · каталог · 11": {
       "v": "=",
-      "f": "Пилюля «Все» в покое: .sb-chip color rgba(var(--v4-ink-rgb),.62) — 750-strength-builder.css:3918-3926; песочный rgba(0,0,0,.62), синий rgba(16,24,38,.62).",
+      "f": "Неактивная пилюля «Все» — .sb-chip без is-on; после bridge --sb-soft=var(--v4-hero) ≈ --c2 контракта; CSS :4832–4843 ink 62%.",
       "h": "39786f5c4be0"
     },
     "Конструктор · каталог · 12": {
       "v": "=",
-      "f": "Выбранная «Спина»: .sb-chip.is-on { background:var(--v4-act); color:var(--v4-btn-on-act) } — 750-strength-builder.css:3931-3934.",
+      "f": "Выбранная пилюля .sb-chip.is-on — :149–151; CSS :4845–4848 background var(--v4-act) color var(--v4-btn-on-act) ≈ --acs/--on-acs.",
       "h": "0ea791d23f58"
     },
     "Конструктор · каталог · 13": {
       "v": "=",
-      "f": "Список .cd: .sb-cat-list { margin-top:12px; padding:2px 16px; border-radius:20px; background:var(--sb-card) } — 750-strength-builder.css:3946-3951.",
+      "f": ".sb-cat-list margin-top 12 — :168; CSS :4860–4865.",
       "h": "f06d6e12de2e"
     },
     "Конструктор · каталог · 14": {
       "v": "=",
-      "f": "Строка списка: .sb-cat-row { display:flex; align-items:center; gap:12px; padding:13px 0 } — 750-strength-builder.css:3953-3958; map rows — catalog_ui:146-174.",
+      "f": "Строка .sb-cat-row — :174–197.",
       "h": "af81bb6e54c6"
     },
     "Конструктор · каталог · 15": {
       "v": "=",
-      "f": "Звезда «★» избранного: .sb-star.is-on { color:var(--sb-acc) } font 600 13px — 750-strength-builder.css:3969-3984; catalog_ui:154.",
+      "f": "Избранная ★ .sb-star.is-on color --sb-acc/--v4-act-text — :175–176; CSS :4896–4898.",
       "h": "2128e0253d09"
     },
     "Конструктор · каталог · 16": {
       "v": "=",
-      "f": "Имя упражнения: .sb-cat-title b { font:600 12.5px/1; color:var(--sb-tx) } — 750-strength-builder.css:3994-3997; r.name — catalog_ui:165.",
+      "f": "Имя упражнения .sb-cat-title b — :187–188; CSS :4908–4911 color --sb-tx.",
       "h": "ea7c823f0eb7"
     },
     "Конструктор · каталог · 17": {
       "v": "=",
-      "f": "Подпись «Спина · прошлый раз …»: .sb-cat-title span { font:500 11px/1.3; color:rgba(var(--v4-ink-rgb),.56) } — 750-strength-builder.css:3999-4002; sub — catalog_ui:148-166.",
+      "f": "sub «Группа · прошлый раз W × R» — previousResult :78–89, 171; CSS span :4913–4916 11px ink 56%.",
       "h": "6ddf1bd50638"
     },
     "Конструктор · каталог · 18": {
       "v": "=",
-      "f": "Кнопка «+»: .sb-cat-add 44×44 r12, background var(--sb-bg), inset 1.5px var(--v4-act), font 600 18px color var(--sb-acc) — 750-strength-builder.css:4004-4017.",
+      "f": "Кнопка + .sb-cat-add 44×44 radius 12 — :191–195; CSS :4918–4932 border inset 1.5px --v4-act.",
       "h": "a4f58f803c14"
     },
     "Конструктор · каталог · 19": {
       "v": "=",
-      "f": "Пустая звезда: .sb-star { color:rgba(var(--v4-ink-rgb),.18) } — 750-strength-builder.css:3977; catalog_ui:163.",
+      "f": "Пустая ★ .sb-star без is-on — :175; CSS :4883–4894 ink 18%.",
       "h": "3e4425ac13ab"
     },
     "Конструктор · каталог · 20": {
       "v": "=",
-      "f": "Разделитель none: .sb-cat-row:last-child { box-shadow:none } — 750-strength-builder.css:3965-3967.",
+      "f": "Разделитель: .sb-cat-row box-shadow inset bottom, :last-child none — CSS :4876–4881.",
       "h": "6b286135ed76"
     },
     "Конструктор · каталог · 21": {
       "v": "=",
-      "f": "Карточка создания: .sb-cat-create { margin-top:10px; padding:16px; border-radius:20px; background:var(--sb-soft) } — 750-strength-builder.css:4020-4029.",
+      "f": "Карточка создания .sb-cat-create margin-top 10; фон --sb-soft=--v4-hero после bridge ≈ --c2 — :199–209; CSS :4934–4947.",
       "h": "1627a654aedc"
     },
     "Конструктор · каталог · 22": {
       "v": "=",
-      "f": "Ряд создания: .sb-cat-create { display:flex; align-items:center; gap:12px } — 750-strength-builder.css:4020-4023.",
+      "f": "flex align center gap 12 в .sb-cat-create — CSS :4934–4937.",
       "h": "4f0556a76560"
     },
     "Конструктор · каталог · 23": {
       "v": "=",
-      "f": "Колонка текста создания: .sb-cat-title { flex-direction:column; gap:3px } — 750-strength-builder.css:3986-3992 внутри .sb-cat-create.",
+      "f": ".sb-cat-title column gap 3px в create — :206–208.",
       "h": "56118530aa17"
     },
     "Конструктор · каталог · 24": {
       "v": "=",
-      "f": "«Создать «…»»: .sb-cat-create .sb-cat-title b { font:700 12.5px/1.2; color:var(--sb-acc) } — 750-strength-builder.css:4035-4038; catalog_ui:184.",
+      "f": "«Создать «…»» b + подпись «каталог подсказывает…» — :207–208; CSS b :4949–4952 ac tone.",
       "h": "9b5cf7765c29"
     },
     "Конструктор · каталог · 25": {
       "v": "=",
-      "f": "Сноска: p.sb-catalog-note font 500 11px/1.55 — 750-strength-builder.css:4044-4048; текст совпадает с data-v — catalog_ui:188-189.",
+      "f": "Сноска .sb-catalog-note — :211–212; текст совпадает с кадром Б2 data-demo stop.",
       "h": "cbf1bd50d9f4"
     },
     "Конструктор · итоги · 01": {
@@ -5227,923 +5229,947 @@
       "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-день-не-состоялся-не-имеет-доменного-факта"
     },
     "Спорное · тап по закрытому во время отдыха · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · тап по закрытому во время отдыха · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · тап по закрытому во время отдыха · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "9e001396ce0a"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "9e001396ce0a",
+      "naKind": "demo-only"
     },
     "Спорное · тап по закрытому во время отдыха · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f5efaf1b7000"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "f5efaf1b7000",
+      "naKind": "demo-only"
     },
     "Спорное · тап по закрытому во время отдыха · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · тап по закрытому во время отдыха · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list padding-top 12px — 750-strength-builder.css:3301.",
       "h": "f06d6e12de2e"
     },
     "Спорное · тап по закрытому во время отдыха · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Карточки .sb-ex без border-bottom между строками — .sb-ex-head border 0.",
       "h": "6b286135ed76"
     },
     "Спорное · тап по закрытому во время отдыха · 08": {
       "v": "=",
-      "f": "Свёрнутая полоска .sb-rest-compact b — color var(--tx), tabular-nums; heys_strength_superset_ui_v1.js RestRing collapsed.",
+      "f": ".sb-rest-compact-copy b — color var(--tx), tabular-nums; RestRing collapsed superset_ui.",
       "h": "03ca3a96df77"
     },
     "Спорное · тап по закрытому во время отдыха · 09": {
       "v": "=",
-      "f": ".sb-rest-compact span — font 500 11px/1.3 Figtree, color rgba(var(--ink),.56); 750-strength-builder.css.",
+      "f": ".sb-rest-compact-copy span — 500 11px/1.3 rgba(var(--ink),.56); 750-strength-builder.css:1142-1149.",
       "h": "a4c3da126eda"
     },
     "Спорное · тап по закрытому во время отдыха · 10": {
       "v": "=",
-      "f": "onExpand в RestRing — label «развернуть», font 700 11.5px, color var(--ac); strength-builder-ui.test.js кликает «Развернуть».",
+      "f": ".sb-rest-compact i «развернуть» — 700 11.5px var(--ac); dispute-k test K1.",
       "h": "f8a6cf1bc4c3"
     },
     "Спорное · тап по закрытому во время отдыха · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex--collapsed margin-top через .sb-list gap 8px.",
       "h": "c8f60277f33e"
     },
     "Спорное · тап по закрытому во время отдыха · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex-head — align-items center gap 10px; 750-strength-builder.css:3311-3315.",
       "h": "869d1e5dd696"
     },
     "Спорное · тап по закрытому во время отдыха · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex.is-complete .sb-ex-num — bg var(--bg) inset var(--gr-bg) color var(--gr); sand+blue dispute-k.",
       "h": "7c91f7740c38"
     },
     "Спорное · тап по закрытому во время отдыха · 14": {
       "v": "=",
-      "f": ".sb-ex--collapsed .sb-ex-title b — font 700 12.5px/1.2, color var(--tx); collapsedExerciseRow heys_strength_builder_ui_v1.js:387-388.",
+      "f": ".sb-ex--collapsed .sb-ex-title b — 700 12.5px/1.2 var(--tx); builder_ui collapsedExerciseRow.",
       "h": "34bb4503ef04"
     },
     "Спорное · тап по закрытому во время отдыха · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex-state.is-editing «правится» — 700 11px var(--ac); rest owner + openIdx≠index.",
       "h": "b4c7c4fb05a2"
     },
     "Спорное · тап по закрытому во время отдыха · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Таблица подходов открытого упражнения — .sb-aps margin-top 10px (open card body).",
       "h": "ba833af6a156"
     },
     "Спорное · тап по закрытому во время отдыха · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap.is-done .sb-ap-num — bg var(--gr-bg) color var(--gr).",
       "h": "1a330ca9621c"
     },
     "Спорное · тап по закрытому во время отдыха · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Последняя строка подхода border-bottom none — .sb-ap:last-child.",
       "h": "7395c82cd118"
     },
     "Спорное · подход добавлен к закрытому · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · подход добавлен к закрытому · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · подход добавлен к закрытому · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c7964589bc00"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "c7964589bc00",
+      "naKind": "demo-only"
     },
     "Спорное · подход добавлен к закрытому · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "875d0b01ce39"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "875d0b01ce39",
+      "naKind": "demo-only"
     },
     "Спорное · подход добавлен к закрытому · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · подход добавлен к закрытому · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-stats gap 6px margin-top 18px — счётчик дня обновляется live, без двойной пилюли демо.",
       "h": "c00d4648c76a"
     },
     "Спорное · подход добавлен к закрытому · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Демо «23 подхода» зачёркнуто — продукт: один .sb-stat с актуальным «N из M подходов».",
       "h": "06421a62c8b5"
     },
     "Спорное · подход добавлен к закрытому · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-stat:nth-child(2) после +Подход — bg var(--gr-bg) color var(--gr); dispute-k K2.",
       "h": "10a0520f8f12"
     },
     "Спорное · подход добавлен к закрытому · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex.is-current .sb-ex-num — bg var(--acs) color var(--on-acs) при reopened.",
       "h": "c8f60277f33e"
     },
     "Спорное · подход добавлен к закрытому · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex-head gap 10px align center.",
       "h": "869d1e5dd696"
     },
     "Спорное · подход добавлен к закрытому · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex-num accent при текущем упражнении после reopen.",
       "h": "61464eb844e9"
     },
     "Спорное · подход добавлен к закрытому · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex-title column gap 2px.",
       "h": "4629850b7333"
     },
     "Спорное · подход добавлен к закрытому · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex-title b — 700 12.5px var(--tx).",
       "h": "a82bb13fc535"
     },
     "Спорное · подход добавлен к закрытому · 14": {
       "v": "=",
-      "f": "Строка «было N из M · стало…» — stateLabel в collapsedExerciseRow при reopened; тест видит «1 / 2 ✓».",
+      "f": ".sb-ex-sub.is-reopened «было N из N · стало N из M» — builder_ui collapsedExerciseRow + ex.reopened после addApproach на закрытом.",
       "h": "8ba3e1ec9380"
     },
     "Спорное · подход добавлен к закрытому · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Новая строка подхода margin-top 10px — .sb-aps.",
       "h": "3137d37b80aa"
     },
     "Спорное · подход добавлен к закрытому · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap-num pending — bg rgba(var(--ink),.06) color rgba(var(--ink),.62).",
       "h": "8043a0981952"
     },
     "Спорное · подход добавлен к закрытому · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap-check empty — bg rgba(.06) color rgba(.24) inset border.",
       "h": "f5eb6b4713c0"
     },
     "Спорное · подход добавлен к закрытому · 18": {
       "v": "=",
-      "f": "Кнопка «Завершить · 1 не закрыто» — finishRemainderLabel; strength-builder-ui.test.js после +Подход.",
+      "f": ".sb-finish «Завершить · N не закрыто» margin-top 9px — 750-strength-builder.css:3384-3398.",
       "h": "21c64c87457f"
     },
     "Спорное · подход добавлен к закрытому · 19": {
       "v": "=",
-      "f": "completedAt сбрасывается onPatchSession {completedAt:null}; addApproach на закрытом — strength-builder-ui.test.js.",
+      "f": "completedAt:null on +Подход — strength-builder-ui.test.js K2.",
       "h": "7191ed3ac375"
     },
     "Спорное · рабочий стал разминкой · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · рабочий стал разминкой · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · рабочий стал разминкой · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "67ee3ab39b62"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "67ee3ab39b62",
+      "naKind": "demo-only"
     },
     "Спорное · рабочий стал разминкой · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "266142498a12"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "266142498a12",
+      "naKind": "demo-only"
     },
     "Спорное · рабочий стал разминкой · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · рабочий стал разминкой · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "f06d6e12de2e"
     },
     "Спорное · рабочий стал разминкой · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "RenumberScreen .sb-renumber-row — grid 44px 1fr 1fr 44px.",
       "h": "af81bb6e54c6"
     },
     "Спорное · рабочий стал разминкой · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-renumber-tonnage b — color var(--tx); sand+blue dispute-k K3.",
       "h": "224782c71ae8"
     },
     "Спорное · рабочий стал разминкой · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-renumber-tonnage b — 700 12.5px tabular-nums var(--tx).",
       "h": "c0e598bcaec9"
     },
     "Спорное · рабочий стал разминкой · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-renumber-delta — color var(--ac2); tonnage drop animation row.",
       "h": "95bf060da2d5"
     },
     "Спорное · рабочий стал разминкой · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-renumber-row.is-last border-bottom 0.",
       "h": "6b286135ed76"
     },
     "Спорное · рабочий стал разминкой · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-renumber-footnote — 500 11px rgba(var(--ink),.56); renumber copy.",
       "h": "ccdcb8a289d0"
     },
     "Спорное · рабочий стал разминкой · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-renumber-footnote — transition on .sb-renumber-num 0.22s ease CSS.",
       "h": "c96b35fc3858"
     },
     "Спорное · вес правят после галочки · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · вес правят после галочки · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · вес правят после галочки · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "64a86d7572d3"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "64a86d7572d3",
+      "naKind": "demo-only"
     },
     "Спорное · вес правят после галочки · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "4cc0539f89d2"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "4cc0539f89d2",
+      "naKind": "demo-only"
     },
     "Спорное · вес правят после галочки · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · вес правят после галочки · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex.is-open margin-top 12px — open exercise card.",
       "h": "81d6d8e40a85"
     },
     "Спорное · вес правят после галочки · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap-row border-bottom none on marked approach.",
       "h": "7395c82cd118"
     },
     "Спорное · вес правят после галочки · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap.is-done .sb-ap-num — bg var(--gr-bg) color var(--gr).",
       "h": "ee8ca69eec8d"
     },
     "Спорное · вес правят после галочки · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "lastMarkAt caption — 500 11px rgba(var(--ink),.56) margin-top 8px in approach meta.",
       "h": "a8968ac41c37"
     },
     "Спорное · вес правят после галочки · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-aps margin-top 10px list.",
       "h": "d641122bb122"
     },
     "Спорное · вес правят после галочки · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap-row flex list item.",
       "h": "af81bb6e54c6"
     },
     "Спорное · вес правят после галочки · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Tonnage recalc label color var(--tx) — kernel trainingTonnage live.",
       "h": "6cbf2be0af84"
     },
     "Спорное · вес правят после галочки · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«пересчитаны» — bold 11.5px var(--tx) in finish/stats feedback.",
       "h": "0df48f690077"
     },
     "Спорное · вес правят после галочки · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Record row separator none.",
       "h": "6b286135ed76"
     },
     "Спорное · вес правят после галочки · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Record stays on historical date — historyFor, not sticky on approach.",
       "h": "5a64074e7259"
     },
     "Спорное · вес правят после галочки · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Record badge removed — 700 11.5px var(--ac2) «снят» when weight drops.",
       "h": "c6ba7f15e5e6"
     },
     "Спорное · вес правят после галочки · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Marked approach edit allowed — patchApproach without readOnly; dispute-k K4 behavior.",
       "h": "7bd18d67fc24"
     },
     "Спорное · дроп или разминка в связке · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · дроп или разминка в связке · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · дроп или разминка в связке · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "1ba6d9fa00ed"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "1ba6d9fa00ed",
+      "naKind": "demo-only"
     },
     "Спорное · дроп или разминка в связке · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "55daf48b3b89"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "55daf48b3b89",
+      "naKind": "demo-only"
     },
     "Спорное · дроп или разминка в связке · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · дроп или разминка в связке · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Superset card margin-top 12px — .sb-round margin.",
       "h": "81d6d8e40a85"
     },
     "Спорное · дроп или разминка в связке · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-warmup-tag / warmup row — 44×26px uppercase 9.5px rgba(var(--ink),.56); warmup-drop CSS.",
       "h": "6e45f131cd53"
     },
     "Спорное · дроп или разминка в связке · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Warmup row prose — 600 11.5px rgba(var(--ink),.56) flex 1.",
       "h": "0305812878b0"
     },
     "Спорное · дроп или разминка в связке · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Warmup done check — 700 12px var(--gr).",
       "h": "4668dbccd211"
     },
     "Спорное · дроп или разминка в связке · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Drop row border-bottom none.",
       "h": "7395c82cd118"
     },
     "Спорное · дроп или разминка в связке · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-at-drop-tag / drop denied — bg var(--tint) color var(--ac2) 44×26.",
       "h": "dcb392a39f9f"
     },
     "Спорное · дроп или разминка в связке · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Drop denied mark — — color var(--ac2).",
       "h": "ccf0d4abcf6f"
     },
     "Спорное · дроп или разминка в связке · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "No drop button in superset — queryByRole +Сброс null ui.test.js.",
       "h": "af396c191109"
     },
     "Спорное · галочка при пустых полях · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · галочка при пустых полях · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · галочка при пустых полях · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "749fe512e595"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "749fe512e595",
+      "naKind": "demo-only"
     },
     "Спорное · галочка при пустых полях · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "fb022aa6ec68"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "fb022aa6ec68",
+      "naKind": "demo-only"
     },
     "Спорное · галочка при пустых полях · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · галочка при пустых полях · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Open exercise card margin-top 12px.",
       "h": "81d6d8e40a85"
     },
     "Спорное · галочка при пустых полях · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Approach row border-bottom none.",
       "h": "7395c82cd118"
     },
     "Спорное · галочка при пустых полях · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap.is-current .sb-ap-num — bg var(--acs) color var(--on-acs).",
       "h": "61464eb844e9"
     },
     "Спорное · галочка при пустых полях · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap-field.is-reps-missing — inset 1.5px var(--val-bad); validation CSS.",
       "h": "b23b8bacbc09"
     },
     "Спорное · галочка при пустых полях · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ap-check.is-blocked — rgba(.24) disabled; no modal.",
       "h": "f5eb6b4713c0"
     },
     "Спорное · галочка при пустых полях · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Validation footnote — blocked check without dialog; validation-v4-canvas-contract.test.js.",
       "h": "6498e68eb37f"
     },
     "Спорное · запись куратора поверх вашей · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · запись куратора поверх вашей · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · запись куратора поверх вашей · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "bbdc767527ce"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "bbdc767527ce",
+      "naKind": "demo-only"
     },
     "Спорное · запись куратора поверх вашей · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d68457896287"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "d68457896287",
+      "naKind": "demo-only"
     },
     "Спорное · запись куратора поверх вашей · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · запись куратора поверх вашей · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Approach card after session complete — read-only or meta strip.",
       "h": "81d6d8e40a85"
     },
     "Спорное · запись куратора поверх вашей · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Approach row border none.",
       "h": "7395c82cd118"
     },
     "Спорное · запись куратора поверх вашей · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Approach num column gap 3px.",
       "h": "56118530aa17"
     },
     "Спорное · запись куратора поверх вашей · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Approach number color var(--tx).",
       "h": "af2cb59aa1c5"
     },
     "Спорное · запись куратора поверх вашей · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-curator-edit / meta «Артём поставил…» — 500 10.5px var(--ac).",
       "h": "a619a4ae2eb2"
     },
     "Спорное · запись куратора поверх вашей · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Curator values muted rgba(var(--ink),.55) tabular.",
       "h": "f39f515e16ec"
     },
     "Спорное · запись куратора поверх вашей · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Meta list margin-top 10px.",
       "h": "d641122bb122"
     },
     "Спорное · запись куратора поверх вашей · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Policy row list item.",
       "h": "af81bb6e54c6"
     },
     "Спорное · запись куратора поверх вашей · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«куратор её не правит» — 600 11px rgba(var(--ink),.56) during session.",
       "h": "be5d20bd99c2"
     },
     "Спорное · запись куратора поверх вашей · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Policy row separator none.",
       "h": "6b286135ed76"
     },
     "Спорное · запись куратора поверх вашей · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Merge dialog deferred — prose 500 11px muted.",
       "h": "037556958178"
     },
     "Спорное · запись куратора поверх вашей · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«отложен» — 700 11.5px var(--ac2).",
       "h": "cf0c260654e5"
     },
     "Спорное · запись куратора поверх вашей · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Author+time stamp on curator edit, no silent overwrite — builder curator meta.",
       "h": "3ddb93a541f6"
     },
     "Спорное · в связке разное число подходов · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · в связке разное число подходов · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · в связке разное число подходов · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "42ca28ffb05c"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "42ca28ffb05c",
+      "naKind": "demo-only"
     },
     "Спорное · в связке разное число подходов · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "beae633bd257"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "beae633bd257",
+      "naKind": "demo-only"
     },
     "Спорное · в связке разное число подходов · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · в связке разное число подходов · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "f06d6e12de2e"
     },
     "Спорное · в связке разное число подходов · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Policy list row.",
       "h": "af81bb6e54c6"
     },
     "Спорное · в связке разное число подходов · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Подход одному участнику» — color var(--tx) policy copy.",
       "h": "e65ee7a398a1"
     },
     "Спорное · в связке разное число подходов · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«кнопки нет» — 500 11px muted; per-member add absent.",
       "h": "449f891fcdce"
     },
     "Спорное · в связке разное число подходов · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«нельзя» — 700 11.5px var(--ac2).",
       "h": "38a8309cfc5d"
     },
     "Спорное · в связке разное число подходов · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Separator none.",
       "h": "6b286135ed76"
     },
     "Спорное · в связке разное число подходов · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«+ Раунд» symmetric — 700 11.5px var(--gr); addSupersetRound kernel.",
       "h": "984be29f5a4e"
     },
     "Спорное · в связке разное число подходов · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "New links enforce equal rounds — superset create + ui.test.js.",
       "h": "7c202a78b940"
     },
     "Спорное · тяжесть не отмечена · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · тяжесть не отмечена · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · тяжесть не отмечена · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "073fe88f131b"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "073fe88f131b",
+      "naKind": "demo-only"
     },
     "Спорное · тяжесть не отмечена · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "3201b9cd96b4"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "3201b9cd96b4",
+      "naKind": "demo-only"
     },
     "Спорное · тяжесть не отмечена · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · тяжесть не отмечена · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Rest dock card margin-top 12px.",
       "h": "81d6d8e40a85"
     },
     "Спорное · тяжесть не отмечена · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "RPE row flex center gap 7px wrap.",
       "h": "8bdf1b0ccb27"
     },
     "Спорное · тяжесть не отмечена · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-rpe-label — 700 9.5px uppercase rgba(var(--ink),.56).",
       "h": "0c9356cf95bc"
     },
     "Спорное · тяжесть не отмечена · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«не отмечена» — 600 10.5px rgba(var(--ink),.56).",
       "h": "bae1ddaadb05"
     },
     "Спорное · тяжесть не отмечена · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Rest timer row baseline gap 8px margin-top 12px.",
       "h": "7ca7e2ee4631"
     },
     "Спорное · тяжесть не отмечена · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-rest-timer / ring time — 800 26px var(--tx) default 1:30.",
       "h": "7bce4bbc5bcd"
     },
     "Спорное · тяжесть не отмечена · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«по умолчанию» — 600 11.5px muted.",
       "h": "b9a4a65b8345"
     },
     "Спорное · тяжесть не отмечена · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "RPE scale list margin-top 10px.",
       "h": "d641122bb122"
     },
     "Спорное · тяжесть не отмечена · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Scale row item.",
       "h": "af81bb6e54c6"
     },
     "Спорное · тяжесть не отмечена · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Тяжесть 9 и выше» — color var(--tx).",
       "h": "e578d5a174e7"
     },
     "Спорное · тяжесть не отмечена · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«3:00» — 600 12px rgba(var(--ink),.55) coarse scale.",
       "h": "3025ceaf6061"
     },
     "Спорное · тяжесть не отмечена · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Scale row separator none.",
       "h": "6b286135ed76"
     },
     "Спорное · тяжесть не отмечена · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Default rest 90s when rpe=0 — patchRest source «по умолчанию» builder_ui:498-507.",
       "h": "b9e2bddae0f7"
     },
     "Спорное · старая связка неравная · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · старая связка неравная · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · старая связка неравная · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "dc073223d9e6"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "dc073223d9e6",
+      "naKind": "demo-only"
     },
     "Спорное · старая связка неравная · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a89f77a553b8"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "a89f77a553b8",
+      "naKind": "demo-only"
     },
     "Спорное · старая связка неравная · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · старая связка неравная · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "f06d6e12de2e"
     },
     "Спорное · старая связка неравная · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Legacy superset list row.",
       "h": "af81bb6e54c6"
     },
     "Спорное · старая связка неравная · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Раунды» policy — color var(--tx).",
       "h": "33b2537670e7"
     },
     "Спорное · старая связка неравная · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«не строим» — 700 11.5px var(--ac2) for legacy flat list.",
       "h": "74d3644a20f2"
     },
     "Спорное · старая связка неравная · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«как было» — 700 11.5px var(--gr) preserve history.",
       "h": "28abaaa778e8"
     },
     "Спорное · старая связка неравная · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Separator none.",
       "h": "6b286135ed76"
     },
     "Спорное · старая связка неравная · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Tonnage/count as flat list — 600 11px muted.",
       "h": "75634184d861"
     },
     "Спорное · старая связка неравная · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "No retroactive round UI for legacy ssGroup — kernel counts flat.",
       "h": "a6c66e6563a1"
     },
     "Спорное · участник добавлен по ходу · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · участник добавлен по ходу · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · участник добавлен по ходу · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6ef905f60c0c"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "6ef905f60c0c",
+      "naKind": "demo-only"
     },
     "Спорное · участник добавлен по ходу · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "49772dc1cda2"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "49772dc1cda2",
+      "naKind": "demo-only"
     },
     "Спорное · участник добавлен по ходу · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · участник добавлен по ходу · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Round card margin-top 12px.",
       "h": "81d6d8e40a85"
     },
     "Спорное · участник добавлен по ходу · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-round-label «Р1» — 700 10.5px uppercase rgba(var(--ink),.56) width 36px.",
       "h": "36f1a894d3ab"
     },
     "Спорное · участник добавлен по ходу · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Member values flex 1 rgba(var(--ink),.55).",
       "h": "7f3e428f0d15"
     },
     "Спорное · участник добавлен по ходу · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Blank member cell «—» flex 1 not closable.",
       "h": "17c8733ccc2d"
     },
     "Спорное · участник добавлен по ходу · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Round row border none.",
       "h": "7395c82cd118"
     },
     "Спорное · участник добавлен по ходу · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Current round label accent var(--ac).",
       "h": "52439bd20851"
     },
     "Спорное · участник добавлен по ходу · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Active member values var(--tx).",
       "h": "590dc24164e1"
     },
     "Спорное · участник добавлен по ходу · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Dash policy list margin-top 10px.",
       "h": "d641122bb122"
     },
     "Спорное · участник добавлен по ходу · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Dash policy separator none.",
       "h": "6b286135ed76"
     },
     "Спорное · участник добавлен по ходу · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Прочерк в прошлых раундах» — color var(--tx).",
       "h": "c8f979bc78a7"
     },
     "Спорное · участник добавлен по ходу · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Dash not in count/tonnage — 500 11px muted policy.",
       "h": "d55e255c4571"
     },
     "Спорное · участник добавлен по ходу · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Mid-link member gets dash in past rounds — ui.test.js «прочерк участника».",
       "h": "667a20690cd0"
     },
     "Спорное · свой вес без коэффициента · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · свой вес без коэффициента · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
       "h": "07ffbada0ee7"
     },
     "Спорное · свой вес без коэффициента · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "745f4bc283ab"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "745f4bc283ab",
+      "naKind": "demo-only"
     },
     "Спорное · свой вес без коэффициента · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d000ee7346dc"
+      "v": "—",
+      "f": "Подпись демо-рамки канваса (.top/.ttl); продукт не рисует «Случай N» — экран builder с живой шапкой.",
+      "h": "d000ee7346dc",
+      "naKind": "demo-only"
     },
     "Спорное · свой вес без коэффициента · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "c629f84f9712"
     },
     "Спорное · свой вес без коэффициента · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list — overflow-y auto padding 12px 18px; 750-strength-builder.css:3299-3302.",
       "h": "f06d6e12de2e"
     },
     "Спорное · свой вес без коэффициента · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Stats list row separator none.",
       "h": "6b286135ed76"
     },
     "Спорное · свой вес без коэффициента · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Без объёма» stat — color var(--tx).",
       "h": "ea90b043a91b"
     },
     "Спорное · свой вес без коэффициента · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Exercise hint — 500 11px muted why unmeasured.",
       "h": "dcd845d7ac5b"
     },
     "Спорное · свой вес без коэффициента · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-stat unmeasured count — 600 12.5px rgba(var(--ink),.56).",
       "h": "8bb5e99afca6"
     },
     "Спорное · свой вес без коэффициента · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Warning card margin-top 10px bg var(--tint).",
       "h": "19d657373049"
     },
     "Спорное · свой вес без коэффициента · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Почему без дефолта» — 700 12.5px var(--ac2).",
       "h": "26b115c038a1"
     },
     "Спорное · свой вес без коэффициента · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Prose why no 1.0 default — finish footnote / unmeasured copy.",
       "h": "8a0290a5a2dd"
     },
     "Спорное · свой вес без коэффициента · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "unmeasuredExercises in agg + finish line — kernel bodyweightFactor null.",
       "h": "586bac0bab65"
     },
     "Правка · план ещё не начат · 01": {
@@ -8164,7 +8190,7 @@
     },
     "Конструктор · каталог · текст": {
       "v": "=",
-      "f": "CatalogScreen рендерит цепочку: «Каталог упражнений», ключ группы, placeholder поиска, чипы «Все»/«★»/группы, строки с name+sub, create-row при showCreateRow, .sb-catalog-note — strength/heys_strength_catalog_ui_v1.js:102-189.",
+      "f": "Копия экрана: заголовок, ключ, placeholder, чипы (Все/группы/Ноги), строки с прошлым результатом и «ещё не делали», create row — strength-builder-ui.test.js describe «каталог конструктора по Canvas Б2» зелёный.",
       "h": "953bf32c667a"
     },
     "Конструктор · итоги · текст 1/2": {
@@ -8309,62 +8335,62 @@
     },
     "Спорное · тап по закрытому во время отдыха · текст": {
       "v": "=",
-      "f": "Сценарий: тап по закрытому → .sb-rest--collapsed, ring скрыт, таймер идёт — strength-builder-ui.test.js «тап по закрытому упражнению…».",
+      "f": "Тап по закрытому → .sb-rest--collapsed, ring скрыт, таймер идёт — strength-builder-dispute-k + ui.test.js.",
       "h": "caf8ada47665"
     },
     "Спорное · подход добавлен к закрытому · текст": {
       "v": "=",
-      "f": "К2 copy: «Завершить · 1 не закрыто» + 1/2 ✓ — strength-builder-ui.test.js «добавление подхода к закрытому…».",
+      "f": "«Завершить · 1 не закрыто» + reopen label — dispute-k + ui.test.js.",
       "h": "e9a5a828e090"
     },
     "Спорное · рабочий стал разминкой · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "toggleType→RenumberScreen: working count −1, tonnage delta, warmup label Р — ui.test.js + offscreen-renumber test.",
       "h": "2e2d01b49706"
     },
     "Спорное · вес правят после галочки · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Weight edit after check recalculates tonnage, clears record badge — strength-builder-ui.test.js max/record.",
       "h": "2fb20c02a6b9"
     },
     "Спорное · дроп или разминка в связке · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Warmup allowed as row above rounds; drop button absent in link — ui.test.js «не предлагает сброс».",
       "h": "671eca5b9a27"
     },
     "Спорное · галочка при пустых полях · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Empty reps blocks check, highlights field — strength-builder-validation-v4-canvas-contract.test.js.",
       "h": "f5f5e875f392"
     },
     "Спорное · запись куратора поверх вашей · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Curator edit after finish shows author stamp; no version picker — proposal/curator tests.",
       "h": "17cdca6c1aa7"
     },
     "Спорное · в связке разное число подходов · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "No per-member approach button; +Раунд adds full round — ui.test.js superset section.",
       "h": "5d96a1e2df89"
     },
     "Спорное · тяжесть не отмечена · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "RPE 0 → rest 1:30 default; 7-8→2:00, 9+→3:00 — ui.test.js rest dock.",
       "h": "06cce623929e"
     },
     "Спорное · старая связка неравная · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Uneven legacy link: flat approaches, no round grid rewrite — ui.test.js legacy superset.",
       "h": "1a82a71ac464"
     },
     "Спорное · участник добавлен по ходу · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Blank dash cell disabled, excluded from count — ui.test.js прочерк + finish remainder.",
       "h": "369a9984b15c"
     },
     "Спорное · свой вес без коэффициента · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "No default bodyweight factor; unmeasured stat — ui.test.js bodyweight unit test.",
       "h": "2381b2522a74"
     },
     "Правка · план ещё не начат · текст": {
@@ -9269,7 +9295,7 @@
     },
     "Спорное · тап по закрытому во время отдыха · 19": {
       "v": "=",
-      "f": "Таймер не сбрасывается при collapsed:true — patchRest сохраняет startedAt; strength-builder-ui.test.js advanceTimersByTime(5000) → «1:13».",
+      "f": ".sb-rest-note / collapsed ring — таймер не сбрасывается; strength-builder-ui.test.js K1.",
       "h": "eebc148f09c5"
     },
     "Правка · план ещё не начат · 20": {

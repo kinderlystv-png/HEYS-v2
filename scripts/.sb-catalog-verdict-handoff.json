@@ -17,6 +17,8 @@
     {
       "contractLine": "каталог",
       "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2208",
       "f": "Поведение =: поиск, фильтр мышц (.sb-chip is-on), прошлый результат в sub (heys_strength_catalog_ui_v1.js:78–89, 164–167), строка создания showCreateRow (:100–101, 177–187), «+» .sb-cat-add (:168–173). Формат прошлого: контракт пишет «60 кг × 8», кадр «Конструктор · каталог · текст» и строка 17 — «60 × 8» без кг; код и strength-builder-ui.test.js:512 следуют текстовому блоку. Расхождение только в общей строке «каталог»."
     },
     {
