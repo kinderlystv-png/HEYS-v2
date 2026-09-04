@@ -14483,6 +14483,15 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   fill: var(--v4-val-bad, #a8382b);
 }
 
+/* Шторка «Компакт»: линия 2 / точка 2.4. Живой 2×1 (2.5 / 3.5) не делит. */
+.widget-trend-compact--sheet .widget-trend-compact__spark polyline {
+  stroke-width: 2;
+}
+
+.widget-trend-compact--sheet .widget-trend-compact__spark circle {
+  r: 2.4;
+}
+
 /* Тренд 2×2 «Как сейчас»: число --gr текстовой ролью, не sand-ok.
    Компакт 2×1 свои тона не делит. */
 .widget-trend-now .widget-v4-hero-num {

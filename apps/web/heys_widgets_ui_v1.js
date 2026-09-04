@@ -3290,7 +3290,13 @@
         : formatRuNumber(Math.round(score));
       const compactState = v4HealthTrendState(compactDelta);
       const compactTone = v4ValueStateClass(compactState);
-      return React.createElement('div', { className: 'widget-v4-stack widget-trend-compact' },
+      // Шторка «Компакт»: толщина 2 / r 2.4. Живой 2×1 (рост/зона/падение)
+      // остаётся 2.5 / box.dotR 3.5 — коробку COMPACT не трогаю.
+      const sheetCompact = Boolean(meta.preview);
+      return React.createElement('div', {
+        className: 'widget-v4-stack widget-trend-compact'
+          + (sheetCompact ? ' widget-trend-compact--sheet' : '')
+      },
         React.createElement('div', { className: 'widget-trend-compact__head' },
           v4Kicker(`Тренд · ${formatRuUnit(periodDays, 'дней')}`)
         ),
@@ -3310,6 +3316,7 @@
               points: compactSparkPoints,
               stroke: 'currentColor',
               strokeWidth: compactSpark.strokeWidth || 2.5,
+              ...(sheetCompact ? { strokeWidth: 2 } : {}),
               strokeLinecap: 'round',
               strokeLinejoin: 'round'
             }),
@@ -3320,6 +3327,7 @@
               cx: compactSparkLast.x,
               cy: compactSparkLast.y,
               r: compactSparkLast.r || 2.4,
+              ...(sheetCompact ? { r: 2.4 } : {}),
               fill: 'currentColor'
             }) : null
           ) : null
