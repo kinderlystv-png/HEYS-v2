@@ -605,7 +605,9 @@
             'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
           }, warmup ? warmupLabel : String(workNumber || '—')),
           approach.done
-            ? h('span', { className: 'sb-ap-field sb-ap-value' }, fmtNumber(approach.weightKg) || 'свой')
+            ? h('span', {
+              className: 'sb-ap-field sb-ap-value' + (!fmtNumber(approach.weightKg) ? ' is-bw' : '')
+            }, ownWeightLabel(approach.weightKg, true))
             : h('input', {
               className: 'sb-ap-field',
               type: 'text',
@@ -619,7 +621,7 @@
           approach.done
             ? h('span', { className: 'sb-ap-field sb-ap-value' }, value ? fmtNumber(value) : (isTime ? 'сек' : 'м'))
             : h('input', {
-              className: 'sb-ap-field',
+              className: 'sb-ap-field' + (!(+value > 0) ? ' is-reps-missing' : ''),
               type: 'text',
               inputMode: 'numeric',
               value: value ? String(value) : '',
@@ -635,11 +637,13 @@
             }),
           h('button', {
             type: 'button',
-            className: 'sb-ap-check' + (approach.done ? ' is-done' : ''),
+            className: 'sb-ap-check'
+              + (approach.done ? ' is-done' : '')
+              + (readOnly || !(+value > 0) ? ' is-blocked' : ''),
             disabled: readOnly || !(+value > 0),
             onClick: function () { if (!readOnly) onPatch(index, { done: !approach.done }); },
             'aria-label': approach.done ? 'Отменить отметку' : 'Отметить выполненным'
-          }, approach.done ? '✓' : '')
+          }, approach.done ? '✓' : ((readOnly || !(+value > 0)) ? '○' : ''))
         )
       ];
       if (approach && approach.discomfort) {
@@ -673,6 +677,12 @@
       return +stage.reps > 0;
     }
 
+    function ownWeightLabel(weightKg, done) {
+      const n = fmtNumber(weightKg);
+      if (n) return n;
+      return done ? 'свой вес' : 'свой';
+    }
+
     const rows = [];
     const firstPendingStage = stages.findIndex(function (stage) { return !stage.done; });
     stages.forEach(function (stage, si) {
@@ -696,7 +706,9 @@
             'aria-label': warmup ? 'Разминочный подход' : 'Рабочий подход номер ' + workNumber
           }, warmup ? warmupLabel : String(workNumber || '—')),
         stage.done
-          ? h('span', { className: 'sb-ap-field sb-ap-value' }, fmtNumber(stage.weightKg) || 'свой')
+          ? h('span', {
+            className: 'sb-ap-field sb-ap-value' + (!fmtNumber(stage.weightKg) ? ' is-bw' : '')
+          }, ownWeightLabel(stage.weightKg, true))
           : h('input', {
             className: 'sb-ap-field',
             type: 'text',
@@ -710,7 +722,7 @@
         stage.done
           ? h('span', { className: 'sb-ap-field sb-ap-value' }, stage.reps ? fmtNumber(stage.reps) : '—')
           : h('input', {
-            className: 'sb-ap-field',
+            className: 'sb-ap-field' + (!canClose(stage) ? ' is-reps-missing' : ''),
             type: 'text',
             inputMode: 'numeric',
             value: stage.reps ? String(stage.reps) : '',
@@ -724,11 +736,13 @@
           }),
         h('button', {
           type: 'button',
-          className: 'sb-ap-check' + (stage.done ? ' is-done' : ''),
+          className: 'sb-ap-check'
+            + (stage.done ? ' is-done' : '')
+            + (!canClose(stage) ? ' is-blocked' : ''),
           disabled: readOnly || !canClose(stage),
           onClick: function () { patchStage(si, { done: !stage.done }); },
           'aria-label': stage.done ? 'Отменить отметку' : 'Отметить выполненным'
-        }, stage.done ? '✓' : '')
+        }, stage.done ? '✓' : (!canClose(stage) ? '○' : ''))
       ));
     });
 

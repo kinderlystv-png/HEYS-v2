@@ -352,6 +352,22 @@
   cursor: not-allowed;
 }
 
+.sb-ap-field.is-reps-missing {
+  box-shadow: inset 0 0 0 1.5px var(--val-bad, var(--v4-bad-text, #a83c22));
+}
+
+.sb-ap-check.is-blocked:not(.is-done) {
+  background: rgba(var(--ink, 0, 0, 0), 0.06);
+  color: rgba(var(--ink, 0, 0, 0), 0.24);
+  box-shadow: inset 0 0 0 1px rgba(var(--ink, 0, 0, 0), 0.12);
+  opacity: 1;
+}
+
+.sb-ap-value.is-bw {
+  font: 600 12px/1 Figtree, sans-serif;
+  color: rgba(var(--ink, 0, 0, 0), 0.5);
+}
+
 .sb-ap.is-blank .sb-ap-field {
   border-style: dashed;
   color: var(--sb-mut);
@@ -3125,11 +3141,34 @@
   justify-content: center;
 }
 
-.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-field {
+.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-field:not(.is-reps-missing) {
   border: 0;
   box-shadow: inset 0 0 0 2px var(--sb-acc-strong);
   font-size: 16px;
   outline: 0;
+}
+
+.sb-builder-screen.is-exercise-open .sb-ap-field.is-reps-missing,
+.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-field.is-reps-missing {
+  box-shadow: inset 0 0 0 1.5px var(--val-bad, var(--v4-bad-text, #a83c22));
+}
+
+.sb-builder-screen.is-exercise-open .sb-ap-check.is-blocked:not(.is-done) {
+  border: 0;
+  background: rgba(var(--ink), 0.06);
+  color: rgba(var(--ink), 0.24);
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.12);
+  opacity: 1;
+  font-size: 17px;
+}
+
+.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-check.is-blocked:not(.is-done) {
+  font-size: 17px;
+}
+
+.sb-builder-screen.is-exercise-open .sb-ap-value.is-bw {
+  font: 600 12px/1 Figtree, sans-serif;
+  color: rgba(var(--ink), 0.5);
 }
 
 .sb-builder-screen.is-exercise-open .sb-ap.is-done .sb-ap-num {
