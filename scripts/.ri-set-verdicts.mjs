@@ -1,5 +1,5 @@
-import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
-import { readZone, writeZone, ROOT } from './lib/ui-v4-verdicts.mjs';
+import { readZone, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const CASCADE_CSS = '734-ui-v4-insights.css';
 const INSIGHTS_JS = 'insights/pi_ui_dashboard.js';
@@ -113,14 +113,13 @@ for (const [key, row] of Object.entries(zone.rows)) {
   const spec = VERDICTS.get(key);
   if (!spec) throw new Error(`Нет вердикта для «${key}»`);
   const [verdict, fact, reasonCode, decisionRef] = spec;
-  applyVerdictToRow(row, {
+  setVerdictKey('reports-insights', key, {
     verdict,
     fact,
     options: verdict === '≠'
       ? { 'reason-code': reasonCode || 'canvas-conflict', 'decision-ref': decisionRef || DECISION_REF }
       : {},
-  }, ROOT);
+  });
   applied += 1;
 }
-writeZone('reports-insights', zone);
 console.log(`reports-insights: ${applied} вердиктов поставлено`);

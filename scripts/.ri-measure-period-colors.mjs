@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { patchZoneRow } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via patchZoneRow — assertForeignRowsUnchanged outside scope keys.
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODULES = path.join(ROOT, 'apps/web/styles/modules');
@@ -112,24 +113,22 @@ async function measure() {
 
 const CSS = '733-ui-v4-reports.css';
 const measured = await measure();
-const zone = readZone('reports-insights');
 let updated = 0;
 
 for (const { key, sel, prop } of SELECTORS) {
-  const row = zone.rows[key];
-  if (!row || row.v !== '=') continue;
-  const sand = fmtColor(measured[key].sand);
-  const blue = fmtColor(measured[key].blue);
-  const cssProp = prop === 'backgroundColor' ? 'background' : 'color';
-  const base = row.f.split('; sand ')[0].split('; sand rgb')[0].split('; sand #')[0];
-  const prefix = base.includes('733-ui-v4-reports.css')
-    ? base
-    : `${CSS} ${sel} ${cssProp}; ${base}`;
-  row.f = `${prefix}; sand ${sand} blue ${blue} — computed :3001 ${new Date().toISOString().slice(0, 10)}`;
-  updated += 1;
+  const { changed } = patchZoneRow('reports-insights', key, (row) => {
+    if (row.v !== '=') return;
+    const sand = fmtColor(measured[key].sand);
+    const blue = fmtColor(measured[key].blue);
+    const cssProp = prop === 'backgroundColor' ? 'background' : 'color';
+    const base = row.f.split('; sand ')[0].split('; sand rgb')[0].split('; sand #')[0];
+    const prefix = base.includes('733-ui-v4-reports.css')
+      ? base
+      : `${CSS} ${sel} ${cssProp}; ${base}`;
+    row.f = `${prefix}; sand ${sand} blue ${blue} — computed :3001 ${new Date().toISOString().slice(0, 10)}`;
+  });
+  if (changed) updated += 1;
 }
-
-writeZone('reports-insights', zone);
 console.log(`Обновлено ${updated} цветовых f листа периодов (sand+blue computed)`);
 for (const { key } of SELECTORS) {
   console.log(`  ${key}: sand=${fmtColor(measured[key].sand)} blue=${fmtColor(measured[key].blue)}`);

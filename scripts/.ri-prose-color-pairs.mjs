@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { patchZoneRow, readZone } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via patchZoneRow — assertForeignRowsUnchanged outside scope keys.
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODULES = path.join(ROOT, 'apps/web/styles/modules');
@@ -315,7 +316,6 @@ const proseKeys = [];
 const failed = [];
 
 for (const [key, pairs] of pairPlan) {
-  const row = zone.rows[key];
   const parts = [];
   let ok = true;
   for (const p of pairs) {
@@ -330,6 +330,7 @@ for (const [key, pairs] of pairPlan) {
     parts.push(`${p.css} ${p.sel} ${cssPropLabel(p.prop)}; sand ${sand} blue ${blue}`);
   }
   if (!ok) {
+    const row = zone.rows[key];
     prosePlan.push({ key, kind: 'pair-failed', row, reason: failed.at(-1) });
     continue;
   }
@@ -339,7 +340,9 @@ for (const [key, pairs] of pairPlan) {
     pairedKeys.push(key);
     continue;
   }
-  row.f = `${stripSuffixes(row.f)}; ${parts.join('; ')} — computed :3001 ${today}`;
+  patchZoneRow('reports-insights', key, (row) => {
+    row.f = `${stripSuffixes(row.f)}; ${parts.join('; ')} — computed :3001 ${today}`;
+  });
   paired += 1;
   pairedKeys.push(key);
 }
@@ -359,14 +362,12 @@ for (const { key, kind, row, reason } of prosePlan) {
   if (DRY) {
     console.log(`[prose] ${key}: ${note.slice(0, 100)}…`);
   } else {
-    row.f = `${stripSuffixes(row.f)}; ${note}`;
+    patchZoneRow('reports-insights', key, (live) => {
+      live.f = `${stripSuffixes(live.f)}; ${note}`;
+    });
   }
   proseMarked += 1;
   proseKeys.push(key);
-}
-
-if (!DRY) {
-  writeZone('reports-insights', zone);
 }
 
 console.log('\n--- итог ---');

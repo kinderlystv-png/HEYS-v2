@@ -1,5 +1,5 @@
-import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
-import { readZone, writeZone, ROOT } from './lib/ui-v4-verdicts.mjs';
+import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const MODAL = 'heys_day_tab_impl_v1.js';
 const MONTHLY = 'heys_monthly_reports_v1.js';
@@ -51,15 +51,11 @@ const FACTS = {
   'Лист периодов · текст': `${MODAL}+${MONTHLY} копия канваса: «По месяцам и неделям», чипы Неделя/Месяц/Только надёжные, легенда 3 точки, карточки 3×2, «Дни недели ›», сноска <4 дней`,
 };
 
-const zone = readZone('reports-insights');
 let applied = 0;
 for (const key of PERIOD_KEYS) {
-  const row = zone.rows[key];
-  if (!row) throw new Error(`Нет строки «${key}»`);
   const fact = FACTS[key];
   if (!fact) throw new Error(`Нет факта для «${key}»`);
-  applyVerdictToRow(row, { verdict: '=', fact, options: {} }, ROOT);
+  setVerdictKey('reports-insights', key, { verdict: '=', fact, options: {} });
   applied += 1;
 }
-writeZone('reports-insights', zone);
 console.log(`reports-insights period sheet: ${applied} вердиктов → =`);

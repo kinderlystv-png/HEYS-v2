@@ -5,7 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { patchZoneRow, readZone } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via patchZoneRow — assertForeignRowsUnchanged outside scope keys.
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MODULES = path.join(ROOT, 'apps/web/styles/modules');
@@ -267,18 +268,20 @@ for (const [key, items] of byKey) {
 
   if (!parts.length) {
     questioned.push({ key, reason: 'селектор не найден в probe HTML' });
-    row.v = '?';
-    row.f = `${stripComputedSuffix(row.f || '')}; замер: элемент не найден в probe — computed :3001 ${today}`;
+    patchZoneRow('reports-insights', key, (live) => {
+      live.v = '?';
+      live.f = `${stripComputedSuffix(live.f || '')}; замер: элемент не найден в probe — computed :3001 ${today}`;
+    });
     continue;
   }
 
-  const base = stripComputedSuffix(row.f || '');
-  row.f = `${base}; ${parts.join('; ')} — computed :3001 ${today}`;
+  const newFact = `${stripComputedSuffix(row.f || '')}; ${parts.join('; ')} — computed :3001 ${today}`;
+  patchZoneRow('reports-insights', key, (live) => {
+    live.f = newFact;
+  });
   updated += 1;
   confirmed += 1;
 }
-
-writeZone('reports-insights', zone);
 
 console.log(`\nОбновлено f: ${updated}`);
 console.log(`Подтверждено (= с sand+blue): ${confirmed}`);
