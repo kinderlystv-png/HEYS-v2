@@ -5,8 +5,8 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
-import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { readZone, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -253,20 +253,26 @@ const zone = readZone('checkin-morning', ROOT);
 let set = 0;
 const missing = [];
 
+const inScope = (row) => row.v === '?'
+  || (row.v === '=' && (row.f?.includes('сверена парой') || row.f?.includes('сведено парами')));
+
 for (const [key, row] of Object.entries(zone.rows)) {
   if (!FRAMES.some((f) => key === f || key.startsWith(`${f} · `))) continue;
   if (BLOCK_A.test(key) || BLOCK_B.test(key) || BLOCK_B2.test(key)) continue;
-  if (row.v !== '?' && !(row.v === '=' && (row.f?.includes('сверена парой') || row.f?.includes('сведено парами')))) continue;
+  if (!inScope(row)) continue;
 
   const f = factFor(key, row, zone.rows);
   if (!f) {
     missing.push(key);
     continue;
   }
-  applyVerdictToRow(row, { verdict: '=', fact: f, options: {} }, ROOT);
+
+  const result = setVerdictKey('checkin-morning', key, { verdict: '=', fact: f, options: {} }, {
+    skipIf: (live) => !inScope(live),
+  });
+  if (result.skipped) continue;
   set += 1;
 }
 
-writeZone('checkin-morning', zone, ROOT);
 console.log(JSON.stringify({ set, missing: missing.length, missingSample: missing.slice(0, 15) }, null, 2));
 if (missing.length) process.exitCode = 1;
