@@ -1,3 +1,4 @@
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 import { patchZoneRow, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const TEST = 'apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js';

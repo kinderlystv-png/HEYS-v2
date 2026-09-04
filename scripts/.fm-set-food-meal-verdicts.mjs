@@ -1,3 +1,4 @@
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const SAND_ACT = '#8a4a20';

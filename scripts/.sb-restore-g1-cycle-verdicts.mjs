@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 /**
  * Restore G1 «Программа · цикл · 01–33» verdicts from commit 744b9bab8.
  * Per-key setVerdictKey — fresh read before each write.

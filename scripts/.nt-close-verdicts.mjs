@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 /**
  * Bulk-close nutrition-tab ? verdicts after code verification.
  * Usage: node scripts/.nt-close-verdicts.mjs [--dry-run]

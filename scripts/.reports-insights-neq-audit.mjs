@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 /**
  * Second-eye audit of all «≠» in reports-insights zone — 2026-09-04.
  * Three checks per line: concrete f · reason in code · frame not superseded.

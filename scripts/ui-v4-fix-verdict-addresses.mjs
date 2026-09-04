@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 /**
  * Чинит протухшие адреса в доказательствах вердиктов.
  *

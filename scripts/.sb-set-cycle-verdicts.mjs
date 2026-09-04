@@ -1,3 +1,4 @@
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 import { patchZoneRow, readZone, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const FACT = 'CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js';

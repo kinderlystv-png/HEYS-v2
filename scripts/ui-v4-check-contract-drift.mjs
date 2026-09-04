@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 // ui-v4-check-contract-drift.mjs — гейт «контракт поехал, а вердикт остался».
 //
 // Контракт канваса (`[data-contract]`, строки `data-v`) — единственный источник

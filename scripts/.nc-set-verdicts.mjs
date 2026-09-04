@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 // Пакетная простановка вердиктов зоны norm-correction после сверки кода.
 import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
 import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
