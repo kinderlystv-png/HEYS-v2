@@ -40,8 +40,131 @@
       "f": "Сноска канваса; поведение = через ProgramNextLine (:3944–3953, :3176–3216): строка не исчезает в пустой день программы."
     }
   ],
+  "meta": {
+    "note": "Runtime-only contract keys for day_trainings; absent from strength-builder canvas. Seeded into docs/ui/verdicts/strength-builder.json on batch apply before rows.",
+    "apply": "node scripts/.sb-750-verdict-batch-apply.mjs",
+    "contractKeys": [
+      {
+        "key": "границы (scope)",
+        "dataV": "day_trainings — оркестратор ленты дня: renderTrainingsBlock, Program*Screen/Line/Card, handlers onMove/onSkip/onResumeSkipped, historyFor/lastSessionFor, mergeWorkoutLifecyclePatch. Рендер PlanCard/SkipSheet/SummaryCard/ProposalCard — superset_ui + proposal_ui; геометрия — 750/731.",
+        "h": "535eb4ee1e74",
+        "source": "apps/web/heys_day_trainings_v1.js",
+        "naKind": "handoff"
+      },
+      {
+        "key": "Следующая тренировка — строка программы",
+        "dataV": "ProgramNextLine :3176–3216: whenPhrase + dayLabel + «· по программе»; скрывается при hasPlanToday (:3956–3961). activity-program-next-row.test.js + program-week-overview.test.js.",
+        "h": "9f1c22f4fcf0",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "Программа · путь (второй слой)",
+        "dataV": "ProgramPathScreen :2894–2956: done/skipped/ahead счёт, точки недель, ближайшая без слова «статус». program-week-overview.test.js describe ProgramPathScreen.",
+        "h": "e114ff82b32f",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "Программа пройдена (16e)",
+        "dataV": "ProgramDoneLine :3124–3168 → Parts.ProgramDoneScreen; не исчезает при завершении цикла. program-week-overview.test.js.",
+        "h": "6b6f7617079d",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "План в ленте · перенос",
+        "dataV": "onMove :4376–4436: stableMoveTransferId, appendTrainingToDay с rollback, status moved на источнике. strength-plan-outcome-web.test.js (5 тестов).",
+        "h": "939557e20dba",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "План в ленте · пропуск",
+        "dataV": "onSkip :4447–4464: status skipped, пустой workoutLog, skipReason опционален; hasMeaningfulLiveWorkout guard.",
+        "h": "9aa59c941293",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "План в ленте · передумать",
+        "dataV": "onResumeSkipped :4466–4475: только !isPastDay, assigned из skipped.",
+        "h": "893058bc0f2e",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "вход в конструктор с карточки дня",
+        "dataV": "openBuilder :4128–4293: trainingForBuilder, assignedDraft, callbacks onPatch/onPatchSession/historyFor/finishSummaryFor. SummaryCard fallback :4481–4502.",
+        "h": "76de371e2400",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "assigned не блокирует onPatch до старта",
+        "dataV": "onPatch guard :4262–4267: assigned без exercises не патчится; onStartPlan/onStartCustom материализуют started (:4218–4251).",
+        "h": "61f2e9e92169",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "повтор прошлой тренировки",
+        "dataV": "onRepeatLast :4202–4216 + inline ct-wb-replay-btn :4608–4630; findLastWorkoutBuilderExercises с composition key.",
+        "h": "20cda6ce0d5f",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "бытовая активность в ленте",
+        "dataV": "householdEntries :4740–4775; removeHousehold с undo :3873–3933; householdNetKcalPerMin :22.",
+        "h": "34fb4d37f3fa",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "режим program на Активе",
+        "dataV": "trainingFilterMode==='program' (:3948–3961): пустота только без clientId; ProgramNextLine всегда при программе. heys_day_tab_impl_v1.js — единственный вызов (activity-program-next-row.test.js).",
+        "h": "a90ccb97ffa5",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "mergeWorkoutLifecyclePatch",
+        "dataV": ":724–753 fail-closed merge startedAt/firstMarkAt/lastMarkAt/completedAt/activeRest/feedback. program-week-overview.test.js lifecycle.",
+        "h": "ffb4c69f8491",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "finishStartedWorkoutPlan",
+        "dataV": ":844–849 started→done только при finish; assigned не трогается.",
+        "h": "fa69319fd713",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "moveOptionsFor",
+        "dataV": ":3078–3113 семь дней вперёд, busy/unknown, лимит 3 тренировок; useAuthoritativeMoveOptions KV-batch (:3036–3070).",
+        "h": "238ffe91072d",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "projectProgramWeek",
+        "dataV": ":2984–3002 семь честных kind для weekOverview в ProgramPlanCard.",
+        "h": "3b20e0eba6a4",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "День не состоялся · 01–05",
+        "dataV": "visual-composite day shell; поведение и карточка — superset_ui + day_trainings handlers.",
+        "h": "d4af9e1d2bf6",
+        "source": "apps/web/heys_day_trainings_v1.js",
+        "naKind": "handoff"
+      },
+      {
+        "key": "День не состоялся · 06–17",
+        "dataV": "Уже = в strength-builder.json; CSS 750 + strength-builder-day-missed-v4-canvas-contract.test.js. day_trainings не дублирует.",
+        "h": "ecfb07ec4b28",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      },
+      {
+        "key": "План в ленте дня · 06–35",
+        "dataV": "Уже = в strength-builder.json (731/750/superset_ui). day_trainings владеет ProgramPlanCard wiring + isFutureDay/isPastDay.",
+        "h": "061296a8b2a7",
+        "source": "apps/web/heys_day_trainings_v1.js"
+      }
+    ]
+  },
   "rows": [
     {
+      "key": "границы (scope)",
       "contractLine": "границы (scope)",
       "verdict": "—",
       "f": "day_trainings — оркестратор ленты дня: renderTrainingsBlock, Program*Screen/Line/Card, handlers onMove/onSkip/onResumeSkipped, historyFor/lastSessionFor, mergeWorkoutLifecyclePatch. Рендер PlanCard/SkipSheet/SummaryCard/ProposalCard — superset_ui + proposal_ui; геометрия — 750/731."

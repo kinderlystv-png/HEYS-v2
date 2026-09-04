@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -36,6 +37,7 @@ const handoffPattern = /^\.sb-.+-verdict-handoff(?:-\d+)?\.json$/;
 const extraHandoffs = [
   '.sb-neq-audit-handoff.json',
   '.sb-catalog-custom-exercise-handoff.json',
+  '.sb-catalog-custom-exercise-01-07-handoff.json',
 ];
 const handoffFiles = [
   ...fs.readdirSync(handoffDir)
@@ -48,7 +50,10 @@ const handoffFiles = [
 ];
 
 const loadedHandoffs = [];
+const handoffRowCounts = {};
 let skippedMissing = 0;
+/** @type {string[]} exact contract line keys skipped because absent from zone */
+const missingKeys = [];
 
 function ingestStandardRow(source, row) {
   const rowKey = row.key || row.contractLine;
@@ -58,6 +63,7 @@ function ingestStandardRow(source, row) {
   }
   if (!rows[rowKey]) {
     skippedMissing += 1;
+    if (!missingKeys.includes(rowKey)) missingKeys.push(rowKey);
     console.warn(`skip missing contract key in ${source}: ${rowKey}`);
     return;
   }
@@ -75,7 +81,7 @@ function ingestStandardRow(source, row) {
   const options = row.options || {};
   if (verdict === '—') {
     if (!options['na-kind']) {
-      options['na-kind'] = rowKey === 'границы' ? 'handoff' : 'foreign-zone';
+      options['na-kind'] = rowKey === 'границы' || rowKey === 'границы (scope)' ? 'handoff' : 'foreign-zone';
     }
   }
   if (row['na-kind']) options['na-kind'] = row['na-kind'];
@@ -96,6 +102,7 @@ function ingestNeqAuditRow(source, row) {
   if (!rowKey) return;
   if (!rows[rowKey]) {
     skippedMissing += 1;
+    if (!missingKeys.includes(rowKey)) missingKeys.push(rowKey);
     console.warn(`skip missing contract key in ${source}: ${rowKey}`);
     return;
   }
@@ -111,12 +118,101 @@ function ingestNeqAuditRow(source, row) {
   queueRow(source, rowKey, verdict, fact, options);
 }
 
+function ingestOutOfScopeCssRow(source, row) {
+  const rowKey = row.key || row.contractLine;
+  if (!rowKey) return;
+  if (!rows[rowKey]) {
+    skippedMissing += 1;
+    if (!missingKeys.includes(rowKey)) missingKeys.push(rowKey);
+    console.warn(`skip missing contract key in ${source} (outOfScopeCss): ${rowKey}`);
+    return;
+  }
+  const verdict = row.verdict ?? row.recommend ?? '=';
+  let fact = row.f ?? row.fDraft ?? rows[rowKey].f ?? '';
+  if (!fact) {
+    fact = verdict === '≠'
+      ? `Кадр ${rowKey}: сверка 750-strength-builder.css; handoff ${source}.`
+      : `750-strength-builder.css — кадр ${rowKey}; handoff ${source}.`;
+  }
+  const options = row.options || {};
+  if (verdict === '≠') {
+    if (!options['reason-code']) options['reason-code'] = 'canvas-conflict';
+    if (!options['decision-ref']) {
+      options['decision-ref'] = row.decisionRef
+        || 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
+    }
+  }
+  queueRow(source, rowKey, verdict, fact, options);
+}
+
+function ingestOutOfScopeRuntimeRow(source, row) {
+  const rowKey = row.key || row.contractLine;
+  if (!rowKey) return;
+  if (!rows[rowKey]) {
+    skippedMissing += 1;
+    if (!missingKeys.includes(rowKey)) missingKeys.push(rowKey);
+    console.warn(`skip missing contract key in ${source} (outOfScopeRuntime): ${rowKey}`);
+    return;
+  }
+  const verdict = row.verdict ?? row.recommend ?? '?';
+  let fact = row.f ?? row.fDraft ?? rows[rowKey].f ?? '';
+  if (!fact) {
+    console.warn(`skip row without fact in ${source} (outOfScopeRuntime): ${rowKey}`);
+    return;
+  }
+  if (row.note) fact = `${fact} ${row.note}`;
+  const options = row.options || {};
+  if (verdict === '≠') {
+    if (!options['reason-code']) options['reason-code'] = 'canvas-conflict';
+    if (!options['decision-ref']) {
+      options['decision-ref'] = row.decisionRef
+        || 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
+    }
+  }
+  queueRow(source, rowKey, verdict, fact, options);
+}
+
+function countHandoffRows(handoff) {
+  return (handoff.rows?.length || 0)
+    + (handoff.outOfScopeCssRows?.length || 0)
+    + (handoff.outOfScopeRuntimeRows?.length || 0);
+}
+
+function hashContractValue(value) {
+  return crypto.createHash('sha1').update(value).digest('hex').slice(0, 12);
+}
+
+/** Handoff-only keys absent from canvas contract — seed before row ingest. */
+function seedMetaContractKeys(source, handoff) {
+  const entries = handoff.meta?.contractKeys;
+  if (!Array.isArray(entries) || !entries.length) return 0;
+  let seeded = 0;
+  for (const entry of entries) {
+    const rowKey = entry.key;
+    if (!rowKey || rows[rowKey]) continue;
+    const dataV = entry.dataV || rowKey;
+    rows[rowKey] = {
+      v: '?',
+      f: `Handoff meta (${source}); verdict pending apply. ${entry.source || ''}`.trim(),
+      h: entry.h || hashContractValue(dataV),
+    };
+    if (entry.naKind) rows[rowKey].naKind = entry.naKind;
+    seeded += 1;
+  }
+  return seeded;
+}
+
 for (const filePath of handoffFiles) {
   const source = path.basename(filePath);
   const handoff = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   loadedHandoffs.push(source);
+  handoffRowCounts[source] = countHandoffRows(handoff);
+  const seeded = seedMetaContractKeys(source, handoff);
+  if (seeded) console.log(`  ${source}: seeded ${seeded} meta contract keys`);
   const ingest = source === '.sb-neq-audit-handoff.json' ? ingestNeqAuditRow : ingestStandardRow;
   for (const row of handoff.rows || []) ingest(source, row);
+  for (const row of handoff.outOfScopeCssRows || []) ingestOutOfScopeCssRow(source, row);
+  for (const row of handoff.outOfScopeRuntimeRows || []) ingestOutOfScopeRuntimeRow(source, row);
 }
 
 // Inline rows not yet in separate handoff chats (proposal L2, program-done hero)
@@ -173,9 +269,25 @@ for (const [key, verdict, fact, options] of batchMap.values()) {
 writeZone('strength-builder', zone);
 const counts = { '=': 0, '?': 0, '≠': 0, '—': 0 };
 for (const row of Object.values(rows)) counts[row.v] = (counts[row.v] || 0) + 1;
-console.log(`handoff files (${loadedHandoffs.length}): ${loadedHandoffs.join(', ') || '(none)'}`);
-for (const name of [...loadedHandoffs, 'inline-equals']) {
-  if (perFileCounts[name]) console.log(`  ${name}: ${perFileCounts[name]} rows queued`);
+console.log(`handoff files (${loadedHandoffs.length}):`);
+for (const name of loadedHandoffs) {
+  console.log(`  ${name}: ${handoffRowCounts[name]} rows in file, ${perFileCounts[name] || 0} queued`);
+}
+if (perFileCounts['inline-equals']) {
+  console.log(`  inline-equals: ${perFileCounts['inline-equals']} rows queued`);
+}
+const proposalFile = '.sb-proposal-ui-verdict-handoff.json';
+if (loadedHandoffs.includes(proposalFile)) {
+  const proposalHandoff = JSON.parse(fs.readFileSync(path.join(handoffDir, proposalFile), 'utf8'));
+  const proposalExpected = (proposalHandoff.rows?.length || 0) + (proposalHandoff.outOfScopeCssRows?.length || 0);
+  const proposalQueued = perFileCounts[proposalFile] || 0;
+  if (proposalQueued !== proposalExpected) {
+    console.warn(`proposal handoff queued ${proposalQueued} rows (expected ${proposalExpected} = rows+outOfScopeCss)`);
+  }
 }
 console.log(`unique keys queued: ${batchMap.size}; applied ${applied}; skipped unchanged ${skippedSame}; skipped missing ${skippedMissing}`);
+if (missingKeys.length) {
+  console.log(`missing keys (${missingKeys.length}):`);
+  for (const key of missingKeys) console.log(`  ${key}`);
+}
 console.log(`totals: =${counts['=']} · ?=${counts['?']} · ≠=${counts['≠']} · —=${counts['—']} · всего ${Object.keys(rows).length}`);
