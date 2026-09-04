@@ -68,21 +68,21 @@ const ALIAS = { '733-login-theme.css': '733-ui-v4-login-theme.css' };
 
 // Долг на 31 августа 2026. Список может только уменьшаться.
 const BASELINE = {
-  '000-base-and-gamification.css': 347,
+  '000-base-and-gamification.css': 13,
   '100-metrics-and-graphs.css': 6,
   '300-modals-and-day.css': 163,
-  '500-pwa-and-offline.css': 77,
+  '500-pwa-and-offline.css': 70,
   '600-steps-and-aps.css': 46,
   '610-aps-meal-flow.css': 73,
   '611-aps-product-card.css': 11,
   '715-yesterday-verify.css': 35,
-  '730-widgets-dashboard.css': 106,
+  '730-widgets-dashboard.css': 104,
   '733-ui-v4-login-theme.css': 9,
-  '740-cascade-card.css': 23,
+  '740-cascade-card.css': 15,
   '750-strength-builder.css': 6,
   'critical.css': 26,
   'heys-boot-mark.css': 1,
-  'heys-components.css': 410,
+  'heys-components.css': 394,
 };
 
 /** Файлы, на которые ссылаются вердикты, — то есть сведённые. */
