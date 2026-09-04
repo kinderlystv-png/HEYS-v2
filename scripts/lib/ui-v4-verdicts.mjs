@@ -90,8 +90,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 03.09: пакет перерисовал четыре кадра церемонии и лист уровней — 60 строк
     // ушли в «?» на пересмотр, 21 строка исчезла из контракта вовсе. Долг упал
     // сам собой: ≠ 52 → 25, «—» 74 → 38. База опущена вслед за ним.
-    mismatch: [25, '945d98113bf9c558'],
-    notApplicable: [38, '6acb02521938cd4f'],
+    // 04.09: 683eb9da7 закрыл 60 «?» — часть сведена в «=», часть в «—» без
+    // naKind. Долг вырос относительно пониженной базы 03.09: ≠ 25 → 32,
+    // «—» 38 → 54.
+    mismatch: [32, '40b8936495276938'],
+    notApplicable: [54, '5864600e16443fce'],
   }),
   'home-widgets': Object.freeze({
     // 2 сентября: 128 -> 110. Восемнадцать строк «Разбор · … · 78» стояли
@@ -113,8 +116,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [37, '3f2cfeaa0a205b26'],
   }),
   'nutrition-tab': Object.freeze({
-    mismatch: [31, 'ab6e75925fa26a10'],
-    notApplicable: [168, '8c3144d10251c301'],
+    // 04.09: 9e3fc6c3d типизировал 26 legacy «≠» (31 → 5). «—» выросло 168 → 211:
+    // закрытие ?-долга ea801dfbb и новые нетипизированные «—» без naKind.
+    mismatch: [5, '24d0bbb594da3e3d'],
+    notApplicable: [211, 'c56b7bc960bb40c0'],
   }),
   'product-card': Object.freeze({
     mismatch: [58, 'fe58a8ef1a7107cf'],
@@ -156,7 +161,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // сам кадр» типизирована naKind: 'handoff' — она про разметку пакета и его
     // собственную проверку, а не про продукт; новая строка того же долга
     // канваса заведена сразу типизированной.
-    mismatch: [226, '28c24a4244192529'],
+    // 04.09: серия коммитов 4 сент (61f82b922 и ранее) — приёмка пакета, новые
+    // вердикты по кадрам A–E. Legacy «≠» 226 → 237; «—» без изменений.
+    mismatch: [237, 'ddb49d6cd8e7bae0'],
     notApplicable: [97, '65b097f314a63ea6'],
   }),
   'tab-activity': Object.freeze({
