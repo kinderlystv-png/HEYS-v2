@@ -23,6 +23,7 @@ describe('gamification v4 · data ink ladder', () => {
     '.game-v4-sheet__ach-cond',
     '.game-v4-sheet__ladder-xp',
     '.game-v4-sheet__xp-value',
+    '.game-v4-sheet__footnote',
   ])('%s uses the 56%% data role', (selector) => {
     expect(rule(selector)).toContain('var(--v4-ink-data');
   });
