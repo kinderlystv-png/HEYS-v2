@@ -73,6 +73,134 @@
     return String(hours) + ':' + String(minutes).padStart(2, '0');
   }
 
+  function unitEntryLabel(unit) {
+    if (unit === 'time') return 'единица — время';
+    if (unit === 'distance') return 'единица — метры';
+    if (unit === 'bodyweight') return 'свой вес';
+    return '';
+  }
+
+  function approachCountLabel(n) {
+    const t = Math.abs(n) % 100;
+    const d = t % 10;
+    if (t > 10 && t < 20) return n + ' подходов';
+    if (d === 1) return n + ' подход';
+    if (d >= 2 && d <= 4) return n + ' подхода';
+    return n + ' подходов';
+  }
+
+  function exerciseDurationTotalSec(ex) {
+    let sec = 0;
+    (ex && Array.isArray(ex.approaches) ? ex.approaches : []).forEach(function (a) {
+      if (a && a.done && Number.isFinite(+a.durationSec) && +a.durationSec > 0) sec += +a.durationSec;
+    });
+    return sec;
+  }
+
+  function pluralChanges(n) {
+    const t = Math.abs(n) % 100;
+    const d = t % 10;
+    if (t > 10 && t < 20) return 'изменений';
+    if (d === 1) return 'изменение';
+    if (d >= 2 && d <= 4) return 'изменения';
+    return 'изменений';
+  }
+
+  /**
+   * Кадр Л2 «Правка · клиент уже начал»: полный разбор поверх идущей
+   * тренировки. Шапка — как у конструктора; тело — замороженное и впереди.
+   */
+  function ProposalStartedScreen(props) {
+    const Parts = HEYS.StrengthBuilderParts || {};
+    const {
+      training, exercises, startedAt, elapsedSec, agg, onClose, onAccept, onDecline
+    } = props;
+    const ks = kernel();
+    const proposal = ks && ks.pendingPlanProposal(training);
+    if (!proposal) return null;
+    const wl = (training && training.workoutLog) || {};
+    const diff = Parts.describePlanEdit
+      ? Parts.describePlanEdit(wl.exercises || exercises, proposal.exercises)
+      : { frozen: [], ahead: [] };
+    const who = proposal.proposedBy || 'Куратор';
+    const dayLabel = (training.plan && training.plan.dayLabel) || 'План на сегодня';
+    const changeCount = diff.ahead.length;
+    const acceptLabel = changeCount > 0
+      ? 'Принять · ' + changeCount + ' ' + pluralChanges(changeCount)
+      : 'Принять';
+
+    return h('div', { className: 'sb-root sb-builder-screen sb-proposal-started' },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: onClose, 'aria-label': 'Закрыть разбор'
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, dayLabel),
+          h('div', { className: 'sb-head-sub' },
+            'по плану ' + who + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : ''))
+        ),
+        agg && h('span', { className: 'sb-proposal-started-badge' },
+          agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓')
+      ),
+      h('div', { className: 'sb-list sb-proposal-started-scroll' },
+        h('div', { className: 'sb-proposal-started-banner' },
+          h('span', { className: 'sb-proposal-started-banner-icon' }, who.slice(0, 1)),
+          h('span', { className: 'sb-proposal-started-banner-main' },
+            h('b', null, who + ' подправил план'),
+            h('span', null, 'сделанное не тронется — только то, что впереди')
+          )
+        ),
+        diff.frozen.length > 0 && h('div', { className: 'sb-proposal-started-block' },
+          diff.frozen.map(function (row, i) {
+            return h('div', { key: 'f' + i, className: 'sb-proposal-started-card is-frozen' },
+              h('span', { className: 'sb-proposal-started-lock', 'aria-hidden': 'true' }, '🔒'),
+              h('span', { className: 'sb-proposal-started-card-main' },
+                h('b', null, row.name),
+                h('span', null, row.summary)
+              ),
+              h('span', { className: 'sb-proposal-started-tag is-done' }, 'сделано')
+            );
+          })
+        ),
+        diff.ahead.length > 0 && h('div', { className: 'sb-proposal-started-block' },
+          diff.ahead.map(function (row, i) {
+            const tag = row.kind === 'removed' ? 'убрать'
+              : row.kind === 'added' ? 'добавить'
+                : row.kind === 'changed' ? 'править'
+                  : '';
+            return h('div', {
+              key: 'a' + i,
+              className: 'sb-proposal-started-card'
+                + (row.kind === 'removed' ? ' is-remove' : '')
+                + (row.kind === 'changed' ? ' is-change' : '')
+            },
+              h('span', { className: 'sb-proposal-started-num' }, String(i + 1)),
+              h('span', { className: 'sb-proposal-started-card-main' },
+                h('b', null, row.name),
+                h('span', null, row.detail || row.before || '')
+              ),
+              tag && h('span', {
+                className: 'sb-proposal-started-tag'
+                  + (row.kind === 'removed' ? ' is-remove' : ' is-change')
+              }, tag)
+            );
+          })
+        ),
+        h('button', {
+          type: 'button', className: 'sb-btn is-accent sb-proposal-started-accept',
+          onClick: onAccept
+        }, acceptLabel),
+        h('p', { className: 'sb-proposal-started-footnote' },
+          'Заморожены именно подходы, а не упражнения целиком: незакрытые подходы начатого упражнения править можно, включая их число. Начатое упражнение из плана не исчезает, даже если куратор его вычеркнул.'),
+        onDecline && h('button', {
+          type: 'button', className: 'sb-btn sb-proposal-started-decline',
+          onClick: onDecline
+        }, 'Оставить прежнюю')
+      )
+    );
+  }
+
   function repeatDateLabel(dateKey) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
     if (!m) return String(dateKey || '');
@@ -173,7 +301,8 @@
 
   function BuilderScreen(props) {
     const { training, dateKey, onPatch, onPatchSession, onPatchNote, profile, historyFor, historyDetailFor,
-      lastSessionFor, finishSummaryFor, onRepeatLast, onStartPlan, onStartCustom, syncStatusFor, onReviewProposal, onFinishProposal, onClose } = props;
+      lastSessionFor, finishSummaryFor, onRepeatLast, onStartPlan, onStartCustom, syncStatusFor,
+      onReviewProposal, onProposalAccept, onProposalDecline, onFinishProposal, onClose } = props;
     const SK = kernel();
     const wl = (training && training.workoutLog) || {};
     const [openIdx, setOpenIdx] = React.useState(0);
@@ -807,6 +936,40 @@
 
     const CatUI = HEYS.StrengthCatalogUI || {};
     function FinUIRef() { return HEYS.StrengthFinishUI || {}; }
+
+    const pendingProposal = SK && SK.pendingPlanProposal ? SK.pendingPlanProposal(training) : null;
+
+    function handleProposalAccept() {
+      if (typeof onProposalAccept === 'function') {
+        onProposalAccept();
+        setView('list');
+        return;
+      }
+      if (typeof onReviewProposal === 'function') onReviewProposal();
+    }
+
+    function handleProposalDecline() {
+      if (typeof onProposalDecline === 'function') {
+        onProposalDecline();
+        setView('list');
+        return;
+      }
+      if (typeof onReviewProposal === 'function') onReviewProposal();
+    }
+
+    if (view === 'proposal-started' && pendingProposal) {
+      return h(ProposalStartedScreen, {
+        training: training,
+        exercises: exercises,
+        startedAt: startedAt,
+        elapsedSec: elapsedSec,
+        agg: agg,
+        onClose: function () { setView('list'); },
+        onAccept: handleProposalAccept,
+        onDecline: handleProposalDecline
+      });
+    }
+
     if (view === 'warmup-drop' && warmupDropIdx >= 0 && exercises[warmupDropIdx]) {
       const wdEx = exercises[warmupDropIdx];
       return h((HEYS.StrengthBuilderParts || {}).WarmupDropScreen, {
@@ -1163,7 +1326,8 @@
         rendered.push(collapsedExerciseRow(ex, i));
         return;
       }
-      rendered.push(h((HEYS.StrengthBuilderParts || {}).ExerciseCard, {
+      rendered.push(h(React.Fragment, { key: 'e-wrap' + i },
+        h((HEYS.StrengthBuilderParts || {}).ExerciseCard, {
         key: 'e' + i,
         ex: ex,
         index: i,
@@ -1210,9 +1374,23 @@
         onDiscomfortAction: discomfortAction,
         curatorMeta: curatorMeta,
         onReplyCurator: function () {
-          if (typeof onReviewProposal === 'function') onReviewProposal();
+          setView('proposal-started');
         }
-      }));
+      }),
+        ((ex.unit || 'weight_reps') === 'time') && h('div', { className: 'sb-time-summary' },
+          h('div', { className: 'sb-time-summary-row' },
+            h('span', null, 'Итого под нагрузкой'),
+            h('b', { className: 'sb-time-summary-val' }, fmtClock(exerciseDurationTotalSec(ex)))
+          ),
+          h('div', { className: 'sb-time-summary-row is-muted' },
+            h('span', { className: 'sb-time-summary-copy' },
+              h('b', null, 'В тоннаж'),
+              h('span', null, 'не идёт · килограммы на секунды не умножаются')
+            ),
+            h('span', { className: 'sb-time-summary-dash' }, '—')
+          )
+        )
+      ));
     });
 
     const restSourceName = rest ? String(rest.source || '').split(/\s(?:→|·)\s/)[0] : '';
@@ -1220,8 +1398,17 @@
       ? 'из ' + restSourceName
       : 'по правилу «' + (restSourceName || 'отдыха') + '»';
 
+    const openEx = openIdx >= 0 ? exercises[openIdx] : null;
+    const openUnit = openEx ? (openEx.unit || 'weight_reps') : '';
+    const openApproachCount = openEx && Array.isArray(openEx.approaches) ? openEx.approaches.length : 0;
+    const proposalWho = pendingProposal && pendingProposal.proposedBy ? pendingProposal.proposedBy : null;
+
     return h('div', {
-      className: 'sb-root sb-builder-screen' + (openIdx >= 0 ? ' is-exercise-open' : '') + (rest
+      className: 'sb-root sb-builder-screen'
+        + (openIdx >= 0 ? ' is-exercise-open' : '')
+        + (openUnit === 'time' ? ' is-time-entry' : '')
+        + (openUnit === 'distance' ? ' is-distance-entry' : '')
+        + (rest
         ? ' sb-root--rest-docked ' + (rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded')
         : '')
     },
@@ -1231,22 +1418,26 @@
           onClick: onClose, 'aria-label': 'Закрыть конструктор'
         }, '✕'),
         h('div', { className: 'sb-head-title' },
-          // Название собирается из основных групп упражнений (решение 12):
-          // подпись не должна врать про то, что человек делает.
-          h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
+          h('b', null, openEx
+            ? ((openEx.name || 'Упражнение') + ' · ' + approachCountLabel(openApproachCount))
+            : (wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises))),
           h('div', { className: 'sb-head-sub' }, rest && !rest.collapsed
             ? 'отдых между подходами'
-            : compactSessionDate(dateKey)
-              + (startedAt ? ' · начата в ' + fmtTime(startedAt) : ''))
+            : openEx && unitEntryLabel(openUnit)
+              ? unitEntryLabel(openUnit)
+              : (proposalWho && startedAt > 0 && !completedAt
+                ? 'по плану ' + proposalWho + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : '')
+                : compactSessionDate(dateKey)
+                  + (startedAt ? ' · начата в ' + fmtTime(startedAt) : '')))
         ),
-        // Очередь отправки: зал без сети — основной сценарий (решение 6). Статус
-        // берётся у уже существующей общей sync-очереди приложения, конструктор
-        // не заводит вторую.
         syncStatus === 'pending' && h('span', {
           className: 'sb-sync-badge',
           title: 'Сохранено на телефоне, ждёт сеть'
         }, '📡 Ждёт сеть'),
-        startedAt > 0 && !completedAt && openIdx < 0
+        agg && startedAt > 0 && !completedAt && (openIdx >= 0 || pendingProposal)
+          && h('span', { className: 'sb-proposal-started-badge' },
+            agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓'),
+        startedAt > 0 && !completedAt && openIdx < 0 && !pendingProposal
           && h('span', { className: 'sb-session-badge' }, 'идёт'),
         h('button', {
           type: 'button', className: 'sb-icon-btn',
@@ -1277,7 +1468,7 @@
       Parts.ProposalStrip && h(Parts.ProposalStrip, {
         training: training,
         onReview: function () {
-          if (typeof onReviewProposal === 'function') onReviewProposal();
+          setView('proposal-started');
         }
       }),
       h('div', { className: 'sb-list' },

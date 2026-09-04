@@ -131,8 +131,8 @@ const inlineEquals = [
   ['Программа пройдена · 08', '.program-done-hero-label — 600 10.5px/.12em uppercase rgba(var(--ink),.56); heys_strength_proposal_ui_v1.js.'],
   ['Программа пройдена · 09', '.program-done-hero b — 800 30px/1 tabular-nums var(--tx); strength-proposal-v4-canvas-contract.test.js «9 из 12».'],
   ['Программа пройдена · 10', '.program-done-hero p — 500 11.5px/1.4 rgba(var(--ink),.56); ProgramDoneScreen copy.'],
-  ['Правка · клиент уже начал · 01', '.sb-proposal-review .sb-head — gap 10px, padding 16px 18px 0; 750-strength-builder.css:4108-4114.'],
-  ['Правка · клиент уже начал · 02', '.sb-proposal-review .sb-head-title column gap 3px; 750-strength-builder.css:4116-4122.'],
+  ['Правка · клиент уже начал · 01', '.sb-proposal-started .sb-head — gap 10px, padding 16px 18px 0; 750-strength-builder.css.'],
+  ['Правка · клиент уже начал · 02', '.sb-builder-screen .sb-icon-btn — 36×36, radius 999px, bg var(--c1), font 600 13px; 750:3278-3291.'],
 ];
 
 for (const [key, fact] of inlineEquals) queueRow('inline-equals', key, '=', fact, {});
