@@ -12630,8 +12630,32 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 /* Клетчатка · Добрать · 06: трекинг кадра -.02em; общий stack -.03em
-   остаётся неделе и белку. */
+   остаётся неделе и белку «По приёмам». */
 .widget-v4-fiber-add .widget-v4-goal-value {
+  letter-spacing: -0.02em;
+}
+
+/* Белок · Добрать · 02: ключ и «N из M г» в одном ряду.
+   Классы клетчатки add не переиспользовал. */
+.widget-v4-protein-add__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Белок · Добрать · 04: факт дня 9/600 тоном данных. */
+.widget-v4-protein-add__now {
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Белок · Добрать · 06: трекинг -.02em, не общий stack -.03em. */
+.widget-v4-protein-add .widget-v4-goal-value {
   letter-spacing: -0.02em;
 }
 

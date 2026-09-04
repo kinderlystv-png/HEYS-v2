@@ -70,8 +70,9 @@ describe('Клетчатка · Добрать — сведённый кусок
     expect(add).toContain('widget-v4-hint');
     expect(add).not.toContain('widget-v4-muted');
     expect(add).not.toContain('v4GoalBar');
-    expect(proteinAdd).toContain('widget-v4-muted');
     expect(proteinAdd).not.toContain('widget-v4-fiber-add');
+    expect(proteinAdd).not.toContain('widget-v4-hint');
+    expect(proteinAdd).toContain('widget-v4-protein-add');
   });
 
   it('держит числа шапки, героя и подсказки; общий hero 4 px и mini 3 px живы', () => {

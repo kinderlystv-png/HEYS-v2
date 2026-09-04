@@ -5908,20 +5908,29 @@
     }
 
     if (variantId === 'add') {
-      // Подсказки здесь нет: словарь «чем добрать» — про клетчатку, а источников
-      // белка в продукте не существует. Советовать овощи под именем белка
-      // нельзя (решение 22 августа). Ниже остатка не рисуется ничего.
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-protein' },
-        v4Kicker('Белок'),
-        React.createElement('div', { className: 'widget-v4-goal-hero' },
-          React.createElement('span', {
-            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
-          }, hasData ? `${protein} из ${target}` : '—'),
-          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+      // Подсказки нет: словарь «чем добрать» — про клетчатку, источников белка
+      // в продукте не существует (решение 22 августа). Шапка и герой — как у
+      // клетчатки «Добрать», без hint.
+      const remaining = Number(data?.remaining) || 0;
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-protein widget-v4-protein-add' },
+        React.createElement('div', { className: 'widget-v4-protein-add__head' },
+          v4Kicker('Белок'),
+          hasData
+            ? React.createElement('span', { className: 'widget-v4-protein-add__now' }, `${protein} из ${target} г`)
+            : null
         ),
-        hasData && data.remaining > 0
-          ? React.createElement('span', { className: 'widget-v4-muted' }, `+${formatRuUnit(data.remaining, 'г')} добрать`)
-          : null
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          hasData && remaining > 0
+            ? React.createElement('span', {
+                className: 'widget-v4-goal-value widget-v4-val--neutral'
+              }, `+${remaining}`)
+            : (hasData ? null : React.createElement('span', {
+                className: 'widget-v4-goal-value'
+              }, '—')),
+          hasData && remaining > 0
+            ? React.createElement('span', { className: 'widget-v4-unit' }, 'г добрать')
+            : null
+        )
       );
     }
 

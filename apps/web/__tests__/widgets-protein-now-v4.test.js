@@ -66,7 +66,8 @@ describe('Белок · Как сейчас — сведённый кусок', 
     expect(now).toContain('hasData ? v4GoalBar(pct) : null');
     expect(now).toContain('widget-v4-goal-value--empty');
     expect(now).not.toContain('widget-v4-fiber-add');
-    expect(add).toContain('widget-v4-muted');
+    expect(add).toContain('widget-v4-protein-add');
+    expect(add).not.toContain('widget-v4-muted');
     expect(fiberMini).toContain(", 'г')");
     expect(fiberMini).toContain('hasData ? v4GoalBar(pct) : null');
   });
