@@ -4387,7 +4387,7 @@
 }
 
 .sb-proposal-outcome-list {
-  margin: 0;
+  margin: 10px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -4434,6 +4434,12 @@
 .sb-proposal-outcome-mark {
   flex: none;
   font: 700 12px/1 Figtree, sans-serif;
+}
+
+.sb-proposal-outcome-footnote {
+  margin: 10px 0 0;
+  font: 500 11px/1.4 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
 }
 
 .sb-proposal-boundaries {

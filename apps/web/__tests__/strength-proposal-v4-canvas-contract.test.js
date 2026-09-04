@@ -7,6 +7,26 @@ import { cleanup, render, screen } from '@testing-library/react';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(WEB_DIR, 'strength/heys_strength_proposal_ui_v1.js'), 'utf8');
+const CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8');
+const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
+
+const SAND = Object.freeze({
+  tint: '#f6e6dd', tx: '#201e1d', ac2: '#a1471c', gr: '#5c6a45', ink56: 'rgba(0, 0, 0, .56)',
+});
+const BLUE = Object.freeze({
+  tint: '#e2ecf6', tx: '#101826', ac2: '#1d5e96', gr: '#5c6a45', ink56: 'rgba(16, 24, 38, 0.64)',
+});
+
+function paletteCss(name) {
+  const p = name === 'blue' ? BLUE : SAND;
+  const inkRgb = name === 'blue' ? '16, 24, 38' : '0, 0, 0';
+  return `${BASE_CSS}\n${CSS}`
+    .replaceAll('var(--tint)', p.tint)
+    .replaceAll('var(--tx)', p.tx)
+    .replaceAll('var(--ac2)', p.ac2)
+    .replaceAll('var(--gr)', p.gr)
+    .replaceAll('var(--ink)', inkRgb);
+}
 
 function srcBlock(name) {
   const start = SRC.indexOf('function ' + name);
@@ -94,16 +114,55 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
         },
       },
     };
-    const { container } = render(React.createElement(Parts.ProposalOutcome, { training }));
-    expect(screen.getByText(/легла не полностью/)).toBeTruthy();
-    expect(screen.getByText(/Эта же строка уйдёт ему/)).toBeTruthy();
-    const title = container.querySelector('.sb-proposal-outcome-title');
-    expect(title).toBeTruthy();
-    expect(container.querySelector('.sb-proposal-outcome-row.is-applied .sb-proposal-outcome-mark')?.textContent).toBe('✓');
-    expect(container.querySelector('.sb-proposal-outcome-row.is-rejected .sb-proposal-outcome-mark')?.textContent).toBe('—');
+    const style = document.createElement('style');
+    style.textContent = paletteCss('sand');
+    document.head.appendChild(style);
+    try {
+      const { container } = render(React.createElement(Parts.ProposalOutcome, { training }));
+      expect(screen.getByText(/легла не полностью/)).toBeTruthy();
+      expect(screen.getByText(/Эта же строка уйдёт ему/)).toBeTruthy();
+      const list = container.querySelector('.sb-proposal-outcome-list');
+      expect(list).toBeTruthy();
+      expect(getComputedStyle(list).marginTop).toBe('10px');
+      const row = container.querySelector('.sb-proposal-outcome-row');
+      expect(row).toBeTruthy();
+      expect(getComputedStyle(row).display).toBe('flex');
+      expect(container.querySelector('.sb-proposal-outcome-row.is-applied .sb-proposal-outcome-mark')?.textContent).toBe('✓');
+      expect(container.querySelector('.sb-proposal-outcome-row.is-rejected .sb-proposal-outcome-mark')?.textContent).toBe('—');
+      const appliedDetail = container.querySelector('.sb-proposal-outcome-row.is-applied .sb-proposal-outcome-detail');
+      const rejectedDetail = container.querySelector('.sb-proposal-outcome-row.is-rejected .sb-proposal-outcome-detail');
+      expect(getComputedStyle(appliedDetail).color).toBe(SAND.gr);
+      expect(getComputedStyle(rejectedDetail).color).toBe(SAND.ac2);
+    } finally {
+      style.remove();
+    }
     const block = srcBlock('ProposalOutcome');
     expect(block).not.toContain('backgroundColor: V4.tint');
     expect(block).toContain('className: \'sb-proposal-outcome\'');
+  });
+
+  it('ProposalOutcome list colors follow palette on blue set', () => {
+    const training = {
+      plan: {
+        proposal: {
+          status: 'accepted', proposedBy: 'Артём',
+          applied: [{ name: 'Жим лёжа · 25 кг', reason: 'approaches_changed' }],
+          rejected: [{ name: 'Тяга блока · 60 кг', reason: 'done_approaches_kept' }],
+        },
+      },
+    };
+    const style = document.createElement('style');
+    style.textContent = paletteCss('blue');
+    document.head.appendChild(style);
+    try {
+      const { container } = render(React.createElement(Parts.ProposalOutcome, { training }));
+      const appliedDetail = container.querySelector('.sb-proposal-outcome-row.is-applied .sb-proposal-outcome-detail');
+      const rejectedDetail = container.querySelector('.sb-proposal-outcome-row.is-rejected .sb-proposal-outcome-detail');
+      expect(getComputedStyle(appliedDetail).color).toBe(BLUE.gr);
+      expect(getComputedStyle(rejectedDetail).color).toBe(BLUE.ac2);
+    } finally {
+      style.remove();
+    }
   });
 
   it('ProgramDoneScreen: hero count 30px on v4 ok-bg', () => {
