@@ -109,6 +109,11 @@ export function inspectVerdictSemantics(data, zoneIds = null, options = {}) {
   };
 }
 
+function formatZoneDeviationSummary(zoneId, counts) {
+  const totalMismatch = counts.mismatch + counts.typedMismatch;
+  return `${zoneId}: «≠» ${totalMismatch} (legacy ${counts.mismatch} · typed-v1 ${counts.typedMismatch}) · «—» ${counts.notApplicable}`;
+}
+
 function runCli() {
   const selected = process.argv.includes('--zone')
     ? new Set([process.argv[process.argv.indexOf('--zone') + 1]])
@@ -121,20 +126,36 @@ function runCli() {
   ];
 
   if (!problems.length) {
-    const legacy = Object.entries(state.legacyByZone)
-      .map(([zoneId, counts]) => ({ zoneId, count: counts.mismatch + counts.notApplicable }))
-      .filter((item) => item.count > 0)
-      .sort((a, b) => b.count - a.count);
-    const legacyTotal = legacy.reduce((sum, item) => sum + item.count, 0);
-    console.log('Семантика вердиктов чиста: typed-v1 валиден, неизвестность не записана как ≠.');
-    if (legacyTotal) {
-      const top = legacy
-        .slice(0, 5)
-        .map((item) => `${item.zoneId} ${item.count}`)
-        .join(' · ');
-      console.log(
-        `Миграционный legacy-долг: ${legacyTotal} строк в ${legacy.length} зонах — ${top}${legacy.length > 5 ? ' …' : ''}`,
+    const zones = Object.entries(state.legacyByZone)
+      .filter(([zoneId]) => !selected || selected.has(zoneId))
+      .map(([zoneId, counts]) => ({ zoneId, counts }))
+      .filter(({ counts }) => counts.mismatch + counts.typedMismatch + counts.notApplicable > 0)
+      .sort(
+        (a, b) =>
+          b.counts.mismatch +
+          b.counts.typedMismatch +
+          b.counts.notApplicable -
+          (a.counts.mismatch + a.counts.typedMismatch + a.counts.notApplicable),
       );
+
+    const legacyTotal = zones.reduce((sum, { counts }) => sum + counts.mismatch, 0);
+    const typedTotal = zones.reduce((sum, { counts }) => sum + counts.typedMismatch, 0);
+    const naTotal = zones.reduce((sum, { counts }) => sum + counts.notApplicable, 0);
+    const mismatchTotal = legacyTotal + typedTotal;
+
+    console.log('Семантика вердиктов чиста: typed-v1 валиден, неизвестность не записана как ≠.');
+    console.log(
+      `Подтверждённые отступления: «≠» ${mismatchTotal} (legacy ${legacyTotal} · typed-v1 ${typedTotal}) · «—» ${naTotal}.`,
+    );
+
+    if (zones.length) {
+      const lines = zones.map(({ zoneId, counts }) => formatZoneDeviationSummary(zoneId, counts));
+      if (selected && selected.size === 1) {
+        for (const line of lines) console.log(line);
+      } else {
+        const top = lines.slice(0, 8).join(' · ');
+        console.log(`По зонам: ${top}${lines.length > 8 ? ' …' : ''}`);
+      }
     }
     return;
   }
@@ -154,9 +175,13 @@ function runCli() {
       const detail =
         row.reason ||
         row.value ||
+        row.form ||
+        (row.extraKeys?.length ? `keys: ${row.extraKeys.join(', ')}` : '') ||
         (row.kind === 'legacy-baseline-exceeded'
           ? `${row.category}: ${row.actual} > ${row.allowed}`
-          : '');
+          : row.kind === 'legacy-baseline-must-decrease'
+            ? `${row.category}: ${row.actual} < ${row.allowed}`
+            : '');
       console.error(`  ${row.kind}${at}${detail ? ` · ${detail}` : ''}`);
     }
     if (rows.length > 12) console.error(`  … ещё ${rows.length - 12}`);

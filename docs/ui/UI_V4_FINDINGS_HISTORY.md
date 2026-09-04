@@ -10,6 +10,32 @@
 
 ---
 
+## Закрыто 4 сентября · Гейт legacy-mismatch не считал typed-v1 «≠»
+
+**Что нашли.** Аудит `home-widgets` (4 сентября): **82** подтверждённых «≠» в
+файле вердиктов, гейт `ui-v4-check-verdict-semantics` показывал legacy-долг
+**72** — **10** typed-v1 строк выпадали из отчётности. По всем
+`docs/ui/verdicts/*.json` typed-v1 «≠» было **88** в **11** зонах; гейт их не
+включал в `legacyByZone.mismatch` и не сравнивал с baseline.
+
+**Чем это грозило.** Зелёный прогон означал «legacy-долг не вырос», но не
+«подтверждённых «≠» столько-то» — зона с десятками typed «≠» могла выглядеть
+закрытой по legacy-счёту.
+
+**Что сделали без дизайнера (4 сентября).** `inspectVerdictSchema` теперь
+классифицирует формы «≠» (`classifyMismatchVerdictRow`): legacy `{v,f,h}`,
+typed-v1 `{v,f,h,reasonCode,decisionRef}` ± опциональный `evidence`, неизвестные
+формы → `unknown-mismatch-form` (fail-closed). В baseline добавлен
+`typedMismatch` с digest по ключам для 11 зон; CLI печатает по зонам «≠» total =
+legacy + typed-v1 и «—». Проверка:
+`node scripts/ui-v4-check-verdict-semantics.mjs --zone home-widgets` →
+`«≠» 82 (legacy 72 · typed-v1 10)`; vitest `ui-v4-verdict-semantics.test.js`
+зелёный.
+
+**Чей ход был.** Агент/инфра v4 — закрыто этим коммитом.
+
+---
+
 ## Закрыто 3 сентября · Пустой Конструктор объединяет взаимоисключающие состояния плана
 
 **Что нашли.** Кадр Б1 одновременно показывает назначенный план и главную кнопку

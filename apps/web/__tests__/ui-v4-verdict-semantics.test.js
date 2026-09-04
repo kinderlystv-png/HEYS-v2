@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ALLOWED_MISMATCH_REASON_CODES,
   ALLOWED_NA_KINDS,
+  classifyMismatchVerdictRow,
   inspectVerdictSchema,
   legacyVerdictKeysDigest,
   readAllZones,
@@ -138,9 +139,42 @@ describe('UI v4 verdict semantics', () => {
         expect.objectContaining({ key: 'partial', kind: 'invalid-decision-ref' }),
         expect.objectContaining({ key: 'placeholder', kind: 'invalid-decision-ref' }),
         expect.objectContaining({ key: 'inventedMismatch', kind: 'invalid-reason-code' }),
+        expect.objectContaining({ key: 'inventedMismatch', kind: 'invalid-decision-ref' }),
         expect.objectContaining({ key: 'inventedNa', kind: 'invalid-na-kind' }),
+        expect.objectContaining({
+          zoneId: 'typed',
+          kind: 'legacy-baseline-exceeded',
+          category: 'typedMismatch',
+        }),
       ]),
     );
+  });
+
+  it('fail-closed отклоняет неизвестную форму «≠» с лишними ключами', () => {
+    const data = {
+      zones: {
+        typed: {
+          rows: {
+            alien: {
+              v: '≠',
+              f: 'Есть отличие.',
+              reasonCode: 'platform',
+              decisionRef: 'docs/ui/UI_V4_HANDOFF_CODEX.md:1',
+              surprise: true,
+            },
+          },
+        },
+      },
+    };
+
+    expect(inspectVerdictSchema(data).problems).toEqual([
+      expect.objectContaining({
+        key: 'alien',
+        kind: 'unknown-mismatch-form',
+        form: 'typed-v1-extra-keys',
+        extraKeys: ['surprise'],
+      }),
+    ]);
   });
 
   it('не разрешает переносить typed-поля на другой символ вердикта', () => {
@@ -168,7 +202,11 @@ describe('UI v4 verdict semantics', () => {
         expect.objectContaining({ key: 'equal', kind: 'unexpected-schema-fields' }),
         expect.objectContaining({ key: 'unknown', kind: 'unexpected-schema-fields' }),
         expect.objectContaining({ key: 'na', kind: 'unexpected-mismatch-decision' }),
-        expect.objectContaining({ key: 'mismatch', kind: 'unexpected-na-kind' }),
+        expect.objectContaining({
+          key: 'mismatch',
+          kind: 'unknown-mismatch-form',
+          form: 'neq-with-naKind',
+        }),
       ]),
     );
   });
@@ -193,7 +231,11 @@ describe('UI v4 verdict semantics', () => {
     };
     const state = inspectVerdictSchema(data, { baseline });
 
-    expect(state.legacyByZone.migrating).toEqual({ mismatch: 1, notApplicable: 1 });
+    expect(state.legacyByZone.migrating).toEqual({
+      mismatch: 1,
+      typedMismatch: 0,
+      notApplicable: 1,
+    });
     expect(state.problems).toEqual([
       expect.objectContaining({
         zoneId: 'newZone',
@@ -302,6 +344,58 @@ describe('UI v4 verdict semantics', () => {
     expect(findMissingCodeMarkedNotApplicable(data)).toEqual([
       expect.objectContaining({ key: 'absent', kind: 'required-code-marked-not-applicable' }),
     ]);
+  });
+
+  it('home-widgets считает все «≠»: 72 legacy + 10 typed-v1', () => {
+    const state = inspectVerdictSemantics(readAllZones(), new Set(['home-widgets']));
+    expect(state.schemaProblems).toEqual([]);
+    expect(state.legacyByZone['home-widgets']).toEqual({
+      mismatch: 72,
+      typedMismatch: 10,
+      notApplicable: 1356,
+    });
+    const neqTotal =
+      state.legacyByZone['home-widgets'].mismatch + state.legacyByZone['home-widgets'].typedMismatch;
+    expect(neqTotal).toBe(82);
+  });
+
+  it('classifyMismatchVerdictRow различает legacy, typed-v1 и лишние ключи', () => {
+    expect(
+      classifyMismatchVerdictRow({
+        v: '≠',
+        f: 'Старое основание.',
+        h: 'abc',
+      }),
+    ).toEqual({ form: 'legacy' });
+    expect(
+      classifyMismatchVerdictRow({
+        v: '≠',
+        f: 'Canvas просит 10 px.',
+        h: 'abc',
+        reasonCode: 'platform',
+        decisionRef: 'docs/ui/UI_V4_HANDOFF_CODEX.md:1',
+      }),
+    ).toEqual({ form: 'typed-v1' });
+    expect(
+      classifyMismatchVerdictRow({
+        v: '≠',
+        f: 'Есть evidence.',
+        h: 'abc',
+        reasonCode: 'platform',
+        decisionRef: 'docs/ui/UI_V4_HANDOFF_CODEX.md:1',
+        evidence: ['dom: test'],
+      }),
+    ).toEqual({ form: 'typed-v1' });
+    expect(
+      classifyMismatchVerdictRow({
+        v: '≠',
+        f: 'Лишний ключ.',
+        h: 'abc',
+        reasonCode: 'platform',
+        decisionRef: 'docs/ui/UI_V4_HANDOFF_CODEX.md:1',
+        surprise: true,
+      }),
+    ).toEqual({ form: 'typed-v1-extra-keys', extraKeys: ['surprise'] });
   });
 
   it('текущий repository snapshot укладывается в миграционный baseline', () => {
