@@ -406,6 +406,54 @@ describe('конструктор: спокойная нижняя панель',
     expect(patched.at(-1)[0].approaches).toHaveLength(5);
   });
 
+  it('тап по закрытому упражнению во время отдыха сворачивает кольцо, таймер идёт', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-09T18:40:00Z'));
+    try {
+      const startedAt = Date.now() - 12000;
+      const sessionPatches = [];
+      render(React.createElement(SB.BuilderScreen, {
+        training: {
+          ...training([
+            { name: 'Жим', restSec: 90, approaches: [work(75, 8, true), work(75, 8, true)] },
+            { name: 'Тяга', restSec: 90, approaches: [work(60, 10, false)] },
+          ]),
+          workoutLog: {
+            exercises: [
+              { name: 'Жим', restSec: 90, approaches: [work(75, 8, true), work(75, 8, true)] },
+              { name: 'Тяга', restSec: 90, approaches: [work(60, 10, false)] },
+            ],
+            activeRest: {
+              startedAt, total: 90, owner: 'Жим', collapsed: false,
+              nextLabel: 'Следующий подход',
+            },
+          },
+        },
+        dateKey: '2026-08-09',
+        profile: {},
+        onPatch: () => {},
+        onPatchSession: (patch) => sessionPatches.push(patch),
+        onClose: () => {},
+      }));
+
+      fireEvent.click(screen.getByRole('button', { name: /Тяга/ }));
+      fireEvent.click(screen.getByRole('button', { name: /Развернуть/ }));
+
+      expect(document.querySelector('.sb-rest-ring')).toBeTruthy();
+      expect(document.querySelector('.sb-ex--collapsed.is-complete .sb-ex-head')).toBeTruthy();
+
+      fireEvent.click(screen.getByRole('button', { name: /Жим/ }));
+      expect(sessionPatches.at(-1).activeRest).toMatchObject({ collapsed: true, owner: 'Жим' });
+      expect(document.querySelector('.sb-rest--collapsed')).toBeTruthy();
+      expect(document.querySelector('.sb-rest-ring')).toBeNull();
+
+      act(() => { vi.advanceTimersByTime(5000); });
+      expect(document.querySelector('.sb-rest--collapsed')?.textContent).toMatch(/1:1[0-3]/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('добавление подхода к закрытому упражнению сбрасывает время завершения и возвращает active-state', () => {
     const sessionPatches = [];
     const exercisePatches = [];

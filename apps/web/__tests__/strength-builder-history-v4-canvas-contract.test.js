@@ -156,7 +156,23 @@ describe('Д1 · История упражнения', { timeout: 45_000 }, () =
       ['22', '.sb-history-session:first-child > b', '2\u00a0390 кг', {
         color: CANVAS_COLORS.tx, fontSize: '12.5px', fontWeight: '600'
       }],
-      ['30', '.sb-history-growth small', 'расчёт по весу и повторам, не замер', {
+      ['19', '.sb-history-badge.is-record', 'рекорд', {
+        backgroundColor: CANVAS_COLORS.tint, color: CANVAS_COLORS.ac,
+        borderRadius: '999px', fontSize: '10px', fontWeight: '600'
+      }],
+      ['21', '.sb-history-set', '75 × 8', {
+        height: '32px', paddingLeft: '12px', paddingRight: '12px',
+        backgroundColor: CANVAS_COLORS.bg, color: CANVAS_COLORS.tx,
+        fontSize: '12.5px', fontWeight: '700'
+      }],
+      ['23', '.sb-history-badge.is-quiet', 'по плану', {
+        color: CANVAS_COLORS.ink56, fontSize: '10px', fontWeight: '600'
+      }],
+      ['25', '.sb-history-badge.is-warning', 'дискомфорт', {
+        backgroundColor: CANVAS_COLORS.tint, color: CANVAS_COLORS.ac2,
+        fontSize: '10px', fontWeight: '600'
+      }],
+      ['30', '.sb-history-growth-note', 'расчёт по весу и повторам, не замер', {
         fontSize: '11px', fontWeight: '500', lineHeight: '1.3', color: CANVAS_COLORS.ink56
       }],
       ['36', '.sb-history-chart .sb-finish-chart', null, {

@@ -84,7 +84,7 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
     expect(screen.getByText('Принять план')).toBeTruthy();
   });
 
-  it('ProposalOutcome: D2 copy and v4 warn/ok roles', () => {
+  it('ProposalOutcome: D2 copy and v4 warn/ok roles via CSS', () => {
     const training = {
       plan: {
         proposal: {
@@ -99,10 +99,11 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
     expect(screen.getByText(/Эта же строка уйдёт ему/)).toBeTruthy();
     const title = container.querySelector('.sb-proposal-outcome-title');
     expect(title).toBeTruthy();
+    expect(container.querySelector('.sb-proposal-outcome-row.is-applied .sb-proposal-outcome-mark')?.textContent).toBe('✓');
+    expect(container.querySelector('.sb-proposal-outcome-row.is-rejected .sb-proposal-outcome-mark')?.textContent).toBe('—');
     const block = srcBlock('ProposalOutcome');
-    expect(block).toContain('color: V4.warnText');
-    expect(block).toContain('backgroundColor: V4.tint');
-    expect(block).toContain('color: V4.okText');
+    expect(block).not.toContain('backgroundColor: V4.tint');
+    expect(block).toContain('className: \'sb-proposal-outcome\'');
   });
 
   it('ProgramDoneScreen: hero count 30px on v4 ok-bg', () => {
