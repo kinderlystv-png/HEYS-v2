@@ -10693,7 +10693,7 @@ body:has(:is(
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__soft-card.is-on {
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139); /* v4-intentional */
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__soft-swatch {
@@ -10861,7 +10861,7 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__chip.is-on {
-  box-shadow: inset 0 0 0 2px #c67139;
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139); /* v4-intentional */
 }
 
 .hdr-settings-sheet__fab-prefs {
@@ -11234,7 +11234,7 @@ body:has(:is(
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink, #201e1d);
   font-family: Figtree, system-ui, sans-serif;
-  box-shadow: 0 -2px 20px rgba(80, 50, 20, 0.1);
+  box-shadow: 0 -2px 20px color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
 }
 
 /* Ручка 38×4 — рисунок, а не хват: жеста закрытия у листа нет. */
@@ -11521,7 +11521,7 @@ body:has(:is(
   height: 21px;
   border-radius: 50%;
   background: var(--v4-bg, #fff);
-  box-shadow: 0 1px 2px rgba(80, 50, 20, 0.3);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--v4-ink, #201e1d) 30%, transparent);
   transition: transform 0.18s ease;
 }
 
@@ -12299,7 +12299,7 @@ body:has(:is(
   padding: 1px 3px;
   text-align: center;
   border-radius: 5px;
-  border: 1px solid #f9c58d;
+  border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
   /* same as training inputs */
   background: var(--color-white);
 }
@@ -16336,7 +16336,7 @@ body:has(:is(
   padding: 12px;
   border-radius: 12px;
   background: var(--v4-sand-hero, #efe3cf);
-  border: 1px solid rgba(138, 74, 32, 0.06);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 6%, transparent);
 }
 
 .profile-section__fields {
@@ -16393,7 +16393,7 @@ body:has(:is(
   --profile-tone-wash: var(--v4-sand-hero, #efe3cf);
   --profile-tone-swatch: var(--v4-sand-tint, #f3e0d2);
   --profile-tone-ink: var(--v4-sand-act, #c67139);
-  --profile-tone-line: rgba(198, 113, 57, 0.18);
+  --profile-tone-line: color-mix(in srgb, var(--v4-act, #c67139) 18%, transparent); /* v4-intentional */
 }
 
 .profile-section[class*="tone-"] .profile-section__icon {
@@ -16499,7 +16499,7 @@ body:has(:is(
 .profile-section td input:focus {
   outline: none;
   border-color: var(--v4-sand-act, #c67139);
-  box-shadow: 0 0 0 3px rgba(198, 113, 57, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent);
   background: var(--v4-bg, #fff);
 }
 
@@ -16660,7 +16660,7 @@ body:has(:is(
 .profile-field-group td input:focus {
   outline: none;
   border-color: var(--v4-sand-act, #c67139);
-  box-shadow: 0 0 0 3px rgba(198, 113, 57, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent);
   background: var(--v4-bg, #fff);
 }
 
@@ -16795,7 +16795,7 @@ body:has(:is(
   border-radius: 10px;
   margin-bottom: 8px;
   background: var(--v4-sand-hero, #efe3cf);
-  border: 1px solid rgba(138, 74, 32, 0.08);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 8%, transparent);
 }
 
 .profile-push-status--on {
@@ -16825,7 +16825,7 @@ body:has(:is(
   padding: 6px 14px;
   border-radius: 8px;
   background: transparent;
-  border: 1px solid rgba(138, 74, 32, 0.28);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 28%, transparent);
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
   font-weight: 500;
@@ -16853,7 +16853,7 @@ body:has(:is(
 .profile-push-input {
   padding: 4px 8px;
   border-radius: 8px;
-  border: 1px solid rgba(138, 74, 32, 0.16);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 16%, transparent);
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink, #201e1d);
 }
@@ -16876,7 +16876,7 @@ body:has(:is(
   padding: 14px;
   border-radius: 12px;
   background: var(--v4-sand-hero, #efe3cf);
-  border: 1px solid rgba(138, 74, 32, 0.12);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 12%, transparent);
   color: var(--v4-sand-ink, #201e1d);
 }
 
@@ -16928,7 +16928,7 @@ body:has(:is(
   font-size: 13px;
   background: var(--v4-sand-hero, #efe3cf);
   color: var(--v4-sand-ink, #201e1d);
-  border: 1px solid rgba(138, 74, 32, 0.1);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 10%, transparent);
 }
 
 .profile-message--ok {
@@ -16940,19 +16940,19 @@ body:has(:is(
 .profile-message--err {
   background: var(--v4-surface, #f7efe2);
   color: var(--v4-warn-text, #a1471c);
-  border-color: rgba(161, 71, 28, 0.18);
+  border-color: color-mix(in srgb, var(--v4-warn-text, #a1471c) 18%, transparent);
 }
 
 .profile-accordion .pill,
 .profile-section__pill {
   background: var(--v4-bg, #fffaf1);
-  border: 1px solid rgba(138, 74, 32, 0.12);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 12%, transparent);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
 }
 
 .profile-subscription-card {
   background: var(--v4-sand-hero, #efe3cf) !important;
-  border: 1px solid rgba(198, 113, 57, 0.18) !important;
+  border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 18%, transparent) !important;
   border-radius: 12px;
 }
 
@@ -16999,7 +16999,7 @@ body:has(:is(
   padding: 14px 16px;
   border-radius: 12px;
   background: var(--v4-sand-hero, #efe3cf);
-  border: 1px solid rgba(138, 74, 32, 0.1);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 10%, transparent);
 }
 
 .profile-goal-panel--success {
@@ -17031,7 +17031,7 @@ body:has(:is(
   border-radius: 8px;
   font-size: 12px;
   background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(138, 74, 32, 0.08);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 8%, transparent);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
 }
 
@@ -17053,7 +17053,7 @@ body:has(:is(
   padding: 8px;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.62);
-  border: 1px solid rgba(138, 74, 32, 0.08);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 8%, transparent);
 }
 
 .profile-goal-metric__val {
@@ -17088,7 +17088,7 @@ body:has(:is(
   margin-bottom: 8px;
   background: rgba(255, 255, 255, 0.72);
   border-radius: 12px;
-  border: 1px solid rgba(138, 74, 32, 0.08);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 8%, transparent);
 }
 
 .profile-hr-zone__name {
@@ -17096,7 +17096,7 @@ body:has(:is(
   padding: 8px 12px;
   font-size: 14px;
   font-weight: 600;
-  border: 1px solid rgba(138, 74, 32, 0.1);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 10%, transparent);
   border-radius: 8px;
   background: var(--v4-bg, #fffaf1);
 }
@@ -17115,7 +17115,7 @@ body:has(:is(
   padding: 6px 10px;
   border-radius: 8px;
   background: var(--v4-sand-hero, #efe3cf);
-  border: 1px solid rgba(138, 74, 32, 0.08);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 8%, transparent);
 }
 
 .profile-hr-zone__chip-label {
@@ -17130,7 +17130,7 @@ body:has(:is(
   padding: 4px 6px;
   font-size: 13px;
   text-align: center;
-  border: 1px solid rgba(138, 74, 32, 0.12);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 12%, transparent);
   border-radius: 6px;
   background: var(--v4-bg, #fffaf1);
 }
@@ -17159,13 +17159,13 @@ body:has(:is(
   user-select: none;
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  border: 1px solid rgba(138, 74, 32, 0.1);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 10%, transparent);
 }
 
 .profile-advice-chip.is-on {
   background: var(--v4-sand-tint, #f3e0d2);
   color: var(--v4-sand-act-text, #8a4a20);
-  border-color: rgba(198, 113, 57, 0.35);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 35%, transparent);
 }
 
 .profile-advice-chip__icon {
@@ -17180,7 +17180,7 @@ body:has(:is(
   gap: 16px;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid rgba(138, 74, 32, 0.1);
+  border-top: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 10%, transparent);
 }
 
 .profile-inline-check {
@@ -17213,7 +17213,7 @@ body:has(:is(
 }
 
 .profile-accordion .sound-settings-card__preview-button {
-  border-color: rgba(138, 74, 32, 0.14);
+  border-color: color-mix(in srgb, var(--v4-act-text, #8a4a20) 14%, transparent);
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
@@ -17232,7 +17232,7 @@ body:has(:is(
   padding: 10px 12px;
   background: var(--v4-sand-hero, #efe3cf);
   border-radius: 8px;
-  border: 1px solid rgba(138, 74, 32, 0.08);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 8%, transparent);
 }
 
 .profile-goal-progress__head {
@@ -17258,7 +17258,7 @@ body:has(:is(
 
 .profile-progress-bar {
   height: 8px;
-  background: rgba(138, 74, 32, 0.08);
+  background: color-mix(in srgb, var(--v4-act-text, #8a4a20) 8%, transparent);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -17324,7 +17324,7 @@ body:has(:is(
   padding: 10px 12px;
   margin-bottom: 8px;
   background: var(--v4-bg, #fffaf1);
-  border: 1px solid rgba(138, 74, 32, 0.1);
+  border: 1px solid color-mix(in srgb, var(--v4-act-text, #8a4a20) 10%, transparent);
 }
 
 .profile-consent-row.is-granted {
@@ -17345,10 +17345,10 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .profile-section[class*="tone-"] {
-  --profile-tone-wash: rgba(207, 129, 68, 0.12);
-  --profile-tone-swatch: rgba(207, 129, 68, 0.22);
-  --profile-tone-ink: #cf8144;
-  --profile-tone-line: rgba(226, 164, 104, 0.22);
+  --profile-tone-wash: color-mix(in srgb, var(--v4-sand-act, #cf8144) 12%, transparent);
+  --profile-tone-swatch: color-mix(in srgb, var(--v4-sand-act, #cf8144) 22%, transparent);
+  --profile-tone-ink: var(--v4-sand-act, #cf8144); /* v4-intentional */
+  --profile-tone-line: color-mix(in srgb, var(--v4-sand-act-soft, #e2a468) 22%, transparent);
 }
 
 [data-theme$="dark"] .profile-section--expanded .profile-section__fields {
@@ -17424,7 +17424,7 @@ body:has(:is(
 
 [data-theme$="dark"] .profile-section td input:focus {
   border-color: var(--v4-sand-act-soft, #e2a468);
-  box-shadow: 0 0 0 3px rgba(226, 164, 104, 0.14);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-sand-act-soft, #e2a468) 14%, transparent);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -17472,10 +17472,10 @@ body:has(:is(
   }
 
   .profile-section[class*="tone-"] {
-    --profile-tone-wash: rgba(207, 129, 68, 0.12);
-    --profile-tone-swatch: rgba(207, 129, 68, 0.22);
-    --profile-tone-ink: #cf8144;
-    --profile-tone-line: rgba(226, 164, 104, 0.22);
+    --profile-tone-wash: color-mix(in srgb, var(--v4-sand-act, #cf8144) 12%, transparent);
+    --profile-tone-swatch: color-mix(in srgb, var(--v4-sand-act, #cf8144) 22%, transparent);
+    --profile-tone-ink: var(--v4-sand-act, #cf8144); /* v4-intentional */
+    --profile-tone-line: color-mix(in srgb, var(--v4-sand-act-soft, #e2a468) 22%, transparent);
   }
 
   .profile-section__title,
