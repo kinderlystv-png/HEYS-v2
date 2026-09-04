@@ -1,4 +1,4 @@
-/* ===================================================================
+﻿/* ===================================================================
  * 730-widgets-dashboard.css
  * Widget Dashboard System — Premium Apple-style CSS
  * Version: 2.0.0 — "Premium Edition"
@@ -349,10 +349,10 @@ body:has(.page-reports) .hdr::after {
   width: 100%;
   margin: 10px 0 14px;
   padding: 13px 14px;
-  border: 1px solid rgba(234, 88, 12, 0.58);
+  border: 1px solid color-mix(in srgb, var(--v4-warn-3, #a1471c) 58%, transparent);
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(254, 215, 170, 0.92));
-  box-shadow: 0 8px 24px rgba(194, 65, 12, 0.14);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 98%, transparent), color-mix(in srgb, var(--v4-warn-1, #d99a63) 92%, transparent));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--v4-warn-3, #a1471c) 14%, transparent);
   box-sizing: border-box;
 }
 
@@ -363,12 +363,12 @@ body:has(.page-reports) .hdr::after {
   width: 42px;
   height: 42px;
   border-radius: 13px;
-  background: #ea580c;
+  background: var(--v4-warn-3, #a1471c);
   color: var(--v4-bg, #fff);
   font-size: 24px;
   font-weight: 800;
   line-height: 1;
-  box-shadow: 0 4px 12px rgba(194, 65, 12, 0.2);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--v4-warn-3, #a1471c) 20%, transparent);
 }
 
 .empty-meal-alert__copy {
@@ -376,17 +376,17 @@ body:has(.page-reports) .hdr::after {
   min-width: 0;
   flex-direction: column;
   gap: 2px;
-  color: #7c2d12;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .empty-meal-alert__copy strong {
-  color: #7c2d12;
+  color: var(--v4-warn-text, #a1471c);
   font-size: 15px;
   line-height: 1.25;
 }
 
 .empty-meal-alert__copy span {
-  color: var(--v4-wgt-brown, #9a3412);
+  color: var(--v4-warn-2, #c67139);
   font-size: 12px;
   line-height: 1.35;
 }
@@ -396,37 +396,37 @@ body:has(.page-reports) .hdr::after {
   padding: 0 16px;
   border: 0;
   border-radius: 13px;
-  background: var(--v4-wgt-rust, #c2410c);
+  background: var(--v4-act, #c67139);
   color: var(--v4-bg, #fff);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(154, 52, 18, 0.24);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--v4-warn-text, #a1471c) 24%, transparent);
 }
 
 @media (hover: hover) {
   .empty-meal-alert__action:hover {
-  background: var(--v4-wgt-brown, #9a3412);
+  background: var(--v4-warn-text, #a1471c);
 }
 }
 
 .empty-meal-alert__action:focus-visible {
-  outline: 3px solid rgba(194, 65, 12, 0.28);
+  outline: 3px solid color-mix(in srgb, var(--v4-warn-3, #a1471c) 28%, transparent);
   outline-offset: 2px;
 }
 
 [data-theme$="dark"] .empty-meal-alert {
-  border-color: rgba(251, 146, 60, 0.62);
-  background: linear-gradient(135deg, rgba(67, 33, 18, 0.98), rgba(124, 45, 18, 0.92));
+  border-color: color-mix(in srgb, var(--v4-warn-1, #d99a63) 62%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-warn-text, #a1471c) 98%, transparent), color-mix(in srgb, var(--v4-warn-3, #a1471c) 92%, transparent));
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
 }
 
 [data-theme$="dark"] .empty-meal-alert__copy strong {
-  color: var(--v4-wgt-peach, #ffedd5);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .empty-meal-alert__copy span {
-  color: var(--v4-wgt-apricot, #fed7aa);
+  color: var(--v4-warn-1, #d39673);
 }
 
 @media (max-width: 520px) {
@@ -946,14 +946,14 @@ body:has(.page-reports) .hdr::after {
   padding: 8px 11px;
   font-size: 18px;
   line-height: 1;
-  color: var(--v4-wgt-rust, #c2410c);
-  background: rgba(249, 115, 22, 0.12);
+  color: var(--v4-act, #c67139);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent);
   border-radius: 8px;
 }
 
 @media (hover: hover) {
   .widgets-header__btn--reset:hover:not(.disabled) {
-  background: rgba(249, 115, 22, 0.18);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 18%, transparent);
 }
 }
 
@@ -10839,7 +10839,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-heatmap .widget-v4-row__meta--count.widget-v4-val--good {
-  color: var(--v4-sand-ok-text, #5c6a45);
+  color: var(--v4-ok-text);
 }
 
 .widget-v4-unit {

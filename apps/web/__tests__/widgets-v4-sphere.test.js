@@ -242,7 +242,7 @@ describe('виджеты g1 в сфере палитры', () => {
         const stepsChunk = uiSrc.slice(stepsStart, stepsStart + 1200);
         expect(stepsChunk).toContain("const plotPx = Number(opts?.plotPx) || 30");
         expect(stepsChunk).toContain("Math.max(2, Math.round((value / max) * plotPx)) + 'px'");
-        expect(cssSrc).toMatch(/\.widget-heatmap \.widget-v4-row__meta--count\.widget-v4-val--good\s*\{[^}]*--v4-sand-ok-text/s);
+        expect(cssSrc).toMatch(/\.widget-heatmap \.widget-v4-row__meta--count\.widget-v4-val--good\s*\{[^}]*--v4-ok-text/s);
         expect(cssSrc).toMatch(/\.widget-v4-insulin-wave__footer > \.widget-v4-val--good\s*\{[^}]*--v4-sand-ok-text/s);
         expect(cssSrc).toMatch(/\.widget-v4-mini__value\.widget-v4-val--bad\s*\{[^}]*--v4-val-bad/s);
         expect(cssSrc).toMatch(/\.widget-v4-macro__fact--bad\s*\{[^}]*--v4-val-bad/s);
