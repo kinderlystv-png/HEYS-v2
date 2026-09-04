@@ -14454,6 +14454,10 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   color: var(--v4-ink, #201e1d);
 }
 
+.widget-trend-compact__value.widget-v4-val--bad {
+  color: var(--v4-val-bad, #a8382b);
+}
+
 .widget-trend-compact__spark {
   flex: none;
   margin-bottom: 2px;
@@ -14465,6 +14469,18 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 
 .widget-trend-compact__spark.widget-v4-spark--flat {
   color: var(--v4-ink-mark) /* v4-intentional */;
+}
+
+.widget-trend-compact__spark.widget-v4-spark--bad {
+  color: var(--v4-val-bad, #a8382b);
+}
+
+.widget-trend-compact__spark.widget-v4-spark--bad polyline {
+  stroke: var(--v4-val-bad, #a8382b);
+}
+
+.widget-trend-compact__spark.widget-v4-spark--bad circle {
+  fill: var(--v4-val-bad, #a8382b);
 }
 
 /* Перебор красит число и его подпись — эти правила стоят после базовых цветов
