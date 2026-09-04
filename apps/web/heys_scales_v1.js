@@ -17,10 +17,15 @@
         WARN_STRONG: 'warn-strong',
     };
 
+    // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, ведро 2)
+    const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+    const V4_WARN_1 = 'var(--v4-warn-1, #d99a63)';
+    const v4MixRole = (role, pct) => `color-mix(in srgb, ${role} ${pct}%, transparent)`;
+
     const CLASSIC_STEP_COLOR = Object.freeze({
         [STEPS.GOOD_STRONG]: '#22c55e',
         [STEPS.GOOD_SOFT]: '#3b82f6',
-        [STEPS.NEUTRAL]: '#eab308',
+        [STEPS.NEUTRAL]: V4_WARN_SOFT,
         [STEPS.WARN_SOFT]: '#ef4444',
         [STEPS.WARN_STRONG]: '#dc2626',
     });
@@ -44,8 +49,8 @@
         greenDark: '#10b981',
         greenLight: '#84cc16',
         blue: '#3b82f6',
-        yellow: '#eab308',
-        orange: '#f97316',
+        yellow: V4_WARN_SOFT,
+        orange: V4_WARN_1,
         red: '#ef4444',
         redDark: '#dc2626',
         gray: '#9ca3af',
@@ -53,7 +58,7 @@
         purple: '#a855f7',
         greenHarm: '#16a34a',
         redHarm: '#7f1d1d',
-        amberMacro: '#f59e0b',
+        amberMacro: V4_WARN_1,
         slate: '#94a3b8',
     });
 
@@ -263,7 +268,7 @@
         { min: 1, max: 4, id: 'novice', title: 'Новичок', icon: '🌱', color: C.slate },
         { min: 5, max: 9, id: 'student', title: 'Ученик', icon: '📚', color: C.blue },
         { min: 10, max: 14, id: 'practitioner', title: 'Практик', icon: '💪', color: C.green },
-        { min: 15, max: 19, id: 'expert', title: 'Эксперт', icon: '⭐', color: C.yellow },
+        { min: 15, max: 19, id: 'expert', title: 'Эксперт', icon: '⭐', color: '#eab308' },
         { min: 20, max: 25, id: 'master', title: 'Мастер', icon: '👑', color: C.purple },
     ];
 
@@ -350,7 +355,7 @@
 
     const MACRO_GRADIENT_STOPS = Object.freeze({
         protein: ['#fecaca', '#ef4444'],
-        fat: ['#fde68a', '#f59e0b'],
+        fat: [v4MixRole(V4_WARN_1, 40), V4_WARN_1],
         carbs: ['#bbf7d0', '#22c55e'],
     });
 
