@@ -6260,7 +6260,7 @@
     const window = data?.sleepWindow || null;
 
     if (variantId === 'review') {
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-sleepready' },
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-sleepready widget-v4-sleepready-review' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('К вечеру'),
           window?.hasData
@@ -6284,6 +6284,10 @@
               key: item.key,
               className: 'widget-v4-checklist__row' + (item.done ? ' is-done' : '')
             },
+              React.createElement('i', {
+                className: 'widget-v4-sleepready-review__dot',
+                'aria-hidden': 'true'
+              }),
               React.createElement('span', { className: 'widget-v4-checklist__label' }, item.label),
               React.createElement('span', { className: 'widget-v4-checklist__value' }, sleepReadyItemText(item))
             ))

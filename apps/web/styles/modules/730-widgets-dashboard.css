@@ -13237,6 +13237,61 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
 }
 
+/* Кадр «Готовность ко сну · Разбор»: герой 26 px / gap 5 / отступ 7,
+   ряды gap 7, точки 7 px. Чек-лист чипов 8.5 / dropped 8.5 не трогал. */
+.widget-v4-sleepready-review .widget-v4-goal-hero {
+  gap: 5px;
+  margin-top: 7px;
+}
+
+.widget-v4-sleepready-review .widget-v4-goal-value {
+  font-size: 26px;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--v4-ink, #201e1d) /* v4-intentional */;
+}
+
+.widget-v4-sleepready-review .widget-v4-checklist {
+  gap: 8px;
+  margin-top: auto;
+}
+
+.widget-v4-sleepready-review .widget-v4-checklist__row {
+  align-items: center;
+  gap: 7px;
+}
+
+.widget-v4-sleepready-review .widget-v4-checklist__row.is-done .widget-v4-checklist__label {
+  color: var(--v4-ink, #201e1d) /* v4-intentional */;
+}
+
+.widget-v4-sleepready-review .widget-v4-checklist__label {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d) /* v4-intentional */;
+}
+
+.widget-v4-sleepready-review .widget-v4-checklist__value {
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
+}
+
+.widget-v4-sleepready-review__dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.widget-v4-sleepready-review .widget-v4-checklist__row.is-done .widget-v4-sleepready-review__dot {
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
 /* Блок «Рекомендуемый экран»: между каталогом и пустым состоянием
    (контракт home-widgets, строка «сброс к дефолту»). */
 .widget-v4-recommended {
