@@ -3361,7 +3361,7 @@
   height: 26px;
   border-radius: 9px;
   background: var(--sb-soft);
-  color: var(--sb-mut);
+  color: var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
   font: 700 11px/1 Figtree, sans-serif;
 }
 

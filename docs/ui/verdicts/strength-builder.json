@@ -749,8 +749,8 @@
       "h": "da893498c416"
     },
     "вид · создание связки": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Кадр З1: SupersetScreen — три .sb-radio в .sb-superset-kinds, степпер раундов и .sb-rest-preview рядом на --c1, блок .sb-superset-result с тремя .sb-tile и .sb-finish 48px на --acs — apps/web/strength/heys_strength_catalog_ui_v1.js:375-447, apps/web/styles/modules/750-strength-builder.css:3329-3520; геометрия+цвет apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js.",
       "h": "c2c04c404d6b"
     },
     "вид · трисет в работе": {
@@ -4287,196 +4287,164 @@
       "h": "62fdb9627056"
     },
     "Связка · создание · 01": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "175bdcc2e73a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Шапка: .sb-superset-create-screen .sb-head { align-items:flex-start; gap:10px; padding:16px 18px 0 } — apps/web/styles/modules/750-strength-builder.css:3301-3303,2734-2738; computed row 01 в apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js.",
+      "h": "175bdcc2e73a"
     },
     "Связка · создание · 02": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "07ffbada0ee7",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Колонка заголовка: .sb-head-title { flex-direction:column; gap:3px; padding:0 } — apps/web/styles/modules/750-strength-builder.css:2747-2752,3297-3299; computed row 02.",
+      "h": "07ffbada0ee7"
     },
     "Связка · создание · 03": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "e4be91b17c51",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Имя экрана «Новая связка»: h('b', …) — apps/web/strength/heys_strength_catalog_ui_v1.js:378; DOM apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js.",
+      "h": "e4be91b17c51"
     },
     "Связка · создание · 04": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "6031e987e93a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Ключ «упражнения подряд, отдых — после круга»: .sb-head-sub — apps/web/strength/heys_strength_catalog_ui_v1.js:379; apps/web/styles/modules/750-strength-builder.css:2770-2776,3305-3308.",
+      "h": "6031e987e93a"
     },
     "Связка · создание · 05": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "c629f84f9712",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Прокрутка: .sb-list { flex:1 1 auto; overflow-y:auto } — apps/web/styles/modules/750-strength-builder.css:156-160,3310-3313; computed row 05.",
+      "h": "c629f84f9712"
     },
     "Связка · создание · 06": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "ae51c9227c86",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Ярус «Сколько упражнений»: .sb-step span — apps/web/strength/heys_strength_catalog_ui_v1.js:386; apps/web/styles/modules/750-strength-builder.css:3315-3327.",
+      "h": "ae51c9227c86"
     },
     "Связка · создание · 07": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "d9a337aab838",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Список .cd: .sb-superset-kinds { padding:2px 16px 1.5px; border-radius:20px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:3329-3335.",
+      "h": "d9a337aab838"
     },
     "Связка · создание · 08": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "af81bb6e54c6",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Строка списка: .sb-radio { display:flex; align-items:center; gap:10px; padding:13.5px 0 } — apps/web/styles/modules/750-strength-builder.css:3337-3345; computed row 08.",
+      "h": "af81bb6e54c6"
     },
     "Связка · создание · 09": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "869d1e5dd696",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Ряд выбора: align-items:center; gap:10px на .sb-radio — apps/web/styles/modules/750-strength-builder.css:3337-3340; computed row 09.",
+      "h": "869d1e5dd696"
     },
     "Связка · создание · 10": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "5c6c1c3e858a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Цифра «2» в покое: .sb-radio .sb-ex-num { color:var(--v4-ink-prose) } — apps/web/styles/modules/750-strength-builder.css:3359-3365; песок rgba(0,0,0,.62), синий rgba(16,24,38,.62) — apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js rows 10/10 blue.",
+      "h": "5c6c1c3e858a"
     },
     "Связка · создание · 11": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "4ae5a0621f39",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "«Суперсет»: .sb-radio .sb-cat-title b { color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3380-3383; apps/web/strength/heys_strength_catalog_ui_v1.js:366.",
+      "h": "4ae5a0621f39"
     },
     "Связка · создание · 12": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "9cb5697272b6",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Подпись «два упражнения подряд без паузы»: .sb-cat-title span { font:500 11px/1.3; color:var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:3385-3388; apps/web/strength/heys_strength_catalog_ui_v1.js:366.",
+      "h": "9cb5697272b6"
     },
     "Связка · создание · 13": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "792768abd9da",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Выбранная строка: .sb-radio.is-on { border-radius:12px; box-shadow:inset 0 0 0 2px var(--sb-acc-strong) } — apps/web/styles/modules/750-strength-builder.css:3351-3357; computed row 13.",
+      "h": "792768abd9da"
     },
     "Связка · создание · 14": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "61464eb844e9",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Цифра «3» в выборе: .sb-radio.is-on .sb-ex-num { background:var(--sb-acc-strong); color:var(--v4-btn-on-act) } — apps/web/styles/modules/750-strength-builder.css:3368-3371.",
+      "h": "61464eb844e9"
     },
     "Связка · создание · 15": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "4297ede3cf2f",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "«три подряд — плотнее и тяжелее» у .is-on: .sb-cat-title span { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:3390-3393; apps/web/strength/heys_strength_catalog_ui_v1.js:367.",
+      "h": "4297ede3cf2f"
     },
     "Связка · создание · 16": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "9236c47a3332",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Галочка «✓»: .sb-radio-check { font:700 12px/1; color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:3391-3398,402-403; computed row 16.",
+      "h": "9236c47a3332"
     },
     "Связка · создание · 17": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "6b286135ed76",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Последняя строка без разделителя: .sb-radio:last-child { box-shadow:none } — apps/web/styles/modules/750-strength-builder.css:3347-3349; computed row 17.",
+      "h": "6b286135ed76"
     },
     "Связка · создание · 18": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "2c2ec98a753e",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Блоки раундов и отдыха: .sb-superset-controls { display:flex; gap:8px; margin-bottom:21px } — apps/web/styles/modules/750-strength-builder.css:3400-3404; .sb-superset-kinds margin-bottom:10px — :3331.",
+      "h": "2c2ec98a753e"
     },
     "Связка · создание · 19": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "9cb94cdf7b14",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Карточка «Раундов»: .sb-superset-control { flex:1; padding:12px; border-radius:16px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:3406-3412.",
+      "h": "9cb94cdf7b14"
     },
     "Связка · создание · 20": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "14e3d8779b29",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Степпер раундов: .sb-stepper { align-items:center; gap:7px; margin-top:8px } — apps/web/styles/modules/750-strength-builder.css:3420-3423; computed row 20.",
+      "h": "14e3d8779b29"
     },
     "Связка · создание · 21": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "44102f1dd940",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Кнопка «−»: .sb-stepper .sb-btn { font:700 18px/1; background:var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:3425-3434; apps/web/strength/heys_strength_catalog_ui_v1.js:411-414.",
+      "h": "44102f1dd940"
     },
     "Связка · создание · 22": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "5218d4f95680",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Число раундов «3»: .sb-stepper b { flex:1; text-align:center; font:800 19px/1; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3441-3446; apps/web/strength/heys_strength_catalog_ui_v1.js:415.",
+      "h": "5218d4f95680"
     },
     "Связка · создание · 23": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "778be85ef026",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Кнопка «+»: .sb-stepper .sb-btn.is-accent { background:var(--sb-acc-strong); color:var(--v4-btn-on-act); font:700 18px/1 } — apps/web/styles/modules/750-strength-builder.css:3436-3439; apps/web/strength/heys_strength_catalog_ui_v1.js:416-419.",
+      "h": "778be85ef026"
     },
     "Связка · создание · 24": {
       "v": "=",
-      "f": "DOM-тест подтверждает точное значение отдыха «2:00».",
-      "h": "a830c4b664d8",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "f": "Поле «2:00»: .sb-rest-preview { height:44px; border-radius:12px; background:var(--sb-bg); box-shadow:inset 0 0 0 1px var(--sb-br); font:700 15px/1 } — apps/web/styles/modules/750-strength-builder.css:3448-3460; max restSec участников — apps/web/strength/heys_strength_catalog_ui_v1.js:358-363.",
+      "h": "a830c4b664d8"
     },
     "Связка · создание · 25": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "02587f9d6d0e",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Подпись «максимум из значений участников»: .sb-control-hint { margin-top:6px; font:500 10px/1.35; color:var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:3462-3466; apps/web/strength/heys_strength_catalog_ui_v1.js:425.",
+      "h": "02587f9d6d0e"
     },
     "Связка · создание · 26": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "54643961e08d",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Карточка «Что получится»: .sb-block.sb-superset-result { padding:16px; border-radius:20px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:3468-3473.",
+      "h": "54643961e08d"
     },
     "Связка · создание · 27": {
       "v": "=",
-      "f": "DOM-тест подтверждает точное резюме трисета и его порядок.",
-      "h": "b95286e88946",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "f": "Резюме «3 упражнения подряд…»: .sb-step-hint { font:600 12.5px/1.55; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3475-3479; строка из countWord/restLabel/rounds — apps/web/strength/heys_strength_catalog_ui_v1.js:431-432.",
+      "h": "b95286e88946"
     },
     "Связка · создание · 28": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "3ae4b3ce70b5",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Плитки прогноза: .sb-tiles { gap:6px; margin-top:10px } — apps/web/styles/modules/750-strength-builder.css:3481-3485; computed row 28.",
+      "h": "3ae4b3ce70b5"
     },
     "Связка · создание · 29": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "df492a01c1fb",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Плитка «подходов»: .sb-tile { flex-direction:column; align-items:center; gap:4px; padding:9px 4px; border-radius:12px; background:var(--sb-bg) } — apps/web/styles/modules/750-strength-builder.css:3487-3496.",
+      "h": "df492a01c1fb"
     },
     "Связка · создание · 30": {
       "v": "=",
-      "f": "DOM-тест подтверждает точный прогноз «9» подходов.",
-      "h": "1b3f15833258",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "f": "Число «9»: .sb-tile b { font:800 16px/1; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3505-3508; totalApproaches=count*rounds — apps/web/strength/heys_strength_catalog_ui_v1.js:371.",
+      "h": "1b3f15833258"
     },
     "Связка · создание · 31": {
       "v": "=",
-      "f": "DOM-тест подтверждает точное главное действие «Собрать связку · 9 подходов».",
-      "h": "e476d2fae726",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
+      "f": "Кнопка «Собрать связку · 9 подходов»: .sb-finish { margin-top:12px; min-height:48px; border-radius:999px; background:var(--sb-acc-strong) } — apps/web/styles/modules/750-strength-builder.css:3510-3520; apps/web/strength/heys_strength_catalog_ui_v1.js:439-444.",
+      "h": "e476d2fae726"
     },
     "Связка · создание · 32": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "6a7fa8e553f0",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Сноска про один объект: .sb-superset-note { margin-top:12px; font:500 11px/1.55 } — apps/web/styles/modules/750-strength-builder.css:3522-3525,3291-3295; текст — apps/web/strength/heys_strength_catalog_ui_v1.js:445-446.",
+      "h": "6a7fa8e553f0"
     },
     "Трисет в работе · 01": {
       "v": "?",
@@ -8281,10 +8249,9 @@
       "h": "f50219e65cc0"
     },
     "Связка · создание · текст": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
-      "h": "57903ce9d9ab",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for З1"]
+      "v": "=",
+      "f": "Полный текст кадра З1: заголовок, три вида связки, раунды, отдых 2:00, прогноз 9/3/13 мин и CTA — apps/web/strength/heys_strength_catalog_ui_v1.js:365-446; DOM-смоук apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js и apps/web/__tests__/strength-builder-ui.test.js «создание связки».",
+      "h": "57903ce9d9ab"
     },
     "Трисет в работе · текст": {
       "v": "?",
