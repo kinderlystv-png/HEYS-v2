@@ -10,6 +10,13 @@
   const { useState, useEffect, useCallback, useRef, useMemo } = React || {};
   const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
 
+  // v4 roles для registration (смысл, не оттенок — UI_V4_BARE_LITERALS_DECISION.md).
+  const V4_ACCENT_FILL = 'var(--v4-act, #c67139)';
+  const V4_WARN_TEXT = 'var(--v4-warn-text, #a1471c)';
+  const V4_WARN_SURFACE = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, transparent)';
+  const V4_WARN_BORDER = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 35%, transparent)';
+  const V4_WARN_TAP = 'color-mix(in srgb, var(--v4-warn-text, #a1471c) 15%, transparent)';
+
   function useFallbackAccessSignPin() {
     const [value, setValue] = useState('');
     return {
@@ -1570,7 +1577,7 @@
       isReadonlyHost && React.createElement('div', {
         'data-testid': 'consents-readonly-banner',
         className: 'px-4 py-2 text-sm',
-        style: { backgroundColor: '#fef3c7', color: '#92400e', borderBottom: '1px solid #fcd34d' }
+        style: { backgroundColor: V4_WARN_SURFACE, color: V4_WARN_TEXT, borderBottom: `1px solid ${V4_WARN_BORDER}` }
       }, 'Замороженная копия — только просмотр. Согласия не сохраняются.'),
 
       // Content - разные шаги
@@ -3102,7 +3109,7 @@
   function NotMedicineBadge() {
     return React.createElement('span', {
       className: 'inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full',
-      style: { backgroundColor: '#fef3c7', color: '#b45309' }
+      style: { backgroundColor: V4_WARN_SURFACE, color: V4_WARN_TEXT }
     }, '⚠️ Не является медицинской услугой');
   }
 
@@ -3649,7 +3656,7 @@
           style: {
             width: '100%', marginTop: 16, padding: '13px 16px', borderRadius: 14,
             border: 'none', cursor: (!allRead || busy) ? 'default' : 'pointer',
-            background: (!allRead || busy) ? '#e5e7eb' : '#d97642',
+            background: (!allRead || busy) ? '#e5e7eb' : V4_ACCENT_FILL,
             color: (!allRead || busy) ? 'rgba(0,0,0,.4)' : '#fff',
             font: '600 15px/1 Figtree, system-ui, sans-serif',
           },
@@ -3699,18 +3706,18 @@
         position: 'fixed', top: 0, left: 0, right: 0,
         zIndex: 2147483000,
         width: '100%',
-        background: '#fef3c7',
+        background: V4_WARN_SURFACE,
         border: 'none',
-        borderBottom: '1px solid #fbbf24',
+        borderBottom: `1px solid ${V4_WARN_BORDER}`,
         padding: '12px 16px',
-        color: '#92400e',
+        color: V4_WARN_TEXT,
         fontSize: '14px',
         textAlign: 'center',
         cursor: 'pointer',
         font: 'inherit',
         display: 'block',
         boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-        WebkitTapHighlightColor: 'rgba(146,64,14,0.15)',
+        WebkitTapHighlightColor: V4_WARN_TAP,
         pointerEvents: 'auto',
       }
     },
@@ -3776,8 +3783,8 @@
           'data-testid': 'age-gate-readonly-banner',
           style: {
             marginTop: 12, padding: '10px 12px', borderRadius: 8,
-            background: '#fef3c7', color: '#92400e', fontSize: 13,
-            border: '1px solid #fcd34d'
+            background: V4_WARN_SURFACE, color: V4_WARN_TEXT, fontSize: 13,
+            border: `1px solid ${V4_WARN_BORDER}`
           }
         }, 'Замороженная копия — только просмотр. Возраст не сохраняется.'),
         React.createElement('p', { style: { color: '#52525b', fontSize: 14 } },
@@ -3883,8 +3890,8 @@
       React.createElement('div', {
         style: {
           position: 'absolute', top: 0, left: 0, right: 0,
-          padding: '12px 16px', background: '#fef3c7',
-          color: '#92400e', textAlign: 'center', fontSize: 14
+          padding: '12px 16px', background: V4_WARN_SURFACE,
+          color: V4_WARN_TEXT, textAlign: 'center', fontSize: 14
         }
       }, '📋 Мы обновили документы. Пожалуйста, ознакомьтесь и подпишите.'),
       React.createElement(ConsentScreen, {
