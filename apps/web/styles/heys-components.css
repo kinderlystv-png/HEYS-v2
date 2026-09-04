@@ -9428,9 +9428,9 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 [data-theme$="dark"] .date-picker-streak:not(.date-picker-streak--v4) {
-  background: linear-gradient(135deg, rgba(146, 64, 14, 0.56) 0%, rgba(120, 53, 15, 0.78) 100%);
-  color: #fde68a;
-  border: 1px solid rgba(251, 191, 36, 0.24);
+  background: var(--v4-accent-bg, #3a2620);
+  color: var(--v4-sand-act-soft, #e2a468);
+  border: 1px solid color-mix(in srgb, var(--v4-act, #cf8144) 24%, transparent);
 }
 
 [data-theme$="dark"] .date-picker-legend {
