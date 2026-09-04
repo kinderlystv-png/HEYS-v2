@@ -1177,14 +1177,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
 .compact-train {
   padding: 10px 14px !important;
   animation: slideIn 0.25s ease-out;
-  background: rgba(249, 115, 22, 0.08) !important;
-  border: 1px solid rgba(249, 115, 22, 0.2) !important;
+  background: color-mix(in srgb, var(--v4-act, #c67139) 8%, transparent) !important; /* v4-intentional */
+  border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 20%, transparent) !important; /* v4-intentional */
 }
 
 @media (hover: hover) {
   .compact-train:hover {
-  background: rgba(249, 115, 22, 0.12) !important;
-  border-color: rgba(249, 115, 22, 0.3) !important;
+  background: color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent) !important; /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 30%, transparent) !important; /* v4-intentional */
 }
 }
 
@@ -1262,7 +1262,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 @media (hover: hover) {
   .compact-train-fold-btn:hover {
   background: var(--v4-bg, #fff);
-  border-color: rgba(249, 115, 22, 0.45);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent); /* v4-intentional */
   color: var(--v4-act-text, #8a4a20); /* v4-intentional */
 }
 }
@@ -1295,7 +1295,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 @media (hover: hover) {
   [data-theme$="dark"] .compact-train-fold-btn:hover {
   background: rgba(51, 65, 85, 0.95);
-  border-color: rgba(251, 146, 60, 0.45);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent); /* v4-intentional */
   color: var(--v4-act-text, #8a4a20); /* v4-intentional */
 }
 }
@@ -1305,7 +1305,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .compact-badge.train {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  background: linear-gradient(135deg, var(--v4-act, #c67139) 0%, color-mix(in srgb, var(--v4-act, #c67139) 75%, #000) 100%); /* v4-intentional */
   font-size: 11px;
   padding: 3px 8px;
   color: var(--v4-bg, #fff);
@@ -1658,8 +1658,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-ss-connector.ct-wb-ss-conn-g1 {
-  border-color: rgba(245, 158, 11, 0.65);
-  background: rgba(245, 158, 11, 0.08);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 65%, transparent); /* v4-intentional */
+  background: color-mix(in srgb, var(--v4-act, #c67139) 8%, transparent); /* v4-intentional */
 }
 
 .ct-wb-ex-ss-connector.ct-wb-ss-conn-g2 {
@@ -1727,8 +1727,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-row--ss.ct-wb-ss-g1 {
-  border-left-color: #f59e0b;
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, #f8fafc 12px);
+  border-left-color: var(--v4-act, #c67139);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--v4-act, #c67139) 8%, transparent) 0%, var(--v4-hero, #f8fafc) 12px); /* v4-intentional */
 }
 
 .ct-wb-ex-row--ss.ct-wb-ss-g2 {
@@ -1854,7 +1854,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .ct-wb-ex-remove {
   box-sizing: border-box;
-  border: 1px solid #fde68a;
+  border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
   background: var(--v4-accent-bg, #f0dcc6); /* v4-intentional */
   color: var(--v4-warn-text, #a1471c); /* v4-intentional */
   width: 26px;
@@ -1871,7 +1871,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-ex-remove:hover {
-  background: var(--v4-sand-warn-bg, #fef3c7);
+  background: var(--v4-accent-bg, #f0dcc6);
   border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
   color: var(--v4-warn-text, #a1471c); /* v4-intentional */
 }
@@ -1921,7 +1921,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-size: 14px;
   line-height: 1;
   padding-top: 2px;
-  filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.55));
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--v4-act, #c67139) 55%, transparent)); /* v4-intentional */
 }
 
 .ct-wb-ex-folded-deltas {
@@ -2029,7 +2029,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .ct-wb-ex-name-header-fav.is-on {
   color: var(--v4-warn-2, #c67139); /* v4-intentional */
-  border-color: rgba(245, 158, 11, 0.45);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent); /* v4-intentional */
   background: var(--v4-accent-bg, #f0dcc6); /* v4-intentional */
 }
 
@@ -2042,7 +2042,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-ex-name-header-fav.is-on:hover {
-  background: var(--v4-sand-warn-bg, #fef3c7);
+  background: var(--v4-accent-bg, #f0dcc6);
 }
 }
 
@@ -2100,7 +2100,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-ex-name-suggest-fav:hover {
-  background: rgba(245, 158, 11, 0.12);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent); /* v4-intentional */
 }
 }
 
@@ -2216,8 +2216,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-rest-watch.is-overflow {
-  border-color: rgba(245, 158, 11, 0.65);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(34, 197, 94, 0.10) 100%);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 65%, transparent); /* v4-intentional */
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 14%, transparent) 0%, color-mix(in srgb, var(--v4-ok-text, #5c6a45) 10%, transparent) 100%); /* v4-intentional */
   color: var(--v4-warn-text, #a1471c); /* v4-intentional */
 }
 
@@ -2333,8 +2333,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 [data-theme$="dark"] .ct-wb-rest-watch.is-overflow {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(34, 197, 94, 0.14) 100%);
-  border-color: rgba(245, 158, 11, 0.65);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 22%, transparent) 0%, color-mix(in srgb, var(--v4-ok-text, #5c6a45) 14%, transparent) 100%); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 65%, transparent); /* v4-intentional */
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
 }
 
@@ -2408,11 +2408,11 @@ color: var(--v4-sand-ink-slate, #1f2937);
   margin-left: 4px;
   padding: 2px 6px;
   border-radius: 999px;
-  background: rgba(245, 158, 11, 0.18);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 18%, transparent); /* v4-intentional */
   color: var(--v4-warn-text, #a1471c); /* v4-intentional */
   font-size: 11px;
   font-weight: 700;
-  filter: drop-shadow(0 0 2px rgba(245, 158, 11, 0.45));
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent)); /* v4-intentional */
 }
 
 [data-theme$="dark"] .ct-wb-workout-pill {
@@ -2432,7 +2432,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 [data-theme$="dark"] .ct-wb-workout-pill-pr {
-  background: rgba(245, 158, 11, 0.30);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 30%, transparent); /* v4-intentional */
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
 }
 
@@ -2466,7 +2466,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 .ct-wb-summary-emoji {
   font-size: 22px;
   line-height: 1;
-  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.55));
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--v4-act, #c67139) 55%, transparent)); /* v4-intentional */
 }
 
 .ct-wb-summary-grid {
@@ -2486,8 +2486,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-summary-cell.is-pr {
-  background: rgba(254, 243, 199, 0.85);
-  border-color: rgba(245, 158, 11, 0.55);
+  background: color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 85%, transparent); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 55%, transparent); /* v4-intentional */
 }
 
 .ct-wb-summary-cell-label {
@@ -2579,8 +2579,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 [data-theme$="dark"] .ct-wb-summary-cell.is-pr {
-  background: rgba(120, 53, 15, 0.6);
-  border-color: rgba(245, 158, 11, 0.55);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 60%, transparent); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 55%, transparent); /* v4-intentional */
 }
 
 [data-theme$="dark"] .ct-wb-summary-cell-label {
@@ -2765,7 +2765,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-ex-grid--inline .ct-wb-stepper-row>button.ct-wb-stepper-btn:first-of-type:hover:not(:disabled) {
-  background: var(--v4-sand-warn-bg, #fef3c7);
+  background: var(--v4-accent-bg, #f0dcc6);
   border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
   color: var(--v4-warn-text, #a1471c); /* v4-intentional */
 }
@@ -3026,14 +3026,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-ap-row--pr {
-  box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.5);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-act, #c67139) 50%, transparent); /* v4-intentional */
 }
 
 .ct-wb-ex-ap-pr {
   font-size: 14px;
   line-height: 1;
   margin-left: 2px;
-  filter: drop-shadow(0 0 1px rgba(245, 158, 11, 0.55));
+  filter: drop-shadow(0 0 1px color-mix(in srgb, var(--v4-act, #c67139) 55%, transparent)); /* v4-intentional */
 }
 
 .ct-wb-ex-ap-done-btn {
@@ -3181,7 +3181,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 @media (hover: hover) {
   .ct-wb-stepper--ap-reps .ct-wb-stepper-row>button.ct-wb-stepper-btn:first-of-type:hover:not(:disabled) {
-  background: var(--v4-sand-warn-bg, #fef3c7);
+  background: var(--v4-accent-bg, #f0dcc6);
   border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
   color: var(--v4-warn-text, #a1471c); /* v4-intentional */
 }
@@ -3370,7 +3370,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 [data-theme$="dark"] .ct-wb-ex-row--ss.ct-wb-ss-g1 {
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 23, 42, 0.45) 14px);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent) 0%, rgba(15, 23, 42, 0.45) 14px); /* v4-intentional */
 }
 
 [data-theme$="dark"] .ct-wb-ex-row--ss.ct-wb-ss-g2 {
@@ -3499,8 +3499,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 [data-theme$="dark"] .ct-wb-ex-name-header-fav.is-on {
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
-  border-color: rgba(245, 158, 11, 0.45);
-  background: rgba(120, 53, 15, 0.35);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent); /* v4-intentional */
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 35%, transparent); /* v4-intentional */
 }
 
 @media (hover: hover) {
@@ -3543,15 +3543,15 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 [data-theme$="dark"] .ct-wb-ex-grid--inline .ct-wb-stepper-row>button.ct-wb-stepper-btn:first-of-type {
-  background: rgba(120, 53, 15, 0.4);
-  border-color: rgba(245, 158, 11, 0.5);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 40%, transparent); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 50%, transparent); /* v4-intentional */
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .ct-wb-ex-grid--inline .ct-wb-stepper-row>button.ct-wb-stepper-btn:first-of-type:hover:not(:disabled) {
-  background: rgba(146, 64, 14, 0.55);
-  border-color: rgba(251, 191, 36, 0.65);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 55%, transparent); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 65%, transparent); /* v4-intentional */
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
 }
 }
@@ -3571,15 +3571,15 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 [data-theme$="dark"] .ct-wb-stepper--ap-reps .ct-wb-stepper-row>button.ct-wb-stepper-btn:first-of-type {
-  background: rgba(120, 53, 15, 0.4);
-  border-color: rgba(245, 158, 11, 0.5);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 40%, transparent); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 50%, transparent); /* v4-intentional */
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .ct-wb-stepper--ap-reps .ct-wb-stepper-row>button.ct-wb-stepper-btn:first-of-type:hover:not(:disabled) {
-  background: rgba(146, 64, 14, 0.55);
-  border-color: rgba(251, 191, 36, 0.65);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 55%, transparent); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 65%, transparent); /* v4-intentional */
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
 }
 }
@@ -3612,15 +3612,15 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 [data-theme$="dark"] .ct-wb-ex-remove {
-  background: rgba(120, 53, 15, 0.4);
-  border-color: rgba(245, 158, 11, 0.5);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 40%, transparent); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 50%, transparent); /* v4-intentional */
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .ct-wb-ex-remove:hover {
-  background: rgba(146, 64, 14, 0.55);
-  border-color: rgba(251, 191, 36, 0.65);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 55%, transparent); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 65%, transparent); /* v4-intentional */
   color: var(--v4-warn-soft, #e2b264); /* v4-intentional */
 }
 }
@@ -3663,7 +3663,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .compact-zone-inline.has-value {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, var(--v4-accent-bg, #f0dcc6)) 100%); /* v4-intentional */
   border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
 }
 
@@ -3893,8 +3893,8 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font: 600 11px/1.4 Figtree, sans-serif;
   letter-spacing: 0.02em;
   padding: 4px 10px;
-  color: var(--v4-warn-text, #92400e);
-  background: var(--v4-sand-warn-bg, #fef3c7);
+  color: var(--v4-warn-text, #a1471c);
+  background: var(--v4-accent-bg, #f0dcc6);
   pointer-events: none;
 }
 
@@ -5593,7 +5593,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .roadmap-check {
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
   font-size: 12px;
 }
 
@@ -5809,7 +5809,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .game-weekly-card.completed .weekly-subtitle {
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: 600;
 }
 
@@ -5856,7 +5856,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .game-weekly-card.completed .weekly-progress-fill {
-  background: linear-gradient(90deg, var(--v4-ok-fill, #7a8a5e) 0%, var(--v4-ok-fill, #7a8a5e) 50%, color-mix(in srgb, var(--v4-ok-fill, #7a8a5e) 70%, black) 100%);
+  background: linear-gradient(90deg, var(--v4-ok-fill, #7a8a5e) 0%, var(--v4-ok-fill, #7a8a5e) 50%, color-mix(in srgb, var(--v4-ok-fill, #7a8a5e) 70%, black) 100%); /* v4-intentional */
 }
 
 .weekly-progress-glow {
@@ -5917,7 +5917,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .game-weekly-card.completed .weekly-percent {
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
   text-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
 }
 
@@ -5985,7 +5985,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .weekly-progress-fill.near-complete {
-  background: linear-gradient(90deg, #22c55e 0%, #eab308 100%);
+  background: linear-gradient(90deg, var(--v4-ok-text, #5c6a45) 0%, var(--v4-warn-soft, #c9922e) 100%);
   animation: nearCompletePulse 1s ease-in-out infinite;
 }
 
@@ -6002,7 +6002,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .weekly-percent.almost {
-  color: var(--v4-warn-soft, #eab308);
+  color: var(--v4-warn-soft, #c9922e);
   animation: percentPulse 1s ease-in-out infinite;
 }
 
@@ -6020,7 +6020,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .weekly-percent.completed {
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: bold;
   animation: completedBounce 0.5s ease-out;
 }
@@ -6051,7 +6051,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .weekly-reward-preview .reward-xp {
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: 600;
 }
 
@@ -6091,7 +6091,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .xp-bar-fill {
   width: 100%;
-  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+  background: linear-gradient(180deg, var(--v4-warn-soft, #c9922e) 0%, var(--v4-act, #c67139) 100%);
   border-radius: 4px 4px 0 0;
   min-height: 2px;
   max-height: calc(100% - 20px);
@@ -6117,7 +6117,7 @@ color: var(--v4-sand-ink, #201e1d);
   opacity: 1;
   font-weight: 600;
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .xp-bar-value {
@@ -6125,7 +6125,7 @@ color: var(--v4-sand-ink, #201e1d);
   font-weight: 600;
   position: absolute;
   bottom: 22px;
-  color: #fbbf24;
+  color: var(--v4-warn-soft, #c9922e);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -6138,7 +6138,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .xp-history-bar.today .xp-bar-value {
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
   opacity: 1;
 }
 
@@ -6808,7 +6808,7 @@ color: var(--v4-sand-ink, #201e1d);
   font-size: 14px;
   font-weight: bold;
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
   animation: floatUp 0.8s ease-out forwards;
   pointer-events: none;
 }
@@ -7104,7 +7104,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 .hdr-tab-meta__sync {
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: 600;
 }
 
@@ -7318,7 +7318,7 @@ color: var(--v4-sand-ink, #201e1d);
   }
 
   50% {
-    color: color-mix(in srgb, var(--v4-ink-2, #64748b) 24%, #ffffff);
+    color: color-mix(in srgb, var(--v4-ink-2, #64748b) 24%, #ffffff); /* v4-intentional */
     opacity: 1;
   }
 }
@@ -7503,7 +7503,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 /* Medium severity (orange) */
 .ews-badge--medium {
-  background: color-mix(in srgb, var(--v4-warn-2, #c67139) 15%, transparent);
+  background: color-mix(in srgb, var(--v4-warn-2, #c67139) 15%, transparent); /* v4-intentional */
   color: var(--v4-warn-3, #a1471c);
 }
 
@@ -7513,9 +7513,9 @@ color: var(--v4-sand-ink, #201e1d);
 
 @media (hover: hover) {
   .ews-badge--medium:hover {
-  background: rgba(249, 115, 22, 0.25);
+  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 25%, transparent); /* v4-intentional */
   transform: scale(1.05);
-  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, transparent); /* v4-intentional */
 }
 }
 
@@ -7701,7 +7701,7 @@ color: var(--v4-sand-ink, #201e1d);
   left: 0;
   right: 0;
   z-index: var(--v4-z-offline-banner, 14000);
-  background: linear-gradient(135deg, var(--v4-ok-fill, #7a8a5e) 0%, color-mix(in srgb, var(--v4-ok-fill, #7a8a5e) 70%, black) 100%);
+  background: linear-gradient(135deg, var(--v4-ok-fill, #7a8a5e) 0%, color-mix(in srgb, var(--v4-ok-fill, #7a8a5e) 70%, black) 100%); /* v4-intentional */
   color: white;
   padding: 8px 16px;
   display: flex;
@@ -7857,7 +7857,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .cloud-sync-indicator.error {
-  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 15%, transparent);
+  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 15%, transparent); /* v4-intentional */
   color: var(--v4-warn-2, #c67139);
 }
 
@@ -8130,7 +8130,7 @@ body:has(.offline-banner) .wrap {
 
 .date-picker--v4 .date-picker-trigger.open {
   /* v4-intentional */
-  box-shadow: 0 0 0 2px var(--v4-act);
+  box-shadow: 0 0 0 2px var(--v4-act, #c67139);
 }
 
 /* Сегодня — тот же грунт, что у стрелок (канвас «Дата v4») */
@@ -8375,7 +8375,7 @@ body:has(.offline-banner) .wrap {
   border-radius: 999px;
   margin: 0 auto 16px;
   /* v4-intentional */
-  background: color-mix(in srgb, var(--v4-ink) 14%, transparent);
+  background: color-mix(in srgb, var(--v4-ink) 14%, transparent); /* v4-intentional */
 }
 
 /* Sheet calendar · вариант А (канвас «Дата и остатки» 2026-08-11):
@@ -8398,7 +8398,7 @@ body:has(.offline-banner) .wrap {
   font-weight: 700;
   text-transform: uppercase;
   /* v4-intentional */
-  color: color-mix(in srgb, var(--v4-ink) 40%, transparent);
+  color: color-mix(in srgb, var(--v4-ink) 40%, transparent); /* v4-intentional */
 }
 
 /* Контракт «тон метки»: общего процента нет — подложка клетки в каждом наборе
@@ -8529,7 +8529,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   width: auto;
   border-radius: 0;
   /* v4-intentional */
-  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
+  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent); /* v4-intentional */
   pointer-events: none;
 }
 
@@ -8548,7 +8548,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
 .date-picker-sheet .date-picker-day.cycle-ribbon--forecast::before {
   background: var(--v4-sand-surface-soft, #fffaf1);
   opacity: 1;
-  background: color-mix(in srgb, var(--v4-sand-act, #c67139) 28%, var(--v4-sand-surface, #f7efe2));
+  background: color-mix(in srgb, var(--v4-sand-act, #c67139) 28%, var(--v4-sand-surface, #f7efe2)); /* v4-intentional */
 }
 
 .date-picker-sheet .date-picker-day.cycle-ribbon--period.cycle-ribbon--start::before {
@@ -8572,7 +8572,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   height: 3px;
   border-radius: 999px;
   /* v4-intentional */
-  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
+  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent); /* v4-intentional */
   pointer-events: none;
 }
 
@@ -8637,7 +8637,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   height: 12px;
   border-radius: 999px;
   /* v4-intentional */
-  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
+  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent); /* v4-intentional */
 }
 
 .date-picker-sheet .legend-swatch--refeed {
@@ -8645,7 +8645,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   height: 3px;
   border-radius: 999px;
   /* v4-intentional */
-  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent);
+  background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent); /* v4-intentional */
 }
 
 .date-picker-sheet .legend-swatch--today {
@@ -8833,13 +8833,13 @@ svg.date-picker-icon {
 .date-picker:not(.date-picker--v4) .date-picker-trigger--not-today {
   /* v4-intentional */
   background: var(--v4-tint, #f6e6dd);
-  border-color: color-mix(in srgb, var(--v4-act, #c67139) 22%, transparent);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 22%, transparent); /* v4-intentional */
 }
 
 @media (hover: hover) {
   .date-picker:not(.date-picker--v4) .date-picker-trigger--not-today:hover {
   background: var(--v4-hero, #faf7f2);
-  border-color: color-mix(in srgb, var(--v4-act, #c67139) 32%, transparent);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 32%, transparent); /* v4-intentional */
 }
 }
 
@@ -9296,7 +9296,7 @@ svg.date-picker-icon {
 .date-picker-streak {
   padding: 8px 12px;
   margin: 8px 0;
-  background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, var(--v4-accent-bg, #f0dcc6)) 100%);
+  background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, var(--v4-accent-bg, #f0dcc6)) 100%); /* v4-intentional */
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
@@ -9343,11 +9343,11 @@ svg.date-picker-icon {
 
 .legend-item.good {
   /* v4-intentional */
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .legend-item.warn {
-  color: var(--v4-warn-soft, #eab308);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 .legend-item.bad {
@@ -11602,7 +11602,7 @@ body:has(:is(
 .tab-settings-backdrop {
   position: fixed;
   inset: 0;
-  background: color-mix(in srgb, var(--v4-ink, #0f172a) 34%, transparent);
+  background: color-mix(in srgb, var(--v4-ink, #0f172a) 34%, transparent); /* v4-intentional */
   backdrop-filter: blur(7px) saturate(0.92);
   -webkit-backdrop-filter: blur(7px) saturate(0.92);
   z-index: 1001;
@@ -11620,7 +11620,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .tab-settings-backdrop {
-  background: color-mix(in srgb, var(--v4-bg, #0f172a) 78%, transparent);
+  background: color-mix(in srgb, var(--v4-bg, #0f172a) 78%, transparent); /* v4-intentional */
 }
 
 [data-theme$="dark"] .tab-settings-backdrop--v4-popover {
@@ -11783,7 +11783,7 @@ body:has(:is(
   transform: translate(-50%, -50%);
   font-size: 22px;
   z-index: 10;
-  filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.5));
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--v4-act, #c67139) 50%, transparent)); /* v4-intentional */
   pointer-events: none;
 }
 
@@ -11856,7 +11856,7 @@ body:has(:is(
   position: absolute;
   inset: -2px;
   border-radius: 10px;
-  border: 2px dashed rgba(249, 115, 22, 0.4);
+  border: 2px dashed color-mix(in srgb, var(--v4-act, #c67139) 40%, transparent); /* v4-intentional */
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
@@ -12048,7 +12048,7 @@ body:has(:is(
 
 .tone-amber {
   background: var(--v4-accent-bg, #f0dcc6);
-  border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, transparent); /* v4-intentional */
 }
 
 .tone-violet {
@@ -12743,7 +12743,7 @@ body:has(:is(
 
 @media (hover: hover) {
   .meal-time-badge-inside:hover {
-  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 35%, var(--v4-accent-bg, #f0dcc6));
+  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 35%, var(--v4-accent-bg, #f0dcc6)); /* v4-intentional */
   transform: scale(1.02);
 }
 }
@@ -12852,8 +12852,8 @@ body:has(:is(
 
 /* Стили для разных типов приёмов пищи ВНУТРИ карточки */
 .meal-header-inside.meal-type-breakfast {
-  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-  border-bottom-color: #fed7aa;
+  background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 22%, var(--v4-accent-bg, #f0dcc6)) 100%); /* v4-intentional */
+  border-bottom-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, transparent); /* v4-intentional */
 }
 
 .meal-header-inside.meal-type-breakfast .meal-kcal-badge-inside {
@@ -13005,8 +13005,8 @@ body:has(:is(
 }
 
 .meal-collapsed-plaque.meal-type-breakfast {
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.98) 0%, rgba(255, 237, 213, 0.98) 100%);
-  border-color: rgba(254, 215, 170, 0.9);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 98%, transparent) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 20%, var(--v4-accent-bg, #f0dcc6)) 100%); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, transparent); /* v4-intentional */
 }
 
 .meal-collapsed-plaque.meal-type-breakfast .meal-collapsed-plaque__time,
@@ -13150,8 +13150,8 @@ body:has(:is(
 /* Per-meal-type фоновые градиенты (мирорят .meal-header-inside.meal-type-X).
  * rgba-вариант чтобы сохранить ощущение прозрачности под backdrop-blur. */
 .meal-sticky-bar.meal-type-breakfast {
-  background: linear-gradient(135deg, rgba(255, 247, 237, 0.92) 0%, rgba(255, 237, 213, 0.92) 100%);
-  border-color: rgba(254, 215, 170, 0.6);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 92%, transparent) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 20%, var(--v4-accent-bg, #f0dcc6)) 100%); /* v4-intentional */
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 35%, transparent); /* v4-intentional */
 }
 .meal-sticky-bar.meal-type-breakfast .meal-sticky-bar__time {
   background: var(--v4-accent-bg, #f0dcc6); /* v4-intentional */
@@ -13593,7 +13593,7 @@ body:has(:is(
 /* Кнопка быстрого перехода на вчера (в header рядом с DatePicker) —
    мягкий жёлтый фон, чтобы визуально парно с голубым today-триггером. */
 .yesterday-quick-btn {
-  border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 28%, transparent); /* v4-intentional */
   background: var(--v4-tint, #f6e6dd);
   color: var(--v4-act-text, #8a4a20);
   min-width: 33px;
@@ -13612,7 +13612,7 @@ body:has(:is(
 @media (hover: hover) {
   .yesterday-quick-btn:hover {
   background: var(--v4-hero, #faf7f2);
-  border-color: color-mix(in srgb, var(--v4-act, #c67139) 40%, transparent);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 40%, transparent); /* v4-intentional */
 }
 }
 
@@ -14288,7 +14288,7 @@ body:has(:is(
 
   /* Цветовые подсказки для больших порций */
   .mpc-grams-btn.grams-warn {
-    background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, var(--v4-accent-bg, #f0dcc6)) 100%);
+    background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, var(--v4-accent-bg, #f0dcc6)) 100%); /* v4-intentional */
     border-color: var(--v4-warn-2, #c67139);
     color: var(--v4-warn-text, #a1471c);
   }
@@ -15889,7 +15889,7 @@ body:has(:is(
 }
 
 .measurements-card__row--warn {
-  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent);
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
   background: var(--v4-accent-bg, #f0dcc6);
 }
 
@@ -16023,7 +16023,7 @@ body:has(:is(
 }
 
 .measurements-card--needs-update {
-  border: 1px solid #fed7aa;
+  border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, transparent); /* v4-intentional */
 }
 
 .measurements-card__monthly {
@@ -17763,7 +17763,7 @@ body:has(:is(
 /* EWS warning — red accent через цвет иконки/бордера, фон остаётся нейтральным */
 .ews-badge--high   { color: var(--v4-warn-2, #dc2626); border-color: rgba(220, 38, 38, 0.24) !important; }
 .ews-badge--medium { color: var(--v4-warn-3, #a1471c); border-color: color-mix(in srgb, var(--v4-warn-2, #c67139) 22%, transparent) !important; }
-.ews-badge--low    { color: #ca8a04; border-color: rgba(202, 138, 4, 0.22) !important; }
+.ews-badge--low    { color: var(--v4-warn-soft, #c9922e); border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 22%, transparent) !important; }
 
 /* Push notifications — состояние через цвет иконки */
 .push-badge.push-badge--on      { color: var(--v4-ok-text, #16a34a); border-color: rgba(22, 163, 74, 0.22) !important; }
@@ -17780,15 +17780,15 @@ body:has(:is(
   color: var(--v4-act-text, #8a4a20) !important;
   font-size: 13px !important;
   font-weight: 600;
-  border-color: color-mix(in srgb, var(--v4-act, #c67139) 28%, transparent) !important;
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 28%, transparent) !important; /* v4-intentional */
 }
 @media (hover: hover) {
   .yesterday-quick-btn:hover {
-  border-color: color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent) !important;
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent) !important; /* v4-intentional */
 }
 }
 .yesterday-quick-btn.active {
-  background: color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 85%, transparent) !important;
+  background: color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 85%, transparent) !important; /* v4-intentional */
 }
 
 /* Dark mode — тёмный glass-пилюль вместо белого */
