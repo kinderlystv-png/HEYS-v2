@@ -4657,7 +4657,7 @@
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Сон · окно'),
           React.createElement('span', {
-            className: 'widget-v4-row__meta ' + v4ValueStateClass(sleepState)
+            className: 'widget-v4-row__meta widget-v4-sleep-window__hours ' + v4ValueStateClass(sleepState)
           }, formatRuUnit(formatRuDecimal(hours, 1), 'ч'))
         ),
         React.createElement('div', { className: 'widget-v4-sleep-window' },

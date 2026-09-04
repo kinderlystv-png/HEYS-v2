@@ -14210,6 +14210,13 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
+/* Кадр «Сон · Окно сна · 04»: длительность в шапке 700 10px, не общий meta 9/600. */
+.widget-v4-row__meta.widget-v4-sleep-window__hours {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .widget-weight__scatter-foot {
   font-size: 9px;
   font-weight: 600;

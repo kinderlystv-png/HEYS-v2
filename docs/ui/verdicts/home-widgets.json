@@ -22405,48 +22405,48 @@
       "h": "b19da834161b"
     },
     "Сон · Окно сна · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитку 2×1 рисует SleepVariantBody ветка window, heys_widgets_ui_v1.js:4652. 2) Хром .widget — пара .w в widgets-v4-canvas-geometry.test.js. 3) Не цвет. 4) Вид sleep.window «Окно сна» 2×1, heys_widgets_variants_v4.js:100. data-v «плитка» — узел кадра без своих чисел. Смоук: widgets-sleep-window-v4.test.js.",
       "h": "25206af9a380"
     },
     "Сон · Окно сна · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Шапка — .widget-v4-row.widget-v4-row--tight, heys_widgets_ui_v1.js:4657. 2) space-between у .widget-v4-row 730:10708; baseline у --tight 730:10805. Позже heatmap перебивает только себя. 3) Не цвет. 4) Смоук: widgets-sleep-window-v4.test.js.",
       "h": "f7098a935ff6"
     },
     "Сон · Окно сна · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ключ рисует v4Kicker('Сон · окно'), heys_widgets_ui_v1.js:4658 / :1755. 2) .widget-v4-kicker 730:10521 одно; у сна не перебито. 3) Слово, не цвет. 4) Текст «Сон · окно». Смоук: widgets-sleep-window-v4.test.js.",
       "h": "02caddf2b904"
     },
     "Сон · Окно сна · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Длительность — .widget-v4-sleep-window__hours на meta, heys_widgets_ui_v1.js:4660. 2) 730:14214 700 10px/1; общий .widget-v4-row__meta остаётся 9/600 (шаги/вес/долг). val--* меняют только цвет. 3) Тон уже закрыт строкой «сон». 4) formatRuUnit(hours, «ч»), tabular-nums с meta. Смоук: widgets-sleep-window-v4.test.js.",
       "h": "bc45a8a49e55"
     },
     "Сон · Окно сна · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Auto несёт дорожка .widget-v4-sleep-window, heys_widgets_ui_v1.js:4663. 2) margin-top:auto 730:14184; позже не перебито. 3) Не цвет. 4) Смоук: widgets-sleep-window-v4.test.js.",
       "h": "19610f96ee25"
     },
     "Сон · Окно сна · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка .widget-v4-sleep-window :4663. 2) 730:14179 relative, 7px, 999. 3) Фон rgba(0,0,0,.07) = чернила 7 %; роли нет, уже в line-roles-v4.test.js. 4) Смоук: widgets-sleep-window-v4.test.js.",
       "h": "7b2a3dbab35c"
     },
     "Сон · Окно сна · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Полоса цели .widget-v4-sleep-window__target :4665. 2) 730:14187 absolute, 999, rgba(0,0,0,.13) = чернила 13 % (line-roles). 3) Ширина 68 % кадра — демо; продукт считает sleepWindowBand(target). 4) Смоук: widgets-sleep-window-v4.test.js.",
       "h": "5cce03f3d0b0"
     },
     "Сон · Окно сна · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Фактическое окно .widget-v4-sleep-window__actual :4671. 2) 730:14195 absolute, 999. 3) Цвет ролью --v4-water (#7d98a6 песок). Ширина 57 % кадра — демо, sleepWindowBand(факт). 4) Смоук: widgets-sleep-window-v4.test.js.",
       "h": "969b837578b7"
     },
     "Сон · Окно сна · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подписи .widget-v4-sleep-window__labels :4677, formatSleepHmLabel лёг/встал. 2) 730:14203 space-between, 600 9px/1, margin-top 7px. 3) Цвет --v4-ink-data (56 %) во всех четырёх наборах; ink-ladder держит класс. 4) Смоук: widgets-sleep-window-v4.test.js.",
       "h": "ba27237ecf19"
     },
     "Оценка дня · Как сейчас · 01": {
@@ -24371,8 +24371,8 @@
       "h": "8c3c7b4c88b7"
     },
     "Сон · Окно сна · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Слова: «Сон · окно» :4658; «6,4 ч» — formatRuDecimal+formatRuUnit; «лёг»/«встал» :4678. 2) «15» — номер клетки кадра (.num), не копия. 3) Не цвет. 4) Смоук: widgets-sleep-window-v4.test.js.",
       "h": "9e501c89a848"
     },
     "Оценка дня · Как сейчас · текст": {
