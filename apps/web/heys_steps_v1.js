@@ -5726,7 +5726,9 @@
           className: 'ma-skip-reason-option',
           onClick: () => pick(opt.id)
         }, opt.label))
-      )
+      ),
+      React.createElement('div', { className: 'ma-skip-reason-footnote' },
+        'Причина не обязательна: статус «Не сегодня» уже записан, диалог закрывается крестиком. На серию и норму ответ не влияет.')
     );
   }
 

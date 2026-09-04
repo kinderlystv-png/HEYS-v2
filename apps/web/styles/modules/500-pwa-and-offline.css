@@ -646,6 +646,13 @@
   padding: calc(12px + var(--safe-area-top)) calc(12px + var(--safe-area-right)) calc(12px + var(--safe-area-bottom)) calc(12px + var(--safe-area-left));
 }
 
+/* Кадры «Рутина · резервный вопрос» и «Рутина · причина пропуска»: отступы
+   подложки 12, не общие 16 у default-layout StepModal. */
+.mc-backdrop:has(.mc-modal[data-heys-step-id="morning_activation_followup"]),
+.mc-backdrop:has(.mc-modal[data-heys-step-id="morning_activation_skip_reason"]) {
+  padding: calc(12px + var(--safe-area-top)) calc(12px + var(--safe-area-right)) calc(12px + var(--safe-area-bottom)) calc(12px + var(--safe-area-left));
+}
+
 .mc-modal {
   position: relative;
   width: 100%;
@@ -657,6 +664,13 @@
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 1px 2px rgba(80, 50, 20, 0.09), 0 14px 40px rgba(80, 50, 20, 0.12);
+}
+
+/* Листы утренней рутины — кадр «вид · резервный вопрос после еды» / «вид ·
+   причина пропуска»: одна тень 0 18 44 −12 от тона набора, 40 %. */
+.mc-modal[data-heys-step-id="morning_activation_followup"],
+.mc-modal[data-heys-step-id="morning_activation_skip_reason"] {
+  box-shadow: 0 18px 44px -12px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.4);
 }
 
 /* Чек-ин отличается размером и скруглением, но не поверхностью: тон и тень
@@ -5021,6 +5035,13 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Листы утренней рутины — поля карточки 14/14/16 (кадр «вид · резервный
+   вопрос после еды»). После общего .mc-step-content, иначе 24/24 перебивают. */
+.mc-modal[data-heys-step-id="morning_activation_followup"] .mc-step-content,
+.mc-modal[data-heys-step-id="morning_activation_skip_reason"] .mc-step-content {
+  padding: 0 14px 16px;
 }
 
 /* Ошибка валидации — shake-анимация */
