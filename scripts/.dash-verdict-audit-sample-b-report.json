@@ -1,0 +1,1432 @@
+{
+  "sampleId": "B",
+  "auditedAt": "2026-09-04",
+  "method": "zones=food-meal,tab-activity,checkin-morning,nutrition-tab,water-add,spinners,app-splash,product-card,pwa-update,norm-correction; offset=2; stride=5; perZone=5",
+  "excludedZones": ["strength-builder", "cycle"],
+  "totalDashInRepo": 3917,
+  "zoneInventory": [
+    {
+      "zone": "home-widgets",
+      "dash": 1481,
+      "total": 4976
+    },
+    {
+      "zone": "tips",
+      "dash": 462,
+      "total": 698
+    },
+    {
+      "zone": "login",
+      "dash": 301,
+      "total": 788
+    },
+    {
+      "zone": "date-remainders",
+      "dash": 272,
+      "total": 381
+    },
+    {
+      "zone": "nutrition-tab",
+      "dash": 234,
+      "total": 735
+    },
+    {
+      "zone": "strength-builder",
+      "dash": 140,
+      "total": 1879
+    },
+    {
+      "zone": "reports-insights",
+      "dash": 136,
+      "total": 1048
+    },
+    {
+      "zone": "water-add",
+      "dash": 122,
+      "total": 304
+    },
+    {
+      "zone": "norm-correction",
+      "dash": 108,
+      "total": 501
+    },
+    {
+      "zone": "food-meal",
+      "dash": 104,
+      "total": 1055
+    },
+    {
+      "zone": "product-card",
+      "dash": 76,
+      "total": 371
+    },
+    {
+      "zone": "checkin-morning",
+      "dash": 70,
+      "total": 1040
+    },
+    {
+      "zone": "tab-activity",
+      "dash": 63,
+      "total": 384
+    },
+    {
+      "zone": "gamification",
+      "dash": 54,
+      "total": 373
+    },
+    {
+      "zone": "pwa-update",
+      "dash": 47,
+      "total": 159
+    },
+    {
+      "zone": "app-splash",
+      "dash": 42,
+      "total": 91
+    },
+    {
+      "zone": "spinners",
+      "dash": 33,
+      "total": 174
+    },
+    {
+      "zone": "cycle",
+      "dash": 30,
+      "total": 445
+    },
+    {
+      "zone": "curator-edits",
+      "dash": 29,
+      "total": 220
+    },
+    {
+      "zone": "registration",
+      "dash": 28,
+      "total": 557
+    },
+    {
+      "zone": "undo-bar",
+      "dash": 27,
+      "total": 100
+    },
+    {
+      "zone": "settings-system",
+      "dash": 23,
+      "total": 240
+    },
+    {
+      "zone": "curator-cabinet",
+      "dash": 17,
+      "total": 444
+    },
+    {
+      "zone": "service-curator",
+      "dash": 10,
+      "total": 29
+    },
+    {
+      "zone": "questionnaire",
+      "dash": 8,
+      "total": 325
+    }
+  ],
+  "zonesInSample": [
+    "food-meal",
+    "tab-activity",
+    "checkin-morning",
+    "nutrition-tab",
+    "water-add",
+    "spinners",
+    "app-splash",
+    "product-card",
+    "pwa-update",
+    "norm-correction"
+  ],
+  "zoneCountsInSample": [
+    {
+      "zone": "food-meal",
+      "count": 5
+    },
+    {
+      "zone": "tab-activity",
+      "count": 5
+    },
+    {
+      "zone": "checkin-morning",
+      "count": 5
+    },
+    {
+      "zone": "nutrition-tab",
+      "count": 5
+    },
+    {
+      "zone": "water-add",
+      "count": 5
+    },
+    {
+      "zone": "spinners",
+      "count": 5
+    },
+    {
+      "zone": "app-splash",
+      "count": 5
+    },
+    {
+      "zone": "product-card",
+      "count": 5
+    },
+    {
+      "zone": "pwa-update",
+      "count": 5
+    },
+    {
+      "zone": "norm-correction",
+      "count": 5
+    }
+  ],
+  "rowKeys": [
+    "food-meal::Действие · копировать · 01",
+    "food-meal::Действие · перенести · 04",
+    "food-meal::Добавление · выбор способа · рисунок 03",
+    "food-meal::Добавление · наборы · 04",
+    "food-meal::Добавление · порция · 05",
+    "tab-activity::Актив · день отдыха · 03",
+    "tab-activity::Актив · день собран · 03",
+    "tab-activity::Актив · нагрузка предупреждает · 03",
+    "tab-activity::Актив · нагрузка слои · 04",
+    "tab-activity::Актив · план назначен · 01",
+    "checkin-morning::Добавки · добавление · 03",
+    "checkin-morning::Добавки · доза и время · 02",
+    "checkin-morning::Добавки · доза и время · 17",
+    "checkin-morning::Добавки · курс · 05",
+    "checkin-morning::Рутина · причина пропуска · 03",
+    "nutrition-tab::Питание · блок · Вода · пустой день · рисунок 05",
+    "nutrition-tab::Питание · блок · Волна сейчас · 02",
+    "nutrition-tab::Питание · блок · Герой · 01",
+    "nutrition-tab::Питание · блок · Итоги дня · 02",
+    "nutrition-tab::Питание · блок · Итоги дня · вечер · 03",
+    "water-add::Вода · В1 база · текст",
+    "water-add::Вода · В3 · финал · 02",
+    "water-add::Вода · В4 метка нормы · 01",
+    "water-add::Вода · В5 мерный столбик · текст",
+    "water-add::Вода · вариант А · рябь от плитки · 05",
+    "spinners::Спиннер · в кнопке · 03",
+    "spinners::Спиннер · в кнопке · 08",
+    "spinners::Спиннер · в кнопке · 13",
+    "spinners::Спиннер · в кнопке · текст",
+    "spinners::Спиннер · версия с превращением · 08",
+    "app-splash::iOS · как сейчас · 03",
+    "app-splash::iOS · после правки · текст",
+    "app-splash::Сплэш · как сейчас · 03",
+    "app-splash::Стык · Главная · 02",
+    "app-splash::Стык · Главная · 07",
+    "product-card::Продукт · ждёт отправки · 03",
+    "product-card::Продукт · ждёт отправки · 08",
+    "product-card::Продукт · ждёт отправки · 13",
+    "product-card::Продукт · ждёт отправки · 18",
+    "product-card::Продукт · ждёт отправки · рисунок 02",
+    "pwa-update::Обновление · готово · 03",
+    "pwa-update::Обновление · загрузка · 03",
+    "pwa-update::Обновление · перезагрузка · 03",
+    "pwa-update::Обновление · перезагрузка одиночная · 03",
+    "pwa-update::Офлайн-баннер · 03",
+    "norm-correction::Pro · на согласовании · 03",
+    "norm-correction::Self · рост применён · 03",
+    "norm-correction::Self · третий отказ подряд · 02",
+    "norm-correction::Замер · включение с согласием · 05",
+    "norm-correction::Замер · включение с согласием · 10"
+  ],
+  "counts": {
+    "total": 50,
+    "CONFIRMED": 50,
+    "MISPLACED": 0,
+    "WEAK": 0
+  },
+  "rows": [
+    {
+      "n": 1,
+      "zone": "food-meal",
+      "key": "Действие · копировать · 01",
+      "v": "—",
+      "f": "адресация: строка называет узел кадра, а не правило — к коду не сводится",
+      "naKind": null,
+      "contractValue": "шапка",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "frame addressing; f has explicit why"
+    },
+    {
+      "n": 2,
+      "zone": "food-meal",
+      "key": "Действие · перенести · 04",
+      "v": "—",
+      "f": "то же: адресация области, без числа и роли",
+      "naKind": null,
+      "contractValue": "область прокрутки",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "frame addressing; f has explicit why"
+    },
+    {
+      "n": 3,
+      "zone": "food-meal",
+      "key": "Добавление · выбор способа · рисунок 03",
+      "v": "—",
+      "f": "Кнопка «Фото» 15×15 снята: строка «единственный вход» + heys_add_product_step_v1.js:5928 — один «Новый продукт» над вкладками.",
+      "naKind": "designer-removed",
+      "contractValue": "поле рисунка 15×15 (viewBox 0 0 24 24)",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=designer-removed"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "designer-removed; naKind=designer-removed; naKind=designer-removed"
+    },
+    {
+      "n": 4,
+      "zone": "food-meal",
+      "key": "Добавление · наборы · 04",
+      "v": "—",
+      "f": "то же: адресация области, без числа и роли",
+      "naKind": null,
+      "contractValue": "область прокрутки",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "frame addressing; f has explicit why"
+    },
+    {
+      "n": 5,
+      "zone": "food-meal",
+      "key": "Добавление · порция · 05",
+      "v": "—",
+      "f": "то же: адресация области, без числа и роли",
+      "naKind": null,
+      "contractValue": "область прокрутки",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "frame addressing; f has explicit why"
+    },
+    {
+      "n": 6,
+      "zone": "tab-activity",
+      "key": "Актив · день отдыха · 03",
+      "v": "—",
+      "f": "шапка приложения и капсула даты — вне границ зоны (строка «границы»)",
+      "naKind": null,
+      "contractValue": "«вс · 31 авг» — ключ + моноцифры",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 7,
+      "zone": "tab-activity",
+      "key": "Актив · день собран · 03",
+      "v": "—",
+      "f": "шапка приложения и капсула даты — вне границ зоны (строка «границы»)",
+      "naKind": null,
+      "contractValue": "«сб · 30 авг» — ключ + моноцифры",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 8,
+      "zone": "tab-activity",
+      "key": "Актив · нагрузка предупреждает · 03",
+      "v": "—",
+      "f": "то же, что «Актив · день собран · 03»: шапка приложения и капсула даты — вне границ зоны (строка «границы»)",
+      "naKind": null,
+      "contractValue": "«сб · 30 авг» — ключ + моноцифры",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 9,
+      "zone": "tab-activity",
+      "key": "Актив · нагрузка слои · 04",
+      "v": "—",
+      "f": "то же, что «Актив · день собран · 04»: контейнер экрана, чисел не несёт",
+      "naKind": null,
+      "contractValue": "область прокрутки",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f long enough"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f long enough"
+    },
+    {
+      "n": 10,
+      "zone": "tab-activity",
+      "key": "Актив · план назначен · 01",
+      "v": "—",
+      "f": "шапка приложения и капсула даты — вне границ зоны (строка «границы»)",
+      "naKind": null,
+      "contractValue": "шапка",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 11,
+      "zone": "checkin-morning",
+      "key": "Добавки · добавление · 03",
+      "v": "—",
+      "f": "шапка листа, кнопка возврата, имя экрана, распорка и область прокрутки — оболочка слоя, общая для трёх экранов добавок",
+      "naKind": null,
+      "contractValue": "«Добавить в курс» — имя экрана",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Добавить в курс",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\heys_steps_v1.js:6220:        }, 'Добавить в курс'),"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 12,
+      "zone": "checkin-morning",
+      "key": "Добавки · доза и время · 02",
+      "v": "—",
+      "f": "шапка листа, кнопка возврата, имя экрана, распорка и область прокрутки — оболочка слоя, общая для трёх экранов добавок",
+      "naKind": null,
+      "contractValue": "ширина 44px, высота 44px, отступы -8px 0, выравнивание center",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 13,
+      "zone": "checkin-morning",
+      "key": "Добавки · доза и время · 17",
+      "v": "—",
+      "f": "ссылка на шаблон главной кнопки, своих чисел у строки нет",
+      "naKind": null,
+      "contractValue": "«Добавить в курс» — главная кнопка",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f long enough"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Добавить в курс",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\heys_steps_v1.js:6220:        }, 'Добавить в курс'),"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f long enough"
+    },
+    {
+      "n": 14,
+      "zone": "checkin-morning",
+      "key": "Добавки · курс · 05",
+      "v": "—",
+      "f": "шапка листа, кнопка возврата, имя экрана, распорка и область прокрутки — оболочка слоя, общая для трёх экранов добавок",
+      "naKind": null,
+      "contractValue": "область прокрутки",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 15,
+      "zone": "checkin-morning",
+      "key": "Рутина · причина пропуска · 03",
+      "v": "—",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта.",
+      "naKind": "foreign-zone",
+      "contractValue": "«вт · 2 сент» — ключ + моноцифры: цвет rgba(var(--ink),.32)",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=foreign-zone"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "naKind=foreign-zone; naKind=foreign-zone"
+    },
+    {
+      "n": 16,
+      "zone": "nutrition-tab",
+      "key": "Питание · блок · Вода · пустой день · рисунок 05",
+      "v": "—",
+      "f": "Точная пунктирная кривая зависит от семи дневных норм демонстрационного человека; продукт строит динамическую normPath тем же Catmull-Rom и рисует currentColor 1 px, dash 3 3, opacity .5. Literal координат не является runtime-контрактом",
+      "naKind": null,
+      "contractValue": "кривая, точки M4 13.3 C11.2 13.3, 32.8 13.7, 47.3 13.3 C61.8 12.9, 76.3 10.9, 90.7 10.9 C105.2 10.9, 119.6 12.9, 134 13.3 C148.4 13.7, 162.9 14.1, 177.3 13.3 C191.8 12.5, 206.3 8.4, 220.7 8.4 C235.…",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 17,
+      "zone": "nutrition-tab",
+      "key": "Питание · блок · Волна сейчас · 02",
+      "v": "—",
+      "f": "обвязка кадра, а не экран: макет телефона и подпись с именем экрана. Их рисует сам канвас у каждого кадра, в продукте им ничего не соответствует",
+      "naKind": null,
+      "contractValue": "шапка",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 18,
+      "zone": "nutrition-tab",
+      "key": "Питание · блок · Герой · 01",
+      "v": "—",
+      "f": "доля заполнения на демонстрационных данных: ширина полосы считается из съеденного и нормы человека, поэтому число кадра — пример, а не правило. Само правило — «полоса по шкале зон» — стоит отдельной строкой контракта",
+      "naKind": null,
+      "contractValue": "ширина 67%",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 19,
+      "zone": "nutrition-tab",
+      "key": "Питание · блок · Итоги дня · 02",
+      "v": "—",
+      "f": "доля заполнения на демонстрационных данных: ширина полосы считается из съеденного и нормы человека, поэтому число кадра — пример, а не правило. Само правило — «полоса по шкале зон» — стоит отдельной строкой контракта",
+      "naKind": null,
+      "contractValue": "ширина 75%",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 20,
+      "zone": "nutrition-tab",
+      "key": "Питание · блок · Итоги дня · вечер · 03",
+      "v": "—",
+      "f": "обвязка кадра, а не экран: макет телефона и подпись с именем экрана. Их рисует сам канвас у каждого кадра, в продукте им ничего не соответствует",
+      "naKind": "demo-only",
+      "contractValue": "ширина 81%",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=demo-only"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; naKind=demo-only; naKind=demo-only"
+    },
+    {
+      "n": 21,
+      "zone": "water-add",
+      "key": "Вода · В1 база · текст",
+      "v": "—",
+      "f": "Кадр protocol «Вода › 0,4 л › 0,65 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "naKind": "demo-only",
+      "contractValue": "Вода › 0,4 л › 0,65 л",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=demo-only"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "protocol frame; naKind=demo-only; naKind=demo-only"
+    },
+    {
+      "n": 22,
+      "zone": "water-add",
+      "key": "Вода · В3 · финал · 02",
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "naKind": "demo-only",
+      "contractValue": "«Вода» — ключ",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=demo-only"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Вода",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\advice\\_other.js:1165:                details: '🌊 Организм теряет жидкость. Вода помогает с самочувствием и уменьшает отёки.',"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "protocol frame; naKind=demo-only; naKind=demo-only"
+    },
+    {
+      "n": 23,
+      "zone": "water-add",
+      "key": "Вода · В4 метка нормы · 01",
+      "v": "—",
+      "f": "Кадр protocol «высота 40%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "naKind": "demo-only",
+      "contractValue": "высота 40%",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=demo-only"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "protocol frame; naKind=demo-only; naKind=demo-only"
+    },
+    {
+      "n": 24,
+      "zone": "water-add",
+      "key": "Вода · В5 мерный столбик · текст",
+      "v": "—",
+      "f": "Кадр protocol «Вода › 0,4 л › 0,65 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "naKind": "demo-only",
+      "contractValue": "Вода › 0,4 л › 0,65 л",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=demo-only"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "protocol frame; naKind=demo-only; naKind=demo-only"
+    },
+    {
+      "n": 25,
+      "zone": "water-add",
+      "key": "Вода · вариант А · рябь от плитки · 05",
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ: позиция relative» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "naKind": "demo-only",
+      "contractValue": "«Вода» — ключ: позиция relative",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=demo-only"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Вода",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\advice\\_core.js:1321:                        text: 'Вода ускоряет метаболизм на 30% на час после стакана',"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "protocol frame; naKind=demo-only; naKind=demo-only"
+    },
+    {
+      "n": 26,
+      "zone": "spinners",
+      "key": "Спиннер · в кнопке · 03",
+      "v": "—",
+      "f": "Декорация кадра: экран «Отчёты» служит фоном для знака в кнопке; сам экран разбирается в зоне reports-insights",
+      "naKind": null,
+      "contractValue": "ширина 44px",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 27,
+      "zone": "spinners",
+      "key": "Спиннер · в кнопке · 08",
+      "v": "—",
+      "f": "Декорация кадра: экран «Отчёты» служит фоном для знака в кнопке; сам экран разбирается в зоне reports-insights",
+      "naKind": null,
+      "contractValue": "выравнивание baseline, зазор 8px, отступ сверху 10px",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 28,
+      "zone": "spinners",
+      "key": "Спиннер · в кнопке · 13",
+      "v": "—",
+      "f": "Пояснение «Данные считаются…» 11/500 тоном 56 % принадлежит декоративному экрану «Отчёты»; его контракт и runtime проверяются в зоне reports-insights, не в спиннере",
+      "naKind": null,
+      "contractValue": "«Данные считаются на устройстве и показываются сраз» — шрифт 500 11px/1.5 Figtree, цвет rgba(0,0,0,.56), отступ сверху 12px",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f long enough"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f long enough"
+    },
+    {
+      "n": 29,
+      "zone": "spinners",
+      "key": "Спиннер · в кнопке · текст",
+      "v": "—",
+      "f": "Декорация кадра: экран «Отчёты» служит фоном для знака в кнопке; сам экран разбирается в зоне reports-insights — слова экрана отчётов, к знаку ожидания не относятся",
+      "naKind": null,
+      "contractValue": "Отчёты › Баланс за период › −1 435 › ккал › Динамика веса › −0,8 › кг за неделю › Данные считаются на устройстве и показываются сразу. Отдельный блок не ждёт — ждёт только кнопка, за которой стоит …",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 30,
+      "zone": "spinners",
+      "key": "Спиннер · версия с превращением · 08",
+      "v": "—",
+      "f": "Пояснительная раскладка кадра: три фазы перехода показаны рядом; в продукте это одна и та же окружность, меняющаяся во времени — подпись первой фазы",
+      "naKind": null,
+      "contractValue": "«крутится» — ширина 56px, выключка center",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f long enough"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "крутится",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\heys_platform_apis_v1.js:482:  // загрузки и перезагрузки в круге крутится дуга, на «Готово» — галочка."
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f long enough"
+    },
+    {
+      "n": 31,
+      "zone": "app-splash",
+      "key": "iOS · как сейчас · 03",
+      "v": "—",
+      "f": "protocol «iOS · как сейчас»: «▂▄▆ ▮» рисует платформа; в apps/web нет разметки статус-бара iOS",
+      "naKind": null,
+      "contractValue": "«▂▄▆ ▮» — прозрачность .6",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "protocol frame; f has explicit why"
+    },
+    {
+      "n": 32,
+      "zone": "app-splash",
+      "key": "iOS · после правки · текст",
+      "v": "—",
+      "f": "«15:29 › ▂▄▆ ▮» — только статус-бар iOS (платформа); по центру и в index.html:1529-1559 видимых слов нет",
+      "naKind": null,
+      "contractValue": "15:29 › ▂▄▆ ▮",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 33,
+      "zone": "app-splash",
+      "key": "Сплэш · как сейчас · 03",
+      "v": "—",
+      "f": "иконки и время статус-бара на системном кадре рисует платформа — в репозитории нет CSS/HTML для LTE/▂▄▆",
+      "naKind": null,
+      "contractValue": "«LTE ▂▄▆ ▮» — прозрачность .85",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 34,
+      "zone": "app-splash",
+      "key": "Стык · Главная · 02",
+      "v": "—",
+      "f": "кадр «Стык · Главная» показывает домашний экран после первого пейнта — чужая поверхность. Её рисует home-widgets.v4.dc.html, и здесь она нужна только чтобы показать, во что превращается загрузчик. Строка «границы» отдаёт этому канвасу иконку, два цвета манифеста и момент стыка",
+      "naKind": null,
+      "contractValue": "выравнивание center, зазор 9px",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 35,
+      "zone": "app-splash",
+      "key": "Стык · Главная · 07",
+      "v": "—",
+      "f": "кадр «Стык · Главная» показывает домашний экран после первого пейнта — чужая поверхность. Её рисует home-widgets.v4.dc.html, и здесь она нужна только чтобы показать, во что превращается загрузчик. Строка «границы» отдаёт этому канвасу иконку, два цвета манифеста и момент стыка",
+      "naKind": null,
+      "contractValue": "выравнивание center, зазор 8px, отступ сверху 14px",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 36,
+      "zone": "product-card",
+      "key": "Продукт · ждёт отправки · 03",
+      "v": "—",
+      "f": "экран поиска продукта: строка поиска, вкладки «Частые/Недавние», список с часами ожидания у неотправленного. По строке «границы» строку поиска и список продуктов рисует food-meal.v4.dc.html; здесь кадр показывает, как выглядит продукт, ещё не уехавший в облако",
+      "naKind": null,
+      "contractValue": "«Перекус · 11:50» — имя экрана",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 37,
+      "zone": "product-card",
+      "key": "Продукт · ждёт отправки · 08",
+      "v": "—",
+      "f": "экран поиска продукта: строка поиска, вкладки «Частые/Недавние», список с часами ожидания у неотправленного. По строке «границы» строку поиска и список продуктов рисует food-meal.v4.dc.html; здесь кадр показывает, как выглядит продукт, ещё не уехавший в облако",
+      "naKind": null,
+      "contractValue": "«Частые» — цвет var(--ac), разделитель 2px solid var(--acs)",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Частые",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\heys_advice_bundle_v1.js:10420:                    text: 'Частые приёмы — инсулин постоянно высокий, липолиза нет',"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 38,
+      "zone": "product-card",
+      "key": "Продукт · ждёт отправки · 13",
+      "v": "—",
+      "f": "экран поиска продукта: строка поиска, вкладки «Частые/Недавние», список с часами ожидания у неотправленного. По строке «границы» строку поиска и список продуктов рисует food-meal.v4.dc.html; здесь кадр показывает, как выглядит продукт, ещё не уехавший в облако",
+      "naKind": null,
+      "contractValue": "ширина 4px, высота 30px, радиус 999px, фон var(--gr2), флекс none",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 39,
+      "zone": "product-card",
+      "key": "Продукт · ждёт отправки · 18",
+      "v": "—",
+      "f": "экран поиска продукта: строка поиска, вкладки «Частые/Недавние», список с часами ожидания у неотправленного. По строке «границы» строку поиска и список продуктов рисует food-meal.v4.dc.html; здесь кадр показывает, как выглядит продукт, ещё не уехавший в облако",
+      "naKind": null,
+      "contractValue": "строка списка: разделитель none",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 40,
+      "zone": "product-card",
+      "key": "Продукт · ждёт отправки · рисунок 02",
+      "v": "—",
+      "f": "строка списка совпадений и экран порции — зона food-meal по строке «границы»",
+      "naKind": null,
+      "contractValue": "кривая, точки M15 18l-6-6 6-6",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "f has explicit why"
+    },
+    {
+      "n": 41,
+      "zone": "pwa-update",
+      "key": "Обновление · готово · 03",
+      "v": "—",
+      "f": "Декорация кадра: экран «Сегодня» под слоем обновления; сам экран разбирается в зоне home-widgets — заголовок «Сегодня»",
+      "naKind": null,
+      "contractValue": "«Сегодня» — шрифт 700 20px/1.2 Figtree, цвет #201e1d",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Сегодня",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\heys_advice_bundle_v1.js:9677:                        details: '🥚 Небольшой недобор белка за последние дни. Сегодня постарайся добрать норму — это важно для метаболизма и мышц.',"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 42,
+      "zone": "pwa-update",
+      "key": "Обновление · загрузка · 03",
+      "v": "—",
+      "f": "Декорация кадра: экран «Сегодня» под слоем обновления; сам экран разбирается в зоне home-widgets — заголовок «Сегодня»",
+      "naKind": null,
+      "contractValue": "«Сегодня» — шрифт 700 20px/1.2 Figtree, цвет #201e1d",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Сегодня",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\heys_advice_rules_v1.js:167:      advice: 'Сегодня мало овощей — добавь салат или гарнир',"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 43,
+      "zone": "pwa-update",
+      "key": "Обновление · перезагрузка · 03",
+      "v": "—",
+      "f": "Декорация кадра: экран «Сегодня» под слоем обновления; сам экран разбирается в зоне home-widgets — заголовок «Сегодня»",
+      "naKind": null,
+      "contractValue": "«Сегодня» — шрифт 700 20px/1.2 Figtree, цвет #201e1d",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Сегодня",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\advice\\_emotional.js:448:                details: '💡 Сегодня вечером немного выше риск impulse eating. Спланируй последний приём заранее: белок + овощи, а не reward food.',"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 44,
+      "zone": "pwa-update",
+      "key": "Обновление · перезагрузка одиночная · 03",
+      "v": "—",
+      "f": "Декорация кадра: экран «Сегодня» под слоем обновления; сам экран разбирается в зоне home-widgets — заголовок «Сегодня»",
+      "naKind": null,
+      "contractValue": "«Сегодня» — шрифт 700 20px/1.2 Figtree, цвет #201e1d",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Сегодня",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\day\\_meals.js:7088:            const labels = ['Сегодня', 'Вчера', 'Позавчера'];"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 45,
+      "zone": "pwa-update",
+      "key": "Офлайн-баннер · 03",
+      "v": "—",
+      "f": "Декорация кадра: экран «Сегодня» служит фоном для баннера; сам экран разбирается в зоне home-widgets — заголовок «Сегодня»",
+      "naKind": null,
+      "contractValue": "«Сегодня» — шрифт 700 20px/1.2 Figtree, цвет var(--tx)",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "f has explicit why"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "Сегодня",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\heys_app_client_helpers_v1.js:101:        if (diff === 0) return 'Сегодня';"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "foreign frame/shell; f has explicit why"
+    },
+    {
+      "n": 46,
+      "zone": "norm-correction",
+      "key": "Pro · на согласовании · 03",
+      "v": "—",
+      "f": "пилюли «решает куратор» в шапке нет: шапку рисует шторка недели. То же говорит заголовок карточки — «Ваша норма сегодня» — и проза под ним",
+      "naKind": "foreign-zone",
+      "contractValue": "«решает куратор» — пилюля: цвет rgba(var(--ink),.55)",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=foreign-zone"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "решает куратор",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\heys_norm_correction_v1.js:869:    // Снижение. На Pro решает куратор: клиент либо видит применённое, либо"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "naKind=foreign-zone; naKind=foreign-zone"
+    },
+    {
+      "n": 47,
+      "zone": "norm-correction",
+      "key": "Self · рост применён · 03",
+      "v": "—",
+      "f": "даты недели — у шторки",
+      "naKind": "foreign-zone",
+      "contractValue": "«с сегодня» — ключ + моноцифры",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=foreign-zone"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [
+            {
+              "type": "copy",
+              "text": "с сегодня",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\advice\\_emotional.js:226:                text: 'Стресс сегодня высокий — не голодай',"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "naKind=foreign-zone; naKind=foreign-zone"
+    },
+    {
+      "n": 48,
+      "zone": "norm-correction",
+      "key": "Self · третий отказ подряд · 02",
+      "v": "—",
+      "f": "то же: имя экрана принадлежит шторке недели",
+      "naKind": "foreign-zone",
+      "contractValue": "«Норма на неделю» — имя экрана",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=foreign-zone"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "naKind=foreign-zone; naKind=foreign-zone"
+    },
+    {
+      "n": 49,
+      "zone": "norm-correction",
+      "key": "Замер · включение с согласием · 05",
+      "v": "—",
+      "f": "включение замеров работает: measurementsTrackingEnabled выключен по умолчанию, включается согласием body_measurements 1.0 и при выключении чистит внесённые замеры — ровно как в подписанном документе. Отдельного экрана с ярусом «Что это даёт» и двумя строками пользы нет: стоит общий тумблер здоровья с текстом согласия. Отдано записью в UI_V4_FINDINGS",
+      "naKind": "foreign-zone",
+      "contractValue": "карточка .grp: отступ сверху 12px",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=foreign-zone"
+        },
+        "productRule": {
+          "classesFound": ["grp"],
+          "hits": [
+            {
+              "type": "css",
+              "cls": "grp",
+              "line": "C:\\Users\\User\\HEYS-v2\\apps\\web\\styles\\modules\\000-base-and-gamification.css:18217:   наград», и тот же радиус у кадрового класса .grp. Поля 14/16 берутся у первой"
+            }
+          ],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "naKind=foreign-zone; naKind=foreign-zone"
+    },
+    {
+      "n": 50,
+      "zone": "norm-correction",
+      "key": "Замер · включение с согласием · 10",
+      "v": "—",
+      "f": "включение замеров работает: measurementsTrackingEnabled выключен по умолчанию, включается согласием body_measurements 1.0 и при выключении чистит внесённые замеры — ровно как в подписанном документе. Отдельного экрана с ярусом «Что это даёт» и двумя строками пользы нет: стоит общий тумблер здоровья с текстом согласия. Отдано записью в UI_V4_FINDINGS",
+      "naKind": "foreign-zone",
+      "contractValue": "строка списка",
+      "checks": {
+        "fExplainsWhy": {
+          "ok": true,
+          "note": "naKind=foreign-zone"
+        },
+        "productRule": {
+          "classesFound": [],
+          "hits": [],
+          "hasCssProps": false
+        }
+      },
+      "classification": "CONFIRMED",
+      "reason": "naKind=foreign-zone; naKind=foreign-zone"
+    }
+  ]
+}
