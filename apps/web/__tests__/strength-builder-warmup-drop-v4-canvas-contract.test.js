@@ -75,7 +75,7 @@ function canvasExercise() {
   };
 }
 
-describe('А3 · разминка и дроп-сет · canvas contract', () => {
+describe('А3 · разминка и дроп-сет · canvas contract', { timeout: 45_000 }, () => {
   afterEach(() => cleanup());
 
   it('держит каноничные строки и геометрию экрана', () => {

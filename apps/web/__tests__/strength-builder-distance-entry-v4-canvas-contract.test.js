@@ -81,7 +81,9 @@ describe('М5 · Ввод · метры · canvas contract', () => {
         onPatch: () => {},
         onClose: () => {},
       }));
-      expect(screen.getByText(/Гребной тренажёр · 3 подход/)).toBeTruthy();
+      // Г4 (425403748): в шапке только имя; счёт подходов ушёл из шапки в ключ
+      // «подход N из M» по контракту Г4 — прежняя строка была снимком старой шапки.
+      expect(screen.getAllByText('Гребной тренажёр').length).toBeGreaterThan(0);
       expect(screen.getByText('единица — метры')).toBeTruthy();
       expect(screen.getByText('Итого')).toBeTruthy();
       expect(screen.getByText('1 400 м')).toBeTruthy();

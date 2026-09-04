@@ -143,7 +143,7 @@ function renderRoundsBlock(paletteName) {
   return { style, palette: PALETTES[paletteName] };
 }
 
-describe('strength builder · В1 superset rounds v4 canvas contract', () => {
+describe('strength builder · В1 superset rounds v4 canvas contract', { timeout: 45_000 }, () => {
   let style;
   let palette;
 

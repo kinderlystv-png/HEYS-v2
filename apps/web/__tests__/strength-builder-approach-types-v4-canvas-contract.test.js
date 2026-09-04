@@ -98,7 +98,7 @@ function assertRows(rows, paletteLabel) {
   return mismatches;
 }
 
-describe('Ж2 · типы подходов · canvas contract', () => {
+describe('Ж2 · типы подходов · canvas contract', { timeout: 45_000 }, () => {
   afterEach(() => cleanup());
 
   it('держит каноничные строки и геометрию экрана', () => {

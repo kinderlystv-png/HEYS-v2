@@ -770,7 +770,8 @@ describe('пустая тренировка (экран 02)', () => {
     expect(screen.getByText('Тяга')).toBeTruthy();
     fireEvent.click(screen.getByText('Начать по плану · День B'));
     expect(onStartPlan).toHaveBeenCalledWith({ id: 'pl_1', assignedAt: 1000 });
-    await waitFor(() => expect(screen.getByText('Жим')).toBeTruthy());
+    // Г4: имя стоит и в .sb-head-title, и в .sb-ex-title — ждём хотя бы одно.
+    await waitFor(() => expect(screen.getAllByText('Жим').length).toBeGreaterThan(0));
     expect(started[0].approaches[0].done).toBe(false);
   });
 
@@ -886,7 +887,8 @@ describe('пустая тренировка (экран 02)', () => {
     expect(screen.getByText('1 упр.')).toBeTruthy();
     fireEvent.click(screen.getByText('Повторить 5 августа'));
     expect(onRepeatLast).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(screen.getByText('Жим')).toBeTruthy());
+    // Г4: имя открытого упражнения стоит и в шапке, и в карточке — ждём хотя бы одно.
+    await waitFor(() => expect(screen.getAllByText('Жим').length).toBeGreaterThan(0));
     expect(repeated[0].name).toBe('Жим');
   });
 });

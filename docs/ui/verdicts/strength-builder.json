@@ -1175,8 +1175,8 @@
       ]
     },
     "Конструктор · список свёрнут · 15": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 15.",
+      "v": "?",
+      "f": "Рендер: .sb-ex.is-complete:first-child .sb-ex-title b 12.5px (К · 14, 750:3391 .sb-ex--collapsed на всех свёрнутых) против 13px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "a45ee30c055e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -1247,8 +1247,8 @@
       ]
     },
     "Конструктор · список свёрнут · 23": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 23.",
+      "v": "?",
+      "f": "Рендер: .sb-ex.is-pending .sb-ex-title b 12.5px (К · 14, 750:3391) против 13px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "c4dc01779567",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -5159,16 +5159,16 @@
       "f": "Unsafe early start намеренно absent — owner contract без fact-date rule. f слабый — усилить file:line при применении.",
       "h": "32404415abea",
       "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
     "План в ленте дня · 19": {
       "v": "≠",
       "f": "Transfer — sole primary action после снятия unsafe early start (owner decision). f слабый — усилить file:line при применении.",
       "h": "096e30f25e4f",
       "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
     "План в ленте дня · 20": {
       "v": "=",
@@ -9213,8 +9213,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 04": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 04.",
+      "v": "?",
+      "f": "Рендер: шапка «Жим гантелей сидя» (Г4 · 01, builder_ui ветка is-exercise-open) против «Силовая · грудь, спина, плечи» — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "97774a22c8cb",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9222,8 +9222,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 05": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 05.",
+      "v": "?",
+      "f": "Рендер: .sb-head-sub «подход 3 из 4» (Г4 exerciseWorkProgressKey) против «пн, 8 авг · начата в 18:40» — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "946ab5761d8f",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9301,8 +9301,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 14": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 14.",
+      "v": "?",
+      "f": "Рендер: .sb-ex.is-complete .sb-ex-title b 12.5px (К · 14, 750:3391 .sb-ex--collapsed) против 13px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "a45ee30c055e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9427,8 +9427,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 28": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 28.",
+      "v": "?",
+      "f": "Рендер: .sb-ex.is-open .sb-aps-head padding 0 (Г4 .is-weight-entry.is-exercise-open, класс на любом weight_reps — builder_ui:1886) против 10px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "6fb02725c750",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9445,8 +9445,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 30": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 30.",
+      "v": "?",
+      "f": "Рендер: .sb-aps-head > span:last-child #5c6a45 (Г4 --gr) против rgba(0,0,0,.56) — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "8429f740e814",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9454,8 +9454,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 31": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 31.",
+      "v": "?",
+      "f": "Рендер: .sb-ex.is-open .sb-aps gap 0 (Г4 .is-weight-entry.is-exercise-open .sb-aps) против 6px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "53b4c780e9ae",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9472,8 +9472,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 33": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 33.",
+      "v": "?",
+      "f": "Рендер: .sb-ap:first-child .sb-ap-num #5c6a45 (Г4 is-done → --gr) против rgba(0,0,0,.62) — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "1e7e3b679417",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9490,8 +9490,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 35": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 35.",
+      "v": "?",
+      "f": "Рендер: .sb-ap.is-current .sb-ap-num #c67139 (Г4 --acs) против #fffaf1 — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "8dda7bd28843",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9499,8 +9499,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 36": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 36.",
+      "v": "?",
+      "f": "Рендер: кольцо активного поля inset 1.5px (Г4) против 2px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "ea251809c8f3",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9571,8 +9571,8 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 44": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 44.",
+      "v": "?",
+      "f": "Рендер: .sb-ex.is-pending .sb-ex-title b 12.5px (К · 14, 750:3391) против 13px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
       "h": "c4dc01779567",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -10274,14 +10274,6 @@
         "apps/web/styles/modules/750-strength-builder.css"
       ]
     },
-    "Конструктор · пусто": {
-      "evidence": [
-        "apps/web/__tests__/strength-builder-ui.test.js",
-        "apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
-        "apps/web/strength/heys_strength_builder_ui_v1.js",
-        "apps/web/styles/modules/750-strength-builder.css"
-      ]
-    },
     "Конструктор · каталог": {
       "evidence": [
         "apps/web/__tests__/strength-builder-ui.test.js",
@@ -10752,6 +10744,34 @@
       "evidence": [
         "apps/web/__tests__/strength-builder-ui.test.js",
         "apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
+        "apps/web/strength/heys_strength_builder_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    "Конструктор · пусто · плана нет": {
+      "evidence": [
+        "apps/web/__tests__/strength-builder-ui.test.js",
+        "apps/web/strength/heys_strength_builder_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    "Конструктор · пусто · план назначен": {
+      "evidence": [
+        "apps/web/__tests__/strength-builder-ui.test.js",
+        "apps/web/strength/heys_strength_builder_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    "Сессия · вернулись через час · без таймера": {
+      "evidence": [
+        "apps/web/__tests__/strength-builder-ui.test.js",
+        "apps/web/strength/heys_strength_builder_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    "Сессия · вернулись через час · таймер идёт": {
+      "evidence": [
+        "apps/web/__tests__/strength-builder-ui.test.js",
         "apps/web/strength/heys_strength_builder_ui_v1.js",
         "apps/web/styles/modules/750-strength-builder.css"
       ]

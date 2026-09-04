@@ -91,7 +91,9 @@ describe('М6 · Ввод · свой вес с довесом · canvas contrac
         onPatch: () => {},
         onClose: () => {},
       }));
-      expect(screen.getByText(/Подтягивания · 3 подход/)).toBeTruthy();
+      // Г4 (425403748): в шапке только имя; счёт подходов ушёл из шапки в ключ
+      // «подход N из M» по контракту Г4 — прежняя строка была снимком старой шапки.
+      expect(screen.getAllByText('Подтягивания').length).toBeGreaterThan(0);
       expect(screen.getByText('свой вес · коэффициент 1,0')).toBeTruthy();
       expect(screen.getByText('Первые два подхода')).toBeTruthy();
       expect(screen.getByText('78 кг за повтор')).toBeTruthy();
