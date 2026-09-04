@@ -31,7 +31,7 @@ const MCP_TRACE_SCHEMA = {
       },
       window_ms: {
         type: 'number',
-        description: `Окно correlate в миллисекундах. По умолчанию ${correlate.DEFAULT_WINDOW_MS}.`,
+        description: `Запас вокруг пинов при чтении телеметрии, мс. По умолчанию ${correlate.DEFAULT_WINDOW_MS}. Связку не меняет: вызов относится к первому обмену, чья запись случилась не раньше него.`,
       },
     },
   },
@@ -100,14 +100,27 @@ function excludeSelfCalls(calls, { sessionId, seq } = {}) {
   });
 }
 
-function narrowLogWindow(exchanges, windowMs) {
+/**
+ * Границы запроса к телеметрии.
+ *
+ * Нижняя — начало московских суток, а не первый пин минус окно. Связка теперь
+ * направленная: вызовы принадлежат следующему чекпоинту, значит первый блок дня
+ * отвечает за всё, что случилось до него. При прежней границе эти вызовы просто
+ * не доезжали из базы, и починка одной корреляции ничего бы не дала.
+ *
+ * Верхняя — последний пин плюс запас: там же лежит собственная запись обмена.
+ */
+function narrowLogWindow(exchanges, windowMs, date) {
   if (!exchanges.length) return null;
   const pins = exchanges.map((e) => e.pinMs).filter((ms) => Number.isFinite(ms));
   if (!pins.length) return null;
-  const min = Math.min(...pins);
   const max = Math.max(...pins);
+  const dayStart = Date.parse(`${date}T00:00:00+03:00`);
+  const floor = Number.isFinite(dayStart)
+    ? Math.min(dayStart, Math.min(...pins) - windowMs - LOG_PADDING_MS)
+    : Math.min(...pins) - windowMs - LOG_PADDING_MS;
   return {
-    since: new Date(min - windowMs - LOG_PADDING_MS).toISOString(),
+    since: new Date(floor).toISOString(),
     until: new Date(max + windowMs + LOG_PADDING_MS).toISOString(),
   };
 }
@@ -191,7 +204,7 @@ function createMcpTraceTools({
         };
       }
 
-      const bounds = narrowLogWindow(selected, windowMs);
+      const bounds = narrowLogWindow(selected, windowMs, date);
       let telemetryTruncated = false;
       let calls = [];
       try {
@@ -220,7 +233,6 @@ function createMcpTraceTools({
       const { rows, unattached } = correlate.correlate({
         exchanges: selected,
         calls,
-        windowMs,
       });
       const sessionIds = correlate.knownSessionIds(selected);
       // Псевдоним подключения переживает смену инстанса, поэтому цепочка,
@@ -230,8 +242,14 @@ function createMcpTraceTools({
 
       const lines = enriched.map((row) => formatRowText(row));
       const tail = [];
-      if (blocksWithoutMark > 0) tail.push(`Блоков ## ЧЧ:ММ без метки: ${blocksWithoutMark} — не вошли в отчёт.`);
-      if (unattached.length > 0) tail.push(`${unattached.length} вызовов вне всех окон.`);
+      if (blocksWithoutMark > 0) {
+        tail.push(
+          `Блоков ## ЧЧ:ММ без метки: ${blocksWithoutMark} — в отчёт вошли, но их вызовы только «вероятные».`,
+        );
+      }
+      if (unattached.length > 0) {
+        tail.push(`${unattached.length} вызовов позже последнего обмена — их заберёт следующий чекпоинт.`);
+      }
       if (telemetryTruncated) tail.push('Выборка обрезана по лимиту — цепочка может быть неполной.');
 
       return {

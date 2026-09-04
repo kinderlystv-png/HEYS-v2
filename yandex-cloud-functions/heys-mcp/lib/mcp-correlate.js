@@ -11,15 +11,19 @@
  * На окне ±5 мин разница незаметна; при сужении окна до секунд учитывать
  * `duration_ms` write.
  *
- * Вызов относится к ближайшему обмену, чей пин попадает в окно — иначе два
- * write за минуту забрали бы одни и те же read.
+ * Вызов относится к первому обмену, чья запись случилась не раньше него:
+ * работа копится, пока её кто-то не запишет. Два write за минуту поэтому не
+ * спорят за одни и те же read — их разводит порядок, а не расстояние.
  */
 
 const MARK_RE = /\[mcp session=([0-9a-f]+) seq=(\d+)(?: conn=([0-9a-f]+))?(?: ts=([^\]]+))?\]/;
 /** `## 14:20`, `## ~14:20`, `## 14:20–15:00` — якорь по началу диапазона. */
 const HEADING_RE = /^##\s*~?(\d{1,2}):(\d{2})(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
 const BLOCK_SPLIT_RE = /^##\s*~?\d{1,2}:\d{2}(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?\s*$/m;
+/** Ширина запроса к телеметрии вокруг пинов дня. Связку больше не решает. */
 const DEFAULT_WINDOW_MS = 5 * 60 * 1000;
+/** Допуск на собственные вызовы обмена — см. exchangeBounds. */
+const WRITE_TAIL_MS = 30 * 1000;
 const TELEMETRY_RETENTION_DAYS = 180;
 /** @deprecated используйте TELEMETRY_RETENTION_DAYS */
 const LOG_RETENTION_DAYS = TELEMETRY_RETENTION_DAYS;
@@ -78,18 +82,23 @@ function parseExchanges(text, { date = null } = {}) {
     const heading = HEADING_RE.exec(block);
     if (!heading) continue;
     const mark = parseMark(block);
-    if (!mark) {
-      blocksWithoutMark += 1;
-      continue;
-    }
+    // Блок без метки прежде выбрасывался целиком, и вызовы вокруг него уходили
+    // соседям или в «вне всех окон». Заголовок ## ЧЧ:ММ — тоже якорь, пусть и
+    // грубее метки: минута вместо секунды. Поэтому блок остаётся в отчёте, а
+    // метка решает не участие, а доверие — его вызовы лягут в «вероятные».
+    if (!mark) blocksWithoutMark += 1;
     const headingMs = headingToUtcMs(date, Number(heading[1]), Number(heading[2]));
-    const markMs = mark.ts ? Date.parse(mark.ts) : NaN;
+    const markMs = mark && mark.ts ? Date.parse(mark.ts) : NaN;
     const pinMs = Number.isFinite(markMs) ? markMs : headingMs;
     if (pinMs == null) continue;
     exchanges.push({
       heading: `${pad(Number(heading[1]))}:${pad(Number(heading[2]))}`,
       kin: kinLine(block),
-      mark,
+      mark: mark || null,
+      // Обмен — это отрезок, а не точка: заголовок ## ЧЧ:ММ говорит, когда он
+      // начался, метка — когда его записали. Между ними бывают часы, и внутрь
+      // помещаются другие, более короткие обмены.
+      headingMs,
       pinMs,
     });
   }
@@ -106,6 +115,10 @@ function mergeSameTurnExchanges(exchanges) {
     const prev = merged[merged.length - 1];
     if (prev && prev.heading === exchange.heading && prev.kin && prev.kin === exchange.kin) {
       prev.pins.push(exchange.pinMs);
+      if (Number.isFinite(exchange.headingMs)
+        && (!Number.isFinite(prev.headingMs) || exchange.headingMs < prev.headingMs)) {
+        prev.headingMs = exchange.headingMs;
+      }
       prev.marks.push(exchange.mark);
       prev.mark = exchange.mark;
       prev.merged_blocks += 1;
@@ -113,6 +126,7 @@ function mergeSameTurnExchanges(exchanges) {
     }
     merged.push({
       ...exchange,
+      headingMs: exchange.headingMs,
       pins: [exchange.pinMs],
       marks: [exchange.mark],
       merged_blocks: 1,
@@ -121,37 +135,80 @@ function mergeSameTurnExchanges(exchanges) {
   return merged;
 }
 
-function nearestPinDelta(exchange, callMs) {
+function lastPinMs(exchange) {
   const pins = exchange.pins || [exchange.pinMs];
-  return Math.min(...pins.map((pin) => Math.abs(callMs - pin)));
+  return Math.max(...pins);
 }
 
-function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
-  const window = Number.isFinite(windowMs) && windowMs > 0 ? windowMs : DEFAULT_WINDOW_MS;
+/**
+ * Отрезки обменов.
+ *
+ * Начало — заголовок `## ЧЧ:ММ` (когда человек заговорил), конец — пин метки
+ * (когда обмен записали) плюс короткий допуск: пин это момент begin() записи, а
+ * строка mcp_call пишется в конце вызова, поэтому собственные вызовы обмена
+ * ложатся в лог на свою длительность позже. Допуск режется началом следующего
+ * обмена — иначе два чекпоинта за минуту снова начали бы спорить за одни и те
+ * же вызовы.
+ */
+function exchangeBounds(exchanges) {
+  const spans = (exchanges || []).map((exchange, index) => {
+    const endMs = lastPinMs(exchange);
+    const headingMs = Number.isFinite(exchange.headingMs) ? exchange.headingMs : endMs;
+    return { exchange, index, startMs: Math.min(headingMs, endMs), endMs };
+  });
+  const byEnd = [...spans].sort((a, b) => a.endMs - b.endMs || a.index - b.index);
+  for (let i = 0; i < byEnd.length; i += 1) {
+    const tail = byEnd[i].endMs + WRITE_TAIL_MS;
+    const next = byEnd[i + 1];
+    byEnd[i].endMs = next ? Math.min(tail, next.endMs - 1) : tail;
+  }
+  return spans;
+}
+
+/**
+ * Обмен, которому принадлежит вызов.
+ *
+ * 1. Отрезок, внутрь которого вызов попал. Если таких несколько — самый узкий,
+ *    то есть начавшийся позже: короткий обмен, случившийся посреди длинного,
+ *    забирает своё. Без этого разговор с 11:48 до 14:55, записанный одним
+ *    чекпоинтом в 14:55, отдал бы всю свою первую половину соседнему блоку
+ *    12:35, который записали раньше, — отчёт снова выглядел бы правдиво и снова
+ *    был бы неверен.
+ * 2. Иначе — первый обмен, начавшийся не раньше вызова: работа копится, пока её
+ *    кто-то не запишет, и принадлежит следующей записи, а не предыдущей.
+ * 3. Иначе — вызов позже всех обменов; его заберёт следующий чекпоинт.
+ */
+function ownerSpan(spans, byStart, ms) {
+  let inner = null;
+  for (const span of spans) {
+    if (ms < span.startMs || ms > span.endMs) continue;
+    if (!inner || span.startMs > inner.startMs) inner = span;
+  }
+  if (inner) return inner;
+  for (const span of byStart) {
+    if (span.startMs >= ms) return span;
+  }
+  return null;
+}
+
+function correlate({ exchanges, calls }) {
   const timed = (calls || [])
     .map((call) => ({ call, ms: callTimeMs(call) }))
-    .filter((row) => row.ms != null);
-  const used = new Set();
+    .filter((row) => row.ms != null)
+    .sort((a, b) => a.ms - b.ms);
+  // Порядок в файле — порядок записи, но блок бывает вписан задним числом,
+  // поэтому отрезки считаются по времени, а не по месту в файле.
+  const spans = exchangeBounds(exchanges);
+  const byStart = [...spans].sort((a, b) => a.startMs - b.startMs || a.index - b.index);
+  const buckets = new Map(spans.map((span) => [span.exchange, []]));
+  const unattached = [];
+  for (const row of timed) {
+    const owner = ownerSpan(spans, byStart, row.ms);
+    if (!owner) unattached.push(row.call);
+    else buckets.get(owner.exchange).push(row.call);
+  }
   const rows = (exchanges || []).map((exchange) => {
-    const attached = [];
-    for (const row of timed) {
-      if (used.has(row)) continue;
-      const delta = nearestPinDelta(exchange, row.ms);
-      if (delta > window) continue;
-      let nearest = exchange;
-      let nearestDelta = delta;
-      for (const other of exchanges) {
-        if (other === exchange) continue;
-        const otherDelta = nearestPinDelta(other, row.ms);
-        if (otherDelta < nearestDelta) {
-          nearest = other;
-          nearestDelta = otherDelta;
-        }
-      }
-      if (nearest !== exchange) continue;
-      used.add(row);
-      attached.push(row.call);
-    }
+    const attached = buckets.get(exchange) || [];
     attached.sort((a, b) => (callTimeMs(a) || 0) - (callTimeMs(b) || 0));
     const totalMs = attached.reduce((sum, call) => sum + (Number(call.duration_ms) || 0), 0);
     return {
@@ -164,7 +221,6 @@ function correlate({ exchanges, calls, windowMs = DEFAULT_WINDOW_MS }) {
       total_ms: totalMs,
     };
   });
-  const unattached = timed.filter((row) => !used.has(row)).map((row) => row.call);
   return { rows, unattached };
 }
 
@@ -446,6 +502,7 @@ function parseLogText(raw) {
 module.exports = {
   BLOCK_SPLIT_RE,
   DEFAULT_WINDOW_MS,
+  WRITE_TAIL_MS,
   HEADING_RE,
   LOG_RETENTION_DAYS,
   TELEMETRY_RETENTION_DAYS,
@@ -453,7 +510,7 @@ module.exports = {
   headingToUtcMs,
   parseExchanges,
   mergeSameTurnExchanges,
-  nearestPinDelta,
+  exchangeBounds,
   correlate,
   parseLogText,
   knownSessionIds,

@@ -72,7 +72,12 @@ test('соседний read с другим session_id попадает в ок�
   assert.equal(rows[0].kin, 'Запиши 250 мл воды');
 });
 
-test('вызов четырьмя часами раньше в цепочку write не попадает', () => {
+test('вызов четырьмя часами раньше попадает в цепочку своего write', () => {
+  // Прежде связка была симметричной и с порогом ±5 минут, и такой вызов уходил
+  // в «вне всех окон». 4 сентября так потерялось пятнадцать вызовов из двадцати:
+  // разговор шёл с 11:48 до 14:55, а чекпоинт закрывал его один. Работа копится,
+  // пока её кто-то не запишет, поэтому вызов принадлежит следующему чекпоинту —
+  // сколько бы времени между ними ни прошло.
   const { exchanges } = correlate.parseExchanges(transcript, { date: '2026-08-17' });
   const { rows, unattached } = correlate.correlate({
     exchanges,
@@ -82,9 +87,58 @@ test('вызов четырьмя часами раньше в цепочку wr
     ],
   });
 
+  assert.deepEqual(rows[0].tools, ['heys_list_clients', 'heys_add_water']);
+  assert.equal(unattached.length, 0);
+});
+
+test('длинный обмен не отдаёт свою первую половину блоку, записанному раньше', () => {
+  // Форма 4 сентября: разговор с 11:48 до 14:55 записан одним чекпоинтом в
+  // 14:55, а посреди него был короткий обмен 12:35, записанный сразу. Если
+  // считать обмен точкой записи, все вызовы до 12:36 уходят короткому блоку:
+  // связка честно направленная, отчёт выглядит правдиво и неверен. Обмен —
+  // отрезок от заголовка до записи, и вложенный забирает только своё.
+  const text = `
+## 11:50
+**Кин:** посмотри трейс
+**Claude:** ок
+[mcp session=bbbbbbbbbbbb seq=1 ts=2026-09-04T11:55:00.000Z]
+
+## 12:35
+**Кин:** короткий вопрос
+**Claude:** ок
+[mcp session=cccccccccccc seq=1 ts=2026-09-04T09:36:00.000Z]
+`;
+  const { exchanges } = correlate.parseExchanges(text, { date: '2026-09-04' });
+  const { rows, unattached } = correlate.correlate({
+    exchanges,
+    calls: [
+      { ts: '2026-09-04T09:00:00.000Z', tool: 'рано', duration_ms: 10 },
+      { ts: '2026-09-04T09:35:30.000Z', tool: 'внутри_короткого', duration_ms: 10 },
+      { ts: '2026-09-04T10:30:00.000Z', tool: 'после_короткого', duration_ms: 10 },
+    ],
+  });
+
+  assert.equal(rows[0].heading, '11:50');
+  assert.deepEqual(rows[0].tools, ['рано', 'после_короткого']);
+  assert.deepEqual(rows[1].tools, ['внутри_короткого']);
+  assert.equal(unattached.length, 0);
+});
+
+test('вызов позже последнего обмена ждёт следующего чекпоинта', () => {
+  // Единственный вид неприписанных вызовов, который остаётся правильным: работу
+  // после последней записи заберёт следующая. Терять её нельзя, приписывать
+  // предыдущему обмену — тоже: он про неё ещё ничего не знает.
+  const { exchanges } = correlate.parseExchanges(transcript, { date: '2026-08-17' });
+  const { rows, unattached } = correlate.correlate({
+    exchanges,
+    calls: [
+      { ts: '2026-08-17T18:33:12.500Z', tool: 'heys_add_water', session_id: '82e5c67303be', seq: 1, duration_ms: 100 },
+      { ts: '2026-08-17T19:40:00.000Z', tool: 'heys_get_day', session_id: 'a2418c691812', seq: 1, duration_ms: 120 },
+    ],
+  });
+
   assert.deepEqual(rows[0].tools, ['heys_add_water']);
-  assert.equal(unattached.length, 1);
-  assert.equal(unattached[0].tool, 'heys_list_clients');
+  assert.deepEqual(unattached.map((call) => call.tool), ['heys_get_day']);
 });
 
 test('два write за минуту не делят одни и те же вызовы', () => {
@@ -129,8 +183,44 @@ test('блоки ## без метки считаются отдельно', () =
 [mcp session=aaaaaaaaaaaa seq=1 ts=2026-08-17T18:33:00.000Z]
 `;
   const parsed = correlate.parseExchanges(text, { date: '2026-08-17' });
+  // Блок без метки считается отдельно, но из отчёта больше не выпадает:
+  // заголовок ## ЧЧ:ММ — тоже якорь, только грубее. Прежде такой блок
+  // выбрасывался целиком, и вызовы вокруг него уходили соседям.
   assert.equal(parsed.blocksWithoutMark, 1);
-  assert.equal(parsed.exchanges.length, 1);
+  assert.equal(parsed.exchanges.length, 2);
+  assert.equal(parsed.exchanges[0].heading, '09:00');
+  assert.equal(parsed.exchanges[0].mark, null);
+  assert.equal(parsed.exchanges[0].pinMs, Date.parse('2026-08-17T06:00:00.000Z'));
+  assert.equal(parsed.exchanges[1].mark.sessionId, 'aaaaaaaaaaaa');
+});
+
+test('вызовы блока без метки становятся вероятными, а не пропадают', () => {
+  const text = `
+## 09:00
+**Кин:** Обмен без метки
+**Claude:** ок
+
+## 21:33
+**Кин:** Вода
+**Claude:** ок
+[mcp session=aaaaaaaaaaaa seq=1 ts=2026-08-17T18:33:00.000Z]
+`;
+  const { exchanges } = correlate.parseExchanges(text, { date: '2026-08-17' });
+  const { rows, unattached } = correlate.correlate({
+    exchanges,
+    calls: [
+      { ts: '2026-08-17T05:58:00.000Z', tool: 'heys_get_day', session_id: 'cccccccccccc', seq: 1, duration_ms: 90 },
+      { ts: '2026-08-17T18:32:00.000Z', tool: 'heys_add_water', session_id: 'aaaaaaaaaaaa', seq: 1, duration_ms: 90 },
+    ],
+  });
+  const enriched = correlate.enrichRowsWithAttribution(rows, correlate.knownSessionIds(exchanges), {
+    date: '2026-08-17',
+  });
+
+  assert.equal(unattached.length, 0);
+  assert.deepEqual(enriched[0].probable_tools, ['heys_get_day']);
+  assert.deepEqual(enriched[0].confirmed_tools, []);
+  assert.deepEqual(enriched[1].confirmed_tools, ['heys_add_water']);
 });
 
 test('parseLogText достаёт mcp_call из JSON и из текста yc logs', () => {
