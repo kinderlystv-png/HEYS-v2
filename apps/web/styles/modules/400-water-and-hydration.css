@@ -3543,15 +3543,12 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
+/* Кадр «Совет · всплывающий · 29»: «Открыть» — фон --acs, текст --on-acs.
+   В синих наборах --v4-btn-on-act не заведена (контраст ждёт дизайнера) —
+   тот же приём, что у .advice-v4-science__primary. */
 .advice-v4-toast-card__primary {
   background: var(--v4-act, #c67139);
-  color: var(--v4-btn-on-act, #2b1608);
-}
-
-html[data-theme-id="blue"] .advice-v4-toast-card__primary,
-html[data-theme-id="blue-dark"] .advice-v4-toast-card__primary {
-  background: #2c5f76;
-  color: #ffffff;
+  color: var(--v4-btn-on-act, #fff5ef);
 }
 
 /* Строка «пустое состояние»: не шторка, а всплывающая плашка над нижним
