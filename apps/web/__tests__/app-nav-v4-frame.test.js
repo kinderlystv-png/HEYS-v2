@@ -360,9 +360,9 @@ describe('UI v4 chrome paint — рама', () => {
         // Светлая: sand-роль (решение 2026-08-12). Тёмная: --v4-act-text как в g1d.
         expect(lightRule).toMatch(/var\(--v4-sand-act(?:-text|-deep)?/);
         expect(lightRule).not.toMatch(/color:\s*#8a4a20\s*;/);
-        // Тёмная sand-nav: литералы после classic-drift fix (#e2a468 / #2f2820).
+        // Тёмная sand-nav: цвет и фон активной — роли, не голые литералы.
         expect(baseCss).toMatch(
-            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-soft,\s*#e2a468\)[\s\S]*?background:\s*#2f2820/,
+            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-soft,\s*#e2a468\)[\s\S]*?background:\s*var\(--v4-hero/,
         );
     });
 
@@ -424,10 +424,10 @@ describe('UI v4 chrome paint — рама', () => {
             /\.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-text[\s\S]*?background:\s*var\(--v4-hero/,
         );
         expect(baseCss).toMatch(
-            /\[data-theme\$="dark"\] \.tabs\.tabs--v4-primary \{[\s\S]*?background:\s*#141210/,
+            /\[data-theme\$="dark"\] \.tabs\.tabs--v4-primary \{[\s\S]*?background:\s*var\(--v4-bg/,
         );
         expect(baseCss).toMatch(
-            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-soft,\s*#e2a468\)[\s\S]*?background:\s*#2f2820/,
+            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-soft,\s*#e2a468\)[\s\S]*?background:\s*var\(--v4-hero/,
         );
         const start = baseCss.indexOf('.tab-primary-nav-row');
         expect(start).toBeGreaterThan(-1);

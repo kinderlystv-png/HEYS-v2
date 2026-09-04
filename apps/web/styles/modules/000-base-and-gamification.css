@@ -4565,7 +4565,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 [data-theme$="dark"] .tabs.tabs--v4-primary {
-  background: var(--v4-hero, #2f2820); /* v4-intentional */
+  background: var(--v4-bg, #141210);
   border-top: none;
   box-shadow: none;
   backdrop-filter: none;
