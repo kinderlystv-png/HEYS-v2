@@ -4970,7 +4970,7 @@
     },
     "вид · резервный вопрос после еды": {
       "v": "=",
-      "f": "heys_morning_checkin_v1.js:731 steps:[morning_activation_followup] без layout; 500-pwa-and-offline.css:651 padding 12px; 300-modals-and-day.css:1801 крест слева",
+      "f": "Центрированный диалог: 500-pwa-and-offline.css:651 padding 12px, :659 max-width 360px border-radius 24px, :671 box-shadow 0 18px 44px -12px; шапка 300-modals-and-day.css:1801-1817 — крест 44×44 margin -10/0/-10/-12px, order:3 справа в StepModal, заголовок/подпись text-align:left; heys_morning_checkin_v1.js:731",
       "h": "0776e3037eba"
     },
     "календарь в резервном вопросе": {
@@ -5067,17 +5067,17 @@
     },
     "Рутина · резервный вопрос после еды · 14": {
       "v": "=",
-      "f": "300-modals-and-day.css:1803-1806 .mc-header--nav align-items:flex-start gap:8px",
+      "f": "300-modals-and-day.css:1801-1807 .mc-header--nav align-items:flex-start gap:8px padding:14px 14px 0",
       "h": "3e00454540d9"
     },
     "Рутина · резервный вопрос после еды · 15": {
       "v": "=",
-      "f": "300-modals-and-day.css:1856-1860 .mc-header-btn--close width:44px height:44px margin:-10px 0 -10px -12px; :1878 background rgba(var(--v4-ink-rgb),.42)",
+      "f": "300-modals-and-day.css:1811-1812 .mc-header-left order:3; :1866-1872 .mc-header-btn--close 44×44 margin -10/0/-10/-12px; ::before/::after 2.75px rgba(var(--v4-ink-rgb),.42)",
       "h": "752c84486760"
     },
     "Рутина · резервный вопрос после еды · 16": {
       "v": "=",
-      "f": "300-modals-and-day.css:1816 .mc-header-center flex:1; min-width:0 от flex-basis",
+      "f": "300-modals-and-day.css:1815-1816 и :1824-1829 .mc-header-center flex:1 text-align:left align-items:flex-start",
       "h": "a7579f507354"
     },
     "Рутина · резервный вопрос после еды · 17": {

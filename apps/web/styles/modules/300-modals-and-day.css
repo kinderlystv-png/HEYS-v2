@@ -1806,6 +1806,16 @@
   gap: 8px;
 }
 
+/* Крест StepModal — справа (order:3), заголовок и подпись — слева: кадр рисует
+   крест в карточке слева, но в шапке листа слева он спорил с колонкой текста. */
+[data-heys-step-id="morning_activation_followup"] .mc-header-left {
+  order: 3;
+}
+
+[data-heys-step-id="morning_activation_followup"] .mc-header-center {
+  text-align: left;
+}
+
 [data-heys-step-id="morning_activation_followup"] .mc-header-right,
 [data-heys-step-id="morning_activation_skip_reason"] .mc-header-right {
   display: none;
