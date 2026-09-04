@@ -6293,7 +6293,7 @@
     }
 
     const droppedText = hasData ? sleepReadyDroppedText(items) : null;
-    return React.createElement('div', { className: 'widget-v4-stack widget-v4-sleepready' },
+    return React.createElement('div', { className: 'widget-v4-stack widget-v4-sleepready widget-v4-sleepready-check' },
       React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
         v4Kicker('К вечеру'),
         React.createElement('span', { className: 'widget-v4-row__meta' },

@@ -13200,6 +13200,34 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-variant-numeric: tabular-nums;
 }
 
+/* Кадр «Готовность ко сну · Чек-лист»: ряд 10 px, чип 8.5 / gap 4,
+   закрытый — --v4-ok-text / --v4-ok-fill, открытая точка — --v4-line.
+   Разбор (__row) и общий chip 9.5 / sand-ok не трогал. */
+.widget-v4-sleepready-check .widget-v4-checklist--dots {
+  gap: 10px;
+}
+
+.widget-v4-sleepready-check .widget-v4-checklist__chip {
+  gap: 4px;
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.widget-v4-sleepready-check .widget-v4-checklist__chip.is-done {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.widget-v4-sleepready-check .widget-v4-checklist__dot {
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+  opacity: 1;
+}
+
+.widget-v4-sleepready-check .widget-v4-checklist__chip.is-done .widget-v4-checklist__dot {
+  background: var(--v4-ok-fill, #7a8a5e);
+  opacity: 1;
+}
+
 /* Блок «Рекомендуемый экран»: между каталогом и пустым состоянием
    (контракт home-widgets, строка «сброс к дефолту»). */
 .widget-v4-recommended {
