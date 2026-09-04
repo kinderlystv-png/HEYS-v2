@@ -258,7 +258,10 @@
       if (res.ok) onDone(String(name).trim());
     }
 
-    return h('div', { className: 'sb-root sb-screen' },
+    return h('div', {
+      className: 'sb-root sb-screen',
+      style: CATALOG_V4_BRIDGE
+    },
       h('div', { className: 'sb-head' },
         h('button', {
           type: 'button', className: 'sb-icon-btn', onClick: onCancel, 'aria-label': 'Отменить'
@@ -319,27 +322,35 @@
           })
         ),
 
+        unit && !needsFactor && h('div', { className: 'sb-step' },
+          h('span', null, '3 · Только для своего веса')
+        ),
+        unit && !needsFactor && h('div', { className: 'sb-block' },
+          h('div', { className: 'sb-step-hint' },
+            'Для «вес × повторы» третий вопрос не задаётся.')
+        ),
         needsFactor && h('div', { className: 'sb-step' },
           h('span', null, '3 · На что похоже движение'),
           h('i', null, 'можно пропустить')
         ),
-        needsFactor && h('div', { className: 'sb-step-hint' },
-          'Коэффициент — физический факт про движение, а не настройка. Выберите похожее, и он подставится сам.'
-        ),
-        needsFactor && refs.map(function (r) {
-          return h('button', {
-            key: r.norm,
-            type: 'button',
-            className: 'sb-radio' + (likeNorm === r.norm ? ' is-on' : ''),
-            onClick: function () { setLikeNorm(r.norm); }
-          },
-            h('span', { className: 'sb-radio-dot' }),
-            h('div', { className: 'sb-cat-title' },
-              h('b', null, 'Как ' + r.name.toLowerCase()),
-              h('span', null, Math.round(r.bodyweightFactor * 100) + '% массы тела')
-            )
-          );
-        })
+        needsFactor && h('div', { className: 'sb-block' },
+          h('div', { className: 'sb-step-hint' },
+            'У упражнений на своём весе спрашиваем «на что похоже» — отжимания, подтягивания, приседания — и коэффициент берём оттуда, а не числом.'),
+          refs.map(function (r) {
+            return h('button', {
+              key: r.norm,
+              type: 'button',
+              className: 'sb-radio' + (likeNorm === r.norm ? ' is-on' : ''),
+              onClick: function () { setLikeNorm(r.norm); }
+            },
+              h('span', { className: 'sb-radio-dot' }),
+              h('div', { className: 'sb-cat-title' },
+                h('b', null, 'Как ' + r.name.toLowerCase()),
+                h('span', null, Math.round(r.bodyweightFactor * 100) + '% массы тела')
+              )
+            );
+          })
+        )
       ),
 
       h('div', { className: 'sb-panel sb-panel-column' },
@@ -355,7 +366,9 @@
           className: 'sb-btn',
           disabled: !ready,
           onClick: function () { save(false); }
-        }, 'Создать · без тоннажа')
+        }, 'Создать · без тоннажа'),
+        unit && h('p', { className: 'sb-catalog-note' },
+          'Без ответа на третий вопрос упражнение в объём не идёт — и об этом будет строка в итогах, а не тишина.')
       )
     );
   }

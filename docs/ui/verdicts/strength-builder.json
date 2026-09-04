@@ -712,7 +712,7 @@
     },
     "вид · замена связки": {
       "v": "=",
-      "f": "SupersetBoundariesBody в ProposalReview; вердикт уже ссылается proposal_ui+superset_ui. Дублирует Связка · границы правки.",
+      "f": "Кадр Д3: SupersetBoundariesScreen — .sb-ss-bound-pair с колонками was/will, .sb-ss-bound-tier, .sb-ss-bound-list и badge на --sb-okbg/--sb-okTx; в разборе правки тот же SupersetBoundariesBody в .sb-proposal-boundaries — apps/web/strength/heys_strength_superset_ui_v1.js:2686-2750, apps/web/strength/heys_strength_proposal_ui_v1.js:363-383, apps/web/styles/modules/750-strength-builder.css:4484-4610; геометрия+цвет apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "df752e8f5407"
     },
     "вид · таблица ввода": {
@@ -2057,68 +2057,88 @@
       "h": "42a08001f0d5"
     },
     "Своё упражнение · 08": {
-      "v": "?",
-      "f": "Контракт «список .cd», продукт — вертикальные .sb-radio (catalog_ui:285-298); геометрия кадра ≠ списка радио — правка catalog_ui, CSS 750 только .sb-radio/.sb-step.",
-      "h": "d9a337aab838"
+      "v": "≠",
+      "f": "Кадр .cd badge-row; продукт — вертикальные .sb-radio (catalog_ui:288-301). Роли v4 через bridge; носитель ≠ pill — осознанное отклонение radio-list.",
+      "h": "d9a337aab838",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 09": {
-      "v": "?",
-      "f": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px — 750:1747-1758; сверить с дизайнером: pill-row vs radio-row.",
-      "h": "931b461e2c48"
+      "v": "≠",
+      "f": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px (750:1782-1794). Форма radio-row ≠ badge-row.",
+      "h": "931b461e2c48",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 10": {
-      "v": "?",
-      "f": "Кадр gap 6px wrap badges; продукт column .sb-radio — layout в catalog_ui, не 750.",
-      "h": "1a415932debe"
+      "v": "≠",
+      "f": "Кадр gap 6px wrap badges; продукт column .sb-radio без wrap — layout catalog_ui, не 750.",
+      "h": "1a415932debe",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 11": {
-      "v": "?",
-      "f": "Выбранная единица .sb-radio.is-on bg --sb-accbg/--v4-act (750:1761-1764); кадр pill --acs — роли sand=blue через bridge, форма ≠ badge.",
-      "h": "3e8e3e3dd598"
+      "v": "≠",
+      "f": "Выбранная .sb-radio.is-on --sb-accbg/--v4-act (750:1796-1799); кадр pill --acs/--on-acs — роли ок, форма ≠ badge.",
+      "h": "3e8e3e3dd598",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 12": {
-      "v": "?",
-      "f": "Неактивная .sb-radio color --sb-mut ≈ ink 62%; кадр badge rgba ink .62 — роль на sand+blue ок, контейнер ≠ pill.",
-      "h": "f98a6986f686"
+      "v": "≠",
+      "f": "Неактивная .sb-radio --sb-mut ≈ ink 62%; кадр badge rgba ink .62 — роль ok, контейнер ≠ pill.",
+      "h": "f98a6986f686",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 13": {
-      "v": "?",
-      "f": "Строка списка — см. ·08–·10; нет .cd в runtime.",
-      "h": "af81bb6e54c6"
+      "v": "≠",
+      "f": "Строка .cd в кадре; в runtime .sb-radio — см. ·08.",
+      "h": "af81bb6e54c6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 14": {
-      "v": "?",
-      "f": "«Основная» — .sb-chip.is-primary color --sb-accTx (750:1641-1645); кадр table row «Основная» var(--tx) — chip vs row.",
-      "h": "ecaed16b6441"
+      "v": "≠",
+      "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676-1680) — chip vs row.",
+      "h": "ecaed16b6441",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 15": {
-      "v": "?",
-      "f": "Primary chip label color --sb-accTx/--v4-act-text (750:1644); кадр «спина» 700 11.5 var(--ac) — семантика совпадает, носитель chip.",
-      "h": "f0df850468b9"
+      "v": "≠",
+      "f": "Primary chip --sb-accTx/--v4-act-text; кадр «спина» 700 11.5 var(--ac) — семантика совпадает, носитель chip.",
+      "h": "f0df850468b9",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 16": {
-      "v": "?",
-      "f": "См. ·13 — divider none в кадре .cd, продукт chips wrap.",
-      "h": "6b286135ed76"
+      "v": "≠",
+      "f": "Кадр .cd divider none; продукт .sb-chips wrap без divider — layout chips.",
+      "h": "6b286135ed76",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 17": {
-      "v": "?",
-      "f": "Secondary .sb-chip.is-on --sb-mut 11.5px (750:1628); кадр «бицепс, плечи» 600 ink 56% — близко по роли, layout chips.",
-      "h": "d5f325075b3e"
+      "v": "≠",
+      "f": "Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56% — близко по роли, layout chips.",
+      "h": "d5f325075b3e",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
     },
     "Своё упражнение · 18": {
-      "v": "?",
-      "f": "Кадр .grp card; продукт .sb-step-hint без .grp (750:1740-1745) — карточка третьего шага только при bodyweight.",
+      "v": "=",
+      "f": ".sb-block обёртка шага 3 — catalog_ui:328-331 (weight_reps) и :336-353 (bodyweight); 750 .sb-block :1879-1884; карточка .grp ≈ .sb-block.",
       "h": "54643961e08d"
     },
     "Своё упражнение · 19": {
-      "v": "?",
-      "f": "При weight_reps шаг 3 не рендерится (needsFactor=false); кадр показывает prose «третий вопрос не задаётся» — copy нет в DOM, catalog_ui.",
+      "v": "=",
+      "f": "При !needsFactor copy «Для «вес × повторы» третий вопрос не задаётся.» в .sb-block .sb-step-hint — catalog_ui:328-330; роли через CATALOG_V4_BRIDGE.",
       "h": "98393bbbef21"
     },
     "Своё упражнение · 20": {
-      "v": "?",
-      "f": "Сноска bodyweight — .sb-step-hint catalog_ui:326-328; кадр .sm margin-top 8px — нет отдельного .sm, catalog_ui.",
+      "v": "=",
+      "f": "Bodyweight сноска в .sb-block .sb-step-hint — catalog_ui:337-338; текст канваса «на что похоже — отжимания…»; margin через padding .sb-block.",
       "h": "d18c851efcdf"
     },
     "Своё упражнение · 21": {
@@ -2132,8 +2152,8 @@
       "h": "7638993b90bb"
     },
     "Своё упражнение · 23": {
-      "v": "?",
-      "f": "Нижняя сноска «Без ответа…» в кадре .sm; в продукте нет footnote под кнопками — catalog_ui scope.",
+      "v": "=",
+      "f": "Нижняя сноска .sb-catalog-note под кнопками — catalog_ui:370-371; copy совпадает с кадром .sm.",
       "h": "88e598cbe64b"
     },
     "Программа · цикл · 01": {
@@ -3270,112 +3290,112 @@
     },
     "Связка · границы правки · 01": {
       "v": "=",
-      "f": "Шапка кадра: .sb-ss-bound-screen .sb-head с .sb-icon-btn и .sb-head-title — apps/web/strength/heys_strength_superset_ui_v1.js:1533-1540; стандартная sb-head из apps/web/styles/modules/750-strength-builder.css.",
+      "f": "Шапка кадра: .sb-ss-bound-screen .sb-head с .sb-icon-btn и .sb-head-title — apps/web/strength/heys_strength_superset_ui_v1.js:2737-2745; стандартная sb-head из apps/web/styles/modules/750-strength-builder.css.",
       "h": "175bdcc2e73a"
     },
     "Связка · границы правки · 02": {
       "v": "=",
-      "f": "Колонка заголовка: .sb-ss-bound-head { flex-direction:column; gap:3px } — apps/web/styles/modules/750-strength-builder.css:3817-3820; computed row 02 в apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Колонка заголовка: .sb-ss-bound-head { flex-direction:column; gap:3px } — apps/web/styles/modules/750-strength-builder.css:4485-4488; computed row 02 в apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "07ffbada0ee7"
     },
     "Связка · границы правки · 03": {
       "v": "=",
-      "f": "Имя экрана «{who} заменил связку»: h('b', …) — apps/web/strength/heys_strength_superset_ui_v1.js:1538; DOM apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Имя экрана «{who} заменил связку»: h('b', …) — apps/web/strength/heys_strength_superset_ui_v1.js:2743; DOM apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "7da5a62a19e4"
     },
     "Связка · границы правки · 04": {
       "v": "=",
-      "f": "Ключ «связка не начата»: .sb-head-sub из replacements[0].key — apps/web/strength/heys_strength_superset_ui_v1.js:1531,1539; apps/web/strength/heys_strength_proposal_ui_v1.js:211-214.",
+      "f": "Ключ «связка не начата»: .sb-head-sub из replacements[0].key — apps/web/strength/heys_strength_superset_ui_v1.js:2736,2744; apps/web/strength/heys_strength_proposal_ui_v1.js:211-214.",
       "h": "23525e7a7701"
     },
     "Связка · границы правки · 05": {
       "v": "=",
-      "f": "Прокрутка: .sb-list.sb-ss-bound-scroll { flex:1; overflow-y:auto } — apps/web/strength/heys_strength_superset_ui_v1.js:1542; apps/web/styles/modules/750-strength-builder.css:3823-3825,156-160.",
+      "f": "Прокрутка: .sb-list.sb-ss-bound-scroll { flex:1; overflow-y:auto } — apps/web/strength/heys_strength_superset_ui_v1.js:2747-2748; apps/web/styles/modules/750-strength-builder.css:4491-4493.",
       "h": "c629f84f9712"
     },
     "Связка · границы правки · 06": {
       "v": "=",
-      "f": "Карточка пары: .sb-ss-bound-grp { margin-top:12px } — apps/web/styles/modules/750-strength-builder.css:3827-3829.",
+      "f": "Карточка пары: .sb-ss-bound-grp { margin-top:12px } — apps/web/styles/modules/750-strength-builder.css:4495-4497.",
       "h": "81d6d8e40a85"
     },
     "Связка · границы правки · 07": {
       "v": "=",
-      "f": "Ряд было→станет: .sb-ss-bound-pair { display:flex; gap:9px; align-items:stretch } — apps/web/styles/modules/750-strength-builder.css:3831-3835.",
+      "f": "Ряд было→станет: .sb-ss-bound-pair { display:flex; gap:9px; align-items:stretch } — apps/web/styles/modules/750-strength-builder.css:4499-4503.",
       "h": "dab99132536b"
     },
     "Связка · границы правки · 08": {
       "v": "=",
-      "f": "Колонка «было»: .sb-ss-bound-col--was { flex:1; padding:10px; border-radius:12px; background:var(--sb-bg); inset border } — apps/web/styles/modules/750-strength-builder.css:3837-3847; computed row 08 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Колонка «было»: .sb-ss-bound-col--was { flex:1; padding:10px; border-radius:12px; background:var(--sb-bg); inset border } — apps/web/styles/modules/750-strength-builder.css:4505-4515; computed row 08 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "8e27fbafc102"
     },
     "Связка · границы правки · 09": {
       "v": "=",
-      "f": "Метка «было»: .sb-ss-bound-label--was { font:700 10px/1; letter-spacing:.04em; text-transform:uppercase; color:rgba(var(--ink),.56); margin-bottom:6px } — apps/web/styles/modules/750-strength-builder.css:3853-3863; apps/web/strength/heys_strength_superset_ui_v1.js:1491.",
+      "f": "Метка «было»: .sb-ss-bound-label--was { font:700 10px/1; letter-spacing:.04em; text-transform:uppercase; color:rgba(var(--ink),.56); margin-bottom:6px } — apps/web/styles/modules/750-strength-builder.css:4521-4531; apps/web/strength/heys_strength_superset_ui_v1.js:2696.",
       "h": "610fdbef2d50"
     },
     "Связка · границы правки · 10": {
       "v": "=",
-      "f": "Строки A1… в «было»: .sb-ss-bound-col--was .sb-ss-bound-lines { font:600 11.5px/1.5; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:3869-3876; memberLines — apps/web/strength/heys_strength_superset_ui_v1.js:1492-1495.",
+      "f": "Строки A1… в «было»: .sb-ss-bound-col--was .sb-ss-bound-lines { font:600 11.5px/1.5; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:4537-4544; memberLines — apps/web/strength/heys_strength_superset_ui_v1.js:2697-2700.",
       "h": "67d125073689"
     },
     "Связка · границы правки · 11": {
       "v": "=",
-      "f": "Стрелка «→»: .sb-ss-bound-arrow { flex:none; align-items:center; font:700 14px/1; color:rgba(var(--ink),.35) } — apps/web/styles/modules/750-strength-builder.css:3882-3888; apps/web/strength/heys_strength_superset_ui_v1.js:1497; computed row 11 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Стрелка «→»: .sb-ss-bound-arrow { flex:none; align-items:center; font:700 14px/1; color:rgba(var(--ink),.35) } — apps/web/styles/modules/750-strength-builder.css:4550-4556; apps/web/strength/heys_strength_superset_ui_v1.js:2702; computed row 11 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "18820f83e021"
     },
     "Связка · границы правки · 12": {
       "v": "=",
-      "f": "Колонка «станет»: .sb-ss-bound-col--will { flex:1; padding:10px; border-radius:12px; background:var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:3849-3851; computed row 12 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Колонка «станет»: .sb-ss-bound-col--will { flex:1; padding:10px; border-radius:12px; background:var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:4517-4519; computed row 12 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "77e4edc59b29"
     },
     "Связка · границы правки · 13": {
       "v": "=",
-      "f": "Метка «станет»: .sb-ss-bound-label--will { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:3865-3867; apps/web/strength/heys_strength_superset_ui_v1.js:1499.",
+      "f": "Метка «станет»: .sb-ss-bound-label--will { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:4533-4535; apps/web/strength/heys_strength_superset_ui_v1.js:2704.",
       "h": "53fd7bda1f72"
     },
     "Связка · границы правки · 14": {
       "v": "=",
-      "f": "Строки A1… в «станет»: .sb-ss-bound-col--will .sb-ss-bound-lines { color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3878-3880; computed row 14 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Строки A1… в «станет»: .sb-ss-bound-col--will .sb-ss-bound-lines { color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:4546-4548; computed row 14 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "18928c901b35"
     },
     "Связка · границы правки · 15": {
       "v": "=",
-      "f": "Сноска про целый блок: .sb-ss-bound-note после пары — текст apps/web/strength/heys_strength_superset_ui_v1.js:1506-1507; margin-top:10px apps/web/styles/modules/750-strength-builder.css:3890-3894.",
+      "f": "Сноска про целый блок: .sb-ss-bound-note после пары — текст apps/web/strength/heys_strength_superset_ui_v1.js:2711-2712; margin-top:10px apps/web/styles/modules/750-strength-builder.css:4558-4562.",
       "h": "4eeec6472c80"
     },
     "Связка · границы правки · 16": {
       "v": "=",
-      "f": "Ярус «Связка начата»: .sb-ss-bound-tier { margin:20px 0 10px; color:var(--sb-acc); font:700 10px/1; letter-spacing:.16em; text-transform:uppercase } — apps/web/styles/modules/750-strength-builder.css:3896-3902; apps/web/strength/heys_strength_superset_ui_v1.js:1510.",
+      "f": "Ярус «Связка начата»: .sb-ss-bound-tier { margin:20px 0 10px; color:var(--sb-acc); font:700 10px/1; letter-spacing:.16em; text-transform:uppercase } — apps/web/styles/modules/750-strength-builder.css:4564-4570; apps/web/strength/heys_strength_superset_ui_v1.js:2715.",
       "h": "a1b52c7e0ce9"
     },
     "Связка · границы правки · 17": {
       "v": "=",
-      "f": "Список заморозки: .sb-ss-bound-list { border-radius:16px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:3904-3908; apps/web/strength/heys_strength_superset_ui_v1.js:1511-1520.",
+      "f": "Список заморозки: .sb-ss-bound-list { border-radius:16px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:4572-4576; apps/web/strength/heys_strength_superset_ui_v1.js:2716-2725.",
       "h": "d9a337aab838"
     },
     "Связка · границы правки · 18": {
       "v": "=",
-      "f": "Строка без разделителя: .sb-ss-bound-row { padding:12px 14px } без border-bottom — apps/web/styles/modules/750-strength-builder.css:3910-3916; одна строка в кадре apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Строка без разделителя: .sb-ss-bound-row { padding:12px 14px } без border-bottom — apps/web/styles/modules/750-strength-builder.css:4578-4584; одна строка в кадре apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "6b286135ed76"
     },
     "Связка · границы правки · 19": {
       "v": "=",
-      "f": "«Связка A · раунд 2 из 3»: .sb-ss-bound-row-title { color:var(--sb-tx); font:600 12.5px/1.2 } — apps/web/styles/modules/750-strength-builder.css:3925-3928; title из currentSupersetRound — apps/web/strength/heys_strength_proposal_ui_v1.js:198-206.",
+      "f": "«Связка A · раунд 2 из 3»: .sb-ss-bound-row-title { color:var(--sb-tx); font:600 12.5px/1.2 } — apps/web/styles/modules/750-strength-builder.css:4593-4596; title из currentSupersetRound — apps/web/strength/heys_strength_proposal_ui_v1.js:198-206.",
       "h": "6d5bf699038a"
     },
     "Связка · границы правки · 20": {
       "v": "=",
-      "f": "«состав заморожен до конца»: .sb-ss-bound-row-sub { font:500 11px/1.3; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:3930-3933; apps/web/strength/heys_strength_superset_ui_v1.js:1516.",
+      "f": "«состав заморожен до конца»: .sb-ss-bound-row-sub { font:500 11px/1.3; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:4598-4601; apps/web/strength/heys_strength_superset_ui_v1.js:2721.",
       "h": "e6f5fb81aac9"
     },
     "Связка · границы правки · 21": {
       "v": "=",
-      "f": "Пилюля «закрыта»: .sb-ss-bound-badge { background:var(--sb-okbg); color:var(--sb-okTx) } — apps/web/styles/modules/750-strength-builder.css:3935-3944; computed row 21 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Пилюля «закрыта»: .sb-ss-bound-badge { background:var(--sb-okbg); color:var(--sb-okTx) } — apps/web/styles/modules/750-strength-builder.css:4603-4609; computed row 21 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "3d107bcccbd0"
     },
     "Связка · границы правки · 22": {
       "v": "=",
-      "f": "Нижняя сноска про начатую связку: .sb-ss-bound-note после списка — текст apps/web/strength/heys_strength_superset_ui_v1.js:1522-1523.",
+      "f": "Нижняя сноска про начатую связку: .sb-ss-bound-note после списка — текст apps/web/strength/heys_strength_superset_ui_v1.js:2727-2728.",
       "h": "48c244229e17"
     },
     "Подход · таблица ввода · 01": {
@@ -4608,157 +4628,157 @@
     },
     "Трисет в работе · 01": {
       "v": "=",
-      "f": "Шапка .sb-head в TriSetWorkScreen — apps/web/styles/modules/750-strength-builder.css:5297-5305; computed row 01 в apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js.",
+      "f": "Шапка .sb-head в TriSetWorkScreen — apps/web/styles/modules/750-strength-builder.css:5556-5562; apps/web/strength/heys_strength_superset_ui_v1.js:1438-1451.",
       "h": "175bdcc2e73a"
     },
     "Трисет в работе · 02": {
       "v": "=",
-      "f": "«✕»: .sb-triset-work-screen .sb-icon-btn { flex:none; 36×36; radius 999; bg var(--sb-card); font 600 13px; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5307-5316; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js rows 02.",
+      "f": "«✕»: .sb-triset-work-screen .sb-icon-btn { flex:none; 36×36; radius 999; bg var(--sb-card); font 600 13px; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5564-5573; apps/web/strength/heys_strength_superset_ui_v1.js:1439-1442.",
       "h": "dbd19d6c8f05"
     },
     "Трисет в работе · 03": {
       "v": "=",
-      "f": ".sb-head-title { flex:1; min-width:0; column; gap 3px; padding 0 10px } — apps/web/styles/modules/750-strength-builder.css:5322-5329; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 03.",
+      "f": ".sb-head-title { flex:1; min-width:0; column; gap 3px; padding 0 10px } — apps/web/styles/modules/750-strength-builder.css:5579-5586.",
       "h": "f143b5d4e1e4"
     },
     "Трисет в работе · 04": {
       "v": "=",
-      "f": "«Трисет B · плечи»: trisetWorkTitle+muscleLabel — apps/web/strength/heys_strength_superset_ui_v1.js:1285-1308; DOM apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 04.",
+      "f": "«Трисет B · плечи»: trisetWorkTitle+muscleLabel — apps/web/strength/heys_strength_superset_ui_v1.js:1320-1325,1388-1391; DOM apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 04.",
       "h": "c1623f8e8cc1"
     },
     "Трисет в работе · 05": {
       "v": "=",
-      "f": "«раунд 2 из 3 · 9 подходов»: trisetWorkHeadKey+activeTrisetRoundIndex — apps/web/strength/heys_strength_superset_ui_v1.js:1310-1314,1344-1354; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 05.",
+      "f": "«раунд 2 из 3 · 9 подходов»: trisetWorkHeadKey+activeTrisetRoundIndex — apps/web/strength/heys_strength_superset_ui_v1.js:1327-1331,1361-1371,1392; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 05.",
       "h": "8226f96701b2"
     },
     "Трисет в работе · 06": {
       "v": "=",
-      "f": "Пилюля «связка»: .sb-tw-badge { bg var(--sb-soft); color var(--sb-acc); 9px uppercase } — apps/web/styles/modules/750-strength-builder.css:5336-5345; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 06.",
+      "f": "Пилюля «связка»: .sb-tw-badge { bg var(--sb-soft); color var(--sb-acc); 9px uppercase } — apps/web/styles/modules/750-strength-builder.css:5593-5602; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 06.",
       "h": "e76060e13472"
     },
     "Трисет в работе · 07": {
       "v": "=",
-      "f": "«⋯»: .sb-head > .sb-icon-btn:last-child { font-weight 700 } — apps/web/styles/modules/750-strength-builder.css:5318-5320; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 07.",
+      "f": "«⋯»: .sb-head > .sb-icon-btn:last-child { font-weight 700 } — apps/web/styles/modules/750-strength-builder.css:5575-5577; apps/web/strength/heys_strength_superset_ui_v1.js:1448-1451.",
       "h": "a6047f6cec68"
     },
     "Трисет в работе · 08": {
       "v": "=",
-      "f": ".sb-tw-scroll { flex:1; overflow-y:auto; padding 6px 18px 18px } — apps/web/styles/modules/750-strength-builder.css:5347-5351.",
+      "f": ".sb-tw-scroll { flex:1; overflow-y:auto; padding 6px 18px 18px } — apps/web/styles/modules/750-strength-builder.css:5604-5608.",
       "h": "c629f84f9712"
     },
     "Трисет в работе · 09": {
       "v": "=",
-      "f": ".sb-tw-actions { gap 7px; margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:5353-5357.",
+      "f": ".sb-tw-actions { gap 7px; margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:5610-5614.",
       "h": "77e4b4025f38"
     },
     "Трисет в работе · 10": {
       "v": "=",
-      "f": "«местами»: .sb-tw-pill.is-accent { flex:1; bg var(--sb-accbg); color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5372-5375; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 10.",
+      "f": "«местами»: .sb-tw-pill.is-accent { flex:1; bg var(--sb-accbg); color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5630-5633; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 10.",
       "h": "209577f78b39"
     },
     "Трисет в работе · 11": {
       "v": "=",
-      "f": "«разъединить»: .sb-tw-pill { flex:1; bg var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:5359-5370; apps/web/strength/heys_strength_superset_ui_v1.js:1433-1438.",
+      "f": "«разъединить»: .sb-tw-pill { flex:1; bg var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:5616-5628; apps/web/strength/heys_strength_superset_ui_v1.js:1461-1466.",
       "h": "39f9e2d36c95"
     },
     "Трисет в работе · 12": {
       "v": "=",
-      "f": ".sb-tw-grp { margin-top 10px; padding 16px; radius 20px; bg var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:5377-5382.",
+      "f": ".sb-tw-grp { margin-top 10px; padding 16px; radius 20px; bg var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:5635-5640.",
       "h": "c8f60277f33e"
     },
     "Трисет в работе · 13": {
       "v": "=",
-      "f": ".sb-tw-member-row { gap 6px } — apps/web/styles/modules/750-strength-builder.css:5384-5387.",
+      "f": ".sb-tw-member-row { gap 6px } — apps/web/styles/modules/750-strength-builder.css:5642-5645.",
       "h": "45cfeef56a64"
     },
     "Трисет в работе · 14": {
       "v": "=",
-      "f": ".sb-tw-member-card { flex:1; column; gap 2px; bg var(--sb-soft); radius 12px; padding 8px 9px } — apps/web/styles/modules/750-strength-builder.css:5389-5399.",
+      "f": ".sb-tw-member-card { flex:1; column; gap 2px; bg var(--sb-soft); radius 12px; padding 8px 9px } — apps/web/styles/modules/750-strength-builder.css:5647-5656; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js static CSS check.",
       "h": "267a7d3d6190"
     },
     "Трисет в работе · 15": {
       "v": "=",
-      "f": "«A1»: .sb-tw-member-card i { font 700 10px; color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5401-5405; apps/web/strength/heys_strength_superset_ui_v1.js:1316-1318; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 14.",
+      "f": "«A1»: .sb-tw-member-card i { font 700 10px; color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5658-5662; apps/web/strength/heys_strength_superset_ui_v1.js:1333-1335,1472; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 14.",
       "h": "2eb03ce7b260"
     },
     "Трисет в работе · 16": {
       "v": "=",
-      "f": "«Жим гантелей»: .sb-tw-member-card span { font 600 11px/1.2; color var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:5407-5410; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 16.",
+      "f": "«Жим гантелей»: .sb-tw-member-card span { font 600 11px/1.2; color var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:5664-5667; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 16.",
       "h": "8fefed32067e"
     },
     "Трисет в работе · 17": {
       "v": "=",
-      "f": ".sb-tw-warmup { margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:5422-5424.",
+      "f": ".sb-tw-warmup { margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:5679-5681.",
       "h": "7f9aee8f3e6d"
     },
     "Трисет в работе · 18": {
       "v": "=",
-      "f": "«разм.»: .sb-tw-warmup-tag { width 44px; height 26px; radius 8px; bg rgba(ink,.06) } — apps/web/styles/modules/750-strength-builder.css:5426-5436; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 18.",
+      "f": "«разм.»: .sb-tw-warmup-tag { width 44px; height 26px; radius 8px; bg rgba(ink,.06) } — apps/web/styles/modules/750-strength-builder.css:5683-5695; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 18.",
       "h": "6e45f131cd53"
     },
     "Трисет в работе · 19": {
       "v": "=",
-      "f": "«общая для связки · 2 подхода»: .sb-tw-warmup-copy { font 600 11.5px; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5438-5442; apps/web/strength/heys_strength_superset_ui_v1.js:1448-1451.",
+      "f": "«общая для связки · 2 подхода»: .sb-tw-warmup-copy { font 600 11.5px; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5697-5701; apps/web/strength/heys_strength_superset_ui_v1.js:1477-1481.",
       "h": "4e5f3ecccf70"
     },
     "Трисет в работе · 20": {
       "v": "=",
-      "f": "«✓» разминки: .sb-tw-warmup-done { font 700 12px; color rgba(ink,.42) } — apps/web/styles/modules/750-strength-builder.css:5444-5447.",
+      "f": "«✓» разминки: .sb-tw-warmup-done { font 700 12px; color rgba(ink,.42) } — apps/web/styles/modules/750-strength-builder.css:5703-5706; apps/web/strength/heys_strength_superset_ui_v1.js:1482.",
       "h": "15c408f1d223"
     },
     "Трисет в работе · 21": {
       "v": "=",
-      "f": "«Р1»: .sb-tw-round-num { width 36px; font 700 10.5px uppercase; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5464-5470; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 21.",
+      "f": "«Р1»: .sb-tw-round-num { width 36px; font 700 10.5px uppercase; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5722-5728; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 21.",
       "h": "36f1a894d3ab"
     },
     "Трисет в работе · 22": {
       "v": "=",
-      "f": "«22 × 10 ✓»: .sb-tw-cell.is-done { flex:1; color rgba(ink,.55); tabular-nums } — apps/web/styles/modules/750-strength-builder.css:5487-5489; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 22.",
+      "f": "«22 × 10 ✓»: .sb-tw-cell.is-done { flex:1; color rgba(ink,.55); tabular-nums } — apps/web/styles/modules/750-strength-builder.css:5745-5747; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 22.",
       "h": "63d0f96410a9"
     },
     "Трисет в работе · 23": {
       "v": "=",
-      "f": ".sb-tw-round-footer { border-bottom none } — apps/web/styles/modules/750-strength-builder.css:5499-5502.",
+      "f": ".sb-tw-round-footer { border-bottom none } — apps/web/styles/modules/750-strength-builder.css:5757-5760.",
       "h": "7395c82cd118"
     },
     "Трисет в работе · 24": {
       "v": "=",
-      "f": ".sb-tw-round-spacer { flex none; width 36px } — apps/web/styles/modules/750-strength-builder.css:5504-5507.",
+      "f": ".sb-tw-round-spacer { flex none; width 36px } — apps/web/styles/modules/750-strength-builder.css:5762-5765.",
       "h": "28ebeb6164a9"
     },
     "Трисет в работе · 25": {
       "v": "=",
-      "f": "«круг закрыт · отдых 2:00»: .sb-tw-round-closed { flex:1; font 600 10.5px/1.3; color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5509-5513; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 25.",
+      "f": "«круг закрыт · отдых 2:00»: .sb-tw-round-closed { flex:1; font 600 10.5px/1.3; color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5767-5771; apps/web/strength/heys_strength_superset_ui_v1.js:1431-1432; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 25.",
       "h": "a24fea36e1b7"
     },
     "Трисет в работе · 26": {
       "v": "=",
-      "f": ".sb-tw-round.is-current { box-shadow inset 0 0 0 2px var(--sb-acc-strong); radius 10px } — apps/web/styles/modules/750-strength-builder.css:5458-5462.",
+      "f": ".sb-tw-round.is-current { box-shadow inset 0 0 0 2px var(--sb-acc-strong); radius 10px } — apps/web/styles/modules/750-strength-builder.css:5716-5720; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js static CSS check.",
       "h": "ab2628f5f686"
     },
     "Трисет в работе · 27": {
       "v": "=",
-      "f": "«Р2» текущий: .sb-tw-round-num.is-current { color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5472-5474; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 27.",
+      "f": "«Р2» текущий: .sb-tw-round-num.is-current { color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5730-5732; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 27.",
       "h": "e6d6bf201c7a"
     },
     "Трисет в работе · 28": {
       "v": "=",
-      "f": "«10 × 12» активная: .sb-tw-cell.is-active { flex:1; color var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:5491-5493; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 28.",
+      "f": "«10 × 12» активная: .sb-tw-cell.is-active { flex:1; color var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:5749-5751; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 28.",
       "h": "0020378e4c79"
     },
     "Трисет в работе · 29": {
       "v": "=",
-      "f": "«20 × 10» будущая: .sb-tw-cell.is-pending { flex:1; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5495-5497; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 29.",
+      "f": "«20 × 10» будущая: .sb-tw-cell.is-pending { flex:1; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5753-5755; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 29.",
       "h": "dcc28dde1e31"
     },
     "Трисет в работе · 30": {
       "v": "=",
-      "f": "«+ Раунд · добавит 3 подхода»: .sb-tw-add-round { margin-top 10px; bg var(--sb-accbg); color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5515-5518; apps/web/strength/heys_strength_superset_ui_v1.js:1367-1368; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 30.",
+      "f": "«+ Раунд · добавит 3 подхода»: .sb-tw-add-round { margin-top 10px; bg var(--sb-accbg); color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5773-5776; apps/web/strength/heys_strength_superset_ui_v1.js:1397-1398,1486-1491; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 30.",
       "h": "d3c56028c68d"
     },
     "Трисет в работе · 31": {
       "v": "=",
-      "f": "Сноска: .sb-tw-footnote { margin-top 12px; font 500 11px/1.55 } — apps/web/styles/modules/750-strength-builder.css:5520-5524; текст apps/web/strength/heys_strength_superset_ui_v1.js:1459-1463.",
+      "f": "Сноска: .sb-tw-footnote { margin-top 12px; font 500 11px/1.55 } — apps/web/styles/modules/750-strength-builder.css:5778-5782; текст apps/web/strength/heys_strength_superset_ui_v1.js:1492-1496.",
       "h": "c54736e577d3"
     },
     "Куратор и зал · 01": {
@@ -8492,7 +8512,7 @@
     },
     "Связка · границы правки · текст": {
       "v": "=",
-      "f": "Полный текст кадра Д3: шапка, пара было/станет с раундами, две сноски, ярус и замороженная строка — apps/web/strength/heys_strength_superset_ui_v1.js:1486-1524; DOM-смоук apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "f": "Полный текст кадра Д3: шапка, пара было/станет с раундами, две сноски, ярус и замороженная строка — apps/web/strength/heys_strength_superset_ui_v1.js:2686-2750; DOM-смоук apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "2934320fb407"
     },
     "Подход · таблица ввода · текст": {
@@ -8547,7 +8567,7 @@
     },
     "Трисет в работе · текст": {
       "v": "=",
-      "f": "Composite кадра З2: заголовок, ключ, связка, A1, круг закрыт, +Раунд — apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js composite; строки apps/web/strength/heys_strength_superset_ui_v1.js:1380-1463.",
+      "f": "Composite кадра З2: заголовок, ключ, связка, A1, круг закрыт, +Раунд — apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js composite; строки apps/web/strength/heys_strength_superset_ui_v1.js:1376-1497.",
       "h": "6a31f02b0bbf"
     },
     "Куратор и зал · текст 1/2": {

@@ -1,0 +1,126 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_catalog_ui_v1.js (NewExerciseScreen · Своё упражнение ·08–23)",
+  "generated": "2026-09-04",
+  "agent": "catalog subagent",
+  "summary": {
+    "block": "Своё упражнение ·08–23",
+    "contractLines": 16,
+    "recommendEquals": 6,
+    "recommendNotEquals": 10,
+    "recommendDash": 0,
+    "recommendQuestion": 0,
+    "codeChanged": true,
+    "codeChange": "CATALOG_V4_BRIDGE на NewExerciseScreen; шаг 3 в .sb-block с copy ·19/·20; нижняя сноска ·23 (.sb-catalog-note); radio/chips layout оставлен — ≠ canvas-conflict"
+  },
+  "rows": [
+    {
+      "contractLine": "Своё упражнение · 08",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр .cd badge-row; продукт — вертикальные .sb-radio (heys_strength_catalog_ui_v1.js:288–301). Роли v4 через CATALOG_V4_BRIDGE; носитель ≠ pill."
+    },
+    {
+      "contractLine": "Своё упражнение · 09",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px — 750-strength-builder.css:1782–1794."
+    },
+    {
+      "contractLine": "Своё упражнение · 10",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр gap 6px wrap badges; продукт column .sb-radio без wrap — layout catalog_ui."
+    },
+    {
+      "contractLine": "Своё упражнение · 11",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Выбранная .sb-radio.is-on --sb-accbg/--v4-act (750:1796–1799); кадр pill --acs/--on-acs — роли ok, форма ≠ badge."
+    },
+    {
+      "contractLine": "Своё упражнение · 12",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Неактивная .sb-radio --sb-mut ≈ ink 62%; кадр badge rgba ink .62."
+    },
+    {
+      "contractLine": "Своё упражнение · 13",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Строка .cd в кадре; в runtime .sb-radio — см. ·08."
+    },
+    {
+      "contractLine": "Своё упражнение · 14",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676–1680)."
+    },
+    {
+      "contractLine": "Своё упражнение · 15",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Primary chip --sb-accTx/--v4-act-text; кадр «спина» 700 11.5 var(--ac) — семантика совпадает, носитель chip."
+    },
+    {
+      "contractLine": "Своё упражнение · 16",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр .cd divider none; продукт .sb-chips wrap без divider."
+    },
+    {
+      "contractLine": "Своё упражнение · 17",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56%."
+    },
+    {
+      "contractLine": "Своё упражнение · 18",
+      "verdict": "=",
+      "f": ".sb-block обёртка шага 3 — heys_strength_catalog_ui_v1.js:328–331, 336–353; 750 .sb-block :1879–1884."
+    },
+    {
+      "contractLine": "Своё упражнение · 19",
+      "verdict": "=",
+      "f": "При !needsFactor copy «Для «вес × повторы» третий вопрос не задаётся.» — catalog_ui:328–330."
+    },
+    {
+      "contractLine": "Своё упражнение · 20",
+      "verdict": "=",
+      "f": "Bodyweight сноска в .sb-block .sb-step-hint — catalog_ui:337–338; текст канваса."
+    },
+    {
+      "contractLine": "Своё упражнение · 21",
+      "verdict": "=",
+      "f": ".sb-panel-column .sb-finish margin-top 12px «Создать упражнение» — catalog_ui:357–362; 750 :has(.sb-ex-name)."
+    },
+    {
+      "contractLine": "Своё упражнение · 22",
+      "verdict": "=",
+      "f": ".sb-panel-column .sb-btn margin-top 9px «Создать · без тоннажа» — catalog_ui:364–369."
+    },
+    {
+      "contractLine": "Своё упражнение · 23",
+      "verdict": "=",
+      "f": "Нижняя сноска .sb-catalog-note — catalog_ui:370–371."
+    }
+  ],
+  "outOfScope": {
+    "note": "Геометрия radio/chip vs badge/table — canvas-conflict, без правки 750. strength-builder.json остаток зоны — владелец sb. SupersetScreen/OrderScreen не трогали.",
+    "cssOwner": "750-strength-builder.css:1628–1884",
+    "tests": [
+      "apps/web/__tests__/strength-builder-custom-exercise-v4-canvas-contract.test.js",
+      "apps/web/__tests__/role-fallback-truth.test.js"
+    ]
+  }
+}

@@ -20,6 +20,10 @@ describe('strength builder · Своё упражнение v4 canvas contract',
     expect(catalogSource).toContain("const needsFactor = unit === 'bodyweight'");
     expect(catalogSource).toContain('disabled: !ready || (needsFactor && !likeNorm)');
     expect(catalogSource).toContain("className: 'sb-ap-field sb-ex-name'");
+    expect(catalogSource).toContain('CATALOG_V4_BRIDGE');
+    expect(catalogSource).toContain('Для «вес × повторы» третий вопрос не задаётся.');
+    expect(catalogSource).toContain('У упражнений на своём весе спрашиваем «на что похоже»');
+    expect(catalogSource).toContain('Без ответа на третий вопрос упражнение в объём не идёт');
   });
 
   it('uses canvas geometry for head, scroll, name field and panel buttons', () => {
