@@ -10886,8 +10886,8 @@ body:has(:is(
 
 .hdr-settings-sheet__chips--fab {
   margin-top: 11px;
-  /* Контракт «области нажатия · чипы»: видимый зазор 6 (кадр рисует 8) */
-  gap: 6px;
+  /* Контракт settings-system «Настройки · чипы · 19»: зазор 7 */
+  gap: 7px;
 }
 
 /* Контракт «области нажатия · чипы»: видимая высота 30, цель касания 44 pt —
@@ -10899,12 +10899,11 @@ body:has(:is(
   border-radius: 999px;
   padding: 0 16px;
   min-height: 30px;
-  /* Чип — ПЕРВАЯ поверхность на карточке яруса второй: пока карточка была
-     первой (см. .hdr-settings-sheet__fab-card), чип совпадал с ней тоном и
-     пропадал. Литерал заменён ролью, иначе в тёмных наборах чип оставался
-     кремовым. */
-  /* v4-intentional */
-  background: var(--v4-surface);
+  /* Контракт settings-system «вид яруса» (3 сентября): невыбранный чип на
+     карточке --c2 уходит на грунт --bg с обводкой inset 1,5 px чернил 14 %,
+     иначе на той же поверхности пропадает. Выбранный (.is-on) — без изменений. */
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.14);
   color: rgba(0, 0, 0, 0.55);
   cursor: pointer;
   display: inline-flex;
@@ -10943,6 +10942,7 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__fab-ok {
+  flex: none;
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
@@ -11134,6 +11134,8 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-chip {
+  background: var(--v4-bg, #141210);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.14);
   color: rgba(242, 237, 230, 0.55);
 }
 
@@ -11362,7 +11364,10 @@ body:has(:is(
   min-height: 38px;
   padding: 0 14px;
   border-radius: 14px;
-  background: var(--v4-surface, #f7efe2);
+  /* Контракт settings-system «тихие часы» (3 сентября): плашки на --bg с
+     обводкой inset 1,5 px чернил 16 % — карточка листа тоже --c1. */
+  background: var(--v4-bg, #fffaf1);
+  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.16);
   display: flex;
   align-items: center;
   justify-content: center;
