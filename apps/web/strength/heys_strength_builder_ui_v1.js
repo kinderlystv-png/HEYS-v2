@@ -362,17 +362,29 @@
         : totalCount + ' подходов';
       const history = typeof historyFor === 'function' ? historyFor(source.name, index) : null;
       const record = history && history.record && +history.record.maxW === maxWeight;
-      const stateLabel = allDone
-        ? dose + (record ? ' · рекорд' : '')
-        : started
-          ? 'сейчас · подход ' + (doneCount + 1) + ' из ' + totalCount
-          : (dose ? dose + ' · ' : '') + 'не начато';
+      const restOwnerMatch = !!(rest && (
+        rest.owner === source.name || rest.exName === source.name
+      ));
+      const editingElsewhere = openIdx >= 0 && openIdx !== index;
+      const showRestEditing = allDone && restOwnerMatch && editingElsewhere;
+      const reopened = !!source.reopened && doneCount > 0 && totalCount > doneCount;
+      const stateLabel = reopened
+        ? 'было ' + doneCount + ' из ' + doneCount + ' · стало ' + doneCount + ' из ' + totalCount
+        : allDone
+          ? dose + (record ? ' · рекорд' : '')
+          : started
+            ? 'сейчас · подход ' + (doneCount + 1) + ' из ' + totalCount
+            : (dose ? dose + ' · ' : '') + 'не начато';
+      const titleText = (allDone && showRestEditing)
+        ? ((source.name || 'Без названия') + ' · закрыт')
+        : (source.name || 'Без названия');
       const showDoneChevron = allDone && openIdx >= 0;
 
       return h('div', {
         key: 'e' + index,
         className: 'sb-ex sb-ex--collapsed'
           + (allDone ? ' is-complete' : started ? ' is-current' : ' is-pending')
+          + (showRestEditing ? ' is-rest-editing' : '')
       },
         h('button', {
           type: 'button',
@@ -385,15 +397,17 @@
         },
           h('span', { className: 'sb-ex-num' }, String(index + 1)),
           h('span', { className: 'sb-ex-title' },
-            h('b', null, source.name || 'Без названия'),
-            h('span', { className: 'sb-ex-sub' }, stateLabel)
+            h('b', null, titleText),
+            h('span', { className: 'sb-ex-sub' + (reopened ? ' is-reopened' : '') }, stateLabel)
           ),
           h('span', { className: 'sb-ex-signals' },
-            allDone
-              ? h('span', { className: 'sb-ex-state', 'aria-label': 'Упражнение закрыто' }, '✓')
-              : started
-                ? h('span', { className: 'sb-ex-state' }, 'раскрыть ›')
-                : null,
+            showRestEditing
+              ? h('span', { className: 'sb-ex-state is-editing' }, 'правится')
+              : allDone
+                ? h('span', { className: 'sb-ex-state', 'aria-label': 'Упражнение закрыто' }, '✓')
+                : started
+                  ? h('span', { className: 'sb-ex-state' }, 'раскрыть ›')
+                  : null,
             showDoneChevron
               && h('span', { className: 'sb-ex-chevron', 'aria-hidden': 'true' }, '›')
           )
@@ -466,6 +480,15 @@
       const aps = (ex.approaches || []).slice();
       aps[apIdx] = Object.assign({}, aps[apIdx], patch);
       ex.approaches = aps;
+      const workAfter = aps.filter(function (approach) {
+        return !(SK && SK.isWarmupApproach(approach));
+      });
+      const allWorkDone = workAfter.length > 0 && workAfter.every(function (approach) {
+        return SK
+          ? SK.isApproachDone(approach) && !SK.isBlankApproach(approach)
+          : !!approach.done;
+      });
+      if (allWorkDone) ex.reopened = false;
       next[exIdx] = ex;
       patchExercises(next);
       const isApproachDone = SK ? SK.isApproachDone(aps[apIdx]) : !!(aps[apIdx] && aps[apIdx].done);
@@ -570,9 +593,18 @@
       const next = exercises.slice();
       const ex = Object.assign({}, next[exIdx]);
       const aps = (ex.approaches || []).slice();
+      const workBefore = aps.filter(function (approach) {
+        return !(SK && SK.isWarmupApproach(approach));
+      });
+      const allDoneBefore = workBefore.length > 0 && workBefore.every(function (approach) {
+        return SK
+          ? SK.isApproachDone(approach) && !SK.isBlankApproach(approach)
+          : !!approach.done;
+      });
       const last = aps[aps.length - 1] || { weightKg: '', reps: 10 };
       aps.push({ weightKg: last.weightKg, reps: last.reps, done: false });
       ex.approaches = aps;
+      if (allDoneBefore) ex.reopened = true;
       next[exIdx] = ex;
       patchExercises(next);
     }

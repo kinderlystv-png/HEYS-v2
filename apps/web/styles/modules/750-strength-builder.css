@@ -3353,9 +3353,17 @@
   font: 700 13px/1.2 Figtree, sans-serif;
 }
 
+.sb-builder-screen .sb-ex--collapsed .sb-ex-title b {
+  font: 700 12.5px/1.2 Figtree, sans-serif;
+}
+
 .sb-builder-screen .sb-ex-sub {
   color: var(--sb-mut);
   font: 500 11px/1.3 Figtree, sans-serif;
+}
+
+.sb-builder-screen .sb-ex-sub.is-reopened {
+  color: var(--ac, var(--sb-acc));
 }
 
 .sb-builder-screen .sb-ex.is-current .sb-ex-sub,
@@ -3371,6 +3379,11 @@
   flex: 0 0 auto;
   color: var(--sb-okTx);
   font: 700 12px/1 Figtree, sans-serif;
+}
+
+.sb-builder-screen .sb-ex--collapsed.is-complete .sb-ex-state.is-editing {
+  color: var(--ac, var(--sb-acc));
+  font: 700 11px/1 Figtree, sans-serif;
 }
 
 .sb-builder-screen .sb-panel {
