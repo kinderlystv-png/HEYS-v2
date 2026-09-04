@@ -958,6 +958,20 @@
         return row.kind === 'changed' && row.name === openEx.name;
       });
       if (!changed) return null;
+      const proposalEx = (proposal.exercises || []).find(function (row) {
+        return row && row.name === openEx.name;
+      });
+      const liveAps = Array.isArray(openEx.approaches) ? openEx.approaches : [];
+      const propAps = proposalEx && Array.isArray(proposalEx.approaches) ? proposalEx.approaches : [];
+      let firstChangedIndex = -1;
+      for (let ai = 0; ai < liveAps.length; ai += 1) {
+        const liveW = liveAps[ai] && liveAps[ai].weightKg;
+        const propW = propAps[ai] && propAps[ai].weightKg;
+        if (String(liveW ?? '') !== String(propW ?? '')) {
+          firstChangedIndex = ai;
+          break;
+        }
+      }
       const who = proposal.proposedBy || 'Куратор';
       const at = +proposal.proposedAt || +proposal.updatedAt || Date.now();
       const timeLabel = fmtTime(at);
@@ -966,10 +980,17 @@
         ? weightMatch[1].replace('.', ',') + ' кг'
         : String(changed.after || '').trim();
       const progress = exerciseWorkProgress(openEx);
+      const stamp = weightLabel
+        ? (typeof Parts.fmtAuthorWeightStamp === 'function'
+          ? Parts.fmtAuthorWeightStamp(who, weightLabel.replace(/\s*кг$/, ''), at)
+          : (who + ' поставил ' + weightLabel + ' · ' + timeLabel))
+        : null;
+      const afterApproachIndex = firstChangedIndex > 0 ? firstChangedIndex - 1 : firstChangedIndex;
       return {
         who: who,
         initial: who.slice(0, 1).toUpperCase(),
-        stamp: weightLabel ? (who + ' поставил ' + weightLabel + ' · ' + timeLabel) : null,
+        stamp: stamp,
+        afterApproachIndex: afterApproachIndex,
         changeDetail: progress.current ? ('вес подхода ' + progress.current) : null
       };
     }
@@ -1712,6 +1733,9 @@
         rendered.push(collapsedExerciseRow(ex, i));
         return;
       }
+      const weightEditCtx = pendingProposal && startedAt > 0 && !completedAt
+        ? weightEditSessionContext(exercises, ex, pendingProposal)
+        : null;
       rendered.push(h(React.Fragment, { key: 'e-wrap' + i },
         h((HEYS.StrengthBuilderParts || {}).ExerciseCard, {
         key: 'e' + i,
@@ -1761,7 +1785,12 @@
         curatorMeta: curatorMeta,
         onReplyCurator: function () {
           setView('proposal-started');
-        }
+        },
+        weightEditAuthorship: weightEditCtx && weightEditCtx.stamp ? {
+          afterApproachIndex: weightEditCtx.afterApproachIndex,
+          initial: weightEditCtx.initial,
+          stamp: weightEditCtx.stamp
+        } : null
       }),
         ((ex.unit || 'weight_reps') === 'time') && h('div', { className: 'sb-time-entry-block' },
           h('div', { className: 'sb-time-summary' },
@@ -1820,30 +1849,22 @@
               'Прочерк в довесе значит «только вес тела», а не забытое поле: галочку он не блокирует. Довес живёт на подходе, а не на упражнении — сегодня без блина, через месяц с блином на поясе.')
           );
         })(),
-        pendingProposal && startedAt > 0 && !completedAt && (function () {
-          const ctx = weightEditSessionContext(exercises, ex, pendingProposal);
-          if (!ctx) return null;
-          return h(React.Fragment, { key: 'weight-edit-' + i },
-            ctx.stamp && h('div', { className: 'sb-authorship-pill' },
-              h('span', { className: 'sb-authorship-pill-avatar', 'aria-hidden': 'true' }, ctx.initial),
-              h('span', { className: 'sb-authorship-pill-text' }, ctx.stamp)
+        pendingProposal && startedAt > 0 && !completedAt && weightEditCtx && h(React.Fragment, { key: 'weight-edit-' + i },
+          h('div', { className: 'sb-weight-edit-cd' },
+            h('div', { className: 'sb-weight-edit-cd-row' },
+              h('span', { className: 'sb-weight-edit-cd-title' }, 'Правка пришла'),
+              h('span', { className: 'sb-weight-edit-cd-sub' }, 'после начала сессии')
             ),
-            h('div', { className: 'sb-weight-edit-cd' },
-              h('div', { className: 'sb-weight-edit-cd-row' },
-                h('span', { className: 'sb-weight-edit-cd-title' }, 'Правка пришла'),
-                h('span', { className: 'sb-weight-edit-cd-sub' }, 'после начала сессии')
-              ),
-              ctx.changeDetail && h('div', { className: 'sb-weight-edit-cd-row is-plain' },
-                h('span', null, 'Что менялось'),
-                h('span', { className: 'sb-weight-edit-cd-detail' }, ctx.changeDetail)
-              ),
-              h('p', { className: 'sb-weight-edit-cd-foot' },
-                'Куратор не переписывает идущую сессию и не спрашивает, чью версию оставить: '
-                + 'правка приходит следом и подписана автором со временем. '
-                + 'Диалог двух версий отложен до переписывания слияния.')
-            )
-          );
-        })()
+            weightEditCtx.changeDetail && h('div', { className: 'sb-weight-edit-cd-row is-plain' },
+              h('span', null, 'Что менялось'),
+              h('span', { className: 'sb-weight-edit-cd-detail' }, weightEditCtx.changeDetail)
+            ),
+            h('p', { className: 'sb-weight-edit-cd-foot' },
+              'Куратор не переписывает идущую сессию и не спрашивает, чью версию оставить: '
+              + 'правка приходит следом и подписана автором со временем. '
+              + 'Диалог двух версий отложен до переписывания слияния.')
+          )
+        )
       ));
     });
 

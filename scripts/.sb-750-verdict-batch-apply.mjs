@@ -203,7 +203,7 @@ function ingestStandardRow(source, row, rows, ctx) {
     return;
   }
   const verdict = row.verdict ?? row.recommend;
-  let fact = row.f ?? row.fDraft ?? '';
+  let fact = row.f ?? row.fact ?? row.fDraft ?? '';
   if (!verdict) {
     ctx.log(`skip row without verdict in ${source}: ${rowKey}`);
     return;

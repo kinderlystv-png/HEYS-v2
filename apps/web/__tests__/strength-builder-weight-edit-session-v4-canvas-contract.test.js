@@ -60,7 +60,7 @@ describe('Г4 · Правка веса в сессии · canvas contract', () =
   it('держит is-weight-entry, ключ подхода и карточку правки', () => {
     expect(BUILDER).toContain('is-weight-entry');
     expect(BUILDER).toContain('exerciseWorkProgressKey');
-    expect(BUILDER).toContain('sb-authorship-pill');
+    expect(BUILDER).toContain('weightEditAuthorship');
     expect(BUILDER).toContain('sb-weight-edit-cd');
     expect(BUILDER).toContain('Правка пришла');
     expect(CSS).toMatch(/\.is-weight-entry\.is-exercise-open \.sb-ap\.is-done \.sb-ap-num[\s\S]*var\(--gr-bg\)/);
