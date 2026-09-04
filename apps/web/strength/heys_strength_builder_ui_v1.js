@@ -2008,36 +2008,38 @@
             h('div', { className: 'sb-cat-title' }, h('b', null, 'Связать упражнения'),
               h('span', null, 'Суперсет или трисет')))
           ),
-          (HEYS.StrengthBuilderParts || {}).sheetRows({
-            exercises: exercises,
-            openIdx: openIdx,
-            close: function () { setSheetOpen(false); },
-            go: setView,
-            setLinkFrom: setLinkFrom,
-            setHistoryName: setHistoryName,
-            setWarmupDropIdx: setWarmupDropIdx,
-            setApproachTypesIdx: setApproachTypesIdx,
-            hasPlanSnapshot: !!(training && training.planSnapshot
-              && Array.isArray(training.planSnapshot.exercises)
-              && training.planSnapshot.exercises.length)
-          }).map(function (row, i) {
-            return h('button', {
-              key: i,
-              type: 'button',
-              className: 'sb-sheet-menu-row',
-              disabled: !!row.off,
-              onClick: row.go
-            },
-              h('span', { className: 'sb-sheet-menu-copy' },
-                h('b', null, row.t),
-                h('span', null, row.d)
-              ),
-              h('span', {
-                className: 'sb-sheet-menu-chevron'
-                  + (row.chevron === 'muted' ? ' is-muted' : ' is-dim')
-              }, '›')
-            );
-          }),
+          h('div', { className: 'sb-sheet-menu' },
+            (HEYS.StrengthBuilderParts || {}).sheetRows({
+              exercises: exercises,
+              openIdx: openIdx,
+              close: function () { setSheetOpen(false); },
+              go: setView,
+              setLinkFrom: setLinkFrom,
+              setHistoryName: setHistoryName,
+              setWarmupDropIdx: setWarmupDropIdx,
+              setApproachTypesIdx: setApproachTypesIdx,
+              hasPlanSnapshot: !!(training && training.planSnapshot
+                && Array.isArray(training.planSnapshot.exercises)
+                && training.planSnapshot.exercises.length)
+            }).map(function (row, i) {
+              return h('button', {
+                key: i,
+                type: 'button',
+                className: 'sb-sheet-menu-row',
+                disabled: !!row.off,
+                onClick: row.go
+              },
+                h('span', { className: 'sb-sheet-menu-copy' },
+                  h('b', null, row.t),
+                  h('span', null, row.d)
+                ),
+                h('span', {
+                  className: 'sb-sheet-menu-chevron'
+                    + (row.chevron === 'muted' ? ' is-muted' : ' is-dim')
+                }, '›')
+              );
+            })
+          ),
           h('p', { className: 'sb-sheet-footnote' },
             'Всё, что не нужно посреди подхода, живёт здесь: шаблоны, каталог, история, отчёт куратора и заметка. '
             + 'Шапка сессии несёт только время и счёт подходов — семь входов в ней превратили бы её в панель управления.')

@@ -22,7 +22,7 @@
   --sb-accTx: var(--v4-act-text, #8a4a20);
   --sb-okbg: rgba(34, 197, 94, 0.12);
   --sb-okBr: rgba(34, 197, 94, 0.45);
-  --sb-okTx: #15803d;
+  --sb-okTx: #166534;
   --sb-dropbg: rgba(139, 92, 246, 0.12);
   --sb-dropBr: rgba(139, 92, 246, 0.45);
   --sb-dropTx: #6d28d9;
@@ -6835,6 +6835,13 @@
   margin: 0 auto 14px;
   border-radius: 999px;
   background: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.18);
+}
+
+.sb-builder-screen .sb-sheet-menu {
+  border-radius: 20px;
+  border: 1px solid rgba(var(--v4-ink-rgb, 0, 0, 0), 0.1);
+  background: var(--sb-bg);
+  padding: 2px 16px;
 }
 
 .sb-sheet-menu-row {

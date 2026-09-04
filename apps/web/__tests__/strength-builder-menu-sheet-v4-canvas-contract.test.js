@@ -73,7 +73,8 @@ describe('И2 · Шторка ⋯ · canvas contract', () => {
         return React.createElement('div', { className: 'sb-builder-screen' },
           React.createElement('div', { className: 'sb-sheet' },
             React.createElement('div', { className: 'sb-sheet-grip' }),
-            rows.map(function (row, i) {
+            React.createElement('div', { className: 'sb-sheet-menu' },
+              rows.map(function (row, i) {
               return React.createElement('button', {
                 key: i,
                 type: 'button',
@@ -90,7 +91,8 @@ describe('И2 · Шторка ⋯ · canvas contract', () => {
                     + (row.chevron === 'muted' ? ' is-muted' : ' is-dim')
                 }, '›')
               );
-            }),
+            })
+            ),
             React.createElement('p', { className: 'sb-sheet-footnote' },
               'Всё, что не нужно посреди подхода, живёт здесь: шаблоны, каталог, история, отчёт куратора и заметка. Шапка сессии несёт только время и счёт подходов — семь входов в ней превратили бы её в панель управления.')
           )
