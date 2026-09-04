@@ -929,6 +929,51 @@
       return (source.name || 'Упражнение') + ' · подход ' + workNumber + ' из ' + workTotal;
     }
 
+    function exerciseWorkProgress(exercise) {
+      const approaches = Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [];
+      let workTotal = 0;
+      let currentWork = 0;
+      approaches.forEach(function (approach) {
+        if (SK && SK.isWarmupApproach(approach)) return;
+        workTotal += 1;
+        const done = SK ? SK.isApproachDone(approach) : !!(approach && approach.done);
+        if (!done && !currentWork) currentWork = workTotal;
+      });
+      if (!currentWork && workTotal > 0) currentWork = workTotal;
+      return { current: currentWork, total: workTotal };
+    }
+
+    function exerciseWorkProgressKey(exercise) {
+      const progress = exerciseWorkProgress(exercise);
+      if (!progress.total) return '';
+      return 'подход ' + progress.current + ' из ' + progress.total;
+    }
+
+    function weightEditSessionContext(liveExercises, openEx, proposal) {
+      const Parts = HEYS.StrengthBuilderParts || {};
+      if (!proposal || !openEx || typeof Parts.describePlanEdit !== 'function') return null;
+      if ((openEx.unit || 'weight_reps') !== 'weight_reps') return null;
+      const diff = Parts.describePlanEdit(liveExercises, proposal.exercises || []);
+      const changed = diff.ahead.find(function (row) {
+        return row.kind === 'changed' && row.name === openEx.name;
+      });
+      if (!changed) return null;
+      const who = proposal.proposedBy || 'Куратор';
+      const at = +proposal.proposedAt || +proposal.updatedAt || Date.now();
+      const timeLabel = fmtTime(at);
+      const weightMatch = String(changed.after || '').match(/(\d+(?:[.,]\d+)?)\s*кг/);
+      const weightLabel = weightMatch
+        ? weightMatch[1].replace('.', ',') + ' кг'
+        : String(changed.after || '').trim();
+      const progress = exerciseWorkProgress(openEx);
+      return {
+        who: who,
+        initial: who.slice(0, 1).toUpperCase(),
+        stamp: weightLabel ? (who + ' поставил ' + weightLabel + ' · ' + timeLabel) : null,
+        changeDetail: progress.current ? ('вес подхода ' + progress.current) : null
+      };
+    }
+
     function patchExercises(next) {
       setExercises(next);
       if (typeof onPatch === 'function') onPatch(next);
@@ -1774,6 +1819,30 @@
             h('p', { className: 'sb-time-entry-footnote sb-bw-entry-footnote' },
               'Прочерк в довесе значит «только вес тела», а не забытое поле: галочку он не блокирует. Довес живёт на подходе, а не на упражнении — сегодня без блина, через месяц с блином на поясе.')
           );
+        })(),
+        pendingProposal && startedAt > 0 && !completedAt && (function () {
+          const ctx = weightEditSessionContext(exercises, ex, pendingProposal);
+          if (!ctx) return null;
+          return h(React.Fragment, { key: 'weight-edit-' + i },
+            ctx.stamp && h('div', { className: 'sb-authorship-pill' },
+              h('span', { className: 'sb-authorship-pill-avatar', 'aria-hidden': 'true' }, ctx.initial),
+              h('span', { className: 'sb-authorship-pill-text' }, ctx.stamp)
+            ),
+            h('div', { className: 'sb-weight-edit-cd' },
+              h('div', { className: 'sb-weight-edit-cd-row' },
+                h('span', { className: 'sb-weight-edit-cd-title' }, 'Правка пришла'),
+                h('span', { className: 'sb-weight-edit-cd-sub' }, 'после начала сессии')
+              ),
+              ctx.changeDetail && h('div', { className: 'sb-weight-edit-cd-row is-plain' },
+                h('span', null, 'Что менялось'),
+                h('span', { className: 'sb-weight-edit-cd-detail' }, ctx.changeDetail)
+              ),
+              h('p', { className: 'sb-weight-edit-cd-foot' },
+                'Куратор не переписывает идущую сессию и не спрашивает, чью версию оставить: '
+                + 'правка приходит следом и подписана автором со временем. '
+                + 'Диалог двух версий отложен до переписывания слияния.')
+            )
+          );
         })()
       ));
     });
@@ -1785,7 +1854,6 @@
 
     const openEx = openIdx >= 0 ? exercises[openIdx] : null;
     const openUnit = openEx ? (openEx.unit || 'weight_reps') : '';
-    const openApproachCount = openEx && Array.isArray(openEx.approaches) ? openEx.approaches.length : 0;
     const proposalWho = pendingProposal && pendingProposal.proposedBy ? pendingProposal.proposedBy : null;
 
     return h('div', {
@@ -1794,6 +1862,7 @@
         + (openUnit === 'time' ? ' is-time-entry' : '')
         + (openUnit === 'distance' ? ' is-distance-entry' : '')
         + (openUnit === 'bodyweight' ? ' is-bodyweight-entry' : '')
+        + (openIdx >= 0 && openUnit === 'weight_reps' ? ' is-weight-entry' : '')
         + (rest
         ? ' sb-root--rest-docked ' + (rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded')
         : '')
@@ -1805,15 +1874,17 @@
         }, '✕'),
         h('div', { className: 'sb-head-title' },
           h('b', null, openEx
-            ? ((openEx.name || 'Упражнение') + ' · ' + approachCountLabel(openApproachCount))
+            ? (openEx.name || 'Упражнение')
             : (wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises))),
           h('div', { className: 'sb-head-sub' }, rest && !rest.collapsed
             ? 'отдых между подходами'
             : openEx && openUnit === 'bodyweight'
               ? bodyweightHeadKey(openEx)
-              : openEx && unitEntryLabel(openUnit)
-                ? unitEntryLabel(openUnit)
-                : (proposalWho && startedAt > 0 && !completedAt
+              : openEx && openUnit === 'weight_reps'
+                ? exerciseWorkProgressKey(openEx)
+                : openEx && unitEntryLabel(openUnit)
+                  ? unitEntryLabel(openUnit)
+                  : (proposalWho && startedAt > 0 && !completedAt
                 ? 'по плану ' + proposalWho + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : '')
                 : compactSessionDate(dateKey)
                   + (startedAt ? ' · начата в ' + fmtTime(startedAt) : '')))

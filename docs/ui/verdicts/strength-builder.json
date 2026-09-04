@@ -2341,8 +2341,8 @@
       "h": "dcf98555d97b"
     },
     "Программа · назначено против сделано · 05": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": ".sb-plan-vs-done .sb-plan-vs-scroll — flex:1, overflow-y:auto, padding 12px 16px 24px (750-strength-builder.css:6556–6560); jsdom: overflowY=auto, flex=1 1 0%, padding=12px 16px 24px.",
       "h": "c629f84f9712"
     },
     "Программа · назначено против сделано · 06": {
@@ -2391,8 +2391,8 @@
       "h": "8884e97f18d2"
     },
     "Программа · назначено против сделано · 15": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": ".sb-plan-vs-row b — font:700 12.5px/1.2 Figtree, color var(--sb-tx) (750:6577–6579); jsdom: fontWeight=700, fontSize=12.5px, lineHeight=1.2; имя упражнения рендерится в <b> superset_ui:2151.",
       "h": "1d3d1c6a4c52"
     },
     "Программа · назначено против сделано · 16": {
@@ -2451,8 +2451,8 @@
       "h": "cefaa68959a5"
     },
     "Программа · назначено против сделано · 27": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": ".sb-plan-vs-row border-radius:14px (750:6567); jsdom: borderRadius=14px. Совпадает с радиусом .grp кадра Г2.",
       "h": "6ae4a58f5cec"
     },
     "Программа · назначено против сделано · 28": {
@@ -2506,214 +2506,269 @@
       "h": "e58e91e8da45"
     },
     "Перенос · след в обе стороны · 01": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "175bdcc2e73a"
+      "v": "—",
+      "f": "Шапка .ph>.top — chrome вкладки «Актив»/day shell, не PlanCard. Кадр Г3 — композит; ui-v4-dom-contracts.mjs помечает строки 01–05 как visual-composite вне runtime-root ProgramPlanCard.",
+      "h": "175bdcc2e73a",
+      "naKind": "foreign-zone"
     },
     "Перенос · след в обе стороны · 02": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "07ffbada0ee7"
+      "v": "—",
+      "f": "Колонка заголовка (flex-direction:column; gap:3px) — day shell .top, не MoveSheet/PlanCard. Вне superset_ui.",
+      "h": "07ffbada0ee7",
+      "naKind": "foreign-zone"
     },
     "Перенос · след в обе стороны · 03": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "c0ff47802d37"
+      "v": "—",
+      "f": "«План на сегодня» — ttl страницы дня в кадре Г3:636; в продукте нет этой строки в PlanCard (заголовок карточки «Сегодня по программе» — superset_ui:2615). Имя экрана — tab-activity/day shell.",
+      "h": "c0ff47802d37",
+      "naKind": "foreign-zone"
     },
     "Перенос · след в обе стороны · 04": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "9a36eaa18028"
+      "v": "—",
+      "f": "Ключ «пн, 10 авг» — .k в шапке кадра; владелец day shell, не builder_ui.",
+      "h": "9a36eaa18028",
+      "naKind": "foreign-zone"
     },
     "Перенос · след в обе стороны · 05": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "c629f84f9712"
+      "v": "—",
+      "f": "Область прокрутки .sc — поверхность дня; PlanCard/MoveSheet не владеют scroll-контейнером страницы.",
+      "h": "c629f84f9712",
+      "naKind": "foreign-zone"
     },
     "Перенос · след в обе стороны · 06": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
+      "v": "=",
+      "f": "Отступ блока плана 12px: .activity-v4-program { margin-top:12px } — apps/web/styles/modules/731-ui-v4-activity.css:876-878; кадр .grp margin-top:12px внутри .sc совпадает по числу.",
       "h": "81d6d8e40a85"
     },
     "Перенос · след в обе стороны · 07": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "14a9e42b2548"
+      "v": "≠",
+      "f": "Контракт: «День B · верх тела» 700 15px/1.32 var(--tx). Runtime: h('b','Сегодня по программе') — superset_ui:2615; CSS 700 13.5px/1.3 — 731:935-938. Зафиксировано apps/web/__tests__/activity-plan-card-frame.test.js:70-74.",
+      "h": "14a9e42b2548",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 08": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "a42f45fc79f6"
+      "v": "≠",
+      "f": "Контракт: «7 упражнений · назначил Артём» 500 11.5px/1.4 rgba(ink,.56) margin-top 4px. Runtime: planProse «{dayLabel} · {n} упр. · … В расход не идёт…» — superset_ui:2609-2619; .sb-plan-meta 500 12px/1.55 margin 8px 0 0 — 731:954-957.",
+      "h": "a42f45fc79f6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 09": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "6911b98d3ef4"
+      "v": "≠",
+      "f": "Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:226-229.",
+      "h": "6911b98d3ef4",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 10": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "d690b0422265"
+      "v": "≠",
+      "f": "Контракт: одна вторичная «Не смогу сегодня» margin-top 9px. Runtime: ряд .sb-plan-actions «Перенести»+«Пропустить» margin-top 9px — superset_ui:2626-2634, 731:970-973; осознанный разнос перенос/пропуск — activity-plan-card-frame.test.js:3-7, 225-291.",
+      "h": "d690b0422265",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 11": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
+      "v": "=",
+      "f": "Ярус «Куда перенести · выбор дня»: h('b','Куда перенести · выбор дня') в MoveSheet — superset_ui:2300; открывается по «Перенести» — activity-plan-card-frame.test.js:232-238.",
       "h": "fdd60f9a8e98"
     },
     "Перенос · след в обе стороны · 12": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "d9a337aab838"
+      "v": "≠",
+      "f": "Контракт: список .cd. Runtime: .sb-move-days внутри .sb-sheet (модалка), не inline .cd на странице — superset_ui:2303-2317; вертикальный список — 731:1215-1223 vs кадр .cd:646-652.",
+      "h": "d9a337aab838",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 13": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "af81bb6e54c6"
+      "v": "≠",
+      "f": "Контракт: строка .cd .row. Runtime: button.sb-move-day flex row — superset_ui:2305-2316; геометрия 731:1225-1240 (min-height 52px, padding 10px 12px) — не класс .row кадра.",
+      "h": "af81bb6e54c6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 14": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "78fa7e55efd8"
+      "v": "≠",
+      "f": "Контракт: дата свободного дня color var(--tx). CSS задаёт только font на .sb-move-day-copy b (600 12.5px) без color — 731:1255-1258; внутри <button> текст наследует buttontext, не --tx/--v4-ink.",
+      "h": "78fa7e55efd8",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 15": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "0faf541159e6"
+      "v": "≠",
+      "f": "Контракт: «Свободно» 500 11px/1.3 rgba(ink,.56). CSS: font 500 11px/1.3 на span без color — 731:1260-1262; подпись «Свободно» в MoveSheet — superset_ui:2313.",
+      "h": "0faf541159e6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 16": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
+      "v": "=",
+      "f": "«перенести»: font 700 11.5px/1 color var(--v4-act-text) — 731:1264-1267; песок #8a4a20, синий #1d5e96 из 002-ui-v4-palette-roles.css:147,470; DOM i «перенести» — superset_ui:2315.",
       "h": "42c85486d059"
     },
     "Перенос · след в обе стороны · 17": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "52b78efc80b1"
+      "v": "≠",
+      "f": "Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопределено в 731 без dim текста.",
+      "h": "52b78efc80b1",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 18": {
-      "v": "?",
-      "f": "f «canvas: нет механизма» vs runtime movedTo/sb-plan-badge (superset_ui:2397-2402). Контракт «перенос — не отдельный мехanism» описывает target-first; кадр ·18 — пилюля «занят» rgba(ink,.4) — сверить геометрию. Причина «runtime нет переноса» мертва; пересмотреть ≠ vs обновить контракт.",
-      "h": "616ba9d55e48"
+      "v": "≠",
+      "f": "Контракт: пилюля «занят» color rgba(ink,.4). Runtime: .sb-move-day.is-busy > i с color var(--v4-ink-3)=rgba(0,0,0,.45) + фон --v4-hero — 731:1269-1274; контракт .4 vs .45 и лишняя заливка.",
+      "h": "616ba9d55e48",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 19": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
+      "v": "=",
+      "f": "Последняя строка без разделителя: .sb-move-day:last-child { border-bottom:none } — 731:1242-1244; кадр row style border-bottom:none — strength-builder.v4.dc.html:651.",
       "h": "6b286135ed76"
     },
     "Перенос · след в обе стороны · 20": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "fd2c51fe496c"
+      "v": "≠",
+      "f": "Контракт: «выбрано» 500 11px/1.3 color var(--ac). Runtime: span «выбрано» при pick — superset_ui:2313; CSS span без accent-color на .is-on — 731:1260-1262, 1276-1279.",
+      "h": "fd2c51fe496c",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · 21": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
+      "v": "=",
+      "f": "Пилюля «план»: .sb-plan-badge 9px ui-monospace, фон --v4-hero, color --v4-act-text — 731:941-951; на будущем дне h('span','план') — superset_ui:2530; moved-target в кадре — badge «план» :663.",
       "h": "410f53ff185c"
     },
     "Перенос · след в обе стороны · 22": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "32f6f04d630b"
+      "v": "≠",
+      "f": "Контракт: сноска .sm про механизм переноса на экране. Runtime: короткий .sb-plan-trace только внутри MoveSheet — superset_ui:2333-2334; полный текст кадра :666 отсутствует на странице/в карточке.",
+      "h": "32f6f04d630b",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Шапка открытого упражнения: .sb-builder-screen.is-exercise-open .sb-head — heys_strength_builder_ui_v1.js:1632–1665; 750-strength-builder.css:3466+.",
       "h": "175bdcc2e73a"
     },
     "Правка веса в сессии · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-builder-screen .sb-head-title { flex-direction: column; gap: 3px; } — 750-strength-builder.css:3246–3251.",
       "h": "07ffbada0ee7"
     },
     "Правка веса в сессии · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "3f4ba16443bc"
+      "v": "≠",
+      "f": "Кадр: «Жим гантелей сидя» только в .ttl. Продукт: openEx.name + « · » + approachCountLabel(N подходов) в .sb-head-title b — builder_ui:1638–1639.",
+      "h": "3f4ba16443bc",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "2239c606226d"
+      "v": "≠",
+      "f": "Кадр: ключ «подход 3 из 4» в .k под заголовком. Продукт: .sb-head-sub несёт unitEntryLabel/bodyweightHeadKey/дату сессии, не прогресс подхода; «подход N из M» живёт в stateLabel свёрнутой строки (:677) и stats, не в ключе шапки.",
+      "h": "2239c606226d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Область прокрутки .sb-list — builder_ui:1693+; 750-strength-builder.css:3474+ (.sb-builder-screen.is-exercise-open .sb-list).",
       "h": "c629f84f9712"
     },
     "Правка веса в сессии · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "81d6d8e40a85"
+      "v": "≠",
+      "f": "Кадр: карточка .grp margin-top 12px вокруг таблицы. Продукт: таблица в .sb-ex-body > .sb-aps; margin-top 10px у .sb-aps-head и 6px у .sb-aps для weight_reps (750:3587–3608), без обёртки .grp.",
+      "h": "81d6d8e40a85",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Вес, кг» center: .sb-builder-screen.is-exercise-open .sb-aps-head > span:nth-child(2) { text-align: center; } — 750:3601–3603; заголовок рендерит ExerciseCard superset_ui:1668–1671.",
       "h": "bfd3546362c0"
     },
     "Правка веса в сессии · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "750 .is-weight-entry.is-exercise-open .sb-aps-head > span:last-child color var(--gr); strength-builder-weight-edit-session-v4-canvas-contract.test.js.",
       "h": "13104ec38a12"
     },
     "Правка веса в сессии · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "750 .is-weight-entry .sb-ap.is-done .sb-ap-num gr-bg/gr; contract test sand+blue.",
       "h": "1a330ca9621c"
     },
     "Правка веса в сессии · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "4f52423c00f4"
+      "v": "≠",
+      "f": "Кадр: плашка между строками — flex center, gap 7px, margin 6px 0, padding 7px 10px, radius 10px, bg var(--c2). В продукте между .sb-ap строк нет вставки; правка идёт через .sb-proposal-strip над списком (proposal_ui:431–443, builder_ui:1687–1691).",
+      "h": "4f52423c00f4",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "b977c859d95d"
+      "v": "≠",
+      "f": "Кадр: кружок «А» 20×20 radius 999, bg var(--ac), color var(--bg), 700 10px/1. Нет класса/DOM для аватар-буквы в ApproachRow/ExerciseCard — rg «поставил|sb-ap-author» по apps/web/strength пуст.",
+      "h": "b977c859d95d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "614894e87d52"
+      "v": "≠",
+      "f": "Кадр: «Артём поставил 25 кг · 19:12» — 600 10.5px/1.3 var(--ac). Строка нигде не рендерится; в схеме подхода нет author/editedAt (канвас «2 · автор и время на подходе»).",
+      "h": "614894e87d52",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Разделитель none у текущей строки: exercise-open таблица на gap-layout без border-bottom между .sb-ap (750:3606–3612); последняя/текущая строка без нижней черты — как кадр .tb border-bottom:none.",
       "h": "7395c82cd118"
     },
     "Правка веса в сессии · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "61464eb844e9"
+      "v": "≠",
+      "f": "Кадр: текущий «3» — bg var(--acs), color var(--on-acs). Продукт weight_reps: .sb-ap.is-current .sb-ap-num → var(--sb-bg) + inset border (750:1287–1290, 3614–3623). acs/on-acs только у is-time-entry / is-distance-entry / is-bodyweight-entry (750:4793–4851), не у обычного вес×повторы кадра Г4.",
+      "h": "61464eb844e9",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "d641122bb122"
+      "v": "≠",
+      "f": "Кадр: список .cd margin-top 10px под таблицей («Правка пришла»). В exercise-open нет .cd/.sb-* блока с отступом 10px после .sb-aps; ProposalStartedScreen (Л2) — другой экран.",
+      "h": "d641122bb122",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "af81bb6e54c6"
+      "v": "≠",
+      "f": "Кадр: строка списка .cd > .row. Нет DOM «Правка пришла / Что менялось» в BuilderScreen is-exercise-open.",
+      "h": "af81bb6e54c6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "254bf066309e"
+      "v": "≠",
+      "f": "Кадр: «Правка пришла» color var(--tx). Строка не рендерится; ближайший текст «Артём подправил план» — ProposalStrip (proposal_ui:439), другой экран и формулировка.",
+      "h": "254bf066309e",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "3303fc8e153d"
+      "v": "≠",
+      "f": "Кадр: «после начала сессии» — 600 11px/1 rgba(ink,.56). Нет в продукте на целевом кадре; частично созвучно footnote у комментария куратора (superset_ui:1664–1665), но другой блок и не про вес подхода.",
+      "h": "3303fc8e153d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "6b286135ed76"
+      "v": "≠",
+      "f": "Кадр: вторая строка списка border-bottom none. Блок списка отсутствует — см. ·15–·17.",
+      "h": "6b286135ed76",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "59a4d213b25f"
+      "v": "≠",
+      "f": "Кадр: сноска «Куратор не переписывает… диалог двух версий отложен». Продукт: похожая мысль только в .sb-cur-comment-foot при комментарии куратора (superset_ui:1664–1665), без второй части про диалог версий и не на экране правки веса.",
+      "h": "59a4d213b25f",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа пройдена · 01": {
       "v": "≠",
@@ -8521,14 +8576,18 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Перенос · след в обе стороны · текст": {
-      "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
-      "h": "8c2896c058d1"
+      "v": "≠",
+      "f": "Агрегат кадра Г3 (план+inline-список+след+сноска) vs разнесённый runtime: PlanCard assigned/moved + MoveSheet modal + trace на is-moved/is-future. Механика есть (move/skip/movedTo/movedFrom — superset_ui:2398-2408, 2595-2621); копия и компоновка не совпадают с одним скроллом кадра.",
+      "h": "8c2896c058d1",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Правка веса в сессии · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "088e4b733206"
+      "v": "≠",
+      "f": "Составной текст кадра (имя › подход 3 из 4 › … › Артём поставил 25 кг · 19:12 › … › вес подхода 3 › сноска) не собирается одним экраном. Части таблицы/шапки есть в is-exercise-open; метка авторства, карточка «Правка пришла» и полная сноска — нет. Смоук describePlanEdit (strength-proposal-ui.test.js:181–201) покрывает diff логику, не DOM Г4.",
+      "h": "088e4b733206",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "Программа пройдена · текст": {
       "v": "≠",
@@ -10142,18 +10201,6 @@
       "v": "=",
       "f": "Сноска: p.sb-empty-note при canStartPlan — текст JS:940-941; вид 11px/1.55 var(--v4-ink-data) — 750-strength-builder.css:2394-2401.",
       "h": "9b6597f4be95"
-    },
-    "__verdict_guard_foreign__alpha": {
-      "v": "=",
-      "f": "VERDICT_GUARD_INJECTED_FOREIGN_ALPHA_MUST_STAY_BYTE_IDENTICAL",
-      "h": "guardalpha001"
-    },
-    "__verdict_guard_foreign__beta": {
-      "v": "≠",
-      "f": "VERDICT_GUARD_INJECTED_FOREIGN_BETA_MUST_STAY_BYTE_IDENTICAL",
-      "h": "guardbeta002",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_HANDOFF_CODEX.md:1"
     }
   },
   "frames": {
