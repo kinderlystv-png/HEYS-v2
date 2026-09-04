@@ -12577,6 +12577,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink-3) /* v4-intentional */;
 }
 
+/* Кадр «Качество еды · нет данных · 04»: тот же прочерк 21/600 и --v4-ink-3.
+   Правила клетчатки и белка не трогал. Живое число now остаётся
+   --v4-ok-text / --v4-ink. */
+.widget-v4-mini.widget-v4-foodquality .widget-v4-goal-value--empty {
+  color: var(--v4-ink-3) /* v4-intentional */;
+}
+
 /* Кадр «Окно до сна · Как сейчас»: зазор 5 px, число 21 px, слово 8.5 px.
    Общий hero 4 px и mini fiber/protein 3 px не трогал. */
 .widget-v4-mini.widget-v4-sleepwindow .widget-v4-goal-hero {

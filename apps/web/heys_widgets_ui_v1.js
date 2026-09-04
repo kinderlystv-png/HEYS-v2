@@ -6081,7 +6081,8 @@
       v4Kicker('Качество'),
       React.createElement('div', { className: 'widget-v4-goal-hero' },
         React.createElement('span', {
-          className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+          className: 'widget-v4-goal-value '
+            + (hasData ? v4ValueStateClass(state) : 'widget-v4-goal-value--empty')
         }, hasData ? formatScoreRu(score) : '—'),
         hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'из 10') : null
       ),
