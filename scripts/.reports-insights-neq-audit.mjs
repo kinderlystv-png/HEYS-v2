@@ -679,6 +679,81 @@ const NAMED = {
 };
 Object.assign(VERIFY, NAMED);
 
+// Per-line f refinement for batch-generic ≠ (13 groups, 71 lines)
+const REFINE_F = {};
+const canvasSpec = (key) => (canvas.get(key) || '').slice(0, 90);
+const SKEL_CODE =
+  'pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard';
+for (let i = 1; i <= 13; i++) {
+  const key = `Инсайты · считаем · ${String(i).padStart(2, '0')}`;
+  REFINE_F[key] = `${SKEL_CODE}; кадр «${key}»: ${canvasSpec(key)}`;
+}
+for (const key of ['вид · панель и состояния', 'пустое место в блоке', 'расчёт и отказ', 'карточка · скелетон расчёта']) {
+  REFINE_F[key] = `${SKEL_CODE}; контракт «${key}»: ${canvasSpec(key)}`;
+}
+const CHART_CODE = 'heys_day_stats_v1.js:646-647 ReportsV4Wellbeing W=296 H=96; 733-ui-v4-reports.css:534-538 .reports-v4-wellbeing__chart height 96px';
+const CHART_NOTE = {
+  12: 'мини-график сна viewBox 150×44', 13: 'ломаная сна stroke var(--acs) 2.5', 14: 'конечная точка r=4',
+  15: 'столбиковый viewBox 292×84', 16: 'пунктирная линия плана', 17: 'столбик h=14 var(--gr-bg)',
+  18: 'столбик h=18', 19: 'столбик h=24', 20: 'столбик h=26 #f0d8c4', 21: 'столбик h=20',
+  22: 'столбик h=34 var(--ovl)', 23: 'столбик h=6 трек', 24: 'линейный viewBox 292×72',
+  25: 'ломаная веса', 26: 'конечная точка веса r=4.5',
+};
+for (let n = 12; n <= 26; n++) {
+  const key = `Визуал v4 · Отчёты · рисунок ${n}`;
+  REFINE_F[key] = `${CHART_CODE}; кадр «рисунок ${n}» (${CHART_NOTE[n]}): ${canvasSpec(key)}`;
+}
+const WELLBEING_CODE =
+  'heys_day_stats_v1.js:641-722 ReportsV4Wellbeing — две SVG-кривые на .reports-v4-wellbeing__chart; 733-ui-v4-reports.css:531-538 — без .wellbeing__tile';
+REFINE_F['Визуал v4 · Отчёты · 72'] = `${WELLBEING_CODE}; кадр «72» — распределение space-between трёх плиток со средними`;
+REFINE_F['Визуал v4 · Отчёты · 73'] = `${WELLBEING_CODE}; кадр «73» — выключка left подписи плитки «6,4»`;
+REFINE_F['Визуал v4 · Отчёты · 74'] = `${WELLBEING_CODE}; кадр «74» — моноцифра 22px/600 var(--gr) в плитке сна`;
+REFINE_F['Визуал v4 · Отчёты · 75'] = `${WELLBEING_CODE}; кадр «75» — подпись «часов» 10.5px под плиткой`;
+REFINE_F['Визуал v4 · Отчёты · 76'] = `${WELLBEING_CODE}; кадр «76» — моноцифра 22px/600 var(--ac) в плитке самочувствия`;
+const WEEKS_TONE = '733-ui-v4-reports.css — шапки колонок недель; лестница 55/45/38/30, кадр просит 35 % и 50 %';
+for (const n of [79, 80, 81, 82, 83]) {
+  const key = `Визуал v4 · Отчёты · ${n}`;
+  REFINE_F[key] = `${WEEKS_TONE}; контракт «${key}»: ${canvasSpec(key)} → ближайшая --v4-ink-2 (55 %)`;
+}
+for (const n of [29, 30, 31, 32, 33]) {
+  const key = `Отчёты · нулевая строка матрицы · ${n}`;
+  REFINE_F[key] = `heys_day_stats_v1.js — ReportsV4ZeroActions удалён 2026-08-30; кадр «${key}»: ${canvasSpec(key)}`;
+}
+for (const n of [11, 12, 13, 14, 15]) {
+  const key = `День под порогом · выбор · ${n}`;
+  REFINE_F[key] = `кадр «${key}» перерисовывает блок баланса схематично; продукт по основному кадру «Визуал v4 · Отчёты»: ${canvasSpec(key)}`;
+}
+for (const n of [10, 11, 12, 13]) {
+  const key = `Неделя к неделе · одна закрытая · ${n}`;
+  REFINE_F[key] = `733-ui-v4-reports.css — закрытая неделя --v4-ink-4 (38 %); кадр «${key}»: ${canvasSpec(key)} просит 35 %`;
+}
+for (const key of ['Визуал v4 · Отчёты · 68', 'Визуал v4 · Отчёты · 104', 'Визуал v4 · Отчёты · 105']) {
+  REFINE_F[key] = `контракт «формат · вес» / «карточка · призыв о замерах» — heys_day_stats_v1.js:811 снят «Замеры тела»; кадр «${key}»: ${canvasSpec(key)}`;
+}
+for (const n of [18, 23, 24]) {
+  const key = `Неделя к неделе · одна закрытая · ${n}`;
+  REFINE_F[key] = `733-ui-v4-reports.css — тон --v4-ink-30 (30 %); кадр «${key}»: ${canvasSpec(key)} просит 32 %`;
+}
+for (const n of [14, 15, 16]) {
+  const key = `Ярус Питание · после последнего приёма · ${n}`;
+  const prop = n === 14 ? '734-ui-v4-insights.css:975-979 .insights-v4-nutrition__rhythm-bar height 6px --v4-track'
+    : n === 15 ? '734-ui-v4-insights.css:966-969 .insights-v4-nutrition__rhythm-time 9.5px/600'
+      : '734-ui-v4-insights.css:950-953 .insights-v4-nutrition__rhythm-line 500 11px/1.5';
+  REFINE_F[key] = `${prop}; кадр «${key}» спорит с «Инсайты · ярус Питание»: ${canvasSpec(key)}`;
+}
+REFINE_F['Визуал v4 · Отчёты · 50'] =
+  '733-ui-v4-reports.css:836-849 .reports-v4-discipline__bar — тон заливки --v4-warn-1, кадр «50» просит роль без ступени в лестнице';
+REFINE_F['Визуал v4 · Отчёты · 59'] =
+  '733-ui-v4-reports.css — подпись дисциплины --v4-ink-2; кадр «59»: ' + canvasSpec('Визуал v4 · Отчёты · 59');
+REFINE_F['Визуал v4 · Отчёты · 56'] =
+  '733-ui-v4-reports.css — средняя доля нулевой строки --v4-ink-data; контракт «роли цвета» резервирует --val-bad для падения';
+REFINE_F['Отчёты · нулевая строка матрицы · 20'] =
+  '733-ui-v4-reports.css:923-924 .reports-v4-discipline__score.is-zero color --v4-ink-data; кадр «20»: ' + canvasSpec('Отчёты · нулевая строка матрицы · 20');
+for (const n of [16, 21]) {
+  const key = `Отчёты · нулевая строка матрицы · ${n}`;
+  REFINE_F[key] = '733-ui-v4-reports.css:908-916 .reports-v4-discipline__bar.is-zero — repeating-linear-gradient шаг 4px; кадр «' + key + '»: ' + canvasSpec(key);
+}
+
 // --- Run audit ---
 const data = JSON.parse(fs.readFileSync(VERDICT, 'utf8'));
 const neq = Object.entries(data.rows).filter(([, r]) => r.v === '≠');
@@ -810,6 +885,25 @@ if (process.argv.includes('--apply')) {
   }
   fs.writeFileSync(VERDICT, `${JSON.stringify(data, null, 2)}\n`);
   console.log('Applied', patched, 'patches to', VERDICT);
+}
+
+// Refine batch-generic f fields (--refine-f): keep ≠, replace f with per-line facts
+if (process.argv.includes('--refine-f')) {
+  const REMAINDER = path.join(ROOT, 'scripts/.reports-insights-batch-f-remainder.json');
+  let refined = 0;
+  const remainder = [];
+  for (const [key, row] of neq) {
+    if (!REFINE_F[key]) {
+      remainder.push({ key, f: row.f });
+      continue;
+    }
+    if (row.f === REFINE_F[key]) continue;
+    data.rows[key].f = REFINE_F[key];
+    refined += 1;
+  }
+  fs.writeFileSync(VERDICT, `${JSON.stringify(data, null, 2)}\n`);
+  fs.writeFileSync(REMAINDER, `${JSON.stringify({ refined, remainder, total: Object.keys(REFINE_F).length }, null, 2)}\n`);
+  console.log('Refined f for', refined, 'lines;', remainder.length, 'without REFINE_F entry');
 }
 
 console.log(JSON.stringify({ checked: neq.length, confirmed, demoted, batchGenericCount, codeMissingCount, frameSupersededCount }, null, 2));
