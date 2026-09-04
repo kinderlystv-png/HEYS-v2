@@ -494,6 +494,231 @@
     );
   }
 
+  const CURATOR_EDIT_FOOTNOTE = 'Куратор видит исход, а не поведение клиента: отправлено, принято или «не сегодня», и что именно не легло. Полный кадр «не легло» с клиентской стороны — «Правка легла не полностью» в ярусе выше.';
+
+  const CURATOR_REJECT_REASON = {
+    done_approaches_kept: 'подходы уже закрыты',
+    started_cannot_remove: 'упражнение выполнено',
+    superset_composition_frozen: 'связка начата',
+  };
+
+  const CURATOR_EDIT_STYLE = {
+    colMain: { display: 'flex', flexDirection: 'column', gap: '3px' },
+    meta11: { font: '500 11px/1.3 Figtree, sans-serif', color: 'var(--ink56)' },
+    meta11Warn: { font: '500 11px/1.3 Figtree, sans-serif', color: 'var(--ac2)' },
+    meta11Policy: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--ink56)' },
+    markOk: { font: '700 12px/1 Figtree, sans-serif', color: 'var(--gr)' },
+    markWarn: { font: '700 12px/1 Figtree, sans-serif', color: 'var(--ac2)' },
+    badgeYes: {
+      padding: '4px 8px',
+      borderRadius: '999px',
+      background: 'var(--gr-bg)',
+      color: 'var(--gr)',
+      font: '700 11px/1 Figtree, sans-serif',
+    },
+    card: {
+      background: 'var(--c1)',
+      borderRadius: '20px',
+      padding: '2px 16px',
+    },
+    row: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '13px 0',
+      borderBottom: '1px solid rgba(var(--ink), .07)',
+      font: '600 12.5px/1 Figtree, sans-serif',
+    },
+    footnote: {
+      marginTop: '12px',
+      font: '500 11px/1.55 Figtree, sans-serif',
+      color: 'var(--ink56)',
+    },
+  };
+
+  function fmtCuratorEditClock(ms) {
+    const d = new Date(+ms || 0);
+    if (!+ms) return '';
+    const pad = function (n) { return String(n).padStart(2, '0'); };
+    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function fmtCuratorEditWhen(ms, nowMs) {
+    const at = +ms || 0;
+    if (!at) return '';
+    const d = new Date(at);
+    const now = new Date(+nowMs || Date.now());
+    const clock = fmtCuratorEditClock(at);
+    const sameDay = d.getFullYear() === now.getFullYear()
+      && d.getMonth() === now.getMonth()
+      && d.getDate() === now.getDate();
+    return sameDay ? ('сегодня в ' + clock) : clock;
+  }
+
+  function curatorRejectDetail(row) {
+    const name = row && row.name ? String(row.name) : '';
+    const reason = row && row.reason ? CURATOR_REJECT_REASON[row.reason] || String(row.reason) : '';
+    if (name && reason) return name + ' · ' + reason;
+    return name || reason || '';
+  }
+
+  function curatorAcceptTimingLabel(proposal, trainingStarted) {
+    if (proposal && proposal.acceptTiming) return String(proposal.acceptTiming);
+    if (trainingStarted) return 'во время тренировки';
+    return 'до начала тренировки';
+  }
+
+  function curatorResolutionBadge(proposal) {
+    const status = proposal && proposal.status;
+    if (status === 'accepted') return 'да';
+    if (status === 'declined') return 'нет';
+    if (status === 'expired') return '—';
+    return '';
+  }
+
+  /**
+   * Снимок для кураторского экрана Л9: что видно после отправки правки.
+   * Данные — из proposal на дне клиента; строки политики («не сегодня»,
+   * «прочитано») статичны по контракту.
+   */
+  function buildCuratorEditSnapshot(props) {
+    const proposal = props && props.proposal;
+    const nowMs = props && props.nowMs ? +props.nowMs : Date.now();
+    if (!proposal) return null;
+    const sentAt = +proposal.proposedAt || +proposal.sentAt || +proposal.updatedAt || 0;
+    const resolvedAt = +proposal.resolvedAt || 0;
+    const rejected = Array.isArray(proposal.rejected) ? proposal.rejected : [];
+    const status = proposal.status || 'pending';
+    const dayLabel = (props && props.dayLabel) || proposal.dayLabel || '';
+    const sentSub = [fmtCuratorEditWhen(sentAt, nowMs), dayLabel].filter(Boolean).join(' · ');
+    const resolveSub = status === 'accepted' || status === 'declined' || status === 'expired'
+      ? [
+        resolvedAt ? ('в ' + fmtCuratorEditClock(resolvedAt)) : '',
+        status === 'accepted'
+          ? curatorAcceptTimingLabel(proposal, !!(props && props.trainingStarted))
+          : (status === 'declined' ? 'отказ «не сегодня»' : 'без ответа'),
+      ].filter(Boolean).join(' · ')
+      : '';
+    return {
+      clientName: (props && props.clientName) || '',
+      programKey: (props && props.programKey) || '',
+      sentTitle: 'Правка отправлена',
+      sentSub: sentSub,
+      resolutionTitle: status === 'accepted' ? 'Принята'
+        : status === 'declined' ? 'Отказ «не сегодня»'
+          : status === 'expired' ? 'Без ответа' : '',
+      resolutionSub: resolveSub,
+      resolutionBadge: curatorResolutionBadge(proposal),
+      partialTitle: rejected.length ? 'Легло не полностью' : '',
+      partialSub: rejected.length ? curatorRejectDetail(rejected[0]) : '',
+      policyDeclineTitle: 'Отказ «не сегодня»',
+      policyDeclineSub: 'видно, причина — только если указана',
+      policyReadTitle: 'Отметка «прочитано»',
+      policyReadSub: 'не показывается',
+      footnote: CURATOR_EDIT_FOOTNOTE,
+    };
+  }
+
+  function curatorEditRow(main, sub, tail, opts) {
+    const o = opts || {};
+    const rowStyle = Object.assign({}, CURATOR_EDIT_STYLE.row);
+    if (o.noBorder) {
+      rowStyle.borderBottomWidth = '0';
+      rowStyle.borderBottomStyle = 'none';
+    }
+    return h('div', { className: 'sb-curator-edit-row', style: rowStyle },
+      h('span', { className: 'sb-curator-edit-main', style: CURATOR_EDIT_STYLE.colMain },
+        h('span', { className: 'sb-curator-edit-title', style: { color: 'var(--tx)' } }, main),
+        sub && h('span', {
+          className: 'sb-curator-edit-sub' + (o.subWarn ? ' is-warn' : ''),
+          style: o.subWarn ? CURATOR_EDIT_STYLE.meta11Warn : CURATOR_EDIT_STYLE.meta11,
+        }, sub)
+      ),
+      tail && (o.tailBadge
+        ? h('span', { className: 'sb-curator-edit-badge', style: CURATOR_EDIT_STYLE.badgeYes }, tail)
+        : h('span', {
+          className: 'sb-curator-edit-mark' + (o.tailWarn ? ' is-warn' : ' is-ok'),
+          style: o.tailWarn ? CURATOR_EDIT_STYLE.markWarn : CURATOR_EDIT_STYLE.markOk,
+        }, tail)
+      )
+    );
+  }
+
+  /**
+   * Сторона куратора (кадр Л9): исход правки после отправки — без «прочитано»
+   * и без поведения клиента внутри тренировки.
+   */
+  function CuratorEditStatusScreen(props) {
+    const snapshot = buildCuratorEditSnapshot(props);
+    if (!snapshot) return null;
+    const onClose = props && props.onClose;
+
+    return h('div', {
+      className: 'sb-root sb-curator-edit',
+      style: { '--ink56': 'rgba(var(--ink), .56)' },
+    },
+      h('div', { className: 'sb-cycle-top sb-curator-edit-head' },
+        onClose && h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть'
+        }, '✕'),
+        h('span', { className: 'sb-cycle-top-main sb-curator-edit-head-main' },
+          h('span', {
+            className: 'sb-cycle-title sb-curator-edit-client',
+            style: { color: 'var(--tx)' },
+          }, snapshot.clientName),
+          snapshot.programKey
+            && h('span', { className: 'sb-cycle-key sb-curator-edit-program' }, snapshot.programKey)
+        )
+      ),
+      h('div', { className: 'sb-list sb-curator-edit-scroll' },
+        h('div', {
+          className: 'sb-curator-edit-card is-primary',
+          style: Object.assign({}, CURATOR_EDIT_STYLE.card, { marginTop: '12px' }),
+        },
+          curatorEditRow(snapshot.sentTitle, snapshot.sentSub, '✓'),
+          snapshot.resolutionTitle
+            && curatorEditRow(
+              snapshot.resolutionTitle,
+              snapshot.resolutionSub,
+              snapshot.resolutionBadge,
+              { tailBadge: !!snapshot.resolutionBadge }
+            ),
+          snapshot.partialTitle
+            && curatorEditRow(snapshot.partialTitle, snapshot.partialSub, '—', {
+              noBorder: true, subWarn: true, tailWarn: true,
+            })
+        ),
+        h('div', {
+          className: 'sb-curator-edit-card is-policy',
+          style: Object.assign({}, CURATOR_EDIT_STYLE.card, { marginTop: '10px' }),
+        },
+          h('div', {
+            className: 'sb-curator-edit-row',
+            style: CURATOR_EDIT_STYLE.row,
+          },
+            h('span', { style: { color: 'var(--tx)' } }, snapshot.policyDeclineTitle),
+            h('span', { className: 'sb-curator-edit-policy', style: CURATOR_EDIT_STYLE.meta11Policy },
+              snapshot.policyDeclineSub)
+          ),
+          h('div', {
+            className: 'sb-curator-edit-row',
+            style: Object.assign({}, CURATOR_EDIT_STYLE.row, {
+              borderBottomWidth: '0',
+              borderBottomStyle: 'none',
+            }),
+          },
+            h('span', { style: { color: 'var(--tx)' } }, snapshot.policyReadTitle),
+            h('span', { className: 'sb-curator-edit-policy', style: CURATOR_EDIT_STYLE.meta11Policy },
+              snapshot.policyReadSub)
+          )
+        ),
+        h('p', { className: 'sb-curator-edit-footnote', style: CURATOR_EDIT_STYLE.footnote },
+          snapshot.footnote)
+      )
+    );
+  }
+
   /**
    * Программа пройдена (экран 16e). Про сделанное, а не про пропуски.
    *
@@ -957,4 +1182,6 @@
   Parts.ProposalReview = ProposalReview;
   Parts.ProposalStrip = ProposalStrip;
   Parts.ProposalOutcome = ProposalOutcome;
+  Parts.CuratorEditStatusScreen = CuratorEditStatusScreen;
+  Parts.buildCuratorEditSnapshot = buildCuratorEditSnapshot;
 })(window);

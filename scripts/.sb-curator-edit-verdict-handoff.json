@@ -1,0 +1,137 @@
+{
+  "zone": "strength-builder",
+  "block": "Правка · сторона куратора",
+  "canvasOid": "Л9",
+  "canvasPath": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html",
+  "frameCount": 1,
+  "frameNote": "stop-кадр data-oid=Л9 data-demo=stop data-screen-label=Правка · сторона куратора — исход правки на стороне куратора",
+  "scope": "apps/web/strength/heys_strength_proposal_ui_v1.js",
+  "generated": "2026-09-05",
+  "agent": "proposal-ui subagent",
+  "summary": {
+    "rows": 18,
+    "recommendEquals": 18,
+    "recommendNotEquals": 0,
+    "recommendQuestion": 0,
+    "needsCode": 0,
+    "codeChanged": true,
+    "cssTouched": false,
+    "testsRun": [
+      "apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js — 21 passed",
+      "apps/web/__tests__/strength-proposal-v4-canvas-contract.test.js — 7 passed",
+      "pnpm ui:v4:check:roles — exit 0",
+      "apps/web/__tests__/role-fallback-truth.test.js — 2 passed",
+      "node scripts/ui-v4-check-contract-drift.mjs --list strength-builder — exit 0"
+    ]
+  },
+  "rows": [
+    {
+      "key": "Правка · сторона куратора · 01",
+      "verdict": "=",
+      "needsCode": false,
+      "f": ".sb-cycle-top.sb-curator-edit-head — шапка кадра Л9; heys_strength_proposal_ui_v1.js:661; jsdom display:flex (contract test row 01)."
+    },
+    {
+      "key": "Правка · сторона куратора · 02",
+      "verdict": "=",
+      "needsCode": false,
+      "f": ".sb-curator-edit-head-main.sb-cycle-top-main — flex-direction:column, gap:3px; proposal_ui:665 + 750-strength-builder.css:6977-6982; contract test row 02."
+    },
+    {
+      "key": "Правка · сторона куратора · 03",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "props.clientName → .sb-curator-edit-client color var(--tx); proposal_ui:667-669; копия «Марина К.» contract test row 03."
+    },
+    {
+      "key": "Правка · сторона куратора · 04",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "props.programKey → .sb-curator-edit-program.sb-cycle-key; proposal_ui:671; «Pro Спорт · программа «Верх-низ»» contract test row 04."
+    },
+    {
+      "key": "Правка · сторона куратора · 05",
+      "verdict": "=",
+      "needsCode": false,
+      "f": ".sb-list.sb-curator-edit-scroll — flex:1 overflow-y:auto (750 .sb-list); proposal_ui:674; contract test row 05."
+    },
+    {
+      "key": "Правка · сторона куратора · 06",
+      "verdict": "=",
+      "needsCode": false,
+      "f": ".sb-curator-edit-card.is-primary margin-top:12px border-radius:20px background var(--c1); CURATOR_EDIT_STYLE.card proposal_ui:676-677; contract test row 06."
+    },
+    {
+      "key": "Правка · сторона куратора · 07",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "curatorEditRow → .sb-curator-edit-row display:flex padding 13px 0; proposal_ui:623-630; contract test row 07."
+    },
+    {
+      "key": "Правка · сторона куратора · 08",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "«Правка отправлена» .sb-curator-edit-title color var(--tx); proposal_ui:632,678; contract test row 08."
+    },
+    {
+      "key": "Правка · сторона куратора · 09",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "подпись sentSub 500 11px/1.3 Figtree color var(--ink56); CURATOR_EDIT_STYLE.meta11 proposal_ui:507,635; contract test row 09 sand."
+    },
+    {
+      "key": "Правка · сторона куратора · 10",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "«✓» .sb-curator-edit-mark.is-ok — 700 12px/1 Figtree color var(--gr); CURATOR_EDIT_STYLE.markOk proposal_ui:510,641; contract test row 10."
+    },
+    {
+      "key": "Правка · сторона куратора · 11",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "«да» .sb-curator-edit-badge — фон var(--gr-bg) цвет var(--gr); CURATOR_EDIT_STYLE.badgeYes proposal_ui:511-516,639; contract test row 11."
+    },
+    {
+      "key": "Правка · сторона куратора · 12",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "последняя строка primary-карточки noBorder → borderBottomWidth:0; curatorEditRow proposal_ui:627-628,689-691; contract test row 12."
+    },
+    {
+      "key": "Правка · сторона куратора · 13",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "partialSub «тяга блока · подходы уже закрыты» .sb-curator-edit-sub.is-warn 500 11px color var(--ac2); curatorRejectDetail proposal_ui:558-563,635; contract test row 13."
+    },
+    {
+      "key": "Правка · сторона куратора · 14",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "«—» .sb-curator-edit-mark.is-warn 700 12px color var(--ac2); CURATOR_EDIT_STYLE.markWarn proposal_ui:511,641-642; contract test row 14."
+    },
+    {
+      "key": "Правка · сторона куратора · 15",
+      "verdict": "=",
+      "needsCode": false,
+      "f": ".sb-curator-edit-card.is-policy margin-top:10px; proposal_ui:693-694; contract test row 15."
+    },
+    {
+      "key": "Правка · сторона куратора · 16",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "«видно, причина — только если указана» .sb-curator-edit-policy 600 11px color var(--ink56); CURATOR_EDIT_STYLE.meta11Policy proposal_ui:509,701; contract test row 16."
+    },
+    {
+      "key": "Правка · сторона куратора · 17",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "сноска CURATOR_EDIT_FOOTNOTE → .sb-curator-edit-footnote 500 11px/1.55 var(--ink56); proposal_ui:497,716-717; contract test row 17."
+    },
+    {
+      "key": "Правка · сторона куратора · текст",
+      "verdict": "=",
+      "needsCode": false,
+      "f": "buildCuratorEditSnapshot агрегирует все строки кадра Л9 (имя, ключ, отправлена, принята, частично, политика, сноска); proposal_ui:585-621; contract test «текст»."
+    }
+  ]
+}
