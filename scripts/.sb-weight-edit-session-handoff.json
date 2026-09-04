@@ -1,0 +1,190 @@
+{
+  "zone": "strength-builder",
+  "scope": "Г4 «Правка веса в сессии» · 01–20 + текст (21 строка контракта)",
+  "block": "Правка веса в сессии",
+  "canvasRef": {
+    "oid": "Г4",
+    "vid": "вид · метка авторства",
+    "stopFrame": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:674",
+    "contractLines": "2885–2904, 4074"
+  },
+  "generated": "2026-09-04",
+  "agent": "weight-edit-session subagent (read-only handoff)",
+  "summary": {
+    "contractLines": 21,
+    "recommendEquals": 5,
+    "recommendNotEquals": 16,
+    "recommendDash": 0,
+    "recommendQuestion": 0,
+    "codeChanged": false,
+    "productAnchor": "Ближайший живой UI — is-exercise-open BuilderScreen + ProposalStrip (14b) + ProposalStartedScreen (Л2); целевой кадр Г4 (inline-метка в таблице) не реализован",
+    "schemaBlocker": "Канвас «2 · автор и время на подходе» (strength-builder.v4.dc.html:2425) — поля в схеме подхода отсутствуют"
+  },
+  "rows": [
+    {
+      "contractLine": "Правка веса в сессии · 01",
+      "verdict": "=",
+      "f": "Шапка открытого упражнения: .sb-builder-screen.is-exercise-open .sb-head — heys_strength_builder_ui_v1.js:1632–1665; 750-strength-builder.css:3466+."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 02",
+      "verdict": "=",
+      "f": ".sb-builder-screen .sb-head-title { flex-direction: column; gap: 3px; } — 750-strength-builder.css:3246–3251."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 03",
+      "verdict": "≠",
+      "reasonCode": "copy-format",
+      "f": "Кадр: «Жим гантелей сидя» только в .ttl. Продукт: openEx.name + « · » + approachCountLabel(N подходов) в .sb-head-title b — builder_ui:1638–1639."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 04",
+      "verdict": "≠",
+      "reasonCode": "copy-placement",
+      "f": "Кадр: ключ «подход 3 из 4» в .k под заголовком. Продукт: .sb-head-sub несёт unitEntryLabel/bodyweightHeadKey/дату сессии, не прогресс подхода; «подход N из M» живёт в stateLabel свёрнутой строки (:677) и stats, не в ключе шапки."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 05",
+      "verdict": "=",
+      "f": "Область прокрутки .sb-list — builder_ui:1693+; 750-strength-builder.css:3474+ (.sb-builder-screen.is-exercise-open .sb-list)."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 06",
+      "verdict": "≠",
+      "reasonCode": "geometry",
+      "f": "Кадр: карточка .grp margin-top 12px вокруг таблицы. Продукт: таблица в .sb-ex-body > .sb-aps; margin-top 10px у .sb-aps-head и 6px у .sb-aps для weight_reps (750:3587–3608), без обёртки .grp."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 07",
+      "verdict": "=",
+      "f": "«Вес, кг» center: .sb-builder-screen.is-exercise-open .sb-aps-head > span:nth-child(2) { text-align: center; } — 750:3601–3603; заголовок рендерит ExerciseCard superset_ui:1668–1671."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 08",
+      "verdict": "≠",
+      "reasonCode": "color",
+      "f": "Кадр: «✓» center + color var(--gr). Продукт: justify-self center у :last-child (750:3594–3598), но явного var(--gr) для weight_reps нет (есть только у is-bodyweight-entry :4773+). Цвет наследует --sb-mut."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 09",
+      "verdict": "≠",
+      "reasonCode": "color",
+      "f": "Кадр: закрытый «1» — bg var(--gr-bg), color var(--gr). Продукт weight_reps: .sb-ap.is-done .sb-ap-num → var(--sb-soft) + rgba(ink,.62) — 750:3671–3673 (не gr-bg/gr; отличие от bodyweight-entry, где gr совпадает — 4844–4847)."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 10",
+      "verdict": "≠",
+      "reasonCode": "missing-ui",
+      "decisionRef": "strength-builder.v4.dc.html:681,2361,2425",
+      "f": "Кадр: плашка между строками — flex center, gap 7px, margin 6px 0, padding 7px 10px, radius 10px, bg var(--c2). В продукте между .sb-ap строк нет вставки; правка идёт через .sb-proposal-strip над списком (proposal_ui:431–443, builder_ui:1687–1691)."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 11",
+      "verdict": "≠",
+      "reasonCode": "missing-ui",
+      "f": "Кадр: кружок «А» 20×20 radius 999, bg var(--ac), color var(--bg), 700 10px/1. Нет класса/DOM для аватар-буквы в ApproachRow/ExerciseCard — rg «поставил|sb-ap-author» по apps/web/strength пуст."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 12",
+      "verdict": "≠",
+      "reasonCode": "missing-ui-and-schema",
+      "decisionRef": "strength-builder.v4.dc.html:2425",
+      "f": "Кадр: «Артём поставил 25 кг · 19:12» — 600 10.5px/1.3 var(--ac). Строка нигде не рендерится; в схеме подхода нет author/editedAt (канвас «2 · автор и время на подходе»)."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 13",
+      "verdict": "=",
+      "f": "Разделитель none у текущей строки: exercise-open таблица на gap-layout без border-bottom между .sb-ap (750:3606–3612); последняя/текущая строка без нижней черты — как кадр .tb border-bottom:none."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 14",
+      "verdict": "≠",
+      "reasonCode": "color",
+      "f": "Кадр: текущий «3» — bg var(--acs), color var(--on-acs). Продукт weight_reps: .sb-ap.is-current .sb-ap-num → var(--sb-bg) + inset border (750:1287–1290, 3614–3623). acs/on-acs только у is-time-entry / is-distance-entry / is-bodyweight-entry (750:4793–4851), не у обычного вес×повторы кадра Г4."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 15",
+      "verdict": "≠",
+      "reasonCode": "missing-ui",
+      "f": "Кадр: список .cd margin-top 10px под таблицей («Правка пришла»). В exercise-open нет .cd/.sb-* блока с отступом 10px после .sb-aps; ProposalStartedScreen (Л2) — другой экран."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 16",
+      "verdict": "≠",
+      "reasonCode": "missing-ui",
+      "f": "Кадр: строка списка .cd > .row. Нет DOM «Правка пришла / Что менялось» в BuilderScreen is-exercise-open."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 17",
+      "verdict": "≠",
+      "reasonCode": "missing-copy",
+      "f": "Кадр: «Правка пришла» color var(--tx). Строка не рендерится; ближайший текст «Артём подправил план» — ProposalStrip (proposal_ui:439), другой экран и формулировка."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 18",
+      "verdict": "≠",
+      "reasonCode": "missing-copy",
+      "f": "Кадр: «после начала сессии» — 600 11px/1 rgba(ink,.56). Нет в продукте на целевом кадре; частично созвучно footnote у комментария куратора (superset_ui:1664–1665), но другой блок и не про вес подхода."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 19",
+      "verdict": "≠",
+      "reasonCode": "missing-ui",
+      "f": "Кадр: вторая строка списка border-bottom none. Блок списка отсутствует — см. ·15–·17."
+    },
+    {
+      "contractLine": "Правка веса в сессии · 20",
+      "verdict": "≠",
+      "reasonCode": "missing-copy",
+      "f": "Кадр: сноска «Куратор не переписывает… диалог двух версий отложен». Продукт: похожая мысль только в .sb-cur-comment-foot при комментарии куратора (superset_ui:1664–1665), без второй части про диалог версий и не на экране правки веса."
+    },
+    {
+      "contractLine": "Правка веса в сессии · текст",
+      "verdict": "≠",
+      "reasonCode": "missing-ui",
+      "f": "Составной текст кадра (имя › подход 3 из 4 › … › Артём поставил 25 кг · 19:12 › … › вес подхода 3 › сноска) не собирается одним экраном. Части таблицы/шапки есть в is-exercise-open; метка авторства, карточка «Правка пришла» и полная сноска — нет. Смоук describePlanEdit (strength-proposal-ui.test.js:181–201) покрывает diff логику, не DOM Г4."
+    }
+  ],
+  "codeNeeded": [
+    {
+      "file": "apps/web/_kernel/heys_kernel_strength_v1.js",
+      "what": "Поля author + editedAt (или эквивалент) на подходе; протокол записи при кураторской правке веса",
+      "why": "Канвас «2 · автор и время на подходе» (2425) — без схемы строка «Артём поставил 25 кг · 19:12» неоткуда брать"
+    },
+    {
+      "file": "apps/web/__tests__/strength-builder-weight-edit-session-v4-canvas-contract.test.js",
+      "what": "Новый контрактный тест Г4: inline-метка, карточка «Правка пришла», ключ «подход N из M», gr/acs на weight_reps",
+      "why": "Гейт сведения для 21 строки; эталон — strength-builder-weight-entry-v4-canvas-contract.test.js"
+    }
+  ],
+  "ownerCodeNeeded": [
+    {
+      "file": "apps/web/strength/heys_strength_builder_ui_v1.js",
+      "what": "В is-exercise-open: ключ «подход N из M» в .sb-head-sub; вставка метки авторства между строками таблицы при pending/applied curator weight edit; карточка «Правка пришла / после начала сессии / Что менялось»",
+      "why": "Кадр Г4 — inline в таблице, не только ProposalStrip (1687–1691) и не полный Л2 ProposalStartedScreen (265+)"
+    },
+    {
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "what": "ApproachRow/ExerciseCard: hook для authorship-row между .sb-ap; формат fmtAuthorWeightStamp(proposal, approachIndex)",
+      "why": "Таблица подходов рендерится здесь (:1524–1674); builder_ui не рисует строки напрямую"
+    },
+    {
+      "file": "apps/web/styles/modules/750-strength-builder.css",
+      "what": "Стили .sb-authorship-pill (c2, 7/10, radius 10), avatar 20 ac/bg, текст 10.5 ac; weight_reps done num gr-bg/gr и current acs/on-acs; .cd margin-top 10 под таблицей; ✓ header var(--gr)",
+      "why": "Строки ·08–·14, ·15–·20 контракта"
+    },
+    {
+      "file": "docs/ui/verdicts/strength-builder.json",
+      "what": "Проставить =/≠ по этому handoff после реализации + --rehash",
+      "why": "21 строка сейчас v:? с заглушкой «Нужна построчная visual/runtime-сверка»"
+    }
+  ],
+  "interimUxNote": "ProposalStrip + ProposalStartedScreen закрывают сценарий «правка посреди сессии» иначе, чем Г4: полоска/разбор вместо inline-метки. proposal-ui handoff «вид · куратор в зале» = для strip; Г4 — отдельный целевой кадр.",
+  "testsRun": [
+    "pnpm ui:v4:check:roles",
+    "cd apps/web && npx vitest run __tests__/role-fallback-truth.test.js",
+    "cd apps/web && npx vitest run __tests__/strength-proposal-ui.test.js",
+    "cd apps/web && npx vitest run __tests__/strength-builder-proposal-started-v4-canvas-contract.test.js",
+    "cd apps/web && npx vitest run __tests__/strength-builder-weight-entry-v4-canvas-contract.test.js"
+  ]
+}
