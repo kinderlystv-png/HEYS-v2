@@ -217,3 +217,24 @@ XP: `.onboarding-fusion__*`, `.game-*`, `.flying-xp-item`, `.roadmap-*`,
 > `home-widgets`. Второе такое место, главная кнопка шага приёма, снято тем же
 > решением: переходит с `--v4-sand-act` на `--v4-act`. Два исключения по одному
 > признаку — это уже не исключение, а вторая система.
+
+## Приёмка янтарных батчей — четыре гейта по порядку
+
+После правок CSS в `apps/web/styles/modules/` прогон обязателен **в этом
+порядке**. Три regex-гейта не ловят битый синтаксис (незакрытые скобки) — три
+раза за 4 сентября они выходили с кодом 0 на файлах, которые postcss не парсит.
+Четвёртый гейт закрывает эту дыру.
+
+| #   | гейт                            | команда                                                               |
+| --- | ------------------------------- | --------------------------------------------------------------------- |
+| 1   | `ui-check-undeclared-vars`      | `node scripts/ui-check-undeclared-vars.mjs`                           |
+| 2   | `ui-v4-check-undefined-roles`   | `node scripts/ui-v4-check-undefined-roles.mjs`                        |
+| 3   | `ui-v4-check-foreign-fallbacks` | `node scripts/ui-v4-check-foreign-fallbacks.mjs`                      |
+| 4   | `role-fallback-truth` (postcss) | `cd apps/web && npx vitest run __tests__/role-fallback-truth.test.js` |
+
+Четвёртый гейт сканирует **все** `*.css` в `styles/modules/`, не только файлы
+батча: синтаксическая ошибка в любом модуле роняет прогон.
+
+**Единая команда:** `pnpm ui:v4:check:roles` — все четыре гейта подряд с тем же
+порядком, что в `package.json`. Полный `pnpm ui:v4:check` начинается с неё и
+дальше тянет гейты вердиктов и контракта.
