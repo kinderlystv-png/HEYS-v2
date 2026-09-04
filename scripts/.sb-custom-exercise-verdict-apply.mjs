@@ -3,19 +3,9 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { applyVerdictToRow } = await import(
-  pathToFileURL(path.join(ROOT, 'scripts/ui-v4-set-verdict.mjs')).href
-);
-const { readZone, writeZone } = await import(
+const { setVerdictKey } = await import(
   pathToFileURL(path.join(ROOT, 'scripts/lib/ui-v4-verdicts.mjs')).href
 );
-
-const zone = readZone('strength-builder');
-const rows = zone.rows;
-
-function set(key, verdict, fact, options = {}) {
-  applyVerdictToRow(rows[key], { verdict, fact, options }, ROOT);
-}
 
 const equals = [
   ['Своё упражнение · 18', '.sb-block обёртка шага 3 — catalog_ui:328-331 (weight_reps) и :336-353 (bodyweight); 750 .sb-block :1879-1884; карточка .grp ≈ .sb-block.'],
@@ -37,22 +27,26 @@ const notEquals = [
   ['Своё упражнение · 17', 'Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56% — близко по роли, layout chips.', 'canvas-conflict'],
 ];
 
+const DREF = 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506';
+
 let applied = 0;
 for (const [key, fact] of equals) {
-  if (rows[key].v !== '=' || rows[key].f !== fact) {
-    set(key, '=', fact);
-    applied += 1;
-  }
+  const result = setVerdictKey('strength-builder', key, { verdict: '=', fact, options: {} }, {
+    root: ROOT,
+    skipIf: (row) => row.v === '=' && row.f === fact,
+  });
+  if (!result.skipped) applied += 1;
 }
 for (const [key, fact, reasonCode] of notEquals) {
-  if (rows[key].v !== '≠' || rows[key].f !== fact) {
-    set(key, '≠', fact, {
-      'reason-code': reasonCode,
-      'decision-ref': 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506'
-    });
-    applied += 1;
-  }
+  const result = setVerdictKey('strength-builder', key, {
+    verdict: '≠',
+    fact,
+    options: { 'reason-code': reasonCode, 'decision-ref': DREF },
+  }, {
+    root: ROOT,
+    skipIf: (row) => row.v === '≠' && row.f === fact,
+  });
+  if (!result.skipped) applied += 1;
 }
 
-writeZone('strength-builder', zone);
 console.log(`custom-exercise 08-23: applied ${applied} verdict updates`);

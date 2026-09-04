@@ -24,7 +24,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { applyVerdictToRow } = await import(
   pathToFileURL(path.join(ROOT, 'scripts/ui-v4-set-verdict.mjs')).href
 );
-const { readZone, writeZone } = await import(
+const { readZone, writeZone, shouldSkipStaleHandoff } = await import(
   pathToFileURL(path.join(ROOT, 'scripts/lib/ui-v4-verdicts.mjs')).href
 );
 
@@ -186,9 +186,7 @@ function queueRow(ctx, source, rowKey, verdict, fact, options = {}) {
 }
 
 function shouldSkipNeqDowngrade(rows, rowKey, verdict, allowDowngrade) {
-  if (allowDowngrade || verdict !== '≠') return false;
-  const live = rows[rowKey];
-  return live?.v === '=';
+  return shouldSkipStaleHandoff(rows[rowKey], verdict, { allowDowngrade });
 }
 
 function ingestStandardRow(source, row, rows, ctx) {
@@ -342,52 +340,44 @@ export function buildBatchMap(handoffFiles, { withInline = false, allowDowngrade
   return ctx;
 }
 
-export function applyBatchMap(batchMap, { dryRun = false, log = console.log } = {}) {
-  const zone = readZone(ZONE_ID);
-  if (!zone) throw new Error(`zone ${ZONE_ID} not found`);
-  const rows = zone.rows;
-  const handoffKeys = new Set(batchMap.keys());
-  const beforeForeign = {};
-  for (const [key, row] of Object.entries(rows)) {
-    if (!handoffKeys.has(key)) beforeForeign[key] = rowSnapshot(row);
-  }
-
+export function applyBatchMap(batchMap, { dryRun = false, allowDowngrade = false, log = console.log } = {}) {
   let applied = 0;
   let skippedSame = 0;
+  let skippedStale = 0;
+
   for (const [key, verdict, fact, options] of batchMap.values()) {
-    const row = rows[key];
+    const zone = readZone(ZONE_ID);
+    if (!zone) throw new Error(`zone ${ZONE_ID} not found`);
+    const row = zone.rows[key];
     if (!row) continue;
+
+    if (shouldSkipStaleHandoff(row, verdict, { allowDowngrade })) {
+      skippedStale += 1;
+      continue;
+    }
     if (row.v === verdict && row.f === fact) {
       skippedSame += 1;
       continue;
     }
+
     applyVerdictToRow(row, { verdict, fact, options }, ROOT);
+    if (!dryRun) writeZone(ZONE_ID, zone);
     applied += 1;
   }
 
-  const foreignViolations = [];
-  for (const [key, snap] of Object.entries(beforeForeign)) {
-    if (rowSnapshot(rows[key]) !== snap) foreignViolations.push(key);
-  }
-  if (foreignViolations.length) {
-    throw new Error(
-      `foreign key mutation blocked (${foreignViolations.length}): ${foreignViolations.slice(0, 5).join(' · ')}${foreignViolations.length > 5 ? ' …' : ''}`,
-    );
-  }
-
-  if (!dryRun) writeZone(ZONE_ID, zone);
-
+  const live = readZone(ZONE_ID);
+  const rows = live?.rows || {};
   const counts = { '=': 0, '?': 0, '≠': 0, '—': 0 };
   for (const row of Object.values(rows)) counts[row.v] = (counts[row.v] || 0) + 1;
 
-  return { applied, skippedSame, counts, handoffKeys, rows };
+  return { applied, skippedSame, skippedStale, counts, handoffKeys: new Set(batchMap.keys()), rows };
 }
 
 export function runBatchApply({ files = [], withInline = false, allowDowngrade = false, dryRun = false, log = console.log } = {}) {
   const handoffFiles = files.length ? files : listDefaultHandoffFiles();
   const useInline = files.length ? withInline : true;
   const ctx = buildBatchMap(handoffFiles, { withInline: useInline, allowDowngrade, log });
-  const result = applyBatchMap(ctx.batchMap, { dryRun, log });
+  const result = applyBatchMap(ctx.batchMap, { dryRun, allowDowngrade, log });
   return { ...result, ...ctx, handoffFiles };
 }
 
@@ -398,7 +388,7 @@ function main() {
     return 0;
   }
 
-  const { applied, skippedSame, skippedMissing, skippedNeqStale, counts, batchMap, perFileCounts, handoffRowCounts, loadedHandoffs, missingKeys, handoffFiles } = runBatchApply({
+  const { applied, skippedSame, skippedMissing, skippedNeqStale, skippedStale, counts, batchMap, perFileCounts, handoffRowCounts, loadedHandoffs, missingKeys, handoffFiles } = runBatchApply({
     files: args.files,
     withInline: args.withInline,
     allowDowngrade: args.allowDowngrade,
@@ -421,7 +411,7 @@ function main() {
     }
   }
   console.log(`mode: ${args.files.length ? `single/multi file (${args.files.length})` : 'glob all handoffs'}`);
-  console.log(`unique keys queued: ${batchMap.size}; applied ${applied}; skipped unchanged ${skippedSame}; skipped missing ${skippedMissing}; skipped stale neq ${skippedNeqStale}`);
+  console.log(`unique keys queued: ${batchMap.size}; applied ${applied}; skipped unchanged ${skippedSame}; skipped missing ${skippedMissing}; skipped stale neq ${skippedNeqStale}; skipped stale apply ${skippedStale || 0}`);
   if (missingKeys.length) {
     console.log(`missing keys (${missingKeys.length}):`);
     for (const key of missingKeys) console.log(`  ${key}`);

@@ -102,8 +102,8 @@ function main() {
     console.warn(`warn: queued ${ctx.batchMap.size} vs handoff ${handoffKeys.size} (missing keys skipped)`);
   }
 
-  const { applied, skippedSame } = applyBatchMap(ctx.batchMap, { dryRun: false });
-  console.log(`apply: ${applied} changed, ${skippedSame} unchanged`);
+  const { applied, skippedSame, skippedStale } = applyBatchMap(ctx.batchMap, { dryRun: false, allowDowngrade: false, log: () => {} });
+  console.log(`apply: ${applied} changed, ${skippedSame} unchanged, ${skippedStale} stale`);
 
   const zoneAfter = readZone(ZONE_ID);
   let ok = assertG1Unchanged(g1Before, zoneAfter.rows);

@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { applyVerdictToRow } from '../../../../scripts/ui-v4-set-verdict.mjs';
+import { applyVerdictToRow } from '../../../../scripts/lib/ui-v4-verdicts.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '../../../..');

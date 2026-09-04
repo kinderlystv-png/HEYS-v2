@@ -3,15 +3,9 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { applyVerdictToRow } = await import(
-  pathToFileURL(path.join(ROOT, 'scripts/ui-v4-set-verdict.mjs')).href
-);
-const { readZone, writeZone } = await import(
+const { setVerdictKey } = await import(
   pathToFileURL(path.join(ROOT, 'scripts/lib/ui-v4-verdicts.mjs')).href
 );
-
-const zone = readZone('strength-builder');
-const rows = zone.rows;
 
 const equals = [
   ['Правка · клиент уже начал · 01', '.sb-proposal-started .sb-head — gap 10px, padding 16px 18px 0; 750-strength-builder.css.'],
@@ -59,16 +53,16 @@ const equals = [
 
 let applied = 0;
 for (const [key, fact] of equals) {
-  if (!rows[key]) {
-    console.warn('skip missing:', key);
-    continue;
+  try {
+    const result = setVerdictKey('strength-builder', key, { verdict: '=', fact, options: {} }, {
+      root: ROOT,
+      skipIf: (row) => row.v === '=' && row.f === fact,
+    });
+    if (result.skipped) continue;
+    applied += 1;
+  } catch (error) {
+    console.warn('skip missing:', key, error.message);
   }
-  if (rows[key].v === '=' && rows[key].f === fact) continue;
-  applyVerdictToRow(rows[key], { verdict: '=', fact, options: {} }, ROOT);
-  applied += 1;
 }
 
-writeZone('strength-builder', zone);
-const counts = { '=': 0, '?': 0, '≠': 0, '—': 0 };
-for (const row of Object.values(rows)) counts[row.v] = (counts[row.v] || 0) + 1;
-console.log(`B1/B2 applied ${applied}; totals: =${counts['=']} · ?=${counts['?']} · ≠=${counts['≠']} · —=${counts['—']} · всего ${Object.keys(rows).length}`);
+console.log(`B1/B2 applied ${applied}`);

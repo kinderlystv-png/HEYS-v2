@@ -1,5 +1,4 @@
-import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { patchZoneRow, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const CALM = 'apps/web/__tests__/strength-builder-calm-canvas-contract.test.js';
 const CSS = 'apps/web/styles/modules/750-strength-builder.css';
@@ -25,19 +24,19 @@ const ITEMS = [
   }],
 ];
 
-const zone = readZone('strength-builder');
 let changed = 0;
 for (const [key, { verdict, fact, options = {} }] of ITEMS) {
-  const row = zone.rows[key];
-  if (!row) {
-    console.error('нет строки', key);
-    process.exit(1);
+  const result = setVerdictKey('strength-builder', key, { verdict, fact, options }, {
+    skipIf: (row) => row.v === verdict && row.f === fact,
+  });
+  if (result.skipped) {
+    console.log(`${key}  skip`);
+    continue;
   }
-  const was = row.v;
-  applyVerdictToRow(row, { verdict, fact, options });
-  delete row.evidence;
-  if (was !== verdict || row.f !== fact) changed += 1;
-  console.log(`${key}  ${was} → ${verdict}`);
+  patchZoneRow('strength-builder', key, (row) => {
+    delete row.evidence;
+  });
+  changed += 1;
+  console.log(`${key}  ${result.was.v} → ${verdict}`);
 }
-writeZone('strength-builder', zone);
 console.log(`updated ${changed} rows`);

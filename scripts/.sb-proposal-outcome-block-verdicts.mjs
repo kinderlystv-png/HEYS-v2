@@ -3,10 +3,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { applyVerdictToRow } = await import(
-  pathToFileURL(path.join(ROOT, 'scripts/ui-v4-set-verdict.mjs')).href
-);
-const { readZone, writeZone } = await import(
+const { setVerdictKey } = await import(
   pathToFileURL(path.join(ROOT, 'scripts/lib/ui-v4-verdicts.mjs')).href
 );
 
@@ -25,12 +22,7 @@ const rows = [
   ['Правка легла не полностью · текст', '=', 'DOM ProposalOutcome: title/prose/Жим лёжа/Тяга/легло/не легло — strength-proposal-v4-canvas-contract.test.js D2 it.'],
 ];
 
-const zone = readZone('strength-builder');
 for (const [key, verdict, fact, options = {}] of rows) {
-  applyVerdictToRow(zone.rows[key], { verdict, fact, options }, ROOT);
+  setVerdictKey('strength-builder', key, { verdict, fact, options }, { root: ROOT });
 }
-writeZone('strength-builder', zone);
-const c = { '=': 0, '?': 0, '≠': 0, '—': 0 };
-for (const row of Object.values(zone.rows)) c[row.v] = (c[row.v] || 0) + 1;
 console.log(`closed ${rows.length} proposal-outcome rows`);
-console.log(`totals: =${c['=']} · ?=${c['?']} · ≠=${c['≠']} · —=${c['—']} · всего ${Object.keys(zone.rows).length}`);

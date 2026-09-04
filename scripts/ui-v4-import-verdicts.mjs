@@ -21,7 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readAllZones, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { patchZoneRow, readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PACK = path.join(
@@ -78,7 +78,7 @@ if (!dirArg) {
 }
 const dry = flags.includes('--dry');
 
-const data = readAllZones();
+const data = { zones: {} };
 const problems = [];
 const report = [];
 /** Зоны, пришедшие из каталога: только их файлы и переписываются. */
@@ -148,8 +148,33 @@ if (problems.length) {
 }
 console.log(report.join('\n'));
 if (!dry) {
-  // Пишем только зоны, которые пришли из каталога: остальные файлы не трогаем.
-  for (const zoneId of touched) writeZone(zoneId, data.zones[zoneId]);
+  for (const zoneId of touched) {
+    const imported = data.zones[zoneId];
+    for (const [key, rowData] of Object.entries(imported.rows)) {
+      const live = readZone(zoneId);
+      if (!live?.rows?.[key]) {
+        const zone = live || { rows: {}, canvas: imported.canvas, contractOnly: imported.contractOnly, recorded: imported.recorded };
+        zone.rows[key] = { ...rowData };
+        zone.canvas = imported.canvas;
+        zone.contractOnly = imported.contractOnly;
+        zone.recorded = imported.recorded;
+        writeZone(zoneId, zone);
+      } else {
+        patchZoneRow(zoneId, key, (row) => {
+          row.v = rowData.v;
+          row.f = rowData.f;
+          row.h = rowData.h;
+        });
+      }
+    }
+    const zone = readZone(zoneId);
+    if (zone) {
+      zone.canvas = imported.canvas;
+      zone.contractOnly = imported.contractOnly;
+      zone.recorded = imported.recorded;
+      writeZone(zoneId, zone);
+    }
+  }
   console.log(`\nЗаписано зон: ${touched.size}.`);
 } else {
   console.log('\n--dry: файлы не тронуты.');

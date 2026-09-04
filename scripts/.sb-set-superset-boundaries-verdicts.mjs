@@ -1,5 +1,4 @@
-import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { patchZoneRow, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const TEST = 'apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js';
 const CSS = 'apps/web/styles/modules/750-strength-builder.css';
@@ -33,19 +32,15 @@ const ITEMS = [
   ['вид · замена связки', `Кадр Д3: SupersetBoundariesScreen — .sb-ss-bound-pair с колонками was/will, .sb-ss-bound-tier, .sb-ss-bound-list и badge на --gr-bg/--gr; в разборе правки тот же SupersetBoundariesBody в .sb-proposal-boundaries — ${SS}:1527-1545, ${PROP}:309-315, ${CSS}:3816-3944; геометрия+цвет ${TEST}.`],
 ];
 
-const zone = readZone('strength-builder');
 let changed = 0;
 for (const [key, fact] of ITEMS) {
-  const row = zone.rows[key];
-  if (!row) {
-    console.error('нет строки', key);
-    process.exit(1);
-  }
-  const was = row.v;
-  applyVerdictToRow(row, { verdict: '=', fact, options: {} });
-  delete row.evidence;
-  if (was !== '=' || row.f !== fact) changed += 1;
-  console.log(`${key}  ${was} → =`);
+  setVerdictKey('strength-builder', key, { verdict: '=', fact, options: {} }, {
+    skipIf: (row) => row.v === '=' && row.f === fact,
+  });
+  patchZoneRow('strength-builder', key, (row) => {
+    delete row.evidence;
+  });
+  changed += 1;
+  console.log(`${key}  → =`);
 }
-writeZone('strength-builder', zone);
 console.log(`updated ${changed} rows`);

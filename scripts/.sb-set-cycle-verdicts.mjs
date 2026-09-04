@@ -1,11 +1,4 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const file = path.join(root, 'docs/ui/verdicts/strength-builder.json');
-const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-const rows = data.rows || data;
+import { patchZoneRow, readZone, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const FACT = 'CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js';
 
@@ -47,22 +40,28 @@ const lineFacts = {
 
 let n = 0;
 for (const [num, fact] of Object.entries(lineFacts)) {
-  const key = 'Программа · цикл · ' + num;
-  if (!rows[key]) continue;
-  rows[key] = { v: '=', f: fact + '; ' + FACT, h: rows[key].h };
-  delete rows[key].reasonCode;
-  delete rows[key].decisionRef;
-  n++;
+  const key = `Программа · цикл · ${num}`;
+  if (!readZone('strength-builder')?.rows?.[key]) continue;
+  setVerdictKey('strength-builder', key, {
+    verdict: '=',
+    fact: `${fact}; ${FACT}`,
+    options: {},
+  });
+  patchZoneRow('strength-builder', key, (row) => {
+    delete row.reasonCode;
+    delete row.decisionRef;
+  });
+  n += 1;
 }
 
-if (rows['вид · экран цикла']) {
-  rows['вид · экран цикла'] = {
-    v: '=',
-    f: 'Кадр Г1 stop: CycleScreen DOM+CSS сверен strength-builder-cycle-v4-canvas-contract.test.js; вход ProgramNextLine › программа.',
-    h: rows['вид · экран цикла'].h
-  };
-  n++;
+const viewKey = 'вид · экран цикла';
+if (readZone('strength-builder')?.rows?.[viewKey]) {
+  setVerdictKey('strength-builder', viewKey, {
+    verdict: '=',
+    fact: 'Кадр Г1 stop: CycleScreen DOM+CSS сверен strength-builder-cycle-v4-canvas-contract.test.js; вход ProgramNextLine › программа.',
+    options: {},
+  });
+  n += 1;
 }
 
-fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 console.log('updated', n, 'verdict rows');

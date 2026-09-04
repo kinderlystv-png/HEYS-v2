@@ -1,5 +1,4 @@
-import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const SMOKE = 'widgets-rings-v4-contract.test.js';
 const UI = 'heys_widgets_ui_v1.js';
@@ -105,22 +104,17 @@ const ROWS = [
   ],
 ];
 
-const zone = readZone('home-widgets');
 let applied = 0;
 for (const row of ROWS) {
   const [key, verdict, fact] = row;
-  const entry = zone.rows[key];
-  if (!entry) {
-    console.error('нет строки', key);
-    process.exit(1);
-  }
-  if (entry.v !== '?') {
-    console.log(`${key}  skip (${entry.v})`);
+  const result = setVerdictKey('home-widgets', key, { verdict, fact, options: {} }, {
+    skipIf: (entry) => entry.v !== '?',
+  });
+  if (result.skipped) {
+    console.log(`${key}  skip (${result.was.v})`);
     continue;
   }
-  applyVerdictToRow(entry, { verdict, fact, options: {} });
   applied += 1;
   console.log(`${key}  ? → ${verdict}`);
 }
-writeZone('home-widgets', zone);
 console.log(`applied ${applied}`);
