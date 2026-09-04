@@ -474,6 +474,15 @@ function runVitest({ full = false, tests = [] } = {}) {
   const env = {
     ...process.env,
     NODE_PATH: [runtimeNodeModules, process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
+    // Тот же контур, что у деплойного гейта, который эта проверка зеркалит.
+    // Гейты сведения с канвасом (`*-canvas-{razbor,geometry,copy}` и список в
+    // apps/web/vitest.config.ts) краснеют, когда приехал пакет дизайна, а зоны
+    // под него ещё не сведены. Решением 3 сентября это состояние работы, а не
+    // поломка продукта, и выкатку оно не держит: CI гоняет их отдельным
+    // workflow. Здесь их не выключили, и push оказался заблокирован тем, что
+    // деплой пропускает, — то есть строже собственного гейта, который он
+    // зеркалит. Переопределить можно снаружи: HEYS_DESIGN_GATES=only.
+    HEYS_DESIGN_GATES: process.env.HEYS_DESIGN_GATES || 'skip',
   };
 
   try {
