@@ -123,6 +123,101 @@
     return { frozen: frozen, ahead: ahead };
   }
 
+  function memberLinesForBlock(exercises, indexes, roundCount) {
+    const Parts = HEYS.StrengthBuilderParts || {};
+    if (typeof Parts.supersetMemberLines === 'function') {
+      return Parts.supersetMemberLines(exercises, indexes, roundCount);
+    }
+    return (Array.isArray(indexes) ? indexes : []).map(function (i) {
+      return exercises[i] && exercises[i].name ? exercises[i].name : '';
+    });
+  }
+
+  function blockRoundCount(exercises, indexes, ks) {
+    const rounds = ks.supersetRounds(exercises, exercises[indexes[0]] && exercises[indexes[0]].ssGroup);
+    if (rounds) return rounds.length;
+    const counts = indexes.map(function (i) { return ks.workApproaches(exercises[i]).length; });
+    return counts.length ? Math.min.apply(null, counts) : 0;
+  }
+
+  function namesEqual(left, right) {
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i++) {
+      if (left[i] !== right[i]) return false;
+    }
+    return true;
+  }
+
+  function currentSupersetRound(exercises, groupId, ks) {
+    const rounds = ks.supersetRounds(exercises, groupId);
+    if (!rounds || !rounds.length) return { current: 0, total: 0 };
+    for (let ri = 0; ri < rounds.length; ri++) {
+      const cells = rounds[ri];
+      for (let ci = 0; ci < cells.length; ci++) {
+        const a = exercises[cells[ci].exerciseIndex].approaches[cells[ci].approachIndex];
+        if (!ks.isApproachDone(a)) return { current: ri + 1, total: rounds.length };
+      }
+    }
+    return { current: rounds.length, total: rounds.length };
+  }
+
+  /**
+   * Границы правки связки для кадра Д3: не начатая меняется целиком парой
+   * «было → станет», начатая держит состав до конца.
+   */
+  function describeSupersetBoundaries(liveExercises, proposedExercises) {
+    const ks = kernel();
+    const replacements = [];
+    const frozen = [];
+    if (!ks) return { replacements: replacements, frozen: frozen };
+
+    const live = Array.isArray(liveExercises) ? liveExercises : [];
+    const proposed = Array.isArray(proposedExercises) ? proposedExercises : [];
+    const liveBlocks = ks.orderBlocks(live);
+    const proposedBlocks = ks.orderBlocks(proposed);
+    const liveByGroup = {};
+    liveBlocks.forEach(function (block) {
+      if (block.groupId) liveByGroup[block.groupId] = block;
+    });
+    const seen = {};
+
+    proposedBlocks.forEach(function (pb) {
+      if (!pb.groupId || pb.indexes.length < 2 || seen[pb.groupId]) return;
+      const lb = liveByGroup[pb.groupId];
+      if (!lb || lb.indexes.length < 2) return;
+      seen[pb.groupId] = true;
+
+      const started = lb.indexes.some(function (i) { return ks.hasDoneApproach(live[i]); });
+      const liveNames = lb.indexes.map(function (i) { return live[i].name; });
+      const propNames = pb.indexes.map(function (i) { return proposed[i].name; });
+      const liveRounds = blockRoundCount(live, lb.indexes, ks);
+      const propRounds = blockRoundCount(proposed, pb.indexes, ks);
+      const compositionChanged = !namesEqual(liveNames, propNames) || liveRounds !== propRounds;
+      if (!compositionChanged) return;
+
+      if (started) {
+        const letter = HEYS.StrengthBuilderParts && HEYS.StrengthBuilderParts.supersetGroupLetter
+          ? HEYS.StrengthBuilderParts.supersetGroupLetter(pb.groupId)
+          : 'A';
+        const round = currentSupersetRound(live, pb.groupId, ks);
+        frozen.push({
+          title: 'Связка ' + letter + ' · раунд ' + round.current + ' из ' + round.total,
+          subtitle: 'состав заморожен до конца',
+          badge: 'закрыта'
+        });
+        return;
+      }
+
+      replacements.push({
+        key: 'связка не начата',
+        beforeLines: memberLinesForBlock(live, lb.indexes, liveRounds),
+        afterLines: memberLinesForBlock(proposed, pb.indexes, propRounds)
+      });
+    });
+
+    return { replacements: replacements, frozen: frozen };
+  }
+
   const KIND_SIGN = { added: '+', removed: '−', changed: '~', same: '·' };
 
   /**
@@ -197,7 +292,9 @@
     if (!proposal) return null;
     const wl = (training && training.workoutLog) || {};
     const diff = describePlanEdit(wl.exercises, proposal.exercises);
+    const boundaries = describeSupersetBoundaries(wl.exercises, proposal.exercises);
     const who = proposal.proposedBy || 'Куратор';
+    const BoundBody = HEYS.StrengthBuilderParts && HEYS.StrengthBuilderParts.SupersetBoundariesBody;
 
     return h('div', { className: 'sb-root sb-proposal-review' },
       h('div', { className: 'sb-head' },
@@ -209,6 +306,14 @@
         )
       ),
       h('div', { className: 'sb-list' },
+        BoundBody && (boundaries.replacements.length > 0 || boundaries.frozen.length > 0)
+          && h('section', { className: 'sb-proposal-boundaries' },
+            h('div', { className: 'sb-proposal-section-title' }, 'Связка · границы правки'),
+            h(BoundBody, {
+              replacements: boundaries.replacements,
+              frozen: boundaries.frozen
+            })
+          ),
         diff.frozen.length > 0 && h('section', { className: 'sb-proposal-frozen' },
           h('div', { className: 'sb-proposal-section-title' },
             h('span', { className: 'sb-lock' }, '🔒'),
@@ -429,6 +534,7 @@
   Parts.openProposalReview = openReview;
   Parts.closeProposalReview = closeReview;
   Parts.describePlanEdit = describePlanEdit;
+  Parts.describeSupersetBoundaries = describeSupersetBoundaries;
   Parts.ProposalCard = ProposalCard;
   Parts.ProposalReview = ProposalReview;
   Parts.ProposalStrip = ProposalStrip;

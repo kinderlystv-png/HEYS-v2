@@ -4905,145 +4905,109 @@
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "175bdcc2e73a",
-      "evidence": [
-        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
-      ]
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 02": {
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "07ffbada0ee7",
-      "evidence": [
-        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
-      ]
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 03": {
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "b948a7bf7ffa",
-      "evidence": [
-        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
-      ]
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 04": {
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "79f2acd79e23",
-      "evidence": [
-        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
-      ]
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 05": {
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "c629f84f9712",
-      "evidence": [
-        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
-      ]
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "План в ленте дня · 06": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "81d6d8e40a85",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 07": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "869d1e5dd696",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 08": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "addb1ad16c00",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 09": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "b4a4fa9ae422",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 10": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "00ceac024a98",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 11": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "76deaf58abb7",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 12": {
       "v": "=",
       "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "410f53ff185c",
-      "evidence": [
-        "dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 13": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "94a2209f25bb",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 14": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "7df83bd94c9e",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 15": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "f250c86095df",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 16": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "c0d7c8cb1544",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 17": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "77e4b4025f38",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 18": {
       "v": "≠",
       "f": "Unsafe early start is intentionally absent because the owner contract has no fact-date rule.",
       "h": "32404415abea",
-      "evidence": [
-        "semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ],
+      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
@@ -5051,9 +5015,7 @@
       "v": "≠",
       "f": "Transfer is intentionally the sole primary action after unsafe early start is removed.",
       "h": "096e30f25e4f",
-      "evidence": [
-        "semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ],
+      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
@@ -5061,129 +5023,97 @@
       "v": "=",
       "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "5cf087fff7b6",
-      "evidence": [
-        "dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 21": {
       "v": "=",
       "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "54643961e08d",
-      "evidence": [
-        "dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 22": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "0e0d875194db",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 23": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "cbb5c1f8e50f",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 24": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "2612a29a6aa6",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 25": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "0712125d3ac4",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 26": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "ea40d5b7e5ed",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 27": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "c013a0005595",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 28": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "895d864e529b",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 29": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "c5fea7338543",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 30": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "0ddbabb4c903",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 31": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "d116851f82d0",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 32": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "d55c4db65a48",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 33": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "3c87cb21ff36",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 34": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "0b68cc8e46d1",
-      "evidence": [
-        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 35": {
       "v": "=",
       "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "3e002c1a437f",
-      "evidence": [
-        "dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"
-      ]
+      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "День не состоялся · 01": {
       "v": "?",
@@ -8201,9 +8131,7 @@
       "v": "=",
       "f": "Rendered DOM тест доказывает точную составную строку текста А2.",
       "h": "98feae4e48c2",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
-      ]
+      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Конструктор · разминка и дроп-сет · текст": {
       "v": "?",
@@ -8349,9 +8277,7 @@
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "47c4373b8180",
-      "evidence": [
-        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
-      ]
+      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
     },
     "День не состоялся · текст": {
       "v": "?",
@@ -9362,17 +9288,13 @@
       "v": "=",
       "f": "Rendered DOM тест доказывает точную составную строку текста А1б · текст 1/2.",
       "h": "e7b6b6c40a06",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
-      ]
+      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Конструктор · тренировка идёт · спокойнее · текст 2/2": {
       "v": "=",
       "f": "Rendered DOM тест доказывает точную составную строку текста А1б · текст 2/2.",
       "h": "92226772e9f4",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
-      ]
+      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Программа · назначено против сделано · текст": {
       "v": "?",

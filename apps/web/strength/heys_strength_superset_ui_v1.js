@@ -1451,6 +1451,104 @@
 
   Parts.PlanCard = PlanCard;
 
+  function supersetGroupLetter(groupId) {
+    const n = +groupId || 0;
+    return n > 0 && n <= 26 ? String.fromCharCode(64 + n) : '?';
+  }
+
+  /** Строки участников связки для пары «было → станет», как на кадре Д3. */
+  function supersetMemberLines(exercises, indexes, roundCount) {
+    const list = Array.isArray(exercises) ? exercises : [];
+    const idx = Array.isArray(indexes) ? indexes : [];
+    const gid = idx.length && list[idx[0]] ? (+list[idx[0]].ssGroup || 0) : 0;
+    const letter = supersetGroupLetter(gid);
+    const lines = idx.map(function (i, mi) {
+      const ex = list[i];
+      return letter + (mi + 1) + ' ' + (ex && ex.name ? ex.name : '');
+    });
+    const rounds = +roundCount || 0;
+    if (rounds > 0) {
+      lines.push(rounds + ' ' + ruPlural(rounds, 'раунд', 'раунда', 'раундов'));
+    }
+    return lines;
+  }
+
+  /**
+   * Кадр Д3 «Связка · границы правки»: пара «было → станет» для не начатой
+   * связки и полоса заморозки для начатой. В разборе правки показывается
+   * телом панели; отдельный экран добавляет шапку с именем куратора.
+   */
+  function SupersetBoundariesBody(props) {
+    const replacements = Array.isArray(props.replacements) ? props.replacements : [];
+    const frozen = Array.isArray(props.frozen) ? props.frozen : [];
+    if (!replacements.length && !frozen.length) return null;
+
+    return h('div', { className: 'sb-ss-bound' },
+      replacements.map(function (row, i) {
+        return h('div', { key: 'r' + i, className: 'sb-ss-bound-grp' },
+          h('div', { className: 'sb-ss-bound-pair' },
+            h('div', { className: 'sb-ss-bound-col sb-ss-bound-col--was' },
+              h('span', { className: 'sb-ss-bound-label sb-ss-bound-label--was' }, 'было'),
+              h('span', { className: 'sb-ss-bound-lines' },
+                row.beforeLines.map(function (line, li) {
+                  return h('span', { key: 'b' + li }, line, li < row.beforeLines.length - 1 ? h('br', null) : null);
+                }))
+            ),
+            h('span', { className: 'sb-ss-bound-arrow', 'aria-hidden': 'true' }, '→'),
+            h('div', { className: 'sb-ss-bound-col sb-ss-bound-col--will' },
+              h('span', { className: 'sb-ss-bound-label sb-ss-bound-label--will' }, 'станет'),
+              h('span', { className: 'sb-ss-bound-lines' },
+                row.afterLines.map(function (line, li) {
+                  return h('span', { key: 'a' + li }, line, li < row.afterLines.length - 1 ? h('br', null) : null);
+                }))
+            )
+          ),
+          h('p', { className: 'sb-ss-bound-note' },
+            'Связка меняется как один блок: вынуть из неё одно упражнение куратор не может — раунды перестанут сходиться.')
+        );
+      }),
+      frozen.length > 0 && h('div', { className: 'sb-ss-bound-tier' }, 'Связка начата'),
+      frozen.length > 0 && h('div', { className: 'sb-ss-bound-list' },
+        frozen.map(function (row, i) {
+          return h('div', { key: 'f' + i, className: 'sb-ss-bound-row' },
+            h('span', { className: 'sb-ss-bound-row-main' },
+              h('span', { className: 'sb-ss-bound-row-title' }, row.title),
+              h('span', { className: 'sb-ss-bound-row-sub' }, row.subtitle)
+            ),
+            h('span', { className: 'sb-ss-bound-badge' }, row.badge || 'закрыта')
+          );
+        })
+      ),
+      frozen.length > 0 && h('p', { className: 'sb-ss-bound-note' },
+        'Начатую связку куратор не переставляет: раунды уже посчитаны, и подмена участника задним числом сделала бы прошлые раунды неправдой.')
+    );
+  }
+
+  function SupersetBoundariesScreen(props) {
+    const who = props.who || 'Куратор';
+    const replacements = Array.isArray(props.replacements) ? props.replacements : [];
+    const frozen = Array.isArray(props.frozen) ? props.frozen : [];
+    const key = replacements[0] && replacements[0].key ? replacements[0].key : 'границы правки связки';
+    return h('div', { className: 'sb-root sb-ss-bound-screen' },
+      h('div', { className: 'sb-head' },
+        props.onClose && h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: props.onClose, 'aria-label': 'Закрыть'
+        }, '✕'),
+        h('div', { className: 'sb-head-title sb-ss-bound-head' },
+          h('b', null, who + ' заменил связку'),
+          h('span', { className: 'sb-head-sub' }, key)
+        )
+      ),
+      h('div', { className: 'sb-list sb-ss-bound-scroll' },
+        h(SupersetBoundariesBody, { replacements: replacements, frozen: frozen })
+      )
+    );
+  }
+
+  Parts.supersetGroupLetter = supersetGroupLetter;
+  Parts.supersetMemberLines = supersetMemberLines;
+  Parts.SupersetBoundariesBody = SupersetBoundariesBody;
+  Parts.SupersetBoundariesScreen = SupersetBoundariesScreen;
   Parts.SupersetBlock = SupersetBlock;
   Parts.RestRing = RestRing;
 })(typeof window !== 'undefined' ? window : globalThis);
