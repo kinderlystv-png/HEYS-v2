@@ -88,6 +88,17 @@
       return 'прошлый раз ' + String(last.weightKg).replace('.', ',') + ' × ' + last.reps;
     }
 
+    const trimmedQuery = String(query || '').trim();
+    const catalogMatches = React.useMemo(function () {
+      const fn = HEYS.getExerciseSuggestions;
+      return typeof fn === 'function' ? fn(trimmedQuery, 60) : [];
+    }, [trimmedQuery]);
+    const catalogHasExact = !trimmedQuery || catalogMatches.some(function (row) {
+      return String(row.name || '').trim().toLowerCase() === trimmedQuery.toLowerCase()
+        || String(row.norm || '').trim().toLowerCase() === trimmedQuery.toLowerCase();
+    });
+    const showCreateRow = !!trimmedQuery && !catalogHasExact;
+
     return h('div', { className: 'sb-root sb-screen sb-catalog-screen' },
       h('div', { className: 'sb-head' },
         h('button', {
@@ -98,82 +109,85 @@
           h('div', { className: 'sb-head-sub' }, groupLabel + ' · ' + exerciseCountLabel(rows.length))
         )
       ),
-      h('div', { className: 'sb-search' },
-        h('span', { 'aria-hidden': 'true' }, '⌕'),
-        h('input', {
-          type: 'search',
-          value: query,
-          placeholder: 'Поиск по названию',
-          onChange: function (e) { setQuery(e.target.value); },
-          'aria-label': 'Поиск по названию'
-        })
-      ),
-      h('div', { className: 'sb-chips' },
-        h('button', {
-          type: 'button',
-          className: 'sb-chip' + (group === 'all' ? ' is-on' : ''),
-          onClick: function () { setGroup('all'); }
-        }, 'Все'),
-        h('button', {
-          type: 'button',
-          className: 'sb-chip' + (group === 'fav' ? ' is-on' : ''),
-          onClick: function () { setGroup('fav'); },
-          'aria-label': 'Избранное'
-        }, '★'),
-        groupChips.map(function (g) {
-          return h('button', {
-            key: g.id,
-            type: 'button',
-            className: 'sb-chip' + (group === g.id ? ' is-on' : ''),
-            onClick: function () { setGroup(g.id); }
-          }, g.label);
-        })
-      ),
-      h('div', { className: 'sb-list' },
-        rows.map(function (r) {
-          const m = api ? api.get(r.name) : null;
-          const groupName = m && api ? api.groupLabel(m.primaryGroup) : 'своё упражнение';
-          const prior = previousResult(r.name);
-          const sub = groupName + (prior ? ' · ' + prior : '');
-          return h('div', { className: 'sb-cat-row', key: r.norm },
-            h('button', {
-              type: 'button',
-              className: 'sb-star' + (r.favorite ? ' is-on' : ''),
-              onClick: function () {
-                if (typeof HEYS.toggleExerciseFavorite === 'function') {
-                  HEYS.toggleExerciseFavorite(r.name);
-                  setQuery(query);
-                  setGroup(group);
-                }
-              },
-              'aria-label': r.favorite ? 'Убрать из избранного' : 'В избранное'
-            }, '★'),
-            h('div', { className: 'sb-cat-title' },
-              h('b', null, r.name),
-              h('span', null, sub)
-            ),
-            h('button', {
-              type: 'button',
-              className: 'sb-cat-add',
-              onClick: function () { onPick(r.name); },
-              'aria-label': 'Добавить ' + r.name
-            }, '+')
-          );
-        }),
-        // Каталог подсказывает, но не запрещает.
-        h('button', {
-          type: 'button',
-          className: 'sb-cat-create',
-          onClick: function () { onCreate(query); }
-        },
-          h('span', { className: 'sb-cat-add' }, '+'),
-          h('div', { className: 'sb-cat-title' },
-            h('b', null, query.trim() ? 'Создать «' + query.trim() + '»' : 'Создать своё упражнение'),
-            h('span', null, 'Каталог подсказывает, но не запрещает')
-          )
+      h('div', { className: 'sb-catalog-scroll' },
+        h('div', { className: 'sb-search' },
+          h('span', { 'aria-hidden': 'true' }, '⌕'),
+          h('input', {
+            type: 'search',
+            value: query,
+            placeholder: 'Поиск по названию',
+            onChange: function (e) { setQuery(e.target.value); },
+            'aria-label': 'Поиск по названию'
+          })
         ),
-        h('p', { className: 'sb-catalog-note' },
-          'Строка создания появляется, когда в поиске набрано то, чего в каталоге нет. Прошлый результат стоит у каждого упражнения — по нему выбирают, а не по названию; у кого его нет, так и написано. Звезда слева — избранное: она же отдельным фильтром в ряду, чтобы свой короткий список открывался одним тапом.')
+        h('div', { className: 'sb-chips' },
+          h('button', {
+            type: 'button',
+            className: 'sb-chip' + (group === 'all' ? ' is-on' : ''),
+            onClick: function () { setGroup('all'); }
+          }, 'Все'),
+          h('button', {
+            type: 'button',
+            className: 'sb-chip' + (group === 'fav' ? ' is-on' : ''),
+            onClick: function () { setGroup('fav'); },
+            'aria-label': 'Избранное'
+          }, '★'),
+          groupChips.map(function (g) {
+            return h('button', {
+              key: g.id,
+              type: 'button',
+              className: 'sb-chip' + (group === g.id ? ' is-on' : ''),
+              onClick: function () { setGroup(g.id); }
+            }, g.label);
+          })
+        ),
+        h('div', { className: 'sb-list' },
+          h('div', { className: 'sb-cat-list' },
+            rows.map(function (r) {
+              const m = api ? api.get(r.name) : null;
+              const groupName = m && api ? api.groupLabel(m.primaryGroup) : 'своё упражнение';
+              const prior = previousResult(r.name);
+              const sub = groupName + (prior ? ' · ' + prior : '');
+              return h('div', { className: 'sb-cat-row', key: r.norm },
+                h('button', {
+                  type: 'button',
+                  className: 'sb-star' + (r.favorite ? ' is-on' : ''),
+                  onClick: function () {
+                    if (typeof HEYS.toggleExerciseFavorite === 'function') {
+                      HEYS.toggleExerciseFavorite(r.name);
+                      setQuery(query);
+                      setGroup(group);
+                    }
+                  },
+                  'aria-label': r.favorite ? 'Убрать из избранного' : 'В избранное'
+                }, '★'),
+                h('div', { className: 'sb-cat-title' },
+                  h('b', null, r.name),
+                  h('span', null, sub)
+                ),
+                h('button', {
+                  type: 'button',
+                  className: 'sb-cat-add',
+                  onClick: function () { onPick(r.name); },
+                  'aria-label': 'Добавить ' + r.name
+                }, '+')
+              );
+            })
+          ),
+          showCreateRow && h('button', {
+            type: 'button',
+            className: 'sb-cat-create',
+            onClick: function () { onCreate(trimmedQuery); }
+          },
+            h('span', { className: 'sb-cat-add', 'aria-hidden': 'true' }, '+'),
+            h('div', { className: 'sb-cat-title' },
+              h('b', null, 'Создать «' + trimmedQuery + '»'),
+              h('span', null, 'каталог подсказывает, но не запрещает')
+            )
+          ),
+          h('p', { className: 'sb-catalog-note' },
+            'Строка создания появляется, когда в поиске набрано то, чего в каталоге нет. Прошлый результат стоит у каждого упражнения — по нему выбирают, а не по названию; у кого его нет, так и написано. Звезда слева — избранное: она же отдельным фильтром в ряду, чтобы свой короткий список открывался одним тапом.')
+        )
       )
     );
   }
