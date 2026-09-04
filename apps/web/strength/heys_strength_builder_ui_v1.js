@@ -373,6 +373,175 @@
     );
   }
 
+  var EX_CARD_UNIT_LABELS = {
+    weight_reps: 'кг × повт',
+    bodyweight: 'свой вес',
+    time: 'время',
+    distance: 'метры'
+  };
+
+  /**
+   * Кадр М1 «Упражнение · карточка»: единая форма — имя, единица, группы,
+   * коэффициент только у своего веса. Одна кнопка «Сохранить упражнение».
+   */
+  function ExerciseCardScreen(props) {
+    const { initialName, onDone, onCancel } = props;
+    const api = HEYS.exerciseMeta;
+    const [name, setName] = React.useState(initialName || '');
+    const [unit, setUnit] = React.useState('');
+    const [primary, setPrimary] = React.useState('');
+    const [secondary, setSecondary] = React.useState([]);
+    const [picker, setPicker] = React.useState('');
+
+    if (!api) return null;
+
+    const ready = !!String(name).trim() && !!unit && !!primary;
+    const share = typeof api.synergistShare === 'number' ? api.synergistShare : 0.5;
+    const shareLabel = share === 0.5 ? 'половину' : Math.round(share * 100) + '%';
+
+    function toggleGroup(id) {
+      if (picker === 'primary') {
+        setPrimary(id);
+        setSecondary(secondary.filter(function (x) { return x !== id; }));
+        setPicker('');
+        return;
+      }
+      if (picker === 'secondary') {
+        if (id === primary) return;
+        if (secondary.indexOf(id) >= 0) {
+          setSecondary(secondary.filter(function (x) { return x !== id; }));
+        } else {
+          setSecondary(secondary.concat([id]));
+        }
+        return;
+      }
+    }
+
+    function save() {
+      const res = api.save(name, {
+        primaryGroup: primary,
+        secondaryGroups: secondary,
+        unit: unit,
+        bodyweightFactor: unit === 'bodyweight' ? null : null
+      });
+      if (res.ok) onDone(String(name).trim());
+    }
+
+    const secondaryText = secondary.map(function (id) {
+      return api.groupLabel(id).toLowerCase();
+    }).join(', ');
+
+    return h('div', {
+      className: 'sb-root sb-screen sb-exercise-card-screen'
+    },
+      h('div', { className: 'sb-head sb-ex-card-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onCancel, 'aria-label': 'Отменить'
+        }, '✕'),
+        h('div', { className: 'sb-head-title sb-ex-card-head-title' },
+          h('b', null, 'Новое упражнение'),
+          h('div', { className: 'sb-head-sub' }, 'своё, не из каталога')
+        )
+      ),
+      h('div', { className: 'sb-list sb-ex-card-scroll' },
+        h('input', {
+          className: 'sb-ap-field sb-ex-card-name',
+          type: 'text',
+          value: name,
+          placeholder: 'Название упражнения',
+          onChange: function (e) { setName(e.target.value); },
+          'aria-label': 'Название упражнения'
+        }),
+
+        h('div', { className: 'sb-ex-card-tier' }, 'Чем меряется'),
+        h('div', { className: 'sb-ex-card-units' },
+          api.units.map(function (u) {
+            const label = EX_CARD_UNIT_LABELS[u.id] || u.label.toLowerCase();
+            return h('button', {
+              key: u.id,
+              type: 'button',
+              className: 'sb-ex-card-pill' + (unit === u.id ? ' is-on' : ''),
+              onClick: function () { setUnit(u.id); setPicker(''); }
+            }, label);
+          })
+        ),
+        unit && h('p', { className: 'sb-ex-card-footnote' },
+          'Единица решает две вещи сразу: состав колонок в таблице и то, попадёт ли упражнение в тоннаж. '
+          + 'Метры и время не попадают — у них своя строка в итогах.'),
+
+        h('div', { className: 'sb-ex-card-tier' }, 'Какие мышцы'),
+        picker && h('div', { className: 'sb-ex-card-picker' },
+          api.groups.map(function (g) {
+            const isPrimary = g.id === primary;
+            const isSecondary = secondary.indexOf(g.id) >= 0;
+            const isOn = picker === 'primary' ? isPrimary : isSecondary;
+            return h('button', {
+              key: g.id,
+              type: 'button',
+              className: 'sb-ex-card-pill sb-ex-card-pill--pick' + (isOn ? ' is-on' : ''),
+              onClick: function () { toggleGroup(g.id); }
+            }, g.label.toLowerCase());
+          }),
+          h('button', {
+            type: 'button',
+            className: 'sb-ex-card-picker-done',
+            onClick: function () { setPicker(''); }
+          }, 'Готово')
+        ),
+        !picker && h('div', { className: 'sb-ex-card-cd' },
+          primary && h('div', { className: 'sb-ex-card-row' },
+            h('span', { className: 'sb-ex-card-row-copy' },
+              h('b', null, 'Основная · ' + api.groupLabel(primary).toLowerCase()),
+              h('span', null, 'берёт полный объём')
+            ),
+            h('button', {
+              type: 'button',
+              className: 'sb-ex-card-action',
+              onClick: function () { setPicker('primary'); }
+            }, 'сменить')
+          ),
+          h('div', {
+            className: 'sb-ex-card-row' + (!secondary.length ? ' is-last' : '')
+          },
+            h('span', { className: 'sb-ex-card-row-copy' },
+              h('b', null, secondary.length
+                ? ('Синергисты · ' + secondaryText)
+                : 'Синергисты'),
+              h('span', null, secondary.length ? ('берут ' + shareLabel) : 'по желанию')
+            ),
+            h('button', {
+              type: 'button',
+              className: 'sb-ex-card-action',
+              onClick: function () { setPicker('secondary'); }
+            }, 'выбрать')
+          )
+        ),
+
+        h('div', { className: 'sb-ex-card-tier' }, 'Коэффициент своего веса'),
+        h('div', { className: 'sb-ex-card-cd' },
+          h('div', { className: 'sb-ex-card-row is-last' },
+            h('span', { className: 'sb-ex-card-row-copy' },
+              h('b', { className: 'sb-ex-card-muted' }, 'Не спрашиваем'),
+              h('span', null, unit === 'bodyweight'
+                ? 'выберите «на что похоже» после сохранения'
+                : 'единица не «свой вес» — поля нет')
+            )
+          )
+        ),
+
+        h('button', {
+          type: 'button',
+          className: 'sb-finish sb-ex-card-save',
+          disabled: !ready,
+          onClick: save
+        }, 'Сохранить упражнение'),
+        h('p', { className: 'sb-ex-card-footnote sb-ex-card-footnote--tail' },
+          'Карточка спрашивает ровно то, без чего расчёт неверен, и ни одного поля сверх: единицу, '
+          + 'группы и — только для своего веса — коэффициент. Ничего из этого не заполняется за человека молча.')
+      )
+    );
+  }
+
   function repeatDateLabel(dateKey) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
     if (!m) return String(dateKey || '');
@@ -1309,8 +1478,8 @@
         onCancel: function () { setView('list'); }
       });
     }
-    if (view === 'new' && CatUI.NewExerciseScreen) {
-      return h(CatUI.NewExerciseScreen, {
+    if (view === 'new') {
+      return h(ExerciseCardScreen, {
         initialName: draftName,
         onDone: addExercise,
         onCancel: function () { setView('catalog'); }
@@ -1894,4 +2063,5 @@
   SB.open = open;
   SB.close = close;
   SB.BuilderScreen = BuilderScreen;
+  SB.ExerciseCardScreen = ExerciseCardScreen;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -4927,6 +4927,176 @@
   color: rgba(var(--ink), .56);
 }
 
+/* М1 «Упражнение · карточка» — единая форма своего упражнения. */
+.sb-exercise-card-screen {
+  --c1: var(--v4-c1, #f7efe2);
+  --c2: var(--v4-hero, #efe3cf);
+  --tx: var(--v4-ink, #201e1d);
+  --ac: var(--v4-act-text, #8a4a20);
+  --acs: var(--v4-act, #c67139);
+  --on-acs: var(--v4-btn-on-act, #2b1608);
+  --ink: var(--v4-ink-rgb, 32, 30, 29);
+}
+
+.sb-exercise-card-screen .sb-ex-card-head {
+  gap: 10px;
+  padding: 16px 18px 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.sb-exercise-card-screen .sb-ex-card-head-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 10px;
+}
+
+.sb-exercise-card-screen .sb-ex-card-head-title b {
+  font: 700 15px/1 Figtree, sans-serif;
+  color: var(--tx);
+}
+
+.sb-exercise-card-screen .sb-ex-card-scroll {
+  overflow-y: auto;
+}
+
+.sb-ex-card-name {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--v4-bg, var(--sb-bg));
+  box-shadow: inset 0 0 0 1.5px var(--acs);
+  text-align: center;
+  font: 600 13.5px/1 Figtree, sans-serif;
+  color: var(--tx);
+}
+
+.sb-ex-card-tier {
+  margin: 20px 0 10px;
+  font: 700 10px/1 Figtree, sans-serif;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ac);
+}
+
+.sb-ex-card-units {
+  display: flex;
+  gap: 6px;
+}
+
+.sb-ex-card-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--c2);
+  font: 700 12px/1 Figtree, sans-serif;
+  color: rgba(var(--ink), .58);
+  cursor: pointer;
+}
+
+.sb-ex-card-pill.is-on {
+  background: var(--acs);
+  color: var(--on-acs);
+}
+
+.sb-ex-card-footnote {
+  margin-top: 12px;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+  text-wrap: pretty;
+}
+
+.sb-ex-card-footnote--tail {
+  margin-top: 12px;
+}
+
+.sb-ex-card-cd {
+  border-radius: 20px;
+  padding: 2px 16px;
+  background: var(--c1);
+}
+
+.sb-ex-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(var(--ink), .08);
+}
+
+.sb-ex-card-row.is-last {
+  border-bottom: 0;
+}
+
+.sb-ex-card-row-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sb-ex-card-row-copy b {
+  color: var(--tx);
+  font: 600 12px/1.3 Figtree, sans-serif;
+}
+
+.sb-ex-card-row-copy span {
+  font: 500 11px/1.3 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+}
+
+.sb-ex-card-muted {
+  color: rgba(var(--ink), .42) !important;
+}
+
+.sb-ex-card-action {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  font: 700 11.5px/1 Figtree, sans-serif;
+  color: var(--ac);
+  cursor: pointer;
+}
+
+.sb-ex-card-save {
+  margin-top: 12px;
+}
+
+.sb-ex-card-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.sb-ex-card-pill--pick {
+  flex: none;
+  padding: 0 14px;
+}
+
+.sb-ex-card-picker-done {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--c2);
+  font: 700 12px/1 Figtree, sans-serif;
+  color: var(--ac);
+  cursor: pointer;
+}
+
 .sb-time-summary {
   margin-top: 10px;
   padding: 0 8px 8px;

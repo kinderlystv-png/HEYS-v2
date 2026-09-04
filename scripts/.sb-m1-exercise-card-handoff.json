@@ -1,0 +1,107 @@
+{
+  "zone": "strength-builder",
+  "scope": "М1 · Упражнение · карточка ·01–19 + текст",
+  "generated": "2026-09-04",
+  "rows": [
+    {
+      "contractLine": "Упражнение · карточка · 01",
+      "verdict": "=",
+      "f": ".sb-exercise-card-screen .sb-ex-card-head — шапка; 750-strength-builder.css .sb-ex-card-head; strength-builder-exercise-card-v4-canvas-contract.test.js."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 02",
+      "verdict": "=",
+      "f": ".sb-ex-card-head-title flex column gap 3px; 750-strength-builder.css."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 03",
+      "verdict": "=",
+      "f": "ExerciseCardScreen .sb-head-title b «Новое упражнение»; heys_strength_builder_ui_v1.js."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 04",
+      "verdict": "=",
+      "f": ".sb-head-sub «своё, не из каталога» — builder_ui ExerciseCardScreen."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 05",
+      "verdict": "=",
+      "f": ".sb-list.sb-ex-card-scroll overflow-y auto; 750-strength-builder.css."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 06",
+      "verdict": "=",
+      "f": ".sb-ex-card-name min-height 48px radius 14 bg var(--bg) inset 1.5px var(--acs) padding 0 14px margin-top 12px font 600 13.5px color var(--tx); 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 07",
+      "verdict": "=",
+      "f": ".sb-ex-card-tier «Чем меряется» — 700 10px uppercase var(--ac); 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 08",
+      "verdict": "=",
+      "f": ".sb-ex-card-units gap 6px; 750-strength-builder.css."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 09",
+      "verdict": "=",
+      "f": ".sb-ex-card-pill flex 1 «кг × повт»; EX_CARD_UNIT_LABELS builder_ui."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 10",
+      "verdict": "=",
+      "f": ".sb-ex-card-pill.is-on bg var(--acs) color var(--on-acs); contract test sand+blue."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 11",
+      "verdict": "=",
+      "f": ".sb-ex-card-footnote copy «Единица решает две вещи…» 500 11px/1.55 rgba ink .56; builder_ui + 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 12",
+      "verdict": "=",
+      "f": ".sb-ex-card-cd bg var(--c1) radius 20 padding 2px 16px; 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 13",
+      "verdict": "=",
+      "f": ".sb-ex-card-row flex space-between padding 9px 0; 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 14",
+      "verdict": "=",
+      "f": ".sb-ex-card-row-copy b color var(--tx) «Основная · …»; builder_ui."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 15",
+      "verdict": "=",
+      "f": ".sb-ex-card-row-copy span 500 11px/1.3 rgba(var(--ink),.56) «берёт полный объём»; 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 16",
+      "verdict": "=",
+      "f": ".sb-ex-card-action 700 11.5px/1 color var(--ac) «сменить»/«выбрать»; 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 17",
+      "verdict": "=",
+      "f": ".sb-ex-card-row.is-last border-bottom 0; 750-strength-builder.css."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 18",
+      "verdict": "=",
+      "f": ".sb-ex-card-muted color rgba(var(--ink),.42) «Не спрашиваем»; 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · 19",
+      "verdict": "=",
+      "f": ".sb-ex-card-save margin-top 12px «Сохранить упражнение»; builder_ui + 750."
+    },
+    {
+      "contractLine": "Упражнение · карточка · текст",
+      "verdict": "=",
+      "f": "Новое упражнение › своё, не из каталога › Тяга саней › Чем меряется › кг×повт/свой вес/время/метры › сноска › Какие мышцы › сменить/выбрать › Коэффициент › Не спрашиваем › Сохранить › хвост — strength-builder-exercise-card-v4-canvas-contract.test.js."
+    }
+  ]
+}
