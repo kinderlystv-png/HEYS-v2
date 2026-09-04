@@ -1,7 +1,7 @@
 {
   "canvas": "water-add.v4.dc.html",
   "contractOnly": false,
-  "recorded": "2026-08-24",
+  "recorded": "2026-09-04",
   "rows": {
     "фича": {
       "v": "=",
@@ -434,8 +434,8 @@
       "h": "705721a99d04"
     },
     "длинные числа": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Сокращений нет нигде — formatLiters water_v1:119, formatRuDecimal widgets_ui:3819; числа отдельными узлами",
+      "v": "=",
+      "f": "formatLiters/formatRuDecimal — heys_day_water_v1.js:119, heys_widgets_ui_v1.js:3819; отдельные узлы без сокращений — water-add-v4.test.js:76",
       "h": "c41646cd3f70"
     },
     "что пишется": {
@@ -494,11 +494,9 @@
       "h": "eddac038eb9a"
     },
     "вид · плитка воды 1×1": {
-      "v": "≠",
-      "f": "Строка описывает снятую редакцию: «число 12 px/600 в правом ВЕРХНЕМ углу (17 px было у прежней раскладки с числом внизу — снято)». Решение владельца 2 сентября и соседняя строка «раскладка плитки» после пакета 3 сентября требуют обратного — число внизу справа 17 px, наверху норма. Код следует решению владельца (heys_widgets_ui_v1.js:4262-4285). Противоречие переехало из одной строки в пару строк зоны и стало незаметным; вынесено дизайнеру.",
-      "h": "05c691f0c7cd",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#закрыто-3-сентября-плитка-воды-11-одну-строку-зоны-привели-к-решению-вторую-нет-water-add"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Строка описывает снятую редакцию: «число 12 px/600 в правом ВЕРХНЕМ углу (17 px было у прежней раскладки с числом внизу — снято)». Решение владельца 2 сентября и соседняя строка «раскладка плитки» после пакета 3 сентября требуют обратного — число внизу справа 17 px, наверху норма. Код следует решению владельца (heys_widgets_ui_v1.js:4262-4285). Противоречие переехало из одной строки в пару строк зоны и стало незаметным; вынесено дизайнеру.",
+      "h": "36a7ab676a04"
     },
     "вид · плитка в увеличении": {
       "v": "—",
@@ -676,879 +674,955 @@
       "h": "3a755f83303c"
     },
     "Вода · вариант А · рябь от плитки · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "25206af9a380"
+      "v": "—",
+      "f": "Кадр protocol «плитка» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "25206af9a380",
+      "naKind": "demo-only"
     },
     "Вода · вариант А · рябь от плитки · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "c6caef30e721"
+      "v": "—",
+      "f": "Кадр protocol ««Калории» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "c6caef30e721",
+      "naKind": "demo-only"
     },
     "Вода · вариант А · рябь от плитки · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "5bd3d5bc5c4d"
+      "v": "—",
+      "f": "Кадр protocol ««642» — отступ сверху 6px, цвет var(--ac)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "5bd3d5bc5c4d",
+      "naKind": "demo-only"
     },
     "Вода · вариант А · рябь от плитки · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "1a1ac8bfde27"
+      "v": "—",
+      "f": "Кадр protocol «плитка: обрез visible» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "1a1ac8bfde27",
+      "naKind": "demo-only"
     },
     "Вода · вариант А · рябь от плитки · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "843c92f2fa15"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ: позиция relative» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "843c92f2fa15",
+      "naKind": "demo-only"
     },
     "Вода · вариант А · рябь от плитки · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "30e1bc9e99f6"
+      "v": "—",
+      "f": "Кадр protocol «позиция relative, высота 16px, отступ сверху 2px» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "30e1bc9e99f6",
+      "naKind": "demo-only"
     },
     "Вода · вариант А · рябь от плитки · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "916749bdb4e9"
+      "v": "—",
+      "f": "Кадр protocol «высота 4px, радиус 999px, фон rgba(0,0,0,.09), отступ сверху auto, обрез» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "916749bdb4e9",
+      "naKind": "demo-only"
     },
     "Вода · вариант А · рябь от плитки · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "88c6fe08c746"
+      "v": "—",
+      "f": "Кадр protocol «плавающая кнопка» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "88c6fe08c746",
+      "naKind": "demo-only"
     },
     "Вода · В1 база · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "160139c62a4a"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "160139c62a4a",
+      "naKind": "demo-only"
     },
     "Вода · В1 база · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · В2 плеск · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "160139c62a4a"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "160139c62a4a",
+      "naKind": "demo-only"
     },
     "Вода · В2 плеск · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · В3 капля и круг · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "160139c62a4a"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "160139c62a4a",
+      "naKind": "demo-only"
     },
     "Вода · В3 капля и круг · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · В4 метка нормы · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "160139c62a4a"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "160139c62a4a",
+      "naKind": "demo-only"
     },
     "Вода · В4 метка нормы · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · В5 мерный столбик · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "160139c62a4a"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "160139c62a4a",
+      "naKind": "demo-only"
     },
     "Вода · В5 мерный столбик · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · В3 · финал · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "160139c62a4a"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "160139c62a4a",
+      "naKind": "demo-only"
     },
     "Вода · В3 · финал · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · В3 · уменьшенное движение · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор «высота 60%» — reduce-motion .widget-water--v4 730-widgets-dashboard.css:11284-11294; гейт water-add-v4-canvas-razbor.test.js",
       "h": "a0aa9c3a21ad"
     },
     "Вода · В3 · уменьшенное движение · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««Вода» — ключ» — reduce-motion .widget-water--v4 730-widgets-dashboard.css:11284-11294; гейт water-add-v4-canvas-razbor.test.js",
       "h": "53a3e027564f"
     },
     "Вода · В3 · уменьшенное движение · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««0,4 л» — прозрачность 0» — reduce-motion .widget-water--v4 730-widgets-dashboard.css:11284-11294; гейт water-add-v4-canvas-razbor.test.js",
       "h": "7e0828450f3d"
     },
     "Вода · В3 · уменьшенное движение · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««0,65 л» — прозрачность 1» — reduce-motion .widget-water--v4 730-widgets-dashboard.css:11284-11294; гейт water-add-v4-canvas-razbor.test.js",
       "h": "aaa1796d7064"
     },
     "Вода · погружение · 0 мс · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "97da9636c3b5"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%, фон color-mix(in oklab, var(--w), var(--wDeep) 57%)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "97da9636c3b5",
+      "naKind": "demo-only"
     },
     "Вода · погружение · 0 мс · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "d182c26577df"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ: сдвиг translateY(0px), цвет var(--dimTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "d182c26577df",
+      "naKind": "demo-only"
     },
     "Вода · погружение · 0 мс · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "e6877acdd2c6"
+      "v": "—",
+      "f": "Кадр protocol ««2,4 л» — сдвиг translateY(0px), цвет var(--inkTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "e6877acdd2c6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · подход · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "09ed779d2f06"
+      "v": "—",
+      "f": "Кадр protocol «высота 66%, фон color-mix(in oklab, var(--w), var(--wDeep) 94%)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "09ed779d2f06",
+      "naKind": "demo-only"
     },
     "Вода · погружение · подход · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "d182c26577df"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ: сдвиг translateY(0px), цвет var(--dimTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "d182c26577df",
+      "naKind": "demo-only"
     },
     "Вода · погружение · подход · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "e6877acdd2c6"
+      "v": "—",
+      "f": "Кадр protocol ««2,4 л» — сдвиг translateY(0px), цвет var(--inkTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "e6877acdd2c6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · касание · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "b9eabb2a0abc"
+      "v": "—",
+      "f": "Кадр protocol «высота 70%, фон var(--wDeep)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "b9eabb2a0abc",
+      "naKind": "demo-only"
     },
     "Вода · погружение · касание · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "d182c26577df"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ: сдвиг translateY(0px), цвет var(--dimTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "d182c26577df",
+      "naKind": "demo-only"
     },
     "Вода · погружение · касание · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "e6877acdd2c6"
+      "v": "—",
+      "f": "Кадр protocol ««2,4 л» — сдвиг translateY(0px), цвет var(--inkTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "e6877acdd2c6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · переезд · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "e5d011398a90"
+      "v": "—",
+      "f": "Кадр protocol «высота 76%, фон var(--wDeep)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "e5d011398a90",
+      "naKind": "demo-only"
     },
     "Вода · погружение · переезд · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "1d864c202aac"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ: сдвиг translateY(38.5px), цвет var(--wTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "1d864c202aac",
+      "naKind": "demo-only"
     },
     "Вода · погружение · переезд · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "d5f794203b6e"
+      "v": "—",
+      "f": "Кадр protocol ««2,4 л» — сдвиг translateY(37px), цвет var(--wTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "d5f794203b6e",
+      "naKind": "demo-only"
     },
     "Вода · погружение · покой · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "07290ff6a6be"
+      "v": "—",
+      "f": "Кадр protocol «высота 84%, фон var(--wDeep)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "07290ff6a6be",
+      "naKind": "demo-only"
     },
     "Вода · погружение · покой · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "1d864c202aac"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ: сдвиг translateY(38.5px), цвет var(--wTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "1d864c202aac",
+      "naKind": "demo-only"
     },
     "Вода · погружение · покой · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "d5f794203b6e"
+      "v": "—",
+      "f": "Кадр protocol ««2,4 л» — сдвиг translateY(37px), цвет var(--wTxt)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "d5f794203b6e",
+      "naKind": "demo-only"
     },
     "Вода · погружение · петля · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "97da9636c3b5"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%, фон color-mix(in oklab, var(--w), var(--wDeep) 57%)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "97da9636c3b5",
+      "naKind": "demo-only"
     },
     "Вода · погружение · петля · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · погружение · уменьшенное движение · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "07290ff6a6be"
+      "v": "—",
+      "f": "Кадр protocol «высота 84%, фон var(--wDeep)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "07290ff6a6be",
+      "naKind": "demo-only"
     },
     "Вода · погружение · уменьшенное движение · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "5a22d230b41e"
+      "v": "—",
+      "f": "Кадр protocol «ширина 57%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "5a22d230b41e",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "e03e2e29f036"
+      "v": "—",
+      "f": "Кадр protocol «высота 46%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "e03e2e29f036",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "04d06c106125"
+      "v": "—",
+      "f": "Кадр protocol «высота 72%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "04d06c106125",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a0aa9c3a21ad"
+      "v": "—",
+      "f": "Кадр protocol «высота 60%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "a0aa9c3a21ad",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "319c7627888b"
+      "v": "—",
+      "f": "Кадр protocol «высота 88%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "319c7627888b",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "f6e87edf140d"
+      "v": "—",
+      "f": "Кадр protocol «высота 54%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "f6e87edf140d",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "b80acd6851d4"
+      "v": "—",
+      "f": "Кадр protocol «высота 80%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "b80acd6851d4",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "2126caffbc39"
+      "v": "—",
+      "f": "Кадр protocol «высота 62%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "2126caffbc39",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "5d75943d66f7"
+      "v": "—",
+      "f": "Кадр protocol «ширина 0» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "5d75943d66f7",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "e03e2e29f036"
+      "v": "—",
+      "f": "Кадр protocol «высота 46%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "e03e2e29f036",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "04d06c106125"
+      "v": "—",
+      "f": "Кадр protocol «высота 72%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "04d06c106125",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a0aa9c3a21ad"
+      "v": "—",
+      "f": "Кадр protocol «высота 60%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "a0aa9c3a21ad",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "319c7627888b"
+      "v": "—",
+      "f": "Кадр protocol «высота 88%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "319c7627888b",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "f6e87edf140d"
+      "v": "—",
+      "f": "Кадр protocol «высота 54%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "f6e87edf140d",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "b80acd6851d4"
+      "v": "—",
+      "f": "Кадр protocol «высота 80%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "b80acd6851d4",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "ca436112c2c3"
+      "v": "—",
+      "f": "Кадр protocol «высота 2px» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "ca436112c2c3",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Кольцо · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Элемент ««Вода · 7 дней в среднем 2,1 л» — ключ» — heys_day_water_v1.js карточка Кольцо; минус в .water-review__chip--in-row 400-water-and-hydration.css:313; гейт water-add-v4-canvas-razbor.test.js",
       "h": "235ad3375c6a"
     },
     "Вода · карточка · Кольцо · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Элемент ««−200» — высота 26px, поля 0 10px» — heys_day_water_v1.js карточка Кольцо; минус в .water-review__chip--in-row 400-water-and-hydration.css:313; гейт water-add-v4-canvas-razbor.test.js",
       "h": "21b2aae2ee7a"
     },
     "Вода · свой объём · лист · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««Свой объём» — ключ» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "e2dee05c36cc"
     },
     "Вода · свой объём · лист · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор «выравнивание center, распределение space-between, зазор 12px, отступ све» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "922ba185d012"
     },
     "Вода · свой объём · лист · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««−» — ширина 44px, высота 44px, поля 0» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "82d315963d47"
     },
     "Вода · свой объём · лист · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««750» — шрифт 600 26px/1 Figtree, трекинг -.03em, цвет var(--inkTxt)» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "c7b245270456"
     },
     "Вода · свой объём · лист · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««мл» — шрифт 600 11px/1 Figtree, цвет var(--dimTxt)» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "fe16f1a6d34c"
     },
     "Вода · свой объём · лист · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор «зазор 6px, отступ сверху 13px» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "75e11fb810ca"
     },
     "Вода · свой объём · лист · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««330» — флекс 1, поля 0» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "863376a050a1"
     },
     "Вода · свой объём · лист · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор «отступ сверху 13px» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "968b14e1d4dc"
     },
     "Вода · свой объём · лист · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор ««Добавить 750 мл» — ширина 100%, высота 38px» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "f716e1e02e75"
     },
     "Вода · столбик · Питание · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «высота 250px, направление column» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "8ecda42fdf5e"
     },
     "Вода · столбик · Питание · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик ««Питание» — шрифт 700 13px/1 Figtree, цвет var(--tx), отступ снизу 9px» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "826853a883e4"
     },
     "Вода · столбик · Питание · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «направление column, зазор 6px» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "9e1b7a789594"
     },
     "Вода · столбик · Питание · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «ряд вкладок» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "6ae4cb6436b0"
     },
     "Вода · столбик · Питание · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «высота 40%» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "160139c62a4a"
     },
     "Вода · столбик · Питание · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «плавающая кнопка» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "88c6fe08c746"
     },
     "Вода · столбик · Актив · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «высота 250px, направление column» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "8ecda42fdf5e"
     },
     "Вода · столбик · Актив · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик ««Актив» — шрифт 700 13px/1 Figtree, цвет var(--tx), отступ снизу 9px» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "94f76bb1520d"
     },
     "Вода · столбик · Актив · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «направление column, зазор 6px» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "9e1b7a789594"
     },
     "Вода · столбик · Актив · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «ряд вкладок» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "6ae4cb6436b0"
     },
     "Вода · столбик · Актив · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «высота 40%» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "160139c62a4a"
     },
     "Вода · столбик · Актив · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «плавающая кнопка» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "88c6fe08c746"
     },
     "Вода · столбик · Главная прокручена · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «высота 250px, направление column» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "8ecda42fdf5e"
     },
     "Вода · столбик · Главная прокручена · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик ««Отчёт за день» — шрифт 700 13px/1 Figtree, цвет var(--tx), отступ снизу» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "49ed1457af39"
     },
     "Вода · столбик · Главная прокручена · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «направление column, зазор 6px» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "9e1b7a789594"
     },
     "Вода · столбик · Главная прокручена · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «ряд вкладок» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "6ae4cb6436b0"
     },
     "Вода · столбик · Главная прокручена · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «высота 40%» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "160139c62a4a"
     },
     "Вода · столбик · Главная прокручена · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «плавающая кнопка» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "88c6fe08c746"
     },
     "Вода · норма · 0,4 л · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «высота 12%, фон color-mix(in oklab, var(--w), var(--wDeep) 17%)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "bf6f59a151b8"
     },
     "Вода · норма · 0,4 л · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««из 3,0» — цвет var(--dimTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "db6459934e4e"
     },
     "Вода · норма · 0,4 л · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««2,4» — цвет var(--inkTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "d33984b414d5"
     },
     "Вода · норма · 0,8 л · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «высота 25%, фон color-mix(in oklab, var(--w), var(--wDeep) 36%)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "2ffde4ad3703"
     },
     "Вода · норма · 0,8 л · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««из 3,0» — цвет var(--dimTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "db6459934e4e"
     },
     "Вода · норма · 0,8 л · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««2,4» — цвет var(--inkTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "d33984b414d5"
     },
     "Вода · норма · 1,0 л · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «высота 31%, фон color-mix(in oklab, var(--w), var(--wDeep) 44%)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "559f99a9fd11"
     },
     "Вода · норма · 1,0 л · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««из 3,0» — цвет var(--dimTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "db6459934e4e"
     },
     "Вода · норма · 1,0 л · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««Вода» — цвет var(--wTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "a730dae2c53c"
     },
     "Вода · норма · 2,1 л · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «высота 70%, фон var(--wDeep)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "b9eabb2a0abc"
     },
     "Вода · норма · 2,1 л · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««из 3,0» — цвет var(--dimTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "db6459934e4e"
     },
     "Вода · норма · 2,1 л · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««Вода» — цвет var(--wTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "a730dae2c53c"
     },
     "Вода · норма · 2,7 л · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «высота 89%, фон var(--wDeep)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "d3eae83c1648"
     },
     "Вода · норма · 2,7 л · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB ««из 3,0» — цвет var(--wTxt)» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "636fff3b2332"
     },
     "Вода · норма · петля · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Петля порогов «высота 22%» — классы widget-water--lines-on-water / --norm-on-water heys_widgets_ui_v1.js:4103-4212; перекраска 730-widgets-dashboard.css:11262",
       "h": "bb36689499ba"
     },
     "Вода · норма А · петля · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "97da9636c3b5"
+      "v": "—",
+      "f": "Кадр protocol «высота 40%, фон color-mix(in oklab, var(--w), var(--wDeep) 57%)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "97da9636c3b5",
+      "naKind": "demo-only"
     },
     "Вода · норма А · петля · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "53a3e027564f"
+      "v": "—",
+      "f": "Кадр protocol ««Вода» — ключ» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "53a3e027564f",
+      "naKind": "demo-only"
     },
     "Вода · норма Б · петля (протокол, канон — Вода · норма · петля) · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Кадр protocol «высота 22%» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
       "h": "bb36689499ba"
     },
     "Вода · вариант А · рябь от плитки · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0d870165fdc4"
+      "v": "—",
+      "f": "Кадр protocol «поле рисунка 14×14 (viewBox 0 0 24 24)» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "0d870165fdc4",
+      "naKind": "demo-only"
     },
     "Вода · вариант А · рябь от плитки · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3ebec640fc4f"
+      "v": "—",
+      "f": "Кадр protocol «кривая, точки M12 6v12M6 12h12» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "3ebec640fc4f",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Кольцо · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «поле рисунка 58×58 (viewBox 0 0 58 58)» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "5811cd064a8e"
     },
     "Вода · карточка · Кольцо · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 24 в (29,29), заливка none, обводка var(--trk)» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "7d1580701f53"
     },
     "Вода · карточка · Кольцо · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 24 в (29,29), заливка none, обводка var(--wDeep)» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "27d205b8d6b9"
     },
     "Вода · карточка · Кольцо · рисунок 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «поле рисунка 268×34 (viewBox 0 0 268 34)» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "41d6a6fed82d"
     },
     "Вода · карточка · Кольцо · рисунок 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «кривая, точки M4 20 L48 11 L92 15 L136 6 L180 18 L224 9 L264 14 L264 30 » — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "1ff76483ecb9"
     },
     "Вода · карточка · Кольцо · рисунок 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «кривая, точки M4 12 L264 12, линия currentColor, толщина 1, пунктир 3 3,» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "69bf86dd6136"
     },
     "Вода · карточка · Кольцо · рисунок 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «ломаная, точки 4,20 48,11 92,15 136,6 180,18 224,9 264,14, линия current» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "c37b7c4e83cf"
     },
     "Вода · карточка · Кольцо · рисунок 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 2.6 в (48,11), заливка currentColor» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "1f44ac40b366"
     },
     "Вода · карточка · Кольцо · рисунок 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 2.6 в (136,6), заливка currentColor» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "782639f91f42"
     },
     "Вода · карточка · Кольцо · рисунок 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 2.6 в (224,9), заливка currentColor» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "4e1ff6a7d1fa"
     },
     "Вода · карточка · Кольцо · рисунок 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 2.6 в (4,20), заливка var(--cardBg), обводка currentColor» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "802d73fa92cd"
     },
     "Вода · карточка · Кольцо · рисунок 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 2.6 в (92,15), заливка var(--cardBg), обводка currentColor» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "3ff6e10851ee"
     },
     "Вода · карточка · Кольцо · рисунок 13": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 2.6 в (180,18), заливка var(--cardBg), обводка currentColor» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "fbe48c44308f"
     },
     "Вода · карточка · Кольцо · рисунок 14": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 3.4 в (264,14), заливка var(--cardBg), обводка currentColor» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "df524e7e61b0"
     },
     "Вода · карточка · Кольцо · рисунок 15": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "SVG кольца/кривой «точка r 6.8 в (264,14), заливка none, обводка currentColor, прозрачность» — heys_day_water_v1.js renderRing + water-review-card-v4.test.js",
       "h": "2ec740695501"
     },
     "Вода · столбик · Питание · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «поле рисунка 14×14 (viewBox 0 0 24 24)» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "0d870165fdc4"
     },
     "Вода · столбик · Питание · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «кривая, точки M12 6v12M6 12h12» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "3ebec640fc4f"
     },
     "Вода · столбик · Актив · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «поле рисунка 14×14 (viewBox 0 0 24 24)» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "0d870165fdc4"
     },
     "Вода · столбик · Актив · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «кривая, точки M12 6v12M6 12h12» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "3ebec640fc4f"
     },
     "Вода · столбик · Главная прокручена · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «поле рисунка 14×14 (viewBox 0 0 24 24)» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "0d870165fdc4"
     },
     "Вода · столбик · Главная прокручена · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «кривая, точки M12 6v12M6 12h12» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "3ebec640fc4f"
     },
     "Чипы объёма · обычный вид · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Чип FAB «поле рисунка 17×17 (viewBox 0 0 24 24)» — .water-fab-vol / --minus 400-water-and-hydration.css; water-add-v4.test.js + water-add-v4-canvas-razbor.test.js",
       "h": "57f7c5e99afc"
     },
     "Чипы объёма · обычный вид · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Чип FAB «кривая, точки M12 3s6 6.4 6 10.2A6 6 0 0 1 6 13.2C6 9.4 12 3 12 3z» — .water-fab-vol / --minus 400-water-and-hydration.css; water-add-v4.test.js + water-add-v4-canvas-razbor.test.js",
       "h": "ba8cd6d426f0"
     },
     "Чипы объёма · нечего убавлять · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Чип FAB «поле рисунка 17×17 (viewBox 0 0 24 24)» — .water-fab-vol / --minus 400-water-and-hydration.css; water-add-v4.test.js + water-add-v4-canvas-razbor.test.js",
       "h": "57f7c5e99afc"
     },
     "Чипы объёма · нечего убавлять · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Чип FAB «кривая, точки M12 3s6 6.4 6 10.2A6 6 0 0 1 6 13.2C6 9.4 12 3 12 3z» — .water-fab-vol / --minus 400-water-and-hydration.css; water-add-v4.test.js + water-add-v4-canvas-razbor.test.js",
       "h": "ba8cd6d426f0"
     },
     "Чипы объёма · нажатие · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Чип FAB «поле рисунка 17×17 (viewBox 0 0 24 24)» — .water-fab-vol / --minus 400-water-and-hydration.css; water-add-v4.test.js + water-add-v4-canvas-razbor.test.js",
       "h": "57f7c5e99afc"
     },
     "Чипы объёма · нажатие · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Чип FAB «кривая, точки M12 3s6 6.4 6 10.2A6 6 0 0 1 6 13.2C6 9.4 12 3 12 3z» — .water-fab-vol / --minus 400-water-and-hydration.css; water-add-v4.test.js + water-add-v4-canvas-razbor.test.js",
       "h": "ba8cd6d426f0"
     },
     "Вода · вариант А · рябь от плитки · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "54e7b4810143"
+      "v": "—",
+      "f": "Кадр protocol «Калории › 642 › ккал › Инсулиновая волна › Белки · Жиры · Углеводы › Сон» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "54e7b4810143",
+      "naKind": "demo-only"
     },
     "Вода · В1 база · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a2a2e1c465bb"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 0,4 л › 0,65 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "a2a2e1c465bb",
+      "naKind": "demo-only"
     },
     "Вода · В2 плеск · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a2a2e1c465bb"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 0,4 л › 0,65 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "a2a2e1c465bb",
+      "naKind": "demo-only"
     },
     "Вода · В3 капля и круг · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a2a2e1c465bb"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 0,4 л › 0,65 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "a2a2e1c465bb",
+      "naKind": "demo-only"
     },
     "Вода · В4 метка нормы · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a2a2e1c465bb"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 0,4 л › 0,65 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "a2a2e1c465bb",
+      "naKind": "demo-only"
     },
     "Вода · В5 мерный столбик · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a2a2e1c465bb"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 0,4 л › 0,65 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "a2a2e1c465bb",
+      "naKind": "demo-only"
     },
     "Вода · В3 · финал · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a2a2e1c465bb"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 0,4 л › 0,65 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "a2a2e1c465bb",
+      "naKind": "demo-only"
     },
     "Вода · В3 · уменьшенное движение · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор «Вода › 0,4 л › 0,65 л» — reduce-motion .widget-water--v4 730-widgets-dashboard.css:11284-11294; гейт water-add-v4-canvas-razbor.test.js",
       "h": "a2a2e1c465bb"
     },
     "Вода · погружение · 0 мс · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0c85c5cd57d6"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 2,4 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "0c85c5cd57d6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · подход · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0c85c5cd57d6"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 2,4 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "0c85c5cd57d6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · касание · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0c85c5cd57d6"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 2,4 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "0c85c5cd57d6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · переезд · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0c85c5cd57d6"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 2,4 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "0c85c5cd57d6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · покой · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0c85c5cd57d6"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 2,4 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "0c85c5cd57d6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · петля · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0c85c5cd57d6"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 2,4 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "0c85c5cd57d6",
+      "naKind": "demo-only"
     },
     "Вода · погружение · уменьшенное движение · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0c85c5cd57d6"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 2,4 л» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "0c85c5cd57d6",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "34957c950ea8"
+      "v": "—",
+      "f": "Кадр protocol «Вода › из 3,0 л › 1,7 › осталось 1,3 › в среднем 2,1 л › −200 › +200 › +» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "34957c950ea8",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Полоса · утро · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "2161254597eb"
+      "v": "—",
+      "f": "Кадр protocol «Вода › из 3,0 л › осталось 3,0 › в среднем 2,1 л › −200 › +200 › +500 › » — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "2161254597eb",
+      "naKind": "demo-only"
     },
     "Вода · карточка · Кольцо · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Копия кадра «Вода · 7 дней в среднем 2,1 л › −200 › 1,7 л › из 3,0 · осталось 1,3 › +» — heys_day_water_v1.js + water-add-v4-canvas-copy.test.js",
       "h": "3f10787290a4"
     },
     "Вода · свой объём · лист · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Разбор «Свой объём › шаг 50 мл › 750 › мл › 330 › 500 › 750 › 1000 › Добавить 75» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
       "h": "c92c2eba6a14"
     },
     "Вода · столбик · Питание · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «Питание › +200 мл › 0,65 л › из 2,7» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "e5659534b949"
     },
     "Вода · столбик · Актив · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «Актив › +200 мл › 0,65 л › из 2,7» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "4dfee5bf6b4f"
     },
     "Вода · столбик · Главная прокручена · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Столбик «Отчёт за день › +200 мл › 0,65 л › из 2,7» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
       "h": "3683d60081e5"
     },
     "Вода · норма · 0,4 л · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «из 3,0 › Вода › 2,4» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "a7e4d1ac7d05"
     },
     "Вода · норма · 0,8 л · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «из 3,0 › Вода › 2,4» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "a7e4d1ac7d05"
     },
     "Вода · норма · 1,0 л · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «из 3,0 › Вода › 2,4» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "a7e4d1ac7d05"
     },
     "Вода · норма · 2,1 л · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «из 3,0 › Вода › 2,4» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "a7e4d1ac7d05"
     },
     "Вода · норма · 2,7 л · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Стоп nrmB «из 3,0 › Вода › 2,4» — .widget-water--v4 nrmB 730-widgets-dashboard.css:11227-11269; гейт water-add-v4-canvas-geometry.test.js",
       "h": "a7e4d1ac7d05"
     },
     "Вода · норма · петля · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Петля порогов «из 3,0 › Вода › 2,4» — классы widget-water--lines-on-water / --norm-on-water heys_widgets_ui_v1.js:4103-4212; перекраска 730-widgets-dashboard.css:11262",
       "h": "a7e4d1ac7d05"
     },
     "Вода · норма А · петля · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "baa018376145"
+      "v": "—",
+      "f": "Кадр protocol «Вода › 2,4 л › из 3,0» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
+      "h": "baa018376145",
+      "naKind": "demo-only"
     },
     "Вода · норма Б · петля (протокол, канон — Вода · норма · петля) · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Кадр protocol «из 3,0 › Вода › 2,4» — data-demo=\"protocol\" water-add.v4.dc.html; в продукт не реализуется",
       "h": "a7e4d1ac7d05"
     },
     "Чипы объёма · обычный вид · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Копия «−200 › +200 › +500» — heys_day_page_shell.js FAB-чипы; water-add-v4-canvas-copy.test.js",
       "h": "d590fe1899f3"
     },
     "Чипы объёма · нечего убавлять · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Копия «−200 › +200 › +500» — heys_day_page_shell.js FAB-чипы; water-add-v4-canvas-copy.test.js",
       "h": "d590fe1899f3"
     },
     "Чипы объёма · нажатие · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "Копия «−200 › +200 › +500» — heys_day_page_shell.js FAB-чипы; water-add-v4-canvas-copy.test.js",
       "h": "d590fe1899f3"
     }
   },
   "frames": {
     "Вода · В3 · уменьшенное движение": {
       "evidence": [
-        "apps/web/__tests__/water-add-v4.test.js",
-        "apps/web/__tests__/water-custom-volume-v4.test.js",
-        "apps/web/heys_water_custom_volume_v1.js",
-        "apps/web/styles/modules/400-water-and-hydration.css"
+        "apps/web/__tests__/water-add-v4-canvas-geometry.test.js",
+        "apps/web/__tests__/water-add-v4-canvas-razbor.test.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
       ]
     },
     "Вода · карточка · Кольцо": {
       "evidence": [
-        "apps/web/__tests__/water-add-v4.test.js",
-        "apps/web/__tests__/water-custom-volume-v4.test.js",
-        "apps/web/heys_water_custom_volume_v1.js",
-        "apps/web/styles/modules/400-water-and-hydration.css"
+        "apps/web/__tests__/water-add-v4-canvas-geometry.test.js",
+        "apps/web/__tests__/water-add-v4-canvas-razbor.test.js",
+        "apps/web/__tests__/water-review-card-v4.test.js",
+        "apps/web/heys_day_water_v1.js"
       ]
     },
     "Вода · свой объём · лист": {
       "evidence": [
-        "apps/web/__tests__/water-add-v4.test.js",
+        "apps/web/__tests__/water-add-v4-canvas-razbor.test.js",
         "apps/web/__tests__/water-custom-volume-v4.test.js",
-        "apps/web/heys_water_custom_volume_v1.js",
-        "apps/web/styles/modules/400-water-and-hydration.css"
+        "apps/web/heys_water_custom_volume_v1.js"
       ]
     },
     "Вода · норма · 0,4 л": {
@@ -1592,12 +1666,7 @@
       ]
     },
     "Чипы объёма · обычный вид": {
-      "evidence": [
-        "apps/web/__tests__/water-add-v4.test.js",
-        "apps/web/__tests__/water-custom-volume-v4.test.js",
-        "apps/web/heys_water_custom_volume_v1.js",
-        "apps/web/styles/modules/400-water-and-hydration.css"
-      ]
+      "evidence": ["apps/web/__tests__/water-add-v4-canvas-geometry.test.js", "apps/web/__tests__/water-add-v4.test.js"]
     },
     "Чипы объёма · нечего убавлять": {
       "evidence": [
