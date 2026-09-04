@@ -5671,7 +5671,7 @@
     // 2×1 «Неделя»: семь столбиков и среднее.
     const avg = data?.avgWeek;
     const state = v4StepsState(avg != null && goal > 0 ? (avg / goal) * 100 : 0);
-    return React.createElement('div', { className: 'widget-v4-stack widget-v4-steps' },
+    return React.createElement('div', { className: 'widget-v4-stack widget-v4-steps widget-v4-steps--week' },
       React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
         v4Kicker('Шаги'),
         avg != null
