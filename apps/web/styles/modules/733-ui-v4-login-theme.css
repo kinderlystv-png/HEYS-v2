@@ -2450,7 +2450,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   font-weight: 600;
   line-height: 1.4;
   text-align: center;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .consent-fulltext__accept {
@@ -2597,7 +2597,6 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   color: rgba(242, 237, 230, 0.5);
 }
 
-[data-theme$="dark"] .consent-fulltext__scroll-hint,
 [data-theme$="dark"] .consent-fulltext__decline {
   color: rgba(242, 237, 230, 0.5);
 }

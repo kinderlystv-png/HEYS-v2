@@ -524,8 +524,8 @@
       "h": "0135401bdf46"
     },
     "Документ · начало · 22": {
-      "v": "≠",
-      "f": "733-ui-v4-login-theme.css:2447-2453 .consent-fulltext__scroll-hint — 600 11/1.4 center совпали с кадром; color rgba(0,0,0,.5) = 50 % против rgba(var(--ink),.56) кадра",
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css:2447-2453 .consent-fulltext__scroll-hint — 600 11px/1.4 center; color var(--v4-ink-data): sand rgba(0,0,0,.56), blue rgba(16,24,38,.64) (Playwright computed 2026-09-04)",
       "h": "4f18a4b2e3ea"
     },
     "Документ · начало · 23": {
