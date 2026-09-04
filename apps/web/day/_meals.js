@@ -30,6 +30,15 @@
         }
     };
 
+    // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, ведро 2)
+    const WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+    const WARN_1 = 'var(--v4-warn-1, #d99a63)';
+    const WARN_TEXT = 'var(--v4-warn-text, #a1471c)';
+    const ACT = 'var(--v4-act, #c67139)';
+    const ACT_TEXT = 'var(--v4-act-text, #8a4a20)';
+    const ACCENT_BG = 'var(--v4-accent-bg, #f0dcc6)';
+    const mixRole = (role, pct) => `color-mix(in srgb, ${role} ${pct}%, transparent)`;
+
     // v69 FIX: Resolve scoped dayv2 key to prevent cross-client contamination
     function _scopedDayKey(dateStr) {
         const cid = HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '';
@@ -1296,14 +1305,14 @@
                             background: mealQuality.mealRoleStatus.tone === 'green'
                                 ? '#dcfce7'
                                 : mealQuality.mealRoleStatus.tone === 'amber'
-                                    ? '#fef3c7'
+                                    ? ACCENT_BG
                                     : mealQuality.mealRoleStatus.tone === 'slate'
                                         ? '#e2e8f0'
                                         : '#dbeafe',
                             color: mealQuality.mealRoleStatus.tone === 'green'
                                 ? '#15803d'
                                 : mealQuality.mealRoleStatus.tone === 'amber'
-                                    ? '#b45309'
+                                    ? WARN_TEXT
                                     : mealQuality.mealRoleStatus.tone === 'slate'
                                         ? '#475569'
                                         : '#1d4ed8',
@@ -2570,10 +2579,10 @@
                             style: {
                                 margin: '8px 12px 10px 12px',
                                 padding: '8px 10px',
-                                background: inRiskWindow ? 'rgba(249,115,22,0.12)' : 'rgba(234,179,8,0.1)',
+                                background: inRiskWindow ? mixRole(WARN_1, 12) : mixRole(WARN_SOFT, 10),
                                 borderRadius: '8px',
                                 fontSize: '12px',
-                                color: inRiskWindow ? '#ea580c' : '#ca8a04',
+                                color: inRiskWindow ? WARN_TEXT : WARN_SOFT,
                             },
                         },
                             React.createElement('div', { style: { fontWeight: '600', marginBottom: '2px' } },
@@ -2741,8 +2750,8 @@
                             padding: '4px 8px',
                             borderRadius: '12px',
                             border: 'none',
-                            background: '#fef3c7',
-                            color: '#b45309',
+                            background: ACCENT_BG,
+                            color: WARN_TEXT,
                             fontSize: '12px',
                             fontWeight: 600,
                             cursor: 'pointer',
@@ -2754,7 +2763,7 @@
                         'Советы',
                         React.createElement('span', {
                             style: {
-                                background: '#f59e0b',
+                                background: ACT,
                                 color: '#fff',
                                 borderRadius: '8px',
                                 padding: '0 5px',
@@ -2801,8 +2810,8 @@
                             padding: '4px 8px',
                             borderRadius: '12px',
                             border: 'none',
-                            background: '#fef3c7',
-                            color: '#b45309',
+                            background: ACCENT_BG,
+                            color: WARN_TEXT,
                             fontSize: '12px',
                             fontWeight: 600,
                             cursor: (meal.items || []).length ? 'pointer' : 'not-allowed',
@@ -2918,9 +2927,9 @@
                     style: {
                         marginTop: '12px',
                         padding: '12px',
-                        background: 'linear-gradient(135deg, rgba(245, 158, 0, 0.08) 0%, rgba(251, 191, 36, 0.05) 100%)',
+                        background: `linear-gradient(135deg, ${mixRole(WARN_1, 8)} 0%, ${mixRole(WARN_SOFT, 5)} 100%)`,
                         borderRadius: '12px',
-                        border: '1px solid rgba(245, 158, 0, 0.2)',
+                        border: `1px solid ${mixRole(WARN_1, 20)}`,
                         animation: 'slideDown 0.2s ease-out',
                     },
                 }, React.createElement(MealOptimizerSection, {
@@ -3879,8 +3888,8 @@
         const gi = Number(wave?.gi);
         if (Number.isFinite(gi)) {
             if (gi <= 35) return '#22c55e';
-            if (gi <= 55) return '#eab308';
-            if (gi <= 70) return '#f97316';
+            if (gi <= 55) return WARN_SOFT;
+            if (gi <= 70) return WARN_1;
             return '#ef4444';
         }
         return '#3b82f6';
@@ -4217,8 +4226,8 @@
                             fontSize: '11px',
                             padding: '2px 6px',
                             borderRadius: '10px',
-                            background: mealsChartData.avgQualityScore >= 80 ? '#dcfce7' : mealsChartData.avgQualityScore >= 50 ? '#fef3c7' : '#fee2e2',
-                            color: mealsChartData.avgQualityScore >= 80 ? '#166534' : mealsChartData.avgQualityScore >= 50 ? '#92400e' : '#991b1b',
+                            background: mealsChartData.avgQualityScore >= 80 ? '#dcfce7' : mealsChartData.avgQualityScore >= 50 ? ACCENT_BG : '#fee2e2',
+                            color: mealsChartData.avgQualityScore >= 80 ? '#166534' : mealsChartData.avgQualityScore >= 50 ? WARN_TEXT : '#991b1b',
                             fontWeight: '600',
                         },
                     }, 'средняя оценка ' + mealsChartData.avgQualityScore),
@@ -4325,8 +4334,8 @@
                                 React.createElement('stop', { offset: '100%', stopColor: '#22c55e', stopOpacity: '0.02' }),
                             ),
                             React.createElement('linearGradient', { id: 'snackZoneGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
-                                React.createElement('stop', { offset: '0%', stopColor: '#eab308', stopOpacity: '0.08' }),
-                                React.createElement('stop', { offset: '100%', stopColor: '#eab308', stopOpacity: '0.01' }),
+                                React.createElement('stop', { offset: '0%', stopColor: WARN_SOFT, stopOpacity: '0.08' }),
+                                React.createElement('stop', { offset: '100%', stopColor: WARN_SOFT, stopOpacity: '0.01' }),
                             ),
                             React.createElement('linearGradient', { id: 'badZoneGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
                                 React.createElement('stop', { offset: '0%', stopColor: '#ef4444', stopOpacity: '0.12' }),
@@ -4489,7 +4498,7 @@
                     const isBest = mealsChartData.bestMealIndex === originalIndex && quality && quality.score >= 70;
                     const barFill = quality
                         ? `linear-gradient(90deg, ${quality.color} 0%, ${quality.color}cc 100%)`
-                        : (isOverTarget ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(90deg, #34d399 0%, #10b981 100%)');
+                        : (isOverTarget ? `linear-gradient(90deg, ${WARN_SOFT} 0%, ${ACT} 100%)` : 'linear-gradient(90deg, #34d399 0%, #10b981 100%)');
                     const problemBadges = quality?.badges?.filter((b) => !b.ok).slice(0, 3) || [];
                     const openQualityModal = (e) => {
                         if (!quality) return;
@@ -4539,7 +4548,7 @@
                         quality.score >= 80
                             ? { background: 'rgba(34, 197, 94, 0.14)', color: '#16a34a', borderColor: 'rgba(34, 197, 94, 0.28)' }
                             : quality.score >= 50
-                                ? { background: 'rgba(245, 158, 11, 0.14)', color: '#b45309', borderColor: 'rgba(245, 158, 11, 0.28)' }
+                                ? { background: mixRole(WARN_1, 14), color: WARN_TEXT, borderColor: mixRole(WARN_1, 28) }
                                 : { background: 'rgba(239, 68, 68, 0.14)', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.28)' }
                     ) : null;
                     return React.createElement('div', {
@@ -4615,7 +4624,7 @@
                                 overflow: 'visible',
                                 position: 'relative',
                                 cursor: quality ? 'pointer' : 'default',
-                                boxShadow: isBest ? '0 0 0 2px #fbbf24, 0 2px 8px rgba(251,191,36,0.3)' : undefined,
+                                boxShadow: isBest ? `0 0 0 2px ${WARN_SOFT}, 0 2px 8px ${mixRole(WARN_SOFT, 30)}` : undefined,
                             },
                         },
                             React.createElement('div', {
@@ -4702,7 +4711,7 @@
                 }),
                 mealsChartData.qualityStreak >= 3 && React.createElement('div', { className: 'meal-quality-streak-banner' },
                     React.createElement('span', { className: 'streak-fire' }, '🔥'),
-                    React.createElement('span', { style: { fontWeight: '600', color: '#92400e' } }, mealsChartData.qualityStreak + ' отличных приёмов подряд!'),
+                    React.createElement('span', { style: { fontWeight: '600', color: ACT_TEXT } }, mealsChartData.qualityStreak + ' отличных приёмов подряд!'),
                     React.createElement('span', { style: { fontSize: '16px' } }, '🏆'),
                 ),
                 showFirstPerfectAchievement && React.createElement('div', { className: 'first-perfect-meal-badge', style: { marginTop: '8px' } },

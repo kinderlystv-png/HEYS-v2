@@ -5,6 +5,14 @@
 ; (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
 
+  // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, ведро 2)
+  const WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const WARN_1 = 'var(--v4-warn-1, #d99a63)';
+  const WARN_TEXT = 'var(--v4-warn-text, #a1471c)';
+  const ACT = 'var(--v4-act, #c67139)';
+  const ACCENT_BG = 'var(--v4-accent-bg, #f0dcc6)';
+  const mixRole = (role, pct) => `color-mix(in srgb, ${role} ${pct}%, transparent)`;
+
   /**
    * Build stats view model from raw data
    * @param {Object} params - Input parameters
@@ -336,7 +344,7 @@
     if (!goal) return { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0' };
     const ratio = eaten / goal;
     if (ratio < 0.8) {
-      return { bg: '#fef9c320', text: '#eab308', border: '#eab30860' }; // Warning yellow
+      return { bg: mixRole(WARN_1, 12), text: WARN_SOFT, border: mixRole(WARN_SOFT, 38) }; // Warning yellow
     } else if (ratio <= 1.05) {
       return { bg: '#dcfce720', text: '#22c55e', border: '#22c55e60' }; // Good green
     } else {
@@ -349,18 +357,18 @@
     if (remaining > 100) {
       return { bg: '#22c55e20', text: '#22c55e', border: '#22c55e60' }; // Green
     } else if (remaining >= 0) {
-      return { bg: '#eab30820', text: '#eab308', border: '#eab30860' }; // Yellow
+      return { bg: mixRole(WARN_SOFT, 12), text: WARN_SOFT, border: mixRole(WARN_SOFT, 38) }; // Yellow
     } else {
       return { bg: '#ef444420', text: '#ef4444', border: '#ef444460' }; // Red
     }
   }
 
   function getProgressGradient(ratio) {
-    if (ratio <= 0.5) return 'linear-gradient(90deg, #ef4444 0%, #f97316 100%)';
-    if (ratio <= 0.8) return 'linear-gradient(90deg, #f97316 0%, #eab308 100%)';
-    if (ratio <= 1.0) return 'linear-gradient(90deg, #eab308 0%, #22c55e 100%)';
+    if (ratio <= 0.5) return 'linear-gradient(90deg, #ef4444 0%, ' + WARN_1 + ' 100%)';
+    if (ratio <= 0.8) return 'linear-gradient(90deg, ' + WARN_1 + ' 0%, ' + WARN_SOFT + ' 100%)';
+    if (ratio <= 1.0) return 'linear-gradient(90deg, ' + WARN_SOFT + ' 0%, #22c55e 100%)';
     if (ratio <= 1.2) return 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)';
-    return 'linear-gradient(90deg, #f97316 0%, #ef4444 100%)';
+    return 'linear-gradient(90deg, ' + WARN_1 + ' 0%, #ef4444 100%)';
   }
 
   function buildHeroCardsMeta(day, displayHeroOptimum, optimum) {
@@ -371,13 +379,13 @@
       tdeeCardStyle: { background: 'var(--bg-secondary, #f8fafc)', borderColor: '#e2e8f0', cursor: 'pointer' },
       tdeeValueStyle: { color: '#64748b' },
       goalCardStyle: {
-        background: isRefeedDay ? '#fff7ed' : '#f0f9ff',
-        borderColor: isRefeedDay ? '#fdba74' : '#bae6fd',
+        background: isRefeedDay ? mixRole(ACCENT_BG, 70) : '#f0f9ff',
+        borderColor: isRefeedDay ? mixRole(ACT, 50) : '#bae6fd',
         cursor: 'pointer'
       },
-      goalValueStyle: { color: isRefeedDay ? '#f97316' : (isBoosted ? '#10b981' : '#0369a1') },
+      goalValueStyle: { color: isRefeedDay ? ACT : (isBoosted ? '#10b981' : '#0369a1') },
       goalLabelSuffix: !isRefeedDay && isBoosted ? ' 💰' : '',
-      refeedHintStyle: { fontSize: '9px', color: '#f97316', marginTop: '2px', textAlign: 'center' },
+      refeedHintStyle: { fontSize: '9px', color: ACT, marginTop: '2px', textAlign: 'center' },
       getEatenCardStyle: (eatenCol) => ({
         background: eatenCol?.bg || '#f8fafc',
         borderColor: eatenCol?.border || '#e2e8f0',
@@ -398,7 +406,7 @@
 
   function buildDebtCardMeta(caloricDebt) {
     const debt = caloricDebt?.debt || 0;
-    const accentColor = debt > 700 ? '#ef4444' : debt > 400 ? '#f59e0b' : '#3b82f6';
+    const accentColor = debt > 700 ? '#ef4444' : debt > 400 ? WARN_SOFT : '#3b82f6';
     return { accentColor, iconStyle: { color: accentColor } };
   }
 
@@ -430,15 +438,15 @@
           alignItems: 'center',
           gap: '8px',
           padding: '8px 12px',
-          background: proteinSeverity === 'critical' ? 'rgba(239, 68, 68, 0.08)' : 'rgba(245, 158, 11, 0.08)',
+          background: proteinSeverity === 'critical' ? 'rgba(239, 68, 68, 0.08)' : mixRole(WARN_SOFT, 8),
           borderRadius: '8px',
-          borderLeft: '3px solid ' + (proteinSeverity === 'critical' ? '#ef4444' : '#f59e0b')
+          borderLeft: '3px solid ' + (proteinSeverity === 'critical' ? '#ef4444' : WARN_SOFT)
         },
         iconStyle: { fontSize: '16px' },
         titleStyle: {
           fontWeight: 600,
           fontSize: '12px',
-          color: proteinSeverity === 'critical' ? '#dc2626' : '#d97706'
+          color: proteinSeverity === 'critical' ? '#dc2626' : WARN_TEXT
         },
         subtitleStyle: { fontSize: '11px', color: '#64748b' },
         pmidStyle: { fontSize: '9px', color: '#94a3b8', textDecoration: 'none' }
@@ -453,12 +461,12 @@
             ? 'rgba(239, 68, 68, 0.12)'
             : emotionalLevel === 'high'
               ? 'rgba(239, 68, 68, 0.08)'
-              : 'rgba(245, 158, 11, 0.06)',
+              : mixRole(WARN_SOFT, 6),
           borderRadius: '8px',
           borderLeft: '3px solid ' + (
             emotionalLevel === 'critical' ? '#ef4444'
-              : emotionalLevel === 'high' ? '#f97316'
-                : '#eab308'
+              : emotionalLevel === 'high' ? WARN_1
+                : WARN_SOFT
           ),
           animation: emotionalLevel === 'critical' ? 'pulse 2s infinite' : 'none'
         },
@@ -466,7 +474,7 @@
         titleStyle: {
           fontWeight: 600,
           fontSize: '12px',
-          color: emotionalLevel === 'critical' ? '#dc2626' : '#92400e'
+          color: emotionalLevel === 'critical' ? '#dc2626' : WARN_TEXT
         },
         subtitleStyle: { fontSize: '11px', color: '#64748b' },
         pmidStyle: { fontSize: '9px', color: '#94a3b8', textDecoration: 'none' }
@@ -523,11 +531,11 @@
   function buildDayScoreStyleMeta(score) {
     if (!score || score <= 0) return null;
     const backgroundColor = score <= 3 ? '#fee2e2'
-      : score <= 5 ? '#fef3c7'
-        : score <= 7 ? '#fef3c7' : '#dcfce7';
+      : score <= 5 ? mixRole(WARN_1, 30)
+        : score <= 7 ? mixRole(WARN_1, 30) : '#dcfce7';
     const color = score <= 3 ? '#dc2626'
-      : score <= 5 ? '#d97706'
-        : score <= 7 ? '#d97706' : '#16a34a';
+      : score <= 5 ? WARN_TEXT
+        : score <= 7 ? WARN_TEXT : '#16a34a';
     return { backgroundColor, color };
   }
 
@@ -653,7 +661,7 @@
     const getDeltaPctColor = (delta, target) => {
       const tone = getDeltaPctTone(delta, target);
       if (tone === 'green') return '#22c55e';
-      if (tone === 'yellow') return '#f59e0b';
+      if (tone === 'yellow') return WARN_SOFT;
       if (tone === 'red') return '#ef4444';
       return '#94a3b8';
     };
@@ -900,19 +908,19 @@
 
     const getColor = (r) => {
       if (r <= 0.5) return '#ef4444';
-      if (r < 0.75) return '#eab308';
+      if (r < 0.75) return WARN_SOFT;
       if (r < 0.9) return '#22c55e';
       if (r < 1.1) return '#10b981';
-      if (r < 1.3) return '#eab308';
+      if (r < 1.3) return WARN_SOFT;
       return '#ef4444';
     };
 
     const getGradient = (r) => {
       if (r < 0.5) return 'linear-gradient(90deg, #ef4444 0%, #ef4444 100%)';
-      if (r < 0.75) return 'linear-gradient(90deg, #ef4444 0%, #eab308 100%)';
-      if (r < 1.0) return 'linear-gradient(90deg, #eab308 0%, #22c55e 100%)';
+      if (r < 0.75) return 'linear-gradient(90deg, #ef4444 0%, ' + WARN_SOFT + ' 100%)';
+      if (r < 1.0) return 'linear-gradient(90deg, ' + WARN_SOFT + ' 0%, #22c55e 100%)';
       if (r < 1.15) return 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)';
-      return 'linear-gradient(90deg, #eab308 0%, #ef4444 100%)';
+      return 'linear-gradient(90deg, ' + WARN_SOFT + ' 0%, #ef4444 100%)';
     };
 
     const color = getColor(ratio);
@@ -950,8 +958,8 @@
     if (!point || !point.target) return null;
 
     const pct = Math.round((point.kcal / point.target) * 100);
-    const stripeGradient = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
-    const pctColor = '#f59e0b';
+    const stripeGradient = 'linear-gradient(90deg, ' + ACT + ', ' + WARN_1 + ')';
+    const pctColor = ACT;
 
     const styles = {
       popup: { position: 'fixed', zIndex: 9999 },
@@ -995,7 +1003,7 @@
       const minGood = hasTrainingFlag ? 1.0 : 0.9;
       const minOk = hasTrainingFlag ? 0.7 : 0.6;
       if (ratio < minOk) return '#ef4444';
-      if (ratio < minGood) return '#f59e0b';
+      if (ratio < minGood) return WARN_SOFT;
       return '#22c55e';
     };
 
@@ -1003,9 +1011,9 @@
       if (!norm || norm === 0) return '#6b7280';
       const ratio = actual / norm;
       if (ratio < 0.5) return '#ef4444';
-      if (ratio < 0.8) return '#f59e0b';
+      if (ratio < 0.8) return WARN_SOFT;
       if (ratio <= 1.2) return '#22c55e';
-      if (ratio <= 1.5) return '#f59e0b';
+      if (ratio <= 1.5) return WARN_SOFT;
       return '#ef4444';
     };
 
@@ -1013,16 +1021,16 @@
       if (!norm || norm === 0) return '#6b7280';
       const ratio = actual / norm;
       if (hasDeficitFlag) {
-        if (ratio < 0.3) return '#f59e0b';
+        if (ratio < 0.3) return WARN_SOFT;
         if (ratio <= 0.8) return '#22c55e';
         if (ratio <= 1.0) return '#22c55e';
-        if (ratio <= 1.2) return '#f59e0b';
+        if (ratio <= 1.2) return WARN_SOFT;
         return '#ef4444';
       }
       if (ratio < 0.5) return '#ef4444';
-      if (ratio < 0.8) return '#f59e0b';
+      if (ratio < 0.8) return WARN_SOFT;
       if (ratio <= 1.1) return '#22c55e';
-      if (ratio <= 1.3) return '#f59e0b';
+      if (ratio <= 1.3) return WARN_SOFT;
       return '#ef4444';
     };
 
@@ -1198,7 +1206,7 @@
     if (!goalPopup || !goalPopup.data) return null;
     const d = goalPopup.data;
     const baseOptimumCalc = Math.round(d.baseExpenditure * (1 + d.deficitPct / 100));
-    const deficitColor = d.deficitPct >= 0 ? '#10b981' : '#f59e0b';
+    const deficitColor = d.deficitPct >= 0 ? '#10b981' : WARN_SOFT;
     const styles = {
       popup: {
         position: 'fixed',
@@ -1221,8 +1229,8 @@
       totalValue: { fontSize: '14px', fontWeight: 600, color: '#0369a1' },
       boostLabel: { fontSize: '13px', color: '#10b981' },
       boostValue: { fontSize: '13px', fontWeight: 500, color: '#10b981' },
-      refeedLabel: { fontSize: '13px', color: '#f97316' },
-      refeedValue: { fontSize: '13px', fontWeight: 500, color: '#f97316' },
+      refeedLabel: { fontSize: '13px', color: ACT },
+      refeedValue: { fontSize: '13px', fontWeight: 500, color: ACT },
       tefNote: {
         marginTop: '12px',
         padding: '8px',
@@ -1369,7 +1377,7 @@
     const config = {
       water: { icon: '💧', name: 'Вода', unit: 'мл', color: '#3b82f6', goal },
       steps: { icon: '👟', name: 'Шаги', unit: '', color: data.color || '#22c55e', goal },
-      kcal: { icon: '🔥', name: 'Калории', unit: 'ккал', color: '#f59e0b', goal }
+      kcal: { icon: '🔥', name: 'Калории', unit: 'ккал', color: ACT, goal }
     }[type] || { icon: '•', name: 'Метрика', unit: '', color: '#64748b', goal };
 
     const ratio = typeof data.ratio === 'number'
@@ -1379,10 +1387,10 @@
 
     const getGradient = (r) => {
       if (r < 0.5) return 'linear-gradient(90deg, #ef4444 0%, #ef4444 100%)';
-      if (r < 0.75) return 'linear-gradient(90deg, #ef4444 0%, #eab308 100%)';
-      if (r < 1.0) return 'linear-gradient(90deg, #eab308 0%, #22c55e 100%)';
+      if (r < 0.75) return 'linear-gradient(90deg, #ef4444 0%, ' + WARN_SOFT + ' 100%)';
+      if (r < 1.0) return 'linear-gradient(90deg, ' + WARN_SOFT + ' 0%, #22c55e 100%)';
       if (r < 1.15) return 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)';
-      return 'linear-gradient(90deg, #eab308 0%, #ef4444 100%)';
+      return 'linear-gradient(90deg, ' + WARN_SOFT + ' 0%, #ef4444 100%)';
     };
 
     const formatWater = (val) => (val >= 1000 ? (val / 1000).toFixed(1) + 'л' : val + 'мл');
@@ -1660,14 +1668,14 @@
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '8px 10px',
-        background: 'rgba(234, 179, 8, 0.1)',
+        background: mixRole(WARN_SOFT, 10),
         borderRadius: '8px',
-        border: '1px solid rgba(234, 179, 8, 0.2)'
+        border: '1px solid ' + mixRole(WARN_SOFT, 20)
       },
       rowLabel: { color: '#475569' },
       valueFat: { fontWeight: 600, color: '#16a34a' },
       valueGlycogen: { fontWeight: 600, color: '#0ea5e9' },
-      valueMuscle: { fontWeight: 600, color: '#d97706' },
+      valueMuscle: { fontWeight: 600, color: WARN_TEXT },
       totalBox: {
         padding: '12px 14px',
         background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%)',
@@ -1718,10 +1726,12 @@
     if (!balanceDayPopup || !balanceDayPopup.day) return null;
     const v = balanceDayPopup.day;
 
-    const stripeColor = Math.abs(v.delta) <= 100
+    const isBalanced = Math.abs(v.delta) <= 100;
+    const isWarnDeficit = !isBalanced && v.delta < 0;
+    const stripeColor = isBalanced
       ? '#22c55e'
-      : v.delta < 0
-        ? '#f59e0b'
+      : isWarnDeficit
+        ? WARN_SOFT
         : '#ef4444';
 
     const dateLabel = v.date && typeof v.date === 'string'
@@ -1778,9 +1788,11 @@
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '10px 12px',
-        background: stripeColor + '15',
+        background: isWarnDeficit ? mixRole(WARN_SOFT, 8) : stripeColor + '15',
         borderRadius: '10px',
-        border: '1px solid ' + stripeColor + '30'
+        border: isWarnDeficit
+          ? ('1px solid ' + mixRole(WARN_SOFT, 19))
+          : ('1px solid ' + stripeColor + '30')
       },
       balanceLabel: { color: '#475569', fontSize: '13px' },
       balanceValue: { fontSize: '18px', fontWeight: 700, color: stripeColor },
@@ -1798,8 +1810,8 @@
       baseValue: { fontSize: '13px', fontWeight: 600, color: '#334155' },
       refeedBadge: {
         fontSize: '10px',
-        color: '#f97316',
-        background: 'rgba(249, 115, 22, 0.12)',
+        color: ACT,
+        background: mixRole(ACT, 12),
         padding: '2px 6px',
         borderRadius: '10px',
         marginLeft: '6px'
@@ -1901,15 +1913,15 @@
         overflow: 'hidden',
         animation: 'fadeInScale 0.2s ease'
       },
-      stripe: { height: '4px', background: 'linear-gradient(90deg, #f97316 0%, #fb923c 100%)' },
+      stripe: { height: '4px', background: 'linear-gradient(90deg, ' + ACT + ' 0%, ' + WARN_1 + ' 100%)' },
       content: { padding: '20px' },
       header: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' },
       headerIcon: { fontSize: '28px' },
       title: { fontSize: '18px', fontWeight: 700, color: 'var(--text, #1e293b)' },
       subtitle: { fontSize: '13px', color: '#64748b' },
       description: { fontSize: '14px', color: '#475569', marginBottom: '16px', lineHeight: '1.5' },
-      formulaBox: { background: 'rgba(249, 115, 22, 0.08)', borderRadius: '12px', padding: '14px', marginBottom: '16px' },
-      formulaLabel: { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#f97316', fontWeight: 600, marginBottom: '8px' },
+      formulaBox: { background: mixRole(ACT, 8), borderRadius: '12px', padding: '14px', marginBottom: '16px' },
+      formulaLabel: { fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', color: ACT, fontWeight: 600, marginBottom: '8px' },
       formulaCode: { fontSize: '13px', fontFamily: 'monospace', color: 'var(--text, #1e293b)', background: 'rgba(0,0,0,0.04)', padding: '10px 12px', borderRadius: '8px', lineHeight: '1.6' },
       formulaIndent: { paddingLeft: '38px' },
       rangeGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' },
@@ -1953,9 +1965,9 @@
     let style;
 
     if (severity === 2) {
-      style = { icon: '📊', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.06)', border: 'rgba(245, 158, 11, 0.15)', label: 'Значительный профицит' };
+      style = { icon: '📊', color: WARN_SOFT, bg: mixRole(WARN_SOFT, 6), border: mixRole(WARN_SOFT, 15), label: 'Значительный профицит' };
     } else if (severity === 1) {
-      style = { icon: '📈', color: '#eab308', bg: 'rgba(234, 179, 8, 0.06)', border: 'rgba(234, 179, 8, 0.15)', label: 'Умеренный профицит' };
+      style = { icon: '📈', color: WARN_1, bg: mixRole(WARN_1, 6), border: mixRole(WARN_1, 15), label: 'Умеренный профицит' };
     } else {
       style = { icon: '➕', color: '#a3a3a3', bg: 'rgba(163, 163, 163, 0.05)', border: 'rgba(163, 163, 163, 0.12)', label: 'Небольшой плюс' };
     }

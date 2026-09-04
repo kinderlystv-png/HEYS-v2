@@ -423,20 +423,28 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   justify-content: center;
   gap: 6px;
   padding: 7px 12px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border: 1.5px solid #fbbf24;
+  background: linear-gradient(
+    135deg,
+    var(--v4-accent-bg, #f0dcc6) 0%,
+    color-mix(in srgb, var(--v4-warn-soft, #c9922e) 35%, var(--v4-accent-bg, #f0dcc6)) 100%
+  );
+  border: 1.5px solid var(--v4-warn-soft, #c9922e);
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 13px;
   font-weight: 600;
-  color: #92400e;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 @media (hover: hover) {
   .aps-ready-sets-btn:hover {
-    background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
-    border-color: #f59e0b;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, var(--v4-accent-bg, #f0dcc6)) 0%,
+      var(--v4-warn-soft, #c9922e) 100%
+    );
+    border-color: var(--v4-warn-2, #c67139);
   }
 }
 
@@ -799,7 +807,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .aps-did-you-mean {
   margin-top: 12px;
   padding: 12px;
-  background-color: rgba(255, 213, 0, 0.08);
+  background-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 8%, transparent);
   border-radius: 8px;
   text-align: left;
 }
@@ -810,8 +818,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 @media (hover: hover) {
   .aps-did-you-mean button:hover {
-    background-color: rgba(255, 213, 0, 0.2) !important;
-    border-color: rgba(255, 213, 0, 0.5) !important;
+    background-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 20%, transparent) !important;
+    border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 50%, transparent) !important;
   }
 }
 
@@ -898,8 +906,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 @media (hover: hover) {
   .aps-fav-btn:hover {
-    background: #fef3c7;
-    color: #f59e0b;
+    background: var(--v4-accent-bg, #f0dcc6);
+    color: var(--v4-act, #c67139);
   }
 }
 
@@ -1125,25 +1133,33 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 /* === 12. Умные рекомендации === */
 .aps-smart-rec {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(
+    135deg,
+    var(--v4-accent-bg, #f0dcc6) 0%,
+    color-mix(in srgb, var(--v4-warn-soft, #c9922e) 35%, var(--v4-accent-bg, #f0dcc6)) 100%
+  );
   border-radius: 10px;
   padding: 8px !important;
   margin-bottom: 8px;
 }
 
 [data-theme$='dark'] .aps-smart-rec {
-  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--v4-warn-3, #a1471c) 70%, black) 0%,
+    var(--v4-warn-text, #a1471c) 100%
+  );
 }
 
 .aps-rec-hint {
   font-size: 12px;
-  color: #92400e;
+  color: var(--v4-warn-text, #a1471c);
   margin-left: 8px;
   font-weight: 400;
 }
 
 [data-theme$='dark'] .aps-rec-hint {
-  color: #fcd34d;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 /* === 13. Подсказка про последние граммы === */
@@ -1259,14 +1275,14 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   align-items: center;
   gap: 6px;
   padding: 8px 10px;
-  background: #fef3c7;
+  background: var(--v4-accent-bg, #f0dcc6);
   border-radius: 10px;
   margin-bottom: 8px;
 }
 
 .aps-kcal-label {
   font-size: 13px;
-  color: #92400e;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .aps-kcal-input {
@@ -1275,14 +1291,14 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   font-size: 16px;
   font-weight: 600;
   text-align: center;
-  border: 2px solid #f59e0b;
+  border: 2px solid var(--v4-warn-soft, #c9922e);
   border-radius: 6px;
   background: var(--color-white);
 }
 
 .aps-kcal-input:focus {
   outline: none;
-  border-color: #d97706;
+  border-color: var(--v4-warn-2, #c67139);
 }
 
 .aps-calc-result {
@@ -1292,16 +1308,16 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 [data-theme$='dark'] .aps-kcal-input-row {
-  background: #78350f;
+  background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 70%, black);
 }
 
 [data-theme$='dark'] .aps-kcal-label {
-  color: #fcd34d;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$='dark'] .aps-kcal-input {
   background: var(--v4-surface, #1f2937);
-  border-color: #f59e0b;
+  border-color: var(--v4-warn-soft, #c9922e);
   color: var(--color-white);
 }
 
@@ -1595,14 +1611,14 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 @keyframes bestMealGlow {
   0% {
     box-shadow:
-      0 0 0 2px #fbbf24,
-      0 2px 8px rgba(251, 191, 36, 0.3);
+      0 0 0 2px var(--v4-warn-soft, #c9922e),
+      0 2px 8px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, transparent);
   }
 
   100% {
     box-shadow:
-      0 0 0 2px #f59e0b,
-      0 2px 12px rgba(251, 191, 36, 0.5);
+      0 0 0 2px var(--v4-warn-2, #c67139),
+      0 2px 12px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 50%, transparent);
   }
 }
 
@@ -2129,9 +2145,9 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   margin: 0 0 14px;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(180, 83, 9, 0.18);
-  background: #fef3c7;
-  color: #78350f;
+  border: 1px solid color-mix(in srgb, var(--v4-warn-text, #a1471c) 18%, transparent);
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
+  color: var(--v4-warn-text, #a1471c);
   text-align: left;
 }
 
@@ -2165,9 +2181,9 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   width: 100%;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid rgba(180, 83, 9, 0.22);
+  border: 1px solid color-mix(in srgb, var(--v4-warn-text, #a1471c) 22%, transparent);
   background: rgba(255, 255, 255, 0.72);
-  color: #78350f;
+  color: var(--v4-warn-text, #a1471c);
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
@@ -2195,7 +2211,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #78350f;
+  color: var(--v4-warn-text, #a1471c);
   font-size: 11px;
   font-weight: 600;
   text-decoration: underline;
@@ -2203,19 +2219,19 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 [data-theme$='dark'] .aps-similar-warn {
-  background: #3b2a08;
-  border-color: rgba(252, 211, 77, 0.2);
-  color: #fcd34d;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 35%, transparent);
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 20%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$='dark'] .aps-similar-warn__item {
   background: rgba(0, 0, 0, 0.22);
-  border-color: rgba(252, 211, 77, 0.24);
-  color: #fcd34d;
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 24%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$='dark'] .aps-similar-warn__dismiss {
-  color: #fcd34d;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 /* Вариант предупреждения на шаге граммов: тот же тон, компактнее. */

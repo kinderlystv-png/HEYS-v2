@@ -17,6 +17,16 @@
     anytime: { name: 'Любое время', icon: '✨', hours: null },
   };
 
+  // v4 roles для nutrition-tab (смысл, не оттенок — UI_V4_BARE_LITERALS_DECISION.md).
+  const V4_ACCENT_FILL = 'var(--v4-act, #c67139)';
+  const V4_ACCENT_TEXT = 'var(--v4-act-text, #8a4a20)';
+  const V4_ACCENT_BG = 'var(--v4-accent-bg, #f0dcc6)';
+  const V4_WARN_TEXT = 'var(--v4-warn-text, #a1471c)';
+  const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const V4_WARN_1 = 'var(--v4-warn-1, #d99a63)';
+  const V4_WARN_SURFACE = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent)';
+  const V4_WARN_TINT = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 40%, transparent)';
+
   // === КАТАЛОГ ВИТАМИНОВ ===
   const SUPPLEMENTS_CATALOG = {
     // Внутренние category id сохранены ради совместимости. Пользовательские
@@ -1691,7 +1701,7 @@
                 // Соблюдение
                 React.createElement('div', {
                   style: {
-                    background: stats.compliancePct >= 80 ? '#f0fdf4' : (stats.compliancePct >= 50 ? '#fffbeb' : '#fef2f2'),
+                    background: stats.compliancePct >= 80 ? '#f0fdf4' : (stats.compliancePct >= 50 ? V4_WARN_SURFACE : '#fef2f2'),
                     borderRadius: '12px',
                     padding: '12px 8px'
                   }
@@ -1700,7 +1710,7 @@
                     style: {
                       fontSize: '24px',
                       fontWeight: '700',
-                      color: stats.compliancePct >= 80 ? '#16a34a' : (stats.compliancePct >= 50 ? '#d97706' : '#dc2626')
+                      color: stats.compliancePct >= 80 ? '#16a34a' : (stats.compliancePct >= 50 ? V4_WARN_SOFT : '#dc2626')
                     }
                   }, `${stats.compliancePct}%`),
                   React.createElement('div', { style: { fontSize: '11px', color: '#64748b' } }, 'соблюдение')
@@ -1863,10 +1873,10 @@
                         // Доза (с конвертацией единиц)
                         setting.dose && React.createElement('span', {
                           style: {
-                            background: doseSafety.status === 'danger' || doseSafety.status === 'invalid' ? '#fee2e2' : (doseSafety.status === 'warning' ? '#fef3c7' : '#e2ecf2'),
+                            background: doseSafety.status === 'danger' || doseSafety.status === 'invalid' ? '#fee2e2' : (doseSafety.status === 'warning' ? V4_WARN_TINT : '#e2ecf2'),
                             padding: '2px 8px',
                             borderRadius: '6px',
-                            color: doseSafety.status === 'danger' || doseSafety.status === 'invalid' ? '#b91c1c' : (doseSafety.status === 'warning' ? '#92400e' : '#334155')
+                            color: doseSafety.status === 'danger' || doseSafety.status === 'invalid' ? '#b91c1c' : (doseSafety.status === 'warning' ? V4_WARN_TEXT : '#334155')
                           }
                         }, getDoseDisplay(id, setting, bio)),
                         // Курсовость (недели + предупреждение о перерыве)
@@ -1875,10 +1885,10 @@
                           const needsBreak = cInfo.needsBreak;
                           return React.createElement('span', {
                             style: {
-                              background: needsBreak ? '#fef2f2' : '#fef3c7',
+                              background: needsBreak ? '#fef2f2' : V4_ACCENT_BG,
                               padding: '2px 8px',
                               borderRadius: '6px',
-                              color: needsBreak ? '#dc2626' : '#92400e'
+                              color: needsBreak ? '#dc2626' : V4_ACCENT_TEXT
                             }
                           }, needsBreak ? `⚠️ ${cInfo.weeksOnCourse} нед. (нужен перерыв!)` : `📅 ${cInfo.weeksOnCourse} нед.`);
                         })()
@@ -1904,20 +1914,20 @@
                           color = '#b91c1c';
                         } else if (doseSafety.status === 'warning') {
                           msg = doseSafety.text;
-                          bg = '#fffbeb';
-                          color = '#92400e';
+                          bg = V4_WARN_SURFACE;
+                          color = V4_WARN_TEXT;
                         } else if (doseSafety.status === 'missing') {
                           msg = doseSafety.text;
                           bg = '#eaf0f4';
                           color = '#334155';
                         } else if (needsBreak) {
                           msg = `⏰ На курсе ${cInfo.weeksOnCourse} нед. — пора перерыв`;
-                          bg = '#fffbeb';
-                          color = '#92400e';
+                          bg = V4_WARN_SURFACE;
+                          color = V4_WARN_TEXT;
                         } else if (hasEffects) {
                           msg = `⚡ Побочки: ${sideSum.total} за ${sideSum.days} дн.`;
-                          bg = '#fffbeb';
-                          color = '#92400e';
+                          bg = V4_WARN_SURFACE;
+                          color = V4_WARN_TEXT;
                         }
 
                         return React.createElement('div', {
@@ -2005,7 +2015,7 @@
                             hasEffects && React.createElement('span', {
                               style: {
                                 fontSize: '12px',
-                                color: '#f59e0b'
+                                color: V4_WARN_SOFT
                               }
                             }, `⚡ ${sideSum.total} эффектов за ${sideSum.days} дн.`),
                             React.createElement('button', {
@@ -2019,12 +2029,12 @@
                                 }
                               },
                               style: {
-                                background: '#fef3c7',
+                                background: V4_WARN_TINT,
                                 border: 'none',
                                 borderRadius: '8px',
                                 padding: '6px 10px',
                                 fontSize: '12px',
-                                color: '#92400e',
+                                color: V4_WARN_TEXT,
                                 cursor: 'pointer',
                                 fontWeight: '600'
                               }
@@ -2070,7 +2080,7 @@
                       alignItems: 'center',
                       gap: '10px',
                       padding: '8px 10px',
-                      background: isChecked ? '#fef3c7' : '#f8fafc',
+                      background: isChecked ? V4_ACCENT_BG : '#f8fafc',
                       borderRadius: '10px',
                       cursor: 'pointer'
                     }
@@ -2112,8 +2122,8 @@
                     return React.createElement('div', {
                       key: si,
                       style: {
-                        background: isPlanned ? '#f0fdf4' : '#fffbeb',
-                        border: isPlanned ? '1px solid #86efac' : '1px solid #fcd34d',
+                        background: isPlanned ? '#f0fdf4' : V4_WARN_SURFACE,
+                        border: isPlanned ? '1px solid #86efac' : `1px solid ${V4_WARN_SOFT}`,
                         borderRadius: '10px',
                         padding: '10px'
                       }
@@ -2178,11 +2188,11 @@
                 }, synergies.map((s, i) => React.createElement('div', { key: i, style: { marginBottom: i < synergies.length - 1 ? '4px' : 0 } }, s))),
                 conflicts.length > 0 && React.createElement('div', {
                   style: {
-                    background: '#fffbeb',
+                    background: V4_WARN_SURFACE,
                     borderRadius: '10px',
                     padding: '10px',
                     fontSize: '12px',
-                    color: '#d97706'
+                    color: V4_WARN_SOFT
                   }
                 }, conflicts.map((c, i) => React.createElement('div', { key: i, style: { marginBottom: i < conflicts.length - 1 ? '4px' : 0 } }, c)))
               );
@@ -2560,7 +2570,7 @@
 
       // UI: цвета для бейджа времени приёма (чтобы визуально разделить группы)
       const GROUP_THEME = {
-        morning: { bg: '#fef3c7', border: '#f59e0b', fg: '#92400e' },   // amber
+        morning: { bg: V4_ACCENT_BG, border: V4_ACCENT_FILL, fg: V4_ACCENT_TEXT },   // accent
         withMeal: { bg: '#dbeafe', border: '#60a5fa', fg: '#1d4ed8' },  // blue
         evening: { bg: '#ede9fe', border: '#a78bfa', fg: '#6d28d9' },   // violet
         anytime: { bg: '#f1f5f9', border: '#cbd5e1', fg: '#334155' },   // slate
@@ -2937,8 +2947,8 @@
             className: 'supplements-card__reminder supplements-card__reminder--' + reminder.urgency,
             style: {
               fontSize: '12px',
-              color: reminder.urgency === 'high' ? '#dc2626' : '#d97706',
-              background: reminder.urgency === 'high' ? '#fef2f2' : '#fffbeb',
+              color: reminder.urgency === 'high' ? '#dc2626' : V4_WARN_SOFT,
+              background: reminder.urgency === 'high' ? '#fef2f2' : V4_WARN_SURFACE,
               padding: '8px 10px',
               borderRadius: '8px',
               marginBottom: '10px',
@@ -2966,8 +2976,8 @@
           className: 'supplements-card__message supplements-card__message--warning',
           style: {
             fontSize: '12px',
-            color: '#d97706',
-            background: '#fffbeb',
+            color: V4_WARN_SOFT,
+            background: V4_WARN_SURFACE,
             padding: '8px 10px',
             borderRadius: '8px',
             marginBottom: '8px'
@@ -3107,7 +3117,7 @@
     const sources = science?.EVIDENCE_SOURCES || {};
     const levelMeta = {
       strong: { label: 'Надёжные данные', color: '#166534', background: '#dcfce7' },
-      moderate: { label: 'Умеренные данные', color: '#92400e', background: '#fef3c7' },
+      moderate: { label: 'Умеренные данные', color: V4_WARN_TEXT, background: V4_WARN_TINT },
       limited: { label: 'Ограниченные данные', color: '#475569', background: '#e2ecf2' },
       unsupported: { label: 'Не подтверждено', color: '#991b1b', background: '#fee2e2' },
     };
@@ -3158,8 +3168,8 @@
                   marginTop: '8px',
                   padding: '7px 9px',
                   borderRadius: '8px',
-                  background: '#fef3c7',
-                  color: '#92400e',
+                  background: V4_WARN_TINT,
+                  color: V4_WARN_TEXT,
                   fontSize: '12px'
                 }
               }, `Нужно подтвердить: ${item.confirmationType || 'обсудить показание со специалистом'}`),
@@ -3207,7 +3217,7 @@
     const doseStatusColors = {
       danger: { color: '#b91c1c', background: '#fee2e2' },
       invalid: { color: '#b91c1c', background: '#fee2e2' },
-      warning: { color: '#92400e', background: '#fef3c7' },
+      warning: { color: V4_WARN_TEXT, background: V4_WARN_TINT },
       missing: { color: '#334155', background: '#e2ecf2' },
       unverified: { color: '#334155', background: '#e2ecf2' },
       within_limit: { color: '#166534', background: '#dcfce7' },
@@ -3240,9 +3250,9 @@
         style: {
           fontSize: '12px',
           fontWeight: '600',
-          color: '#d97706',
+          color: V4_WARN_SOFT,
           padding: '6px 10px',
-          background: '#fef3c7',
+          background: V4_WARN_TINT,
           borderRadius: '8px',
           marginBottom: '8px'
         }
@@ -3437,8 +3447,8 @@
           React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' } },
             React.createElement('div', {
               style: {
-                background: '#fef3c7',
-                color: '#92400e',
+                background: V4_ACCENT_BG,
+                color: V4_ACCENT_TEXT,
                 padding: '4px 10px',
                 borderRadius: '12px',
                 fontSize: '13px',
@@ -3531,7 +3541,7 @@
                 borderBottom: i < antagonisms.length - 1 ? '1px solid #e2e8f0' : 'none'
               }
             },
-              React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: '#d97706' } },
+              React.createElement('div', { style: { fontWeight: '600', fontSize: '14px', color: V4_WARN_SOFT } },
                 `✗ ${SUPPLEMENTS_CATALOG[a.conflict]?.name || a.conflict}`
               ),
               a.mechanism && React.createElement('div', {
@@ -3560,8 +3570,8 @@
             },
               React.createElement('span', {
                 style: {
-                  background: tip.type === 'enhancer' ? '#dcfce7' : '#fef3c7',
-                  color: tip.type === 'enhancer' ? '#166534' : '#92400e',
+                  background: tip.type === 'enhancer' ? '#dcfce7' : V4_WARN_TINT,
+                  color: tip.type === 'enhancer' ? '#166534' : V4_WARN_TEXT,
                   padding: '2px 8px',
                   borderRadius: '8px',
                   fontSize: '11px'
@@ -3621,7 +3631,7 @@
 
     const priorityColors = {
       critical: { bg: '#fef2f2', border: '#fca5a5', text: '#dc2626' },
-      high: { bg: '#fff7ed', border: '#fdba74', text: '#ea580c' },
+      high: { bg: V4_WARN_SURFACE, border: V4_WARN_1, text: V4_WARN_TEXT },
       medium: { bg: '#fefce8', border: '#fde047', text: '#ca8a04' },
       timing: { bg: '#ecfdf5', border: '#6ee7b7', text: '#059669' },
       low: { bg: '#f8fafc', border: '#e2e8f0', text: '#64748b' }
