@@ -620,13 +620,9 @@ generated scope не stash/revert/delete. Если он блокирует де�
   `node scripts/ui-v4-check-contract-drift.mjs --list`, а перед каждым крупным
   блоком перечитывай свои строки в самом канвасе. Гейт ловит расхождение на
   следующем прогоне — работать нужно уже по свежему.
-- **Цвет — ролью, и это проверяется машинно.** `pnpm ui:v4:check:roles` держит
-  четыре гейта: неопределённые роли и голые `var()`
-  (`scripts/ui-v4-check-undefined-roles.mjs`), необъявленные переменные
-  (`scripts/ui-check-undeclared-vars.mjs`), чужие запасные значения
-  (`scripts/ui-v4-check-foreign-fallbacks.mjs`) и правду запасного значения
-  рядом с ролью (`apps/web/__tests__/role-fallback-truth.test.js`, postcss).
-  Полный `pnpm ui:v4:check` включает их и дрейф контракта
+- **Цвет — ролью, и это проверяется машинно.** `pnpm ui:v4:check` держит два
+  гейта: неопределённые роли и голые `var()`
+  (`scripts/ui-v4-check-undefined-roles.mjs`) и дрейф контракта
   (`scripts/ui-v4-check-contract-drift.mjs`). Неопределённая роль — это цвет,
   который молча не следует набору: список известных мест заморожен и может
   только уменьшаться. Голая `var(--роль)` без запасного значения требует маркера

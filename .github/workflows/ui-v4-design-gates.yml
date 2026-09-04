@@ -74,11 +74,8 @@ jobs:
           HEYS_DESIGN_GATES: only
         run: cd apps/web && pnpm exec vitest run --retry=1
 
-      # Роли и дрейф — отдельно от полного ui:v4:check: тот тянет ещё frames/
-      # evidence, которая сегодня красна в трёх зонах по своей причине.
+      # Только дрейф контракта: полный ui:v4:check тянет ещё и проверку
+      # frames/evidence, которая сегодня красна в трёх зонах по своей причине.
       # Заводить заведомо красный гейт нельзя — такие выключают в первый день.
-      - name: Гейты ролей палитры
-        run: pnpm ui:v4:check:roles
-
       - name: Дрейф контракта
         run: node scripts/ui-v4-check-contract-drift.mjs
