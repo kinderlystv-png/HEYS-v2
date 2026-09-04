@@ -11203,7 +11203,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   --water-tone-deep: #4e6d7a;
   --water-submerge-text: #fffaf1;
   --water-ink-text: var(--v4-ink, #201e1d);
-  --water-dim-text: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  --water-dim-text: #6b5f4f;
   --water-cream-text: var(--water-submerge-text);
   --water-drop-travel: 21px;
   position: relative;
@@ -11219,14 +11219,17 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   padding: 0;
 }
 
-/* Строка контракта «вид · плитка воды 1×1»: норма 9,5/600 чернила 50 % справа
-   сверху, «Вода» 9,5/600 слева внизу, факт 17/600 справа внизу, поля 8. */
+/* Решение владельца 2 сентября: кадр «Главная · дефолтная раскладка» — норма
+   мелким справа сверху, «Вода» слева внизу, факт справа внизу по общей нижней
+   кромке. Семёрка у нормы — компенсация одиночного элемента у верхнего края,
+   она вернулась вместе с раскладкой. Расхождение с текстом строки «раскладка
+   плитки» (решение дизайнера 31 августа) записано в UI_V4_FINDINGS.md. */
 .widget-water--v4 .widget-water__norm {
   position: absolute;
   right: 8px;
-  top: 8px;
+  top: 7px;
   z-index: 3;
-  font-size: 9.5px;
+  font-size: 0.53125rem;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0;
@@ -11247,10 +11250,10 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   border-radius: 0;
   background: none;
   display: block;
-  font-size: 9.5px;
+  font-size: 0.5625rem;
   font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0;
+  line-height: 1.1;
+  letter-spacing: 0.03em;
   color: var(--water-dim-text);
   transition: color 220ms ease-out;
   pointer-events: none;
@@ -11298,7 +11301,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   --water-tone-deep: #3f6c7e;
   --water-submerge-text: #f2ede6;
   --water-ink-text: #f2ede6;
-  --water-dim-text: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
+  --water-dim-text: rgba(242, 237, 230, 0.62);
 }
 
 html[data-theme-id="blue"] .widget-water--v4 {
@@ -11306,7 +11309,7 @@ html[data-theme-id="blue"] .widget-water--v4 {
   --water-tone-deep: #2c5f76;
   --water-submerge-text: #ffffff;
   --water-ink-text: #101826;
-  --water-dim-text: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  --water-dim-text: #5a6474;
 }
 
 html[data-theme-id="blue-dark"] .widget-water--v4 {
@@ -11314,14 +11317,11 @@ html[data-theme-id="blue-dark"] .widget-water--v4 {
   --water-tone-deep: #35657d;
   --water-submerge-text: #eef3f8;
   --water-ink-text: #eef3f8;
-  --water-dim-text: var(--v4-ink-2, rgba(238, 243, 248, 0.63));
+  --water-dim-text: rgba(238, 243, 248, 0.62);
 }
 
 body:has(.widgets-tab) .widget--water.widget--1x1 {
   padding: 0;
-  background: var(--v4-card, #f7efe2);
-  border-radius: 13px;
-  overflow: hidden;
 }
 
 body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
@@ -12520,6 +12520,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 4px;
   margin-top: auto;
   min-width: 0;
+}
+
+/* Кадр «Клетчатка · Как сейчас · 03»: зазор 3 px у числа и «г».
+   Общий hero 4 px не трогал — им пользуются белок и 2×1 клетчатки. */
+.widget-v4-mini.widget-v4-fiber .widget-v4-goal-hero {
+  gap: 3px;
 }
 
 .widget-v4-goal-value {

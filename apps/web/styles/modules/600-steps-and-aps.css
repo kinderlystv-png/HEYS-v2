@@ -8,6 +8,22 @@
    чужой коммит — 1239 строк за один день. Раскладку держит гейт
    apps/web/__tests__/aps-css-zones.test.js. */
 
+.mc-modal--meal-create .meal-time-cta {
+  color: #2b1608;
+}
+
+/* НЕ СНИМАТЬ, пока --v4-btn-on-act не объявлена в синих наборах. По брифу
+   3 сентября это правило должно было уйти вместе с переводом заливки кнопки на
+   --v4-act. Но в палитре роль текста на заливке в обоих синих наборах
+   закомментирована с причиной: «белый на #2e7cc0 даёт 4.41:1 < 4.5, в вёрстке
+   еды не использовать». Без неё перевод заливки даёт запасное песочное
+   #2b1608 — коричневую надпись на синей кнопке. Снимается вместе с решением
+   дизайнера по этой роли, не раньше. */
+[data-palette='blue'] .mc-modal--meal-create .meal-time-cta,
+[data-palette='blue-dark'] .mc-modal--meal-create .meal-time-cta {
+  color: var(--v4-ink, #ffffff);
+}
+
 .confirm-modal:has(.flow-add-products) {
   max-width: 330px;
   border-radius: 28px;
