@@ -126,7 +126,7 @@
         if (SK.isApproachDone(a)) hasDone = true;
         else hasPending = true;
       }
-      if (!allClosed && (hasPending || hasDone)) return ri;
+      if (!allClosed && hasPending) return ri;
     }
     return -1;
   }
