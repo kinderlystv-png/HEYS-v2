@@ -69,7 +69,8 @@ describe('конструктор: подходы и типы', () => {
       onPatch: () => {},
       onClose: () => {},
     }));
-    expect(screen.getByText('разм')).toBeTruthy();
+    fireEvent.click(screen.getByText('Разминка и дроп-сет'));
+    expect(screen.getByText('разм.')).toBeTruthy();
     expect(screen.getByLabelText('Рабочий подход номер 1')).toBeTruthy();
     expect(screen.getByLabelText('Рабочий подход номер 2')).toBeTruthy();
   });
@@ -85,6 +86,7 @@ describe('конструктор: подходы и типы', () => {
       onPatch: () => {},
       onClose: () => {},
     }));
+    fireEvent.click(screen.getByText('Разминка и дроп-сет'));
     expect(screen.getByText('дроп')).toBeTruthy();
     expect(screen.queryByLabelText('Рабочий подход номер 2')).toBeNull();
   });
@@ -1140,10 +1142,10 @@ describe('сохраняемый отдых', () => {
         onPatchSession: (patch) => patches.push(patch), onClose: () => {},
       }));
 
-      expect(screen.getByText('1:20')).toBeTruthy();
+      expect(document.querySelector('.sb-rest-value')?.textContent).toContain('1:20');
       fireEvent.click(screen.getByText('+10 секунд'));
       expect(patches.at(-1).activeRest).toMatchObject({ startedAt, total: 100, owner: 'Жим' });
-      expect(screen.getByText('1:30')).toBeTruthy();
+      expect(document.querySelector('.sb-rest-value')?.textContent).toContain('1:30');
     } finally {
       vi.useRealTimers();
     }

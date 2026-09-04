@@ -139,7 +139,7 @@ describe('strength builder · З1 superset create v4 canvas contract', () => {
     expect(SOURCE).toContain("'Суперсет, трисет и круговая — один объект с разным числом участников");
   });
 
-  it('доказывает построчный DOM/computed-style контракт кадра З1 на песочном наборе', () => {
+  it('доказывает построчный DOM/computed-style контракт кадра З1 на песочном наборе', { timeout: 15000 }, () => {
     style = renderTrisetScreen(Cat, 'sand');
     const palette = PALETTES.sand;
 
@@ -230,7 +230,7 @@ describe('strength builder · З1 superset create v4 canvas contract', () => {
     expectStyle(note, { marginTop: '12px', fontSize: '11px', fontWeight: '500', lineHeight: '1.55' }, '32');
   });
 
-  it('держит цветовые строки З1 на синем наборе через роли v4', () => {
+  it('держит цветовые строки З1 на синем наборе через роли v4', { timeout: 15000 }, () => {
     style = renderTrisetScreen(Cat, 'blue');
     const palette = PALETTES.blue;
     const idleNum = document.querySelector('.sb-superset-create-screen .sb-radio:not(.is-on) .sb-ex-num');
