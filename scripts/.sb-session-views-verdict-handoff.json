@@ -1,0 +1,461 @@
+{
+  "zone": "strength-builder",
+  "scope": "13 line groups — session/transfer views (read-only audit)",
+  "generated": "2026-09-05",
+  "agent": "session-views audit subagent",
+  "summary": {
+    "groups": 13,
+    "rows": 89,
+    "equals": 63,
+    "notEquals": 20,
+    "question": 1,
+    "dash": 5
+  },
+  "rows": [
+    {
+      "key": "вид · строка подхода",
+      "verdict": "≠",
+      "fact": "Контракт :2349 требует отметку 44×44 r12 и поля r12; кадр А1б/Е1 и код 750-strength-builder.css:3614-3680 — .sb-ap-num 26×26 r9, .sb-ap-check/.sb-ap-field 44×44 r999. Продукт = кадру, prose-строка отстаёт."
+    },
+    {
+      "key": "Подход · таблица ввода · 32",
+      "verdict": "=",
+      "fact": "Строка .sb-ap: grid 34px 1fr 1fr 52px gap 8px padding 7px 8px — 750:3581-3612; strength-builder-calm-canvas-contract.test.js row 32."
+    },
+    {
+      "key": "Подход · таблица ввода · 33",
+      "verdict": "≠",
+      "fact": "Контракт: номер 12px/600 --tx на фоне ink 6%. Runtime: .sb-ap-num 26×26, color rgba(ink,.62), done на --sb-soft не --gr-bg — 750:3614-3674; calm A1б row 33 падает на color."
+    },
+    {
+      "key": "Подход · таблица ввода · 34",
+      "verdict": "=",
+      "fact": "Значение done: .sb-ap-value 44px r999 inset 1px ink 10%, 15px/700 --tx — 750:3635-3639; calm row 34."
+    },
+    {
+      "key": "Подход · таблица ввода · 35",
+      "verdict": "≠",
+      "fact": "Контракт: текущий номер на --acs фоне. Runtime: .sb-ap.is-current .sb-ap-num — bg var(--sb-bg) inset, не --acs — 750:3614-3623; calm A1б row 35 ожидал #fffaf1, факт #c67139 на поле ввода соседней колонки."
+    },
+    {
+      "key": "Подход · таблица ввода · 36",
+      "verdict": "≠",
+      "fact": "Текущее поле: inset 2px --acs ожидается; факт inset 1.5px на .is-reps-missing или 2px на field — 750:3641-3650; calm row 36 boxShadow 1.5px vs 2px."
+    },
+    {
+      "key": "Подход · таблица ввода · 37",
+      "verdict": "=",
+      "fact": "Галочка 44×44 r999, текущая — inset 2px --acs — 750:3676-3694; calm row 37."
+    },
+    {
+      "key": "вид · строка отдыха",
+      "verdict": "=",
+      "fact": "Ряд flex gap 8: .sb-rest-copy 44 r12 на --bg 11.5px/1.3 ink 55% + .sb-rest-manual 44 r12 на --c1 11.5px/700 --tx — 750:3727-3747; superset_ui ExerciseCard .sb-rest-line; calm rows 40-42."
+    },
+    {
+      "key": "Подход · таблица ввода · 23",
+      "verdict": "≠",
+      "fact": "Кадр Е1 колонкой отдыха: .sb-rest-copy видим, .sb-rest-cd скрыт — superset_ui:1713-1724; verdicts :3473-3477. Строка отдыха в карточке есть, компоновка ≠ кадру Е1."
+    },
+    {
+      "key": "Подход · таблица ввода · 24",
+      "verdict": "≠",
+      "fact": "То же расхождение rest-copy vs rest-cd — superset_ui:1713+; verdicts :3479-3484."
+    },
+    {
+      "key": "Подход · таблица ввода · 25",
+      "verdict": "≠",
+      "fact": "То же — verdicts :3486-3491."
+    },
+    {
+      "key": "Подход · таблица ввода · 26",
+      "verdict": "≠",
+      "fact": "То же — verdicts :3493-3498."
+    },
+    {
+      "key": "Подход · таблица ввода · 27",
+      "verdict": "≠",
+      "fact": "То же — verdicts :3500-3505."
+    },
+    {
+      "key": "Подход · таблица ввода · 28",
+      "verdict": "≠",
+      "fact": "То же — verdicts :3507-3512."
+    },
+    {
+      "key": "вид · клетка раунда",
+      "verdict": "=",
+      "fact": "Капсула .sb-cell 44 r999 bg --bg inset 1px ink 10%; текущая inset 2px --acs; пустая dashed 1.5px — 750:619-651; superset_ui roundCellDisplay; strength-superset-rounds-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · раунды · 13",
+      "verdict": "=",
+      "fact": ".sb-round-num width 36px 700 10.5px uppercase ink 56% — 750:607-613; scripts/.sb-superset-v1-rounds-verdict-handoff.json row 13."
+    },
+    {
+      "key": "Связка · раунды · 14",
+      "verdict": "=",
+      "fact": ".sb-cell flex 1 min-height 44 r999 bg --bg inset 1px — 750:619-632; v1-rounds handoff row 14."
+    },
+    {
+      "key": "Связка · раунды · 15",
+      "verdict": "=",
+      "fact": ".sb-round--spaced margin-top 6px — 750:603-605; v1-rounds handoff row 15."
+    },
+    {
+      "key": "Связка · раунды · 16",
+      "verdict": "=",
+      "fact": ".sb-round-num.is-current color var(--ac) — 750:615-617; v1-rounds handoff row 16."
+    },
+    {
+      "key": "Связка · раунды · 17",
+      "verdict": "=",
+      "fact": ".sb-cell.is-current inset 2px var(--acs) — 750:634-636; v1-rounds handoff row 17."
+    },
+    {
+      "key": "Связка · раунды · 18",
+      "verdict": "=",
+      "fact": ".sb-cell.is-blank dashed 1.5px ink 22% min-height 44 — 750:645-651; v1-rounds handoff row 18."
+    },
+    {
+      "key": "вид · служебная шапка сессии",
+      "verdict": "≠",
+      "fact": "Контракт :2293 — одна служебная шапка на всех экранах сессии. Runtime: список .sb-head sessionTitle (calm rows 01-07), но is-exercise-open подменяет на имя упражнения — builder_ui:1876-1884; weight-edit test:111 «Жим гантелей сидя»."
+    },
+    {
+      "key": "Конструктор · список свёрнут · 02",
+      "verdict": "=",
+      "fact": "Кнопка ✕: .sb-icon-btn 36×36 r999 bg --c1 color ink 56% — 750:3278-3291; calm A2 row 02."
+    },
+    {
+      "key": "Конструктор · список свёрнут · 03",
+      "verdict": "=",
+      "fact": "Заголовок сессии 15px/700 --tx в .sb-head-title > b — 750:3258-3262; calm row 03."
+    },
+    {
+      "key": "Конструктор · список свёрнут · 04",
+      "verdict": "=",
+      "fact": "Подпись 10.5px/600 tabular-nums ink 56% — 750:3270-3276; calm row 04."
+    },
+    {
+      "key": "Конструктор · список свёрнут · 06",
+      "verdict": "=",
+      "fact": "Кнопка ⋯ 36×36 r999 13px/700 — 750:3278-3287; calm row 06."
+    },
+    {
+      "key": "Подход · таблица ввода · 04",
+      "verdict": "≠",
+      "fact": "Кадр Е1: шапка упражнения + badge «3 из 3» вместо служебной шапки сессии — verdicts :3371-3376; А1б exercise-open header."
+    },
+    {
+      "key": "вид · нижняя панель сессии",
+      "verdict": "=",
+      "fact": "is-exercise-open: .sb-panel row gap 8 border-top 1px ink 7% padding 10/18; + 48×48 r14 --c2; .sb-finish flex 1 min-height 48 — 750:3769-3803; calm rows 45-47; strength-builder-ui.test.js «спокойная нижняя панель»."
+    },
+    {
+      "key": "Конструктор · список свёрнут · 24",
+      "verdict": "=",
+      "fact": "Свёрнутый список: .sb-panel column full-width кнопки 48 r999 — 750:3424-3459; calm A2 rows 24-26 (панель в потоке под списком)."
+    },
+    {
+      "key": "1 · тип подхода",
+      "verdict": "=",
+      "fact": "Kernel: approachType/isWarmupApproach, type warmup|work, пусто=work — heys_kernel_strength_v1.js:114-120; toggle в builder_ui:1107; kernel-strength-approach-schema.test.js:67-70."
+    },
+    {
+      "key": "2 · автор и время на подходе",
+      "verdict": "=",
+      "fact": "Kernel: author+editedAt пара в normalizeApproach, formatAuthorshipStamp — heys_kernel_strength_v1.js:86-106,201-202; kernel-strength-approach-schema.test.js:116-214."
+    },
+    {
+      "key": "вид · метка авторства",
+      "verdict": "=",
+      "fact": "Плашка .sb-authorship-pill на --c2 r10 pad 7/10: avatar 20 --ac, text 10.5px/600 --ac — 750:4905-4930; AuthorshipPill superset_ui:674-681; weight-edit test:113."
+    },
+    {
+      "key": "Правка веса в сессии · 10",
+      "verdict": "=",
+      "fact": ".sb-authorship-pill flex gap 7px margin 6px 0 — 750:4905-4912; builder_ui:1827-1830; weight-edit-session contract."
+    },
+    {
+      "key": "Правка веса в сессии · 11",
+      "verdict": "=",
+      "fact": ".sb-authorship-pill-avatar 20×20 r999 bg --ac color --bg 700 10px — 750:4915-4925; weight-edit test."
+    },
+    {
+      "key": "Правка веса в сессии · 12",
+      "verdict": "=",
+      "fact": ".sb-authorship-pill-text 600 10.5px/1.3 var(--ac); stamp «Артём поставил 25 кг · 19:12» — builder_ui:972,1829; weight-edit test:113 sand+blue."
+    },
+    {
+      "key": "метка авторства вместо диалога версий",
+      "verdict": "=",
+      "fact": "Нет диалога версий: правка = AuthorshipPill + .sb-weight-edit-cd footnote «отложен до переписывания слияния» — builder_ui:1840-1843; weight-edit test:114-115; kernel stamp без merge UI."
+    },
+    {
+      "key": "Правка веса в сессии · 20",
+      "verdict": "=",
+      "fact": ".sb-weight-edit-cd-foot — сноска про куратора и отложенный диалог — builder_ui:1840-1843, 750:4964-4967."
+    },
+    {
+      "key": "вид · след переноса",
+      "verdict": "?",
+      "fact": "Механика movedFrom/movedTo + trace в PlanCard/MoveSheet есть (superset_ui:2398-2621); копия/компоновка кадра Г3 ≠ runtime — scripts/.sb-transfer-follow-verdict-handoff.json 13×≠. Owner: свести или принять modal-flow."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 06",
+      "verdict": "=",
+      "fact": "margin-top 12px блока плана — 731:876-878; transfer handoff row 06."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 11",
+      "verdict": "=",
+      "fact": "MoveSheet «Куда перенести · выбор дня» — superset_ui:2300; transfer handoff row 11."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 12",
+      "verdict": "≠",
+      "fact": "Inline .cd vs modal .sb-move-days — superset_ui:2303-2317; transfer handoff row 12."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 13",
+      "verdict": "≠",
+      "fact": ".cd .row vs button.sb-move-day — 731:1225-1240; transfer handoff row 13."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 14",
+      "verdict": "≠",
+      "fact": "Цвет даты --tx vs buttontext inherit — 731:1255-1258; transfer handoff row 14."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 15",
+      "verdict": "≠",
+      "fact": "Подпись «Свободно» без ink 56% — 731:1260-1262; transfer handoff row 15."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 16",
+      "verdict": "=",
+      "fact": "«перенести» 700 11.5px --v4-act-text — 731:1264-1267; transfer handoff row 16."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 17",
+      "verdict": "≠",
+      "fact": "Занятый день не приглушён до ink 40% — transfer handoff row 17."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 18",
+      "verdict": "≠",
+      "fact": "Пилюля «занят» .45 vs .4 + лишний фон — 731:1269-1274; transfer handoff row 18."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 19",
+      "verdict": "=",
+      "fact": ".sb-move-day:last-child border-bottom none — 731:1242-1244; transfer handoff row 19."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 20",
+      "verdict": "≠",
+      "fact": "«выбрано» без accent color на .is-on — transfer handoff row 20."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 21",
+      "verdict": "=",
+      "fact": "Пилюля «план» 9px mono --v4-act-text — 731:941-951, superset_ui:2530; transfer handoff row 21."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 22",
+      "verdict": "≠",
+      "fact": "Сноска .sm на экране vs .sb-plan-trace только в MoveSheet — superset_ui:2333-2334; transfer handoff row 22."
+    },
+    {
+      "key": "вид · план в ленте",
+      "verdict": "=",
+      "fact": "PlanCard future feed: .sb-plan-card--future, letter 34, badge «план», exercises, week tiles — superset_ui:2770+; strength-builder-day-feed-v4-canvas-contract.test.js sand+blue."
+    },
+    {
+      "key": "План в ленте дня · 01",
+      "verdict": "—",
+      "fact": "visual-composite day shell — PLAN_FEED_DOM_CONTRACTS ·01; вне PlanCard host."
+    },
+    {
+      "key": "План в ленте дня · 02",
+      "verdict": "—",
+      "fact": "visual-composite day shell — ·02."
+    },
+    {
+      "key": "План в ленте дня · 03",
+      "verdict": "—",
+      "fact": "visual-composite day shell — ·03."
+    },
+    {
+      "key": "План в ленте дня · 04",
+      "verdict": "—",
+      "fact": "visual-composite day shell — ·04."
+    },
+    {
+      "key": "План в ленте дня · 05",
+      "verdict": "—",
+      "fact": "visual-composite scroll — ·05."
+    },
+    {
+      "key": "План в ленте дня · 06",
+      "verdict": "=",
+      "fact": "margin-top 12px .sb-plan-card--future — 750:6980-6982; day-feed test."
+    },
+    {
+      "key": "План в ленте дня · 07",
+      "verdict": "=",
+      "fact": "summary row flex gap 10 — 731 .sb-plan-summary; day-feed test."
+    },
+    {
+      "key": "План в ленте дня · 08",
+      "verdict": "=",
+      "fact": "letter 34×34 r11 --v4-act-text — 731 .sb-plan-letter; day-feed sand+blue."
+    },
+    {
+      "key": "План в ленте дня · 09",
+      "verdict": "=",
+      "fact": "summary-copy column gap 3 — 731; day-feed ·09."
+    },
+    {
+      "key": "План в ленте дня · 10",
+      "verdict": "=",
+      "fact": "«Запланировано куратором» 700 12.5px --v4-ink — superset_ui PlanCard; day-feed ·10."
+    },
+    {
+      "key": "План в ленте дня · 11",
+      "verdict": "=",
+      "fact": "meta 500 11px ink 56% — 731 .sb-plan-meta; day-feed ·11."
+    },
+    {
+      "key": "План в ленте дня · 12",
+      "verdict": "=",
+      "fact": "badge «план» — superset_ui .sb-plan-badge; day-feed ·12."
+    },
+    {
+      "key": "План в ленте дня · 13",
+      "verdict": "=",
+      "fact": "exercises column gap 6 margin-top 12 — 731; day-feed ·13."
+    },
+    {
+      "key": "План в ленте дня · 14",
+      "verdict": "=",
+      "fact": "exercise row name 12px/600 + mono summary — superset_ui planPreviewRows; day-feed ·14."
+    },
+    {
+      "key": "План в ленте дня · 15",
+      "verdict": "=",
+      "fact": "«и ещё N · всего M подходов» — superset_ui preview tail; day-feed ·15."
+    },
+    {
+      "key": "План в ленте дня · 16",
+      "verdict": "=",
+      "fact": "actions row gap 9 margin-top 14 — 731 .sb-plan-actions; day-feed ·16."
+    },
+    {
+      "key": "План в ленте дня · 17",
+      "verdict": "=",
+      "fact": "CTA «Начать сейчас» 44 min-height --acs — superset_ui:2622-2625; day-feed ·17."
+    },
+    {
+      "key": "План в ленте дня · 18",
+      "verdict": "=",
+      "fact": "«Перенести» вторичная 44 --c2 — superset_ui:2626-2634; day-feed ·18."
+    },
+    {
+      "key": "План в ленте дня · 19",
+      "verdict": "=",
+      "fact": "week label 10px/700 --ac uppercase — superset_ui weekLabel; day-feed ·19."
+    },
+    {
+      "key": "План в ленте дня · 20",
+      "verdict": "=",
+      "fact": "week grid 7 equal tiles r10 — 731 .sb-plan-week; day-feed ·20."
+    },
+    {
+      "key": "План в ленте дня · 21",
+      "verdict": "=",
+      "fact": "tile done --gr-bg check --gr — day-feed ·21."
+    },
+    {
+      "key": "План в ленте дня · 22",
+      "verdict": "=",
+      "fact": "tile assigned --c2 dot --ac — day-feed ·22."
+    },
+    {
+      "key": "План в ленте дня · 23",
+      "verdict": "=",
+      "fact": "tile rest --bg dash 11px ink 28% — day-feed ·23."
+    },
+    {
+      "key": "План в ленте дня · 24",
+      "verdict": "=",
+      "fact": "legend row gap 12 margin-top 10 — 731 .sb-plan-legend; day-feed ·24."
+    },
+    {
+      "key": "План в ленте дня · 25",
+      "verdict": "=",
+      "fact": "legend «сделано» dot --gr — day-feed ·25."
+    },
+    {
+      "key": "План в ленте дня · 26",
+      "verdict": "=",
+      "fact": "legend «назначено» dot --ac — day-feed ·26."
+    },
+    {
+      "key": "План в ленте дня · 27",
+      "verdict": "=",
+      "fact": "legend «день отдыха» dash — day-feed ·27."
+    },
+    {
+      "key": "План в ленте дня · 28",
+      "verdict": "=",
+      "fact": "footnote mesocycle — superset_ui weekOverview copy; day-feed ·28."
+    },
+    {
+      "key": "План в ленте дня · 29",
+      "verdict": "=",
+      "fact": "card bg --c1 r16 padding — 731 .sb-plan-card; day-feed ·29."
+    },
+    {
+      "key": "План в ленте дня · 30",
+      "verdict": "=",
+      "fact": "host .activity-v4-program margin-top — 731:876; day-feed ·30."
+    },
+    {
+      "key": "План в ленте дня · 31",
+      "verdict": "=",
+      "fact": "feed wrapper .sb-plan-feed — superset_ui:2770; day-feed ·31."
+    },
+    {
+      "key": "План в ленте дня · 32",
+      "verdict": "=",
+      "fact": "modifier --future on card — superset_ui isFutureDay; day-feed ·32."
+    },
+    {
+      "key": "План в ленте дня · 33",
+      "verdict": "=",
+      "fact": "exercise mono digits ink 45% — day-feed ·33."
+    },
+    {
+      "key": "План в ленте дня · 34",
+      "verdict": "=",
+      "fact": "superset preview row «Связка …» — planPreviewRows superset_ui:699-725; day-feed ·34."
+    },
+    {
+      "key": "План в ленте дня · 35",
+      "verdict": "=",
+      "fact": "composite PlanCard DOM — strength-builder-day-feed-v4-canvas-contract.test.js 36 PLAN_FEED_DOM_CONTRACTS."
+    },
+    {
+      "key": "план в ленте — назначение, а не факт",
+      "verdict": "=",
+      "fact": "isPlanned(status assigned|skipped|moved) исключает из dayTonnage/training count — heys_kernel_strength_v1.js:36-38,1276-1288; heys_day_trainings isNotPerformedTraining; карточка future не в счётчиках до старта."
+    },
+    {
+      "key": "клиент переносит сам",
+      "verdict": "=",
+      "fact": "MoveSheet: мгновенный pick дня без approval куратора; PLAN_MOVE_FOOTNOTE + «Совсем пропустить» — superset_ui:2538,2579; onMove без confirm gate."
+    }
+  ]
+}

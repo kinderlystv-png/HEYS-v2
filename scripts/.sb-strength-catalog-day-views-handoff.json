@@ -1,0 +1,637 @@
+{
+  "zone": "strength-builder",
+  "scope": "catalog views + day missed/outcomes (read-only)",
+  "generated": "2026-09-05",
+  "notes": {
+    "productionCreatePath": "Catalog onCreate → builder_ui:1458 setView(new) → ExerciseCardScreen М1; канвас В3/NewExerciseScreen/CustomExerciseScreen — не боевой маршрут.",
+    "priorHandoffs": [
+      "scripts/.sb-catalog-exercise-muscles-handoff.json",
+      "scripts/.sb-catalog-custom-exercise-handoff.json",
+      "scripts/.sb-strength-copy-text-handoff.json",
+      "scripts/.sb-day-trainings-verdict-handoff.json"
+    ],
+    "missingKeys": []
+  },
+  "summary": {
+    "rows": 115,
+    "equals": 65,
+    "notEquals": 40,
+    "question": 3,
+    "dash": 6,
+    "resolved": 1
+  },
+  "sections": {
+    "catalogCard": {
+      "keys": [
+        "вид · карточка упражнения",
+        "вид · раскрытое упражнение",
+        "вид · таблица подходов в карточке",
+        "вид · создание упражнения",
+        "вид · выбор групп мышц",
+        "Своё упражнение · текст",
+        "5 · карточка упражнения несёт три вещи"
+      ],
+      "rowCount": 68,
+      "equals": 50,
+      "notEquals": 18,
+      "question": 0,
+      "dash": 0,
+      "resolved": 0
+    },
+    "day": {
+      "keys": [
+        "вид · день не состоялся",
+        "День не состоялся · 17",
+        "пропущенный день — выбор, а не упрёк",
+        "вчерашняя ждёт решения, а не закрывается сама",
+        "у брошенной сессии три исхода",
+        "отчёт называет дыру",
+        "пропущен сегодня и пропущен раньше — два разных случая",
+        "целевой день с выбранным лимитом не предлагается"
+      ],
+      "rowCount": 47,
+      "equals": 15,
+      "notEquals": 22,
+      "question": 3,
+      "dash": 6,
+      "resolved": 1
+    }
+  },
+  "rows": [
+    {
+      "key": "5 · карточка упражнения несёт три вещи",
+      "verdict": "=",
+      "fact": "Канвас :2428 (единица, группы+основная, коэффициент в данных). ExerciseCardScreen save → exerciseMeta.save unit/primaryGroup/secondaryGroups/bodyweightFactor heys_exercise_catalog_v1.js:527-624; коэффициенты BODYWEIGHT_SIMILAR_OPTIONS :702+ как данные."
+    },
+    {
+      "key": "вид · выбор групп мышц",
+      "verdict": "≠",
+      "fact": "Канвас :2278 (пилюли 44, превью объёма). Поведение ExerciseMuscleGroupsScreen catalog_ui:446-493 =; геометрия пилюль ·08-10 ≠ (scripts/.sb-catalog-exercise-muscles-handoff.json). Агрегат ≠ из-за носителя, не копии."
+    },
+    {
+      "key": "вид · день не состоялся",
+      "verdict": "?",
+      "fact": "Поведение PlanCard missed superset_ui:2412-2483 + day_trainings handlers =. Геометрия ·06-16 = (missed contract test). Composite ·01-05 day shell — —; aggregate ? до закрытия shell/copy."
+    },
+    {
+      "key": "вид · карточка упражнения",
+      "verdict": "=",
+      "fact": "Кадр М1: aggregate data-v strength-builder.v4.dc.html:2277. Продукт ExerciseCardScreen heys_strength_builder_ui_v1.js:387-542 + 750 .sb-ex-card-*; построчно ·01-19 = (strength-builder-exercise-card-v4-canvas-contract.test.js)."
+    },
+    {
+      "key": "вид · раскрытое упражнение",
+      "verdict": "=",
+      "fact": "Канвас :2342 (.ex.is-open, ⠿, счётчик 2/4, ✕ 36 data-svc). Продукт ExerciseCard superset_ui:1697-1802 + 750 .sb-builder-screen.is-exercise-open .sb-ex.is-open (:3480-3547); без overlay/scrim. Отличие рамки 1.5px vs 2px — в исключениях calm/geometry, поведение =."
+    },
+    {
+      "key": "вид · создание упражнения",
+      "verdict": "≠",
+      "fact": "Канвас В3 data-v :2356 («1·Что меряем», пилюли, «Создать без объёма»). Runtime: каталог onCreate → view new → ExerciseCardScreen М1 (builder_ui:1458, :387) — «Чем меряется», одна CTA «Сохранить упражнение», без «Создать без объёма». NewExerciseScreen/CustomExerciseScreen есть, но не подключены (rg по apps/web — только export+тесты)."
+    },
+    {
+      "key": "вид · таблица подходов в карточке",
+      "verdict": "=",
+      "fact": "Канвас :2344 (A1б .vl/.ok/.off круг 44). Продукт ApproachRow + 750 в раскрытой карточке; strength-builder-approach-table-v4-canvas-contract.test.js + calm A1б."
+    },
+    {
+      "key": "вчерашняя ждёт решения, а не закрывается сама",
+      "verdict": "=",
+      "fact": "Канвас :2291. SummaryCard pastOpen без completedAt superset_ui:2105-2181; нет автозавершения; mergeWorkoutLifecyclePatch day_trainings:724-753; новая сессия не блокируется (offscreen-renumber + builder-ui stale tests)."
+    },
+    {
+      "key": "День не состоялся · 01",
+      "verdict": "—",
+      "fact": "visual-composite: шапка day shell вне .sb-plan-missed — кадр И4 ·01."
+    },
+    {
+      "key": "День не состоялся · 02",
+      "verdict": "—",
+      "fact": "visual-composite: column header day shell — И4 ·02."
+    },
+    {
+      "key": "День не состоялся · 03",
+      "verdict": "—",
+      "fact": "visual-composite: title «День B не состоялся» — day shell — И4 ·03."
+    },
+    {
+      "key": "День не состоялся · 04",
+      "verdict": "—",
+      "fact": "visual-composite: subtitle «был назначен…» — day shell — И4 ·04."
+    },
+    {
+      "key": "День не состоялся · 05",
+      "verdict": "—",
+      "fact": "visual-composite: scroll area day surface — И4 ·05."
+    },
+    {
+      "key": "День не состоялся · 06",
+      "verdict": "=",
+      "fact": "missed-card margin-top 12 bg var(--v4-tint): 750:5862-5867; missed contract test ·06 sand+blue."
+    },
+    {
+      "key": "День не состоялся · 07",
+      "verdict": "=",
+      "fact": "lead copy 600 12.5px/1.55 var(--v4-ink): 750 .sb-plan-missed-lead + superset_ui:2413-2415; ·07."
+    },
+    {
+      "key": "День не состоялся · 08",
+      "verdict": "=",
+      "fact": "actions flex gap 7 margin-top 12: 750:5875-5878; missed test ·08."
+    },
+    {
+      "key": "День не состоялся · 09",
+      "verdict": "=",
+      "fact": "move CTA flex 1 var(--v4-act): 750:5881-5889 + moveCtaLabel; missed test ·09 sand+blue."
+    },
+    {
+      "key": "День не состоялся · 10",
+      "verdict": "=",
+      "fact": "release btn flex 1 var(--v4-bg): 750:5892-5899; superset_ui onSkip; ·10."
+    },
+    {
+      "key": "День не состоялся · 11",
+      "verdict": "=",
+      "fact": "foot margin-top 9px ink-2: 750:5902-5905; superset_ui:2432-2433; ·11."
+    },
+    {
+      "key": "День не состоялся · 12",
+      "verdict": "=",
+      "fact": "tier «Что помешало»: .sb-tier 750:5533-5538 + superset_ui:2435."
+    },
+    {
+      "key": "День не состоялся · 13",
+      "verdict": "=",
+      "fact": "chips flex gap 6 wrap: 750:5908-5912; MISSED_DAY_REASONS map; ·13."
+    },
+    {
+      "key": "День не состоялся · 14",
+      "verdict": "=",
+      "fact": "chip off-state pad 0 14 min-h 44: 750:5915-5925; ·14."
+    },
+    {
+      "key": "День не состоялся · 15",
+      "verdict": "=",
+      "fact": "chip.is-on var(--v4-act): 750:5927-5929; toggle без sheet; missed test ·15 sand+blue."
+    },
+    {
+      "key": "День не состоялся · 16",
+      "verdict": "=",
+      "fact": "model card .sb-plan-missed-model sb-grp var(--v4-c1): 750:5936-5939 + superset_ui:2461-2464."
+    },
+    {
+      "key": "День не состоялся · 17",
+      "verdict": "!",
+      "fact": "Канвас сноска «признак плана ловит только назначено» (:3420) — долг закрыт: isPlanned включает skipped/moved heys_kernel_strength_v1.js:36-38; dayTonnage пропускает план :1276+. В UI dev-сноски нет (намеренно). Рекомендация: снять ? → ! и обновить контракт/канвас."
+    },
+    {
+      "key": "День не состоялся · текст",
+      "verdict": "—",
+      "fact": "semantic aggregate кадра И4; runtime ·06–16 + intentional ·17 ≠ без dev-сноски в UI."
+    },
+    {
+      "key": "отчёт называет дыру",
+      "verdict": "?",
+      "fact": "Канвас :2321 + «Программа · отчёт за период · текст» :4076 — карточка «Пропущенная не считается сделанной». PlanVsDoneScreen superset_ui:2322-2397 без этой карточки; kernel isPlanned уже исключает skipped из факта. Нужно решение: убрать сноску из канваса как ! или вернуть disclosure в UI."
+    },
+    {
+      "key": "пропущен сегодня и пропущен раньше — два разных случая",
+      "verdict": "?",
+      "fact": "Канвас :2399 + кадры Л5/Л6. day_trainings: onResumeSkipped только !isPastDay; прошлый skipped — missed-card без воскрешения. Кураторская замена «сегодня vs раньше» — proposal_ui, серверный guard в канвасе; отдельного Л6 UI нет."
+    },
+    {
+      "key": "пропущенный день — выбор, а не упрёк",
+      "verdict": "=",
+      "fact": "Канвас :2243. PlanCard перенести/отпустить + MISSED_DAY_REASONS пилюли superset_ui:2461-2483; onSkip/onMove day_trainings:4447-4436; тоннаж не считает isPlanned kernel :36-38."
+    },
+    {
+      "key": "Своё упражнение · 01",
+      "verdict": "=",
+      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+    },
+    {
+      "key": "Своё упражнение · 02",
+      "verdict": "=",
+      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+    },
+    {
+      "key": "Своё упражнение · 03",
+      "verdict": "=",
+      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+    },
+    {
+      "key": "Своё упражнение · 04",
+      "verdict": "=",
+      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+    },
+    {
+      "key": "Своё упражнение · 05",
+      "verdict": "=",
+      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+    },
+    {
+      "key": "Своё упражнение · 06",
+      "verdict": "=",
+      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+    },
+    {
+      "key": "Своё упражнение · 07",
+      "verdict": "=",
+      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+    },
+    {
+      "key": "Своё упражнение · 08",
+      "verdict": "≠",
+      "fact": "Кадр .cd badge-row; продукт — вертикальные .sb-radio (heys_strength_catalog_ui_v1.js:288–301). Роли v4 через CATALOG_V4_BRIDGE; носитель ≠ pill."
+    },
+    {
+      "key": "Своё упражнение · 09",
+      "verdict": "≠",
+      "fact": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px — 750-strength-builder.css:1782–1794."
+    },
+    {
+      "key": "Своё упражнение · 10",
+      "verdict": "≠",
+      "fact": "Кадр gap 6px wrap badges; продукт column .sb-radio без wrap — layout catalog_ui."
+    },
+    {
+      "key": "Своё упражнение · 11",
+      "verdict": "≠",
+      "fact": "Выбранная .sb-radio.is-on --sb-accbg/--v4-act (750:1796–1799); кадр pill --acs/--on-acs — роли ok, форма ≠ badge."
+    },
+    {
+      "key": "Своё упражнение · 12",
+      "verdict": "≠",
+      "fact": "Неактивная .sb-radio --sb-mut ≈ ink 62%; кадр badge rgba ink .62."
+    },
+    {
+      "key": "Своё упражнение · 13",
+      "verdict": "≠",
+      "fact": "Строка .cd в кадре; в runtime .sb-radio — см. ·08."
+    },
+    {
+      "key": "Своё упражнение · 14",
+      "verdict": "≠",
+      "fact": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676–1680)."
+    },
+    {
+      "key": "Своё упражнение · 15",
+      "verdict": "≠",
+      "fact": "Primary chip --sb-accTx/--v4-act-text; кадр «спина» 700 11.5 var(--ac) — семантика совпадает, носитель chip."
+    },
+    {
+      "key": "Своё упражнение · 16",
+      "verdict": "≠",
+      "fact": "Кадр .cd divider none; продукт .sb-chips wrap без divider."
+    },
+    {
+      "key": "Своё упражнение · 17",
+      "verdict": "≠",
+      "fact": "Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56%."
+    },
+    {
+      "key": "Своё упражнение · 18",
+      "verdict": "=",
+      "fact": ".sb-block обёртка шага 3 — heys_strength_catalog_ui_v1.js:328–331, 336–353; 750 .sb-block :1879–1884."
+    },
+    {
+      "key": "Своё упражнение · 19",
+      "verdict": "=",
+      "fact": "При !needsFactor copy «Для «вес × повторы» третий вопрос не задаётся.» — catalog_ui:328–330."
+    },
+    {
+      "key": "Своё упражнение · 20",
+      "verdict": "=",
+      "fact": "Bodyweight сноска в .sb-block .sb-step-hint — catalog_ui:337–338; текст канваса."
+    },
+    {
+      "key": "Своё упражнение · 21",
+      "verdict": "=",
+      "fact": ".sb-panel-column .sb-finish margin-top 12px «Создать упражнение» — catalog_ui:357–362; 750 :has(.sb-ex-name)."
+    },
+    {
+      "key": "Своё упражнение · 22",
+      "verdict": "=",
+      "fact": ".sb-panel-column .sb-btn margin-top 9px «Создать · без тоннажа» — catalog_ui:364–369."
+    },
+    {
+      "key": "Своё упражнение · 23",
+      "verdict": "=",
+      "fact": "Нижняя сноска .sb-catalog-note — catalog_ui:370–371."
+    },
+    {
+      "key": "Своё упражнение · текст",
+      "verdict": "≠",
+      "fact": "Канвас :4070 — копия В3 («1·Что меряем», «Создать без объёма»). Production create = ExerciseCardScreen М1 (builder_ui:1458): «Чем меряется», «Сохранить упражнение», нет вторичной CTA. Copy-handoff (=) сверял unwired CustomExerciseScreen superset_ui:3134 — не боевой путь."
+    },
+    {
+      "key": "Сессия · брошена вчера · 01",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 02",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 03",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 04",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 05",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 06",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 07",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 08",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 09",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 10",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 11",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 12",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 13",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 14",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 15",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 16",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 17",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 18",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 19",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 20",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 21",
+      "verdict": "≠",
+      "fact": "Кадр М8 full-screen ≠ inline .sb-offscreen-session--stale в ленте дня. Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · текст",
+      "verdict": "≠",
+      "fact": "Копия М8 ≠ inline SummaryCard stale (удалить/дописать/закрыть lowercase). Поведение трёх исходов = (superset_ui:2161-2177). В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "у брошенной сессии три исхода",
+      "verdict": "=",
+      "fact": "Канвас :2292 (завершить/дописать/удалить, без таймаута). SummaryCard stale: onDelete/onOpen/onCloseAtLastMark superset_ui:2174-2177 wired day_trainings:4491-4500."
+    },
+    {
+      "key": "Упражнение · группы мышц · 01",
+      "verdict": "=",
+      "fact": ".sb-head с ‹ — catalog_ui ExerciseMuscleGroupsScreen; 750 .sb-catalog-screen .sb-head."
+    },
+    {
+      "key": "Упражнение · группы мышц · 02",
+      "verdict": "=",
+      "fact": ".sb-head-title column gap 3px — catalog_ui + 750 .sb-catalog-screen .sb-head-title."
+    },
+    {
+      "key": "Упражнение · группы мышц · 03",
+      "verdict": "=",
+      "fact": "Динамический заголовок «{имя} · мышцы» — catalog_ui ExerciseMuscleGroupsScreen."
+    },
+    {
+      "key": "Упражнение · группы мышц · 04",
+      "verdict": "=",
+      "fact": "Подзаголовок «одна основная, синергисты по желанию» — .sb-head-sub."
+    },
+    {
+      "key": "Упражнение · группы мышц · 05",
+      "verdict": "=",
+      "fact": ".sb-catalog-scroll overflow-y auto — catalog_ui + 750 :5575+."
+    },
+    {
+      "key": "Упражнение · группы мышц · 06",
+      "verdict": "=",
+      "fact": "Ярус «Основная — одна» — .sb-tier; 750 :6530+."
+    },
+    {
+      "key": "Упражнение · группы мышц · 07",
+      "verdict": "=",
+      "fact": ".sb-catalog-screen .sb-chips flex wrap gap 6px — 750 :5637–5644."
+    },
+    {
+      "key": "Упражнение · группы мышц · 08",
+      "verdict": "≠",
+      "fact": "Кадр pill44 padding 0 14px; продукт .sb-catalog-screen .sb-chip padding 4px 7px min-height 20px — роли acs/on-acs через is-on ок, геометрия ≠."
+    },
+    {
+      "key": "Упражнение · группы мышц · 09",
+      "verdict": "≠",
+      "fact": "Неактивная pill44 padding 0 14px; продукт catalog chip uppercase mono 9px — носитель ≠."
+    },
+    {
+      "key": "Упражнение · группы мышц · 10",
+      "verdict": "≠",
+      "fact": "Синергист tint/ac через inline style на .sb-chip; кадр pill44 padding 0 14px — цвет ≈, форма ≠."
+    },
+    {
+      "key": "Упражнение · группы мышц · 11",
+      "verdict": "=",
+      "fact": "Превью «Как это ляжет в объём» — .sb-ex-card-cd.sb-ex-muscle-volume; 750 .sb-ex-card-cd."
+    },
+    {
+      "key": "Упражнение · группы мышц · 12",
+      "verdict": "=",
+      "fact": "Строка .sb-ex-card-row — catalog_ui + 750 :5113+."
+    },
+    {
+      "key": "Упражнение · группы мышц · 13",
+      "verdict": "=",
+      "fact": "Название группы b в .sb-ex-card-row-copy — color var(--tx) через 750."
+    },
+    {
+      "key": "Упражнение · группы мышц · 14",
+      "verdict": "≠",
+      "fact": "Число formatVolumeKg (meta) — семантика «2 980 кг» =; моно 700 12.5px/1 на .sb-ex-muscle-kg не в 750 (вне scope)."
+    },
+    {
+      "key": "Упражнение · группы мышц · 15",
+      "verdict": "≠",
+      "fact": "Синергист kg 50% через muscleVolumePreviewRows =; тон ink 55% для .sb-ex-muscle-kg без is-primary — не в 750."
+    },
+    {
+      "key": "Упражнение · группы мышц · 16",
+      "verdict": "=",
+      "fact": "Последняя строка .sb-ex-card-row.is-last border-bottom 0 — 750 :5122."
+    },
+    {
+      "key": "Упражнение · группы мышц · 17",
+      "verdict": "=",
+      "fact": "Сноска .sb-catalog-note — полный текст канваса; список групп в UI — 14 из meta.groups (факт ≠ «одиннадцати», copy =)."
+    },
+    {
+      "key": "Упражнение · группы мышц · текст",
+      "verdict": "=",
+      "fact": "Канвас :4121 data-v: «{имя}·мышцы › одна основная, синергисты по желанию › Основная — одна › …группы… › Синергисты — сколько нужно › Как это ляжет в объём › …кг… › сноска про одиннадцать групп». Код ExerciseMuscleGroupsScreen — catalog_ui:446-493: «· мышцы», подзаголовок, ярусы, превью muscleVolumePreviewRows, сноска дословно; опции групп из heys_exercise_catalog_v1.js MUSCLE_GROUPS :31-45. Контракт-тест strength-builder-exercise-muscles-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Упражнение · карточка · 01",
+      "verdict": "=",
+      "fact": ".sb-exercise-card-screen .sb-ex-card-head — шапка; 750-strength-builder.css .sb-ex-card-head; strength-builder-exercise-card-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Упражнение · карточка · 02",
+      "verdict": "=",
+      "fact": ".sb-ex-card-head-title flex column gap 3px; 750-strength-builder.css."
+    },
+    {
+      "key": "Упражнение · карточка · 03",
+      "verdict": "=",
+      "fact": "ExerciseCardScreen .sb-head-title b «Новое упражнение»; heys_strength_builder_ui_v1.js."
+    },
+    {
+      "key": "Упражнение · карточка · 04",
+      "verdict": "=",
+      "fact": ".sb-head-sub «своё, не из каталога» — builder_ui ExerciseCardScreen."
+    },
+    {
+      "key": "Упражнение · карточка · 05",
+      "verdict": "=",
+      "fact": ".sb-list.sb-ex-card-scroll overflow-y auto; 750-strength-builder.css."
+    },
+    {
+      "key": "Упражнение · карточка · 06",
+      "verdict": "=",
+      "fact": ".sb-ex-card-name min-height 48px radius 14 bg var(--bg) inset 1.5px var(--acs) padding 0 14px margin-top 12px font 600 13.5px color var(--tx); 750."
+    },
+    {
+      "key": "Упражнение · карточка · 07",
+      "verdict": "=",
+      "fact": ".sb-ex-card-tier «Чем меряется» — 700 10px uppercase var(--ac); 750."
+    },
+    {
+      "key": "Упражнение · карточка · 08",
+      "verdict": "=",
+      "fact": ".sb-ex-card-units gap 6px; 750-strength-builder.css."
+    },
+    {
+      "key": "Упражнение · карточка · 09",
+      "verdict": "=",
+      "fact": ".sb-ex-card-pill flex 1 «кг × повт»; EX_CARD_UNIT_LABELS builder_ui."
+    },
+    {
+      "key": "Упражнение · карточка · 10",
+      "verdict": "=",
+      "fact": ".sb-ex-card-pill.is-on bg var(--acs) color var(--on-acs); contract test sand+blue."
+    },
+    {
+      "key": "Упражнение · карточка · 11",
+      "verdict": "=",
+      "fact": ".sb-ex-card-footnote copy «Единица решает две вещи…» 500 11px/1.55 rgba ink .56; builder_ui + 750."
+    },
+    {
+      "key": "Упражнение · карточка · 12",
+      "verdict": "=",
+      "fact": ".sb-ex-card-cd bg var(--c1) radius 20 padding 2px 16px; 750."
+    },
+    {
+      "key": "Упражнение · карточка · 13",
+      "verdict": "=",
+      "fact": ".sb-ex-card-row flex space-between padding 9px 0; 750."
+    },
+    {
+      "key": "Упражнение · карточка · 14",
+      "verdict": "=",
+      "fact": ".sb-ex-card-row-copy b color var(--tx) «Основная · …»; builder_ui."
+    },
+    {
+      "key": "Упражнение · карточка · 15",
+      "verdict": "=",
+      "fact": ".sb-ex-card-row-copy span 500 11px/1.3 rgba(var(--ink),.56) «берёт полный объём»; 750."
+    },
+    {
+      "key": "Упражнение · карточка · 16",
+      "verdict": "=",
+      "fact": ".sb-ex-card-action 700 11.5px/1 color var(--ac) «сменить»/«выбрать»; 750."
+    },
+    {
+      "key": "Упражнение · карточка · 17",
+      "verdict": "=",
+      "fact": ".sb-ex-card-row.is-last border-bottom 0; 750-strength-builder.css."
+    },
+    {
+      "key": "Упражнение · карточка · 18",
+      "verdict": "=",
+      "fact": ".sb-ex-card-muted color rgba(var(--ink),.42) «Не спрашиваем»; 750."
+    },
+    {
+      "key": "Упражнение · карточка · 19",
+      "verdict": "=",
+      "fact": ".sb-ex-card-save margin-top 12px «Сохранить упражнение»; builder_ui + 750."
+    },
+    {
+      "key": "Упражнение · карточка · текст",
+      "verdict": "=",
+      "fact": "Новое упражнение › своё, не из каталога › Тяга саней › Чем меряется › кг×повт/свой вес/время/метры › сноска › Какие мышцы › сменить/выбрать › Коэффициент › Не спрашиваем › Сохранить › хвост — strength-builder-exercise-card-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "целевой день с выбранным лимитом не предлагается",
+      "verdict": "=",
+      "fact": "Канвас :2319 (пилюля «занят», 40% ink, нет действия). moveOptionsFor busy при real.length>=3 day_trainings:3078-3113; MoveSheet disabled+«занят» superset_ui:2554-2562."
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+audit(strength-builder): session/transfer view handoff for 13 line groups
+
+Read-only audit of session chrome, approach/rest rows, round cells,
+authorship pill, transfer trace, and plan-in-feed contract lines.
+Outputs scripts/.sb-session-views-verdict-handoff.json and needs-code list
+for owner apply; no product source edits.

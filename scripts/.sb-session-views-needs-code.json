@@ -1,0 +1,57 @@
+[
+  {
+    "key": "вид · строка подхода",
+    "reason": "Prose-контракт :2349 (отметка 44×44 r12) расходится с кадром А1б/Е1 и CSS 750:3614-3680 (капсулы 26/44 r999). Нужно либо обновить data-v, либо свести геометрию.",
+    "file": "750-strength-builder.css"
+  },
+  {
+    "key": "Подход · таблица ввода · 33",
+    "reason": "Цвет/фон номера done: контракт --gr-bg на отметке, код --sb-soft + ink 62%.",
+    "file": "750-strength-builder.css"
+  },
+  {
+    "key": "Подход · таблица ввода · 35",
+    "reason": "Текущий номер: контракт тон --ac на фоне, код bg --sb-bg без acs на .sb-ap-num.",
+    "file": "750-strength-builder.css"
+  },
+  {
+    "key": "Подход · таблица ввода · 23-28",
+    "reason": "Строка отдыха в Е1: показать .sb-rest-cd колонкой вместо .sb-rest-copy или свести кадр.",
+    "file": "heys_strength_superset_ui_v1.js"
+  },
+  {
+    "key": "вид · служебная шапка сессии",
+    "reason": "Двойной режим шапки: sessionTitle vs exercise name на is-exercise-open — решить единый chrome или зафиксировать исключение в контракте.",
+    "file": "heys_strength_builder_ui_v1.js"
+  },
+  {
+    "key": "вид · след переноса",
+    "reason": "Г3 кадр inline .cd + сноска .sm vs modal MoveSheet + короткий trace — 10 frame-rows ≠ (см. transfer handoff).",
+    "file": "heys_strength_superset_ui_v1.js"
+  },
+  {
+    "key": "Перенос · след в обе стороны · 14-15",
+    "reason": "Цвета даты/«Свободно» в .sb-move-day-copy — явный color var(--tx)/ink-2.",
+    "file": "731-ui-v4-activity.css"
+  },
+  {
+    "key": "Перенос · след в обе стороны · 17-18",
+    "reason": "Приглушение занятого дня и пилюли «занят» до контрактных .4.",
+    "file": "731-ui-v4-activity.css"
+  },
+  {
+    "key": "Перенос · след в обе стороны · 20",
+    "reason": "«выбрано» на .sb-move-day.is-on — accent color на span.",
+    "file": "731-ui-v4-activity.css"
+  },
+  {
+    "key": "Перенос · след в обе стороны · 22",
+    "reason": "Полная сноска переноса на карточке/странице, не только в MoveSheet.",
+    "file": "heys_strength_superset_ui_v1.js"
+  },
+  {
+    "key": "Конструктор · список свёрнут · 15",
+    "reason": "calm A2 row 15: font-size title 12.5px vs контракт 13px — мелкий drift заголовка упражнения.",
+    "file": "750-strength-builder.css"
+  }
+]
