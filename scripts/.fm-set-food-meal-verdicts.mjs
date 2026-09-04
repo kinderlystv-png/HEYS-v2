@@ -1,5 +1,4 @@
-import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const SAND_ACT = '#8a4a20';
 const BLUE_ACT = '#1d5e96';
@@ -90,25 +89,17 @@ const ITEMS = [
 ];
 
 const root = process.cwd();
-let zone = readZone('food-meal');
 let applied = 0;
 for (const row of ITEMS) {
   const [key, verdict, fact, opt1, opt2] = row;
-  const item = zone.rows[key];
-  if (!item) {
-    console.error('нет строки', key);
-    process.exit(1);
-  }
-  const was = item.v;
   const options = {};
   if (verdict === '≠') {
     options['reason-code'] = opt1 || 'canvas-conflict';
     options['decision-ref'] = opt2 || `${DECISION_CANVAS}:1153`;
   }
   if (verdict === '—') options['na-kind'] = opt1 || 'designer-removed';
-  applyVerdictToRow(item, { verdict, fact, options }, root);
-  writeZone('food-meal', zone);
-  console.log(`${key}  ${was} → ${verdict}`);
+  const result = setVerdictKey('food-meal', key, { verdict, fact, options }, { root });
+  console.log(`${key}  ${result.was.v} → ${verdict}`);
   applied += 1;
 }
 console.log(`готово: ${applied} строк`);

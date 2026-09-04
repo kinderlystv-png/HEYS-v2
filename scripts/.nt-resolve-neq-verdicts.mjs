@@ -3,7 +3,7 @@
  * Resolve nutrition-tab ≠ verdicts after code/contract verification.
  * Usage: node scripts/.nt-resolve-neq-verdicts.mjs [--dry-run]
  */
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { readZone, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
 
 const dryRun = process.argv.includes('--dry-run');
 
@@ -101,32 +101,33 @@ const RESOLVE = {
   'Питание · блок · Нижняя навигация · рисунок 05': { v: '—', f: CHIP_NA, naKind: 'foreign-zone' },
 };
 
-const zoneData = readZone('nutrition-tab');
 let resolved = 0;
-let kept = 0;
-const keptList = [];
+let skipped = 0;
 
 for (const [key, patch] of Object.entries(RESOLVE)) {
-  const row = zoneData.rows[key];
-  if (!row || row.v !== '≠') {
+  const options = patch.v === '—' && patch.naKind ? { 'na-kind': patch.naKind } : {};
+  const result = setVerdictKey(
+    'nutrition-tab',
+    key,
+    { verdict: patch.v, fact: patch.f, options },
+    {
+      dryRun,
+      skipIf: (row) => row.v !== '≠',
+    },
+  );
+  if (result.skipped) {
     console.warn(`skip (not ≠): ${key}`);
+    skipped += 1;
     continue;
   }
-  row.v = patch.v;
-  row.f = patch.f;
-  if (patch.v === '—' && patch.naKind) row.naKind = patch.naKind;
-  else delete row.naKind;
   resolved += 1;
 }
 
-for (const [key, row] of Object.entries(zoneData.rows)) {
-  if (row.v === '≠') {
-    kept += 1;
-    keptList.push(key);
-  }
-}
-
-if (!dryRun) writeZone('nutrition-tab', zoneData);
+const zoneAfter = readZone('nutrition-tab');
+const keptList = Object.entries(zoneAfter.rows)
+  .filter(([, row]) => row.v === '≠')
+  .map(([key]) => key);
+const kept = keptList.length;
 
 console.log(`Resolved: ${resolved}, remain ≠: ${kept}`);
 if (keptList.length) {
