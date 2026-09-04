@@ -473,7 +473,7 @@
   }
 
   /** Короткая строка состава плана: число подходов, диапазон повторов и вес. */
-  function planExerciseSummary(exercise) {
+  function planExerciseSummary(exercise, opts) {
     const approaches = workApproaches(exercise);
     if (!approaches.length) return '';
     const unit = exercise && exercise.unit;
@@ -491,7 +491,203 @@
         ? 'подхода'
         : 'подходов';
     const countBit = count + (measure ? ' × ' + measure : ' ' + countWord);
-    return countBit + (weight ? ' · ' + weight + ' кг' : '');
+    const weightBit = weight
+      ? ' · ' + (opts && opts.assignedWeight ? 'до ' : '') + weight + ' кг'
+      : '';
+    return countBit + weightBit;
+  }
+
+  function planExerciseCellSummary(exercise, role) {
+    return planExerciseSummary(exercise, { assignedWeight: role === 'assigned' }) || '';
+  }
+
+  function exerciseMaxWeightKg(exercise) {
+    const approaches = workApproaches(exercise);
+    let max = 0;
+    approaches.forEach(function (approach) {
+      const w = parseFloat(String(approach && approach.weightKg || '').replace(',', '.'));
+      if (Number.isFinite(w) && w > max) max = w;
+    });
+    return max;
+  }
+
+  function countDoneWorkApproaches(exercise) {
+    const SK = kernel();
+    return workApproaches(exercise).filter(function (approach) {
+      return SK ? SK.isApproachDone(approach) : !!(approach && approach.done);
+    }).length;
+  }
+
+  function deviationWord(count) {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'отклонение';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'отклонения';
+    return 'отклонений';
+  }
+
+  function fmtPlanVolume(kg) {
+    const v = Math.round(kg || 0);
+    return v >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, '') + ' т' : v + ' кг';
+  }
+
+  function planVsDoneHeaderKey(plan, exerciseCount) {
+    const planObj = plan || {};
+    if (planObj.weekRange) {
+      return String(planObj.weekRange) + ' · ' + exerciseCount + ' назначено';
+    }
+    if (planObj.weekLabel) {
+      return String(planObj.weekLabel) + ' · ' + exerciseCount + ' назначено';
+    }
+    if (planObj.dayLabel) {
+      return String(planObj.dayLabel) + ' · ' + exerciseCount + ' назначено';
+    }
+    return exerciseCount + ' ' + ruPlural(exerciseCount, 'упражнение', 'упражнения', 'упражнений') + ' назначено';
+  }
+
+  function buildPlanVsDoneRow(planEx, liveEx) {
+    const name = planEx && planEx.name ? String(planEx.name) : 'Без названия';
+    const plannedCount = workApproaches(planEx).length;
+    const planned = planExerciseCellSummary(planEx, 'assigned') || '—';
+    if (!liveEx) {
+      const missNote = plannedCount
+        ? plannedCount + ' ' + ruPlural(plannedCount, 'подход', 'подхода', 'подходов') + ' не сделаны'
+        : 'пропущено';
+      return {
+        name: name,
+        status: 'skipped',
+        note: missNote,
+        planned: planned,
+        actual: 'пропущено',
+        doneTone: 'skip'
+      };
+    }
+    const doneCount = countDoneWorkApproaches(liveEx);
+    if (!doneCount) {
+      return {
+        name: name,
+        status: 'skipped',
+        note: plannedCount
+          ? plannedCount + ' ' + ruPlural(plannedCount, 'подход', 'подхода', 'подходов') + ' не сделаны'
+          : 'пропущено',
+        planned: planned,
+        actual: 'пропущено',
+        doneTone: 'skip'
+      };
+    }
+    const actual = planExerciseCellSummary(liveEx, 'done') || '—';
+    const plannedPlain = planExerciseSummary(planEx);
+    const actualPlain = planExerciseSummary(liveEx);
+    if (plannedPlain === actualPlain) {
+      return {
+        name: name,
+        status: 'match',
+        note: 'Как назначено',
+        planned: planned,
+        actual: actual,
+        doneTone: 'neutral'
+      };
+    }
+    const planMax = exerciseMaxWeightKg(planEx);
+    const liveMax = exerciseMaxWeightKg(liveEx);
+    if (liveMax > planMax && doneCount >= plannedCount) {
+      return {
+        name: name,
+        status: 'progress',
+        note: 'Вес выше плана — это прогресс',
+        planned: planned,
+        actual: actual,
+        doneTone: 'positive'
+      };
+    }
+    if (doneCount < plannedCount) {
+      const miss = plannedCount - doneCount;
+      return {
+        name: name,
+        status: 'under',
+        note: miss + ' ' + ruPlural(miss, 'подход', 'подхода', 'подходов') + ' не сделаны',
+        planned: planned,
+        actual: actual,
+        doneTone: 'under'
+      };
+    }
+    return {
+      name: name,
+      status: 'under',
+      note: 'Отличается от плана',
+      planned: planned,
+      actual: actual,
+      doneTone: 'under'
+    };
+  }
+
+  function buildPlanVsDoneSnapshot(training) {
+    const snapshot = (training && training.planSnapshot) || {};
+    const planExercises = Array.isArray(snapshot.exercises) ? snapshot.exercises : [];
+    const liveExercises = Array.isArray(training && training.workoutLog && training.workoutLog.exercises)
+      ? training.workoutLog.exercises
+      : [];
+    const liveByName = {};
+    liveExercises.forEach(function (exercise) {
+      if (exercise && exercise.name) liveByName[String(exercise.name).toLowerCase()] = exercise;
+    });
+    const rows = planExercises.map(function (planEx) {
+      const name = planEx && planEx.name ? String(planEx.name) : '';
+      const live = name ? liveByName[name.toLowerCase()] || null : null;
+      return buildPlanVsDoneRow(planEx, live);
+    });
+    let totalPlannedApproaches = 0;
+    let totalDoneApproaches = 0;
+    let deviations = 0;
+    planExercises.forEach(function (planEx, index) {
+      totalPlannedApproaches += workApproaches(planEx).length;
+      const row = rows[index];
+      if (!row) return;
+      if (row.status !== 'match') deviations += 1;
+      const live = planEx && planEx.name ? liveByName[String(planEx.name).toLowerCase()] : null;
+      if (live) totalDoneApproaches += countDoneWorkApproaches(live);
+    });
+    const percent = totalPlannedApproaches > 0
+      ? Math.round((totalDoneApproaches / totalPlannedApproaches) * 100)
+      : 0;
+    const SK = kernel();
+    const plannedVolume = SK
+      ? SK.trainingTonnage({ workoutLog: { exercises: planExercises } }).plannedVolume
+      : 0;
+    const doneVolume = SK ? SK.trainingTonnage(training).totalVolume : 0;
+    const summarySub = totalPlannedApproaches
+      ? (totalDoneApproaches + ' подходов из ' + totalPlannedApproaches
+        + (deviations > 0 ? ' · ' + deviations + ' ' + deviationWord(deviations) : ''))
+      : '';
+    return {
+      rows: rows,
+      percent: percent,
+      summarySub: summarySub,
+      plannedVolume: plannedVolume,
+      doneVolume: doneVolume,
+      headerKey: planVsDoneHeaderKey(training && training.plan, planExercises.length)
+    };
+  }
+
+  const PLAN_VS_DONE_FOOTNOTE = 'Перенос и пропуск — разные исходы: перенос освобождает исходный день заранее и пропуском не считается, пропуск остаётся навсегда — прошедший день не переигрываем.';
+
+  function AuthorshipPill(props) {
+    const stamp = props && props.stamp;
+    if (!stamp) return null;
+    return h('div', { className: 'sb-authorship-pill', role: 'note' },
+      h('span', { className: 'sb-authorship-pill-avatar', 'aria-hidden': 'true' },
+        props.initial || '?'),
+      h('span', { className: 'sb-authorship-pill-text' }, stamp)
+    );
+  }
+
+  function fmtAuthorWeightStamp(who, weightKg, atMs) {
+    const name = who ? String(who).trim() : 'Куратор';
+    const raw = weightKg == null || weightKg === '' ? '' : String(weightKg).trim();
+    const weight = raw ? raw.replace('.', ',') + ' кг' : '';
+    const time = fmtTime(atMs);
+    if (!weight) return '';
+    return name + ' поставил ' + weight + (time ? ' · ' + time : '');
   }
 
   function planApproachCount(exercises) {
@@ -1502,7 +1698,7 @@
     const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
       onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onStartRest, onLink,
       onOpenWarmupDrop, onRemove, onDiscomfortAction, onReplyCurator, curatorMeta,
-      history, readOnly } = props;
+      history, readOnly, weightEditAuthorship } = props;
     const SK = kernel();
     const aps = Array.isArray(ex.approaches) ? ex.approaches : [];
     const metaApi = HEYS.exerciseMeta;
@@ -1523,17 +1719,29 @@
     let workNo = 0;
     const rows = visibleWork.map(function (row) {
       workNo += 1;
-      return h(ApproachRow, {
-        key: 'a' + row.index,
-        approach: row.approach,
-        index: row.index,
-        workNumber: workNo,
-        onPatch: onPatchApproach,
-        onToggleType: onToggleType,
-        readOnly: readOnly,
-        unit: unit,
-        isCurrent: row.index === (visibleWork[firstPendingIndex] || {}).index
-      });
+      const rowNodes = [
+        h(ApproachRow, {
+          key: 'ap' + row.index,
+          approach: row.approach,
+          index: row.index,
+          workNumber: workNo,
+          onPatch: onPatchApproach,
+          onToggleType: onToggleType,
+          readOnly: readOnly,
+          unit: unit,
+          isCurrent: row.index === (visibleWork[firstPendingIndex] || {}).index
+        })
+      ];
+      if (weightEditAuthorship
+        && weightEditAuthorship.afterApproachIndex === row.index
+        && weightEditAuthorship.stamp) {
+        rowNodes.push(h(AuthorshipPill, {
+          key: 'auth-' + row.index,
+          initial: weightEditAuthorship.initial,
+          stamp: weightEditAuthorship.stamp
+        }));
+      }
+      return h(React.Fragment, { key: 'a' + row.index }, rowNodes);
     });
 
     const doneCount = indexedWork.filter(function (row) {
@@ -2112,50 +2320,93 @@
   Parts.SyncQueuePanel = SyncQueuePanel;
 
   function PlanVsDoneScreen(props) {
-    const { training, onBack, onClose } = props;
-    const snapshot = (training && training.planSnapshot) || {};
-    const planExercises = Array.isArray(snapshot.exercises) ? snapshot.exercises : [];
-    const liveExercises = Array.isArray(training && training.workoutLog && training.workoutLog.exercises)
-      ? training.workoutLog.exercises
-      : [];
-    const liveByName = {};
-    liveExercises.forEach(function (ex) {
-      if (ex && ex.name) liveByName[String(ex.name).toLowerCase()] = ex;
-    });
-    const rows = planExercises.map(function (planEx) {
-      const name = planEx && planEx.name ? String(planEx.name) : 'Без названия';
-      const live = liveByName[name.toLowerCase()] || null;
-      const planned = planExerciseSummary(planEx);
-      const actual = live ? planExerciseSummary(live) : '—';
-      return { name: name, planned: planned || '—', actual: actual || '—', same: planned === actual };
-    });
+    const { training, onBack, onClose, onMessageCurator, onWeekReport } = props;
+    const snapshot = buildPlanVsDoneSnapshot(training || {});
+    const rows = snapshot.rows;
     return h('div', { className: 'sb-root sb-plan-vs-done' },
-      h('div', { className: 'sb-head' },
+      h('div', { className: 'sb-cycle-top' },
         h('button', {
           type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
-        }, '←'),
-        h('div', { className: 'sb-head-title' },
-          h('b', null, 'Назначено против сделано'),
-          h('div', { className: 'sb-head-sub' }, 'Отклонения от плана куратора')
+        }, '‹'),
+        h('span', { className: 'sb-cycle-top-main' },
+          h('span', { className: 'sb-cycle-title' }, 'Отчёт по циклу'),
+          snapshot.headerKey && h('span', { className: 'sb-cycle-key' }, snapshot.headerKey)
         ),
         h('button', {
           type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть'
         }, '✕')
       ),
       h('div', { className: 'sb-plan-vs-scroll' },
-        rows.length ? rows.map(function (row, i) {
-          return h('div', {
-            key: row.name + i,
-            className: 'sb-plan-vs-row' + (row.same ? ' is-match' : ' is-diff')
-          },
-            h('b', null, row.name),
-            h('span', null, 'план · ' + row.planned),
-            h('span', null, 'факт · ' + row.actual)
-          );
-        }) : h('p', { className: 'sb-plan-vs-empty' }, 'План куратора для сравнения не найден.')
+        rows.length && h('div', { className: 'sb-plan-vs-summary' },
+          h('div', { className: 'sb-plan-vs-summary-head' },
+            h('span', { className: 'sb-plan-vs-dot is-summary', 'aria-hidden': 'true' }),
+            h('span', { className: 'sb-plan-vs-summary-title' },
+              'План выполнен на ' + snapshot.percent + ' %')
+          ),
+          snapshot.summarySub && h('p', { className: 'sb-plan-vs-summary-sub' }, snapshot.summarySub)
+        ),
+        rows.length
+          ? h('div', { className: 'sb-plan-vs-list' },
+            rows.map(function (row, i) {
+              const doneCellClass = row.doneTone === 'positive'
+                ? ' is-positive'
+                : row.doneTone === 'skip'
+                  ? ' is-skip'
+                  : row.doneTone === 'neutral'
+                    ? ' is-neutral'
+                    : '';
+              return h('div', {
+                key: row.name + i,
+                className: 'sb-plan-vs-row is-' + row.status
+              },
+                h('div', { className: 'sb-plan-vs-row-head' },
+                  h('span', { className: 'sb-plan-vs-dot is-' + row.status, 'aria-hidden': 'true' }),
+                  h('b', null, row.name)
+                ),
+                row.note && h('p', { className: 'sb-plan-vs-note' }, row.note),
+                h('div', { className: 'sb-plan-vs-cols' },
+                  h('div', { className: 'sb-plan-vs-cell is-assigned' },
+                    h('span', { className: 'sb-plan-vs-cell-label' }, 'Назначено'),
+                    h('span', { className: 'sb-plan-vs-cell-val' }, row.planned)
+                  ),
+                  h('div', { className: 'sb-plan-vs-cell is-done' + doneCellClass },
+                    h('span', { className: 'sb-plan-vs-cell-label' }, 'Сделано'),
+                    h('span', { className: 'sb-plan-vs-cell-val' }, row.actual)
+                  )
+                )
+              );
+            }))
+          : h('p', { className: 'sb-plan-vs-empty' }, 'План куратора для сравнения не найден.'),
+        rows.length && h('div', { className: 'sb-plan-vs-cd' },
+          h('div', { className: 'sb-plan-vs-cd-row' },
+            h('span', { className: 'sb-plan-vs-cd-label' }, 'Объём назначенного'),
+            h('span', { className: 'sb-plan-vs-cd-val is-muted' }, fmtPlanVolume(snapshot.plannedVolume))
+          ),
+          h('div', { className: 'sb-plan-vs-cd-row is-last' },
+            h('span', { className: 'sb-plan-vs-cd-label' }, 'Объём сделанного'),
+            h('span', { className: 'sb-plan-vs-cd-val' }, fmtPlanVolume(snapshot.doneVolume))
+          )
+        ),
+        rows.length && h('div', { className: 'sb-plan-vs-actions' },
+          h('button', {
+            type: 'button',
+            className: 'sb-btn sb-plan-cta',
+            onClick: onMessageCurator || undefined
+          }, 'Написать куратору'),
+          h('button', {
+            type: 'button',
+            className: 'sb-btn is-accent sb-plan-cta',
+            onClick: onWeekReport || onBack || undefined
+          }, 'Отчёт за неделю')
+        ),
+        rows.length && h('p', { className: 'sb-plan-vs-foot' }, PLAN_VS_DONE_FOOTNOTE)
       )
     );
   }
+
+  Parts.buildPlanVsDoneSnapshot = buildPlanVsDoneSnapshot;
+  Parts.AuthorshipPill = AuthorshipPill;
+  Parts.fmtAuthorWeightStamp = fmtAuthorWeightStamp;
 
   Parts.PlanVsDoneScreen = PlanVsDoneScreen;
 
@@ -2290,6 +2541,8 @@
     );
   }
 
+  const PLAN_MOVE_FOOTNOTE = 'Отдельного механизма переноса нет: это обычное назначение на свободный день плюс след в обе стороны. Клиент переносит сам, без подтверждения — пока куратор ответит, день уйдёт, и перенос превратится в пропуск.';
+
   /** Ближайшие свободные дни для переноса (16a). Занятый день не предлагается. */
   function MoveSheet(props) {
     const { options, onCancel, onConfirm, busy, error } = props;
@@ -2331,7 +2584,8 @@
           onClick: function () { if (!busy && props.onSkipInstead) props.onSkipInstead(); }
         }, 'Совсем пропустить'),
         h('p', { className: 'sb-plan-trace' },
-          'Исходный день останется со следом переноса, новый — с тем же планом и весами.')
+          'Исходный день останется со следом переноса, новый — с тем же планом и весами.'),
+        h('p', { className: 'sb-plan-footnote' }, PLAN_MOVE_FOOTNOTE)
       )
     );
   }
@@ -2633,6 +2887,7 @@
           onClick: function () { setSkipOpen(true); }
         }, 'Пропустить')
       ),
+      h('p', { className: 'sb-plan-footnote' }, PLAN_MOVE_FOOTNOTE),
       moveOpen && h(MoveSheet, {
         options: moveOptions,
         busy: pendingAction === 'move',
