@@ -2751,7 +2751,7 @@ body:has(.page-reports) .hdr::after {
   border: none;
   padding: 0;
   margin: 0;
-  background: color-mix(in srgb, var(--v4-on-fab, #2b1608) 34%, transparent);
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: 0;
@@ -2767,18 +2767,6 @@ body:has(.page-reports) .hdr::after {
   to {
     opacity: 1;
   }
-}
-
-[data-theme$="dark"] .widgets-quick-scrim {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-[data-theme-id="blue"] .widgets-quick-scrim {
-  background: rgba(16, 24, 38, 0.34);
-}
-
-[data-theme-id="blue-dark"] .widgets-quick-scrim {
-  background: rgba(0, 0, 0, 0.5);
 }
 
 .widgets-quick-sheet {
@@ -13865,10 +13853,9 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   inset: 0;
   z-index: var(--v4-z-sheet-scrim, 1200);
   border: none;
-  /* Подложка product-модалки: dim и блюр берутся из токенов набора.
-     Канвас рисует blur(2px), инвариант продукта — 2.5px из
-     --v4-modal-backdrop-blur; отступление названо в протоколе. */
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  /* Подложка product-модалки: --scrim набора с блюром 2,5 px (home-widgets,
+     «затемнение под слоем · правило продукта»). Канвас рисует blur(2px). */
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   animation: widget-wd-scrim-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -14832,7 +14819,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   z-index: var(--v4-z-sheet-scrim, 1200);
   border: none;
   padding: 0;
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   animation: widget-bd-scrim-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1);

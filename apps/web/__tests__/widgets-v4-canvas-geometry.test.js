@@ -116,8 +116,8 @@ const EXCEPTIONS = new Set([
   // Инвариант product-модалок (CLAUDE.md): блюр подложки — 2.5 px из токена
   // --v4-modal-backdrop-blur. Канвас рисует 2 px.
   '.widget-wd-sheet__scrim|backdrop-filter',
-  // Тот же инвариант: dim берётся из --v4-modal-backdrop-dim (0.45), канвас
-  // рисует 0.42.
+  // Инвариант product-модалок: dim — роль --scrim набора (home-widgets,
+  // «затемнение под слоем», 4 сентября). Канвас рисует 0.42.
   '.widget-wd-sheet__scrim|background',
   // Цвет этих трёх нейтральных подписей теперь задаёт семантическая роль
   // --v4-ink-data. Её точное значение против строки «лестница чернил» сверяет

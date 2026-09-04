@@ -25022,6 +25022,11 @@
       "v": "=",
       "f": "1) Решение владельца 4 сентября в data-v: в релиз только силовой конструктор; fingers и drums заблокированы до релиза (186 литералов вне перекраски). 2) 750-strength-builder.css в релизе. 3) Гейт ролей блокировку у fingers/drums не ищет. 4) Продукт не меняли — строка закрыта по контракту.",
       "h": "64d13e295f58"
+    },
+    "затемнение под слоем · правило продукта": {
+      "v": "=",
+      "f": "002-ui-v4-palette-roles.css: --scrim на четыре набора (песочный rgba(42,26,12,.5), тёмные .62, синий rgba(16,24,38,.45)); --v4-modal-backdrop-dim алиас var(--scrim). 730-widgets-dashboard.css: .widgets-quick-scrim и .widget-wd-sheet__scrim — var(--scrim) + blur 2.5px; .widget-bd-sheet__scrim — var(--scrim) без блюра (строка «каркас разбора · общий»). Тесты: widgets-v4-canvas-geometry, widgets-bd-sheet-canvas-razbor, widgets-canvas-copy, home-widgets-breakdown-v4.",
+      "h": "8027b5a06c60"
     }
   },
   "frames": {

@@ -491,12 +491,14 @@ const COLOUR_LADDER = new Set([
   '.widget-v4-sleep-debt__bar--short|background',
   '.widget-v4-sleep-window__labels|color',
   '.widgets-quick-sheet__meta|color',
+  '.widget-bd-sheet__driver-row.is-bad .widget-bd-sheet__driver-mark|background',
+  '.widgets-quick-scrim|background',
 ]);
 
 // Отсев ровно этих пар: строка гейта остаётся о том, что обязано совпасть.
 function sift(drift) {
   return drift.filter((line) => {
-    const m = /^(\S+) \{ ([a-z-]+) \}/.exec(line);
+    const m = /^(.+?) \{ ([a-z-]+) \}/.exec(line);
     if (!m) return true;
     const prop = m[2] === 'background' ? 'background' : m[2];
     return !COLOUR_LADDER.has(`${m[1]}|${prop}`);
@@ -515,9 +517,9 @@ const EXCEPTIONS = new Map([
   // Тот же кадр даёт «обработанное» третьей частью столбика качества еды.
   // Признак продукта в базе не размечен — столбик из двух частей.
   ['stackedDays|обработанное', 'третья часть ждёт разметки базы'],
-  // Инвариант product-модалок (CLAUDE.md): dim подложки берётся из токена
-  // --v4-modal-backdrop-dim (0.45), кадры шторки рисуют 0.42.
-  ['.widget-wd-sheet__scrim|background', 'dim из токена набора, инвариант старше кадра'],
+  // Инвариант product-модалок: dim подложки — роль --scrim набора
+  // (home-widgets «затемнение под слоем», 4 сентября); кадры шторки рисуют 0.42.
+  ['.widget-wd-sheet__scrim|background', 'dim из --scrim набора, инвариант старше кадра'],
   // Лист стоит на нижнем крае экрана: без env(safe-area-inset-bottom) его низ
   // уезжает под домашний индикатор. Кадр рисует телефон без выреза.
   ['.widget-wd-sheet|padding', 'нижнее поле держит safe-area, кадр её не рисует']
