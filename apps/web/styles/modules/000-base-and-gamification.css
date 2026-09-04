@@ -186,7 +186,7 @@ input[type="password"] {
 
   /* Activity block (жёлтый) */
   --activity-bg: #fffef5;
-  --activity-border: #f5e6a3;
+  --activity-border: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
 
   /* Sleep/Day block (суперсветло-розовый) */
   --sleep-bg: #fef7f9;
@@ -11120,7 +11120,7 @@ body:has(:is(
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__panel,
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__inline-panel,
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .tab-settings-diary-wrap {
-  background: rgba(20, 18, 16, 0.55);
+  background: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent); /* v4-intentional */
   border-color: rgba(255, 255, 255, 0.08);
 }
 
