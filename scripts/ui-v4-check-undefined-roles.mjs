@@ -56,10 +56,6 @@ const BARE_SKIP_FILES = new Set([
 // только вместе с решением, почему роль остаётся необъявленной.
 const BASELINE = {
   'v4-card-bg': ['styles/modules/000-base-and-gamification.css'],
-  'v4-ok': [
-    'heys_widgets_ui_v1.js',
-    'styles/modules/730-widgets-dashboard.css',
-  ],
   'v4-sand-wave': ['styles/modules/730-widgets-dashboard.css'],
   'v4-warn-fill': ['styles/modules/733-ui-v4-reports.css'],
 };

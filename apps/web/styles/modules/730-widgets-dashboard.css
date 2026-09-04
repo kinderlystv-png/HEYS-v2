@@ -14145,7 +14145,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   flex: 1;
   height: 6px;
   border-radius: 999px;
-  background: var(--v4-ok, #5a9a6e);
+  background: var(--v4-ok-fill, #7a8a5e);
   max-width: 100%;
 }
 
