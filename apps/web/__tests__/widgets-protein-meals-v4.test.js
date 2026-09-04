@@ -86,7 +86,7 @@ describe('Белок · По приёмам — сведённый кусок', 
     expect(add).toContain('widget-v4-protein-add');
     expect(now).toContain('v4GoalBar');
     expect(now).toContain(", 'г')");
-    expect(intervals).toContain('widget-v4-val--good');
+    expect(intervals).toContain('widget-v4-rhythm-intervals');
     expect(intervals).toContain('6 * 60');
   });
 

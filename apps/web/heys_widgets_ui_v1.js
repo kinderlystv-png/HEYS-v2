@@ -6120,15 +6120,15 @@
     const intervals = Array.isArray(data?.intervals) ? data.intervals : [];
 
     if (variantId === 'intervals') {
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm' },
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm widget-v4-rhythm-intervals' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Ритм · интервалы'),
           React.createElement('span', { className: 'widget-v4-row__meta' },
             `${data?.count || 0} ${ruMealsWord(data?.count || 0)}`
           )
         ),
-        React.createElement('div', { className: 'widget-v4-goal-hero' },
-          React.createElement('span', { className: 'widget-v4-goal-value widget-v4-val--neutral' },
+        React.createElement('div', { className: 'widget-v4-rhythm-intervals__hero' },
+          React.createElement('span', { className: 'widget-v4-rhythm-intervals__value' },
             data?.avgMinutes != null ? formatHoursColon(data.avgMinutes) : '—'
           ),
           React.createElement('span', { className: 'widget-v4-unit' },
@@ -6136,7 +6136,7 @@
           )
         ),
         intervals.length
-          ? React.createElement('div', { className: 'widget-v4-mealbars' },
+          ? React.createElement('div', { className: 'widget-v4-mealbars widget-v4-rhythm-intervals__bars' },
             intervals.slice(-3).map((item, index) => React.createElement('div', {
               key: `${item.from}_${index}`,
               className: 'widget-v4-mealbars__row'
@@ -6144,7 +6144,7 @@
               React.createElement('span', { className: 'widget-v4-mealbars__time' }, `${item.from} → ${item.to}`),
               React.createElement('span', { className: 'widget-v4-mealbars__track' },
                 React.createElement('span', {
-                  className: 'widget-v4-mealbars__fill widget-v4-val--good',
+                  className: 'widget-v4-mealbars__fill',
                   style: { width: Math.max(4, Math.min(100, (item.minutes / (6 * 60)) * 100)) + '%' }
                 })
               ),

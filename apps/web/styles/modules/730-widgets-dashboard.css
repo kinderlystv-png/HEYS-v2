@@ -13012,6 +13012,52 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink, #201e1d);
 }
 
+/* Кадр «Ритм приёмов · Интервалы»: герой 26 px, полосы 5 px, время 74 px.
+   Общий mealbars (gap 5 / 4 px) и белок 34 px не трогал. Ленту дня не трогал. */
+.widget-v4-rhythm-intervals__hero {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 7px;
+  min-width: 0;
+}
+
+.widget-v4-rhythm-intervals__value {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--v4-ink, #201e1d) /* v4-intentional */;
+}
+
+.widget-v4-mealbars.widget-v4-rhythm-intervals__bars {
+  gap: 6px;
+  margin-top: auto;
+}
+
+.widget-v4-rhythm-intervals__bars .widget-v4-mealbars__time {
+  width: 74px;
+  font-size: 8.5px;
+  line-height: 1;
+}
+
+.widget-v4-rhythm-intervals__bars .widget-v4-mealbars__track {
+  height: 5px;
+}
+
+.widget-v4-rhythm-intervals__bars .widget-v4-mealbars__fill {
+  height: 5px;
+  background: #b7c29b;
+}
+
+.widget-v4-rhythm-intervals__bars .widget-v4-mealbars__num {
+  font-size: 8.5px;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d) /* v4-intentional */;
+}
+
 /* Кадр «Ритм приёмов · Лента дня»: поле 14 px, точки 8 px шалфеем набора,
    риска 2 px чернилами. Общий row--tight / meta / kicker не трогал.
    Интервалы эти классы не рисуют. */
