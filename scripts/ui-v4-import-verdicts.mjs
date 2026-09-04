@@ -125,11 +125,11 @@ for (const file of fs.readdirSync(dirArg).filter((f) => f.endsWith('.txt')).sort
     continue;
   }
 
-  const zoneRows = {};
+  const importedRows = {};
   const tally = {};
   rows.forEach((row, index) => {
     const got = parsed.get(index + 1) || { v: '?', f: 'Номер строки не пришёл из ревизии' };
-    zoneRows[row.key] = { v: got.v, f: got.f, h: hash(row.raw) };
+    importedRows[row.key] = { v: got.v, f: got.f, h: hash(row.raw) };
     tally[got.v] = (tally[got.v] || 0) + 1;
   });
 
@@ -137,7 +137,7 @@ for (const file of fs.readdirSync(dirArg).filter((f) => f.endsWith('.txt')).sort
     canvas,
     contractOnly: false,
     recorded: '2026-08-24',
-    rows: zoneRows,
+    rows: importedRows,
   };
   report.push(`${zoneId.padEnd(18)} строк ${String(rows.length).padEnd(4)} ${JSON.stringify(tally)}`);
 }
@@ -147,31 +147,45 @@ if (problems.length) {
   for (const p of problems) console.error(`  ${p}`);
 }
 console.log(report.join('\n'));
+function mergeImportedRow(zoneId, key, rowData, meta) {
+  const live = readZone(zoneId);
+  if (!live?.rows?.[key]) {
+    const zone = live || {
+      rows: {},
+      canvas: meta.canvas,
+      contractOnly: meta.contractOnly,
+      recorded: meta.recorded,
+    };
+    zone.rows[key] = { ...rowData };
+    zone.canvas = meta.canvas;
+    zone.contractOnly = meta.contractOnly;
+    zone.recorded = meta.recorded;
+    writeZone(zoneId, zone);
+    return;
+  }
+  patchZoneRow(zoneId, key, (row) => {
+    row.v = rowData.v;
+    row.f = rowData.f;
+    row.h = rowData.h;
+  });
+}
+
 if (!dry) {
   for (const zoneId of touched) {
     const imported = data.zones[zoneId];
+    const meta = {
+      canvas: imported.canvas,
+      contractOnly: imported.contractOnly,
+      recorded: imported.recorded,
+    };
     for (const [key, rowData] of Object.entries(imported.rows)) {
-      const live = readZone(zoneId);
-      if (!live?.rows?.[key]) {
-        const zone = live || { rows: {}, canvas: imported.canvas, contractOnly: imported.contractOnly, recorded: imported.recorded };
-        zone.rows[key] = { ...rowData };
-        zone.canvas = imported.canvas;
-        zone.contractOnly = imported.contractOnly;
-        zone.recorded = imported.recorded;
-        writeZone(zoneId, zone);
-      } else {
-        patchZoneRow(zoneId, key, (row) => {
-          row.v = rowData.v;
-          row.f = rowData.f;
-          row.h = rowData.h;
-        });
-      }
+      mergeImportedRow(zoneId, key, rowData, meta);
     }
     const zone = readZone(zoneId);
     if (zone) {
-      zone.canvas = imported.canvas;
-      zone.contractOnly = imported.contractOnly;
-      zone.recorded = imported.recorded;
+      zone.canvas = meta.canvas;
+      zone.contractOnly = meta.contractOnly;
+      zone.recorded = meta.recorded;
       writeZone(zoneId, zone);
     }
   }
