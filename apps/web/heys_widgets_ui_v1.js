@@ -5701,12 +5701,15 @@
   // Общее по цвету: недобор ни у одного не красится. Красный есть только у
   // «Окна до сна» и только в одном случае — ел меньше чем за час до отбоя.
 
-  /** Полоса дневной цели: ниже 67 % — --ovl, от 67 % — --gr2. */
-  function v4GoalBar(pct) {
+  /** Полоса дневной цели: ниже 67 % — --ovl, от 67 % — --gr2; tone bad/good — явный тон БЖУ. */
+  function v4GoalBar(pct, tone) {
     const width = Math.max(0, Math.min(100, Number(pct) || 0));
+    const fillClass = tone === 'bad'
+      ? ' widget-v4-goalbar__fill--bad'
+      : (tone === 'good' || (!tone && width >= 67) ? ' is-on-track' : '');
     return React.createElement('div', { className: 'widget-v4-goalbar' },
       React.createElement('span', {
-        className: 'widget-v4-goalbar__fill' + (width >= 67 ? ' is-on-track' : ''),
+        className: 'widget-v4-goalbar__fill' + fillClass,
         style: { width: `${width}%` }
       })
     );

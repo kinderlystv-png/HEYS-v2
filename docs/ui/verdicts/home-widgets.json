@@ -20880,168 +20880,168 @@
       "h": "f1aa75320e54"
     },
     "Кольца БЖУ · Как сейчас · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget--macros — position relative на .widget. 2) Кадр stop «Как сейчас». 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Кольца БЖУ · Как сейчас · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-macros — heys_widgets_ui_v1.js:6588. 2) gap 6, margin auto — 730-widgets-dashboard.css:11702-11709. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "077efcfd0ab0"
     },
     "Кольца БЖУ · Как сейчас · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Колонка .widget-v4-macro — v4SageRing heys_widgets_ui_v1.js:2435. 2) flex 1 1 0, min-width 0, center — 730-widgets-dashboard.css:11712-11718. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "866afd83bd2f"
     },
     "Кольца БЖУ · Как сейчас · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ключ .widget-v4-macro__label — heys_widgets_ui_v1.js:2436. 2) margin-bottom 5 — 730-widgets-dashboard.css:11721-11723. 3) Слово «Белки». 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "bc5e0fdceeef"
     },
     "Кольца БЖУ · Как сейчас · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Факт .widget-v4-macro__fact-val при macroDeviationBad — heys_widgets_ui_v1.js:2462-2466. 2) margin-top 5, 13px/700 — 730-widgets-dashboard.css:11738-11743. 3) --v4-val-bad: песок #a8382b, синий #a8382b (002-ui-v4-palette-roles.css:210/504). 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "1417908f5886"
     },
     "Кольца БЖУ · Как сейчас · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «/ 150» .widget-v4-macro__fact-sep+tgt — heys_widgets_ui_v1.js:2467-2468. 2) font-weight 600. 3) --v4-ink-secondary 38 % / bad → --v4-ink-3 42 % (730-widgets-dashboard.css:11752-11760). 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "e55277d1a616"
     },
     "Кольца БЖУ · Как сейчас · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Нейтральный факт .widget-v4-macro__fact — heys_widgets_ui_v1.js:2461-2468. 2) 13px/700. 3) --v4-ink на факте, sep/tgt --v4-ink-secondary. 4) «48» — formatRuNumber(value).",
       "h": "53306c5d9b47"
     },
     "Кольца БЖУ · Три полосы · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget--macros — position relative на .widget. 2) Кадр stop «Как сейчас». 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Кольца БЖУ · Три полосы · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Корень .widget-macros--bars — heys_widgets_ui_v1.js:6482. 2) column gap 4 margin-top auto — 730-widgets-dashboard.css:14339-14343. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "e0b2943cf278"
     },
     "Кольца БЖУ · Три полосы · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Строка v4MacroBarRow — heys_widgets_ui_v1.js:2208. 2) align center gap 7 — 730-widgets-dashboard.css:14346-14349. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "e7e38fcb6a6f"
     },
     "Кольца БЖУ · Три полосы · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ключ .widget-v4-macro-bar-row__label — heys_widgets_ui_v1.js:2209. 2) width 8, flex none, line-height 1 — 730-widgets-dashboard.css:14355-14358. 3) «Б». 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "78911a1001f8"
     },
     "Кольца БЖУ · Три полосы · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка .widget-v4-macro-bar-row__track — heys_widgets_ui_v1.js:2212. 2) flex 1, 5px, 999, bg 9 % — 730-widgets-dashboard.css:14361-14366. 3) rgba 9 %. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "2f0421826ad9"
     },
     "Кольца БЖУ · Три полосы · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка .widget-v4-macro-bar-row__fill--bad — heys_widgets_ui_v1.js:2214-2215. 2) width inline из ratio. 3) --v4-bad-text: #a83c22 / #b03a24 (002-ui-v4-palette-roles.css:209/503). 4) Демо 64 % — динамика.",
       "h": "fad6036a80fb"
     },
     "Кольца БЖУ · Три полосы · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Числа .widget-v4-macro-bar-row__nums — heys_widgets_ui_v1.js:2224. 2) 9px/700, width 46, right — 730-widgets-dashboard.css:14393-14399. 3) widget-v4-val--bad при macroDeviationBad. 4) «96 / 150».",
       "h": "f0e730f6d414"
     },
     "Кольца БЖУ · Три полосы · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка ok .widget-v4-macro-bar-row__fill — heys_widgets_ui_v1.js:2214. 2) 5px/999. 3) --v4-ok-fill: песок #7a8a5e, синий #4f9a78 (002-ui-v4-palette-roles.css:167/477). 4) Демо 77 % — динамика.",
       "h": "64350b996fb7"
     },
     "Кольца БЖУ · Три полосы · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) То же __nums без bad — heys_widgets_ui_v1.js:2224. 2) 9px/700. 3) --v4-ink на нейтральном. 4) «48 / 62».",
       "h": "e038f1011fdf"
     },
     "Кольца БЖУ · Три полосы · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Track relative для маркера — heys_widgets_ui_v1.js:2212. 2) position relative — 730-widgets-dashboard.css:14361-14362. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "9db5562a2d0e"
     },
     "Кольца БЖУ · Три полосы · 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Перебор fill --bad — heys_widgets_ui_v1.js:2214-2215. 2) width 100 %. 3) --v4-bad-text. 4) «198 / 180» carbs over.",
       "h": "3e2855a1d619"
     },
     "Кольца БЖУ · Три полосы · 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Маркер нормы .widget-v4-macro-bar-row__norm — heys_widgets_ui_v1.js:2218-2220. 2) absolute 2×9, radius 2 — 730-widgets-dashboard.css:14383-14390. 3) --v4-sand-ink. 4) left из over ratio.",
       "h": "bf5402a25f41"
     },
     "Кольца БЖУ · Что выбивается · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Корень .widget-macros--deficits — heys_widgets_ui_v1.js:6512. 2) Кадр 2×1. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "25206af9a380"
     },
     "Кольца БЖУ · Что выбивается · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('БЖУ · что выбивается') — heys_widgets_ui_v1.js:6513. 2) .widget-v4-kicker. 3) Слово. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "f9d9993dc668"
     },
     "Кольца БЖУ · Что выбивается · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Hero .widget-v4-deficit-hero — heys_widgets_ui_v1.js:6514. 2) baseline gap 5 margin-top 9 — 730-widgets-dashboard.css:14402-14410. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "7e0784626aee"
     },
     "Кольца БЖУ · Что выбивается · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число в hero — heys_widgets_ui_v1.js:6515. 2) 26px/600/-.03em — 730-widgets-dashboard.css:14406-14409. 3) widget-v4-val--bad на worst. 4) «−54».",
       "h": "1dca015b9733"
     },
     "Кольца БЖУ · Что выбивается · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Низ .widget-v4-deficit-rows — heys_widgets_ui_v1.js:6518. 2) column gap 6 margin-top auto — 730-widgets-dashboard.css:14413-14417. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "a4bb5b9f39a2"
     },
     "Кольца БЖУ · Что выбивается · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Строки .widget-v4-deficit-rows__row — heys_widgets_ui_v1.js:6519. 2) space-between 10px/600 --v4-ink-data — 730-widgets-dashboard.css:14424-14427. 3) 56 % ink. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "a7b0f4600a98"
     },
     "Кольца БЖУ · Что выбивается · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дельта +18 в row — heys_widgets_ui_v1.js:6526-6528. 2) tabular-nums в hero/rows. 3) val--bad при bad. 4) fmtDelta.",
       "h": "743e1d52170c"
     },
     "Кольца БЖУ · Что выбивается · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дельта −14 neutral — heys_widgets_ui_v1.js:6526-6528. 2) widget-v4-val--neutral. 3) --v4-ink. 4) fmtDelta.",
       "h": "7dacf94d35d9"
     },
     "Кольца БЖУ · Только белок · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-macros--1x1.widget-v4-mini — heys_widgets_ui_v1.js:6543. 2) Кадр 1×1. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "25206af9a380"
     },
     "Кольца БЖУ · Только белок · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Белки') — heys_widgets_ui_v1.js:6544. 2) .widget-v4-kicker. 3) Слово. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "d2e1e6fc24b6"
     },
     "Кольца БЖУ · Только белок · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-v4-mini__value — heys_widgets_ui_v1.js:6545. 2) baseline gap 2 margin-top auto — 730-widgets-dashboard.css:11151-11158. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "67eff63bf24f"
     },
     "Кольца БЖУ · Только белок · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-v4-mini__value — heys_widgets_ui_v1.js:6548. 2) 21px/600/-.02em (1.3125rem). 3) val--bad при proteinBad. 4) «96».",
       "h": "539df5844e82"
     },
     "Кольца БЖУ · Только белок · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка .widget-v4-goalbar — v4GoalBar heys_widgets_ui_v1.js:5705. 2) height 4, 999, --v4-track, margin-top 6 на 1×1 — 730-widgets-dashboard.css:12633-12637,12656-12658. 3) track 12 %. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "8aa2c600e6e6"
     },
     "Кольца БЖУ · Только белок · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка .widget-v4-goalbar__fill--bad — v4GoalBar(..., 'bad') heys_widgets_ui_v1.js:5705-5714. 2) width inline. 3) --v4-bad-text. 4) Демо 64 %.",
       "h": "d9802fcfb611"
     },
     "Вода · Как сейчас · 01": {
@@ -22175,33 +22175,33 @@
       "h": "8d5fedda9d7e"
     },
     "Кольца БЖУ · пустой день · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-macros--3x2 на пустом дне — heys_widgets_ui_v1.js:6349. 2) Кадр 219×136 — сетка, не отдельное правило. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "eedd3c9f1acf"
     },
     "Кольца БЖУ · пустой день · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-macros — heys_widgets_ui_v1.js:6588. 2) gap 6, margin auto — 730-widgets-dashboard.css:11702-11709. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "077efcfd0ab0"
     },
     "Кольца БЖУ · пустой день · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Колонка .widget-v4-macro — v4SageRing heys_widgets_ui_v1.js:2435. 2) flex 1 1 0, min-width 0, center — 730-widgets-dashboard.css:11712-11718. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "866afd83bd2f"
     },
     "Кольца БЖУ · пустой день · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ключ .widget-v4-macro__label — heys_widgets_ui_v1.js:2436. 2) margin-bottom 5 — 730-widgets-dashboard.css:11721-11723. 3) Слово «Белки». 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "bc5e0fdceeef"
     },
     "Кольца БЖУ · пустой день · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Прочерк .widget-v4-macro__fact-val empty — heys_widgets_ui_v1.js:2466. 2) margin-top 5, 13px/700 — 730-widgets-dashboard.css:11738-11743. 3) --v4-ink-3: песок rgba(0,0,0,.45), синий rgba(0,0,0,.45) (002-ui-v4-palette-roles.css:180/484). 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "32b69e64dedb"
     },
     "Кольца БЖУ · пустой день · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Норма empty sep/tgt — heys_widgets_ui_v1.js:2467-2468 empty. 2) font-weight 700 на empty. 3) --v4-ink-data 56 %. 4) «/ 150».",
       "h": "1c42a899be82"
     },
     "Тренд здоровья · рост · 01": {
@@ -23752,28 +23752,28 @@
       "h": "3458d3407b69"
     },
     "Кольца БЖУ · Как сейчас · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) SVG v4SageRing width 46 height 46 viewBox 0 0 44 44 — heys_widgets_ui_v1.js:2437. 2) Поле рисунка кадра. 3) Не цвет набора. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "d95ca8ce07c4"
     },
     "Кольца БЖУ · Как сейчас · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка circle r=18 stroke --v4-line — heys_widgets_ui_v1.js:2438-2440. 2) 9 % ink fallback. 3) Не дуга. 4) empty и filled.",
       "h": "a58792895d04"
     },
     "Кольца БЖУ · Как сейчас · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дуга .widget-v4-macro__ring-fill — heys_widgets_ui_v1.js:2442-2449. 2) stroke --v4-ok-fill (730-widgets-dashboard.css:11835-11837). 3) Песок #7a8a5e, синий #4f9a78. 4) pathLength 100, cap round.",
       "h": "2dfe6e8051f9"
     },
     "Кольца БЖУ · пустой день · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) SVG v4SageRing width 46 height 46 viewBox 0 0 44 44 — heys_widgets_ui_v1.js:2437. 2) Поле рисунка кадра. 3) Не цвет набора. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "d95ca8ce07c4"
     },
     "Кольца БЖУ · пустой день · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка circle r=18 stroke --v4-line — heys_widgets_ui_v1.js:2438-2440. 2) 9 % ink fallback. 3) Не дуга. 4) empty и filled.",
       "h": "a58792895d04"
     },
     "Тренд здоровья · рост · рисунок 01": {
@@ -24213,23 +24213,23 @@
       "h": "82749184d7c1"
     },
     "Кольца БЖУ · Как сейчас · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Слова кадра: «Белки», «54», «96», «/ 150», «Жиры», «14», «48», «/ 62», «Углеводы», «−18», «198», «/ 180». 2) Номер «5». 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "2c42a4941c4a"
     },
     "Кольца БЖУ · Три полосы · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «96 / 150», «48 / 62», «198 / 180». 2) Номер «6». 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "dc4bd4cf93ed"
     },
     "Кольца БЖУ · Что выбивается · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «БЖУ · что выбивается», «−54», «белки, г», «Углеводы», «+18», «Жиры», «−14». 2) Номер «7». 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "8799a3ffbe91"
     },
     "Кольца БЖУ · Только белок · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «Белки», «96», «/150». 2) Номер «8». 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "dc42666cb233"
     },
     "Вода · Как сейчас · текст": {
@@ -24373,8 +24373,8 @@
       "h": "644eaeebf78e"
     },
     "Кольца БЖУ · пустой день · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «Белки», «/ 150», «Жиры», «/ 62», «Углеводы», «/ 180»; прочерк вместо факта. 2) Кадр empty. 3) Не цвет. 4) Смоук: widgets-rings-v4-contract.test.js.",
       "h": "1a9c2a909d91"
     },
     "Тренд здоровья · рост · текст": {

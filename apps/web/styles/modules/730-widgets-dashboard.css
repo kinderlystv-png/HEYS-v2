@@ -12653,6 +12653,14 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   background: var(--v4-ok-fill); /* v4-intentional */
 }
 
+.widget-v4-goalbar__fill--bad {
+  background: var(--v4-bad-text, #a8382b);
+}
+
+.widget-macros--1x1 .widget-v4-goalbar {
+  margin-top: 6px;
+}
+
 /* Кадр «Окно до сна · Вечер»: полоса вечера, не «вид · полоса цели».
    Дорожка --v4-line 8 % (data-v 07), не --v4-track 12 %. Общий goalbar
    4 px / track / 7 px и mini sleep now не трогал. */
@@ -13053,7 +13061,6 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
-
 
 /* Чек-лист вечера: закрытый пункт — шалфейная точка и шалфейное слово,
    открытый — нейтральные. Красного нет: вечером ругать поздно. */
