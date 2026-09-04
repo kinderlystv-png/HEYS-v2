@@ -5052,9 +5052,9 @@
         const trendCls = v4ValueStateClass(v4WeightWindowState(data));
         return React.createElement('div', { className: 'widget-weight widget-weight--1x1 widget-v4-mini' },
           v4Kicker('Вес'),
-          React.createElement('div', { className: 'widget-v4-mini__value ' + trendCls },
+          React.createElement('div', { className: 'widget-v4-mini__value widget-v4-mini__value--pair ' + trendCls },
             hasCurrent ? formatRuDecimal(current, 1) : '—',
-            hasCurrent ? React.createElement('span', { className: 'widget-v4-unit' }, ' кг') : null
+            hasCurrent ? React.createElement('span', { className: 'widget-v4-unit' }, 'кг') : null
           )
         );
       }
@@ -5229,7 +5229,7 @@
             React.createElement('polyline', {
               points: maPath,
               fill: 'none',
-              stroke: 'var(--v4-ok, #7a8a5e)',
+              stroke: 'var(--v4-ok-fill, #7a8a5e)',
               strokeWidth: 2.5,
               strokeLinecap: 'round',
               strokeLinejoin: 'round'

@@ -236,6 +236,26 @@ describe('геометрия виджетов Главной против кад
     expect(ui).toContain("v4EmptyTile('Динамика веса', 'данные недоступны')");
   });
 
+  it('вес 2×2 держит герой 26px и спарклайн 38px', () => {
+    const heroVal = declarations(product.get('.widget-v4-hero-num__val'));
+    expect(normalize(heroVal['font-size'])).toBe('26px');
+    expect(heroVal['font-weight']).toBe('600');
+    expect(heroVal['line-height']).toBe('1');
+
+    const delta = declarations(
+      (product.get('.widget-v4-delta.widget-v4-val--good') || [])
+        .concat(product.get('.widget-v4-delta') || []),
+    );
+    expect(delta['margin-top']).toBe('7px');
+
+    const ui = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_ui_v1.js'), 'utf8');
+    const css = fs.readFileSync(CSS, 'utf8');
+    expect(ui).toContain("viewBox = '0 0 130 38'");
+    expect(ui).toContain('height = 38');
+    expect(ui).toContain('widget-v4-mini__value--pair');
+    expect(css).toMatch(/\.widget-weight--2x2 \.widget-v4-row__meta[\s\S]*?font-size:\s*10px/);
+  });
+
   it('осознанные отступления не разрослись', () => {
     expect(EXCEPTIONS.size).toBe(6);
   });

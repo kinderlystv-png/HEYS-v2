@@ -13251,32 +13251,6 @@ body:has(.widgets-tab) .widget-weight--2x2.widget-v4-stack {
   gap: 0;
 }
 
-/* Вес 2×2 — герой читается чётче, цвет тренда сохраняем */
-body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-hero-num__val {
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 0.92;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: geometricPrecision;
-}
-
-body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--good {
-  color: #4a5c34;
-}
-
-body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--bad {
-  color: #9a3228;
-}
-
-body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--act {
-  color: #7a4218;
-}
-
-body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-hero-num__val.widget-v4-val--neutral {
-  color: var(--v4-ink, #201e1d);
-}
-
 body:has(.widgets-tab) .widget-weight--2x2 .widget-v4-unit {
   font-weight: 600;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.48));
@@ -14563,6 +14537,13 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 /* Кадр «Сон · Окно сна · 04»: длительность в шапке 700 10px, не общий meta 9/600. */
 .widget-v4-row__meta.widget-v4-sleep-window__hours {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Кадр «Вес · Точки и среднее · 04»: число в шапке 10px/700, не общий meta 9/600. */
+.widget-weight--2x2 .widget-v4-row__meta {
   font-size: 10px;
   font-weight: 700;
   line-height: 1;

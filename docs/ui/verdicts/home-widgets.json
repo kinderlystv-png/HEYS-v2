@@ -23119,73 +23119,73 @@
       "h": "dd3434534f83"
     },
     "Вес · Как сейчас · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-weight--2x2.widget-v4-stack — heys_widgets_ui_v1.js:4847. 2) Кадр stop «Как сейчас». 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "25206af9a380"
     },
     "Вес · Как сейчас · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Вес') — heys_widgets_ui_v1.js:4848. 2) .widget-v4-kicker — 730-widgets-dashboard.css:10518-10524. 3) Слово «Вес». 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "f5f7a55194a5"
     },
     "Вес · Как сейчас · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-hero-num — heys_widgets_ui_v1.js:4849. 2) baseline gap 5 margin-top 10 — 730-widgets-dashboard.css:11011-11017. 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "5de956a46607"
     },
     "Вес · Как сейчас · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-v4-hero-num__val — heys_widgets_ui_v1.js:4850-4854. 2) 26px/600/1 (1.625rem) — 730-widgets-dashboard.css:11035-11041. 3) Тон v4ValueStateClass(windowState). 4) formatRuDecimal(current,1).",
       "h": "7d8f9e862341"
     },
     "Вес · Как сейчас · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дельта .widget-v4-delta — heys_widgets_ui_v1.js:4857-4860. 2) margin-top 7, 10px/600 — 730-widgets-dashboard.css:13294-13296,10925-10930. 3) --v4-sand-ok-text при good (002-ui-v4-palette-roles.css:247). 4) «−0,9 за неделю».",
       "h": "7ca0fcce7200"
     },
     "Вес · Только число · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-weight--1x1.widget-v4-mini — heys_widgets_ui_v1.js:5053. 2) Кадр 1×1. 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "25206af9a380"
     },
     "Вес · Только число · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Вес') — heys_widgets_ui_v1.js:4848. 2) .widget-v4-kicker — 730-widgets-dashboard.css:10518-10524. 3) Слово «Вес». 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "f5f7a55194a5"
     },
     "Вес · Только число · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-v4-mini__value--pair — heys_widgets_ui_v1.js:5055. 2) flex baseline gap 2 margin-top auto — 730-widgets-dashboard.css:11151-11166. 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "67eff63bf24f"
     },
     "Вес · Только число · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число в pair — heys_widgets_ui_v1.js:5056-5057. 2) 21px/600/-.02em — 730-widgets-dashboard.css:11151-11157. 3) --v4-ink (#201e1d) нейтральный. 4) «91,1» + unit «кг».",
       "h": "7bf71d5da3b3"
     },
     "Вес · Точки и среднее · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-weight--2x2.widget-v4-stack scatter — heys_widgets_ui_v1.js:5201. 2) Кадр 2×2. 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "25206af9a380"
     },
     "Вес · Точки и среднее · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Шапка .widget-v4-row--tight — heys_widgets_ui_v1.js:5202. 2) space-between baseline — 730-widgets-dashboard.css:10802-10806. 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "f7098a935ff6"
     },
     "Вес · Точки и среднее · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Вес · точки и среднее') — heys_widgets_ui_v1.js:5203. 2) .widget-v4-kicker. 3) Текст ключа. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "e59d93af5bba"
     },
     "Вес · Точки и среднее · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Meta .widget-v4-row__meta — heys_widgets_ui_v1.js:5205-5207. 2) 10px/700 — 730-widgets-dashboard.css:14536-14542. 3) widget-v4-val--good. 4) formatRuDecimal(current,1).",
       "h": "e52222bf2c93"
     },
     "Вес · Точки и среднее · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-weight__scatter-foot — heys_widgets_ui_v1.js:5238-5240. 2) 9px/600 margin-top 5 — 730-widgets-dashboard.css:14545-14549. 3) --v4-ink-data 56 %. 4) «точки — весы, линия — среднее за 7 дней».",
       "h": "4f980474058c"
     },
     "Калории без заголовка · Остаток и рамки · 01": {
@@ -24037,88 +24037,88 @@
       "h": "c365dbed50cf"
     },
     "Вес · Как сейчас · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) WidgetV4DrawSparkSvg viewBox 0 0 130 38 height 38 — heys_widgets_ui_v1.js:2004-2005,4862-4867. 2) Поле 100%×38. 3) Не цвет набора. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "dda530325252"
     },
     "Вес · Как сейчас · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) path/polyline strokeWidth 2.5 — heys_widgets_ui_v1.js:2035. 2) class widget-v4-spark--act — heys_widgets_ui_v1.js:4863. 3) --v4-act: песок #c67139, синий #2e7cc0 (002-ui-v4-palette-roles.css:143/461). 4) Точки из sparklinePoints.",
       "h": "9ba3bd895512"
     },
     "Вес · Как сейчас · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle dotR 3.5 — heys_widgets_ui_v1.js:2011,2040-2045. 2) fill через dotStyle. 3) --v4-act на точке. 4) Последняя точка окна.",
       "h": "b008a8e718fd"
     },
     "Вес · Точки и среднее · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) svg.widget-weight__scatter viewBox 0 0 130 56 height 56 — heys_widgets_ui_v1.js:5210-5215. 2) Поле 100%×56. 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "8166c5a4e8a4"
     },
     "Вес · Точки и среднее · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "20dfce5b2a2b"
     },
     "Вес · Точки и среднее · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "d6b3a5f4b952"
     },
     "Вес · Точки и среднее · рисунок 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "fe873a362b80"
     },
     "Вес · Точки и среднее · рисунок 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "ac8b0bba806a"
     },
     "Вес · Точки и среднее · рисунок 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "8224043c9a94"
     },
     "Вес · Точки и среднее · рисунок 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "a8e35f6bf556"
     },
     "Вес · Точки и среднее · рисунок 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "a048d4eb8b09"
     },
     "Вес · Точки и среднее · рисунок 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "004f9a9a8604"
     },
     "Вес · Точки и среднее · рисунок 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "03efb884dc9a"
     },
     "Вес · Точки и среднее · рисунок 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "514c4ec3385d"
     },
     "Вес · Точки и среднее · рисунок 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "b66b2bd5ec74"
     },
     "Вес · Точки и среднее · рисунок 13": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) circle r 2.2 fill rgba(0,0,0,.22) — heys_widgets_ui_v1.js:5220-5226. 2) Каждая точка взвешивания. 3) 22 % ink. 4) Демо-координаты — динамика.",
       "h": "4399700ba482"
     },
     "Вес · Точки и среднее · рисунок 14": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) polyline maPath strokeWidth 2.5 — heys_widgets_ui_v1.js:5229-5235. 2) 7-дневное среднее. 3) --v4-ok-fill: песок #7a8a5e, синий #4f9a78 (002-ui-v4-palette-roles.css:167/477). 4) var(--gr2) в кадре.",
       "h": "28e7e05b1526"
     },
     "Добавление · 1 колонка · текст": {
@@ -24510,18 +24510,18 @@
       "h": "d06a7d77ef6f"
     },
     "Вес · Как сейчас · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4TileSpokenLabel — heys_widgets_ui_v1.js:1776-1800. 2) «32 › Вес › 91,1 › кг › −0,9 за неделю». 3) Состояние словом из V4_STATE_WORD. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "aa6f145b2013"
     },
     "Вес · Только число · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4TileSpokenLabel на .widget-v4-mini__value — heys_widgets_ui_v1.js:1788-1800. 2) «33 › Вес › 91,1 › кг». 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "393a31d5ba16"
     },
     "Вес · Точки и среднее · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4TileSpokenLabel на .widget-v4-row__value или kicker+meta — heys_widgets_ui_v1.js:1784-1800. 2) «34 › Вес · точки и среднее › 91,1 › …». 3) Не цвет. 4) Смоук: widgets-weight-v4-contract.test.js.",
       "h": "ab92a2a7e463"
     },
     "Калории без заголовка · Остаток и рамки · текст": {
@@ -26015,8 +26015,8 @@
     },
     "Вес · Как сейчас": {
       "evidence": [
-        "apps/web/__tests__/widget-variants-v4.test.js",
-        "apps/web/__tests__/home-widgets-breakdown-v4.test.js",
+        "apps/web/__tests__/widgets-weight-v4-contract.test.js",
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
         "apps/web/heys_widgets_ui_v1.js",
         "apps/web/heys_widgets_variants_v4.js",
         "apps/web/styles/modules/730-widgets-dashboard.css"
@@ -26024,8 +26024,8 @@
     },
     "Вес · Только число": {
       "evidence": [
-        "apps/web/__tests__/widget-variants-v4.test.js",
-        "apps/web/__tests__/home-widgets-breakdown-v4.test.js",
+        "apps/web/__tests__/widgets-weight-v4-contract.test.js",
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
         "apps/web/heys_widgets_ui_v1.js",
         "apps/web/heys_widgets_variants_v4.js",
         "apps/web/styles/modules/730-widgets-dashboard.css"
@@ -26033,8 +26033,8 @@
     },
     "Вес · Точки и среднее": {
       "evidence": [
-        "apps/web/__tests__/widget-variants-v4.test.js",
-        "apps/web/__tests__/home-widgets-breakdown-v4.test.js",
+        "apps/web/__tests__/widgets-weight-v4-contract.test.js",
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
         "apps/web/heys_widgets_ui_v1.js",
         "apps/web/heys_widgets_variants_v4.js",
         "apps/web/styles/modules/730-widgets-dashboard.css"
