@@ -1,0 +1,139 @@
+{
+  "zone": "strength-builder",
+  "scope": "В3 «Своё упражнение» · heys_strength_superset_ui_v1.js (CustomExerciseScreen)",
+  "generated": "2026-09-04",
+  "agent": "superset B3 subagent",
+  "canvasRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:505-533",
+  "summary": {
+    "block": "Своё упражнение ·01–23",
+    "rows": 23,
+    "recommendEquals": 21,
+    "recommendNotEquals": 1,
+    "recommendDash": 0,
+    "recommendQuestion": 1,
+    "codeChanged": true,
+    "codeChange": "CustomExerciseScreen + CUSTOM_EX_V4_BRIDGE + CUSTOM_EX_SCREEN_CSS (badge/hint); тест strength-superset-b3-custom-exercise-v4-canvas-contract.test.js"
+  },
+  "rows": [
+    {
+      "key": "Своё упражнение · 01",
+      "verdict": "=",
+      "f": ".sb-head с .sb-icon-btn + .sb-head-title — heys_strength_superset_ui_v1.js:2875–2888; стандартная шапка strength-builder."
+    },
+    {
+      "key": "Своё упражнение · 02",
+      "verdict": "=",
+      "f": ".sb-head-title flex column gap 3px — 750-strength-builder.css .sb-head-title; тест row 02 sand."
+    },
+    {
+      "key": "Своё упражнение · 03",
+      "verdict": "=",
+      "f": "«Новое упражнение» в .sb-head-title b — superset_ui:2886."
+    },
+    {
+      "key": "Своё упражнение · 04",
+      "verdict": "=",
+      "f": "«три поля, третье — только иногда» в .sb-head-sub — superset_ui:2887."
+    },
+    {
+      "key": "Своё упражнение · 05",
+      "verdict": "?",
+      "f": "Кадр .sc; продукт .sb-list — прокрутка есть, точные padding/safe-area не замерялись отдельным гейтом."
+    },
+    {
+      "key": "Своё упражнение · 06",
+      "verdict": "=",
+      "f": ".sb-ap-field.sb-ex-name min-height 44px radius 14px padding 0 14px margin-top 12px font 700 13px/1 — 750 + тест row 06 sand/blue."
+    },
+    {
+      "key": "Своё упражнение · 07",
+      "verdict": "=",
+      "f": "tierStyle «1 · Что меряем» 700 10px/1 var(--sb-acc) — superset_ui:2849–2852; тест row 07."
+    },
+    {
+      "key": "Своё упражнение · 08",
+      "verdict": "=",
+      "f": "Блок единиц .sb-custom-ex-cd — superset_ui:2901–2928; аналог кадра .cd."
+    },
+    {
+      "key": "Своё упражнение · 09",
+      "verdict": "=",
+      "f": "cdRowStyle padding 9px 0 border-bottom none — superset_ui:2854–2858; тест row 09."
+    },
+    {
+      "key": "Своё упражнение · 10",
+      "verdict": "=",
+      "f": "flex gap 6px wrap на badge-row — superset_ui:2904–2905."
+    },
+    {
+      "key": "Своё упражнение · 11",
+      "verdict": "=",
+      "f": ".sb-custom-ex-badge--on background var(--acs) color var(--on-acs) — CUSTOM_EX_SCREEN_CSS; тест row 11 sand/blue."
+    },
+    {
+      "key": "Своё упражнение · 12",
+      "verdict": "=",
+      "f": ".sb-custom-ex-badge--off color rgba(var(--ink),.62) — CUSTOM_EX_SCREEN_CSS; тест row 12 sand."
+    },
+    {
+      "key": "Своё упражнение · 13",
+      "verdict": "=",
+      "f": "Строки «Основная»/«Помогают» cdRowStyle после выбора группы — superset_ui:2955–2966."
+    },
+    {
+      "key": "Своё упражнение · 14",
+      "verdict": "=",
+      "f": "«Основная» color var(--sb-tx) — superset_ui:2956; тест row 14."
+    },
+    {
+      "key": "Своё упражнение · 15",
+      "verdict": "=",
+      "f": "Значение primary 700 11.5px/1 var(--sb-acc) — superset_ui:2957–2959; тест row 15 sand/blue."
+    },
+    {
+      "key": "Своё упражнение · 16",
+      "verdict": "=",
+      "f": "Вторичная строка cdRowStyle border-bottom none — superset_ui:2961–2966."
+    },
+    {
+      "key": "Своё упражнение · 17",
+      "verdict": "=",
+      "f": "«Помогают» 600 11.5px/1 var(--sb-mut) ≈ ink 56% — superset_ui:2963–2965; кадр ink .56."
+    },
+    {
+      "key": "Своё упражнение · 18",
+      "verdict": "=",
+      "f": "grpStyle padding 12px 13px radius 14px background var(--c1) — superset_ui:2861–2866."
+    },
+    {
+      "key": "Своё упражнение · 19",
+      "verdict": "=",
+      "f": ".sb-custom-ex-hint 600 12.5px/1.4 rgba(var(--ink),.55) — CUSTOM_EX_SCREEN_CSS; тест row 19 sand."
+    },
+    {
+      "key": "Своё упражнение · 20",
+      "verdict": "=",
+      "f": "Bodyweight сноска в grp при needsFactor — superset_ui:2976–2977; текст канваса."
+    },
+    {
+      "key": "Своё упражнение · 21",
+      "verdict": "=",
+      "f": ".sb-finish margin-top 12px «Создать упражнение» — superset_ui:2999–3004; тест row 21."
+    },
+    {
+      "key": "Своё упражнение · 22",
+      "verdict": "≠",
+      "reasonCode": "product-logic",
+      "f": "«Создать без объёма» (.sb-btn margin-top 9px) рендерится только при unit=bodyweight (needsFactor); кадр stop показывает кнопку при weight_reps — демо-композит, продукт скрывает."
+    },
+    {
+      "key": "Своё упражнение · 23",
+      "verdict": "=",
+      "f": ".sb-catalog-note 500 11px/1.55 var(--sb-mut) margin-top 12px — 750:5353–5357 + superset_ui:3011–3013; тест row 23."
+    }
+  ],
+  "outOfScope": {
+    "note": "Catalog NewExerciseScreen (heys_strength_catalog_ui_v1.js ·08–23) — другой lane. strength-builder.json не трогали. 750-strength-builder.css не меняли.",
+    "routing": "CustomExerciseScreen экспортирован в Parts; wiring в builder shell — отдельная задача если ещё не подключён."
+  }
+}

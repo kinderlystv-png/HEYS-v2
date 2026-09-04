@@ -2750,10 +2750,274 @@
     );
   }
 
+  /** Canvas В3 · мост канвас-ролей на v4 без правки CSS-модуля. */
+  var CUSTOM_EX_V4_BRIDGE = {
+    '--c1': 'var(--v4-c1, #f7efe2)',
+    '--c2': 'var(--v4-hero, #efe3cf)',
+    '--bg': 'var(--v4-bg, #fffaf3)',
+    '--tx': 'var(--v4-ink, #201e1d)',
+    '--ac': 'var(--v4-act-text, #8a4a20)',
+    '--acs': 'var(--v4-act, #c67139)',
+    '--on-acs': 'var(--v4-btn-on-act, #2b1608)',
+    '--ink': 'var(--v4-ink-rgb, 32, 30, 29)',
+    '--sb-card': 'var(--v4-c1, #f7efe2)',
+    '--sb-bg': 'var(--v4-bg, #fffaf3)',
+    '--sb-tx': 'var(--v4-ink, #201e1d)',
+    '--sb-mut': 'var(--v4-ink-data, rgba(32, 30, 29, 0.56))',
+    '--sb-soft': 'var(--v4-hero, #efe3cf)',
+    '--sb-acc': 'var(--v4-act-text, #8a4a20)',
+    '--sb-acc-strong': 'var(--v4-act, #c67139)',
+    '--sb-accbg': 'var(--v4-accent-bg, #f6e6dd)',
+    '--sb-accTx': 'var(--v4-act-text, #8a4a20)'
+  };
+
+  var CUSTOM_EX_UNIT_LABELS = {
+    weight_reps: 'вес × повторы',
+    bodyweight: 'свой вес',
+    time: 'время',
+    distance: 'метры'
+  };
+
+  var CUSTOM_EX_SCREEN_CSS = [
+    '.sb-custom-exercise-screen .sb-custom-ex-badge {',
+    'font:700 9px/1 ui-monospace,Menlo,monospace;',
+    'letter-spacing:.09em;text-transform:lowercase;',
+    'padding:4px 7px;border-radius:6px;border:none;cursor:pointer;',
+    'background:transparent;',
+    '}',
+    '.sb-custom-exercise-screen .sb-custom-ex-badge--on {',
+    'background:var(--acs);color:var(--on-acs);',
+    '}',
+    '.sb-custom-exercise-screen .sb-custom-ex-badge--off {',
+    'color:rgba(var(--ink), .62);',
+    '}',
+    '.sb-custom-exercise-screen .sb-custom-ex-hint {',
+    'font:600 12.5px/1.4 Figtree,sans-serif;',
+    'color:rgba(var(--ink), .55);',
+    '}'
+  ].join('');
+
+  function exerciseMetaApi() {
+    return HEYS.exerciseMeta || null;
+  }
+
+  /**
+   * Кадр В3 «Своё упражнение»: единица первым полем, третий вопрос только у своего
+   * веса, кнопка «Создать без объёма» при пропуске коэффициента.
+   */
+  function CustomExerciseScreen(props) {
+    const { initialName, onDone, onCancel } = props;
+    const api = exerciseMetaApi();
+    const [name, setName] = React.useState(initialName || '');
+    const [unit, setUnit] = React.useState('');
+    const [primary, setPrimary] = React.useState('');
+    const [secondary, setSecondary] = React.useState([]);
+    const [likeNorm, setLikeNorm] = React.useState('');
+
+    if (!api) return null;
+    const refs = api.bodyweightReferences();
+    const needsFactor = unit === 'bodyweight';
+    const factor = needsFactor && likeNorm
+      ? (refs.filter(function (r) { return r.norm === likeNorm; })[0] || {}).bodyweightFactor
+      : null;
+    const ready = !!String(name).trim() && !!unit && !!primary;
+
+    function toggleGroup(id) {
+      if (id === primary) { setPrimary(''); return; }
+      if (secondary.indexOf(id) >= 0) {
+        setSecondary(secondary.filter(function (x) { return x !== id; }));
+        return;
+      }
+      if (!primary) { setPrimary(id); return; }
+      setSecondary(secondary.concat([id]));
+    }
+
+    function save(withFactor) {
+      const res = api.save(name, {
+        primaryGroup: primary,
+        secondaryGroups: secondary,
+        unit: unit,
+        bodyweightFactor: withFactor ? factor : null
+      });
+      if (res.ok) onDone(String(name).trim());
+    }
+
+    function unitBadgeClass(isOn) {
+      return 'sb-custom-ex-badge ' + (isOn ? 'sb-custom-ex-badge--on' : 'sb-custom-ex-badge--off');
+    }
+
+    function muscleBadgeClass(isPrimary, isSecondary) {
+      return unitBadgeClass(isPrimary || isSecondary);
+    }
+
+    const tierStyle = {
+      margin: '14px 0 8px',
+      font: '700 10px/1 Figtree, sans-serif',
+      color: 'var(--sb-acc)'
+    };
+    const cdRowStyle = {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '9px 0',
+      borderBottom: 'none'
+    };
+    const grpStyle = {
+      marginTop: '0',
+      padding: '12px 13px',
+      borderRadius: '14px',
+      background: 'var(--c1)'
+    };
+    const secondaryLabel = secondary.map(function (id) {
+      return api.groupLabel(id).toLowerCase();
+    }).join(', ');
+
+    return h('div', {
+      className: 'sb-root sb-screen sb-custom-exercise-screen',
+      style: CUSTOM_EX_V4_BRIDGE
+    },
+      h('style', null, CUSTOM_EX_SCREEN_CSS),
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onCancel, 'aria-label': 'Отменить'
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, 'Новое упражнение'),
+          h('div', { className: 'sb-head-sub' }, 'три поля, третье — только иногда')
+        )
+      ),
+      h('div', { className: 'sb-list' },
+        h('input', {
+          className: 'sb-ap-field sb-ex-name',
+          type: 'text',
+          value: name,
+          placeholder: 'Название упражнения',
+          onChange: function (e) { setName(e.target.value); },
+          'aria-label': 'Название упражнения'
+        }),
+
+        h('div', { style: tierStyle }, '1 · Что меряем'),
+        h('div', { className: 'sb-custom-ex-cd' },
+          h('div', { style: cdRowStyle },
+            h('div', {
+              style: { display: 'flex', gap: '6px', flexWrap: 'wrap' }
+            },
+              api.units.map(function (u) {
+                const label = CUSTOM_EX_UNIT_LABELS[u.id] || u.label.toLowerCase();
+                return h('span', {
+                  key: u.id,
+                  role: 'button',
+                  tabIndex: 0,
+                  className: unitBadgeClass(unit === u.id),
+                  onClick: function () {
+                    setUnit(u.id);
+                    if (u.id !== 'bodyweight') setLikeNorm('');
+                  },
+                  onKeyDown: function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setUnit(u.id);
+                      if (u.id !== 'bodyweight') setLikeNorm('');
+                    }
+                  }
+                }, label);
+              })
+            )
+          )
+        ),
+
+        h('div', { style: tierStyle }, '2 · Какие мышцы'),
+        h('div', { className: 'sb-custom-ex-cd' },
+          h('div', { style: cdRowStyle },
+            h('div', {
+              style: { display: 'flex', gap: '6px', flexWrap: 'wrap' }
+            },
+              api.groups.map(function (g) {
+                const isPrimary = g.id === primary;
+                const isSecondary = secondary.indexOf(g.id) >= 0;
+                return h('span', {
+                  key: g.id,
+                  role: 'button',
+                  tabIndex: 0,
+                  className: muscleBadgeClass(isPrimary, isSecondary),
+                  onClick: function () { toggleGroup(g.id); },
+                  onKeyDown: function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleGroup(g.id);
+                    }
+                  }
+                }, isPrimary ? g.label.toLowerCase() + ' · основная' : g.label.toLowerCase());
+              })
+            )
+          ),
+          primary && h('div', { style: cdRowStyle },
+            h('span', { style: { color: 'var(--sb-tx)' } }, 'Основная'),
+            h('span', {
+              style: { font: '700 11.5px/1 Figtree, sans-serif', color: 'var(--sb-acc)' }
+            }, api.groupLabel(primary).toLowerCase())
+          ),
+          secondary.length > 0 && h('div', { style: cdRowStyle },
+            h('span', { style: { color: 'var(--sb-tx)' } }, 'Помогают'),
+            h('span', {
+              style: { font: '600 11.5px/1 Figtree, sans-serif', color: 'var(--sb-mut)' }
+            }, secondaryLabel)
+          )
+        ),
+
+        unit && !needsFactor && h('div', { style: tierStyle }, '3 · Только для своего веса'),
+        unit && !needsFactor && h('div', { style: grpStyle },
+          h('div', { className: 'sb-custom-ex-hint' },
+            'Для «вес × повторы» третий вопрос не задаётся.')
+        ),
+        needsFactor && h('div', { style: tierStyle }, '3 · Только для своего веса'),
+        needsFactor && h('div', { style: grpStyle },
+          h('div', { className: 'sb-custom-ex-hint' },
+            'У упражнений на своём весе спрашиваем «на что похоже» — отжимания, подтягивания, приседания — и коэффициент берём оттуда, а не числом.'),
+          h('div', { style: { display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' } },
+            refs.map(function (r) {
+              return h('span', {
+                key: r.norm,
+                role: 'button',
+                tabIndex: 0,
+                className: unitBadgeClass(likeNorm === r.norm),
+                onClick: function () { setLikeNorm(r.norm); },
+                onKeyDown: function (e) {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setLikeNorm(r.norm);
+                  }
+                }
+              }, 'как ' + r.name.toLowerCase());
+            })
+          )
+        )
+      ),
+
+      h('div', { className: 'sb-panel sb-panel-column' },
+        h('button', {
+          type: 'button',
+          className: 'sb-finish',
+          disabled: !ready || (needsFactor && !likeNorm),
+          onClick: function () { save(true); }
+        }, 'Создать упражнение'),
+        needsFactor && h('button', {
+          type: 'button',
+          className: 'sb-btn',
+          disabled: !ready,
+          onClick: function () { save(false); }
+        }, 'Создать без объёма'),
+        unit && h('p', { className: 'sb-catalog-note' },
+          'Без ответа на третий вопрос упражнение в объём не идёт — и об этом будет строка в итогах, а не тишина.')
+      )
+    );
+  }
+
   Parts.supersetGroupLetter = supersetGroupLetter;
   Parts.supersetMemberLines = supersetMemberLines;
   Parts.SupersetBoundariesBody = SupersetBoundariesBody;
   Parts.SupersetBoundariesScreen = SupersetBoundariesScreen;
   Parts.SupersetBlock = SupersetBlock;
+  Parts.CustomExerciseScreen = CustomExerciseScreen;
   Parts.RestRing = RestRing;
 })(typeof window !== 'undefined' ? window : globalThis);
