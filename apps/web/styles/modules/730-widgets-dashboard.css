@@ -12756,6 +12756,30 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   letter-spacing: -0.02em;
 }
 
+/* Качество еды · Что снизило · 02: ключ и «N из 10» в одном ряду.
+   Классы клетчатки/белка add не переиспользовал. */
+.widget-v4-foodquality-why__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Кадр · 04: факт 9/600 тоном данных, не героя. */
+.widget-v4-foodquality-why__score {
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Кадр · 06: трекинг -.02em, не общий stack -.03em. */
+.widget-v4-foodquality-why .widget-v4-goal-value {
+  letter-spacing: -0.02em;
+}
+
 /* Неделя столбиками: сегодня всегда правый и глубоким тоном. */
 .widget-v4-weekbars {
   display: flex;

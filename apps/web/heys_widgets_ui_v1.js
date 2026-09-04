@@ -6050,20 +6050,29 @@
     }
 
     if (variantId === 'why') {
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-foodquality' },
-        v4Kicker('Качество еды'),
+      // Кадр 46: шапка ключ + «N из 10»; герой — дельта и причина соседом,
+      // не третьей строкой hint. Empty («приёмов не было») не сводил.
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-foodquality widget-v4-foodquality-why' },
+        React.createElement('div', { className: 'widget-v4-foodquality-why__head' },
+          v4Kicker('Качество еды'),
+          hasData
+            ? React.createElement('span', { className: 'widget-v4-foodquality-why__score' }, `${formatScoreRu(score)} из 10`)
+            : null
+        ),
         React.createElement('div', { className: 'widget-v4-goal-hero' },
-          React.createElement('span', {
-            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
-          }, hasData ? `${formatScoreRu(score)} из 10` : '—'),
           hasData && data?.delta > 0
-            ? React.createElement('span', { className: 'widget-v4-unit' }, `−${formatScoreRu(data.delta)}`)
+            ? React.createElement('span', {
+                className: 'widget-v4-goal-value widget-v4-val--neutral'
+              }, `−${formatScoreRu(data.delta)}`)
+            : (hasData ? null : React.createElement('span', {
+                className: 'widget-v4-goal-value'
+              }, '—')),
+          hasData && data?.reason
+            ? React.createElement('span', { className: 'widget-v4-unit' }, data.reason)
             : null
         ),
         hasData
-          ? (data?.reason
-            ? React.createElement('span', { className: 'widget-v4-hint' }, data.reason)
-            : null)
+          ? null
           : React.createElement('span', { className: 'widget-v4-muted' }, 'приёмов не было')
       );
     }

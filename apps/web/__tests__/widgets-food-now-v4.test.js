@@ -66,7 +66,7 @@ describe('Качество еды · Как сейчас — сведённый 
     expect(now).not.toContain('v4GoalBar((score / 10) * 100, state)');
     expect(now).not.toContain('widget-v4-hint');
     expect(now).not.toContain('v4WeekBars');
-    expect(why).toContain('widget-v4-hint');
+    expect(why).toContain('widget-v4-foodquality-why');
     expect(why).toContain("'приёмов не было'");
     expect(sleepNow).toContain("'не ел'");
     expect(sleepNow).not.toContain('v4GoalBar');
