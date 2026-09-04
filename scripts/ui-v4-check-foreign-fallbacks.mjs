@@ -26,6 +26,7 @@
 //   node scripts/ui-v4-check-foreign-fallbacks.mjs                    # проверить
 //   node scripts/ui-v4-check-foreign-fallbacks.mjs --list             # текущее состояние
 //   node scripts/ui-v4-check-foreign-fallbacks.mjs --update-baseline  # после закрытия долга
+//   pnpm ui:v4:check:roles                                            # все четыре гейта ролей
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -27,6 +27,7 @@
 //   node scripts/ui-v4-check-undefined-roles.mjs                    # проверить
 //   node scripts/ui-v4-check-undefined-roles.mjs --list             # текущее состояние
 //   node scripts/ui-v4-check-undefined-roles.mjs --update-baseline  # после закрытия долга
+//   pnpm ui:v4:check:roles                                          # все четыре гейта ролей
 
 import fs from 'node:fs';
 import path from 'node:path';

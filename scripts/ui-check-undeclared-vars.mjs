@@ -32,6 +32,7 @@
 //   node scripts/ui-check-undeclared-vars.mjs --list             # текущее состояние
 //   node scripts/ui-check-undeclared-vars.mjs --why <имя>        # где читается
 //   node scripts/ui-check-undeclared-vars.mjs --update-baseline  # после закрытия долга
+//   pnpm ui:v4:check:roles                                       # все четыре гейта ролей
 
 import fs from 'node:fs';
 import path from 'node:path';
