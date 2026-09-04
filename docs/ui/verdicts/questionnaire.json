@@ -1174,8 +1174,8 @@
       "h": "0f315f8e6e9b"
     },
     "Анкета отправлена · 11": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: метка непройденного этапа — 20×20, радиус 999, фон --c1 (heys_trial_intake_v1.js:1453)",
+      "v": "=",
+      "f": "heys_trial_intake_v1.js:1463-1469 — 20×20, flex none, r999, background transparent, boxShadow STEP_PENDING_RING inset 1.5px ink 18%, grid center; внутри «·» (кадр 12 отдельно)",
       "h": "22284f01095a"
     },
     "Анкета отправлена · 12": {
@@ -1284,8 +1284,8 @@
       "h": "e5c0d4242d5a"
     },
     "Анкета · возврат · 17": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: метка непройденного — 22×22, радиус 999, фон --c1 и номер 700 10,5/1 ролью --v4-ink-data 56 %; кружок сливается с карточкой (heys_trial_intake_v1.js)",
+      "v": "=",
+      "f": "heys_trial_intake_v1.js:1346-1355 — 22×22, flex none, r999, stepMarkerStyle(pending): transparent, inset 1.5px ink 18%, 700 10.5/1, INK_DATA 56%",
       "h": "ed9724471383"
     },
     "Анкета · возврат · 18": {
@@ -1624,8 +1624,8 @@
       "h": "4c7fcbd13874"
     },
     "вид · кружки шагов": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "heys_trial_intake_v1.js:117-123 stepMarkerStyle — done: OK_BG/OK_TEXT, current: ACCENT_FILL/ON_ACCENT, pending: transparent + STEP_PENDING_RING 1.5px ink 18% + INK_DATA 56%; resume 22px :1346-1355, финал 20px :1463-1469",
       "h": "458c6cea19f6"
     }
   },
