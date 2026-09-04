@@ -6155,29 +6155,43 @@
       );
     }
 
-    return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm widget-v4-rhythm-day' },
-      React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-        v4Kicker('Ритм приёмов'),
-        React.createElement('span', { className: 'widget-v4-row__meta' },
-          hasData ? `${data.count} за день` : 'приёмов не было'
+    if (hasData) {
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm widget-v4-rhythm-day' },
+        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+          v4Kicker('Ритм приёмов'),
+          React.createElement('span', { className: 'widget-v4-row__meta' },
+            `${data.count} за день`
+          )
+        ),
+        React.createElement('div', { className: 'widget-v4-rhythm__line' },
+          React.createElement('span', { className: 'widget-v4-rhythm__track' }),
+          // Текущий момент — риска.
+          React.createElement('span', {
+            className: 'widget-v4-rhythm__now',
+            style: { left: rhythmLeftPct(data?.nowMinutes) + '%' }
+          }),
+          meals.map((item, index) => React.createElement('span', {
+            key: `${item.time}_${index}`,
+            className: 'widget-v4-rhythm__dot',
+            style: { left: rhythmLeftPct(item.minutes) + '%' }
+          }))
+        ),
+        React.createElement('div', { className: 'widget-v4-rhythm__scale' },
+          React.createElement('span', null, '6:00'),
+          React.createElement('span', null, '24:00')
         )
+      );
+    }
+
+    return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm widget-v4-rhythm-empty' },
+      React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
+        v4Kicker('Ритм приёмов')
       ),
-      React.createElement('div', { className: 'widget-v4-rhythm__line' },
-        React.createElement('span', { className: 'widget-v4-rhythm__track' }),
-        // Текущий момент — риска.
-        React.createElement('span', {
-          className: 'widget-v4-rhythm__now',
-          style: { left: rhythmLeftPct(data?.nowMinutes) + '%' }
-        }),
-        meals.map((item, index) => React.createElement('span', {
-          key: `${item.time}_${index}`,
-          className: 'widget-v4-rhythm__dot',
-          style: { left: rhythmLeftPct(item.minutes) + '%' }
-        }))
+      React.createElement('div', { className: 'widget-v4-rhythm-empty__line' },
+        React.createElement('span', { className: 'widget-v4-rhythm-empty__track' })
       ),
-      React.createElement('div', { className: 'widget-v4-rhythm__scale' },
-        React.createElement('span', null, '6:00'),
-        React.createElement('span', null, '24:00')
+      React.createElement('div', { className: 'widget-v4-rhythm-empty__label' },
+        'приёмов не было'
       )
     );
   }

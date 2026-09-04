@@ -13108,6 +13108,30 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-variant-numeric: tabular-nums;
 }
 
+/* Кадр «Ритм приёмов · нет данных»: пустая лента 12 px, дорожка 3 px,
+   подпись «приёмов не было». Живую ленту 14/8 и интервалы не трогал. */
+.widget-v4-rhythm-empty__line {
+  display: flex;
+  align-items: center;
+  height: 12px;
+  margin-top: auto;
+}
+
+.widget-v4-rhythm-empty__track {
+  flex: 1;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.widget-v4-rhythm-empty__label {
+  margin-top: 4px;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
+}
+
 /* Чек-лист вечера: закрытый пункт — шалфейная точка и шалфейное слово,
    открытый — нейтральные. Красного нет: вечером ругать поздно. */
 .widget-v4-checklist {
