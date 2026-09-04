@@ -1884,6 +1884,11 @@
   font: 500 11px/1.3 Figtree, sans-serif;
 }
 
+
+.sb-finish-row--reason > b.is-quiet {
+  color: rgba(var(--ink), .56);
+}
+
 .sb-finish-tier {
   margin: 20px 0 10px;
   color: var(--ac);
