@@ -23,7 +23,7 @@ function cssRule(css, selector) {
 }
 
 function loadGoalBar(uiSource) {
-  const source = uiSource.match(/function v4GoalBar\(pct\) \{[\s\S]*?\n  \}/)?.[0];
+  const source = uiSource.match(/function v4GoalBar\(pct, tone\) \{[\s\S]*?\n  \}/)?.[0];
   expect(source).toBeTruthy();
   const React = {
     createElement(type, props, ...children) {
