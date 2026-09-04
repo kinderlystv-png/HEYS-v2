@@ -502,107 +502,208 @@
   color: var(--sb-accTx);
 }
 
-/* ── Связка ────────────────────────────────────────────────────────────── */
+/* ── Связка · раунды (кадр В1) ─────────────────────────────────────────── */
 
 .sb-ss {
-  border: 1.5px solid rgba(249, 115, 22, 0.4);
-  border-radius: 14px;
-  background: var(--sb-card);
+  border-radius: 20px;
+  background: var(--c1);
   overflow: hidden;
 }
 
-.sb-ss-head {
+.sb-ss-top {
   display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 10px 11px;
-  background: var(--sb-accbg);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px 0;
 }
 
-.sb-ss-head b {
+.sb-ss-title-col {
+  display: flex;
   flex: 1;
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--sb-accTx);
-}
-
-.sb-ss-members {
-  display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: 3px;
-  padding: 9px 11px 0;
-  font-size: 12px;
-  color: var(--sb-mut);
 }
 
-.sb-ss-member {
+.sb-ss-ttl {
+  font: 700 13.5px/1.2 Figtree, sans-serif;
+  color: var(--tx);
+}
+
+.sb-ss-key {
+  font: 500 11px/1.3 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+}
+
+.sb-ss-badge {
+  flex: none;
+  align-self: flex-start;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--acs);
+  font: 700 10px/1 Figtree, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--on-acs);
+}
+
+.sb-ss-swap {
+  flex: none;
+  margin-left: 4px;
+}
+
+.sb-ss-scroll {
   display: flex;
-  gap: 8px;
+  flex-direction: column;
+  padding: 6px 18px calc(18px + env(safe-area-inset-bottom, 0px));
 }
 
-.sb-ss-member i {
+.sb-ss-grp {
+  margin-top: 12px;
+}
+
+.sb-ss-member-row {
+  display: flex;
+  gap: 6px;
+}
+
+.sb-ss-member-card {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: 12px;
+  background: var(--c2);
+}
+
+.sb-ss-member-card i {
+  font: 700 10px/1 Figtree, sans-serif;
   font-style: normal;
-  font-weight: 800;
-  color: var(--sb-accTx);
+  color: var(--ac);
+}
+
+.sb-ss-member-card span {
+  font: 600 11px/1.2 Figtree, sans-serif;
+  color: var(--tx);
 }
 
 .sb-round {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 11px;
+  gap: 6px;
+  padding: 0;
+  border-bottom: none;
+}
+
+.sb-round--first {
+  margin-top: 12px;
+}
+
+.sb-round--spaced {
+  margin-top: 6px;
 }
 
 .sb-round-num {
-  flex: 0 0 auto;
-  width: 34px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--sb-mut);
+  flex: none;
+  width: 36px;
+  font: 700 10.5px/1 Figtree, sans-serif;
+  text-transform: uppercase;
+  color: rgba(var(--ink), .56);
+}
+
+.sb-round-num.is-current {
+  color: var(--ac);
 }
 
 .sb-cell {
+  display: flex;
   flex: 1;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
-  border-radius: 10px;
-  border: 1px solid var(--sb-br);
-  background: var(--sb-card);
-  color: var(--sb-tx);
-  font-size: 13px;
-  font-weight: 700;
+  border: none;
+  border-radius: 999px;
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), .1);
+  color: var(--tx);
+  font: 700 13px/1 Figtree, sans-serif;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
 
+.sb-cell.is-current {
+  box-shadow: inset 0 0 0 2px var(--acs);
+}
+
 .sb-cell.is-done {
-  border-color: var(--sb-okBr);
-  background: var(--sb-okbg);
-  color: var(--sb-okTx);
+  box-shadow: inset 0 0 0 1px var(--gr);
+  background: var(--gr-bg);
+  color: var(--gr);
 }
 
 /* Прочерк — не ноль и не пропуск: клетка не закрывается. */
 .sb-cell.is-blank {
-  border-style: dashed;
-  border-color: var(--sb-mut);
-  background: var(--sb-soft);
-  color: var(--sb-mut);
+  border: 1.5px dashed rgba(var(--ink), .22);
+  background: transparent;
+  box-shadow: none;
+  color: rgba(var(--ink), .56);
   cursor: default;
 }
 
-.sb-ss-note {
+.sb-ss-detail {
+  margin-top: 10px;
+}
+
+.sb-ss-detail-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 4px 11px 11px;
-  font-size: 11.5px;
-  color: var(--sb-mut);
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(var(--ink), .07);
+  color: var(--tx);
+}
+
+.sb-ss-detail-row--last {
+  border-bottom: none;
+}
+
+.sb-ss-detail-note {
+  font: 600 11px/1 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+}
+
+.sb-ss-detail-row b {
+  font: 700 12.5px/1 Figtree, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--tx);
+}
+
+.sb-ss-footnote {
+  margin: 10px 0 0;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+}
+
+.sb-ss-runtime-note {
+  margin: 8px 0 0;
+  font: 500 11.5px/1.45 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+}
+
+.sb-ss-actions {
+  display: flex;
+  margin-top: 10px;
 }
 
 /* Старая связка без раундов — плоские списки, историю не переписываем. */
 .sb-ss-flat {
-  padding: 8px 11px 11px;
-  font-size: 11.5px;
-  color: var(--sb-mut);
+  margin-top: 12px;
+  font: 500 11.5px/1.45 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
 }
 
 /* ── Дискомфорт ────────────────────────────────────────────────────────── */

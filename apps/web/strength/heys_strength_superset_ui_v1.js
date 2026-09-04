@@ -48,78 +48,172 @@
 
   // ——— Связка (экраны 23, 26) ———
 
+  function ruPlural(n, one, few, many) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+
+  function memberLetter(index) {
+    return String.fromCharCode(65 + index);
+  }
+
+  function roundCellLabel(exercise, approach) {
+    const unit = exercise && exercise.unit;
+    if (unit === 'time') {
+      const sec = approach && approach.durationSec;
+      return sec ? String(sec).replace('.', ',') + ' с' : '—';
+    }
+    if (unit === 'distance') {
+      const dist = approach && approach.distanceM;
+      return dist ? String(dist).replace('.', ',') + ' м' : '—';
+    }
+    const w = approach && approach.weightKg;
+    const r = approach && approach.reps;
+    return (w ? fmtNumber(w) : 'свой') + ' × ' + (r || '—');
+  }
+
+  function currentRoundIndex(rounds, exercises, SK) {
+    for (let ri = 0; ri < rounds.length; ri++) {
+      const cells = rounds[ri];
+      let hasPending = false;
+      let hasDone = false;
+      let allClosed = true;
+      for (let ci = 0; ci < cells.length; ci++) {
+        const a = exercises[cells[ci].exerciseIndex].approaches[cells[ci].approachIndex];
+        if (SK.isBlankApproach(a)) continue;
+        allClosed = false;
+        if (SK.isApproachDone(a)) hasDone = true;
+        else hasPending = true;
+      }
+      if (!allClosed && (hasPending || hasDone)) return ri;
+    }
+    return -1;
+  }
+
   function SupersetBlock(props) {
     const { group, exercises, onToggleCell, onAddRound, onSwap } = props;
     const SK = kernel();
     if (!SK) return null;
     const rounds = SK.supersetRounds(exercises, group.groupId);
     const members = group.indexes.map(function (i) { return exercises[i]; });
+    const memberCount = members.length;
+    const title = 'Связка · ' + memberCount + ' '
+      + ruPlural(memberCount, 'упражнение', 'упражнения', 'упражнений');
 
-    const head = h('div', { className: 'sb-ss-head' },
-      h('b', null, 'Связка · ' + members.length + (members.length === 2 ? ' упражнения' : ' упражнений')),
+    const head = h('div', { className: 'sb-ss-top' },
+      h('div', { className: 'sb-ss-title-col' },
+        h('b', { className: 'sb-ss-ttl' }, title),
+        rounds && h('span', { className: 'sb-ss-key' },
+          'по ' + rounds.length + ' '
+          + ruPlural(rounds.length, 'подход', 'подхода', 'подходов')
+          + ' · ' + rounds.length + ' '
+          + ruPlural(rounds.length, 'раунд', 'раунда', 'раундов'))
+      ),
+      h('span', { className: 'sb-ss-badge' }, 'связка'),
       h('button', {
-        type: 'button', className: 'sb-icon-btn',
+        type: 'button', className: 'sb-icon-btn sb-ss-swap',
         onClick: function () { onSwap(group.groupId); },
-        title: 'Поменять участников местами'
+        title: 'Поменять участников местами',
+        'aria-label': 'Поменять участников местами'
       }, '⇅')
-    );
-
-    const memberList = h('div', { className: 'sb-ss-members' },
-      members.map(function (m, mi) {
-        return h('div', { className: 'sb-ss-member', key: 'm' + mi },
-          h('i', null, 'A' + (mi + 1)),
-          h('span', null, m.name || 'Без названия')
-        );
-      })
     );
 
     // Старая связка с неравным числом подходов: плоские списки без раундов,
     // историю не переписываем.
     if (!rounds) {
-      return h('div', { className: 'sb-ss' }, head, memberList,
-        h('div', { className: 'sb-ss-flat' },
-          'Подходов у участников поровну нет — раунды не показываем, чтобы не переписывать историю. '
-          + 'Выровняйте число подходов, и раунды появятся сами.')
+      return h('div', { className: 'sb-ss' }, head,
+        h('div', { className: 'sb-ss-scroll' },
+          h('div', { className: 'sb-ss-flat' },
+            'Подходов у участников поровну нет — раунды не показываем, чтобы не переписывать историю. '
+            + 'Выровняйте число подходов, и раунды появятся сами.')
+        )
       );
     }
 
+    const activeRound = currentRoundIndex(rounds, exercises, SK);
+    let activeCell = -1;
+    if (activeRound >= 0) {
+      const cells = rounds[activeRound];
+      for (let ci = 0; ci < cells.length; ci++) {
+        const a = exercises[cells[ci].exerciseIndex].approaches[cells[ci].approachIndex];
+        if (!SK.isBlankApproach(a) && !SK.isApproachDone(a)) {
+          activeCell = ci;
+          break;
+        }
+      }
+    }
+
+    const memberRow = h('div', { className: 'sb-ss-member-row' },
+      members.map(function (m, mi) {
+        return h('div', { className: 'sb-ss-member-card', key: 'm' + mi },
+          h('i', null, memberLetter(mi)),
+          h('span', null, m.name || 'Без названия')
+        );
+      })
+    );
+
     const roundRows = rounds.map(function (cells, ri) {
-      const allDone = cells.every(function (c) {
-        return SK.isApproachDone(exercises[c.exerciseIndex].approaches[c.approachIndex]);
-      });
-      return h('div', { className: 'sb-round', key: 'r' + ri },
-        h('span', { className: 'sb-round-num' }, 'Р' + (ri + 1)),
+      const isCurrent = ri === activeRound;
+      return h('div', {
+        className: 'sb-round' + (ri > 0 ? ' sb-round--spaced' : ' sb-round--first'),
+        key: 'r' + ri
+      },
+        h('span', { className: 'sb-round-num' + (isCurrent ? ' is-current' : '') }, 'Р' + (ri + 1)),
         cells.map(function (c, ci) {
-          const a = exercises[c.exerciseIndex].approaches[c.approachIndex];
+          const ex = exercises[c.exerciseIndex];
+          const a = ex.approaches[c.approachIndex];
           const blank = SK.isBlankApproach(a);
           const done = SK.isApproachDone(a);
-          const label = blank
-            ? '—'
-            : (a.weightKg ? a.weightKg : 'свой') + ' × ' + (a.reps || '—');
+          const isActive = isCurrent && ci === activeCell;
           return h('button', {
             key: 'c' + ci,
             type: 'button',
-            className: 'sb-cell' + (done && !blank ? ' is-done' : '') + (blank ? ' is-blank' : ''),
+            className: 'sb-cell'
+              + (done && !blank ? ' is-done' : '')
+              + (blank ? ' is-blank' : '')
+              + (isActive ? ' is-current' : ''),
             disabled: blank,
             onClick: function () { onToggleCell(c.exerciseIndex, c.approachIndex); },
             title: blank ? 'Участник добавлен по ходу — в этом раунде его не было' : ''
-          }, label);
-        }),
-        allDone && h('span', { className: 'sb-round-num' }, '⏱')
+          }, blank ? '—' : roundCellLabel(ex, a));
+        })
       );
     });
 
-    return h('div', { className: 'sb-ss' }, head, memberList,
-      roundRows,
-      h('div', { className: 'sb-ss-note' },
-        '⏱ Отдых ' + fmtClock(group.restSec) + ' пойдёт, когда закрыт весь раунд — внутри раунда таймера нет'),
-      group.warmupCount > 0 && h('div', { className: 'sb-ss-note' },
-        'Разминочных строк: ' + group.warmupCount + ' — в раунды и в тоннаж не входят'),
-      h('div', { className: 'sb-ss-note' },
-        h('button', {
-          type: 'button', className: 'sb-btn is-accent',
-          onClick: function () { onAddRound(group.groupId); }
-        }, '+ Раунд')
+    const detailRows = [];
+    if (group.warmupCount > 0) {
+      detailRows.push(h('div', { className: 'sb-ss-detail-row', key: 'warmup' },
+        h('span', null, 'Разминка связки'),
+        h('span', { className: 'sb-ss-detail-note' }, 'одной строкой, вне объёма')
+      ));
+    }
+    detailRows.push(h('div', { className: 'sb-ss-detail-row sb-ss-detail-row--last', key: 'rest' },
+      h('span', null, 'Отдых после раунда'),
+      h('b', null, fmtClock(group.restSec))
+    ));
+
+    return h('div', { className: 'sb-ss' }, head,
+      h('div', { className: 'sb-ss-scroll' },
+        h('div', { className: 'sb-ss-grp' },
+          memberRow,
+          roundRows
+        ),
+        detailRows.length && h('div', { className: 'sb-ss-detail' }, detailRows),
+        h('p', { className: 'sb-ss-footnote' },
+          'Раунды строятся, только когда подходов у участников равно. Прочерк — реальный пустой подход, '
+          + 'а не отсутствие: клетку нельзя закрыть без повторов, и «не участвовал» от «ещё не сделал» '
+          + 'отличает контекст — у остальных раунд закрыт.'),
+        h('p', { className: 'sb-ss-runtime-note' },
+          'Отдых ' + fmtClock(group.restSec) + ' пойдёт, когда закрыт весь раунд — внутри раунда таймера нет'),
+        h('div', { className: 'sb-ss-actions' },
+          h('button', {
+            type: 'button', className: 'sb-btn is-accent',
+            onClick: function () { onAddRound(group.groupId); }
+          }, '+ Раунд')
+        )
       )
     );
   }
