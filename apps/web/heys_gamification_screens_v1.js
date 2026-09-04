@@ -671,6 +671,22 @@
             );
         }
 
+        /** Галочка 12×12 тоном --gr для достигнутой ступени лестницы. */
+        function renderLadderCheckMark() {
+            return React.createElement('svg', {
+                className: 'game-v4-sheet__ladder-mark',
+                width: 12,
+                height: 12,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: 'currentColor',
+                strokeWidth: 3,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+                'aria-hidden': 'true'
+            }, React.createElement('path', { d: 'M5 13l4 4L19 7' }));
+        }
+
         function renderMoreChevron() {
             return React.createElement('svg', {
                 width: 18,
@@ -985,16 +1001,23 @@
                         const t = titleForLevel(lvl);
                         const isCurrent = lvl === stats.level;
                         const isPast = lvl < stats.level;
+                        const isReached = lvl <= stats.level;
                         const threshold = LEVEL_XP_THRESHOLDS[lvl - 1] ?? 0;
-                        // Строка «вид строки уровня в списке»: гаснут пройденные,
-                        // текущий — чернилами с весом 700, будущие в обычном тоне.
+                        const suffix = isCurrent ? ' · сейчас' : (lvl === 25 ? ' · последний' : '');
+                        // Строка «вид строки уровня в списке»: номер и титул одной
+                        // строкой; достигнутые — галочка 12×12, будущие — поле 12 px.
                         return React.createElement('div', {
                             key: lvl,
                             className: `game-v4-sheet__ladder-row${isCurrent ? ' is-current' : ''}${isPast ? ' is-past' : ''}`
                         },
-                            React.createElement('span', { className: 'game-v4-sheet__ladder-num' }, lvl),
+                            isReached
+                                ? renderLadderCheckMark()
+                                : React.createElement('span', {
+                                    className: 'game-v4-sheet__ladder-mark game-v4-sheet__ladder-mark--spacer',
+                                    'aria-hidden': 'true'
+                                }),
                             React.createElement('span', { className: 'game-v4-sheet__ladder-title' },
-                                `${t.title || ''}${isCurrent ? ' · сейчас' : lvl === 25 ? ' · последний' : ''}`
+                                `${lvl} · ${t.title || ''}${suffix}`
                             ),
                             React.createElement('span', { className: 'game-v4-sheet__ladder-xp' }, formatXp(threshold))
                         );
@@ -1011,7 +1034,7 @@
                                 [streakReason, dailyReason].filter(Boolean).join(' · ')
                             )
                         ),
-                        React.createElement('div', { className: 'game-v4-sheet__card-sub' },
+                        React.createElement('div', { className: 'game-v4-sheet__card-sub game-v4-sheet__card-sub--mult' },
                             'Множители серии и активности за день перемножаются — итоговая награда может быть выше номинала в таблице.'
                         ),
                         // Строка «множитель»: что даст следующая ступень.
