@@ -165,6 +165,43 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
     }
   });
 
+  it('ProposalReview: superset boundaries section when composition changes', () => {
+    const ap = (id, w, r, done) => ({ id, weightKg: String(w), reps: r, done: !!done });
+    const ex = (id, name, approaches, ssGroup) => ({ id, name, approaches, ssGroup: ssGroup || 0 });
+    const training = {
+      workoutLog: {
+        exercises: [
+          ex('ex1', 'Подтягивания', [ap('a1', 0, 10, false), ap('a2', 0, 8, false)], 1),
+          ex('ex2', 'Тяга блока', [ap('a3', 55, 12, false), ap('a4', 55, 12, false)], 1),
+        ],
+      },
+      plan: {
+        status: 'assigned', dayLabel: 'Верх тела B',
+        proposal: {
+          id: 'pp_b', status: 'pending', proposedBy: 'Артём',
+          exercises: [
+            ex('ex1', 'Тяга блока', [ap('a1', 55, 12, false), ap('a2', 55, 12, false)], 1),
+            ex('exN', 'Тяга гантели', [ap('n1', 30, 12, false), ap('n2', 30, 12, false)], 1),
+          ],
+        },
+      },
+    };
+    const style = document.createElement('style');
+    style.textContent = paletteCss('sand');
+    document.head.appendChild(style);
+    try {
+      const { container } = render(React.createElement(Parts.ProposalReview, {
+        training, onClose: () => {}, onAccept: () => {}, onDecline: () => {},
+      }));
+      expect(screen.getByText('Связка · границы правки')).toBeTruthy();
+      expect(container.querySelector('.sb-proposal-boundaries')).toBeTruthy();
+      expect(screen.getByText('было')).toBeTruthy();
+      expect(screen.getByText('станет')).toBeTruthy();
+    } finally {
+      style.remove();
+    }
+  });
+
   it('ProgramDoneScreen: hero count 30px on v4 ok-bg', () => {
     render(React.createElement(Parts.ProgramDoneScreen, {
       program: { title: 'Верх/низ', weeks: 4 },
