@@ -5026,7 +5026,7 @@
         items.push({ icon: 'barChart', text: `Прогноз: ${monthChange > 0 ? '+' : ''}${formatRuUnit(formatRuDecimal(monthChange, 1), 'кг/мес')}` });
       }
       if (showAnalytics && hasCleanTrend) {
-        items.push({ icon: 'flower', text: 'Чистый тренд', cls: 'widget-weight__stat--pink' });
+        items.push({ icon: 'flower', text: 'Чистый тренд' });
       }
       if (items.length === 0) return null;
       return React.createElement('div', { className: 'widget-weight__stats' },
@@ -10163,6 +10163,34 @@
     const catalogTypes = [...ready, ...waiting];
     if (!catalogTypes.length) return null;
 
+    const categories = registry?.getCategories() || [];
+    const grouped = [];
+    const placed = new Set();
+    for (const cat of categories) {
+      const types = ready.filter((t) => t.category === cat.id);
+      if (!types.length) continue;
+      types.forEach((t) => placed.add(t.type));
+      grouped.push({ key: cat.id, cat, types });
+    }
+    const restReady = ready.filter((t) => !placed.has(t.type));
+    if (restReady.length) grouped.push({ key: 'rest', cat: null, types: restReady });
+    if (waiting.length) grouped.push({ key: 'waiting', cat: null, types: waiting });
+
+    const catalogTypeCopy = (type, subtitle) => React.createElement('span', { className: 'widget-v4-catalog__copy' },
+      React.createElement('span', { className: 'widget-v4-catalog__title' },
+        type.icon ? React.createElement(WidgetGlyph, { glyph: type.icon }) : null,
+        React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name)
+      ),
+      subtitle
+        ? React.createElement('span', { className: 'widget-v4-catalog__desc' }, subtitle)
+        : null
+    );
+
+    const catalogTypeTitle = (type) => React.createElement('span', { className: 'widget-v4-catalog__title' },
+      type.icon ? React.createElement(WidgetGlyph, { glyph: type.icon }) : null,
+      React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name)
+    );
+
     return React.createElement('div', { className: 'widget-v4-catalog' },
       // Строка контракта «вид счётчика места»: при полном экране красится
       // само число, а не вся строка — поэтому N вынесен отдельным узлом.
@@ -10176,7 +10204,18 @@
       ),
       React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
       React.createElement('div', { className: 'widget-v4-catalog__grid' },
-        catalogTypes.map((type) => {
+        grouped.flatMap(({ key, cat, types }) => {
+          const nodes = [];
+          if (cat) {
+            nodes.push(React.createElement('div', {
+              key: `cat-${key}`,
+              className: 'widget-v4-catalog__category'
+            },
+              React.createElement(WidgetGlyph, { glyph: cat.icon }),
+              React.createElement('span', { className: 'widget-v4-catalog__category-label' }, cat.label)
+            ));
+          }
+          types.forEach((type) => {
           const blocked = !canAddType(type);
           const previewVariant = HEYS.Widgets.VariantsV4?.getDefaultVariant?.(type.type);
           const previewSize = previewVariant?.size || type.defaultSize || '2x1';
@@ -10186,19 +10225,20 @@
           // о том, что виджет покажет. Ни превью, ни даты, ни кнопки — нажатие
           // ничего не делает (строки «готовится» и «готовится · чего нет»).
           if (type.comingSoon) {
-            return React.createElement('span', {
+            nodes.push(React.createElement('span', {
               key: type.type,
               className: 'widget-v4-catalog__item widget-v4-catalog__item--soon',
               'aria-disabled': 'true'
             },
               React.createElement('span', { className: 'widget-v4-catalog__row' },
-                React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
+                catalogTypeTitle(type),
                 React.createElement('span', { className: 'widget-v4-catalog__pill' }, 'скоро')
               ),
               type.comingSoon.about
                 ? React.createElement('span', { className: 'widget-v4-catalog__about' }, type.comingSoon.about)
                 : null
-            );
+            ));
+            return;
           }
 
           // «Мало истории»: то же правило, что у видов — приглушено, справа
@@ -10206,7 +10246,7 @@
           // встанет и покажет ту же подпись вместо графика.
           const history = waitingHistory(type);
           if (history) {
-            return React.createElement('div', { key: type.type, className: 'widget-v4-catalog__slot' },
+            nodes.push(React.createElement('div', { key: type.type, className: 'widget-v4-catalog__slot' },
               React.createElement('button', {
                 type: 'button',
                 className: 'widget-v4-catalog__item widget-v4-catalog__item--waiting'
@@ -10217,7 +10257,7 @@
                 onPointerCancel: finishCatalogDrag(type)
               },
                 React.createElement('span', { className: 'widget-v4-catalog__row' },
-                  React.createElement('span', { className: 'widget-v4-catalog__name' }, type.name),
+                  catalogTypeTitle(type),
                   React.createElement('span', { className: 'widget-v4-catalog__need' },
                     React.createElement('span', { className: 'widget-v4-catalog__hint' }, `нужно ${history.need} ${ruDays(history.need)}`),
                     React.createElement('svg', {
@@ -10231,7 +10271,8 @@
                   `собрано ${history.have} из ${history.need}`)
               ),
               showBlockedHint && renderCatalogBlockedHint(needCells, type, onStartRemovePick)
-            );
+            ));
+            return;
           }
 
           const previewWidget = {
@@ -10240,7 +10281,11 @@
             size: previewSize,
             settings: previewVariant?.id ? { displayVariant: previewVariant.id } : {}
           };
-          return React.createElement('div', { key: type.type, className: 'widget-v4-catalog__slot' },
+          const sizeLabel = String(previewSize || '').replace('x', '×');
+          const subtitle = previewVariant?.title && sizeLabel
+            ? `${previewVariant.title} · ${sizeLabel}`
+            : (previewVariant?.title || sizeLabel || '');
+          nodes.push(React.createElement('div', { key: type.type, className: 'widget-v4-catalog__slot' },
             React.createElement('button', {
               type: 'button',
               className: 'widget-v4-catalog__item'
@@ -10260,16 +10305,18 @@
                   selectedDate
                 })
               ),
+              catalogTypeCopy(type, subtitle),
               React.createElement('svg', {
                 width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none',
                 stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
                 className: 'widget-v4-catalog__plus',
                 'aria-hidden': 'true'
-              }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
-              React.createElement('span', { className: 'sr-only' }, type.name)
+              }, React.createElement('path', { d: 'M12 5v14M5 12h14' }))
             ),
             showBlockedHint && renderCatalogBlockedHint(needCells, type, onStartRemovePick)
-          );
+          ));
+          });
+          return nodes;
         })
       )
     );
@@ -10377,7 +10424,7 @@
               key: cat.id,
               className: `widgets-catalog__category ${selectedCategory === cat.id ? 'active' : ''}`,
               onClick: () => setSelectedCategory(cat.id)
-            }, React.createElement(WidgetGlyph, { glyph: cat.icon, className: 'widgets-catalog__category-glyph' }), ' ', cat.label)
+            }, React.createElement(WidgetGlyph, { glyph: cat.icon, className: 'widgets-catalog__category-glyph' }), cat.label)
           )
         ),
 
@@ -10390,11 +10437,11 @@
               className: `widgets-catalog__item ${isAlreadyAdded ? 'widgets-catalog__item--disabled' : ''}`,
               onClick: () => handleSelect(type)
             },
-              React.createElement('div', { className: 'widgets-catalog__item-icon' },
-                React.createElement(WidgetGlyph, { glyph: type.icon })
-              ),
               React.createElement('div', { className: 'widgets-catalog__item-info' },
-                React.createElement('div', { className: 'widgets-catalog__item-name' }, type.name),
+                React.createElement('div', { className: 'widgets-catalog__item-title' },
+                  React.createElement(WidgetGlyph, { glyph: type.icon }),
+                  React.createElement('div', { className: 'widgets-catalog__item-name' }, type.name)
+                ),
                 React.createElement('div', { className: 'widgets-catalog__item-desc' }, type.description)
               ),
               isAlreadyAdded && React.createElement('div', { className: 'widgets-catalog__item-badge' }, '✓ Уже на экране')

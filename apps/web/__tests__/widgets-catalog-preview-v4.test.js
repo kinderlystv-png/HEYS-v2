@@ -141,8 +141,11 @@ describe('каталог расстановки: превью — настоящ
     const card = wave.closest('button');
     expect(card).toBeTruthy();
     expect(card.className).toContain('widget-v4-catalog__item');
-    // Название несёт сама плитка: второго ярлыка рядом с превью нет.
-    expect(card.querySelector('.widget-v4-catalog__name')).toBeNull();
+    // Кадр «Каталог · значки»: имя со значком стоит рядом с превью, не sr-only.
+    const name = card.querySelector('.widget-v4-catalog__name');
+    expect(name).toBeTruthy();
+    expect(name.textContent).toBe('Инсулиновая волна');
+    expect(card.querySelector('.widget-v4-catalog__desc').textContent).toBe('День как есть · 2×2');
   });
 
   it('уже стоящие на экране виджеты в каталоге не показываются', () => {

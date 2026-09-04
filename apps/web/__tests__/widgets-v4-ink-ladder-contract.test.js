@@ -39,6 +39,7 @@ const SMALL_NEUTRAL_TEXT = `
 .widget-v4-periods__suffix
 .widget-v4-catalog__about
 .widget-v4-catalog__hint
+.widget-v4-catalog__desc
 .widget-v4-catalog__name
 .widget-v4-catalog__item--soon .widget-v4-catalog__name
 .widget-v4-catalog__item--waiting .widget-v4-catalog__name

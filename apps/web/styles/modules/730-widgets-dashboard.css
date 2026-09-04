@@ -4719,50 +4719,37 @@ body:has(.page-reports) .hdr::after {
 }
 
 /* ===== AnalyticsBlock ===== */
+/* Чипы вида: значок первым, зазор 6, пилюля 32, inset 1.5 --acs, текст --ac.
+   Своей заливки у значка нет (home-widgets, «вид · значок вместо эмодзи»). */
 .widget-weight__stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .widget-weight__stat {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
-  padding: 4px 8px;
-  background: var(--widget-surface-soft, rgba(0, 0, 0, 0.03));
-  border-radius: 6px;
-}
-
-/* 4x3/4x4: меньше вертикальной плотности → меньше риск клиппинга нижних строк (например, “Прогноз”) */
-.widget-weight--4x3 .widget-weight__stats,
-.widget-weight--4x4 .widget-weight__stats {
-  gap: 5px;
-}
-
-.widget-weight--4x3 .widget-weight__stat,
-.widget-weight--4x4 .widget-weight__stat {
-  padding: 3px 7px;
+  flex: none;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--v4-act, #c67139);
+  background: none;
   font-size: 10.5px;
-}
-
-.widget-weight__stat--pink {
-  color: var(--v4-wgt-magenta, #ec4899);
-  background: rgba(236, 72, 153, 0.1);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .widget-weight__stat-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--ac, var(--v4-act-text, #c67139));
-}
-
-.widget-weight__stat--pink .widget-weight__stat-icon {
-  color: currentColor;
+  flex: none;
+  background: none;
+  color: inherit;
 }
 
 /* ===== Layout Helpers ===== */
@@ -6851,26 +6838,32 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-catalog__category {
-  padding: var(--widget-spacing-sm) var(--widget-spacing-md);
-  border-radius: 20px;
-  border: 1px solid var(--border-light, #e5e7eb);
-  background: var(--bg-primary, #fff);
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 2px;
+  border: none;
+  background: none;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--v4-ink-label, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45));
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.2s;
 }
 
 @media (hover: hover) {
   .widgets-catalog__category:hover {
-  background: var(--bg-secondary, #f3f4f6);
+  background: none;
 }
 }
 
 .widgets-catalog__category.active {
-  background: var(--primary, #3b82f6);
-  color: white;
-  border-color: var(--primary, #3b82f6);
+  background: none;
+  color: var(--v4-ink, #201e1d);
+  border: none;
 }
 
 /* Widget List */
@@ -6913,16 +6906,15 @@ body:has(.page-reports) .hdr::after {
   transition: opacity 120ms ease;
 }
 
-.widgets-catalog__item-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: var(--bg-primary, #fff);
+.widgets-catalog__item-title {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--ac, var(--v4-act-text, #c67139));
+  gap: 7px;
+}
+
+.widgets-catalog__item-title .widgets-glyph {
+  flex: none;
+  background: none;
 }
 
 .widgets-glyph {
@@ -6934,7 +6926,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-catalog__category-glyph {
-  margin-right: 2px;
+  margin-right: 0;
+  background: none;
 }
 
 .widgets-catalog__category.active .widgets-glyph {
@@ -6947,14 +6940,19 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-catalog__item-name {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--v4-ink, #201e1d);
 }
 
 .widgets-catalog__item-desc {
-  font-size: 11px;
-  color: var(--text-secondary, #6b7280);
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -6985,8 +6983,8 @@ body:has(.page-reports) .hdr::after {
 }
 }
 
-.widgets-catalog__item--disabled .widgets-catalog__item-icon {
-  background: var(--v4-bg, #fff);
+.widgets-catalog__item--disabled .widgets-catalog__item-title .widgets-glyph {
+  opacity: 0.7;
 }
 
 /* Dark mode */
@@ -7003,8 +7001,8 @@ body:has(.page-reports) .hdr::after {
   border-color: rgba(244, 114, 182, 0.35);
 }
 
-[data-theme$="dark"] .widgets-catalog__item-icon {
-  background: var(--bg-dark-tertiary, #4b5563);
+[data-theme$="dark"] .widgets-catalog__item-title .widgets-glyph {
+  background: none;
 }
 
 /* === Crash Risk Widget (Риск срыва) === */
@@ -12014,10 +12012,63 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 8px;
 }
 
+.widget-v4-catalog__category {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 2px;
+  margin: 10px 0 2px;
+  color: var(--v4-ink-label, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45));
+}
+
+.widget-v4-catalog__grid > .widget-v4-catalog__category:first-child {
+  margin-top: 0;
+}
+
+.widget-v4-catalog__category-label {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: inherit;
+}
+
+.widget-v4-catalog__category .widgets-glyph {
+  flex: none;
+  background: none;
+}
+
+.widget-v4-catalog__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.widget-v4-catalog__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.widget-v4-catalog__title .widgets-glyph {
+  flex: none;
+  background: none;
+}
+
+.widget-v4-catalog__desc {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+}
+
 .widget-v4-catalog__item {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   /* Строка каталога стоит на грунте, а плитка внутри — на своей роли: иначе
      фон в фон и превью не читается (кадр «Главная · расстановка»). */
   background: var(--v4-bg, #fffaf1);
@@ -12125,11 +12176,19 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
+.widget-v4-catalog__item:not(.widget-v4-catalog__item--soon):not(.widget-v4-catalog__item--waiting) .widget-v4-catalog__name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--v4-ink, #201e1d);
+}
+
 /* Превью виджета в формате его дефолтного вида (канвас v4, строка 54).
    Размеры — те же, что у карточек листа смены вида; 3×2 ужимается, чтобы
    влезть в колонку каталога. */
 .widget-v4-catalog__preview {
   position: relative;
+  flex: none;
   overflow: hidden;
   pointer-events: none;
   transform-origin: top left;
