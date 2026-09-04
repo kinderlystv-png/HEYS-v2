@@ -1,0 +1,179 @@
+{
+  "zone": "strength-builder",
+  "scope": "З1 «Связка · создание» · heys_strength_catalog_ui_v1.js SupersetScreen + 750-strength-builder.css",
+  "generated": "2026-09-04",
+  "agent": "superset z1 assembly handoff",
+  "summary": {
+    "rows": 33,
+    "block": "Связка · создание · 01–32 + текст",
+    "codeChanged": false,
+    "testFile": "apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js"
+  },
+  "rows": [
+    {
+      "key": "Связка · создание · 01",
+      "verdict": "=",
+      "f": "Шапка: .sb-superset-create-screen .sb-head { align-items:flex-start; gap:10px; padding:16px 18px 0 } — apps/web/styles/modules/750-strength-builder.css:3301-3303,2734-2738; computed row 01 в apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · создание · 02",
+      "verdict": "=",
+      "f": "Колонка заголовка: .sb-head-title { flex-direction:column; gap:3px; padding:0 } — apps/web/styles/modules/750-strength-builder.css:2747-2752,3297-3299; computed row 02."
+    },
+    {
+      "key": "Связка · создание · 03",
+      "verdict": "=",
+      "f": "Имя экрана «Новая связка»: h('b', …) — apps/web/strength/heys_strength_catalog_ui_v1.js:378; DOM apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Связка · создание · 04",
+      "verdict": "=",
+      "f": "Ключ «упражнения подряд, отдых — после круга»: .sb-head-sub — apps/web/strength/heys_strength_catalog_ui_v1.js:379; apps/web/styles/modules/750-strength-builder.css:2770-2776,3305-3308."
+    },
+    {
+      "key": "Связка · создание · 05",
+      "verdict": "=",
+      "f": "Прокрутка: .sb-list { flex:1 1 auto; overflow-y:auto } — apps/web/styles/modules/750-strength-builder.css:156-160,3310-3313; computed row 05."
+    },
+    {
+      "key": "Связка · создание · 06",
+      "verdict": "=",
+      "f": "Ярус «Сколько упражнений»: .sb-step span — apps/web/strength/heys_strength_catalog_ui_v1.js:386; apps/web/styles/modules/750-strength-builder.css:3315-3327."
+    },
+    {
+      "key": "Связка · создание · 07",
+      "verdict": "=",
+      "f": "Список .cd: .sb-superset-kinds { padding:2px 16px 1.5px; border-radius:20px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:3329-3335."
+    },
+    {
+      "key": "Связка · создание · 08",
+      "verdict": "=",
+      "f": "Строка списка: .sb-radio { display:flex; align-items:center; gap:10px; padding:13.5px 0 } — apps/web/styles/modules/750-strength-builder.css:3337-3345; computed row 08."
+    },
+    {
+      "key": "Связка · создание · 09",
+      "verdict": "=",
+      "f": "Ряд выбора: align-items:center; gap:10px на .sb-radio — apps/web/styles/modules/750-strength-builder.css:3337-3340; computed row 09."
+    },
+    {
+      "key": "Связка · создание · 10",
+      "verdict": "=",
+      "f": "Цифра «2» в покое: .sb-radio .sb-ex-num { color:var(--v4-ink-prose) } — apps/web/styles/modules/750-strength-builder.css:3359-3365; песок rgba(0,0,0,.62), синий rgba(16,24,38,.62) — apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js rows 10/10 blue."
+    },
+    {
+      "key": "Связка · создание · 11",
+      "verdict": "=",
+      "f": "«Суперсет»: .sb-radio .sb-cat-title b { color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3380-3383; apps/web/strength/heys_strength_catalog_ui_v1.js:366."
+    },
+    {
+      "key": "Связка · создание · 12",
+      "verdict": "=",
+      "f": "Подпись «два упражнения подряд без паузы»: .sb-cat-title span { font:500 11px/1.3; color:var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:3385-3388; apps/web/strength/heys_strength_catalog_ui_v1.js:366."
+    },
+    {
+      "key": "Связка · создание · 13",
+      "verdict": "=",
+      "f": "Выбранная строка: .sb-radio.is-on { border-radius:12px; box-shadow:inset 0 0 0 2px var(--sb-acc-strong) } — apps/web/styles/modules/750-strength-builder.css:3351-3357; computed row 13."
+    },
+    {
+      "key": "Связка · создание · 14",
+      "verdict": "=",
+      "f": "Цифра «3» в выборе: .sb-radio.is-on .sb-ex-num { background:var(--sb-acc-strong); color:var(--v4-btn-on-act) } — apps/web/styles/modules/750-strength-builder.css:3368-3371."
+    },
+    {
+      "key": "Связка · создание · 15",
+      "verdict": "=",
+      "f": "«три подряд — плотнее и тяжелее» у .is-on: .sb-cat-title span { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:3390-3393; apps/web/strength/heys_strength_catalog_ui_v1.js:367."
+    },
+    {
+      "key": "Связка · создание · 16",
+      "verdict": "=",
+      "f": "Галочка «✓»: .sb-radio-check { font:700 12px/1; color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:3391-3398,402-403; computed row 16."
+    },
+    {
+      "key": "Связка · создание · 17",
+      "verdict": "=",
+      "f": "Последняя строка без разделителя: .sb-radio:last-child { box-shadow:none } — apps/web/styles/modules/750-strength-builder.css:3347-3349; computed row 17."
+    },
+    {
+      "key": "Связка · создание · 18",
+      "verdict": "=",
+      "f": "Блоки раундов и отдыха: .sb-superset-controls { display:flex; gap:8px; margin-bottom:21px } — apps/web/styles/modules/750-strength-builder.css:3400-3404; .sb-superset-kinds margin-bottom:10px — :3331."
+    },
+    {
+      "key": "Связка · создание · 19",
+      "verdict": "=",
+      "f": "Карточка «Раундов»: .sb-superset-control { flex:1; padding:12px; border-radius:16px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:3406-3412."
+    },
+    {
+      "key": "Связка · создание · 20",
+      "verdict": "=",
+      "f": "Степпер раундов: .sb-stepper { align-items:center; gap:7px; margin-top:8px } — apps/web/styles/modules/750-strength-builder.css:3420-3423; computed row 20."
+    },
+    {
+      "key": "Связка · создание · 21",
+      "verdict": "=",
+      "f": "Кнопка «−»: .sb-stepper .sb-btn { font:700 18px/1; background:var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:3425-3434; apps/web/strength/heys_strength_catalog_ui_v1.js:411-414."
+    },
+    {
+      "key": "Связка · создание · 22",
+      "verdict": "=",
+      "f": "Число раундов «3»: .sb-stepper b { flex:1; text-align:center; font:800 19px/1; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3441-3446; apps/web/strength/heys_strength_catalog_ui_v1.js:415."
+    },
+    {
+      "key": "Связка · создание · 23",
+      "verdict": "=",
+      "f": "Кнопка «+»: .sb-stepper .sb-btn.is-accent { background:var(--sb-acc-strong); color:var(--v4-btn-on-act); font:700 18px/1 } — apps/web/styles/modules/750-strength-builder.css:3436-3439; apps/web/strength/heys_strength_catalog_ui_v1.js:416-419."
+    },
+    {
+      "key": "Связка · создание · 24",
+      "verdict": "=",
+      "f": "Поле «2:00»: .sb-rest-preview { height:44px; border-radius:12px; background:var(--sb-bg); box-shadow:inset 0 0 0 1px var(--sb-br); font:700 15px/1 } — apps/web/styles/modules/750-strength-builder.css:3448-3460; max restSec участников — apps/web/strength/heys_strength_catalog_ui_v1.js:358-363."
+    },
+    {
+      "key": "Связка · создание · 25",
+      "verdict": "=",
+      "f": "Подпись «максимум из значений участников»: .sb-control-hint { margin-top:6px; font:500 10px/1.35; color:var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:3462-3466; apps/web/strength/heys_strength_catalog_ui_v1.js:425."
+    },
+    {
+      "key": "Связка · создание · 26",
+      "verdict": "=",
+      "f": "Карточка «Что получится»: .sb-block.sb-superset-result { padding:16px; border-radius:20px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:3468-3473."
+    },
+    {
+      "key": "Связка · создание · 27",
+      "verdict": "=",
+      "f": "Резюме «3 упражнения подряд…»: .sb-step-hint { font:600 12.5px/1.55; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3475-3479; строка из countWord/restLabel/rounds — apps/web/strength/heys_strength_catalog_ui_v1.js:431-432."
+    },
+    {
+      "key": "Связка · создание · 28",
+      "verdict": "=",
+      "f": "Плитки прогноза: .sb-tiles { gap:6px; margin-top:10px } — apps/web/styles/modules/750-strength-builder.css:3481-3485; computed row 28."
+    },
+    {
+      "key": "Связка · создание · 29",
+      "verdict": "=",
+      "f": "Плитка «подходов»: .sb-tile { flex-direction:column; align-items:center; gap:4px; padding:9px 4px; border-radius:12px; background:var(--sb-bg) } — apps/web/styles/modules/750-strength-builder.css:3487-3496."
+    },
+    {
+      "key": "Связка · создание · 30",
+      "verdict": "=",
+      "f": "Число «9»: .sb-tile b { font:800 16px/1; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3505-3508; totalApproaches=count*rounds — apps/web/strength/heys_strength_catalog_ui_v1.js:371."
+    },
+    {
+      "key": "Связка · создание · 31",
+      "verdict": "=",
+      "f": "Кнопка «Собрать связку · 9 подходов»: .sb-finish { margin-top:12px; min-height:48px; border-radius:999px; background:var(--sb-acc-strong) } — apps/web/styles/modules/750-strength-builder.css:3510-3520; apps/web/strength/heys_strength_catalog_ui_v1.js:439-444."
+    },
+    {
+      "key": "Связка · создание · 32",
+      "verdict": "=",
+      "f": "Сноска про один объект: .sb-superset-note { margin-top:12px; font:500 11px/1.55 } — apps/web/styles/modules/750-strength-builder.css:3522-3525,3291-3295; текст — apps/web/strength/heys_strength_catalog_ui_v1.js:445-446."
+    },
+    {
+      "key": "Связка · создание · текст",
+      "verdict": "=",
+      "f": "Полный текст кадра З1: заголовок, три вида связки, раунды, отдых 2:00, прогноз 9/3/13 мин и CTA — apps/web/strength/heys_strength_catalog_ui_v1.js:365-446; DOM-смоук apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js и apps/web/__tests__/strength-builder-ui.test.js «создание связки»."
+    }
+  ]
+}
