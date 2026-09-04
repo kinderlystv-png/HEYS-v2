@@ -1339,6 +1339,58 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   background: var(--swatch-ok, #7a8a5e);
 }
 
+/* Строка «вид выбора оформления»: декоративная миниатюра в карточке палитры. */
+.heys-login-theme__soft-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-height: 28px;
+  padding: 6px 8px 4px;
+  border-radius: 10px;
+  background: var(--v4-bg, #fffaf1);
+}
+
+.heys-login-theme__soft-mini-period {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: auto;
+  font: 700 9.5px/1 Figtree, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.heys-login-theme__soft-mini-period > span {
+  color: rgba(0, 0, 0, 0.35);
+}
+
+.heys-login-theme__soft-mini-period > span.is-active {
+  color: var(--v4-act-text, #8a4a20);
+  border-bottom: 2px solid var(--v4-act, #c67139);
+  padding-bottom: 2px;
+}
+
+.heys-login-theme__soft-mini-period > span.is-days {
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.28);
+}
+
+html[data-theme-id="blue"] .heys-login-theme__soft-mini-period > span,
+html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span {
+  color: rgba(16, 24, 38, 0.35);
+}
+
+html[data-theme-id="blue"] .heys-login-theme__soft-mini-period > span.is-active,
+html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-active {
+  color: var(--v4-act-text, #1d5e96);
+  border-bottom-color: var(--v4-act, #2e7cc0);
+}
+
+html[data-theme-id="blue"] .heys-login-theme__soft-mini-period > span.is-days,
+html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-days {
+  color: rgba(16, 24, 38, 0.28);
+}
+
 .heys-login-theme__soft-label {
   margin-top: 10px;
   font-size: 11px;

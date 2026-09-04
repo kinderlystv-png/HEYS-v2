@@ -114,6 +114,13 @@
   const OK_TEXT = 'var(--v4-ok-text, #5c6a45)';            // --gr
   const OK_BG = 'var(--v4-ok-bg, #eaefe0)';                // --gr-bg
   const WARN_TEXT = 'var(--v4-warn-text, #a1471c)';        // --ac2
+  const STEP_PENDING_RING = 'inset 0 0 0 1.5px rgba(0, 0, 0, 0.18)';
+
+  function stepMarkerStyle(done, current) {
+    if (done) return { background: OK_BG, color: OK_TEXT, boxShadow: 'none' };
+    if (current) return { background: ACCENT_FILL, color: ON_ACCENT, boxShadow: 'none' };
+    return { background: 'transparent', color: INK_DATA, boxShadow: STEP_PENDING_RING };
+  }
 
   const shellStyle = {
     // Роли набора вместо легаси-литералов: экран анкеты был единственным,
@@ -1341,12 +1348,9 @@
                 width: 22, height: 22, flex: 'none', borderRadius: 999,
                 display: 'grid', placeItems: 'center',
                 fontSize: 10.5, fontWeight: 700, lineHeight: 1,
-                // Кадр «Анкета · возврат» даёт непройденной метке фон --c1 —
-                // тот же, что у карточки списка: кружок сливается, остаётся
-                // одна цифра. Так три состояния читаются как «сделано ·
-                // здесь · ещё нет», а не как три разных кружка. Стояло --c2.
-                background: done ? OK_BG : currentRow ? ACCENT_FILL : SURFACE_1,
-                color: done ? OK_TEXT : currentRow ? ON_ACCENT : INK_DATA,
+                // Строка «вид · кружки шагов»: предстоящий — прозрачный круг с
+                // обводкой 1,5 px, без заливки --c1 на фоне карточки.
+                ...stepMarkerStyle(done, currentRow),
               },
             }, done ? '✓' : String(index + 1)),
             React.createElement('span', {
@@ -1460,8 +1464,9 @@
             style: {
               width: 20, height: 20, flex: 'none', borderRadius: 999,
               display: 'grid', placeItems: 'center', fontSize: 11, lineHeight: 1,
-              background: done ? OK_BG : SURFACE_2,
-              color: done ? OK_TEXT : INK_55,
+              ...(done
+                ? { background: OK_BG, color: OK_TEXT, boxShadow: 'none' }
+                : { background: 'transparent', color: INK_55, boxShadow: STEP_PENDING_RING }),
             }
           }, done ? '✓' : '·'),
           label

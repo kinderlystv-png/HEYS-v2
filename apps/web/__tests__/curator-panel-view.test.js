@@ -730,7 +730,7 @@ describe('панель куратора · окно', () => {
     // Отклонение — круг 32, а не красный квадрат с эмодзи.
     expect(lead).toContain("className: 'cur-cab__deny'");
     expect(lead).not.toContain('❌');
-    expect(CSS).toMatch(/\.cur-cab__deny \{[\s\S]{0,200}width: 32px/);
+    expect(CSS).toMatch(/\.cur-cab__deny \{[\s\S]{0,200}width: 44px/);
     // Телефон и дата решения одной строкой.
     expect(lead).toContain("' · ' + formatDate(item.created_at)");
   });

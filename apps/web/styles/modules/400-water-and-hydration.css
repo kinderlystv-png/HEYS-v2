@@ -3548,6 +3548,12 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: var(--v4-btn-on-act, #2b1608);
 }
 
+html[data-theme-id="blue"] .advice-v4-toast-card__primary,
+html[data-theme-id="blue-dark"] .advice-v4-toast-card__primary {
+  background: #2c5f76;
+  color: #ffffff;
+}
+
 /* Строка «пустое состояние»: не шторка, а всплывающая плашка над нижним
    меню — те же 88 px снизу, что у всплывающего совета. */
 .advice-v4-empty-toast {

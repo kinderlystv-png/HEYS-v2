@@ -94,11 +94,13 @@ describe('анкета v4: решения контракта', () => {
     expect(SRC).toContain('своими словами — правильных ответов здесь нет.');
   });
 
-  // Метка непройденного шага берёт фон карточки: кружок сливается, остаётся
-  // цифра. Роль --v4-card объявлена во всех четырёх наборах, поэтому слияние
-  // работает и в синих темах — проверено замером computed.
-  it('метка непройденного шага сливается с карточкой', () => {
-    expect(SRC).toMatch(/background: done \? OK_BG : currentRow \? ACCENT_FILL : SURFACE_1/);
+  // Строка «вид · кружки шагов»: предстоящий шаг — прозрачный круг с обводкой
+  // 1,5 px, без заливки --c1 на карточке списка.
+  it('метка непройденного шага — прозрачная обводка, не заливка --c1', () => {
+    expect(SRC).toContain("const STEP_PENDING_RING = 'inset 0 0 0 1.5px rgba(0, 0, 0, 0.18)'");
+    expect(SRC).toMatch(/function stepMarkerStyle\(done, current\)/);
+    expect(SRC).toMatch(/\.\.\.stepMarkerStyle\(done, currentRow\)/);
+    expect(SRC).toMatch(/background: 'transparent', color: INK_55, boxShadow: STEP_PENDING_RING/);
   });
 
   // Роль с именем набора в модуле незаконна: в синих темах она держит песочное

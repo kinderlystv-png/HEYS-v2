@@ -1224,7 +1224,12 @@
           // карточка схлопывалась, и плашка оказывалась в пустоте.
           !isNewDeviceLogin && React.createElement(
             'div',
-            { className: 'heys-auth-keypad', ref: keypadRef, 'aria-label': 'Цифровая клавиатура кода' },
+            {
+              className: 'heys-auth-keypad',
+              ref: keypadRef,
+              'aria-label': 'Цифровая клавиатура кода',
+              ...(rateBlocked ? { 'data-dim': 'блокировка' } : {}),
+            },
             [1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) =>
               React.createElement(
                 'button',

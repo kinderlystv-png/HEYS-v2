@@ -765,6 +765,7 @@
                 h('button', {
                     type: 'button',
                     className: 'cur-cab__sheet-close',
+                    'data-svc': '',
                     onClick: closeModal,
                     'aria-label': 'Закрыть'
                 }, '✕')
@@ -1016,6 +1017,7 @@
                             React.createElement('button', {
                                 type: 'button',
                                 className: 'cur-cab__sheet-close',
+                                'data-svc': '',
                                 onClick: closeModal,
                                 'aria-label': 'Закрыть'
                             }, '✕')
@@ -1219,6 +1221,7 @@
                 React.createElement('button', {
                     type: 'button',
                     className: 'cur-cab__sheet-close',
+                    'data-svc': '',
                     onClick: closeModal,
                     'aria-label': 'Закрыть'
                 }, '✕')
@@ -1844,6 +1847,7 @@
                         h('button', {
                             type: 'button',
                             className: 'cur-cab__sheet-close',
+                            'data-svc': '',
                             'aria-label': 'Закрыть Ops dashboard',
                             onClick: () => setOpen(false)
                         }, '✕')

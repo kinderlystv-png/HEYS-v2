@@ -90,6 +90,44 @@
         return { background: swatch.act, border: '0', boxShadow: 'none' };
     }
 
+    // Строка «вид выбора оформления»: в карточке палитры — декоративная
+    // миниатюра с рядом периодов; ряд помечен data-dim, не интерактивен.
+    function createPaletteMiniDom(doc) {
+        const mini = doc.createElement('span');
+        mini.className = 'heys-login-theme__soft-mini';
+        mini.setAttribute('aria-hidden', 'true');
+        const period = doc.createElement('span');
+        period.className = 'heys-login-theme__soft-mini-period';
+        period.setAttribute('data-dim', 'вид выбора оформления');
+        [['7', ''], ['14', ' is-active'], ['30', '']].forEach(([text, cls]) => {
+            const span = doc.createElement('span');
+            if (cls) span.className = cls.trim();
+            span.textContent = text;
+            period.appendChild(span);
+        });
+        const days = doc.createElement('span');
+        days.className = 'is-days';
+        days.textContent = 'дней';
+        period.appendChild(days);
+        mini.appendChild(period);
+        return mini;
+    }
+
+    function createPaletteMiniReact(React) {
+        return React.createElement(
+            'span',
+            { className: 'heys-login-theme__soft-mini', 'aria-hidden': 'true' },
+            React.createElement(
+                'span',
+                { className: 'heys-login-theme__soft-mini-period', 'data-dim': 'вид выбора оформления' },
+                React.createElement('span', null, '7'),
+                React.createElement('span', { className: 'is-active' }, '14'),
+                React.createElement('span', null, '30'),
+                React.createElement('span', { className: 'is-days' }, 'дней'),
+            ),
+        );
+    }
+
     function createDomPicker(options) {
         const opts = options || {};
         const loginOnly = opts.scope === 'login';
@@ -152,15 +190,10 @@
             btn.type = 'button';
             btn.className = 'heys-login-theme__soft-card';
             btn.dataset.palette = variant.id;
-            const swatch = document.createElement('span');
-            swatch.className = 'heys-login-theme__soft-swatch';
-            swatch.style.setProperty('--swatch-act', variant.act);
-            swatch.style.setProperty('--swatch-hero', variant.hero);
-            swatch.style.setProperty('--swatch-ok', variant.ok);
+            btn.appendChild(createPaletteMiniDom(document));
             const text = document.createElement('span');
             text.className = 'heys-login-theme__soft-label';
             text.textContent = variant.label;
-            btn.appendChild(swatch);
             btn.appendChild(text);
             paletteRow.appendChild(btn);
             paletteButtons[variant.id] = btn;
@@ -460,14 +493,7 @@
                             'aria-pressed': palette === variant.id ? 'true' : 'false',
                             onClick: () => choosePalette(variant.id),
                         },
-                        React.createElement('span', {
-                            className: 'heys-login-theme__soft-swatch',
-                            style: {
-                                '--swatch-act': variant.act,
-                                '--swatch-hero': variant.hero,
-                                '--swatch-ok': variant.ok,
-                            },
-                        }),
+                        createPaletteMiniReact(React),
                         React.createElement('span', { className: 'heys-login-theme__soft-label' }, variant.label),
                     )),
                 ),

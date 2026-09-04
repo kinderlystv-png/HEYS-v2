@@ -8040,6 +8040,7 @@ body:has(.offline-banner) .wrap {
 
 .date-picker--v4 > .date-picker-row {
   width: 100%;
+  gap: 8px;
 }
 
 .date-picker--v4 .date-picker-day-nav {
