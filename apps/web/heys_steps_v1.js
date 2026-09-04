@@ -14,6 +14,16 @@
   // Используем общие утилиты из StepModal
   const { lsGet: baseLsGet, lsSet: baseLsSet, getTodayKey } = utils;
 
+  // v4 roles для checkin-morning (смысл, не оттенок — UI_V4_BARE_LITERALS_DECISION.md).
+  const V4_ACCENT_FILL = 'var(--v4-act, #c67139)';
+  const V4_ACCENT_TEXT = 'var(--v4-act-text, #8a4a20)';
+  const V4_ACCENT_BG = 'var(--v4-accent-bg, #f0dcc6)';
+  const V4_WARN_TEXT = 'var(--v4-warn-text, #a1471c)';
+  const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const V4_WARN_BORDER = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 35%, transparent)';
+  const V4_WARN_SURFACE = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, transparent)';
+  const V4_ACCENT_TINT = 'color-mix(in srgb, var(--v4-act, #c67139) 10%, transparent)';
+
   const tryParseStoredValue = (raw, fallback) => {
     if (raw === null || raw === undefined) return fallback;
     if (typeof raw === 'string') {
@@ -230,7 +240,7 @@
 
     const isV4 = variant === 'v4' || String(className || '').indexOf('mc-v4-scale') !== -1;
     const fillColor = fill === 'act'
-      ? 'var(--v4-sand-act, #c67139)'
+      ? V4_ACCENT_FILL
       : '#7a8a5e';
     const thumbPx = isV4 ? (Number(thumbSize) || 20) : 34;
 
@@ -850,9 +860,9 @@
         label: 'сделаю',
         title: 'Рутина запланирована на сегодня',
         style: {
-          border: '1px solid rgba(245, 158, 11, 0.35)',
-          background: 'rgba(245, 158, 11, 0.12)',
-          color: '#b45309'
+          border: `1px solid ${V4_WARN_BORDER}`,
+          background: V4_WARN_SURFACE,
+          color: V4_WARN_TEXT
         }
       };
     }
@@ -872,9 +882,9 @@
         label: 'pending',
         title: 'Первый приём пищи уже есть — подтверди статус зарядки',
         style: {
-          border: '1px solid rgba(245, 158, 11, 0.35)',
-          background: 'rgba(245, 158, 11, 0.12)',
-          color: '#b45309'
+          border: `1px solid ${V4_WARN_BORDER}`,
+          background: V4_WARN_SURFACE,
+          color: V4_WARN_TEXT
         }
       };
     }
@@ -2425,7 +2435,7 @@
 
   function getSleepAdviceColor(quality) {
     if (quality <= 3) return { bg: '#fef2f2', border: '#fecaca', text: '#991b1b' };
-    if (quality <= 6) return { bg: '#fefce8', border: '#fef08a', text: '#854d0e' };
+    if (quality <= 6) return { bg: V4_ACCENT_BG, border: V4_WARN_SOFT, text: V4_WARN_TEXT };
     if (quality <= 8) return { bg: '#f0fdf4', border: '#bbf7d0', text: '#166534' };
     return { bg: '#ecfdf5', border: '#6ee7b7', text: '#047857' };
   }
@@ -2676,7 +2686,7 @@
         React.createElement('div', { className: 'mc-scale-head' },
           React.createElement('span', null, 'Насколько выспались'),
           React.createElement('span', { className: 'mc-scale-value' },
-            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Figtree, system-ui, sans-serif', color: 'var(--v4-sand-act-text, #8a4a20)' } }, String(sleepQuality)),
+            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Figtree, system-ui, sans-serif', color: V4_ACCENT_TEXT } }, String(sleepQuality)),
             ` · ${String(qualityWord).toLowerCase()}`
           )
         ),
@@ -3598,7 +3608,7 @@
     // Цвет в зависимости от количества минут
     const getColor = useCallback((min) => {
       if (min === 0) return '#94a3b8';
-      if (min < 30) return '#eab308';
+      if (min < 30) return V4_WARN_SOFT;
       if (min < 60) return '#22c55e';
       return '#10b981';
     }, []);
@@ -3779,7 +3789,7 @@
     // Цвет
     const getColor = (min) => {
       if (min === 0) return '#94a3b8';
-      if (min < 30) return '#eab308';
+      if (min < 30) return V4_WARN_SOFT;
       if (min < 60) return '#22c55e';
       return '#10b981';
     };
@@ -5073,7 +5083,7 @@
         React.createElement('div', { className: 'mc-scale-head' },
           React.createElement('span', null, row.title),
           React.createElement('span', { className: 'mc-scale-value' },
-            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Figtree, system-ui, sans-serif', color: 'var(--v4-sand-act-text, #8a4a20)' } }, String(row.value)),
+            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Figtree, system-ui, sans-serif', color: V4_ACCENT_TEXT } }, String(row.value)),
             ` · ${scaleWord(row.value, row.kind)}`
           )
         ),
@@ -5575,12 +5585,12 @@
                     gap: '4px',
                     padding: '8px 12px',
                     borderRadius: '20px',
-                    border: isSelected ? '2px solid #f97316' : '2px solid #e2e8f0',
-                    background: isSelected ? 'rgba(249, 115, 22, 0.1)' : '#fff',
+                    border: isSelected ? `2px solid ${V4_ACCENT_FILL}` : '2px solid #e2e8f0',
+                    background: isSelected ? V4_ACCENT_TINT : '#fff',
                     cursor: 'pointer',
                     fontSize: '13px',
                     fontWeight: isSelected ? '600' : '500',
-                    color: isSelected ? '#ea580c' : '#374151',
+                    color: isSelected ? V4_ACCENT_TEXT : '#374151',
                     transition: 'all 0.2s'
                   }
                 },
@@ -5597,12 +5607,12 @@
         style: {
           marginTop: '12px',
           padding: '12px',
-          background: selected.length > 0 ? '#fff7ed' : '#f8fafc',
+          background: selected.length > 0 ? V4_ACCENT_BG : '#f8fafc',
           borderRadius: '12px',
           textAlign: 'center',
           fontSize: '14px',
           fontWeight: '600',
-          color: selected.length > 0 ? '#ea580c' : '#64748b',
+          color: selected.length > 0 ? V4_ACCENT_TEXT : '#64748b',
           flexShrink: 0
         }
       },
