@@ -968,8 +968,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .widgets-header__btn--reset {
-  color: #fdba74;
-  background: rgba(249, 115, 22, 0.18);
+  color: var(--v4-warn-1, #d39673);
+  background: color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent);
 }
 
 
@@ -1336,7 +1336,7 @@ body:has(.page-reports) .hdr::after {
   background: linear-gradient(90deg,
       var(--v4-warn-1, #ef4444) 0%,
       /* red at 0% */
-      var(--v4-wgt-orange, #f97316) 40%,
+      var(--v4-act, #c67139) 40%,
       /* orange */
       var(--v4-warn-soft, #eab308) 60%,
       /* yellow */
@@ -1664,7 +1664,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__dot--warn {
-  background: var(--v4-wgt-orange, #f97316);
+  background: var(--v4-act, #c67139);
 }
 
 .widget-cascade__dot--neutral {
@@ -4000,7 +4000,7 @@ body:has(.page-reports) .hdr::after {
   border-radius: 5px;
   background: linear-gradient(90deg,
       var(--v4-warn-1, #ef4444) 0%,
-      var(--v4-wgt-orange, #f97316) 40%,
+      var(--v4-act, #c67139) 40%,
       var(--v4-warn-soft, #eab308) 60%,
       var(--v4-ok-fill, #22c55e) 85%,
       var(--v4-wgt-emerald, #10b981) 100%);
@@ -5096,8 +5096,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-insulin__status--active {
-  background: rgba(249, 115, 22, 0.12);
-  color: var(--v4-wgt-orange, #f97316);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent);
+  color: var(--v4-act, #c67139);
 }
 
 .widget-insulin__status--almost {
@@ -7302,7 +7302,7 @@ body:has(.page-reports) .hdr::after {
 
 .widget--relapseRisk {
   --widget-accent: rgba(239, 68, 68, 0.14);
-  --widget-accent-strong: rgba(249, 115, 22, 0.28);
+  --widget-accent-strong: color-mix(in srgb, var(--v4-act, #c67139) 28%, transparent);
 }
 
 .widget-relapse-risk {
@@ -8546,7 +8546,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-crash-risk--medium .widget-crash-risk__percent {
-  color: var(--v4-wgt-orange, #f97316);
+  color: var(--v4-act, #c67139);
 }
 
 .widget-crash-risk--high .widget-crash-risk__percent {
@@ -8600,8 +8600,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-crash-risk__ews-badge--medium {
-  background: rgba(249, 115, 22, 0.15);
-  color: #ea580c;
+  background: color-mix(in srgb, var(--v4-act, #c67139) 15%, transparent);
+  color: var(--v4-warn-3, #a1471c);
 }
 
 .widget-crash-risk__ews-badge--high {
@@ -8663,7 +8663,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .widget-crash-risk--medium .widget-crash-risk__percent {
-  color: #fb923c;
+  color: var(--v4-warn-1, #d39673);
 }
 
 [data-theme$="dark"] .widget-crash-risk--high .widget-crash-risk__percent {
@@ -8676,8 +8676,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .widget-crash-risk__ews-badge--medium {
-  background: rgba(251, 146, 60, 0.2);
-  color: #fb923c;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 20%, transparent);
+  color: var(--v4-warn-1, #d39673);
 }
 
 [data-theme$="dark"] .widget-crash-risk__ews-badge--high {
@@ -8739,12 +8739,12 @@ body:has(.page-reports) .hdr::after {
   margin: 12px 0 0;
   min-height: 132px;
   padding: 18px 16px 16px;
-  border: 1px solid rgba(234, 88, 12, 0.26);
+  border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 26%, transparent);
   border-radius: 20px;
   background:
-    linear-gradient(135deg, rgba(255, 247, 237, 0.98) 0%, rgba(255, 237, 213, 0.96) 56%, rgba(254, 215, 170, 0.94) 100%);
-  box-shadow: 0 10px 28px rgba(234, 88, 12, 0.14);
-  color: #7c2d12;
+    linear-gradient(135deg, color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 98%, transparent) 0%, color-mix(in srgb, var(--v4-warn-1, #d99a63) 96%, transparent) 56%, color-mix(in srgb, var(--v4-warn-1, #d99a63) 94%, transparent) 100%);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--v4-act, #c67139) 14%, transparent);
+  color: var(--v4-warn-text, #a1471c);
   cursor: pointer;
   user-select: none;
   transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
@@ -8756,7 +8756,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .reports-overview-card:focus-visible {
-  outline: 3px solid rgba(249, 115, 22, 0.35);
+  outline: 3px solid color-mix(in srgb, var(--v4-act, #c67139) 35%, transparent);
   outline-offset: 3px;
 }
 
@@ -8778,7 +8778,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 14px;
   line-height: 1.25;
   font-weight: 900;
-  color: var(--v4-wgt-brown, #9a3412);
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .reports-overview-card__body {
@@ -8788,7 +8788,7 @@ body:has(.page-reports) .hdr::after {
   gap: 10px;
   font-size: 13px;
   line-height: 1.35;
-  color: rgba(124, 45, 18, 0.82);
+  color: color-mix(in srgb, var(--v4-warn-text, #a1471c) 82%, transparent);
 }
 
 .reports-overview-card__stats {
@@ -8807,27 +8807,27 @@ body:has(.page-reports) .hdr::after {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.62);
   box-shadow:
-    inset 0 0 0 1px rgba(251, 146, 60, 0.18),
-    0 6px 14px rgba(154, 52, 18, 0.06);
+    inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d99a63) 18%, transparent),
+    0 6px 14px color-mix(in srgb, var(--v4-warn-text, #a1471c) 6%, transparent);
 }
 
 .reports-overview-card__stat--primary {
-  background: rgba(255, 247, 237, 0.94);
+  background: color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 94%, transparent);
   box-shadow:
-    inset 0 0 0 1px rgba(251, 146, 60, 0.28),
-    0 6px 14px rgba(154, 52, 18, 0.08);
+    inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d99a63) 28%, transparent),
+    0 6px 14px color-mix(in srgb, var(--v4-warn-text, #a1471c) 8%, transparent);
 }
 
 .reports-overview-card__stat-value {
   min-width: 0;
-  color: var(--v4-wgt-rust, #c2410c);
+  color: var(--v4-warn-3, #a1471c);
   font-size: 24px;
   font-weight: 900;
   line-height: 1.1;
 }
 
 .reports-overview-card__stat-label {
-  color: rgba(124, 45, 18, 0.62);
+  color: color-mix(in srgb, var(--v4-warn-text, #a1471c) 62%, transparent);
   font-size: 11px;
   font-weight: 800;
   line-height: 1.2;
@@ -8837,9 +8837,9 @@ body:has(.page-reports) .hdr::after {
   flex: 0 0 auto;
   padding: 5px 9px;
   border-radius: 999px;
-  background: #fff7ed;
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.26);
-  color: var(--v4-wgt-rust, #c2410c);
+  background: var(--v4-accent-bg, #f0dcc6);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d99a63) 26%, transparent);
+  color: var(--v4-warn-3, #a1471c);
   font-weight: 900;
 }
 
@@ -8858,8 +8858,8 @@ body:has(.page-reports) .hdr::after {
   padding: 6px 11px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22);
-  color: var(--v4-wgt-brown, #9a3412);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
+  color: var(--v4-warn-text, #a1471c);
   font-size: 12px;
   font-weight: 900;
 }
@@ -8947,57 +8947,57 @@ body.reports-fullscreen-open {
 
 [data-theme$="dark"] .reports-overview-card,
 .theme-dark .reports-overview-card {
-  border-color: rgba(251, 146, 60, 0.24);
+  border-color: color-mix(in srgb, var(--v4-warn-1, #d39673) 24%, transparent);
   background:
-    linear-gradient(135deg, rgba(67, 20, 7, 0.92) 0%, rgba(124, 45, 18, 0.78) 100%);
+    linear-gradient(135deg, color-mix(in srgb, var(--v4-warn-text, #a1471c) 92%, transparent) 0%, color-mix(in srgb, var(--v4-warn-text, #a1471c) 78%, transparent) 100%);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
-  color: var(--v4-wgt-apricot, #fed7aa);
+  color: var(--v4-warn-1, #d39673);
 }
 
 [data-theme$="dark"] .reports-overview-card__title,
 .theme-dark .reports-overview-card__title {
-  color: var(--v4-wgt-apricot, #fed7aa);
+  color: var(--v4-warn-1, #d39673);
 }
 
 [data-theme$="dark"] .reports-overview-card__body,
 .theme-dark .reports-overview-card__body {
-  color: rgba(255, 237, 213, 0.82);
+  color: color-mix(in srgb, var(--v4-warn-1, #d99a63) 82%, transparent);
 }
 
 [data-theme$="dark"] .reports-overview-card__stat,
 .theme-dark .reports-overview-card__stat {
-  background: rgba(255, 237, 213, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.16);
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d39673) 16%, transparent);
 }
 
 [data-theme$="dark"] .reports-overview-card__stat--primary,
 .theme-dark .reports-overview-card__stat--primary {
-  background: rgba(154, 52, 18, 0.38);
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 38%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d39673) 22%, transparent);
 }
 
 [data-theme$="dark"] .reports-overview-card__stat-value,
 .theme-dark .reports-overview-card__stat-value {
-  color: var(--v4-wgt-peach, #ffedd5);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .reports-overview-card__stat-label,
 .theme-dark .reports-overview-card__stat-label {
-  color: rgba(255, 237, 213, 0.64);
+  color: color-mix(in srgb, var(--v4-warn-1, #d99a63) 64%, transparent);
 }
 
 [data-theme$="dark"] .reports-overview-card__count,
 .theme-dark .reports-overview-card__count {
-  background: rgba(154, 52, 18, 0.48);
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.24);
-  color: var(--v4-wgt-peach, #ffedd5);
+  background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 48%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d39673) 24%, transparent);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .reports-overview-card__action,
 .theme-dark .reports-overview-card__action {
-  background: rgba(255, 237, 213, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.18);
-  color: var(--v4-wgt-apricot, #fed7aa);
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d39673) 18%, transparent);
+  color: var(--v4-warn-1, #d39673);
 }
 
 [data-theme$="dark"] .reports-fullscreen-modal,
@@ -10839,7 +10839,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-heatmap .widget-v4-row__meta--count.widget-v4-val--good {
-  color: var(--v4-ok-text);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .widget-v4-unit {
