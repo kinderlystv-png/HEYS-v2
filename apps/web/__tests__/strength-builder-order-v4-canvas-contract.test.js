@@ -40,7 +40,7 @@ function compileCss() {
     .replaceAll('var(--v4-act-text, #8a4a20)', PALETTE.ac)
     .replaceAll('var(--v4-act, #c67139)', PALETTE.acs)
     .replaceAll('var(--v4-ok-bg, #eaefe0)', PALETTE.grBg)
-    .replaceAll('var(--v4-ok, #5c6a45)', PALETTE.gr)
+    .replaceAll('var(--v4-ok-text, #5c6a45)', PALETTE.gr)
     .replaceAll('var(--v4-ink-data, rgba(32, 30, 29, 0.56))', PALETTE.ink56)
     .replaceAll('env(safe-area-inset-bottom, 0px)', '0px')}`;
 }
