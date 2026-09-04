@@ -663,7 +663,7 @@
   background: var(--v4-sand-surface-soft, #fffaf1);
   border-radius: 24px;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(80, 50, 20, 0.09), 0 14px 40px rgba(80, 50, 20, 0.12);
+  box-shadow: 0 1px 2px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.09), 0 14px 40px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.12);
 }
 
 /* Листы утренней рутины — кадр «вид · резервный вопрос после еды» / «вид ·
@@ -3658,10 +3658,10 @@
 }
 
 .mc-steps-btn.active {
-  color: #f59e0b;
-  background: #fef3c7;
-  border-color: #f59e0b;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+  color: var(--v4-act-text, #8a4a20);
+  background: var(--v4-accent-bg, #f0dcc6);
+  border-color: var(--v4-act, #c67139);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--v4-act, #c67139) 20%, transparent);
 }
 
 .mc-steps-hint {
@@ -4790,9 +4790,9 @@
 }
 
 [data-theme$="dark"] .mc-steps-btn.active {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--v4-warn-soft, #fbbf24);
-  border-color: #f59e0b;
+  background: color-mix(in srgb, var(--v4-act, #cf8144) 15%, transparent);
+  color: var(--v4-act-text, #e2a468);
+  border-color: var(--v4-act, #cf8144);
 }
 
 [data-theme$="dark"] .mc-footer {
@@ -4944,7 +4944,7 @@
   align-items: center;
   gap: 2px;
   padding: 4px 10px;
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 35%, var(--v4-accent-bg, #f0dcc6)) 100%);
   border-radius: 12px;
   font-size: 13px;
   font-weight: 600;
@@ -4965,7 +4965,7 @@
 }
 
 [data-theme$="dark"] .mc-streak-badge {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.15) 100%);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--v4-warn-soft, #e2b264) 20%, transparent) 0%, color-mix(in srgb, var(--v4-act, #cf8144) 15%, transparent) 100%);
 }
 
 [data-theme$="dark"] .mc-streak-count,
@@ -5500,15 +5500,15 @@
 }
 
 .mc-steps-btn--active {
-  color: #f59e0b;
-  background: #fef3c7;
-  border-color: #f59e0b;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+  color: var(--v4-act-text, #8a4a20);
+  background: var(--v4-accent-bg, #f0dcc6);
+  border-color: var(--v4-act, #c67139);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--v4-act, #c67139) 20%, transparent);
 }
 
 [data-theme$="dark"] .mc-steps-btn--active {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--v4-warn-soft, #fbbf24);
+  background: color-mix(in srgb, var(--v4-act, #cf8144) 15%, transparent);
+  color: var(--v4-act-text, #e2a468);
 }
 
 /* Steps stats block */
