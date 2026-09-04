@@ -159,6 +159,25 @@
   flex: none;
 }
 
+.insights-priority-action__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.insights-priority-action__text {
+  font: 600 12.5px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.insights-priority-action__freeze-label {
+  flex: none;
+  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
 .insights-v4-attention {
   padding: 16px 18px;
   border-radius: 20px;

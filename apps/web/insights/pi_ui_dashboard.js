@@ -846,6 +846,60 @@
       );
     }
 
+    /** Контракт «сделай сегодня»: просьба о замере — первая строка, лимит трёх
+     * не поднимается. Показ: первый день заморозки и каждый третий, не больше
+     * четырёх раз за FREEZE_LIMIT_DAYS (heys_norm_correction_v1.js). */
+    function buildInsightsMeasurementAction(lsGet, profile) {
+      const NC = HEYS.NormCorrection;
+      const getter = lsGet || window.HEYS?.utils?.lsGet;
+      const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
+      if (!NC || !getter || typeof getDays !== 'function') return null;
+      const now = Date.now();
+      const askedAt = NC.readMeasurementAsk(getter);
+      const recomp = NC.detectRecomposition(getDays(28, getter), profile || {}, { askedAt, now });
+      if (!recomp || !recomp.indirect) return null;
+      if (recomp.daysLeft != null && recomp.daysLeft <= 0) return null;
+      const age = NC.freezeAgeDays(askedAt, now);
+      const shouldShow = askedAt == null || (age != null && age % 3 === 0 && age < 12);
+      if (!shouldShow) return null;
+      return {
+        id: 'norm-freeze-measurement',
+        type: 'MEASUREMENT_ASK',
+        text: 'Замерить талию — 2 мин',
+        severity: 'high',
+        isFreezeMeasurement: true,
+        freezeLabel: 'норма заморожена'
+      };
+    }
+
+    function mergeInsightsPriorityActions(measurementAction, engineActions) {
+      const rest = Array.isArray(engineActions) ? engineActions.slice(0, 3) : [];
+      if (!measurementAction) return rest;
+      return [measurementAction, ...rest.slice(0, 2)];
+    }
+
+    /** Карточка «перестройка · по косвенным» во «Стоит внимания». */
+    function buildRecompositionAttentionCard(lsGet, profile) {
+      const NC = HEYS.NormCorrection;
+      const getter = lsGet || window.HEYS?.utils?.lsGet;
+      const getDays = HEYS.InsightsPI?.calculations?.getDaysData;
+      if (!NC || !getter || typeof getDays !== 'function') return null;
+      const now = Date.now();
+      const askedAt = NC.readMeasurementAsk(getter);
+      const recomp = NC.detectRecomposition(getDays(28, getter), profile || {}, { askedAt, now });
+      if (!recomp || !recomp.indirect) return null;
+      const weeks = recomp.weeks || 4;
+      const source = recomp.source || ('по росту рабочих весов за ' + weeks + ' нед.');
+      return {
+        id: 'recomposition-indirect',
+        type: 'RECOMPOSITION',
+        humanMessage: 'Похоже на перестройку — вес стоит, но рабочие веса растут '
+          + weeks + ' ' + (weeks === 1 ? 'неделю' : weeks < 5 ? 'недели' : 'недель') + '.',
+        maturity: 'гипотеза',
+        basis: source
+      };
+    }
+
     /**
      * R-INS-2A: PriorityActions — top-3 actionable советы с triple-line context.
      * Каждое действие: Action + Why + Forecast.
@@ -871,13 +925,24 @@
           list.map((a, idx) =>
             h('div', {
               key: a.id || idx,
-              className: `insights-priority-action insights-priority-action--severity-${a.severity || 'medium'}` + (isV4 ? ' insights-priority-action--v4' : '')
+              className: `insights-priority-action insights-priority-action--severity-${a.severity || 'medium'}`
+                + (isV4 ? ' insights-priority-action--v4' : '')
+                + (isV4 && a.isFreezeMeasurement ? ' insights-priority-action--freeze' : '')
             },
               isV4
-                ? h('span', { className: 'insights-priority-action__dot', 'aria-hidden': 'true' })
+                ? h('span', {
+                  className: 'insights-priority-action__dot'
+                    + (a.isFreezeMeasurement ? ' insights-priority-action__dot--freeze' : ''),
+                  'aria-hidden': 'true'
+                })
                 : h('div', { className: 'insights-priority-action__rank' }, idx + 1),
               h('div', { className: 'insights-priority-action__content' },
-                h('div', { className: 'insights-priority-action__text' }, a.text),
+                isV4 && a.freezeLabel
+                  ? h('div', { className: 'insights-priority-action__row' },
+                    h('div', { className: 'insights-priority-action__text' }, a.text),
+                    h('span', { className: 'insights-priority-action__freeze-label' }, a.freezeLabel)
+                  )
+                  : h('div', { className: 'insights-priority-action__text' }, a.text),
                 !isV4 && a.why && h('div', { className: 'insights-priority-action__why' },
                   h('span', { className: 'insights-priority-action__why-label' }, '💡 '),
                   a.why
@@ -2253,10 +2318,12 @@
     }
 
     function InsightsV4Attention(props) {
-      const { warnings, daysWithData, onOpenPanel, onOpenDebtSheet } = props || {};
+      const { warnings, daysWithData, onOpenPanel, onOpenDebtSheet, lsGet, profile } = props || {};
       const riskCard = buildRelapseRiskAttentionCard();
       const hint = riskCard ? null : buildRelapseHintWarning();
-      const list = hint ? [hint].concat(warnings || []) : (warnings || []);
+      const recompositionCard = buildRecompositionAttentionCard(lsGet, profile);
+      let list = hint ? [hint].concat(warnings || []) : (warnings || []);
+      if (recompositionCard) list = [recompositionCard].concat(list);
       if (!riskCard && list.length === 0) {
         return h('div', { className: 'insights-v4-attention insights-v4-attention--ok' },
           h('div', { className: 'insights-v4-tier' }, 'Стоит внимания'),
@@ -2266,7 +2333,8 @@
       }
       const basis = daysWithData ? ('замечено на ваших данных за ' + daysWithData + ' ' + pluralDaysWord(daysWithData)) : '';
       // Лимит контракта: 3 карточки + «Ещё N». Риск занимает первый слот.
-      const warningSlots = riskCard ? 2 : 3;
+      let warningSlots = riskCard ? 2 : 3;
+      if (recompositionCard) warningSlots = Math.max(0, warningSlots - 1);
       const shown = list.slice(0, warningSlots);
       const hiddenCount = list.length - shown.length;
       return h('div', { className: 'insights-v4-attention' },
@@ -2285,6 +2353,7 @@
           ),
           shown.map(function (w, idx) {
             const isDebt = w.type === 'CALORIC_DEBT';
+            const isRecomposition = w.type === 'RECOMPOSITION';
             // Контракт «стоит внимания»: наблюдение голосом куратора. В
             // w.message лежит заголовок с эмодзи («🍽️ Слишком большой
             // дефицит калорий») — в v4 эмодзи нет и заголовок не фраза.
@@ -2301,7 +2370,9 @@
                 w.detail && w.message && h('div', { className: 'insights-v4-attention__sub' }, w.detail),
                 h('div', { className: 'insights-v4-attention__meta' },
                   h('span', { className: 'insights-v4-maturity' }, w.maturity || 'наблюдение'),
-                  basis && h('span', { className: 'insights-v4-attention__basis' }, basis)
+                  (isRecomposition && w.basis)
+                    ? h('span', { className: 'insights-v4-attention__basis' }, w.basis)
+                    : (basis && h('span', { className: 'insights-v4-attention__basis' }, basis))
                 ),
                 // Контракт «тексты из движка»: рекомендация без обоснования
                 // читается как приказ — у карточки долга обязательный лист.
@@ -3272,7 +3343,11 @@
               if (typeof generatePA === 'function' && result) {
                 try {
                   const actions = generatePA({ available: true, ews: result }, effectiveData.profile);
-                  setPriorityActions(Array.isArray(actions) ? actions.slice(0, 3) : []);
+                  const measurementAction = buildInsightsMeasurementAction(getter, effectiveData.profile);
+                  setPriorityActions(mergeInsightsPriorityActions(
+                    measurementAction,
+                    Array.isArray(actions) ? actions : []
+                  ));
                 } catch (e) {
                   setPriorityActions([]);
                 }
@@ -3594,6 +3669,8 @@
                 // окно чипа на предупреждения не влияет — честна общая история.
                 warnings: ewsWarnings,
                 daysWithData: historyDaysWithData,
+                lsGet: lsGet,
+                profile: effectiveData.profile,
                 onOpenPanel: function () { setEwsPanelOpen(true); },
                 onOpenDebtSheet: function () { setDebtSheetOpen(true); }
               }),
