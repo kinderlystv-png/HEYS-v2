@@ -12561,6 +12561,31 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink-3) /* v4-intentional */;
 }
 
+/* Кадр «Окно до сна · Как сейчас»: зазор 5 px, число 21 px, слово 8.5 px.
+   Общий hero 4 px и mini fiber/protein 3 px не трогал. */
+.widget-v4-mini.widget-v4-sleepwindow .widget-v4-goal-hero {
+  gap: 5px;
+}
+
+.widget-v4-mini.widget-v4-sleepwindow .widget-v4-goal-value {
+  font-size: 21px;
+}
+
+/* Кадр · 04: число шалфеем — текстовая роль, не заливка --gr кадра.
+   Роли заливки текст не красят (730:4308). Глобальный val--good несёт
+   --v4-sand-ok-text и на синем остаётся песочным. */
+.widget-v4-mini.widget-v4-sleepwindow .widget-v4-goal-value.widget-v4-val--good {
+  color: var(--v4-ok-text) /* v4-intentional */;
+}
+
+/* Кадр · 05: «чисто» 500 8.5/1. Общий unit 10 px не трогал. */
+.widget-v4-mini.widget-v4-sleepwindow .widget-v4-unit {
+  font-size: 8.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--v4-ink-data) /* v4-intentional */;
+}
+
 .widget-v4-stack .widget-v4-goal-value {
   font-size: 19px;
   letter-spacing: -0.03em;
