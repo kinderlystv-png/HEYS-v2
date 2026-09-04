@@ -16,10 +16,10 @@
   --sb-mut: var(--muted, #64748b);
   --sb-br: var(--border, #e2e8f0);
   --sb-soft: #f1f5f9;
-  --sb-acc: #c2410c;
-  --sb-acc-strong: #9a3412;
-  --sb-accbg: rgba(249, 115, 22, 0.12);
-  --sb-accTx: #9a3412;
+  --sb-acc: var(--v4-act, #c67139);
+  --sb-acc-strong: var(--v4-warn-text, #a1471c);
+  --sb-accbg: color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent);
+  --sb-accTx: var(--v4-act-text, #8a4a20);
   --sb-okbg: rgba(34, 197, 94, 0.12);
   --sb-okBr: rgba(34, 197, 94, 0.45);
   --sb-okTx: #15803d;
@@ -48,8 +48,8 @@
   --sb-mut: var(--v4-ink-2, #94a3b8);
   --sb-br: var(--v4-line, #334155);
   --sb-soft: #172033;
-  --sb-accbg: rgba(249, 115, 22, 0.18);
-  --sb-accTx: #fdba74;
+  --sb-accbg: color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent);
+  --sb-accTx: var(--v4-warn-1, #d99a63);
   --sb-okbg: rgba(34, 197, 94, 0.18);
   --sb-okTx: #86efac;
   /* Отдельные значения для тёмной: на светлых у фиолетового контраст 1,93. */
@@ -67,8 +67,8 @@
     --sb-mut: var(--v4-ink-2, #94a3b8);
     --sb-br: var(--v4-line, #334155);
     --sb-soft: #172033;
-    --sb-accbg: rgba(249, 115, 22, 0.18);
-    --sb-accTx: #fdba74;
+    --sb-accbg: color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent);
+    --sb-accTx: var(--v4-warn-1, #d99a63);
     --sb-okbg: rgba(34, 197, 94, 0.18);
     --sb-okTx: #86efac;
     --sb-dropbg: rgba(167, 139, 250, 0.2);
@@ -1332,7 +1332,7 @@
   margin: 8px 0;
   padding: 12px;
   border-radius: 16px;
-  border: 1px solid rgba(249, 115, 22, 0.35);
+  border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 35%, transparent);
   background: var(--sb-card);
 }
 
@@ -1368,8 +1368,8 @@
   flex: 0 0 auto;
   padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(249, 115, 22, 0.14);
-  color: #9a3412;
+  background: color-mix(in srgb, var(--v4-act, #c67139) 14%, transparent);
+  color: var(--v4-warn-text, #a1471c);
   font-size: 11px;
   font-weight: 800;
 }
@@ -1407,7 +1407,7 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #f97316, #c2410c);
+  background: linear-gradient(90deg, var(--v4-act, #c67139), var(--v4-warn-3, #a1471c));
 }
 
 /* Одно визуально доминирующее действие — как в прототипе. */
@@ -1420,7 +1420,7 @@
   padding: 9px 13px;
   border: none;
   border-radius: 13px;
-  background: linear-gradient(180deg, #c2410c, #9a3412);
+  background: linear-gradient(180deg, var(--v4-act, #c67139), var(--v4-warn-text, #a1471c));
   color: var(--v4-bg, #fff);
   text-align: left;
   cursor: pointer;
@@ -1633,7 +1633,7 @@
 }
 
 .sb-chip.is-on {
-  border-color: rgba(249, 115, 22, 0.45);
+  border-color: color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent);
   background: var(--sb-accbg);
   color: var(--sb-accTx);
 }
@@ -1641,7 +1641,7 @@
 /* Основная группа берёт полный вес упражнения — и выглядит весомее. */
 .sb-chip.is-primary {
   border: 1.5px solid var(--sb-acc-strong);
-  background: rgba(249, 115, 22, 0.14);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 14%, transparent);
   color: var(--sb-accTx);
   font-weight: 800;
 }
@@ -1696,7 +1696,7 @@
 }
 
 .sb-star.is-on {
-  color: #f97316;
+  color: var(--v4-act, #c67139);
 }
 
 .sb-cat-add {
@@ -1707,7 +1707,7 @@
   width: 44px;
   height: 44px;
   border-radius: 11px;
-  border: 1px solid rgba(249, 115, 22, 0.45);
+  border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 45%, transparent);
   background: var(--sb-accbg);
   color: var(--sb-accTx);
   font-size: 20px;
@@ -4898,6 +4898,287 @@
   margin: 12px 0 0;
   color: var(--sb-mut);
   font: 500 11px/1.55 Figtree, sans-serif;
+}
+
+/* Ж2 · типы подходов · честный тоннаж */
+.sb-approach-types-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.sb-at-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 18px 18px;
+}
+
+.sb-at-grp {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--sb-card);
+}
+
+.sb-approach-types-screen .sb-aps-head,
+.sb-approach-types-screen .sb-ap,
+.sb-approach-types-screen .sb-drop {
+  grid-template-columns: 56px 1fr 1fr 44px;
+  gap: 8px;
+}
+
+.sb-approach-types-screen .sb-aps-head {
+  margin-top: 0;
+  padding: 0;
+  font: 700 10px/1 Figtree, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sb-mut);
+}
+
+.sb-approach-types-screen .sb-aps-head > span:nth-child(2),
+.sb-approach-types-screen .sb-aps-head > span:nth-child(3) {
+  text-align: center;
+}
+
+.sb-approach-types-screen .sb-aps-head > span:last-child {
+  color: var(--sb-okTx);
+}
+
+.sb-approach-types-screen .sb-aps {
+  margin-top: 8px;
+}
+
+.sb-approach-types-screen .sb-ap-num.is-warmup {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--sb-mut);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sb-at-aps .sb-ap-num.is-work {
+  background: var(--sb-okbg);
+  color: var(--sb-okTx);
+}
+
+.sb-at-aps .sb-at-drop-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  background: var(--sb-accbg);
+  color: var(--sb-accTx);
+  font: 700 10px/1 Figtree, sans-serif;
+}
+
+.sb-at-tonnage {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--sb-card);
+}
+
+.sb-at-tonnage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--sb-tx);
+  font: 600 12px/1.3 Figtree, sans-serif;
+}
+
+.sb-at-tonnage-copy b {
+  display: block;
+  font: 700 12.5px/1.2 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-at-tonnage-copy span {
+  display: block;
+  margin-top: 2px;
+  font: 600 11px/1 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-at-tonnage-row > .n {
+  font: 700 12.5px/1 Figtree, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--sb-tx);
+}
+
+.sb-at-tier {
+  margin-top: 12px;
+  font: 700 10px/1 Figtree, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sb-mut);
+}
+
+.sb-at-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sb-at-unit.is-active {
+  background: var(--sb-acc-strong);
+  color: var(--sb-bg);
+}
+
+.sb-at-plates {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--sb-card);
+}
+
+.sb-at-plates b {
+  display: block;
+  font: 700 12.5px/1.2 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-at-plates span {
+  display: block;
+  margin-top: 2px;
+  font: 600 11px/1 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-at-footnote {
+  margin: 12px 0 0;
+  color: var(--sb-mut);
+  font: 500 11px/1.55 Figtree, sans-serif;
+}
+
+/* Ж3 · дроп-сет · свой экран */
+.sb-drop-set-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.sb-ds-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 18px 18px;
+}
+
+.sb-ds-grp {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--sb-card);
+}
+
+.sb-ds-grp .sb-ap.is-ds-main,
+.sb-drop-set-screen .sb-ap.is-ds-main {
+  border-radius: 12px;
+  box-shadow: inset 0 0 0 2px var(--sb-acc-strong);
+}
+
+.sb-ds-grp .sb-ap.is-ds-main .sb-ap-num.is-work {
+  background: var(--sb-acc-strong);
+  color: var(--sb-bg);
+}
+
+.sb-ds-grp .sb-ap.is-ds-main .sb-ap-value {
+  font-size: 18px;
+}
+
+.sb-ds-drop-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  background: var(--sb-accbg);
+  color: var(--sb-accTx);
+  font: 700 10px/1 Figtree, sans-serif;
+}
+
+.sb-ds-add-drop {
+  margin-top: 10px;
+}
+
+.sb-ds-volume-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sb-br);
+  color: var(--sb-tx);
+  font: 600 12px/1.3 Figtree, sans-serif;
+}
+
+.sb-ds-volume-copy b {
+  display: block;
+  font: 700 12.5px/1.2 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-ds-volume-copy span {
+  display: block;
+  margin-top: 2px;
+  font: 600 11px/1 Figtree, sans-serif;
+  color: var(--sb-mut);
+}
+
+.sb-ds-volume-row > .n {
+  font: 700 12.5px/1 Figtree, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--sb-tx);
+}
+
+.sb-ds-tier {
+  margin-top: 12px;
+  font: 700 10px/1 Figtree, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--sb-mut);
+}
+
+.sb-ds-rules {
+  margin-top: 8px;
+}
+
+.sb-ds-rule {
+  display: flex;
+  gap: 8px;
+  padding: 6px 0;
+  font: 500 11.5px/1.45 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-ds-rule-num {
+  flex: 0 0 auto;
+  font: 700 11px/1 Figtree, sans-serif;
+  color: var(--sb-acc);
+}
+
+.sb-ds-why {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--sb-card);
+}
+
+.sb-ds-why b {
+  display: block;
+  font: 700 12px/1.2 Figtree, sans-serif;
+  color: var(--sb-accTx);
+}
+
+.sb-ds-why p {
+  margin: 6px 0 0;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: var(--sb-mut);
 }
 
 /* E1 · таблица ввода — пилюли и контрактные слои */

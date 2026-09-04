@@ -1205,6 +1205,27 @@
     return n;
   }
 
+  const STANDARD_PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
+  const DEFAULT_BARBELL_KG = 20;
+
+  function barbellPlateLayout(totalKg, barKg) {
+    const bar = barKg > 0 ? barKg : DEFAULT_BARBELL_KG;
+    const total = parseFloat(String(totalKg == null ? '' : totalKg).replace(',', '.'));
+    if (!isFinite(total) || total <= bar) return null;
+    let perSide = Math.round(((total - bar) / 2) * 100) / 100;
+    if (perSide < 0) return null;
+    const plates = [];
+    for (let pi = 0; pi < STANDARD_PLATES_KG.length; pi++) {
+      const plate = STANDARD_PLATES_KG[pi];
+      while (perSide >= plate - 0.001) {
+        plates.push(plate);
+        perSide = Math.round((perSide - plate) * 100) / 100;
+      }
+    }
+    if (perSide > 0.01) return null;
+    return { barKg: bar, perSide: plates, totalKg: total };
+  }
+
   TK.strength = {
     __registered: true,
     isStrengthBuilder: isStrengthBuilder,
@@ -1237,6 +1258,8 @@
     hasDoneApproach: hasDoneApproach,
     applyPlanEdit: applyPlanEdit,
     acceptPlanProposal: acceptPlanProposal,
+    barbellPlateLayout: barbellPlateLayout,
+    DEFAULT_BARBELL_KG: DEFAULT_BARBELL_KG,
     declinePlanProposal: declinePlanProposal,
     expirePlanProposal: expirePlanProposal,
     pendingPlanProposal: pendingPlanProposal,

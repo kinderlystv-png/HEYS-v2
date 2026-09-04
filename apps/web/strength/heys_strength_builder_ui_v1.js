@@ -179,6 +179,8 @@
     const [openIdx, setOpenIdx] = React.useState(0);
     const [view, setView] = React.useState('list');
     const [warmupDropIdx, setWarmupDropIdx] = React.useState(-1);
+    const [approachTypesIdx, setApproachTypesIdx] = React.useState(-1);
+    const [dropSetCtx, setDropSetCtx] = React.useState(null);
     const [draftName, setDraftName] = React.useState('');
     const [linkFrom, setLinkFrom] = React.useState(0);
     const [sheetOpen, setSheetOpen] = React.useState(false);
@@ -576,9 +578,6 @@
     }
 
     function addDrop(exIdx) {
-      // Защита держится у writer, а не только у SupersetBlock: скрытая кнопка
-      // не должна быть единственной причиной, почему группа сохраняет равные
-      // раунды при программном/устаревшем вызове.
       if (groupByIndex[exIdx]) return;
       const next = exercises.slice();
       const ex = Object.assign({}, next[exIdx]);
@@ -588,16 +587,40 @@
         if (SK && !SK.isWarmupApproach(aps[i])) { target = i; break; }
       }
       if (target < 0) return;
+      addDropAt(exIdx, target, next, ex, aps);
+    }
+
+    function addDropAt(exIdx, apIdx, nextIn, exIn, apsIn) {
+      if (groupByIndex[exIdx]) return;
+      const next = nextIn || exercises.slice();
+      const ex = exIn || Object.assign({}, next[exIdx]);
+      const aps = apsIn || (ex.approaches || []).slice();
+      const target = apIdx;
+      if (target < 0 || !aps[target]) return;
       const a = Object.assign({}, aps[target]);
       const stages = SK ? SK.approachStages(a) : [];
       const lastW = parseFloat(String(stages[stages.length - 1].weightKg || '').replace(',', '.'));
       if (!isFinite(lastW) || lastW <= 0) return;
       const drops = (a.drops || []).slice();
       if (drops.length >= (SK ? SK.MAX_APPROACH_STAGES - 1 : 2)) return;
-      // Подставляем −20% и даём поправить: вес только вниз.
       drops.push({ weightKg: String(Math.round(lastW * 0.8)), reps: a.reps || 0, done: false });
       a.drops = drops;
       aps[target] = a;
+      ex.approaches = aps;
+      next[exIdx] = ex;
+      patchExercises(next);
+    }
+
+    function applyWeightRemaining(exIdx, weightKg) {
+      const next = exercises.slice();
+      const ex = Object.assign({}, next[exIdx]);
+      const aps = (ex.approaches || []).slice();
+      const w = String(weightKg);
+      for (let i = 0; i < aps.length; i++) {
+        if (SK && SK.isWarmupApproach(aps[i])) continue;
+        if (SK && SK.isApproachDone(aps[i])) continue;
+        aps[i] = Object.assign({}, aps[i], { weightKg: w });
+      }
       ex.approaches = aps;
       next[exIdx] = ex;
       patchExercises(next);
@@ -766,6 +789,54 @@
         onToggleType: function (apIdx) { toggleType(warmupDropIdx, apIdx, { skipRenumber: true }); },
         onAddDrop: function () { addDrop(warmupDropIdx); },
         onAddApproach: function () { addApproach(warmupDropIdx); },
+        readOnly: false
+      });
+    }
+    if (view === 'approach-types' && approachTypesIdx >= 0 && exercises[approachTypesIdx]) {
+      const atEx = exercises[approachTypesIdx];
+      return h((HEYS.StrengthBuilderParts || {}).ApproachTypesScreen, {
+        ex: atEx,
+        index: approachTypesIdx,
+        bodyWeightKg: profile && profile.weight,
+        onBack: function () { setView('list'); },
+        onClose: onClose,
+        onOpenSheet: function () { setSheetOpen(true); },
+        onPatchApproach: function (apIdx, patch) { patchApproach(approachTypesIdx, apIdx, patch); },
+        onToggleType: function (apIdx) { toggleType(approachTypesIdx, apIdx, { skipRenumber: true }); },
+        onAddDrop: function () { addDrop(approachTypesIdx); },
+        onAddApproach: function () { addApproach(approachTypesIdx); },
+        onApplyWeight: function (w) { applyWeightRemaining(approachTypesIdx, w); },
+        onOpenDropSet: function () {
+          const aps = (exercises[approachTypesIdx].approaches || []);
+          let targetAp = -1;
+          for (let i = aps.length - 1; i >= 0; i--) {
+            if (SK && SK.isWarmupApproach(aps[i])) continue;
+            if ((SK.approachStages(aps[i]) || []).length > 1) { targetAp = i; break; }
+          }
+          if (targetAp < 0) {
+            for (let i = aps.length - 1; i >= 0; i--) {
+              if (SK && !SK.isWarmupApproach(aps[i])) { targetAp = i; break; }
+            }
+          }
+          if (targetAp >= 0) {
+            setDropSetCtx({ exIdx: approachTypesIdx, apIdx: targetAp });
+            setView('drop-set');
+          }
+        },
+        readOnly: false
+      });
+    }
+    if (view === 'drop-set' && dropSetCtx && exercises[dropSetCtx.exIdx]) {
+      const dsEx = exercises[dropSetCtx.exIdx];
+      return h((HEYS.StrengthBuilderParts || {}).DropSetScreen, {
+        ex: dsEx,
+        apIdx: dropSetCtx.apIdx,
+        bodyWeightKg: profile && profile.weight,
+        onBack: function () { setView('approach-types'); },
+        onClose: onClose,
+        onOpenSheet: function () { setSheetOpen(true); },
+        onPatchApproach: function (apIdx, patch) { patchApproach(dropSetCtx.exIdx, apIdx, patch); },
+        onAddDrop: function () { addDropAt(dropSetCtx.exIdx, dropSetCtx.apIdx); },
         readOnly: false
       });
     }
@@ -1201,7 +1272,8 @@
             go: setView,
             setLinkFrom: setLinkFrom,
             setHistoryName: setHistoryName,
-            setWarmupDropIdx: setWarmupDropIdx
+            setWarmupDropIdx: setWarmupDropIdx,
+            setApproachTypesIdx: setApproachTypesIdx
           }).map(function (row, i) {
             return h('button', {
               key: i,
