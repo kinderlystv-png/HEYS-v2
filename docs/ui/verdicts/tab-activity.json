@@ -149,9 +149,11 @@
       "h": "637770cc1a56"
     },
     "вид · календарь зарядки": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: tab-activity.v4.dc.html «вид · календарь зарядки» 31.08 — «Сегодня» обводкой 1,5 px; 731-ui-v4-activity.css:689-691 inset box-shadow. Прежний ≠ про конфликт заливки 16 % с ответом №23 не подтверждён",
-      "h": "6bd1b47f2c4d"
+      "v": "≠",
+      "f": "Решение 31.08 по форме сведено: «Сегодня» — background transparent + inset box-shadow 1.5px (731-ui-v4-activity.css:689-691), не заливка; «не вели» — var(--v4-ink-30) (746-748). Сетка 7×9, чипы, легенда, листание — .ma-habit-cal--activity-v4 + heys_morning_activation_calendar_v1.js. Остаток: контракт называет обводку --acs, продукт --v4-ink-30; легенда 55 % (--v4-ink-2) вместо 50 %; календарь вторым слоем .activity-v4-history__cal; подпись «режим «Месяц»» не рисуется",
+      "h": "6bd1b47f2c4d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
     },
     "вид · карточка силовой": {
       "v": "≠",
@@ -359,8 +361,8 @@
       "h": "c48d2a7a1f12"
     },
     "Актив · день собран · 28": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: tab-activity.v4.dc.html ·28 — rgba(var(--ink),.56); 731-ui-v4-activity.css:458 var(--v4-ink-data). Прежний ≠ «45 % вместо 42 %» не найден",
+      "v": "=",
+      "f": ".activity-v4-steps__hint — 500 11px/1 Figtree, var(--v4-ink-data) 56 % (731-ui-v4-activity.css:450-458); heys_day_activity_v1.js:1176-1179 «факт — ползунком, цель — тапом». Контракт ·28 и пакет 3 сентября совпали на 56 % — прежний спор 42/45 % снят",
       "h": "c00ed986ed9a"
     },
     "Актив · день собран · 29": {
