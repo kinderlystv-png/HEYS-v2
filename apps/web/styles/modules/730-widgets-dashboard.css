@@ -61,7 +61,7 @@
   /* Apple Cyan */
 
   /* Градиенты для акцентов */
-  --widget-gradient-orange: linear-gradient(135deg, var(--v4-wgt-amber, #d99a63) 0%, var(--v4-wgt-orange, #c67139) 100%);
+  --widget-gradient-orange: linear-gradient(135deg, var(--v4-wgt-amber) 0%, var(--v4-wgt-orange) 100%); /* v4-intentional */
   --widget-gradient-purple: linear-gradient(135deg, #AF52DE 0%, #8944AB 100%);
   --widget-gradient-green: linear-gradient(135deg, #30D158 0%, #28A745 100%);
   --widget-gradient-blue: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
@@ -1615,8 +1615,8 @@ body:has(.page-reports) .hdr::after {
 
 /* Макросы 🥗 — Premium bar design */
 .widget--macros {
-  --widget-accent: color-mix(in srgb, var(--v4-tint-warm, #ff9500) 14%, transparent);
-  --widget-accent-strong: color-mix(in srgb, var(--v4-tint-warm, #ff9500) 28%, transparent);
+  --widget-accent: color-mix(in srgb, var(--v4-tint-warm) 14%, transparent); /* v4-intentional */
+  --widget-accent-strong: color-mix(in srgb, var(--v4-tint-warm) 28%, transparent); /* v4-intentional */
 }
 
 /* Каскад ⚡ — compact dots + CRS badge */

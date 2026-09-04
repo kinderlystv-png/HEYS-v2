@@ -1,0 +1,191 @@
+{
+  "processed": 23,
+  "converted": 6,
+  "left": 17,
+  "items": [
+    {
+      "var": "--boot-fail-disc",
+      "file": "heys-boot-mark.css",
+      "value": "#35211c",
+      "zones": ["app-splash", "spinners", "registration"],
+      "action": "converted",
+      "detail": "blue-dark: var(--v4-tint, #33242a) — как sand-dark, spinners кадр fail"
+    },
+    {
+      "var": "--boot-fail-stroke",
+      "file": "heys-boot-mark.css",
+      "value": "#d97b62",
+      "zones": ["app-splash", "spinners", "registration"],
+      "action": "converted",
+      "detail": "blue-dark: var(--v4-warn-2, #d05868)"
+    },
+    {
+      "var": "--widget-gradient-orange",
+      "file": "730-widgets-dashboard.css",
+      "value": "#FF9500",
+      "zones": ["home-widgets", "water-add"],
+      "action": "converted",
+      "detail": "linear-gradient(var(--v4-wgt-amber), var(--v4-wgt-orange)) v4-intentional"
+    },
+    {
+      "var": "--widget-gradient-orange",
+      "file": "730-widgets-dashboard.css",
+      "value": "#FF6B00",
+      "zones": ["home-widgets", "water-add"],
+      "action": "converted",
+      "detail": "см. предыдущую строку — оба стопа градиента"
+    },
+    {
+      "var": "--widget-accent",
+      "file": "730-widgets-dashboard.css",
+      "value": "rgba(255, 159, 10, 0.14)",
+      "zones": ["home-widgets"],
+      "action": "converted",
+      "detail": ".widget--macros: color-mix(in srgb, var(--v4-tint-warm) 14%, transparent) v4-intentional"
+    },
+    {
+      "var": "--widget-accent-strong",
+      "file": "730-widgets-dashboard.css",
+      "value": "rgba(255, 159, 10, 0.28)",
+      "zones": ["home-widgets"],
+      "action": "converted",
+      "detail": ".widget--macros: color-mix 28% v4-tint-warm v4-intentional"
+    },
+    {
+      "var": "--nut-dim",
+      "file": "732-ui-v4-nutrition.css",
+      "value": "#6b5f4f",
+      "zones": ["nutrition-tab"],
+      "action": "left",
+      "detail": "контракт canvas --dim / вторичный тон; тест nutrition-v4-structure исключает --nut-dim из bare purge"
+    },
+    {
+      "var": "--nut-dim-icon",
+      "file": "732-ui-v4-nutrition.css",
+      "value": "#7a6b58",
+      "zones": ["nutrition-tab"],
+      "action": "left",
+      "detail": "контракт canvas --dimIco; нет v4-роли с этим значением"
+    },
+    {
+      "var": "--water-dim-text",
+      "file": "730-widgets-dashboard.css",
+      "value": "#6b5f4f",
+      "zones": ["water-add"],
+      "action": "left",
+      "detail": "контракт water-add --dimTxt; четыре палитры в блоке .widget-water--v4"
+    },
+    {
+      "var": "--wr-dim",
+      "file": "400-water-and-hydration.css",
+      "value": "#6b5f4f",
+      "zones": ["water-add", "nutrition-tab"],
+      "action": "left",
+      "detail": "контракт вторичного тона карточки воды; пара --water-dim-text"
+    },
+    {
+      "var": "--activity-bg",
+      "file": "200-dark-and-effects.css",
+      "value": "#3d3520",
+      "zones": [],
+      "action": "left",
+      "detail": "200-dark semantic token; зоны нет — файл не перекрашивается"
+    },
+    {
+      "var": "--activity-border",
+      "file": "200-dark-and-effects.css",
+      "value": "#d4a76a",
+      "zones": [],
+      "action": "left",
+      "detail": "200-dark semantic token; зоны нет"
+    },
+    {
+      "var": "--goal-map-warning",
+      "file": "906-planning-goal-map.css",
+      "value": "#8a4b08",
+      "zones": [],
+      "action": "left",
+      "detail": "planning без кадровой зоны вердиктов"
+    },
+    {
+      "var": "--goal-map-warning",
+      "file": "906-planning-goal-map.css",
+      "value": "#ffd19a",
+      "zones": [],
+      "action": "left",
+      "detail": "planning dark; зоны нет"
+    },
+    {
+      "var": "--reader-marker-bg",
+      "file": "907-planning-reading.css",
+      "value": "#f6d977",
+      "zones": [],
+      "action": "left",
+      "detail": "reading reader; зоны вердиктов нет"
+    },
+    {
+      "var": "--reader-marker-bg",
+      "file": "907-planning-reading.css",
+      "value": "#e2c260",
+      "zones": [],
+      "action": "left",
+      "detail": "reading dark marker"
+    },
+    {
+      "var": "--reader-caution",
+      "file": "907-planning-reading.css",
+      "value": "#3a3023",
+      "zones": [],
+      "action": "left",
+      "detail": "reading dark caution block"
+    },
+    {
+      "var": "--fingers-muted",
+      "file": "fingers.css",
+      "value": "rgba(120, 100, 90, 0.18)",
+      "zones": [],
+      "action": "left",
+      "detail": "fingers frozen до релиза — не трогать"
+    },
+    {
+      "var": "--fingers-muted",
+      "file": "fingers.css",
+      "value": "rgba(150, 140, 130, 0.25)",
+      "zones": [],
+      "action": "left",
+      "detail": "fingers frozen dark theme C"
+    },
+    {
+      "var": "--fingers-text",
+      "file": "fingers.css",
+      "value": "#1c1b19",
+      "zones": [],
+      "action": "left",
+      "detail": "fingers frozen"
+    },
+    {
+      "var": "--fingers-muted-text",
+      "file": "fingers.css",
+      "value": "rgba(28, 27, 25, 0.6)",
+      "zones": [],
+      "action": "left",
+      "detail": "fingers frozen"
+    },
+    {
+      "var": "--fingers-card-border",
+      "file": "fingers.css",
+      "value": "rgba(28, 27, 25, 0.08)",
+      "zones": [],
+      "action": "left",
+      "detail": "fingers frozen"
+    },
+    {
+      "var": "--fingers-bg",
+      "file": "fingers.css",
+      "value": "#1c1a18",
+      "zones": [],
+      "action": "left",
+      "detail": "fingers frozen"
+    }
+  ]
+}
