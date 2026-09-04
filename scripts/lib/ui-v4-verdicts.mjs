@@ -93,7 +93,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 04.09: 683eb9da7 закрыл 60 «?» — часть сведена в «=», часть в «—» без
     // naKind. Долг вырос относительно пониженной базы 03.09: ≠ 25 → 32,
     // «—» 38 → 54.
-    mismatch: [32, '40b8936495276938'],
+    mismatch: [31, 'b27b28754bea5e3d'],
     notApplicable: [54, '5864600e16443fce'],
   }),
   'home-widgets': Object.freeze({
