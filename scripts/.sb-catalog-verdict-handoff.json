@@ -1,0 +1,172 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_catalog_ui_v1.js (CatalogScreen · Б2)",
+  "generated": "2026-09-04",
+  "agent": "catalog subagent",
+  "summary": {
+    "block": "Б2 «Конструктор · каталог» + связные строки контракта",
+    "contractLines": 29,
+    "recommendEquals": 26,
+    "recommendNotEquals": 2,
+    "recommendDash": 0,
+    "recommendQuestion": 1,
+    "codeChanged": true,
+    "codeChange": "CATALOG_V4_BRIDGE на корне CatalogScreen: --c2/--acs/--ac → v4-роли; --sb-soft → --v4-hero для пилюль и карточки создания"
+  },
+  "rows": [
+    {
+      "contractLine": "каталог",
+      "verdict": "≠",
+      "f": "Поведение =: поиск, фильтр мышц (.sb-chip is-on), прошлый результат в sub (heys_strength_catalog_ui_v1.js:78–89, 164–167), строка создания showCreateRow (:100–101, 177–187), «+» .sb-cat-add (:168–173). Формат прошлого: контракт пишет «60 кг × 8», кадр «Конструктор · каталог · текст» и строка 17 — «60 × 8» без кг; код и strength-builder-ui.test.js:512 следуют текстовому блоку. Расхождение только в общей строке «каталог»."
+    },
+    {
+      "contractLine": "избранное — звезда и фильтр",
+      "verdict": "=",
+      "f": "★ в строке .sb-star/.is-on (:152–163) + фильтр «★» group==='fav' (:129–134); отдельного экрана избранного нет. HEYS.toggleExerciseFavorite."
+    },
+    {
+      "contractLine": "вид · каталог упражнений",
+      "verdict": "=",
+      "f": "Разметка и классы: ‹ .sb-icon-btn, .sb-search с ⌕, .sb-chips, .sb-cat-row/.sb-cat-create, сноска .sb-catalog-note. Цвета — CATALOG_V4_BRIDGE (:37–55) + 750-strength-builder.css:4722–4962 (вне scope правки); v4-роли на корне, не голые литералы в JS."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 01",
+      "verdict": "=",
+      "f": ".sb-head в CatalogScreen heys_strength_catalog_ui_v1.js:125–133; CSS .sb-catalog-screen .sb-head :4738–4744."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 02",
+      "verdict": "=",
+      "f": "Кнопка ‹ .sb-icon-btn 36×36 radius 999 — heys_strength_catalog_ui_v1.js:127–129; CSS :4746–4755 color rgba(var(--v4-ink-rgb),.5)."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 03",
+      "verdict": "=",
+      "f": ".sb-head-title flex column gap 3px padding-left 10px — JS :130–132; CSS :4757–4764."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 04",
+      "verdict": "=",
+      "f": "Текст «Каталог упражнений» — heys_strength_catalog_ui_v1.js:131 b."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 05",
+      "verdict": "=",
+      "f": "Подзаголовок groupLabel + exerciseCountLabel — :109, 73–76, 132 .sb-head-sub; формат «Спина · 4 упражнения»."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 06",
+      "verdict": "=",
+      "f": ".sb-catalog-scroll overflow-y auto — :135; CSS :4777–4783."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 07",
+      "verdict": "=",
+      "f": ".sb-search min-height 44 radius 14 padding 0 14 margin-top 12 — :136–144; CSS :4785–4797 фон --sb-card/--v4-c1."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 08",
+      "verdict": "=",
+      "f": "⌕ span aria-hidden — :137; CSS .sb-search>span :4799–4802 ink 38%."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 09",
+      "verdict": "=",
+      "f": "placeholder «Поиск по названию» input search — :138–144; CSS placeholder :4817–4820."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 10",
+      "verdict": "=",
+      "f": ".sb-chips flex wrap gap 6 margin-top 10 — :146–165; CSS :4822–4830."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 11",
+      "verdict": "=",
+      "f": "Неактивная пилюля «Все» — .sb-chip без is-on; после bridge --sb-soft=var(--v4-hero) ≈ --c2 контракта; CSS :4832–4843 ink 62%."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 12",
+      "verdict": "=",
+      "f": "Выбранная пилюля .sb-chip.is-on — :149–151; CSS :4845–4848 background var(--v4-act) color var(--v4-btn-on-act) ≈ --acs/--on-acs."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 13",
+      "verdict": "=",
+      "f": ".sb-cat-list margin-top 12 — :168; CSS :4860–4865."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 14",
+      "verdict": "=",
+      "f": "Строка .sb-cat-row — :174–197."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 15",
+      "verdict": "=",
+      "f": "Избранная ★ .sb-star.is-on color --sb-acc/--v4-act-text — :175–176; CSS :4896–4898."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 16",
+      "verdict": "=",
+      "f": "Имя упражнения .sb-cat-title b — :187–188; CSS :4908–4911 color --sb-tx."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 17",
+      "verdict": "=",
+      "f": "sub «Группа · прошлый раз W × R» — previousResult :78–89, 171; CSS span :4913–4916 11px ink 56%."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 18",
+      "verdict": "=",
+      "f": "Кнопка + .sb-cat-add 44×44 radius 12 — :191–195; CSS :4918–4932 border inset 1.5px --v4-act."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 19",
+      "verdict": "=",
+      "f": "Пустая ★ .sb-star без is-on — :175; CSS :4883–4894 ink 18%."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 20",
+      "verdict": "=",
+      "f": "Разделитель: .sb-cat-row box-shadow inset bottom, :last-child none — CSS :4876–4881."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 21",
+      "verdict": "=",
+      "f": "Карточка создания .sb-cat-create margin-top 10; фон --sb-soft=--v4-hero после bridge ≈ --c2 — :199–209; CSS :4934–4947."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 22",
+      "verdict": "=",
+      "f": "flex align center gap 12 в .sb-cat-create — CSS :4934–4937."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 23",
+      "verdict": "=",
+      "f": ".sb-cat-title column gap 3px в create — :206–208."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 24",
+      "verdict": "=",
+      "f": "«Создать «…»» b + подпись «каталог подсказывает…» — :207–208; CSS b :4949–4952 ac tone."
+    },
+    {
+      "contractLine": "Конструктор · каталог · 25",
+      "verdict": "=",
+      "f": "Сноска .sb-catalog-note — :211–212; текст совпадает с кадром Б2 data-demo stop."
+    },
+    {
+      "contractLine": "Конструктор · каталог · текст",
+      "verdict": "=",
+      "f": "Копия экрана: заголовок, ключ, placeholder, чипы (Все/группы/Ноги), строки с прошлым результатом и «ещё не делали», create row — strength-builder-ui.test.js describe «каталог конструктора по Canvas Б2» зелёный."
+    }
+  ],
+  "outOfScope": {
+    "note": "Геометрия CSS в 750-strength-builder.css не правилась (запрет scope). NewExerciseScreen, SupersetScreen, OrderScreen — другие кадры. strength-builder.json и Л2/Л3/Л10–Л12 — владелец зоны.",
+    "cssOwner": "750-strength-builder.css:4720–4962",
+    "tests": [
+      "apps/web/__tests__/strength-builder-ui.test.js — «каталог конструктора по Canvas Б2»",
+      "apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js",
+      "apps/web/__tests__/strength-builder-order-v4-canvas-contract.test.js"
+    ]
+  }
+}

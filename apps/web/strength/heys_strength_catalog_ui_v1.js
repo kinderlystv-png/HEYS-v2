@@ -34,6 +34,27 @@
     return n + ' ' + word;
   }
 
+  /** Canvas Б2 · мост канвас-ролей (--c2, --acs…) на v4 без правки CSS-модуля. */
+  var CATALOG_V4_BRIDGE = {
+    '--c1': 'var(--v4-c1, #f7efe2)',
+    '--c2': 'var(--v4-hero, #efe3cf)',
+    '--bg': 'var(--v4-bg, #fffaf3)',
+    '--tx': 'var(--v4-ink, #201e1d)',
+    '--ac': 'var(--v4-act-text, #8a4a20)',
+    '--acs': 'var(--v4-act, #c67139)',
+    '--on-acs': 'var(--v4-btn-on-act, #2b1608)',
+    '--ink': 'var(--v4-ink-rgb, 32, 30, 29)',
+    '--sb-card': 'var(--v4-c1, #f7efe2)',
+    '--sb-bg': 'var(--v4-bg, #fffaf3)',
+    '--sb-tx': 'var(--v4-ink, #201e1d)',
+    '--sb-mut': 'var(--v4-ink-data, rgba(32, 30, 29, 0.56))',
+    '--sb-soft': 'var(--v4-hero, #efe3cf)',
+    '--sb-acc': 'var(--v4-act-text, #8a4a20)',
+    '--sb-acc-strong': 'var(--v4-act, #c67139)',
+    '--sb-accbg': 'var(--v4-accent-bg, #f6e6dd)',
+    '--sb-accTx': 'var(--v4-act-text, #8a4a20)'
+  };
+
   /** Каталог с фильтром по группе и поиском (экран 03). */
   function CatalogScreen(props) {
     const { onPick, onCreate, onBack, historyFor } = props;
@@ -99,7 +120,10 @@
     });
     const showCreateRow = !!trimmedQuery && !catalogHasExact;
 
-    return h('div', { className: 'sb-root sb-screen sb-catalog-screen' },
+    return h('div', {
+      className: 'sb-root sb-screen sb-catalog-screen',
+      style: CATALOG_V4_BRIDGE
+    },
       h('div', { className: 'sb-head' },
         h('button', {
           type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
