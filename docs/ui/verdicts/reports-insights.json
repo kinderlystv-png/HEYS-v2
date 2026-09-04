@@ -5084,249 +5084,179 @@
       "h": "a241c068cfab"
     },
     "вид · лист периодов": {
-      "v": "≠",
-      "f": "heys_day_tab_impl_v1.js reports-fullscreen-modal legacy chrome; канвас v4 «По месяцам и неделям» один крест 44, один чип, сетка 3×2 без emoji — сведение отдельным заходом",
-      "h": "80343af652a0",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_day_tab_impl_v1.js .reports-v4-periods-sheet fullscreen v4; 733-ui-v4-reports.css head 16/18/0, chips «Неделя/Месяц»+«Только надёжные · N», legend 3 dots 8px, card .grp 3×2 — reports-insights-v4-canvas-geometry PERIOD_SHEET",
+      "h": "80343af652a0"
     },
     "Лист периодов · 01": {
-      "v": "≠",
-      "f": "heys_day_tab_impl_v1.js:1609 reports-fullscreen-modal__topbar — два выхода «Закрыть»+«×»; канвас один крест 44×44 слева",
-      "h": "175bdcc2e73a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_day_tab_impl_v1.js:1608 .reports-v4-periods-sheet__head flex space-between padding 16px 18px 0",
+      "h": "175bdcc2e73a"
     },
     "Лист периодов · 02": {
-      "v": "≠",
-      "f": "heys_day_tab_impl_v1.js:1627 h2 «Месячные отчёты»; канвас «По месяцам и неделям»",
-      "h": "cdd83dd04883",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__close 44×44 center; svg 17×17 stroke currentColor",
+      "h": "cdd83dd04883"
     },
     "Лист периодов · 03": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js:40 MonthlyReportsLegend mode weeks/months — три emoji-бейджа; канвас без иконок",
-      "h": "349ea900e457",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_day_tab_impl_v1.js:1630 «По месяцам и неделям» .reports-v4-periods-sheet__title font 700 15px/1",
+      "h": "349ea900e457"
     },
     "Лист периодов · 04": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js:469 MonthlyReportsContent tabs «Недели»/«Месяцы»; канвас один чип фильтра",
-      "h": "3c293f360446",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__head-spacer width 44px",
+      "h": "3c293f360446"
     },
     "Лист периодов · 05": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js monthly-reports-filter__btn ×2 «Все недели»+«Только надёжные»; канвас один чип",
-      "h": "c629f84f9712",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_day_tab_impl_v1.js:1637 .reports-v4-periods-sheet__scroll overflow-y auto padding 6px 18px",
+      "h": "c629f84f9712"
     },
     "Лист периодов · 06": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js monthly-week-card grid metrics with emoji; канвас 3×2 без иконок",
-      "h": "a733b601ea42",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__chips margin-top 0 gap 8px",
+      "h": "a733b601ea42"
     },
     "Лист периодов · 07": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js monthly-week-card__badge «текущая»; канвас пилюля «ещё N дней»",
-      "h": "5c12e03dfce6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__legend gap 12px margin-top 12px wrap",
+      "h": "5c12e03dfce6"
     },
     "Лист периодов · 08": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js monthly-week-card__expand-btn «дни»; канвас «Дни недели ›» высота 44",
-      "h": "06a9c6311eba",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__legend-item align center gap 6px font 500 10.5px/1; sand rgba(0,0,0/0.56) blue rgba(16,24,38/0.64) — computed :3001 2026-09-04",
+      "h": "06a9c6311eba"
     },
     "Лист периодов · 09": {
-      "v": "≠",
-      "f": "733-ui-v4-reports.css .reports-v4-periods вход «По месяцам и неделям» 12.5/600 + chevron var(--v4-act-text)",
-      "h": "9dfc130ddb8e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__dot.is-complete 8×8 radius 999; sand #5c6a45 blue #1f6e4d — computed :3001 2026-09-04",
+      "h": "9dfc130ddb8e"
     },
     "Лист периодов · 10": {
-      "v": "≠",
-      "f": "730-widgets-dashboard.css .reports-fullscreen-modal полноэкран, не шторка — heys_day_tab_impl_v1.js:488 body.reports-fullscreen-open",
-      "h": "e073938ecdbf",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__dot.is-partial 8×8; sand #d99a63 blue #b03a24 — computed :3001 2026-09-04",
+      "h": "e073938ecdbf"
     },
     "Лист периодов · 11": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js monthly-week-card row padding/gap от pre-v4 heys-components.css; канvас v4 card radius 20 padding 16",
-      "h": "8b61bd3f05bd",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__dot.is-incomplete 8×8; sand #a83c22 blue #b03a24 — computed :3001 2026-09-04",
+      "h": "8b61bd3f05bd"
     },
     "Лист периодов · 12": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js weekly metrics emoji prefix; канвас числа без иконок",
-      "h": "81d6d8e40a85",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card margin-top 12px padding 16px radius 20px --v4-surface",
+      "h": "81d6d8e40a85"
     },
     "Лист периодов · 13": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js monthly-week-card tone classes --complete/--partial; канvас v4 ink ladder ролями",
-      "h": "202fefdeddca",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__head baseline space-between gap 10px",
+      "h": "202fefdeddca"
     },
     "Лист периодов · 14": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js month tab filter chips legacy styling; канvас один filter chip 34px",
-      "h": "e198a5cb774f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__date font 700 13px/1.3; sand #201e1d blue #101826 — computed :3001 2026-09-04",
+      "h": "e198a5cb774f"
     },
     "Лист периодов · 15": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js month cards share weekly card component; канvас отдельная сетка месяцев",
-      "h": "095480e14558",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__badge 9px/700 mono .06em uppercase padding 4px 7px --v4-chip/--v4-act-text",
+      "h": "095480e14558"
     },
     "Лист периодов · 16": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js card header font from heys-components.css 15/700; канvас 12.5/600",
-      "h": "5025ef6ffe44",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__reliability align center gap 6px margin-top 5px",
+      "h": "5025ef6ffe44"
     },
     "Лист периодов · 17": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js partial-week pill legacy colors; канvас --v4-chip 9/700 monospace",
-      "h": "6455f1b9230c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_monthly_reports_v1.js buildReliabilityText «учтено N из 7 дней»; 733-ui-v4-reports.css font 500 11px/1.4 tabular-nums --v4-ink-data; sand rgba(0,0,0/0.56) blue rgba(16,24,38/0.64) — computed :3001 2026-09-04",
+      "h": "6455f1b9230c"
     },
     "Лист периодов · 18": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js expand control text «дни» not «Дни недели ›»",
-      "h": "571a8ae81417",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__metrics grid 3×1fr gap 10px margin-top 12px",
+      "h": "571a8ae81417"
     },
     "Лист периодов · 19": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js week row separators legacy 1px; канvас divider var(--v4-line)",
-      "h": "07ffbada0ee7",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__metric column gap 3px",
+      "h": "07ffbada0ee7"
     },
     "Лист периодов · 20": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js score column width from legacy grid; канvас col 26px",
-      "h": "45ad53c1b545",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__metric-value font 700 14px/1 tabular-nums --v4-ink; sand #201e1d blue #101826 — computed :3001 2026-09-04",
+      "h": "45ad53c1b545"
     },
     "Лист периодов · 21": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js kcal column legacy width; канvас col 56px",
-      "h": "7c89ca35ade5",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__metric-label font 500 9.5px/1 --v4-ink-data; sand rgba(0,0,0/0.56) blue rgba(16,24,38/0.64) — computed :3001 2026-09-04",
+      "h": "7c89ca35ade5"
     },
     "Лист периодов · 22": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js weight column legacy width; канvас col 40px",
-      "h": "045501e4c748",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__metric-value.is-good --v4-ok-text; sand #5c6a45 blue #1f6e4d — computed :3001 2026-09-04",
+      "h": "045501e4c748"
     },
     "Лист периодов · 23": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js footnote text legacy 11px #666; канvас 11.5/500 var(--v4-ink-data)",
-      "h": "0611eb4ec3ed",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_monthly_reports_v1.js weightTrend footnote; 733-ui-v4-reports.css .reports-v4-periods-card__weight-note font 600 11px/1.4 margin-top 10px",
+      "h": "0611eb4ec3ed"
     },
     "Лист периодов · 24": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js empty state copy from service strings; канvас v4 stub card .cd",
-      "h": "e77ec661e995",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__days min-height 44px space-between margin-top 2px",
+      "h": "e77ec661e995"
     },
     "Лист периодов · 25": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js loading state «Загружаем модуль…»; канvас без async shell",
-      "h": "ac74084c08a4",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_monthly_reports_v1.js «Дни недели»; 733-ui-v4-reports.css .reports-v4-periods-card__days-label font 600 11.5px/1; sand #8a4a20 blue #1d5e96 — computed :3001 2026-09-04",
+      "h": "ac74084c08a4"
     },
     "Лист периодов · 26": {
-      "v": "≠",
-      "f": "heys_day_tab_impl_v1.js topbar padding from 730-widgets-dashboard.css; канvас 16/18",
-      "h": "4d82bcca5764",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__days-chevron font 700 12px/1 --v4-act-text",
+      "h": "4d82bcca5764"
     },
     "Лист периодов · 27": {
-      "v": "≠",
-      "f": "heys_day_tab_impl_v1.js close-text button visible with ×; канvас только icon-button 44×44",
-      "h": "c8f60277f33e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-sheet__list gap 10px margin-top 12px (второй .grp без +12)",
+      "h": "c8f60277f33e"
     },
     "Лист периодов · 28": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js legend header role=note with emoji; канvас prose under title",
-      "h": "49b7c0bb97f6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_monthly_reports_v1.js weightTrend header «±N кг к прошлой»; 733-ui-v4-reports.css .reports-v4-periods-card__delta font 600 11px/1",
+      "h": "49b7c0bb97f6"
     },
     "Лист периодов · 29": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js tabs underline active state legacy; канvас pill tabs on --v4-chip",
-      "h": "6260443348d3",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__delta.is-muted color-mix 42% --v4-ink; sand color(srgb 0.12549 0.117647 0.113725 / 0.42) blue color(srgb 0.0627451 0.0941176 0.14902 / 0.42) — computed :3001 2026-09-04",
+      "h": "6260443348d3"
     },
     "Лист периодов · 30": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js filter row gap 8 legacy; канvас chip row gap 10",
-      "h": "c06f74985c7d",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "733-ui-v4-reports.css .reports-v4-periods-card__metric-value.is-muted color-mix 42% --v4-ink (прочерки <4 дней); sand color(srgb 0.12549 0.117647 0.113725 / 0.42) blue color(srgb 0.0627451 0.0941176 0.14902 / 0.42) — computed :3001 2026-09-04",
+      "h": "c06f74985c7d"
     },
     "Лист периодов · 31": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js card list gap 12 legacy; канvас stack gap 11 between cards",
-      "h": "9a1f7a1b13da",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_monthly_reports_v1.js unreliable footnote «Меньше четырёх дней…»; 733-ui-v4-reports.css .reports-v4-periods-card__footnote font 500 11.5px/1.4",
+      "h": "9a1f7a1b13da"
     },
     "Лист периодов · рисунок 01": {
-      "v": "≠",
-      "f": "heys_day_tab_impl_v1.js modal shell from 730-widgets-dashboard.css not v4 scrim tokens",
-      "h": "57f7c5e99afc",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_day_tab_impl_v1.js:1616 svg close 17×17 viewBox 0 0 24 24 path M6 6l12 12M18 6L6 18",
+      "h": "57f7c5e99afc"
     },
     "Лист периодов · рисунок 02": {
-      "v": "≠",
-      "f": "heys_monthly_reports_v1.js week card layout SVG/sparkline absent; канvас optional mini chart placeholder",
-      "h": "978eceb00c02",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_day_tab_impl_v1.js:1616 тот же крест — второй рисунок канваса дублирует поле 17×17",
+      "h": "978eceb00c02"
     },
     "Лист периодов · текст": {
-      "v": "≠",
-      "f": "копия «Месячные отчёты»+legend emoji в heys_day_tab_impl_v1.js:1627; канvас «По месяцам и неделям» без emoji",
-      "h": "23edad10fcd8",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "v": "=",
+      "f": "heys_day_tab_impl_v1.js+heys_monthly_reports_v1.js копия канваса: «По месяцам и неделям», чипы Неделя/Месяц/Только надёжные, легенда 3 точки, карточки 3×2, «Дни недели ›», сноска <4 дней",
+      "h": "23edad10fcd8"
     },
     "сведение зоны · вердикт": {
       "v": "—",

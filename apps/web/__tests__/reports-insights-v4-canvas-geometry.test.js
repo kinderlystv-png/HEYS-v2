@@ -107,6 +107,9 @@ const RAZBOR_EXCEPTIONS = new Map([
   ['Визуал v4 · Отчёты · 68|*', 'строка «формат · вес и его подпись»: 21 px/800'],
   ['Визуал v4 · Отчёты · 104|*', 'строка «карточка · призыв о замерах»: факт 12/1,55'],
   ['Визуал v4 · Отчёты · 105|*', 'та же строка: кнопка не на акценте, это напоминание'],
+  // Лист периодов: кадр просит чернила 42 %, ближайшая роль --v4-ink-4 даёт 38 %.
+  ['Лист периодов · 29|color', 'у набора нет тона 42 %, ближайший --v4-ink-4'],
+  ['Лист периодов · 30|color', 'то же'],
 ]);
 
 const MATRIX = [
@@ -405,6 +408,40 @@ const PERIOD_TABS = [
     ['color', 'minWidth', 'minHeight', 'align', 'justify', 'padding']],
 ];
 
+// Кадр «Лист периодов» — полноэкранный v4-лист «По месяцам и неделям».
+const PERIOD_SHEET = [
+  [2, '.reports-v4-periods-sheet__close', ['width', 'height', 'align']],
+  [4, '.reports-v4-periods-sheet__head-spacer', ['width']],
+  [7, '.reports-v4-periods-sheet__legend', ['gap', 'marginTop']],
+  [8, '.reports-v4-periods-sheet__legend-item', ['align', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [9, ['.reports-v4-periods-sheet__dot', '.reports-v4-periods-sheet__dot.is-complete'],
+    ['flex', 'width', 'height', 'radius']],
+  [10, ['.reports-v4-periods-sheet__dot', '.reports-v4-periods-sheet__dot.is-partial'],
+    ['flex', 'width', 'height', 'radius']],
+  [11, ['.reports-v4-periods-sheet__dot', '.reports-v4-periods-sheet__dot.is-incomplete'],
+    ['flex', 'width', 'height', 'radius']],
+  [12, '.reports-v4-periods-card', ['marginTop']],
+  [13, '.reports-v4-periods-card__head', ['align', 'justify', 'gap']],
+  [14, '.reports-v4-periods-card__date', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [16, '.reports-v4-periods-card__reliability', ['align', 'gap', 'marginTop']],
+  [17, '.reports-v4-periods-card__reliability-text', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [18, '.reports-v4-periods-card__metrics', ['gap', 'marginTop']],
+  [19, '.reports-v4-periods-card__metric', ['direction', 'gap']],
+  [20, '.reports-v4-periods-card__metric-value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [21, '.reports-v4-periods-card__metric-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [22, ['.reports-v4-periods-card__metric-value', '.reports-v4-periods-card__metric-value.is-good'],
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [23, '.reports-v4-periods-card__weight-note', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  [24, '.reports-v4-periods-card__days', ['align', 'justify', 'gap', 'minHeight', 'marginTop']],
+  [25, '.reports-v4-periods-card__days-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [26, '.reports-v4-periods-card__days-chevron', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [28, '.reports-v4-periods-card__delta', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [29, ['.reports-v4-periods-card__delta', '.reports-v4-periods-card__delta.is-muted'],
+    ['fontWeight', 'fontSize', 'lineHeight']],
+  [30, ['.reports-v4-periods-card__metric-value', '.reports-v4-periods-card__metric-value.is-muted'],
+    ['fontWeight', 'fontSize', 'lineHeight']],
+];
+
 describe('Отчёты · разбор кадров канваса', () => {
   const razbor = readRazbor(canvas);
   const rules = readRules(reportsCss);
@@ -522,7 +559,12 @@ describe('Отчёты · разбор кадров канваса', () => {
     // классов: модификаторы собираются склейкой — `'…__dot--' + kind`, — и
     // целиком в исходнике не встречаются. Живым считается класс, чьё полное
     // имя есть в исходнике, либо чья база до `--` там склеивается.
-    const renderers = ['../heys_day_stats_v1.js', '../heys_day_sparklines_v1.js'];
+    const renderers = [
+      '../heys_day_stats_v1.js',
+      '../heys_day_sparklines_v1.js',
+      '../heys_day_tab_impl_v1.js',
+      '../heys_monthly_reports_v1.js',
+    ];
     const src = renderers
       .map((f) => fs.readFileSync(path.resolve(__dirname, f), 'utf8')).join('\n');
     const names = [...new Set(
@@ -802,6 +844,28 @@ describe('Отчёты · разбор кадров канваса', () => {
     })).toEqual([]);
   });
 
+  it('лист «По месяцам и неделям» совпадает с продуктом', () => {
+    expect(compare({
+      razbor, rules, frame: 'Лист периодов', pairs: PERIOD_SHEET,
+    })).toEqual([]);
+  });
+
+  it('лист периодов — разметка и копия без legacy modal', () => {
+    const tab = fs.readFileSync(
+      path.resolve(__dirname, '../heys_day_tab_impl_v1.js'), 'utf8');
+    const monthly = fs.readFileSync(
+      path.resolve(__dirname, '../heys_monthly_reports_v1.js'), 'utf8');
+    expect(tab).toContain('reports-v4-periods-sheet');
+    expect(tab).toContain('По месяцам и неделям');
+    expect(tab).not.toContain('reports-fullscreen-modal');
+    expect(tab).not.toContain('Месячные отчёты');
+    expect(monthly).toContain('reports-v4-periods-sheet__chip');
+    expect(monthly).toContain('Только надёжные · ');
+    expect(monthly).toContain('Дни недели');
+    expect(monthly).not.toContain('monthly-week-card');
+    expect(monthly).not.toContain('monthly-metric-icon');
+  });
+
   it('матрица Дисциплины совпадает с продуктом построчно', () => {
     expect(compare({
       razbor, rules, frame: 'Визуал v4 · Отчёты', pairs: MATRIX,
@@ -828,7 +892,7 @@ describe('Отчёты · разбор кадров канваса', () => {
   });
 
   it('отступления разбора названы и не разрастаются молча', () => {
-    expect(RAZBOR_EXCEPTIONS.size).toBe(25);
+    expect(RAZBOR_EXCEPTIONS.size).toBe(27);
   });
 
   // Охват называется числом, а не подразумевается. Вердикт «сверено гейтом»
@@ -862,7 +926,8 @@ describe('Отчёты · разбор кадров канваса', () => {
       { frame: 'Визуал v4 · Отчёты', pairs: DYNAMICS },
       { frame: 'Визуал v4 · Отчёты', pairs: HEAD_AND_NOTES },
       { frame: 'Визуал v4 · Отчёты', pairs: WEEKS },
-      { frame: 'Неделя к неделе · одна закрытая', pairs: WEEKS_CLOSED },
+      { frame: 'Визуал v4 · Отчёты', pairs: WEEKS_CLOSED },
+      { frame: 'Лист периодов', pairs: PERIOD_SHEET },
       { frame: 'Визуал v4 · Отчёты', pairs: MATRIX },
     ];
     const mine = coverage({ razbor, calls }).perFrame
@@ -1340,14 +1405,6 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
       // числами живут внутри неё. Обязательная оговорка «не HEYS Score»
       // есть, но стоит на ярусе, а не под сценарием.
       // «Что если» сведено 4 сентября: WhatIfScenariosInline + 10 сценариев.
-      // Лист периодов — legacy modal «Месячные отчёты» против v4 канваса;
-      // 35 строк ≠ с decisionRef UI_V4_DESIGNER_REQUEST.md:1217, сведение
-      // отдельным заходом.
-      'вид · лист периодов',
-      ...Array.from({ length: 31 }, (_, i) => `Лист периодов · ${String(i + 1).padStart(2, '0')}`),
-      'Лист периодов · рисунок 01',
-      'Лист периодов · рисунок 02',
-      'Лист периодов · текст',
     ];
 
     const verdicts = JSON.parse(fs.readFileSync(

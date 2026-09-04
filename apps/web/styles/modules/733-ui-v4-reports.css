@@ -1531,3 +1531,276 @@
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
+
+/* Лист «По месяцам и неделям» — полноэкранный v4-экран, кадр «Лист периодов». */
+.reports-v4-periods-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: var(--v4-z-sheet, 1190);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--v4-bg, #fffaf1);
+  color: var(--v4-ink, #201e1d);
+}
+
+.reports-v4-periods-sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  padding: 16px 18px 0;
+}
+
+.reports-v4-periods-sheet__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -8px 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  cursor: pointer;
+}
+
+.reports-v4-periods-sheet__close svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+}
+
+.reports-v4-periods-sheet__title {
+  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.reports-v4-periods-sheet__head-spacer {
+  flex: none;
+  width: 44px;
+}
+
+.reports-v4-periods-sheet__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+.reports-v4-periods-sheet__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 0;
+}
+
+.reports-v4-periods-sheet__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-surface, #f7efe2);
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  cursor: pointer;
+}
+
+.reports-v4-periods-sheet__chip.is-active {
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+}
+
+.reports-v4-periods-sheet__chip.is-filter {
+  margin-left: auto;
+}
+
+.reports-v4-periods-sheet__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.reports-v4-periods-sheet__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 500 10.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.reports-v4-periods-sheet__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.reports-v4-periods-sheet__dot.is-complete {
+  background: var(--v4-ok-text, #5c6a45);
+}
+
+.reports-v4-periods-sheet__dot.is-partial {
+  background: var(--v4-overlay-fill, #d99a63);
+}
+
+.reports-v4-periods-sheet__dot.is-incomplete {
+  background: var(--v4-bad-text, #a83c22);
+}
+
+.reports-v4-periods-sheet__list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reports-v4-periods-sheet__empty {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.reports-v4-periods-card {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--v4-surface, #f7efe2);
+}
+
+.reports-v4-periods-sheet__list > .reports-v4-periods-card {
+  margin-top: 0;
+}
+
+.reports-v4-periods-sheet__list {
+  margin-top: 12px;
+}
+
+.reports-v4-periods-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reports-v4-periods-card__date {
+  font: 700 13px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.reports-v4-periods-card__badge {
+  flex: none;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: var(--v4-chip, #efe3cf);
+  font: 700 9px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.reports-v4-periods-card__delta {
+  flex: none;
+  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.reports-v4-periods-card__delta.is-muted,
+.reports-v4-periods-card__metric-value.is-muted {
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+}
+
+.reports-v4-periods-card__reliability {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.reports-v4-periods-card__reliability-text {
+  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.reports-v4-periods-card__metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.reports-v4-periods-card__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.reports-v4-periods-card__metric-value {
+  font: 700 14px/1 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink, #201e1d);
+}
+
+.reports-v4-periods-card__metric-value.is-good {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
+.reports-v4-periods-card__metric-label {
+  font: 500 9.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.reports-v4-periods-card__weight-note {
+  margin-top: 10px;
+  font: 600 11px/1.4 Figtree, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.reports-v4-periods-card__days {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.reports-v4-periods-card__days-label {
+  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.reports-v4-periods-card__days-chevron {
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.reports-v4-periods-card__footnote {
+  margin-top: 10px;
+  font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+}
+
+.reports-v4-periods-card__breakdown {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.07));
+}

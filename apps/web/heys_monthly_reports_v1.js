@@ -6,11 +6,28 @@
 
     const COMPLETE_RATIO_THRESHOLD = 6 / 7;
     const PARTIAL_RATIO_THRESHOLD = 4 / 7;
+    const UNRELIABLE_DAYS_THRESHOLD = 4;
+
+    function formatInt(value) {
+        const n = Math.round(Number(value));
+        if (!Number.isFinite(n)) return '—';
+        return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    }
+
+    function formatSignedPct(value) {
+        if (!Number.isFinite(value)) return '—';
+        const rounded = Math.round(value);
+        if (rounded > 0) return '+' + rounded + ' %';
+        if (rounded < 0) return '−' + Math.abs(rounded) + ' %';
+        return '0 %';
+    }
+
+    function formatWeight(value) {
+        if (!Number.isFinite(value) || value <= 0) return '—';
+        return value.toFixed(1).replace('.', ',');
+    }
 
     function getCompletenessMeta(report) {
-        // «Учтено N дней» и пороги надёжности считают дни с записями — общим
-        // счётчиком зоны. Пищевые средние делятся отдельным числом, см.
-        // heys_weekly_reports_v2.js: один счётчик на две работы ломает вторую.
         const daysWithData = Number.isFinite(report?.daysWithRecords)
             ? report.daysWithRecords
             : (Number.isFinite(report?.daysWithData) ? report.daysWithData : 0);
@@ -20,173 +37,91 @@
         if (isMonthPeriod && totalDaysPossible > 0) {
             const ratio = daysWithData / totalDaysPossible;
             if (ratio >= COMPLETE_RATIO_THRESHOLD) {
-                return { toneClass: ' monthly-week-card--complete', daysWithData, totalDaysPossible, isMonthPeriod };
+                return { tone: 'complete', daysWithData, totalDaysPossible, isMonthPeriod };
             }
             if (ratio >= PARTIAL_RATIO_THRESHOLD) {
-                return { toneClass: ' monthly-week-card--partial', daysWithData, totalDaysPossible, isMonthPeriod };
+                return { tone: 'partial', daysWithData, totalDaysPossible, isMonthPeriod };
             }
-            return { toneClass: ' monthly-week-card--incomplete', daysWithData, totalDaysPossible, isMonthPeriod };
+            return { tone: 'incomplete', daysWithData, totalDaysPossible, isMonthPeriod };
         }
 
         if (daysWithData >= 6) {
-            return { toneClass: ' monthly-week-card--complete', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
+            return { tone: 'complete', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
         }
         if (daysWithData >= 4) {
-            return { toneClass: ' monthly-week-card--partial', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
+            return { tone: 'partial', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
         }
-        return { toneClass: ' monthly-week-card--incomplete', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
+        return { tone: 'incomplete', daysWithData, totalDaysPossible: 7, isMonthPeriod: false };
+    }
+
+    function buildReliabilityText(meta) {
+        const count = meta.daysWithData;
+        const total = meta.totalDaysPossible || 7;
+        let text = 'учтено ' + count + ' из ' + total + ' дней';
+        if (meta.tone === 'partial') text += ' · оценка примерная';
+        if (meta.tone === 'incomplete') text += ' · данных мало';
+        return text;
     }
 
     function MonthlyReportsLegend({ mode = 'weeks' } = {}) {
-        const legendItems = mode === 'months'
-            ? [
-                {
-                    tone: 'complete',
-                    title: 'Учтено не меньше 86% дней — выводам можно доверять',
-                    aria: 'Зелёный: учтено не меньше 86 процентов дней, выводам можно доверять',
-                    badge: '≥86% дней',
-                    text: 'выводам можно доверять'
-                },
-                {
-                    tone: 'partial',
-                    title: 'Учтено от 57% до 85% дней — оценка примерная',
-                    aria: 'Жёлтый: учтено от 57 до 85 процентов дней, оценка примерная',
-                    badge: '57–85%',
-                    text: 'оценка примерная'
-                },
-                {
-                    tone: 'incomplete',
-                    title: 'Учтено меньше 57% дней — данных мало',
-                    aria: 'Красный: учтено меньше 57 процентов дней, данных мало',
-                    badge: '<57% дней',
-                    text: 'данных мало'
-                }
-            ]
-            : [
-                {
-                    tone: 'complete',
-                    title: '6–7 дней — выводам можно доверять',
-                    aria: 'Зелёный: 6–7 дней, выводам можно доверять',
-                    badge: '6–7 дней',
-                    text: 'выводам можно доверять'
-                },
-                {
-                    tone: 'partial',
-                    title: '4–5 дней — оценка примерная',
-                    aria: 'Жёлтый: 4–5 дней, оценка примерная',
-                    badge: '4–5 дней',
-                    text: 'оценка примерная'
-                },
-                {
-                    tone: 'incomplete',
-                    title: '3 дня и меньше — данных мало',
-                    aria: 'Красный: 3 дня и меньше, данных мало',
-                    badge: '≤3 дней',
-                    text: 'данных мало'
-                }
-            ];
+        void mode;
+        const items = [
+            { tone: 'complete', text: 'можно доверять' },
+            { tone: 'partial', text: 'оценка примерная' },
+            { tone: 'incomplete', text: 'данных мало' }
+        ];
 
-        return React.createElement('div', { className: 'monthly-reports-legend monthly-reports-legend--header', role: 'note', 'aria-label': 'Легенда полноты данных' },
-            ...legendItems.map((item) => React.createElement('span', {
+        return React.createElement('div', {
+            className: 'reports-v4-periods-sheet__legend',
+            role: 'note',
+            'aria-label': 'Легенда полноты данных'
+        },
+            ...items.map((item) => React.createElement('span', {
                 key: item.tone,
-                className: 'monthly-reports-legend__item monthly-reports-legend__item--' + item.tone,
-                title: item.title,
-                'aria-label': item.aria
+                className: 'reports-v4-periods-sheet__legend-item'
             },
-                React.createElement('span', { className: 'monthly-reports-legend__badge', 'aria-hidden': 'true' }, item.badge),
-                React.createElement('span', { className: 'monthly-reports-legend__text' }, item.text)
+                React.createElement('span', {
+                    className: 'reports-v4-periods-sheet__dot is-' + item.tone,
+                    'aria-hidden': 'true'
+                }),
+                item.text
             ))
         );
     }
 
-    function WeekCard({ week, prevWeek, weightGoal }) {
+    function WeekCard({ week, prevWeek }) {
         const h = React.createElement;
         const { useMemo, useState } = React;
         const { report, rangeLabel, isCurrent } = week;
         const completenessMeta = getCompletenessMeta(report);
-        const daysWithData = completenessMeta.daysWithData;
-        const daysLabel = daysWithData > 0
-            ? (completenessMeta.isMonthPeriod && completenessMeta.totalDaysPossible > 0
-                ? ` (учтено ${daysWithData} из ${completenessMeta.totalDaysPossible} дней)`
-                : ` (учтено ${daysWithData} дней)`)
-            : '';
-        const completenessToneClass = completenessMeta.toneClass;
+        const isUnreliable = completenessMeta.daysWithData < UNRELIABLE_DAYS_THRESHOLD;
+        const reliabilityText = buildReliabilityText(completenessMeta);
 
-        const formatMacroDiff = (value, norm) => {
-            if (!Number.isFinite(value) || !Number.isFinite(norm) || norm === 0) return '—';
-            const diff = Math.round(value - norm);
-            // Минус типографский, как во всей зоне: ASCII-дефис здесь был
-            // единственным местом, где знак набран иначе.
-            if (diff < 0) return '−' + Math.abs(diff);
-            return (diff > 0 ? '+' : '') + diff;
-        };
-
-        const getMacroDiffTone = (value, norm, preferHigher) => {
-            if (!Number.isFinite(value) || !Number.isFinite(norm) || norm === 0) return 'monthly-macro-diff-value--neutral';
-            const diff = value - norm;
-            if (diff === 0) return 'monthly-macro-diff-value--neutral';
-            if (preferHigher) {
-                return diff > 0 ? 'monthly-macro-diff-value--good' : 'monthly-macro-diff-value--bad';
-            }
-            return diff < 0 ? 'monthly-macro-diff-value--good' : 'monthly-macro-diff-value--bad';
-        };
-
-        const deficitPctClass = report.avgDeltaPct > 0
-            ? 'monthly-metric-value--surplus'
-            : report.avgDeltaPct < 0
-                ? 'monthly-metric-value--deficit'
-                : 'monthly-metric-value--neutral';
-
-        const targetPctClass = report.targetDeficitPct > 0
-            ? 'monthly-metric-value--surplus'
-            : report.targetDeficitPct < 0
-                ? 'monthly-metric-value--deficit'
-                : 'monthly-metric-value--neutral';
-
-        // Стрелка снята: она сравнивает средние двух периодов, и период, начатый
-        // высоко и законченный низко, законно давал «↑» при тренде вниз. На
-        // плитке объяснить это негде, поэтому направление больше не рисуется —
-        // оно называется словами: «−0,3 кг к прошлой неделе».
         const getWeightTrend = () => {
             const currentWeight = Number.isFinite(report?.avgWeight) ? report.avgWeight : 0;
             const prevWeight = Number.isFinite(prevWeek?.report?.avgWeight) ? prevWeek.report.avgWeight : 0;
-
             if (!currentWeight || !prevWeight) return null;
 
-            const periodWord = report?.periodType === 'month' ? 'месяцу' : 'неделе';
+            const periodShort = report?.periodType === 'month' ? 'месяцу' : 'неделе';
+            const periodTiny = report?.periodType === 'month' ? 'месяц' : 'неделе';
             const diff = currentWeight - prevWeight;
             if (Math.abs(diff) < 0.05) {
                 return {
-                    tone: 'monthly-weight-trend--neutral',
-                    diff: 0,
-                    text: `без изменений к прошлой ${periodWord}`
+                    header: '—',
+                    footnote: 'без изменений к прошлой ' + periodShort
                 };
             }
 
             const sign = diff > 0 ? '+' : '−';
-            const text = `${sign}${Math.abs(diff).toFixed(1)} кг к прошлой ${periodWord}`;
-            const goal = Number.isFinite(weightGoal) && weightGoal > 0 ? weightGoal : 0;
-            if (!goal) {
-                return { tone: 'monthly-weight-trend--neutral', diff, text };
-            }
-
-            const needDown = currentWeight - goal > 0.2;
-            const needUp = currentWeight - goal < -0.2;
-            if (needDown) {
-                return { tone: diff < 0 ? 'monthly-weight-trend--good' : 'monthly-weight-trend--bad', diff, text };
-            }
-            if (needUp) {
-                return { tone: diff > 0 ? 'monthly-weight-trend--good' : 'monthly-weight-trend--bad', diff, text };
-            }
-
-            return { tone: 'monthly-weight-trend--neutral', diff, text };
+            const abs = Math.abs(diff).toFixed(1).replace('.', ',');
+            return {
+                header: sign + abs + ' кг к прошлой',
+                footnote: sign + abs + ' кг к прошлой ' + periodTiny
+            };
         };
 
-        const weightValue = Number.isFinite(report?.avgWeight) && report.avgWeight > 0
-            ? report.avgWeight
-            : '—';
         const weightTrend = getWeightTrend();
-        const canExpandDays = Array.isArray(report?.days) && report.days.length > 0;
+        const canExpandDays = !isUnreliable && Array.isArray(report?.days) && report.days.length > 0;
         const [isExpanded, setIsExpanded] = useState(false);
 
         const dayRows = useMemo(() => {
@@ -203,40 +138,24 @@
                     : (Number.isFinite(d.optimum) ? d.optimum : 0);
                 const eaten = d.totals?.kcal || 0;
                 const goal = d.goalOptimum || 0;
-                // Та же уставка, что усредняется в плитку «план»: цель — это то,
-                // о чём договорились, а не производная от нормы и затрат.
                 const targetDeficitPct = Number.isFinite(d.targetDeficitPct)
                     ? Math.round(d.targetDeficitPct)
                     : null;
                 const hasMeals = !!d.hasMeals;
                 const isIncluded = hasMeals
-                    // День, помеченный «не заполнял», выброшен из средних —
-                    // значит и в ленте он не строка расчёта.
                     && !d.isIncomplete
                     && !(d.isToday && (d.ratio || 0) < 0.5);
-                const weightMorning = Number.isFinite(d.weightMorning) && d.weightMorning > 0
-                    ? Math.round(d.weightMorning * 10) / 10
-                    : '—';
                 const deficit = eaten - burned;
 
                 return {
                     dateStr: d.dateStr,
                     dayLabel,
-                    isToday: !!d.isToday,
-                    hasMeals,
                     isIncluded,
                     burned,
                     eaten,
                     goal,
                     deficit,
-                    targetDeficitPct,
-                    prot: d.totals?.prot || 0,
-                    fat: d.totals?.fat || 0,
-                    carbs: d.totals?.carbs || 0,
-                    normProt: d.normAbs?.prot || 0,
-                    normFat: d.normAbs?.fat || 0,
-                    normCarbs: d.normAbs?.carbs || 0,
-                    weightMorning
+                    targetDeficitPct
                 };
             });
         }, [report]);
@@ -250,16 +169,9 @@
                 acc.goal += d.goal || 0;
                 acc.deficit += d.deficit || 0;
                 return acc;
-            }, {
-                burned: 0,
-                eaten: 0,
-                goal: 0,
-                deficit: 0
-            });
+            }, { burned: 0, eaten: 0, goal: 0, deficit: 0 });
             const count = includedDayRows.length || 1;
             return {
-                ...totals,
-                count,
                 avgBurned: totals.burned / count,
                 avgEaten: totals.eaten / count,
                 avgGoal: totals.goal / count,
@@ -267,148 +179,98 @@
             };
         }, [includedDayRows]);
 
-        const getTargetToneClass = (value, target) => {
-            if (!Number.isFinite(value)) return 'weekly-wrap-breakdown__value--neutral';
-            if (value === 0) return 'weekly-wrap-breakdown__value--neutral';
-            if (target > 0) {
-                return value > 0
-                    ? 'weekly-wrap-breakdown__value--good'
-                    : 'weekly-wrap-breakdown__value--bad';
-            }
-            if (target < 0) {
-                return value < 0
-                    ? 'weekly-wrap-breakdown__value--good'
-                    : 'weekly-wrap-breakdown__value--bad';
-            }
-            return value < 0
-                ? 'weekly-wrap-breakdown__value--good'
-                : 'weekly-wrap-breakdown__value--bad';
-        };
-
-        const getDeltaToneClass = (value, target) => {
-            if (!Number.isFinite(value)) return 'weekly-wrap-breakdown__value--neutral';
-            if (value === 0) return 'weekly-wrap-breakdown__value--neutral';
-            if (target > 0) {
-                return value > 0
-                    ? 'weekly-wrap-breakdown__value--good'
-                    : 'weekly-wrap-breakdown__value--bad';
-            }
-            if (target < 0) {
-                return value < 0
-                    ? 'weekly-wrap-breakdown__value--good'
-                    : 'weekly-wrap-breakdown__value--bad';
-            }
-            return value < 0
-                ? 'weekly-wrap-breakdown__value--good'
-                : 'weekly-wrap-breakdown__value--bad';
-        };
-
-        const formatSignedValue = (value, suffix = '') => {
-            const rounded = Math.round(value);
-            const sign = rounded > 0 ? '+' : '';
-            return sign + rounded + suffix;
-        };
-
-        const formatDeficitWithPct = (deficitValue, burnedValue) => {
-            const pct = burnedValue ? (deficitValue / burnedValue) * 100 : 0;
-            return formatSignedValue(deficitValue) + ' / ' + formatSignedValue(pct, '%');
-        };
-
         const targetPct = report?.targetDeficitPct ?? 0;
-        // Итоговый процент — та же средняя уставка, что в плитке «план», а не
-        // ещё один расчёт из средней нормы и средних затрат.
-        const avgGoalPct = targetPct;
+        const avgDeltaPct = report?.avgDeltaPct;
+        const avgWeight = report?.avgWeight;
+        const macrosText = [
+            Math.round(report?.avgProt || 0),
+            Math.round(report?.avgFat || 0),
+            Math.round(report?.avgCarbs || 0)
+        ].join(' / ');
 
-        const toggleExpanded = () => {
-            setIsExpanded((prev) => {
-                const next = !prev;
-                console.info('[HEYS.monthlyReports] ✅ Week days toggled:', {
-                    week: rangeLabel,
-                    expanded: next,
-                    dayRows: includedDayRows.length
-                });
-                return next;
-            });
-        };
+        const planValue = isUnreliable ? '—' : formatSignedPct(targetPct);
+        const deltaValue = isUnreliable ? '—' : formatSignedPct(avgDeltaPct);
+        const weightValue = isUnreliable ? '—' : formatWeight(avgWeight);
+        const deltaIsGood = !isUnreliable && Number.isFinite(avgDeltaPct) && avgDeltaPct < 0;
 
-        return h('div', { className: 'monthly-week-card widget-shadow-diary-glass widget-outline-diary-glass' + completenessToneClass + (isCurrent ? ' monthly-week-card--current' : '') },
-            h('div', { className: 'monthly-week-card__header' },
-                h('div', { className: 'monthly-week-card__title' }, rangeLabel + daysLabel),
-                h('div', { className: 'monthly-week-card__header-actions' },
-                    isCurrent && h('span', { className: 'monthly-week-card__badge' }, 'текущая'),
-                    canExpandDays && h('button', {
-                        type: 'button',
-                        className: 'monthly-week-card__expand-btn' + (isExpanded ? ' monthly-week-card__expand-btn--open' : ''),
-                        onClick: toggleExpanded,
-                        'aria-expanded': isExpanded,
-                        'aria-label': isExpanded ? 'Скрыть дни недели' : 'Показать дни недели'
-                    },
-                        h('span', { className: 'monthly-week-card__expand-btn-label' }, 'дни'),
-                        h('span', { className: 'monthly-week-card__expand-btn-icon' }, isExpanded ? '▴' : '▾')
-                    )
+        return h('article', { className: 'reports-v4-periods-card' },
+            h('div', { className: 'reports-v4-periods-card__head' },
+                h('span', { className: 'reports-v4-periods-card__date' }, rangeLabel),
+                isCurrent
+                    ? h('span', { className: 'reports-v4-periods-card__badge' }, 'текущая')
+                    : weightTrend && weightTrend.header
+                        ? h('span', {
+                            className: 'reports-v4-periods-card__delta' +
+                                (weightTrend.header === '—' ? ' is-muted' : '')
+                        }, weightTrend.header)
+                        : null
+            ),
+            h('div', { className: 'reports-v4-periods-card__reliability' },
+                h('span', {
+                    className: 'reports-v4-periods-sheet__dot is-' + completenessMeta.tone,
+                    'aria-hidden': 'true'
+                }),
+                h('span', { className: 'reports-v4-periods-card__reliability-text' }, reliabilityText)
+            ),
+            h('div', { className: 'reports-v4-periods-card__metrics' },
+                h('div', { className: 'reports-v4-periods-card__metric' },
+                    h('span', { className: 'reports-v4-periods-card__metric-value' },
+                        formatInt(report?.avgTarget || 0)),
+                    h('span', { className: 'reports-v4-periods-card__metric-label' }, 'затраты')
+                ),
+                h('div', { className: 'reports-v4-periods-card__metric' },
+                    h('span', { className: 'reports-v4-periods-card__metric-value' },
+                        formatInt(report?.avgKcal || 0)),
+                    h('span', { className: 'reports-v4-periods-card__metric-label' }, 'съедено')
+                ),
+                h('div', { className: 'reports-v4-periods-card__metric' },
+                    h('span', {
+                        className: 'reports-v4-periods-card__metric-value' +
+                            (isUnreliable ? ' is-muted' : '')
+                    }, planValue),
+                    h('span', { className: 'reports-v4-periods-card__metric-label' }, 'план')
+                ),
+                h('div', { className: 'reports-v4-periods-card__metric' },
+                    h('span', {
+                        className: 'reports-v4-periods-card__metric-value' +
+                            (deltaIsGood ? ' is-good' : '') +
+                            (isUnreliable ? ' is-muted' : '')
+                    }, deltaValue),
+                    h('span', { className: 'reports-v4-periods-card__metric-label' }, 'вышло')
+                ),
+                h('div', { className: 'reports-v4-periods-card__metric' },
+                    h('span', {
+                        className: 'reports-v4-periods-card__metric-value' +
+                            (isUnreliable ? ' is-muted' : '')
+                    }, weightValue),
+                    h('span', { className: 'reports-v4-periods-card__metric-label' }, 'средний вес')
+                ),
+                h('div', { className: 'reports-v4-periods-card__metric' },
+                    h('span', { className: 'reports-v4-periods-card__metric-value' }, macrosText),
+                    h('span', { className: 'reports-v4-periods-card__metric-label' }, 'Б / Ж / У, г')
                 )
             ),
-            h('div', { className: 'monthly-week-card__metrics' },
-                h('div', { className: 'monthly-metric-block' },
-                    h('div', { className: 'monthly-metric-icon' }, '🔥'),
-                    h('div', { className: 'monthly-metric-value' }, Math.round(report.avgTarget || 0)),
-                    h('div', { className: 'monthly-metric-label' }, 'затраты')
-                ),
-                h('div', { className: 'monthly-metric-block' },
-                    h('div', { className: 'monthly-metric-icon' }, '🍽️'),
-                    h('div', { className: 'monthly-metric-value' }, Math.round(report.avgKcal || 0)),
-                    h('div', { className: 'monthly-metric-label' }, 'съедено')
-                ),
-                h('div', { className: 'monthly-metric-block' },
-                    h('div', { className: 'monthly-metric-icon' }, '🎯'),
-                    h('div', { className: 'monthly-metric-value ' + targetPctClass },
-                        (report.targetDeficitPct > 0 ? '+' : '') + report.targetDeficitPct + '%'
-                    ),
-                    h('div', { className: 'monthly-metric-label' }, 'план')
-                ),
-                h('div', { className: 'monthly-metric-block' },
-                    h('div', { className: 'monthly-metric-icon' }, '📊'),
-                    h('div', { className: 'monthly-metric-value ' + deficitPctClass },
-                        (report.avgDeltaPct > 0 ? '+' : '') + report.avgDeltaPct + '%'
-                    ),
-                    h('div', { className: 'monthly-metric-label' }, 'вышло')
-                ),
-                h('div', { className: 'monthly-metric-block monthly-metric-block--macros' },
-                    h('div', { className: 'monthly-macro-diffs' },
-                        h('div', { className: 'monthly-macro-diff' },
-                            h('span', { className: 'monthly-macro-diff-label' }, 'Б'),
-                            h('span', { className: 'monthly-macro-diff-value ' + getMacroDiffTone(report.avgProt, report.avgNormProt, true) },
-                                formatMacroDiff(report.avgProt, report.avgNormProt)
-                            )
-                        ),
-                        h('div', { className: 'monthly-macro-diff' },
-                            h('span', { className: 'monthly-macro-diff-label' }, 'Ж'),
-                            h('span', { className: 'monthly-macro-diff-value ' + getMacroDiffTone(report.avgFat, report.avgNormFat, false) },
-                                formatMacroDiff(report.avgFat, report.avgNormFat)
-                            )
-                        ),
-                        h('div', { className: 'monthly-macro-diff' },
-                            h('span', { className: 'monthly-macro-diff-label' }, 'У'),
-                            h('span', { className: 'monthly-macro-diff-value ' + getMacroDiffTone(report.avgCarbs, report.avgNormCarbs, false) },
-                                formatMacroDiff(report.avgCarbs, report.avgNormCarbs)
-                            )
-                        )
-                    )
-                ),
-                h('div', { className: 'monthly-metric-block' },
-                    h('div', { className: 'monthly-metric-icon' }, '⚖️'),
-                    h('div', { className: 'monthly-metric-value' }, weightValue),
-                    weightTrend && weightTrend.text
-                        ? h('div', { className: 'monthly-weight-trend-sub ' + weightTrend.tone }, weightTrend.text)
-                        : null,
-                    h('div', { className: 'monthly-metric-label' }, 'средний вес')
-                )
+            isCurrent && weightTrend && weightTrend.footnote && weightTrend.footnote !== '—'
+                ? h('div', { className: 'reports-v4-periods-card__weight-note' }, weightTrend.footnote)
+                : null,
+            isUnreliable
+                ? h('div', { className: 'reports-v4-periods-card__footnote' },
+                    'Меньше четырёх дней с записями: «план», «вышло» и вес стоят прочерками — среднее по трём дням не период.')
+                : null,
+            canExpandDays && h('button', {
+                type: 'button',
+                className: 'reports-v4-periods-card__days',
+                onClick: () => setIsExpanded((prev) => !prev),
+                'aria-expanded': isExpanded
+            },
+                h('span', { className: 'reports-v4-periods-card__days-label' }, 'Дни недели'),
+                h('span', { className: 'reports-v4-periods-card__days-chevron' }, '›')
             ),
             canExpandDays && isExpanded
-                ? h('div', { className: 'monthly-week-days' },
+                ? h('div', { className: 'reports-v4-periods-card__breakdown' },
                     h('div', { className: 'weekly-wrap-breakdown monthly-week-breakdown', onClick: (e) => e.stopPropagation() },
                         h('div', { className: 'weekly-wrap-breakdown__header' },
-                            h('div', { className: 'weekly-wrap-breakdown__title' }, '🧾 Дни в расчёте'),
+                            h('div', { className: 'weekly-wrap-breakdown__title' }, 'Дни в расчёте'),
                             h('div', { className: 'weekly-wrap-breakdown__subtitle' }, includedDayRows.length + ' дн.')
                         ),
                         report?.todayExcluded && h('div', { className: 'weekly-wrap-breakdown__note' },
@@ -422,41 +284,27 @@
                                 h('span', { className: 'weekly-wrap-breakdown__cell' }, 'План'),
                                 h('span', { className: 'weekly-wrap-breakdown__cell' }, 'Дефицит', h('br'), 'от потрач.')
                             ),
-                            ...includedDayRows.map((day, i) => {
-                                const goalPct = day.targetDeficitPct;
-                                const goalPctClass = getTargetToneClass(goalPct ?? 0, targetPct);
-                                const toneClass = getDeltaToneClass(day.deficit, targetPct);
-                                return h('div', { key: day.dateStr || i, className: 'weekly-wrap-breakdown__row' },
-                                    h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--day' }, day.dayLabel),
-                                    h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(day.burned)),
-                                    h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(day.eaten)),
-                                    h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--goal' },
-                                        Math.round(day.goal),
-                                        ' ',
-                                        goalPct == null
-                                            ? null
-                                            : h('span', { className: 'weekly-wrap-breakdown__goal-pct ' + goalPctClass },
-                                                '(' + (goalPct > 0 ? '+' : '') + Math.round(goalPct) + '%)'
-                                            )
-                                    ),
-                                    h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--delta ' + toneClass },
-                                        formatDeficitWithPct(day.deficit, day.burned)
-                                    )
-                                );
-                            }),
+                            ...includedDayRows.map((day, i) => h('div', { key: day.dateStr || i, className: 'weekly-wrap-breakdown__row' },
+                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--day' }, day.dayLabel),
+                                h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(day.burned)),
+                                h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(day.eaten)),
+                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--goal' },
+                                    Math.round(day.goal),
+                                    day.targetDeficitPct == null
+                                        ? null
+                                        : ' (' + (day.targetDeficitPct > 0 ? '+' : '') + day.targetDeficitPct + '%)'
+                                ),
+                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--delta' },
+                                    (day.deficit > 0 ? '+' : '') + Math.round(day.deficit)
+                                )
+                            )),
                             h('div', { className: 'weekly-wrap-breakdown__row weekly-wrap-breakdown__row--total' },
                                 h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--day' }, 'Итого в среднем'),
                                 h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(breakdownTotals.avgBurned)),
                                 h('span', { className: 'weekly-wrap-breakdown__cell' }, Math.round(breakdownTotals.avgEaten)),
-                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--goal' },
-                                    Math.round(breakdownTotals.avgGoal),
-                                    ' ',
-                                    h('span', { className: 'weekly-wrap-breakdown__goal-pct ' + getTargetToneClass(avgGoalPct, targetPct) },
-                                        '(' + (avgGoalPct > 0 ? '+' : '') + Math.round(avgGoalPct) + '%)'
-                                    )
-                                ),
-                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--delta ' + getDeltaToneClass(breakdownTotals.avgDeficit, targetPct) },
-                                    formatDeficitWithPct(breakdownTotals.avgDeficit, breakdownTotals.avgBurned)
+                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--goal' }, Math.round(breakdownTotals.avgGoal)),
+                                h('span', { className: 'weekly-wrap-breakdown__cell weekly-wrap-breakdown__cell--delta' },
+                                    (breakdownTotals.avgDeficit > 0 ? '+' : '') + Math.round(breakdownTotals.avgDeficit)
                                 )
                             )
                         )
@@ -475,13 +323,7 @@
         const monthlyMonths = monthlyReportsService && monthlyReportsService.buildMonthlyMonths
             ? monthlyReportsService.buildMonthlyMonths({ weeksCount: 16, useCache: true })
             : [];
-        const profile = HEYS.store?.get
-            ? HEYS.store.get('heys_profile', {})
-            : (HEYS.utils?.lsGet ? HEYS.utils.lsGet('heys_profile', {}) : {});
-        const weightGoal = +profile.weightGoal || 0;
         const [localMode, setLocalMode] = useState('weeks');
-        // Фильтр приходит сверху, как и режим: локальное состояние умирало
-        // вместе с модалкой, и выбор сбрасывался на каждом открытии.
         const [localWeekFilter, setLocalWeekFilter] = useState('all');
         const [localMonthFilter, setLocalMonthFilter] = useState('all');
         const weekFilter = props.weekFilter || localWeekFilter;
@@ -492,23 +334,25 @@
         const setMode = props.setMode || setLocalMode;
 
         if (!monthlyReportsService || !monthlyReportsService.buildMonthlyWeeks) {
-            return React.createElement('div', { className: 'muted' }, 'Загружаем сервис месячных отчётов...');
+            return React.createElement('div', { className: 'reports-v4-periods-sheet__empty' },
+                'Загружаем сервис месячных отчётов...');
         }
 
         if (monthlyWeeks.length === 0) {
-            return React.createElement('div', { className: 'muted' }, 'Добавьте минимум 2 дня с едой в неделю — и появятся отчёты');
+            return React.createElement('div', { className: 'reports-v4-periods-sheet__empty' },
+                'Добавьте минимум 2 дня с едой в неделю — и появятся отчёты');
         }
 
         const sourceCards = mode === 'months' ? monthlyMonths : monthlyWeeks;
         const isWeeksMode = mode === 'weeks';
         const isMonthsMode = mode === 'months';
-        const totalWeeksCount = monthlyWeeks.length;
-        const trustedWeeksCount = monthlyWeeks.filter((week) => (week?.report?.daysWithRecords ?? week?.report?.daysWithData ?? 0) >= 6).length;
-        const totalMonthsCount = monthlyMonths.length;
-        const trustedMonthsCount = monthlyMonths.filter((month) => {
-            const ratio = month?.report?.completenessRatio || 0;
-            return ratio >= COMPLETE_RATIO_THRESHOLD;
-        }).length;
+        const trustedWeeksCount = monthlyWeeks.filter((week) =>
+            (week?.report?.daysWithRecords ?? week?.report?.daysWithData ?? 0) >= 6).length;
+        const trustedMonthsCount = monthlyMonths.filter((month) =>
+            (month?.report?.completenessRatio || 0) >= COMPLETE_RATIO_THRESHOLD).length;
+        const trustedCount = isMonthsMode ? trustedMonthsCount : trustedWeeksCount;
+        const filterActive = isWeeksMode ? weekFilter === 'trusted' : monthFilter === 'trusted';
+
         const visibleEntries = sourceCards
             .map((week, index) => ({ week, index }))
             .filter(({ week }) => {
@@ -520,57 +364,55 @@
                 }
                 return true;
             });
+
         const emptyMonths = mode === 'months' && sourceCards.length === 0;
         const emptyTrustedWeeks = isWeeksMode && weekFilter === 'trusted' && visibleEntries.length === 0;
         const emptyTrustedMonths = isMonthsMode && monthFilter === 'trusted' && visibleEntries.length === 0;
 
+        const toggleFilter = () => {
+            if (isWeeksMode) {
+                setWeekFilter(filterActive ? 'all' : 'trusted');
+            } else {
+                setMonthFilter(filterActive ? 'all' : 'trusted');
+            }
+        };
+
         return React.createElement(React.Fragment, null,
-            React.createElement('div', { className: 'monthly-reports-tabs' },
+            React.createElement('div', { className: 'reports-v4-periods-sheet__chips', role: 'tablist', 'aria-label': 'Режим листа периодов' },
                 React.createElement('button', {
-                    className: 'monthly-reports-tab' + (mode === 'weeks' ? ' monthly-reports-tab--active' : ''),
+                    type: 'button',
+                    role: 'tab',
+                    className: 'reports-v4-periods-sheet__chip' + (mode === 'weeks' ? ' is-active' : ''),
                     onClick: () => setMode('weeks')
                 }, 'Неделя'),
                 React.createElement('button', {
-                    className: 'monthly-reports-tab' + (mode === 'months' ? ' monthly-reports-tab--active' : ''),
+                    type: 'button',
+                    role: 'tab',
+                    className: 'reports-v4-periods-sheet__chip' + (mode === 'months' ? ' is-active' : ''),
                     onClick: () => setMode('months')
-                }, 'Месяц')
+                }, 'Месяц'),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'reports-v4-periods-sheet__chip is-filter' + (filterActive ? ' is-active' : ''),
+                    onClick: toggleFilter,
+                    'aria-pressed': filterActive
+                }, 'Только надёжные · ' + trustedCount)
             ),
-            isWeeksMode && React.createElement('div', { className: 'monthly-reports-filter', role: 'group', 'aria-label': 'Фильтр недель' },
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'monthly-reports-filter__btn' + (weekFilter === 'all' ? ' monthly-reports-filter__btn--active' : ''),
-                    onClick: () => setWeekFilter('all')
-                }, 'Все недели (' + totalWeeksCount + ')'),
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'monthly-reports-filter__btn' + (weekFilter === 'trusted' ? ' monthly-reports-filter__btn--active' : ''),
-                    onClick: () => setWeekFilter('trusted')
-                }, 'Только надёжные (' + trustedWeeksCount + ')')
-            ),
-            isMonthsMode && React.createElement('div', { className: 'monthly-reports-filter', role: 'group', 'aria-label': 'Фильтр месяцев' },
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'monthly-reports-filter__btn' + (monthFilter === 'all' ? ' monthly-reports-filter__btn--active' : ''),
-                    onClick: () => setMonthFilter('all')
-                }, 'Все месяцы (' + totalMonthsCount + ')'),
-                React.createElement('button', {
-                    type: 'button',
-                    className: 'monthly-reports-filter__btn' + (monthFilter === 'trusted' ? ' monthly-reports-filter__btn--active' : ''),
-                    onClick: () => setMonthFilter('trusted')
-                }, 'Только надёжные (' + trustedMonthsCount + ')')
-            ),
+            React.createElement(MonthlyReportsLegend, { mode }),
             emptyMonths
-                ? React.createElement('div', { className: 'muted' }, 'Для месячных отчётов нужно минимум 4 недели данных')
+                ? React.createElement('div', { className: 'reports-v4-periods-sheet__empty' },
+                    'Для месячных отчётов нужно минимум 4 недели данных')
                 : emptyTrustedWeeks
-                    ? React.createElement('div', { className: 'muted' }, 'Пока нет недель, где выводам можно доверять')
+                    ? React.createElement('div', { className: 'reports-v4-periods-sheet__empty' },
+                        'Пока нет недель, где выводам можно доверять')
                     : emptyTrustedMonths
-                        ? React.createElement('div', { className: 'muted' }, 'Пока нет месяцев, где выводам можно доверять')
-                        : React.createElement('div', { className: 'monthly-reports-grid' },
+                        ? React.createElement('div', { className: 'reports-v4-periods-sheet__empty' },
+                            'Пока нет месяцев, где выводам можно доверять')
+                        : React.createElement('div', { className: 'reports-v4-periods-sheet__list' },
                             ...visibleEntries.map(({ week, index }) => React.createElement(WeekCard, {
-                                key: index,
+                                key: week.rangeLabel || index,
                                 week,
-                                prevWeek: sourceCards[index + 1],
-                                weightGoal
+                                prevWeek: sourceCards[index + 1]
                             }))
                         )
         );

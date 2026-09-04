@@ -1598,54 +1598,65 @@
 
         const reportsFullscreenModal = useMemo(() => {
             if (!reportsModalOpen) return null;
-            const MonthlyReportsLegend = window.HEYS?.monthlyReports?.MonthlyReportsLegend;
             const MonthlyReportsContent = window.HEYS?.monthlyReports?.MonthlyReportsContent;
             return React.createElement('div', {
-                className: 'reports-fullscreen-modal',
+                className: 'reports-v4-periods-sheet',
                 role: 'dialog',
                 'aria-modal': 'true',
-                'aria-labelledby': 'reports-fullscreen-title'
+                'aria-labelledby': 'reports-v4-periods-sheet-title'
             },
-                React.createElement('div', { className: 'reports-fullscreen-modal__topbar' },
+                React.createElement('header', { className: 'reports-v4-periods-sheet__head' },
                     React.createElement('button', {
                         type: 'button',
-                        className: 'reports-fullscreen-modal__close-text',
-                        onClick: closeReportsModal
-                    }, 'Закрыть'),
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'reports-fullscreen-modal__close-icon',
+                        className: 'reports-v4-periods-sheet__close',
                         onClick: closeReportsModal,
-                        'aria-label': 'Закрыть отчёты'
-                    }, '×')
+                        'aria-label': 'Закрыть'
+                    },
+                        React.createElement('svg', {
+                            width: 17,
+                            height: 17,
+                            viewBox: '0 0 24 24',
+                            fill: 'none',
+                            stroke: 'currentColor',
+                            strokeWidth: 2.75,
+                            strokeLinecap: 'round',
+                            'aria-hidden': 'true'
+                        },
+                            React.createElement('path', { d: 'M6 6l12 12M18 6L6 18' })
+                        )
+                    ),
+                    React.createElement('span', {
+                        id: 'reports-v4-periods-sheet-title',
+                        className: 'reports-v4-periods-sheet__title'
+                    }, 'По месяцам и неделям'),
+                    React.createElement('span', {
+                        className: 'reports-v4-periods-sheet__head-spacer',
+                        'aria-hidden': 'true'
+                    })
                 ),
-                React.createElement('main', { className: 'reports-fullscreen-modal__body' },
-                    React.createElement('div', { className: 'reports-fullscreen-modal__card' },
-                        React.createElement('div', { className: 'reports-title-row reports-title-row--monthly' },
-                            React.createElement('h2', {
-                                id: 'reports-fullscreen-title',
-                                className: 'reports-title'
-                            }, 'Месячные отчёты'),
-                            MonthlyReportsLegend
-                                ? React.createElement(MonthlyReportsLegend, { mode: monthlyReportsMode })
-                                : null
-                        ),
-                        MonthlyReportsContent
-                            ? React.createElement(MonthlyReportsContent, {
-                                mode: monthlyReportsMode,
-                                weekFilter: monthlyWeekFilter,
-                                setWeekFilter: setMonthlyWeekFilter,
-                                monthFilter: monthlyMonthFilter,
-                                setMonthFilter: setMonthlyMonthFilter,
-                                setMode: setMonthlyReportsMode
-                            })
-                            : React.createElement('div', {
-                                className: 'reports-fullscreen-modal__loading'
-                            }, 'Загружаем модуль месячных отчётов...')
-                    )
+                React.createElement('div', { className: 'reports-v4-periods-sheet__scroll' },
+                    MonthlyReportsContent
+                        ? React.createElement(MonthlyReportsContent, {
+                            mode: monthlyReportsMode,
+                            weekFilter: monthlyWeekFilter,
+                            setWeekFilter: setMonthlyWeekFilter,
+                            monthFilter: monthlyMonthFilter,
+                            setMonthFilter: setMonthlyMonthFilter,
+                            setMode: setMonthlyReportsMode
+                        })
+                        : React.createElement('div', {
+                            className: 'reports-v4-periods-sheet__empty'
+                        }, 'Загружаем модуль месячных отчётов...')
                 )
             );
-        }, [reportsModalOpen, reportsModuleTick, monthlyReportsMode, closeReportsModal]);
+        }, [
+            reportsModalOpen,
+            reportsModuleTick,
+            monthlyReportsMode,
+            monthlyWeekFilter,
+            monthlyMonthFilter,
+            closeReportsModal
+        ]);
 
         // compareBlock удалён по требованию
 
