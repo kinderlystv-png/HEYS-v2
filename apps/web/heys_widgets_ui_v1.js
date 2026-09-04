@@ -5868,40 +5868,40 @@
 
     if (variantId === 'by_meal') {
       const byMeal = Array.isArray(data?.byMeal) ? data.byMeal : [];
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-protein' },
+      const maxMeal = Math.max(1, ...byMeal.map((item) => Number(item?.grams) || 0));
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-protein widget-v4-protein-meals' },
         React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
           v4Kicker('Белок · по приёмам'),
           target > 0
             ? React.createElement('span', { className: 'widget-v4-row__meta' }, `из ${target}`)
             : null
         ),
-        React.createElement('div', { className: 'widget-v4-goal-hero' },
+        React.createElement('div', { className: 'widget-v4-protein-meals__hero' },
           React.createElement('span', {
-            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+            className: 'widget-v4-protein-meals__value'
+              + (hasData ? ' ' + v4ValueStateClass(state) : '')
           }, hasData ? String(protein) : '—'),
           hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
         ),
         // День без приёмов — подпись, пустые полосы не рисуются.
         byMeal.length
-          ? React.createElement('div', { className: 'widget-v4-mealbars' },
-            byMeal.map((item, index) => React.createElement('div', {
-              key: `${item.time}_${index}`,
-              className: 'widget-v4-mealbars__row'
-            },
-              React.createElement('span', { className: 'widget-v4-mealbars__time' }, item.time || '—'),
-              React.createElement('span', { className: 'widget-v4-mealbars__track' },
-                React.createElement('span', {
-                  // Заливка полосы идёт currentColor, поэтому без класса
-                  // состояния она брала цвет родителя — чернила. Это было не
-                  // решение, а его отсутствие: у соседнего вызова того же класса
-                  // (ритм приёмов, «Интервалы») состояние стоит. Кадр «Белок ·
-                  // По приёмам» рисует эти полосы зелёными на 68 % и 84 %.
-                  className: 'widget-v4-mealbars__fill widget-v4-val--good',
-                  style: { width: Math.max(2, Math.min(100, target > 0 ? (item.grams / target) * 100 : 0)) + '%' }
-                })
-              ),
-              React.createElement('span', { className: 'widget-v4-mealbars__num' }, String(item.grams))
-            ))
+          ? React.createElement('div', { className: 'widget-v4-mealbars widget-v4-protein-meals__bars' },
+            byMeal.map((item, index) => {
+              const grams = Number(item?.grams) || 0;
+              return React.createElement('div', {
+                key: `${item.time}_${index}`,
+                className: 'widget-v4-mealbars__row'
+              },
+                React.createElement('span', { className: 'widget-v4-mealbars__time' }, item.time || '—'),
+                React.createElement('span', { className: 'widget-v4-mealbars__track' },
+                  React.createElement('span', {
+                    className: 'widget-v4-mealbars__fill',
+                    style: { width: Math.max(2, Math.round((grams / maxMeal) * 100)) + '%' }
+                  })
+                ),
+                React.createElement('span', { className: 'widget-v4-mealbars__num' }, String(grams))
+              );
+            })
           )
           : React.createElement('span', { className: 'widget-v4-muted' }, 'приёмов не было')
       );

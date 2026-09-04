@@ -12784,6 +12784,51 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   white-space: nowrap;
 }
 
+/* Белок · По приёмам: герой 26 px, полосы 5 px. Общий mealbars ритма
+   (gap 5 / 4 px / currentColor) не трогал. */
+.widget-v4-protein-meals__hero {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 7px;
+  min-width: 0;
+}
+
+.widget-v4-protein-meals__value {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.widget-v4-mealbars.widget-v4-protein-meals__bars {
+  gap: 6px;
+  margin-top: auto;
+}
+
+.widget-v4-protein-meals__bars .widget-v4-mealbars__time {
+  width: 34px;
+  font-size: 8.5px;
+  line-height: 1;
+}
+
+.widget-v4-protein-meals__bars .widget-v4-mealbars__track {
+  height: 5px;
+}
+
+.widget-v4-protein-meals__bars .widget-v4-mealbars__fill {
+  height: 5px;
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
+.widget-v4-protein-meals__bars .widget-v4-mealbars__num {
+  font-size: 8.5px;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+}
+
 /* Лента дня: точки приёмов на полосе 6:00–24:00, текущий момент — риска. */
 .widget-v4-rhythm__line {
   position: relative;
