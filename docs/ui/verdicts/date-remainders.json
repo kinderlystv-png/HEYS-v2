@@ -50,7 +50,7 @@
     },
     "вид капсулы": {
       "v": "=",
-      "f": "000-base-and-gamification.css: .date-picker-row gap 9; обе .date-picker-day-nav — реальные круглые 44×44 без псевдо-припуска; trigger 36px и label gap 7 сохраняют именованный контракт. date-remainders-v4-canvas-razbor проверяет новый 44×44 кадр",
+      "f": "000-base-and-gamification.css:8047 .date-picker--v4 > .date-picker-row { gap: 8px }; :8050 .date-picker-day-nav — круг 44×44, margin -6px 0; строка именованного контракта про зазор ряда 8 и стрелки 44×44. Геометрия капсулы «сегодня» — в кадре ·18/·19, не в этой строке",
       "h": "10ced4fdb2cf"
     },
     "вид чужого дня": {
@@ -425,12 +425,12 @@
     },
     "Дата · сегодня · 18": {
       "v": "=",
-      "f": "кадр ·18 data-v: min-height 44/radius 14; CSS 000-base-and-gamification.css:8102 .date-picker--v4 .date-picker-trigger height 36px border-radius 999px — продукт следует строке «вид капсулы» (trigger 36, radius 999); ночной кадр «Капсула · ночь ·04» совпадает; отступление дневного кадра зафиксировано в EXCEPTION «Дата · чужой день · 18|height» date-remainders-v4-canvas-razbor.test.js",
+      "f": "000-base-and-gamification.css:8103 .date-picker--v4 .date-picker-trigger — min-height 44px, margin -6px 0, border-radius 14px, gap 3px; ночь (:8152) и чужой день (:8197) переопределяют отдельно. Гейт date-remainders-v4-canvas-razbor.test.js",
       "h": "1521fdba54cf"
     },
     "Дата · сегодня · 19": {
       "v": "=",
-      "f": "кадр ·19 data-v: gap 6px; CSS :8219 .date-picker-lbl-inner gap 7px — продукт следует строке «вид капсулы» (gap 7); ночной кадр «Капсула · ночь ·04» gap 7; отступление дневного кадра в EXCEPTION «Дата · чужой день · 19|gap» razbor-теста",
+      "f": "000-base-and-gamification.css:8227 .date-picker--v4 .date-picker-lbl-inner { gap: 6px } — совпадает с кадром ·19; ночь :8162 держит gap 7px. Гейт razbor",
       "h": "69bce8693f54"
     },
     "Дата · сегодня · 20": {
@@ -1898,6 +1898,16 @@
       "v": "=",
       "f": "heys_day_utils.js:1335 formatDateHeaderRow → «Ночь на 21 августа»; date-header-row.test.js + date-remainders-v4-smoke.test.js 01:30",
       "h": "10f1a94b3c79"
+    },
+    "порог прилипания": {
+      "v": "=",
+      "f": "heys_app_shell_v1.js:6364 bindHdrStickyPin — position:sticky на .hdr-sticky-strip, IntersectionObserver threshold:0 на .hdr-sticky-sentinel; отдельного порога в px нет. hdr-date-collapse.test.js",
+      "h": "e37af8e90aff"
+    },
+    "зазор под липкой подложкой": {
+      "v": "=",
+      "f": "000-base-and-gamification.css:3972 .hdr-sticky-strip { padding: 16px 18px 10px } — нижнее поле 10px подложки; отдельного margin у контента под ней нет. hdr-date-collapse.test.js :69",
+      "h": "8c6514514e73"
     }
   },
   "frames": {

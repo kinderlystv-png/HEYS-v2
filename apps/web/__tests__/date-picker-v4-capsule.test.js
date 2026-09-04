@@ -53,9 +53,15 @@ describe('DatePicker v4 капсула', () => {
     // припуск делает цель невидимой глазу и непроверяемой замером». Тест до
     // этого сторожил литерал 34 и потому упал на починке — ровно тот случай,
     // о котором правило «тест, записанный литералом, охраняет литерал».
-    it('CSS — геометрия dcap: капсула 36px, стрелки 44px без припуска', () => {
+    it('CSS — геометрия капсулы: сегодня 44/14, ночь 36/999, стрелки 44', () => {
         expect(baseCss).toMatch(
-            /\.date-picker--v4 \.date-picker-trigger[\s\S]{0,200}height:\s*36px/,
+            /\.date-picker--v4 \.date-picker-trigger \{[\s\S]*?min-height:\s*44px/,
+        );
+        expect(baseCss).toMatch(
+            /\.date-picker--v4 \.date-picker-trigger \{[\s\S]*?border-radius:\s*14px/,
+        );
+        expect(baseCss).toMatch(
+            /\.date-picker--v4 \.date-picker-trigger--night[\s\S]{0,200}height:\s*36px/,
         );
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-day-nav[\s\S]{0,120}width:\s*44px/,

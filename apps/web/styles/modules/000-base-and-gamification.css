@@ -8051,6 +8051,7 @@ body:has(.offline-banner) .wrap {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
+  margin: -6px 0;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -8102,8 +8103,9 @@ body:has(.offline-banner) .wrap {
 .date-picker--v4 .date-picker-trigger {
   flex: 1;
   min-width: 0;
-  height: 36px;
-  min-height: 36px;
+  height: auto;
+  min-height: 44px;
+  margin: -6px 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8112,7 +8114,7 @@ body:has(.offline-banner) .wrap {
   /* v4-intentional */
   background: var(--v4-surface);
   border: none;
-  border-radius: 999px;
+  border-radius: 14px;
   cursor: pointer;
   box-shadow: none;
   transition: box-shadow 0.15s ease;
@@ -8148,9 +8150,19 @@ body:has(.offline-banner) .wrap {
    Кнопки «Сегодня» в ночной капсуле нет, поэтому и раскладка обычная —
    текст по центру. */
 .date-picker--v4 .date-picker-trigger--night {
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
   /* v4-intentional */
   background: var(--v4-surface);
   border: none;
+}
+
+.date-picker--v4 .date-picker-trigger--night .date-picker-lbl-inner {
+  gap: 7px;
 }
 
 .date-picker--v4 .date-picker-trigger--night .date-picker-main--past {
@@ -8183,11 +8195,15 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger--not-today {
+  height: 38px;
+  min-height: 38px;
+  align-items: center;
   /* v4-intentional */
   background: var(--v4-tint);
   border: none;
-  gap: 0;
-  padding: 0 4px 0 0;
+  border-radius: 999px;
+  gap: 5px;
+  padding: 0 4px 0 11px;
   justify-content: flex-start;
 }
 
@@ -8216,7 +8232,7 @@ body:has(.offline-banner) .wrap {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
   max-width: 100%;
 }
@@ -9411,9 +9427,21 @@ svg.date-picker-icon {
     min-width: 0;
     flex: 1 1 0%;
     padding: 0 12px;
+    height: auto;
+    min-height: 44px;
+    gap: 3px;
+  }
+
+  .date-picker--v4 .date-picker-trigger--night {
     height: 36px;
     min-height: 36px;
-    gap: 3px;
+  }
+
+  .date-picker--v4 .date-picker-trigger--not-today {
+    height: 38px;
+    min-height: 38px;
+    gap: 5px;
+    padding: 0 4px 0 11px;
   }
 
   .date-picker--v4 .date-picker-day-nav {

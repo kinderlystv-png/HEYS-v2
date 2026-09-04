@@ -816,20 +816,22 @@ body.board-dark-nav .heys-tab-skeleton {
     flex: 1 1 auto;
     min-width: 0;
     max-width: none;
-    height: 36px;
-    min-height: 36px;
+    min-height: 44px;
+    height: auto;
     padding: 0 12px;
     gap: 3px;
   }
 
   .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
-    padding: 0 4px 0 0;
-    gap: 0;
+    height: 38px;
+    min-height: 38px;
+    padding: 0 4px 0 11px;
+    gap: 5px;
   }
 
   .hdr-date-group .date-picker--v4 .date-picker-day-nav {
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
   }
 }
 

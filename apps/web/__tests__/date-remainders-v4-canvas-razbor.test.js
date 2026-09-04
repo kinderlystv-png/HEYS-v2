@@ -26,13 +26,10 @@ const S = '.date-picker-sheet';
 // Осознанные отступления: кадр против именованной строки той же зоны. Контракт
 // старше кадра, поэтому сверяется не всё. Список закрытый.
 const EXCEPTIONS = new Map([
-  // Строка «вид капсулы», редакция 31 августа: «ряд из трёх частей с зазором
-  // 9 px»; про высоту капсулы и зазор иконки новая редакция молчит, поэтому
-  // прежние 36 и 7 остаются в силе. Кадры дают 8, 38 и 6 — их разбор снят с
-  // ширины 330, а кадры зоны теперь 375, о чём та же строка и предупреждает.
-  ['Дата · чужой день · 16|gap', 'строка «вид капсулы»: зазор ряда 9'],
-  ['Дата · чужой день · 18|height', 'строка «вид капсулы»: высота капсулы 36'],
-  ['Дата · чужой день · 19|gap', 'строка «вид капсулы»: зазор иконки и текста 7'],
+  // Строка «вид капсулы», редакция 1 сентября: зазор ряда 8; кадр «Дата ·
+  // сегодня» ·16 совпадает. Прежнее «9» в .date-picker-row — наследие строки
+  // до переписи; в v4-ряду стоит 8.
+  ['Дата · чужой день · 16|gap', 'строка «вид капсулы»: зазор ряда 9 в .date-picker-row'],
   // Строка «вид чужого дня»: «„Сегодня" 11 px/700 тоном --ac». Кадр рисует
   // залитую терракотой пилюлю 10,5 px.
   ['Дата · чужой день · 20|background', 'строка «вид чужого дня»: без заливки'],
@@ -65,7 +62,7 @@ const EXCEPTIONS = new Map([
 const PAST = [
   [16, '.date-picker-row', ['align']],
   [17, `${V4} .date-picker-day-nav`, ['width', 'height', 'radius', 'background', 'align', 'justify']],
-  [18, `${V4} .date-picker-trigger`, ['radius', 'align']],
+  [18, `${V4} .date-picker-trigger--not-today`, ['radius', 'align']],
   [19, `${V4} .date-picker-lbl-inner`, ['align']],
   [20, `${V4} .date-picker-inline-today`, ['height', 'fontWeight', 'lineHeight']],
 ];
@@ -75,8 +72,8 @@ const NIGHT = [
   [2, '.date-picker-row', ['align']],
   [2, '.date-picker--v4 > .date-picker-row', ['gap']],
   [3, `${V4} .date-picker-day-nav`, ['radius', 'background', 'align', 'justify']],
-  [4, `${V4} .date-picker-trigger`, ['height', 'radius', 'background', 'align', 'justify']],
-  [4, `${V4} .date-picker-lbl-inner`, ['gap']],
+  [4, `${V4} .date-picker-trigger--night`, ['height', 'radius', 'background', 'align', 'justify']],
+  [4, `${V4} .date-picker-trigger--night .date-picker-lbl-inner`, ['gap']],
   [4, `${V4} .date-picker-lbl-inner .date-picker-main`, ['fontWeight', 'fontSize']],
 ];
 
@@ -123,12 +120,18 @@ describe('«Дата и остатки» · разбор кадров канва
 
   // Числа, которые называет именованная строка зоны, а кадр рисует иначе:
   // проверяются по строке контракта, а не по кадру.
-  it('капсула следует строке «вид капсулы», а не кадру', () => {
+  it('капсула следует кадру «Дата · сегодня» ·18/·19 и строке «вид капсулы»', () => {
     expect(rules.get('.date-picker-row').gap).toBe('9px');
-    expect(rules.get(`${V4} .date-picker-trigger`).height).toBe('36px');
-    expect(rules.get(`${V4} .date-picker-lbl-inner`).gap).toBe('7px');
+    expect(rules.get(`${V4} .date-picker-trigger`)['min-height']).toBe('44px');
+    expect(rules.get(`${V4} .date-picker-trigger`)['border-radius']).toBe('14px');
+    expect(rules.get(`${V4} .date-picker-lbl-inner`).gap).toBe('6px');
     expect(rules.get(`${V4} .date-picker-day-nav`).width).toBe('44px');
     expect(rules.get(`${V4} > .date-picker-row`).gap).toBe('8px');
+    expect(rules.get(`${V4} .date-picker-trigger--night`).height).toBe('36px');
+    expect(rules.get(`${V4} .date-picker-trigger--night`)['border-radius']).toBe('999px');
+    expect(rules.get(`${V4} .date-picker-trigger--night .date-picker-lbl-inner`).gap).toBe('7px');
+    expect(rules.get(`${V4} .date-picker-trigger--not-today`).height).toBe('38px');
+    expect(rules.get(`${V4} .date-picker-trigger--not-today`).gap).toBe('5px');
   });
 
   it('клетка и точка следуют строке «вид клетки», а не кадру', () => {
@@ -139,7 +142,7 @@ describe('«Дата и остатки» · разбор кадров канва
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(15);
+    expect(EXCEPTIONS.size).toBe(13);
   });
 
   it('гейт называет свой охват', () => {
