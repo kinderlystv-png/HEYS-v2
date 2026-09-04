@@ -1404,7 +1404,9 @@
   justify-content: space-between;
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  /* Кадр «советы приёма · 09»: разделитель 1 px чернил 7 % — ближайшая роль
+     --v4-line (8 %), как у строк действий листа приёма. */
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: transparent;
 }
 
