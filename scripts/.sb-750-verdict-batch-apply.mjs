@@ -33,7 +33,10 @@ function queueRow(source, rowKey, verdict, fact, options = {}) {
 
 const handoffDir = path.join(ROOT, 'scripts');
 const handoffPattern = /^\.sb-.+-verdict-handoff(?:-\d+)?\.json$/;
-const extraHandoffs = ['.sb-neq-audit-handoff.json'];
+const extraHandoffs = [
+  '.sb-neq-audit-handoff.json',
+  '.sb-catalog-custom-exercise-handoff.json',
+];
 const handoffFiles = [
   ...fs.readdirSync(handoffDir)
     .filter((name) => handoffPattern.test(name))
@@ -133,6 +136,23 @@ const inlineEquals = [
   ['Программа пройдена · 10', '.program-done-hero p — 500 11.5px/1.4 rgba(var(--ink),.56); ProgramDoneScreen copy.'],
   ['Правка · клиент уже начал · 01', '.sb-proposal-started .sb-head — gap 10px, padding 16px 18px 0; 750-strength-builder.css.'],
   ['Правка · клиент уже начал · 02', '.sb-builder-screen .sb-icon-btn — 36×36, radius 999px, bg var(--c1), font 600 13px; 750:3278-3291.'],
+  ['Правка · клиент уже начал · 20', '.sb-proposal-started-detail — flex gap 8px, margin 9px 0 0 33px, padding 8px 10px, radius 11px, bg var(--c2); 750-strength-builder.css.'],
+  ['Правка · клиент уже начал · 21', '.sb-proposal-started-detail-label — flex 1, 600 11px/1.3 var(--tx); ProposalStartedScreen heys_strength_builder_ui_v1.js.'],
+  ['Правка · клиент уже начал · 22', '.sb-proposal-started-detail-old — 700 11px tabular-nums rgba(var(--ink),.56) line-through; 750-strength-builder.css.'],
+  ['Правка · клиент уже начал · 23', '.sb-proposal-started-detail-new — 700 11.5px tabular-nums var(--ac); 750-strength-builder.css.'],
+  ['Правка · клиент уже начал · 26', '.sb-proposal-started-card.is-plain — padding 11px 12px, radius 14px, bg transparent; 750-strength-builder.css.'],
+  ['Правка · клиент уже начал · 27', '.sb-proposal-started-card.is-plain .sb-proposal-started-num — inset rgba(var(--ink),.1), color rgba(var(--ink),.62); 750.'],
+  ['Правка · клиент уже начал · 29', '.sb-proposal-started-tag.is-empty — 700 9.5px/.1em uppercase rgba(var(--ink),.56); 750-strength-builder.css.'],
+  ['Правка · клиент уже начал · рисунок 01', 'proposalLockIcon svg 11×11 viewBox 0 0 24 24 — heys_strength_builder_ui_v1.js; strength-builder-proposal-started-v4-canvas-contract.test.js.'],
+  ['Правка · клиент уже начал · рисунок 02', 'proposalLockIcon rect 16×10 rx 2.5 — heys_strength_builder_ui_v1.js proposalLockIcon().'],
+  ['Правка · клиент уже начал · рисунок 03', 'proposalLockIcon path M8 11V7a4 4 0 0 1 8 0v4 — heys_strength_builder_ui_v1.js proposalLockIcon().'],
+  ['Ввод · время под нагрузкой · 08', '.is-time-entry.is-exercise-open .sb-aps-head > span:nth-child(3) text-align center; 750-strength-builder.css.'],
+  ['Ввод · время под нагрузкой · 09', '.is-time-entry.is-exercise-open .sb-aps-head > span:last-child color var(--gr); 750-strength-builder.css.'],
+  ['Ввод · время под нагрузкой · 10', '.is-time-entry.is-exercise-open .sb-ap.is-done .sb-ap-num bg var(--gr-bg) color var(--gr); 750.'],
+  ['Ввод · время под нагрузкой · 12', '.is-time-entry.is-exercise-open .sb-ap.is-current .sb-ap-num bg var(--acs) color var(--on-acs); 750.'],
+  ['Ввод · время под нагрузкой · 13', '.is-time-entry.is-exercise-open .sb-ap.is-current .sb-ap-field box-shadow inset 1.5px var(--acs); 750.'],
+  ['Ввод · время под нагрузкой · 14', '.is-exercise-open .sb-ap-check.is-blocked — rgba ink .06/.24 inset 1px; 750-strength-builder.css:3653.'],
+  ['Ввод · время под нагрузкой · 22', '.sb-time-entry-footnote — copy про колонку «Вес»; heys_strength_builder_ui_v1.js + 750-strength-builder.css.'],
 ];
 
 for (const [key, fact] of inlineEquals) queueRow('inline-equals', key, '=', fact, {});

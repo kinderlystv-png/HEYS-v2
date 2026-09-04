@@ -51,9 +51,13 @@ describe('Л2 · Правка · клиент уже начал · canvas contra
 
   it('держит ProposalStartedScreen и полосу куратора', () => {
     expect(BUILDER).toContain('function ProposalStartedScreen');
+    expect(BUILDER).toContain('function proposalLockIcon');
+    expect(BUILDER).toContain('sb-proposal-started-detail');
     expect(BUILDER).toContain("setView('proposal-started')");
     expect(CSS).toMatch(/\.sb-proposal-started-banner[\s\S]*background:\s*var\(--c2\)/);
     expect(CSS).toMatch(/\.sb-proposal-started-badge[\s\S]*background:\s*var\(--gr-bg\)/);
+    expect(CSS).toMatch(/\.sb-proposal-started-detail[\s\S]*background:\s*var\(--c2\)/);
+    expect(CSS).toMatch(/\.sb-proposal-started-card\.is-plain[\s\S]*background:\s*transparent/);
   });
 
   it('рисует разбор с бейджем и кнопкой принятия', () => {
@@ -99,7 +103,11 @@ describe('М4 · Ввод · время под нагрузкой · canvas cont
   it('держит is-time-entry и сводку под нагрузкой', () => {
     expect(BUILDER).toContain('is-time-entry');
     expect(BUILDER).toContain('sb-time-summary');
+    expect(BUILDER).toContain('sb-time-entry-footnote');
+    expect(BUILDER).toContain('есть ли что взвешивать');
     expect(CSS).toMatch(/\.sb-builder-screen\.is-time-entry \.sb-ap[\s\S]*grid-template-columns:\s*44px 1fr 44px/);
+    expect(CSS).toMatch(/\.is-time-entry\.is-exercise-open \.sb-ap\.is-done \.sb-ap-num[\s\S]*var\(--gr-bg\)/);
+    expect(CSS).toMatch(/\.is-time-entry\.is-exercise-open \.sb-ap\.is-current \.sb-ap-num[\s\S]*var\(--acs\)/);
   });
 
   it('показывает заголовок упражнения и единицу времени', () => {
@@ -123,6 +131,7 @@ describe('М4 · Ввод · время под нагрузкой · canvas cont
       expect(screen.getByText(/Планка · 1 подход/)).toBeTruthy();
       expect(screen.getByText('единица — время')).toBeTruthy();
       expect(screen.getByText('Итого под нагрузкой')).toBeTruthy();
+      expect(screen.getByText(/есть ли что взвешивать/)).toBeTruthy();
     } finally {
       style.remove();
     }

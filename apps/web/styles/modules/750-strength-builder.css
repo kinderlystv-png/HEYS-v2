@@ -4572,6 +4572,83 @@
   background: var(--gr-bg);
 }
 
+.sb-proposal-started-card.is-partial {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.sb-proposal-started-card.is-partial > .sb-proposal-started-lock {
+  order: 0;
+}
+
+.sb-proposal-started-card.is-partial > .sb-proposal-started-card-main {
+  order: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+.sb-proposal-started-card.is-partial > .sb-proposal-started-tag {
+  order: 2;
+}
+
+.sb-proposal-started-card.is-partial > .sb-proposal-started-detail {
+  order: 3;
+  width: 100%;
+}
+
+.sb-proposal-started-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 9px 0 0 33px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  background: var(--c2);
+}
+
+.sb-proposal-started-detail-label {
+  flex: 1;
+  font: 600 11px/1.3 Figtree, sans-serif;
+  color: var(--tx);
+}
+
+.sb-proposal-started-detail-old {
+  font: 700 11px/1 Figtree, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: rgba(var(--ink), .56);
+  text-decoration: line-through;
+}
+
+.sb-proposal-started-detail-new {
+  font: 700 11.5px/1 Figtree, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--ac);
+}
+
+.sb-proposal-started-lock svg {
+  display: block;
+}
+
+.sb-proposal-started-card.is-plain {
+  background: transparent;
+}
+
+.sb-proposal-started-card.is-plain .sb-proposal-started-num {
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), .1);
+  color: rgba(var(--ink), .62);
+}
+
+.sb-proposal-started-tag.is-edit {
+  color: var(--ac);
+}
+
+.sb-proposal-started-tag.is-empty {
+  color: rgba(var(--ink), .56);
+  min-width: 1px;
+  min-height: 1em;
+}
+
 .sb-proposal-started-card.is-remove {
   background: var(--tint);
   box-shadow: inset 0 0 0 1.5px var(--acs);
@@ -4670,6 +4747,35 @@
 
 .sb-builder-screen.is-time-entry .sb-ex.is-open .sb-aps {
   margin-top: 12px;
+}
+
+.sb-builder-screen.is-time-entry.is-exercise-open .sb-aps-head > span:nth-child(3) {
+  text-align: center;
+}
+
+.sb-builder-screen.is-time-entry.is-exercise-open .sb-aps-head > span:last-child {
+  justify-self: center;
+  color: var(--gr);
+}
+
+.sb-builder-screen.is-time-entry.is-exercise-open .sb-ap.is-done .sb-ap-num {
+  background: var(--gr-bg);
+  color: var(--gr);
+}
+
+.sb-builder-screen.is-time-entry.is-exercise-open .sb-ap.is-current .sb-ap-num {
+  background: var(--acs);
+  color: var(--on-acs);
+}
+
+.sb-builder-screen.is-time-entry.is-exercise-open .sb-ap.is-current .sb-ap-field:not(.is-reps-missing) {
+  box-shadow: inset 0 0 0 1.5px var(--acs);
+}
+
+.sb-time-entry-footnote {
+  margin: 10px 0 0;
+  font: 500 11px/1.4 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
 }
 
 .sb-time-summary {

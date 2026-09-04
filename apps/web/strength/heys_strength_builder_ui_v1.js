@@ -106,6 +106,55 @@
     return 'изменений';
   }
 
+  function exerciseById(list, id) {
+    return (Array.isArray(list) ? list : []).find(function (ex) { return ex && ex.id === id; }) || null;
+  }
+
+  function proposalLockIcon() {
+    return h('svg', {
+      width: 11,
+      height: 11,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true'
+    },
+      h('rect', { x: 4, y: 11, width: 16, height: 10, rx: 2.5 }),
+      h('path', { d: 'M8 11V7a4 4 0 0 1 8 0v4' })
+    );
+  }
+
+  /** Незакрытый подход начатого упражнения, который правка ещё меняет (кадр Л2 ·20–23). */
+  function frozenPartialDetail(liveEx, proposedEx, ks) {
+    if (!liveEx || !proposedEx || !ks) return null;
+    const liveAps = liveEx.approaches || [];
+    const propAps = proposedEx.approaches || [];
+    for (let i = 0; i < liveAps.length; i++) {
+      const la = liveAps[i];
+      if (ks.isApproachDone(la)) continue;
+      const pa = propAps[i];
+      if (!pa) continue;
+      const wLive = la.weightKg == null || la.weightKg === '' ? '' : String(la.weightKg);
+      const wProp = pa.weightKg == null || pa.weightKg === '' ? '' : String(pa.weightKg);
+      const rLive = la.reps;
+      const rProp = pa.reps;
+      if (wLive !== wProp || rLive !== rProp) {
+        const n = i + 1;
+        return {
+          approachNo: n,
+          tag: 'править ' + n + '-й',
+          label: 'Подход ' + n + ' · не закрыт',
+          oldReps: rLive != null && rLive !== '' ? String(rLive) : '',
+          newWeight: wProp && wProp !== '0' ? wProp + ' кг' : ''
+        };
+      }
+    }
+    return null;
+  }
+
   /**
    * Кадр Л2 «Правка · клиент уже начал»: полный разбор поверх идущей
    * тренировки. Шапка — как у конструктора; тело — замороженное и впереди.
@@ -153,13 +202,29 @@
         ),
         diff.frozen.length > 0 && h('div', { className: 'sb-proposal-started-block' },
           diff.frozen.map(function (row, i) {
-            return h('div', { key: 'f' + i, className: 'sb-proposal-started-card is-frozen' },
-              h('span', { className: 'sb-proposal-started-lock', 'aria-hidden': 'true' }, '🔒'),
+            const liveEx = exerciseById(wl.exercises || exercises, row.id);
+            const propEx = exerciseById(proposal.exercises, row.id);
+            const partial = frozenPartialDetail(liveEx, propEx, ks);
+            const summary = partial && partial.approachNo > 1
+              ? 'подходы 1–' + (partial.approachNo - 1) + ' закрыты · заморожены'
+              : row.summary;
+            return h('div', {
+              key: 'f' + i,
+              className: 'sb-proposal-started-card is-frozen' + (partial ? ' is-partial' : '')
+            },
+              h('span', { className: 'sb-proposal-started-lock', 'aria-hidden': 'true' }, proposalLockIcon()),
               h('span', { className: 'sb-proposal-started-card-main' },
                 h('b', null, row.name),
-                h('span', null, row.summary)
+                h('span', null, summary)
               ),
-              h('span', { className: 'sb-proposal-started-tag is-done' }, 'сделано')
+              partial && h('div', { className: 'sb-proposal-started-detail' },
+                h('span', { className: 'sb-proposal-started-detail-label' }, partial.label),
+                partial.oldReps && h('span', { className: 'sb-proposal-started-detail-old' }, partial.oldReps),
+                partial.newWeight && h('span', { className: 'sb-proposal-started-detail-new' }, partial.newWeight)
+              ),
+              h('span', {
+                className: 'sb-proposal-started-tag' + (partial ? ' is-edit' : ' is-done')
+              }, partial ? partial.tag : 'сделано')
             );
           })
         ),
@@ -169,21 +234,25 @@
               : row.kind === 'added' ? 'добавить'
                 : row.kind === 'changed' ? 'править'
                   : '';
+            const isPlain = row.kind === 'same';
             return h('div', {
               key: 'a' + i,
               className: 'sb-proposal-started-card'
                 + (row.kind === 'removed' ? ' is-remove' : '')
                 + (row.kind === 'changed' ? ' is-change' : '')
+                + (isPlain ? ' is-plain' : '')
             },
               h('span', { className: 'sb-proposal-started-num' }, String(i + 1)),
               h('span', { className: 'sb-proposal-started-card-main' },
                 h('b', null, row.name),
                 h('span', null, row.detail || row.before || '')
               ),
-              tag && h('span', {
-                className: 'sb-proposal-started-tag'
-                  + (row.kind === 'removed' ? ' is-remove' : ' is-change')
-              }, tag)
+              tag
+                ? h('span', {
+                  className: 'sb-proposal-started-tag'
+                    + (row.kind === 'removed' ? ' is-remove' : ' is-change')
+                }, tag)
+                : isPlain && h('span', { className: 'sb-proposal-started-tag is-empty', 'aria-hidden': 'true' })
             );
           })
         ),
@@ -1377,18 +1446,22 @@
           setView('proposal-started');
         }
       }),
-        ((ex.unit || 'weight_reps') === 'time') && h('div', { className: 'sb-time-summary' },
-          h('div', { className: 'sb-time-summary-row' },
-            h('span', null, 'Итого под нагрузкой'),
-            h('b', { className: 'sb-time-summary-val' }, fmtClock(exerciseDurationTotalSec(ex)))
-          ),
-          h('div', { className: 'sb-time-summary-row is-muted' },
-            h('span', { className: 'sb-time-summary-copy' },
-              h('b', null, 'В тоннаж'),
-              h('span', null, 'не идёт · килограммы на секунды не умножаются')
+        ((ex.unit || 'weight_reps') === 'time') && h('div', { className: 'sb-time-entry-block' },
+          h('div', { className: 'sb-time-summary' },
+            h('div', { className: 'sb-time-summary-row' },
+              h('span', null, 'Итого под нагрузкой'),
+              h('b', { className: 'sb-time-summary-val' }, fmtClock(exerciseDurationTotalSec(ex)))
             ),
-            h('span', { className: 'sb-time-summary-dash' }, '—')
-          )
+            h('div', { className: 'sb-time-summary-row is-muted' },
+              h('span', { className: 'sb-time-summary-copy' },
+                h('b', null, 'В тоннаж'),
+                h('span', null, 'не идёт · килограммы на секунды не умножаются')
+              ),
+              h('span', { className: 'sb-time-summary-dash' }, '—')
+            )
+          ),
+          h('p', { className: 'sb-time-entry-footnote' },
+            'Колонка «Вес» показывается по признаку «есть ли что взвешивать», а не по единице: у планки её нет, у фермерской переноски есть — обе меряются временем. Клавиатура времени — мм:сс, хранение в секундах.')
         )
       ));
     });
