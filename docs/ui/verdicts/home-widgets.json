@@ -22844,278 +22844,278 @@
       "h": "1b001f35fdc0"
     },
     "Инсулиновая волна · День как есть · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-v4-stack — heys_widgets_ui_v1.js:3178-3187. 2) Кадр stop, relative. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Инсулиновая волна · День как есть · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-row--tight — heys_widgets_ui_v1.js:3179. 2) space-between baseline — 730-widgets-dashboard.css:10802-10806. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "f7098a935ff6"
     },
     "Инсулиновая волна · День как есть · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Инсулиновая волна') — heys_widgets_ui_v1.js:3179 / 3155 / 3049. 2) .widget-v4-kicker — 730-widgets-dashboard.css:10518-10524. 3) Слово ключа. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "750e8c0918e2"
     },
     "Инсулиновая волна · День как есть · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Счётчик слева footer .widget-v4-insulin-wave__footer > span — heys_widgets_ui_v1.js:3182. 2) 9.5px/700 — 730-widgets-dashboard.css:11691-11695. 3) --v4-ink-data 56 % / val--overlap при нахлёсте (730-widgets-dashboard.css:11072-11075). 4) mealCountLabel / overlapCountLabel.",
       "h": "87d0e37e4a5b"
     },
     "Инсулиновая волна · День как есть · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Footer space-between baseline — heys_widgets_ui_v1.js:3181-3186. 2) margin-top auto у __footer — 730-widgets-dashboard.css:11677-11679. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "5809f491f480"
     },
     "Инсулиновая волна · День как есть · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overlapCountLabel слева при нахлёсте — heys_widgets_ui_v1.js:3182. 2) 9.5px/700, val--overlap — 730-widgets-dashboard.css:11072-11075,11691-11695. 3) --v4-wave-overlap: песок #d99a63, синий #b03a24 (002-ui-v4-palette-roles.css:299/588). 4) «N волн наложились».",
       "h": "dd3434534f83"
     },
     "Инсулиновая волна · День как есть · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) stateLabel справа .widget-v4-muted — heys_widgets_ui_v1.js:3183-3185. 2) 9.5px/700 — 730-widgets-dashboard.css:11691-11695. 3) --v4-ink-data. 4) underWaveLabel / jointCountLabel.",
       "h": "ead62ed2bea3"
     },
     "Инсулиновая волна · Текущая волна · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-v4-stack — heys_widgets_ui_v1.js:3178-3187. 2) Кадр stop, relative. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Инсулиновая волна · Текущая волна · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-row--tight — heys_widgets_ui_v1.js:3111. 2) space-between baseline — 730-widgets-dashboard.css:10802-10806. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "f7098a935ff6"
     },
     "Инсулиновая волна · Текущая волна · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Идёт волна') — heys_widgets_ui_v1.js:3112. 2) .widget-v4-kicker. 3) Слово. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "edd0a2c0cc77"
     },
     "Инсулиновая волна · Текущая волна · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Meta .widget-v4-row__meta — heys_widgets_ui_v1.js:3113-3114. 2) 9px/600 — 730-widgets-dashboard.css:14536-14542. 3) --v4-ink-data. 4) currentMealMeta / overnightMark.",
       "h": "79a7b999b660"
     },
     "Инсулиновая волна · Текущая волна · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-hero-num — heys_widgets_ui_v1.js:3116. 2) baseline gap 5 margin-top 10 — 730-widgets-dashboard.css:11011-11017. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "7e0784626aee"
     },
     "Инсулиновая волна · Текущая волна · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-v4-hero-num__val — heys_widgets_ui_v1.js:3117-3119. 2) 26px/600/-.03em — 730-widgets-dashboard.css:11035-11041. 3) val--act / overlap / good через v4InsulinWaveState heys_widgets_ui_v1.js:2384-2387. 4) remaining минут.",
       "h": "440295fb497e"
     },
     "Инсулиновая волна · Пересечения · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-v4-stack — heys_widgets_ui_v1.js:3178-3187. 2) Кадр stop, relative. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Инсулиновая волна · Пересечения · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-row--tight — heys_widgets_ui_v1.js:3128. 2) space-between baseline — 730-widgets-dashboard.css:10802-10806. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "f7098a935ff6"
     },
     "Инсулиновая волна · Пересечения · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Пересечение волн') — heys_widgets_ui_v1.js:3129. 2) .widget-v4-kicker. 3) Слово. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "feba4c228f07"
     },
     "Инсулиновая волна · Пересечения · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Meta .widget-v4-row__meta — heys_widgets_ui_v1.js:3130-3131. 2) 9px/600. 3) --v4-ink-data. 4) overlapTimeLabel.",
       "h": "6e914445087d"
     },
     "Инсулиновая волна · Пересечения · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-hero-num — heys_widgets_ui_v1.js:3116. 2) baseline gap 5 margin-top 10 — 730-widgets-dashboard.css:11011-11017. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "7e0784626aee"
     },
     "Инсулиновая волна · Пересечения · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-v4-hero-num__val — heys_widgets_ui_v1.js:3134-3136. 2) 26px/600 (1.625rem) — 730-widgets-dashboard.css:11035-11041; кадр пишет 24px — единое правило героя. 3) val--overlap → --v4-wave-overlap. 4) overlapHoursLabel.",
       "h": "761ba8740c9a"
     },
     "Инсулиновая волна · Пересечения · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-v4-insulin-wave__overlap-note — heys_widgets_ui_v1.js:3142-3144. 2) 9px/600 margin-top 7 — 730-widgets-dashboard.css:11683-11689. 3) --v4-ink-data. 4) «второй приём попал в волну».",
       "h": "c0030cc0c32b"
     },
     "Инсулиновая волна · Полоса дня · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-v4-stack — heys_widgets_ui_v1.js:3098-3105. 2) Кадр stop, relative. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Инсулиновая волна · Полоса дня · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-row--tight — heys_widgets_ui_v1.js:3099. 2) space-between baseline — 730-widgets-dashboard.css:10802-10806. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "f7098a935ff6"
     },
     "Инсулиновая волна · Полоса дня · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Инсулин · под волной') — heys_widgets_ui_v1.js:3100. 2) .widget-v4-kicker. 3) Слово. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "7acecece887d"
     },
     "Инсулиновая волна · Полоса дня · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Meta elevatedMeta — heys_widgets_ui_v1.js:3101-3102. 2) 9px/600. 3) --v4-ink-data. 4) «6:20 из 16:00».",
       "h": "9ba312d47c34"
     },
     "Инсулиновая волна · Полоса дня · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-v4-insulin-daybar — InsulinWaveDayBar heys_widgets_ui_v1.js:3001-3019. 2) gap 2 height 9 margin-top auto — 730-widgets-dashboard.css:11633-11638. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "20db1d13cbdd"
     },
     "Инсулиновая волна · Полоса дня · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Сегмент .widget-v4-insulin-daybar__seg — heys_widgets_ui_v1.js:3006-3012. 2) flex inline, min-width 2, radius left — 730-widgets-dashboard.css:11640-11647. 3) rgba 9 % track. 4) Демо flex — динамика.",
       "h": "03e7e2b07ce9"
     },
     "Инсулиновая волна · Полоса дня · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Сегмент --up — heys_widgets_ui_v1.js:3009. 2) flex inline. 3) --v4-sand-wave #e6cfa8 (002-ui-v4-palette-roles.css:243). 4) elevated segment.",
       "h": "8f3225ae32ff"
     },
     "Инсулиновая волна · Полоса дня · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Сегмент базовый — heys_widgets_ui_v1.js:3006. 2) flex inline. 3) rgba 9 %. 4) Демо.",
       "h": "e53b1d6ff4a1"
     },
     "Инсулиновая волна · Полоса дня · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Сегмент --up — heys_widgets_ui_v1.js:3009. 2) flex inline. 3) --v4-sand-wave. 4) Демо.",
       "h": "e55c30d08c94"
     },
     "Инсулиновая волна · Полоса дня · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Сегмент --up — heys_widgets_ui_v1.js:3009. 2) flex inline. 3) --v4-sand-wave. 4) Демо.",
       "h": "67ceb92f534e"
     },
     "Инсулиновая волна · Полоса дня · 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Сегмент --up — heys_widgets_ui_v1.js:3009. 2) flex inline. 3) --v4-sand-wave. 4) Демо.",
       "h": "a312894742f3"
     },
     "Инсулиновая волна · Полоса дня · 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Сегмент --now — heys_widgets_ui_v1.js:3010. 2) flex inline. 3) --v4-sand-ink (730-widgets-dashboard.css:11655-11658). 4) now marker.",
       "h": "58237d788259"
     },
     "Инсулиновая волна · Полоса дня · 13": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Последний сегмент radius right — 730-widgets-dashboard.css:11649-11651. 2) flex inline. 3) track 9 %. 4) Демо.",
       "h": "9f6870b2557c"
     },
     "Инсулиновая волна · Полоса дня · 14": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подписи .widget-v4-insulin-daybar__labels — heys_widgets_ui_v1.js:3014-3018. 2) space-between 8.5px/600 margin-top 6 — 730-widgets-dashboard.css:11664-11672. 3) --v4-ink-data. 4) start/now/end labels.",
       "h": "d334f2db3d5b"
     },
     "Инсулиновая волна · Спокойное окно · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-v4-mini — heys_widgets_ui_v1.js:3083-3094. 2) Кадр stop, relative. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Инсулиновая волна · Спокойное окно · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Покой') — heys_widgets_ui_v1.js:3084. 2) .widget-v4-kicker. 3) Слово. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "a56d3616c145"
     },
     "Инсулиновая волна · Спокойное окно · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-v4-mini__value--pair layout — heys_widgets_ui_v1.js:3085-3087. 2) baseline gap 2 margin-top auto — 730-widgets-dashboard.css:11151-11166. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "67eff63bf24f"
     },
     "Инсулиновая волна · Спокойное окно · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-v4-mini__value — heys_widgets_ui_v1.js:3085-3087. 2) 21px/600/-.02em — 730-widgets-dashboard.css:11151-11157. 3) val--good при calm >180 мин (heys_widgets_ui_v1.js:2386-2387). 4) calmWindowLabel.",
       "h": "485c555fca03"
     },
     "Инсулиновая волна · Спокойное окно · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-v4-unit — heys_widgets_ui_v1.js:3092-3093. 2) line-height 1 — 730-widgets-dashboard.css:10546-10552. 3) Не цвет. 4) «без волн» / overnightMark.",
       "h": "1412ebbea9a5"
     },
     "Волна · пустой день · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-v4-stack — heys_widgets_ui_v1.js:3045-3060. 2) Кадр stop, relative. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Волна · пустой день · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Инсулиновая волна') — heys_widgets_ui_v1.js:3179 / 3155 / 3049. 2) .widget-v4-kicker — 730-widgets-dashboard.css:10518-10524. 3) Слово ключа. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "750e8c0918e2"
     },
     "Волна · пустой день · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Герой .widget-v4-hero-num — heys_widgets_ui_v1.js:3050-3054. 2) baseline gap 6 margin-top 9 в кадре; продукт margin-top 10 — 730-widgets-dashboard.css:11011-11017. 3) Не цвет. 4) Смоук: widgets-insulin-overnight-v4.test.js.",
       "h": "2cf263fbcfba"
     },
     "Волна · пустой день · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Прочерк .widget-v4-hero-num__val — heys_widgets_ui_v1.js:3051-3053. 2) 26px/600 — 730-widgets-dashboard.css:11035-11041. 3) val--neutral. 4) «—».",
       "h": "64dd43e88bfb"
     },
     "Волна · пустой день · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-v4-insulin-wave__note — heys_widgets_ui_v1.js:3057-3059. 2) 9.5px/600 margin-top 7 — 730-widgets-dashboard.css:11582-11588. 3) --v4-ink-data. 4) restFromWakeLabel.",
       "h": "6a67fcf6ba1c"
     },
     "Волна · ночная оценка · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-v4-stack — heys_widgets_ui_v1.js:3151-3162. 2) Кадр stop, relative. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Волна · ночная оценка · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-row--tight — heys_widgets_ui_v1.js:3155. 2) space-between baseline — 730-widgets-dashboard.css:10802-10806. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "c5ff20467600"
     },
     "Волна · ночная оценка · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Инсулиновая волна') — heys_widgets_ui_v1.js:3179 / 3155 / 3049. 2) .widget-v4-kicker — 730-widgets-dashboard.css:10518-10524. 3) Слово ключа. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "750e8c0918e2"
     },
     "Волна · ночная оценка · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overnightNote .widget-v4-insulin-wave__note — heys_widgets_ui_v1.js:3157-3158. 2) 9.5px/600 margin-top 7 — 730-widgets-dashboard.css:11582-11588. 3) --v4-ink-data. 4) «оценка по вчерашнему дню».",
       "h": "b86651b490b6"
     },
     "Волна · ночная оценка · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overnightStateLabel __note--next — heys_widgets_ui_v1.js:3159-3161. 2) margin-top 4 — 730-widgets-dashboard.css:11590-11592. 3) --v4-ink-data. 4) «покой … от вчерашнего».",
       "h": "de803245245c"
     },
     "Волна · стык и нахлёст · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget-v4-stack — heys_widgets_ui_v1.js:3178-3187. 2) Кадр stop, relative. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "9fa5a8a44936"
     },
     "Волна · стык и нахлёст · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-v4-row--tight — heys_widgets_ui_v1.js:3179 / 3111 / 3128 / 3099. 2) space-between baseline — 730-widgets-dashboard.css:10802-10806. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "c5ff20467600"
     },
     "Волна · стык и нахлёст · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Инсулиновая волна') — heys_widgets_ui_v1.js:3179 / 3155 / 3049. 2) .widget-v4-kicker — 730-widgets-dashboard.css:10518-10524. 3) Слово ключа. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "750e8c0918e2"
     },
     "Волна · стык и нахлёст · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Счётчик слева footer .widget-v4-insulin-wave__footer > span — heys_widgets_ui_v1.js:3182. 2) 9.5px/700 — 730-widgets-dashboard.css:11691-11695. 3) --v4-ink-data 56 % / val--overlap при нахлёсте (730-widgets-dashboard.css:11072-11075). 4) mealCountLabel полный / overlapCountLabel.",
       "h": "c0f3c887ac93"
     },
     "Волна · стык и нахлёст · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Footer space-between baseline — heys_widgets_ui_v1.js:3181-3186. 2) margin-top auto у __footer — 730-widgets-dashboard.css:11677-11679. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "7c64839e1cf9"
     },
     "Волна · стык и нахлёст · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overlapCountLabel слева при нахлёсте — heys_widgets_ui_v1.js:3182. 2) 9.5px/700, val--overlap — 730-widgets-dashboard.css:11072-11075,11691-11695. 3) --v4-wave-overlap: песок #d99a63, синий #b03a24 (002-ui-v4-palette-roles.css:299/588). 4) «N волн наложились».",
       "h": "dd3434534f83"
     },
     "Вес · Как сейчас · 01": {
@@ -23852,188 +23852,189 @@
       "h": "36ca5d6195d8"
     },
     "Инсулиновая волна · День как есть · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) InsulinWaveDaySvg viewBox 0 0 130 52 height 52 — heys_widgets_ui_v1.js:2833-2839. 2) Поле 100%×52. 3) Не цвет набора. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "4a9a57804a30"
     },
     "Инсулиновая волна · День как есть · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) path figure.d — buildWaveScheme heys_widgets_insulin_wave_v4.js. 2) Кривая схемы. 3) Не цвет. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "6c205a958518"
     },
     "Инсулиновая волна · День как есть · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-v4-insulin-wave__fill opacity .45 — heys_widgets_ui_v1.js:2850-2855. 2) closed figures. 3) --v4-sand-wave #e6cfa8 (002-ui-v4-palette-roles.css:243). 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "c11956e8c602"
     },
     "Инсулиновая волна · День как есть · рисунок 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) fill opacity .8 на active figure — heys_widgets_ui_v1.js:2854. 2) последняя волна. 3) --v4-sand-wave. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "7013e55d46cb"
     },
     "Инсулиновая волна · День как есть · рисунок 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) baseline line y=46 — heys_widgets_ui_v1.js:2858-2862. 2) stroke --v4-line 1.5. 3) rgba 12 %. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "477e206ab802"
     },
     "Инсулиновая волна · День как есть · рисунок 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) divider риска — heys_widgets_ui_v1.js:2864-2869. 2) 1px × 3.5px. 3) --v4-line. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "c198162a12fd"
     },
     "Инсулиновая волна · День как есть · рисунок 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overlap rect clipPath — heys_widgets_ui_v1.js:2878-2884. 2) width band. 3) --v4-wave-overlap 50 %. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "1c0127e26490"
     },
     "Инсулиновая волна · День как есть · рисунок 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) brace line — heys_widgets_ui_v1.js:2886-2891. 2) strokeWidth 2.4. 3) --v4-wave-overlap. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "c6f4cd32f1ea"
     },
     "Инсулиновая волна · Текущая волна · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) InsulinWaveCurrentSvg viewBox 0 0 130 48 — heys_widgets_ui_v1.js:2900-2906. 2) height 48. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "281a1b29db60"
     },
     "Инсулиновая волна · Текущая волна · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) activeWavePath fill — heys_widgets_ui_v1.js:2908-2913. 2) opacity .5. 3) --v4-sand-wave. 4) Динамика.",
       "h": "51b646226f01"
     },
     "Инсулиновая волна · Текущая волна · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) activeWaveOpenPath stroke — heys_widgets_ui_v1.js:2918-2926. 2) 1.2px open contour. 3) --v4-sand-act (730-widgets-dashboard.css:11518-11520). 4) Без базовой линии.",
       "h": "fdcad48c1b3d"
     },
     "Инсулиновая волна · Текущая волна · рисунок 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a2fc03dbdf64"
+      "v": "—",
+      "f": "1) Кадр рисует пунктир «сейчас»; в продукте InsulinWaveCurrentSvg его нет — heys_widgets_ui_v1.js:2896-2934 (строка «волна · базовая линия»: ось и метка «сейчас» не рисуются в видах 28–29). 2) — 3) — 4) protocol/demo, не продукт.",
+      "h": "a2fc03dbdf64",
+      "naKind": "demo-only"
     },
     "Инсулиновая волна · Текущая волна · рисунок 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) dot r 3.2 — heys_widgets_ui_v1.js:2928-2932. 2) marker на кривой. 3) --v4-sand-act. 4) activeNowX.",
       "h": "57f19a066334"
     },
     "Инсулиновая волна · Пересечения · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) InsulinWaveOverlapSvg viewBox 0 0 130 50 — heys_widgets_ui_v1.js:2944-2951. 2) height 50. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "ab3446bf421d"
     },
     "Инсулиновая волна · Пересечения · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) pair[0] path — heys_widgets_ui_v1.js:2961-2966. 2) overlapPair. 3) Не цвет. 4) Динамика.",
       "h": "885977cebb01"
     },
     "Инсулиновая волна · Пересечения · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) pair[0] fill opacity .45 — heys_widgets_ui_v1.js:2961-2966. 2) closed. 3) --v4-sand-wave. 4) Динамика.",
       "h": "af37b4c47d52"
     },
     "Инсулиновая волна · Пересечения · рисунок 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) pair[1] path — heys_widgets_ui_v1.js:2961-2966. 2) вторая волна. 3) --v4-sand-wave. 4) Динамика.",
       "h": "9884adbff778"
     },
     "Инсулиновая волна · Пересечения · рисунок 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) clipPath overlap fill — heys_widgets_ui_v1.js:2969-2975. 2) opacity .55. 3) --v4-wave-overlap. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "44797a278680"
     },
     "Инсулиновая волна · Пересечения · рисунок 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) brace line — heys_widgets_ui_v1.js:2990-2996. 2) 2.4px. 3) --v4-wave-overlap. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "b1bafa4675cc"
     },
     "Волна · пустой день · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) InsulinWaveEmptySvg viewBox 0 34 130 18 — heys_widgets_ui_v1.js:2780-2786. 2) height 18 (отступление: компакт под 2×2). 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "4a9a57804a30"
     },
     "Волна · пустой день · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) flatline x1=4 x2=126 y=46 — heys_widgets_ui_v1.js:2788-2793. 2) strokeWidth 1.2 round. 3) ink 14 % (730-widgets-dashboard.css:11553-11555). 4) Смоук: widgets-insulin-overnight-v4.test.js.",
       "h": "66a14e547bfe"
     },
     "Волна · ночная оценка · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) InsulinWaveEmptySvg viewBox 0 34 130 18 — heys_widgets_ui_v1.js:2780-2786. 2) height 18 (отступление: компакт под 2×2). 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "4a9a57804a30"
     },
     "Волна · ночная оценка · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overnight figures fill — heys_widgets_ui_v1.js:2816-2820. 2) scheme paths. 3) opacity .18 (730-widgets-dashboard.css:11561-11563). 4) Смоук: widgets-insulin-overnight-v4.test.js.",
       "h": "a99ecaf67e47"
     },
     "Волна · ночная оценка · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overnight figure 2 — heys_widgets_ui_v1.js:2816-2820. 2) та же геометрия. 3) opacity .18. 4) Смоук: widgets-insulin-overnight-v4.test.js.",
       "h": "bfee269d90c2"
     },
     "Волна · ночная оценка · рисунок 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overnight figure 3 — heys_widgets_ui_v1.js:2816-2820. 2) та же геометрия. 3) opacity .18. 4) Смоук: widgets-insulin-overnight-v4.test.js.",
       "h": "be785cf4a4e0"
     },
     "Волна · ночная оценка · рисунок 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overnight-stroke openD — heys_widgets_ui_v1.js:2821-2828. 2) 1.2px ink 22 %. 3) без overlap/brace (730-widgets-dashboard.css:11573-11578). 4) Смоук: widgets-insulin-overnight-v4.test.js.",
       "h": "28caefcf57bc"
     },
     "Волна · стык и нахлёст · рисунок 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) InsulinWaveDaySvg viewBox 0 0 130 52 height 52 — heys_widgets_ui_v1.js:2833-2839. 2) Поле 100%×52. 3) Не цвет набора. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "4a9a57804a30"
     },
     "Волна · стык и нахлёст · рисунок 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) path figure.d — buildWaveScheme heys_widgets_insulin_wave_v4.js. 2) Кривая схемы. 3) Не цвет. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "647ab5553475"
     },
     "Волна · стык и нахлёст · рисунок 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-v4-insulin-wave__fill opacity .45 — heys_widgets_ui_v1.js:2850-2855. 2) closed figures. 3) --v4-sand-wave #e6cfa8 (002-ui-v4-palette-roles.css:243). 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "142ed415cac7"
     },
     "Волна · стык и нахлёст · рисунок 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-v4-insulin-wave__fill opacity .45 — heys_widgets_ui_v1.js:2850-2855. 2) closed figures. 3) --v4-sand-wave #e6cfa8 (002-ui-v4-palette-roles.css:243). 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "bd7866912ab0"
     },
     "Волна · стык и нахлёст · рисунок 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) fill opacity .8 на active figure — heys_widgets_ui_v1.js:2854. 2) последняя волна. 3) --v4-sand-wave. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "66ee6a19d2e4"
     },
     "Волна · стык и нахлёст · рисунок 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) baseline line y=46 — heys_widgets_ui_v1.js:2858-2862. 2) stroke --v4-line 1.5. 3) rgba 12 %. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "477e206ab802"
     },
     "Волна · стык и нахлёст · рисунок 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) divider риска — heys_widgets_ui_v1.js:2864-2869. 2) 1px × 3.5px. 3) --v4-line. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "b6a5725cdea6"
     },
     "Волна · стык и нахлёст · рисунок 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) divider риска — heys_widgets_ui_v1.js:2864-2869. 2) 1px × 3.5px. 3) --v4-line. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "34b2728b6bd7"
     },
     "Волна · стык и нахлёст · рисунок 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) joint circle r 2.2 — heys_widgets_ui_v1.js:2872-2876. 2) стык без подписи. 3) ink 35/40 % (730-widgets-dashboard.css:11532-11538). 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "6a5f9a560719"
     },
     "Волна · стык и нахлёст · рисунок 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) overlap rect clipPath — heys_widgets_ui_v1.js:2878-2884. 2) width band. 3) --v4-wave-overlap 50 %. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "b66366a24e68"
     },
     "Волна · стык и нахлёст · рисунок 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) brace line — heys_widgets_ui_v1.js:2886-2891. 2) strokeWidth 2.4. 3) --v4-wave-overlap. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "c365dbed50cf"
     },
     "Вес · Как сейчас · рисунок 01": {
@@ -24470,33 +24471,33 @@
       "h": "f2429ef68571"
     },
     "Инсулиновая волна · День как есть · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4TileSpokenLabel / footer слова — heys_widgets_ui_v1.js:1776-1800. 2) «Инсулиновая волна», счётчик, стыки, underWave. 3) Не цвет. 4) Смоук: widgets-canvas-copy.test.js.",
       "h": "e8a2e64964d7"
     },
     "Инсулиновая волна · Текущая волна · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4TileSpokenLabel на hero — heys_widgets_ui_v1.js:1776-1800. 2) «Идёт волна», meta, минуты. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "80a447cfb2ea"
     },
     "Инсулиновая волна · Пересечения · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4TileSpokenLabel + overlap-note — heys_widgets_ui_v1.js:1776-1800,3142-3144. 2) «Пересечение волн», часы, подпись. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "77a9fb338d35"
     },
     "Инсулиновая волна · Полоса дня · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) kicker + daybar labels — heys_widgets_ui_v1.js:3014-3018. 2) «Инсулин · под волной», elevated, время. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "cd7f20dce2d0"
     },
     "Инсулиновая волна · Спокойное окно · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4TileSpokenLabel на mini — heys_widgets_ui_v1.js:1776-1800. 2) «Покой», calmWindowLabel, unit. 3) Не цвет. 4) Смоук: widgets-insulin-wave-v4-contract.test.js.",
       "h": "c1343f502428"
     },
     "Волна · пустой день · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) data-v4-spoken — heys_widgets_ui_v1.js:3042-3047. 2) «Инсулиновая волна, приёмов не было, покой … от подъёма». 3) Не цвет. 4) Смоук: widgets-insulin-overnight-v4.test.js.",
       "h": "d0988e76a8ba"
     },
     "Волна · ночная оценка · текст": {
@@ -24505,8 +24506,8 @@
       "h": "de141a6378bc"
     },
     "Волна · стык и нахлёст · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) footer meal + overlap/joint labels — heys_widgets_ui_v1.js:3182-3185. 2) «5 приёмов», «2 волны наложились», «1 стык». 3) Не цвет. 4) Смоук: widgets-insulin-scheme-v4.test.js.",
       "h": "d06a7d77ef6f"
     },
     "Вес · Как сейчас · текст": {
