@@ -12650,6 +12650,63 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   opacity: 1;
 }
 
+/* Клетчатка · Неделя · 03: число, «г сегодня» и норма в одном ряду. */
+.widget-v4-fiber-week__head {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+/* Клетчатка · Неделя · 04: 26/.9/-.03em, не общий stack 19 px. */
+.widget-v4-fiber-week__value {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Клетчатка · Неделя · 05: «норма N» 9/600 тоном данных, прижата вправо. */
+.widget-v4-fiber-week__norm {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Клетчатка · Неделя · 06–07: поле 44, пунктир нормы, сюжет 40. */
+.widget-v4-weekbars.widget-v4-fiber-week__bars {
+  position: relative;
+  height: 44px;
+  margin-top: auto;
+}
+
+.widget-v4-weekbars__norm {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1.5px dashed rgba(var(--v4-ink-rgb), 0.22); /* v4-intentional */
+  pointer-events: none;
+}
+
+/* Клетчатка · Неделя · 08–14: прошлые #b7c29b (как шаги вне нормы),
+   сегодня --gr2. Общий weekbars 0.55 не берём — «средний тон» здесь литерал. */
+.widget-v4-fiber-week__bars .widget-v4-weekbars__bar {
+  border-radius: 3px 3px 0 0;
+  background: #b7c29b;
+  opacity: 1;
+}
+
+.widget-v4-fiber-week__bars .widget-v4-weekbars__bar.is-today {
+  background: var(--v4-ok-fill, #7a8a5e);
+}
+
 /* Строки «по приёмам» и «интервалы»: время слева, полоса, число справа. */
 .widget-v4-mealbars {
   display: flex;

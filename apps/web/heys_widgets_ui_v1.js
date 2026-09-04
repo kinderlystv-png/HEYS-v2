@@ -5712,14 +5712,28 @@
     );
   }
 
-  /** Столбики недели: сегодняшний правый и глубоким тоном, пустой день — 2 px. */
-  function v4WeekBars(week, maxValue, className) {
+  /** Столбики недели: сегодняшний правый и глубоким тоном, пустой день — 2 px.
+      opts.plotPx — высота поля в px (клетчатка: 40 из 44, пунктир нормы сверху 4). */
+  function v4WeekBars(week, maxValue, className, opts) {
     const max = Math.max(1, Number(maxValue) || 1);
+    const plotPx = Number(opts?.plotPx) || 0;
+    const norm = Number(opts?.norm) || 0;
+    const normLine = plotPx > 0 && norm > 0
+      ? React.createElement('span', {
+          className: 'widget-v4-weekbars__norm',
+          style: { top: (4 + (1 - Math.min(1, norm / max)) * plotPx) + 'px' }
+        })
+      : null;
     return React.createElement('div', { className: 'widget-v4-weekbars ' + (className || '') },
+      normLine,
       (week || []).map((item) => {
         const value = Number(item?.value) || 0;
         // Пустой день — столбик 2 px, а не пропуск: день был, еды в нём не было.
-        const height = value > 0 ? Math.max(6, Math.round((value / max) * 100)) + '%' : '2px';
+        const height = value > 0
+          ? (plotPx
+            ? Math.max(2, Math.round((value / max) * plotPx)) + 'px'
+            : Math.max(6, Math.round((value / max) * 100)) + '%')
+          : '2px';
         return React.createElement('span', {
           key: item.iso,
           className: 'widget-v4-weekbars__bar' + (item.isToday ? ' is-today' : ''),
@@ -5775,19 +5789,20 @@
 
     if (variantId === 'week') {
       const week = Array.isArray(data?.week) ? data.week : [];
-      const max = Math.max(norm, ...week.map((item) => Number(item?.value) || 0));
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-fiber' },
+      const max = Math.max(norm, ...week.map((item) => Number(item?.value) || 0), 1);
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-fiber widget-v4-fiber-week' },
         v4Kicker('Клетчатка · 7 дней'),
-        React.createElement('div', { className: 'widget-v4-goal-hero' },
+        React.createElement('div', { className: 'widget-v4-fiber-week__head' },
           React.createElement('span', {
-            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
+            className: 'widget-v4-fiber-week__value'
+              + (hasData ? ' ' + v4ValueStateClass(state) : '')
           }, hasData ? String(fiber) : '—'),
-          React.createElement('span', { className: 'widget-v4-unit' }, hasData ? 'г сегодня' : '')
+          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г сегодня') : null,
+          norm > 0
+            ? React.createElement('span', { className: 'widget-v4-fiber-week__norm' }, 'норма ' + norm)
+            : null
         ),
-        v4WeekBars(week, max),
-        norm > 0
-          ? React.createElement('span', { className: 'widget-v4-muted' }, 'норма ' + norm)
-          : null
+        v4WeekBars(week, max, 'widget-v4-fiber-week__bars', { plotPx: 40, norm })
       );
     }
 
