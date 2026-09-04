@@ -1292,64 +1292,84 @@
 
   // === Лист правки приёма ============================================
 
-  const SWIPE_ACTIONS_WIDTH = 246;
+  function buildVisibleMealOptimizerRecs(meal, mealTotalsValue, ctx) {
+    const MO = HEYS.MealOptimizer;
+    if (!MO || !meal?.items?.length) return [];
+    const recommendations = MO.getMealOptimization({
+      meal,
+      mealTotals: mealTotalsValue,
+      dayData: ctx?.dayData || {},
+      profile: ctx?.profile || {},
+      products: ctx?.products || [],
+      pIndex: ctx?.pIndex,
+      avgGI: mealTotalsValue?.gi || 50
+    });
+    const filtered = recommendations.filter((rec) => !MO.shouldHideRecommendation(rec.id));
+    const seen = new Map();
+    filtered.forEach((rec) => {
+      const key = String(rec.title || '').toLowerCase().trim();
+      if (!seen.has(key) || (seen.get(key).priority || 0) < (rec.priority || 0)) {
+        seen.set(key, rec);
+      }
+    });
+    return Array.from(seen.values()).sort((a, b) => {
+      if (a.isWarning && !b.isWarning) return -1;
+      if (!a.isWarning && b.isWarning) return 1;
+      const aHasProds = (a.products?.length || 0) > 0 ? 1 : 0;
+      const bHasProds = (b.products?.length || 0) > 0 ? 1 : 0;
+      if (aHasProds !== bHasProds) return bHasProds - aHasProds;
+      return (b.priority || 50) - (a.priority || 50);
+    });
+  }
 
   function MealProductRow(props) {
-    const { React, item, name, grams, onEdit, onCopy, onMove, onRemove } = props;
-    const [offset, setOffset] = React.useState(0);
-    const startX = React.useRef(null);
-    const startOffset = React.useRef(0);
+    const { React, item, name, grams, onEdit, onRemove } = props;
 
-    const onTouchStart = (event) => {
-      startX.current = event.touches[0].clientX;
-      startOffset.current = offset;
-    };
-    const onTouchMove = (event) => {
-      if (startX.current == null) return;
-      const delta = event.touches[0].clientX - startX.current;
-      setOffset(Math.max(-SWIPE_ACTIONS_WIDTH, Math.min(0, startOffset.current + delta)));
-    };
-    const onTouchEnd = () => {
-      if (startX.current == null) return;
-      startX.current = null;
-      setOffset(offset < -SWIPE_ACTIONS_WIDTH / 2 ? -SWIPE_ACTIONS_WIDTH : 0);
-    };
-    const close = () => setOffset(0);
-
-    // Тап по строке занят граммовкой; свайп — вторичный жест для редких действий.
-    return React.createElement('div', { className: 'nutrition-v4-sheet__swipe' },
-      React.createElement('div', {
-        className: 'nutrition-v4-sheet__swipe-actions',
-        'aria-hidden': offset === 0 ? 'true' : 'false'
-      },
-        React.createElement('button', { type: 'button', className: 'is-copy', onClick: () => { close(); onCopy?.(item); } }, 'Копировать'),
-        React.createElement('button', { type: 'button', onClick: () => { close(); onMove?.(item); } }, 'Переместить'),
-        React.createElement('button', { type: 'button', className: 'is-danger', onClick: () => { close(); onRemove?.(item); } }, 'Удалить')
-      ),
+    // Контракт 03.09: тап по строке — граммовка; удаление — крестик 14 px в цели 44.
+    // Копирование и перенос продукта — отдельными листами из блока действий приёма.
+    return React.createElement('div', { className: 'nutrition-v4-sheet__row--product' },
       React.createElement('button', {
         type: 'button',
-        className: 'nutrition-v4-sheet__row nutrition-v4-sheet__row--product',
-        style: { transform: 'translateX(' + offset + 'px)' },
-        onTouchStart,
-        onTouchMove,
-        onTouchEnd,
-        onClick: () => {
-          if (offset !== 0) { close(); return; }
-          onEdit?.(item);
-        }
+        className: 'nutrition-v4-sheet__row-main',
+        onClick: () => onEdit?.(item)
       },
         React.createElement('b', null, name),
         React.createElement('span', null, grams)
+      ),
+      React.createElement('button', {
+        type: 'button',
+        className: 'nutrition-v4-sheet__row-remove',
+        'aria-label': 'Удалить ' + name,
+        onClick: (event) => {
+          event.stopPropagation();
+          onRemove?.(item);
+        }
+      },
+        svgIcon(React, { width: 14, height: 14, strokeWidth: 2.75 }, 'M6 6l12 12M18 6L6 18')
       )
     );
   }
 
   function MealEditSheet(props) {
-    const { React, meal, mealIndex, pIndex, date, actions, onClose, insulinWaveData } = props;
+    const {
+      React,
+      meal,
+      mealIndex,
+      pIndex,
+      date,
+      actions,
+      onClose,
+      insulinWaveData,
+      prof,
+      dayTot,
+      waterMl
+    } = props;
     const sheetRef = React.useRef(null);
     const [dragY, setDragY] = React.useState(0);
     const [whyOpen, setWhyOpen] = React.useState(false);
+    const [tipsOpen, setTipsOpen] = React.useState(false);
     const startY = React.useRef(null);
+    const MealOptimizerSection = HEYS.dayMealOptimizerSection?.MealOptimizerSection;
 
     // Строка «вид · разбор приёма»: карточка «Смешанный профиль · волна 4,5 ч»
     // стоит ниже блока действий, прямо перед «Удалить приём» — она объясняет
@@ -1375,6 +1395,21 @@
         'Ж ' + formatNumber(totals.fat),
         'У ' + formatNumber(totals.carbs)
       ].join(' · ');
+
+    const optimizerCtx = React.useMemo(() => ({
+      dayData: { dayTot: dayTot || {}, waterMl: waterMl || 0 },
+      profile: prof || {},
+      products: [],
+      pIndex
+    }), [dayTot, waterMl, prof, pIndex]);
+    const mealOptimizerRecs = React.useMemo(
+      () => buildVisibleMealOptimizerRecs(meal, totals, optimizerCtx),
+      [meal, totals, optimizerCtx]
+    );
+    const mealOptimizerCount = mealOptimizerRecs.length;
+    React.useEffect(() => {
+      if (!mealOptimizerCount) setTipsOpen(false);
+    }, [mealOptimizerCount, meal?.id]);
 
     // Пустой приём предлагает самый частый сценарий копирования — «то же, что вчера».
     const yesterday = React.useMemo(() => {
@@ -1489,8 +1524,6 @@
           name: productName(item, pIndex),
           grams: formatNumber(item.grams) + ' г',
           onEdit: (it) => actions.openEditGramsModal?.(mealIndex, it.id, Number(it.grams) || 0, productFor(it)),
-          onCopy: (it) => { onClose?.(); actions.copyItem?.(mealIndex, it.id); },
-          onMove: (it) => { onClose?.(); actions.moveItem?.(mealIndex, it.id); },
           onRemove: (it) => actions.removeItem?.(mealIndex, it.id)
         })),
 
@@ -1520,6 +1553,32 @@
         ),
 
         React.createElement('div', { className: 'nutrition-v4-sheet__caption' }, 'Действия с приёмом'),
+
+        mealOptimizerCount > 0 ? React.createElement('button', {
+          type: 'button',
+          className: 'nutrition-v4-sheet__tips-toggle' + (tipsOpen ? ' is-open' : ''),
+          'aria-expanded': tipsOpen ? 'true' : 'false',
+          onClick: () => setTipsOpen(!tipsOpen)
+        },
+          React.createElement('span', { className: 'nutrition-v4-sheet__tips-icon', 'aria-hidden': 'true' },
+            svgIcon(React, { width: 17, height: 17, strokeWidth: 2.4 }, ['M12 16v-4', 'M12 8h.01', 'M12 4a8 8 0 1 0 0 16 8 8 0 1 0 0-16'])),
+          React.createElement('b', null, 'Советы · ' + mealOptimizerCount),
+          React.createElement('span', { className: 'nutrition-v4-sheet__chevron', 'aria-hidden': 'true' }, chevron(React, 15))
+        ) : null,
+
+        tipsOpen && mealOptimizerCount > 0 && MealOptimizerSection
+          ? React.createElement('div', { className: 'nutrition-v4-sheet__tips-panel' },
+            React.createElement(MealOptimizerSection, {
+              meal,
+              totals,
+              dayData: optimizerCtx.dayData,
+              profile: optimizerCtx.profile,
+              products: optimizerCtx.products,
+              pIndex,
+              mealIndex
+            }))
+          : null,
+
         // Контракт nutrition-tab «действия приёма»: четыре строки; у пустого приёма все погашены.
         actionRow('repeat', 'Повторить сегодня', 'M3 12a9 9 0 0 1 9-9c3.6 0 6.7 2.1 8.1 5.2M21 4v5h-5M21 12a9 9 0 0 1-9 9c-3.6 0-6.7-2.1-8.1-5.2M3 20v-5h5',
           () => { onClose?.(); actions.repeatTodayMeal?.(mealIndex); }, isEmpty),
@@ -1959,6 +2018,9 @@
         date,
         actions: actions || {},
         insulinWaveData,
+        prof,
+        dayTot,
+        waterMl,
         onClose: closeMealSheet
       }) : null,
 

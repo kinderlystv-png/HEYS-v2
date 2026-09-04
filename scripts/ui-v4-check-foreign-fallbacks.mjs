@@ -66,7 +66,7 @@ const BASELINE = {
   '725-metabolic-intelligence.css': 189,
   '730-widgets-dashboard.css': 206,
   '731-ui-v4-activity.css': 8,
-  '732-ui-v4-nutrition.css': 75,
+  '732-ui-v4-nutrition.css': 72,
   '733-ui-v4-login-theme.css': 4,
   '733-ui-v4-reports.css': 19,
   '734-ui-v4-curator-panel.css': 7,
