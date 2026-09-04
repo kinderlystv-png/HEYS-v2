@@ -722,7 +722,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .mc-modal--daily .mc-header-back-icon {
@@ -731,7 +731,7 @@
 }
 
 [data-theme$="dark"] .mc-modal--daily .mc-header-btn--back {
-  color: rgba(242, 237, 230, 0.45);
+  color: var(--v4-ink-3, rgba(242, 237, 230, 0.45));
 }
 
 .mc-modal--daily .mc-header-btn--back::before {
@@ -783,7 +783,7 @@
 .mc-recorded .mc-recorded-sub {
   margin-top: 7px;
   font: 500 12px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.5);
 }
 
 .mc-recorded-card {
@@ -809,7 +809,7 @@
 }
 
 .mc-recorded-row > span:first-child {
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .mc-recorded-row__value {
@@ -836,7 +836,7 @@
 }
 
 [data-theme$="dark"] .mc-recorded-title {
-  color: #f2ede6;
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .mc-recorded .mc-recorded-sub {
@@ -844,19 +844,19 @@
 }
 
 [data-theme$="dark"] .mc-recorded-card {
-  background: #2c231c;
+  background: var(--v4-chip, #2f2820);
 }
 
 [data-theme$="dark"] .mc-recorded-row {
-  color: #f2ede6;
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .mc-recorded-row > span:first-child {
-  color: rgba(242, 237, 230, 0.55);
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.55));
 }
 
 [data-theme$="dark"] .mc-recorded-row__value {
-  color: #f2ede6;
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .mc-recorded-row__kcal,
@@ -887,7 +887,7 @@
 .mc-daily-footer-secondary {
   flex: 1;
   background: var(--v4-sand-surface, #f7efe2);
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .mc-daily-footer-primary {
@@ -1045,7 +1045,7 @@
 
 .mc-weight-hero-unit {
   font: 600 13px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .mc-weight-week-delta {
@@ -1159,7 +1159,7 @@
 .mc-steps-unit {
   font: 600 13px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .mc-steps-hero {
@@ -1263,7 +1263,7 @@
   flex: none;
   min-width: 96px;
   background: var(--v4-chip, #efe3cf);
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.5);
   font-weight: 600;
   font-size: 12px;
 }
@@ -1401,7 +1401,7 @@
   width: 56px;
   height: 56px;
   border-radius: 999px;
-  background: #eaefe0;
+  background: var(--v4-ok-bg, #eaefe0);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1501,7 +1501,7 @@
      несёт то же значение во всех четырёх наборах, но именем к --c1 не
      привязан. Оговорка про классику снята вместе с каноничной палитрой. */
   background: var(--v4-card, #f7efe2);
-  box-shadow: inset 0 0 0 1.5px rgba(198, 113, 57, 0.28);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--v4-act, #c67139) 28%, transparent);
 }
 
 .mc-rest-consent-card-title {
@@ -1520,13 +1520,13 @@
   margin-top: 16px;
   padding: 12px;
   border-radius: 14px;
-  background: rgba(198, 113, 57, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(198, 113, 57, 0.18);
+  background: color-mix(in srgb, var(--v4-act, #c67139) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-act, #c67139) 18%, transparent);
 }
 
 .mc-rest-consent-copy {
   font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
-  color: rgba(32, 30, 29, 0.78);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 78%, transparent);
 }
 
 .mc-rest-consent-actions {
@@ -1554,7 +1554,7 @@
 .mc-rest-consent-secondary {
   flex: 1;
   background: var(--v4-bg, #fffaf1);
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.5);
   box-shadow: none;
 }
 
@@ -1627,7 +1627,7 @@
   padding: 12px 14px;
   margin-top: 22px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.5);
   text-wrap: pretty;
 }
 
@@ -3623,7 +3623,7 @@
 .mc-steps-value {
   font-size: 48px;
   font-weight: 800;
-  color: #f59e0b;
+  color: var(--v4-act, #c67139);
 }
 
 .mc-steps-unit {
@@ -4956,11 +4956,11 @@
 }
 
 .mc-streak-count {
-  color: #b45309;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .mc-streak-text {
-  color: #d97706;
+  color: var(--v4-act, #c67139);
   font-weight: 500;
 }
 
@@ -5552,11 +5552,11 @@
   margin-top: 8px;
   font-size: 15px;
   font-weight: 600;
-  color: #ea580c;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .mc-steps-bonus {
-  color: #fb923c;
+  color: var(--v4-act-text, #e2a468);
 }
 
 .mc-steps-bonus-icon {
@@ -5734,16 +5734,16 @@
   margin-top: 16px;
   padding: 10px 16px;
   font-size: 13px;
-  color: var(--v4-ink-2, #6b7280);
-  background: #fef3c7;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  background: var(--v4-accent-bg, #f0dcc6);
   border-radius: 8px;
-  border: 1px solid #fcd34d;
+  border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 45%, var(--v4-accent-bg, #f0dcc6));
 }
 
 [data-theme$="dark"] .mc-steps-footer-hint {
-  background: rgba(251, 191, 36, 0.15);
-  border-color: rgba(251, 191, 36, 0.3);
-  color: #fcd34d;
+  background: color-mix(in srgb, var(--v4-act, #cf8144) 15%, transparent);
+  border-color: color-mix(in srgb, var(--v4-act, #cf8144) 30%, transparent);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 /* Recommended steps button */
@@ -7049,7 +7049,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-daily-greeting-date {
   margin-top: 6px;
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
@@ -7072,7 +7072,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-daily-streak-text {
   font: 600 11.5px/1.35 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.6);
 }
 
 .mc-modal--daily .mc-weight-step:has(.mc-daily-greeting) .mc-weight-hero {
@@ -7082,7 +7082,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-step-kicker {
   font: 600 13px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0.02em;
-  color: rgba(0, 0, 0, 0.6);
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.6);
 }
 
 .mc-modal--daily .mc-weight-hero-row {
@@ -7099,7 +7099,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-weight-hero-unit {
   font: 600 13px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 /* Подпись «Легли»/«Встали» набирается той же строкой, что подпись капсулы веса:
@@ -7286,7 +7286,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-steps-unit {
   font: 600 13px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0;
-  color: rgba(0, 0, 0, 0.38);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .mc-modal--daily .mc-wheel-picker--compact .mc-wheel-values {
@@ -7344,7 +7344,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 [data-theme$="dark"] .mc-modal--daily .mc-daily-streak-text {
-  color: rgba(242, 237, 230, 0.6);
+  color: rgba(var(--v4-ink-rgb, 242, 237, 230), 0.6);
 }
 
 [data-theme$="dark"] .mc-modal--daily .mc-wheel-value--prev,
