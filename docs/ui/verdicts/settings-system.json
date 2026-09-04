@@ -394,8 +394,8 @@
       "h": "c629f84f9712"
     },
     "Настройки · список · 07": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: 000-base:10633 .hdr-settings-sheet__push-toggle — background var(--v4-tint, #f6e6dd); кадр ·07 var(--tint). Прежний ≠ про голый литерал #f6e6dd без var() не найден",
+      "v": "=",
+      "f": "000-base:10628-10636 .hdr-settings-sheet__push-toggle — background var(--v4-tint), r18, поля 13/15, min-height 44; кадр ·07 var(--tint). Прежний ≠ про голый литерал без var() не подтверждён; sand #f6e6dd, blue #fbe6e2 (002-ui-v4-palette-roles.css :216/:510)",
       "h": "b4529dd5bbbf"
     },
     "Настройки · список · 08": {
@@ -744,8 +744,8 @@
       "h": "c629f84f9712"
     },
     "Настройки · чипы быстрых действий · 05": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: 000-base:10857 .hdr-settings-sheet__chip — background var(--v4-hero, #efe3cf); кадр ·05 var(--c1). Прежний ≠ про голый литерал #efe3cf не найден",
+      "v": "=",
+      "f": "000-base:10657-10661 .hdr-settings-sheet__group — background var(--v4-surface), r18, overflow hidden; кадр ·05 var(--c1). Элемент — карточка яруса, не .__chip; sand #f7efe2, blue #eef3f9 (002-ui-v4-palette-roles.css :139/:458)",
       "h": "90c3eca5a44a"
     },
     "Настройки · чипы быстрых действий · 06": {
@@ -764,8 +764,8 @@
       "h": "b5aac2f109ce"
     },
     "Настройки · чипы быстрых действий · 09": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: 000-base:10771 .hdr-settings-sheet__dots gap 4px; кадр ·09 зазор 4px. Прежний ≠ не подтверждён",
+      "v": "=",
+      "f": "000-base:10768-10772 .hdr-settings-sheet__dots — gap 4px; кадр ·09 зазор 4px",
       "h": "dff0b12ccea3"
     },
     "Настройки · чипы быстрых действий · 10": {
@@ -814,8 +814,8 @@
       "h": "ee26a69ef0ea"
     },
     "Настройки · чипы быстрых действий · 19": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: 000-base:10894 .hdr-settings-sheet__chips--fab gap 7px; кадр ·19 зазор 7px. Прежний ≠ про 6 px не найден",
+      "v": "=",
+      "f": "000-base:10891-10895 .hdr-settings-sheet__chips--fab — gap 7px; кадр ·19 зазор 7px",
       "h": "3ad04027bbc9"
     },
     "Настройки · чипы быстрых действий · 20": {
