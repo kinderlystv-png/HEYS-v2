@@ -128,13 +128,15 @@ describe('meal time step v4 structure', () => {
       const block = cssSource.slice(at, cssSource.indexOf('}', at));
       expect(block.includes('var(--v4-sand-'), sel + ' держит роль с именем набора').toBe(false);
     }
-    // Заливка главной кнопки намеренно осталась на --v4-sand-act: роль текста
-    // на заливке (--v4-btn-on-act) в синем наборе не объявлена, и перевод
-    // одной заливки дал бы коричневую надпись на синем. Запись в findings.
-    // .meal-time-cta объявлен и в 600 (только цвет внутри модалки), поэтому
-    // ищем именно объявление заливки в 610 — первый indexOf берёт чужое.
+    // Решение food-meal 3 сентября: заливка --v4-act, текст --v4-btn-on-act;
+    // blue-override в 600 снят — пара идёт из палитры.
     const cta = cssSource.lastIndexOf('.meal-time-cta {');
-    expect(cssSource.slice(cta, cssSource.indexOf('}', cta))).toContain('var(--v4-sand-act,');
+    const ctaBlock = cssSource.slice(cta, cssSource.indexOf('}', cta));
+    expect(ctaBlock).toContain('var(--v4-act,');
+    expect(ctaBlock).toContain('var(--v4-btn-on-act,');
+    expect(cssSource).not.toMatch(
+      /\[data-palette=['"]blue['"]\] \.mc-modal--meal-create \.meal-time-cta/,
+    );
   });
 
   it('centers meal-create header like the canvas top bar', () => {
