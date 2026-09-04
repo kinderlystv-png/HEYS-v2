@@ -127,6 +127,84 @@ export function runNodeScript(scriptPath, args, { cwd, timeoutMs = 180_000 }) {
   });
 }
 
+const zoneLocks = new Map();
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function readJsonFile(filePath, attempts = 8) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch (error) {
+      lastError = error;
+      await sleep(40 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
+
+async function writeTextFile(filePath, text, attempts = 8) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      fs.writeFileSync(filePath, text, 'utf8');
+      return;
+    } catch (error) {
+      lastError = error;
+      await sleep(40 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
+
+async function copyFileWithRetry(src, dest, attempts = 8) {
+  let lastError;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      fs.copyFileSync(src, dest);
+      return;
+    } catch (error) {
+      lastError = error;
+      await sleep(40 * (attempt + 1));
+    }
+  }
+  throw lastError;
+}
+
+async function restoreZoneFromBackup(backupPath, zonePath) {
+  if (!fs.existsSync(backupPath)) return;
+  try {
+    await copyFileWithRetry(backupPath, zonePath);
+  } catch {
+    const restored = await readJsonFile(backupPath);
+    await writeTextFile(zonePath, `${JSON.stringify(restored, null, 2)}\n`);
+  }
+  fs.unlinkSync(backupPath);
+}
+
+/**
+ * Serialize backup/run/restore per zone — many hw-set scripts write the same file.
+ * @param {string} zoneId
+ * @param {() => Promise<WriterGuardResult>} fn
+ */
+async function withZoneLock(zoneId, fn) {
+  const prev = zoneLocks.get(zoneId) || Promise.resolve();
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  zoneLocks.set(zoneId, prev.then(() => gate));
+  await prev;
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
 /**
  * @param {string} root
  * @param {VerdictWriterMeta} writer
@@ -167,23 +245,31 @@ export async function testVerdictWriterForeignGuard(root, writer) {
     return { writer, status: 'skip', detail: writer.skipReason || 'zone-id-unknown' };
   }
 
+  return withZoneLock(writer.zoneId, () => testVerdictWriterForeignGuardUnlocked(root, writer));
+}
+
+/**
+ * @param {string} root
+ * @param {VerdictWriterMeta} writer
+ */
+async function testVerdictWriterForeignGuardUnlocked(root, writer) {
   const zonePath = zoneFilePath(root, writer.zoneId);
   if (!fs.existsSync(zonePath)) {
     return { writer, status: 'skip', detail: `zone file missing: ${writer.zoneId}.json` };
   }
 
   const backupPath = path.join(os.tmpdir(), `heys-verdict-guard-${process.pid}-${writer.zoneId}.json`);
-  fs.copyFileSync(zonePath, backupPath);
+  await copyFileWithRetry(zonePath, backupPath);
 
   try {
-    const zone = JSON.parse(fs.readFileSync(zonePath, 'utf8'));
+    const zone = await readJsonFile(zonePath);
     if (!zone.rows || typeof zone.rows !== 'object') {
       return { writer, status: 'skip', detail: 'zone has no rows object' };
     }
 
     const injectedKeys = injectGuardForeignRows(zone.rows);
     const beforeSnap = snapshotForeignRowStrings(zone.rows, injectedKeys);
-    fs.writeFileSync(zonePath, `${JSON.stringify(zone, null, 2)}\n`, 'utf8');
+    await writeTextFile(zonePath, `${JSON.stringify(zone, null, 2)}\n`);
 
     const run = await runNodeScript(writer.absPath, writer.runArgs || [], { cwd: root });
 
@@ -201,7 +287,7 @@ export async function testVerdictWriterForeignGuard(root, writer) {
       };
     }
 
-    const afterZone = JSON.parse(fs.readFileSync(zonePath, 'utf8'));
+    const afterZone = await readJsonFile(zonePath);
     const violations = collectForeignViolations(beforeSnap, afterZone.rows || {});
 
     if (violations.length) {
@@ -225,10 +311,7 @@ export async function testVerdictWriterForeignGuard(root, writer) {
 
     return { writer, status: 'pass', detail: 'foreign rows byte-identical', exitCode: 0 };
   } finally {
-    if (fs.existsSync(backupPath)) {
-      fs.copyFileSync(backupPath, zonePath);
-      fs.unlinkSync(backupPath);
-    }
+    await restoreZoneFromBackup(backupPath, zonePath);
   }
 }
 
@@ -239,19 +322,24 @@ export async function testVerdictWriterForeignGuard(root, writer) {
  */
 async function testSafeSetVerdictCli(root, writer) {
   const zoneId = 'strength-builder';
+  return withZoneLock(zoneId, () => testSafeSetVerdictCliUnlocked(root, writer));
+}
+
+async function testSafeSetVerdictCliUnlocked(root, writer) {
+  const zoneId = 'strength-builder';
   const zonePath = zoneFilePath(root, zoneId);
   const backupPath = path.join(os.tmpdir(), `heys-verdict-guard-safe-${process.pid}.json`);
-  fs.copyFileSync(zonePath, backupPath);
+  await copyFileWithRetry(zonePath, backupPath);
 
   const targetKey = `${GUARD_FOREIGN_PREFIX}safe-target`;
   const foreignKey = `${GUARD_FOREIGN_PREFIX}safe-foreign`;
 
   try {
-    const zone = JSON.parse(fs.readFileSync(zonePath, 'utf8'));
+    const zone = await readJsonFile(zonePath);
     zone.rows[targetKey] = { v: '?', f: 'before safe cli', h: 'safetarget01' };
     zone.rows[foreignKey] = JSON.parse(JSON.stringify(FOREIGN_ROW_TEMPLATE.alpha));
     const beforeForeign = JSON.stringify(zone.rows[foreignKey]);
-    fs.writeFileSync(zonePath, `${JSON.stringify(zone, null, 2)}\n`, 'utf8');
+    await writeTextFile(zonePath, `${JSON.stringify(zone, null, 2)}\n`);
 
     const script = path.join(root, 'scripts/ui-v4-set-verdict.mjs');
     const run = await runNodeScript(
@@ -260,7 +348,7 @@ async function testSafeSetVerdictCli(root, writer) {
       { cwd: root },
     );
 
-    const afterZone = JSON.parse(fs.readFileSync(zonePath, 'utf8'));
+    const afterZone = await readJsonFile(zonePath);
     const foreignAfter = JSON.stringify(afterZone.rows[foreignKey]);
     const targetAfter = JSON.stringify(afterZone.rows[targetKey]);
 
@@ -279,8 +367,7 @@ async function testSafeSetVerdictCli(root, writer) {
     }
     return { writer, status: 'pass', detail: 'single-key CLI preserves foreign rows' };
   } finally {
-    fs.copyFileSync(backupPath, zonePath);
-    fs.unlinkSync(backupPath);
+    await restoreZoneFromBackup(backupPath, zonePath);
   }
 }
 
