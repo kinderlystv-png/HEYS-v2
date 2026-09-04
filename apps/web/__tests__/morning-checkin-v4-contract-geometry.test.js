@@ -209,10 +209,25 @@ describe('чек-ин v4: геометрия по контракту канва�
     expect(comma.fontSize).toBe('32px');
     expect(comma.fontWeight).toBe('700');
 
-    // Двоеточие капсулы времени осталось при своём размере — общее правило
-    // 24 px не перекрашено под вес.
-    const sep = getComputedStyle(document.querySelector('.mc-time-sep'));
-    expect(sep.fontSize).toBe('28px');
+    // Двоеточие сна — крупное 32 px по строке «колесо — общий кадр»; запятая
+    // веса тоже 32, но это другой класс (.mc-weight-comma).
+    const sep = getComputedStyle(document.querySelector('.mc-sleep-combined .mc-time-sep'));
+    expect(sep.fontSize).toBe('32px');
+    expect(sep.fontWeight).toBe('700');
+  });
+
+  it('двоеточие холода рядовое — 20 px, не крупное сна', () => {
+    document.body.innerHTML = `
+      <div class="mc-modal mc-modal--daily">
+        <div class="mc-rest-cold-time">
+          <div class="mc-time-pickers">
+            <div class="mc-time-sep">:</div>
+          </div>
+        </div>
+      </div>`;
+    const sep = getComputedStyle(document.querySelector('.mc-rest-cold-time .mc-time-sep'));
+    expect(sep.fontSize).toBe('20px');
+    expect(sep.fontWeight).toBe('700');
   });
 
   it('без строки динамики капсула веса отступает на 36', () => {

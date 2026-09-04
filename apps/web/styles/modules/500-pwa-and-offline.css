@@ -7312,11 +7312,9 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   min-width: 0;
 }
 
-.mc-modal--daily .mc-weight-comma,
-.mc-modal--daily .mc-time-sep {
+.mc-modal--daily .mc-weight-comma {
   flex: none;
   margin-top: 0;
-  font: 700 24px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   padding: 0 1px;
 }
