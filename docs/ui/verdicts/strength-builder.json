@@ -66,8 +66,8 @@
       "naKind": "foreign-zone"
     },
     "вид · где единицы учёта видны": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "weight_reps .sb-ap 44px; bodyweight ownWeightLabel «свой вес» (superset_ui:712–715); time/distance заголовки колонок; drop padding-left 34px (750:5831); round .sb-round-num 36px «Р1» (750:624–627, superset_ui:236).",
       "h": "26e2f70f1a4d"
     },
     "список и раскрытое упражнение — один экран": {
@@ -86,8 +86,8 @@
       "h": "39f172586541"
     },
     "шкала отдыха": {
-      "v": "?",
-      "f": "Предложение 180/120/60/90 по hardness — логика в UI writer (heys_strength_builder_ui), не в kernel/day_trainings. REST_PRESETS [60,90,120,180] day_trainings :721 — только пресеты ручной правки.",
+      "v": "=",
+      "f": "setRpe: rpe>=9→180с, 7–8→120с, иначе 60с; без restManual дефолт 90с (heys_strength_builder_ui_v1.js:1206–1210). UI: «Отдых 2:00 — по тяжести 7» strength-builder-ui.test.js:282.",
       "h": "af2f515cb773"
     },
     "«тяжесть», а не «RPE»": {
@@ -188,8 +188,8 @@
       "h": "51034cf7b31e"
     },
     "вес ко всем оставшимся": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Кнопка «Применить N кг ко всем оставшимся» — superset_ui ApproachTypes :1176–1180; applyWeightRemaining пропускает warmup/done (builder_ui:1161–1173).",
       "h": "2705a36dfc42"
     },
     "дроп — семь правил": {
@@ -218,8 +218,8 @@
       "h": "5c435bb7b8b4"
     },
     "комментарий у своего упражнения": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": ".sb-cur-comment.sb-grp — bubble на --c2, meta «Артём · куратор», пилюли Ответить/Снять (superset_ui:1643–1664; 750:6591–6623). curator-gym contract test sand.",
       "h": "babc34d278d8"
     },
     "дискомфорт — своя карточка и два выхода": {
@@ -228,8 +228,8 @@
       "h": "786e26f3fa34"
     },
     "офлайн назван, а не скрыт": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "buildSyncQueueRows: ok/offline/retry (superset_ui:2036–2077); .sb-cur-sync-offline «офлайн» — 750:6697; builder_ui SyncQueuePanel :1675–1943.",
       "h": "55f15e5de44d"
     },
     "шторка — семь входов": {
@@ -2326,8 +2326,8 @@
       "h": "175bdcc2e73a"
     },
     "Программа · назначено против сделано · 02": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": ".sb-plan-vs-done .sb-head-title — flex-direction:column, gap:3px (750-strength-builder.css); jsdom getComputedStyle: flexDirection=column, gap=3px на sand+blue.",
       "h": "07ffbada0ee7"
     },
     "Программа · назначено против сделано · 03": {
@@ -2376,8 +2376,8 @@
       "h": "ba833af6a156"
     },
     "Программа · назначено против сделано · 12": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": ".sb-plan-vs-row — margin-bottom:8px, border-radius:14px (750-strength-builder.css); jsdom: marginBottom=8px, borderRadius=14px.",
       "h": "9211e74c81af"
     },
     "Программа · назначено против сделано · 13": {
@@ -2476,8 +2476,8 @@
       "h": "f11ef1c8597b"
     },
     "Программа · назначено против сделано · 32": {
-      "v": "?",
-      "f": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet. Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f.",
+      "v": "=",
+      "f": ".sb-plan-vs-cd-row.is-last / :last-child { border-bottom:none } (750-strength-builder.css); strength-builder-plan-vs-done-v4-canvas-contract.test.js.",
       "h": "6b286135ed76"
     },
     "Программа · назначено против сделано · 33": {
@@ -2674,11 +2674,9 @@
       "h": "c629f84f9712"
     },
     "Правка веса в сессии · 06": {
-      "v": "≠",
-      "f": "Кадр: карточка .grp margin-top 12px вокруг таблицы. Продукт: таблица в .sb-ex-body > .sb-aps; margin-top 10px у .sb-aps-head и 6px у .sb-aps для weight_reps (750:3587–3608), без обёртки .grp.",
-      "h": "81d6d8e40a85",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".is-weight-entry.is-exercise-open .sb-ex.is-open .sb-ex-body { margin-top:12px, border-radius:14px } (750-strength-builder.css); weight-edit-session contract test jsdom sand+blue.",
+      "h": "81d6d8e40a85"
     },
     "Правка веса в сессии · 07": {
       "v": "=",
