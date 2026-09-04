@@ -1,0 +1,324 @@
+{
+  "zone": "strength-builder",
+  "block": "Назначено против сделано",
+  "source": "read-only audit",
+  "generated": "2026-09-04",
+  "agent": "assigned-vs-done audit subagent",
+  "canvasRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html · кадр Г2 data-demo=stop data-vid=вид · отчёт цикла",
+  "productRef": "PlanVsDoneScreen · apps/web/strength/heys_strength_superset_ui_v1.js:2114–2157 · mount builder_ui view plan-vs-done :1297–1298 · CSS 750-strength-builder.css:6554–6591",
+  "summary": {
+    "checked": 38,
+    "equals": 3,
+    "needsCode": 35,
+    "openQuestions": 1,
+    "measurement": "jsdom getComputedStyle 2026-09-04 · sand tokens substituted for --sb-* in 750-strength-builder.css"
+  },
+  "equals": [
+    {
+      "key": "Программа · назначено против сделано · 05",
+      "f": ".sb-plan-vs-done .sb-plan-vs-scroll — flex:1, overflow-y:auto, padding 12px 16px 24px (750-strength-builder.css:6556–6560); jsdom: overflowY=auto, flex=1 1 0%, padding=12px 16px 24px.",
+      "h": "73bfa3bf46c4"
+    },
+    {
+      "key": "Программа · назначено против сделано · 15",
+      "f": ".sb-plan-vs-row b — font:700 12.5px/1.2 Figtree, color var(--sb-tx) (750:6577–6579); jsdom: fontWeight=700, fontSize=12.5px, lineHeight=1.2; имя упражнения рендерится в <b> superset_ui:2151.",
+      "h": "5f9058eb8995"
+    },
+    {
+      "key": "Программа · назначено против сделано · 27",
+      "f": ".sb-plan-vs-row border-radius:14px (750:6567); jsdom: borderRadius=14px. Совпадает с радиусом .grp кадра Г2.",
+      "h": "6ae4a58f5cec"
+    }
+  ],
+  "needsCode": [
+    {
+      "key": "Программа · назначено против сделано · 01",
+      "contract": "шапка",
+      "gap": "Кадр Г2 .top — только колонка ttl/k без боковых кнопок в стоп-кадре; продукт .sb-head с ←/✕, padding 10px 12px (750:82–90), не .sb-cycle-top 16px 18px 0.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 02",
+      "contract": "направление column, зазор 3px",
+      "gap": "У .sb-head-title нет flex-direction:column и gap:3px (750:92–95); эталон — .sb-cycle-top-main (750:6723–6728).",
+      "ownerFiles": ["apps/web/styles/modules/750-strength-builder.css"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 03",
+      "contract": "«Отчёт по циклу» — имя экрана",
+      "gap": "Заголовок «Назначено против сделано» superset_ui:2138 вместо «Отчёт по циклу».",
+      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 04",
+      "contract": "«недели 1–2 · 6 назначено» — ключ",
+      "gap": "Подзаголовок «Отклонения от плана куратора» :2139; нет ключа цикла/недель.",
+      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 06",
+      "contract": "карточка .grp: отступ сверху 12px, фон var(--gr-bg)",
+      "gap": "Нет сводной карточки «План выполнен на 87 %»; только список .sb-plan-vs-row.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 07",
+      "contract": "выравнивание center, зазор 8px",
+      "gap": "Нет строки-заголовка сводки с dot 11px + процентом.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 08",
+      "contract": "флекс none, ширина 11px, высота 11px, радиус 999px, фон var(--gr)",
+      "gap": "Индикатор 11px в сводке отсутствует.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 09",
+      "contract": "«План выполнен на 87 %» — шрифт 700 14px/1.2 Figtree, цвет var(--gr)",
+      "gap": "Процент выполнения цикла не вычисляется и не рендерится.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 10",
+      "contract": "«20 подходов из 23 · два отклонения» — проза",
+      "gap": "Нет агрегата подходов/отклонений под сводкой.",
+      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 11",
+      "contract": "отступ сверху 10px",
+      "gap": "Нет блока между сводкой и карточками упражнений (margin-top:10px у обёртки списка .grp).",
+      "ownerFiles": ["apps/web/styles/modules/750-strength-builder.css"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 12",
+      "contract": "карточка .grp: отступ снизу 8px, радиус 14px",
+      "gap": "Радиус 14px есть (.sb-plan-vs-row), но margin-bottom 10px (750:6565), не 8px; нет border-left 3px по статусу.",
+      "ownerFiles": ["apps/web/styles/modules/750-strength-builder.css"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 13",
+      "contract": "выравнивание center, зазор 7px",
+      "gap": "Шапка карточки упражнения (dot + имя) — column-строка .sb-plan-vs-row, не flex row gap 7px.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 14",
+      "contract": "флекс none, ширина 9px, высота 9px, радиус 999px, фон var(--gr)",
+      "gap": "Статусный dot 9px у имени упражнения отсутствует.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 16",
+      "contract": "«Вес выше плана — это прогресс» — шрифт 500 11px/1.3, цвет ink 56 %, margin-top 3px",
+      "gap": "Нет поясняющей строки по направлению отклонения (прогресс/как назначено/пропуск).",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 17",
+      "contract": "зазор 8px, отступ сверху 9px",
+      "gap": "Нет flex-ряда двух колонок «Назначено»/«Сделано»; вместо них вертикальные span «план ·»/«факт ·» :2152–2153.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 18",
+      "contract": "ячейка «Назначено»: column gap 4px, фон var(--bg), inset border 1px ink 10 %, radius 12px, padding 8px 10px",
+      "gap": "Двухколоночные ячейки и фон --bg с inset-рамкой не реализованы.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 19",
+      "contract": "«Назначено» — 600 9px uppercase tracking .11em ink 56 %",
+      "gap": "Метка «план ·» вместо uppercase «Назначено»; span 500 11px (750:6582–6585).",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 20",
+      "contract": "«4 подхода · до 70 кг» — 700 11.5px/1.3",
+      "gap": "planExerciseSummary :476–494 даёт «4 подхода · 70 кг» без «до»; значение в span 11px не 11.5px.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 21",
+      "contract": "ячейка «Сделано»: column gap 4px, фон var(--gr-bg), radius 12px, padding 8px 10px",
+      "gap": "Нет отдельной зелёной ячейки «Сделано»; is-diff только меняет border-color (750:6573–6575).",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 22",
+      "contract": "«4 подхода · до 75 кг» — 700 11.5px, цвет var(--gr)",
+      "gap": "Факт в mut-цвете span; нет семантики «выше плана = зелёный».",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 23",
+      "contract": "dot 9px фон rgba(ink,.22) — нейтральное совпадение",
+      "gap": "Классификация «как назначено» и нейтральный dot не реализованы (same=true → is-match без dot).",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 24",
+      "contract": "dot 9px фон var(--val-bad)",
+      "gap": "Нет тревожного статуса/бордера var(--val-bad) для недобора.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 25",
+      "contract": "ячейка «Сделано» пропуска: фон var(--tint), radius 12px",
+      "gap": "Нет состояния «пропущено» с tint-ячейкой.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 26",
+      "contract": "«пропущено» — 700 11.5px, цвет var(--ac2)",
+      "gap": "При отсутствии live-упражнения actual «—», не «пропущено» :2129.",
+      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 28",
+      "contract": "список .cd: margin-top 10px",
+      "gap": "Блок «Объём назначенного/сделанного» (.cd) отсутствует.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 29",
+      "contract": "строка списка",
+      "gap": "Нет строк объёма внизу экрана.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 30",
+      "contract": "«Объём назначенного» — цвет var(--tx)",
+      "gap": "Строка не рендерится; ядро plannedVolume готово (kernel handoff), UI не подключён.",
+      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 31",
+      "contract": "«41 т» — 600 12.5px ink 55 %",
+      "gap": "Агрегат тоннажа назначенного не показан.",
+      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 32",
+      "contract": "строка списка: разделитель none",
+      "gap": "Нет второй строки объёма без border-bottom.",
+      "ownerFiles": ["apps/web/styles/modules/750-strength-builder.css"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 33",
+      "contract": "«26 т» — 700 12.5px var(--tx)",
+      "gap": "Агрегат totalVolume не показан.",
+      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 34",
+      "contract": "зазор 8px, отступ сверху 12px",
+      "gap": "Нет нижнего ряда CTA-кнопок.",
+      "ownerFiles": ["apps/web/styles/modules/750-strength-builder.css"]
+    },
+    {
+      "key": "Программа · назначено против сделано · 35",
+      "contract": "«Написать куратору» — flex 1",
+      "gap": "Кнопка отсутствует.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 36",
+      "contract": "«Отчёт за неделю» — flex 1, фон var(--acs), цвет var(--on-acs)",
+      "gap": "Вторичная CTA отсутствует.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · 37",
+      "contract": "сноска про перенос и пропуск",
+      "gap": "Нет .sm-сноски внизу PlanVsDoneScreen.",
+      "ownerFiles": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/styles/modules/750-strength-builder.css"
+      ]
+    },
+    {
+      "key": "Программа · назначено против сделано · текст",
+      "contract": "Полная цепочка copy кадра Г2 (Отчёт по циклу › … › 41 т › 26 т › CTA › сноска)",
+      "gap": "Рендерится только заголовок меню-варианта и пары «план ·/факт ·» по planSnapshot; большинство строк контракта отсутствуют.",
+      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
+    }
+  ],
+  "openQuestions": [
+    {
+      "key": "вид · отчёт цикла vs plan-vs-done",
+      "verdict": "?",
+      "why": "Кадр Г2 — полноэкранный отчёт цикла («Отчёт по циклу», недели 1–2, 87 %, объём 41 т/26 т). Вход из шторки ⋯ открывает in-session PlanVsDoneScreen (сравнение planSnapshot текущей тренировки с workoutLog). Нужно решение владельца: перестроить экран под цикл или разделить контракт на два экрана (день vs цикл).",
+      "h": "d677e73f210e"
+    }
+  ],
+  "notes": [
+    "Вердикты strength-builder.json не менялись — только handoff.",
+    "Смоук: strength-builder-menu-sheet-v4-canvas-contract.test.js проверяет навигацию plan-vs-done, не геометрию Г2.",
+    "Отдельного strength-builder-plan-vs-done-v4-canvas-contract.test.js нет — рекомендуется владельцу по образцу strength-builder-cycle-v4-canvas-contract.test.js."
+  ]
+}
