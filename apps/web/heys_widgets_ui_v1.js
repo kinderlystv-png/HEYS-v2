@@ -6874,9 +6874,9 @@
           v4Kicker('Серия'),
           // Серию нельзя объявить плохой или хорошей: её длина — факт, а не
           // оценка (канвас v4, строка 97) — число всегда чернила.
-          React.createElement('div', { className: 'widget-v4-mini__value widget-v4-mini__value--pair widget-v4-val--neutral' },
+          React.createElement('div', { className: 'widget-v4-mini__value widget-v4-val--neutral' },
             streak,
-            React.createElement('span', { className: 'widget-v4-unit' }, 'дня')
+            React.createElement('span', { className: 'widget-v4-unit' }, ' дня')
           )
         );
       }
@@ -6925,30 +6925,13 @@
         const filled28 = data.monthFilledCount ?? monthDays.filter((day) =>
           day?.status === 'green' || day?.status === 'good' || day?.status === 'ok'
         ).length;
-        // Та же строка «тепловая карта»: шкала плотности, не роли состояния.
-        const barTone = (status) => {
-          if (status === 'green' || status === 'good' || status === 'ok') return 'd3';
-          if (status === 'yellow' || status === 'warn') return 'd2';
-          if (status === 'red') return 'd1';
-          return 'empty';
-        };
         return React.createElement('div', { className: 'widget-heatmap widget-heatmap--2x2 widget-v4-stack' },
-          v4Kicker('Месяц целиком'),
+          v4Kicker('Тепловая карта'),
           React.createElement('div', { className: 'widget-heatmap__month-grid' },
-            monthDays.map((day, index) => {
-              const isToday = highlightToday && day?.date === todayIso;
-              const tone = isToday ? 'today' : barTone(day?.status);
-              return React.createElement('span', {
-                key: `${day?.date || 'empty'}-${index}`,
-                className: [
-                  'widget-heatmap__cell',
-                  'widget-heatmap__cell--month',
-                  tone === 'today'
-                    ? 'widget-heatmap__cell--today'
-                    : `widget-v4-heat__bar--${tone}`
-                ].filter(Boolean).join(' ')
-              });
-            })
+            monthDays.map((day, index) => React.createElement('span', {
+              key: `${day?.date || 'empty'}-${index}`,
+              className: `widget-heatmap__cell widget-heatmap__cell--month widget-heatmap__cell--${day?.status || 'empty'}`
+            }))
           ),
           // Полоса последней недели под сеткой снята 31 августа: кадр «Месяц
           // целиком» её не рисует, а нижний ряд самой сетки — это те же семь
