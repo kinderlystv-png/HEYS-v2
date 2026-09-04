@@ -213,7 +213,10 @@ function scanJs(file) {
 // ── охват ──────────────────────────────────────────────────────────────────
 function listFiles(dir, acc = []) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (e.name === 'public' || e.name === 'node_modules') continue;
+    // dist — сборочная копия тех же модулей: каждое место считалось дважды,
+    // и число не падало, когда исходник чинили. Обнаружено 4 сентября:
+    // 100-metrics показывал 220 янтарных мест при трёх в исходнике.
+    if (e.name === 'public' || e.name === 'node_modules' || e.name === 'dist') continue;
     const p = path.join(dir, e.name);
     if (e.isDirectory()) listFiles(p, acc);
     else if (/\.(js|css)$/.test(e.name)) acc.push(p);
