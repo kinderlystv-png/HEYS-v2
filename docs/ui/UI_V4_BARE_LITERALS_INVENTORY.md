@@ -56,6 +56,11 @@
 8. Мёртвый цвет вычитается: значение в таблице данных, ключ которой никто не
    читает, до экрана не доходит вовсе. Вычтено 4 — разбор в
    [`UI_V4_DEAD_COLORS.md`](UI_V4_DEAD_COLORS.md), список в скрипте поимённо.
+9. **Декор геймификации** вычитается из долга: `.game-*`, `.achievement-*`,
+   `.roadmap-*`, `.onboarding-fusion__*`, `.flying-xp-item`,
+   `.game-panel-expanded--v4` и `@keyframes` с game/xp/achievement-именами. Это
+   иллюстрация, не интерфейс; роли не получает. Вычтено 38 — отдельный раздел
+   «декор, вне набора».
 
 **Насыщенность считается как chroma, а не как saturation из HLS** — это ловушка,
 стоившая одной перепроверке целого захода. У почти белых тёплых тонов
@@ -68,23 +73,21 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 | правило                       | мест |
 | ----------------------------- | ---: |
-| только hex                    |  484 |
-| hex + непрозрачный `rgb()`    |  487 |
-| hex + `rgba()` с альфой ≥ 0,5 |  585 |
-| все, включая полупрозрачные   |  992 |
+| только hex                    |  228 |
+| hex + непрозрачный `rgb()`    |  228 |
+| hex + `rgba()` с альфой ≥ 0,5 |  260 |
+| все, включая полупрозрачные   |  448 |
 
-В описи — последняя строка, **992**.
+В описи — последняя строка, **448**.
 
 ## Охват
 
 Просмотрены все модули стилей (46) и файлы кода, названные обоснованиями
-вердиктов закрытых зон (57). Закрытых зон 10; незакрытой считается та, где ещё
-стоят «?» — сейчас это `app-splash`, `curator-cabinet`, `cycle`,
-`date-remainders`, `food-meal`, `home-widgets`, `login`, `product-card`,
-`questionnaire`, `registration`, `reports-insights`, `settings-system`,
-`strength-builder`, `tips`, `water-add`. Всего голых литералов в этих файлах
-13096; тёплых 992. Остальные палитре тоже не следуют, но песочными экран не
-делают, и это отдельный разговор.
+вердиктов закрытых зон (92). Закрытых зон 17; незакрытой считается та, где ещё
+стоят «?» — сейчас это `curator-cabinet`, `cycle`, `food-meal`, `home-widgets`,
+`registration`, `strength-builder`, `tab-activity`, `tips`. Всего голых
+литералов в этих файлах 12787; тёплых 448 (декор вне набора: 38). Остальные
+палитре тоже не следуют, но песочными экран не делают, и это отдельный разговор.
 
 Файл, которого здесь нет, **просмотрен и чист**: его отсутствие означает ноль, а
 не «не смотрели». Так, `733-ui-v4-reports.css` и `734-ui-v4-curator-panel.css`
@@ -94,351 +97,92 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 **Звёздочка** у литерала означает, что это в точности значение песочной роли и
 ни одной синей — такое место переводится на роль без разговора. Их 5.
 
-Всего мест: **992** в 43 файлах.
+Всего мест: **448** в 38 файлах.
 
 ---
 
 ## Файлы, названные обоснованиями закрытых зон
 
-### `730-widgets-dashboard.css` — 150
+### `730-widgets-dashboard.css` — 87
 
-Зоны: `nutrition-tab`, `spinners`
+Зоны: `nutrition-tab`, `spinners`, `water-add`
 
-| семейство                             | мест | литералы                                                                                                                                                                      |
-| ------------------------------------- | ---: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.reports-overview-card`              |    9 | `rgba(234, 88, 12, 0.26)`, `rgba(255, 237, 213, 0.96)`, `rgba(254, 215, 170, 0.94)`, `rgba(234, 88, 12, 0.14)`, `#7c2d12`, `rgba(249, 115, 22, 0.35)`, … (+3)                 |
-| `.reports-overview-card__stat`        |    8 | `rgba(251, 146, 60, 0.18)`, `rgba(154, 52, 18, 0.06)`, `rgba(251, 146, 60, 0.28)`, `rgba(154, 52, 18, 0.08)`, `rgba(255, 237, 213, 0.08)`, `rgba(251, 146, 60, 0.16)`, … (+2) |
-| `.widgets-quick-pencil`               |    8 | `rgba(80, 50, 20, 0.1)`, `rgba(80, 50, 20, 0.14)`, `#2f2820`, `#e2a468`, `#3a241a`\*, `#cf8144`                                                                               |
-| `.widget`                             |    7 | `rgba(251, 191, 36, 0.4)`, `rgba(251, 191, 36, 0.25)`, `rgba(249, 115, 22, 0.4)`, `rgba(255, 214, 10, 0.12)`, `#FFD60A`, `#FFEA80`, … (+1)                                    |
-| `.widgets-tab`                        |    7 | `#141210`, `#23201b`, `#2f2820`, `rgba(80, 50, 20, 0.22)`                                                                                                                     |
-| `.empty-meal-alert`                   |    6 | `rgba(234, 88, 12, 0.58)`, `rgba(254, 215, 170, 0.92)`, `rgba(194, 65, 12, 0.14)`, `rgba(251, 146, 60, 0.62)`, `rgba(67, 33, 18, 0.98)`, `rgba(124, 45, 18, 0.92)`            |
-| `.widget-relapse-risk__action-card`   |    6 | `rgba(251, 191, 36, 0.22)`, `rgba(245, 158, 11, 0.1)`, `rgba(245, 158, 11, 0.14)`, `rgba(245, 158, 11, 0.07)`, `rgba(245, 158, 11, 0.22)`, `rgba(245, 158, 11, 0.08)`         |
-| `.widgets-settings-fab`               |    5 | `rgba(80, 50, 20, 0.1)`, `rgba(80, 50, 20, 0.14)`, `rgba(20, 18, 16, 0.85)`, `#23201b`, `#e2a468`                                                                             |
-| `.widget-crash-risk__ews-badge`       |    4 | `rgba(249, 115, 22, 0.15)`, `#ea580c`, `rgba(251, 146, 60, 0.2)`, `#fb923c`                                                                                                   |
-| `.widgets-header__btn`                |    4 | `rgba(249, 115, 22, 0.12)`, `rgba(249, 115, 22, 0.18)`, `#fdba74`                                                                                                             |
-| `.widgets-quick-chip`                 |    4 | `rgba(80, 50, 20, 0.1)`, `rgba(80, 50, 20, 0.14)`, `#23201b`, `#e2a468`                                                                                                       |
-| `.reports-overview-card__action`      |    3 | `rgba(251, 146, 60, 0.22)`, `rgba(255, 237, 213, 0.1)`, `rgba(251, 146, 60, 0.18)`                                                                                            |
-| `.reports-overview-card__count`       |    3 | `rgba(251, 146, 60, 0.26)`, `rgba(154, 52, 18, 0.48)`, `rgba(251, 146, 60, 0.24)`                                                                                             |
-| `.widget-heatmap__cell`               |    3 | `#eab308`, `#fbbf24`, `rgba(234, 179, 8, 0.3)`                                                                                                                                |
-| `.widget-macros__bar`                 |    3 | `#FFD60A`, `#FFEA80`, `rgba(255, 214, 10, 0.3)`                                                                                                                               |
-| `.widget-relapse-risk__action-icon`   |    3 | `#f59e0b`, `#fbbf24`, `rgba(245, 158, 11, 0.2)`                                                                                                                               |
-| `.widget-v4-catalog__remove-btn`      |    3 | `#c67139`, `#cf8144`, `#e2a468`                                                                                                                                               |
-| `.widgets-quick-sheet`                |    3 | `rgba(80, 50, 20, 0.14)`, `rgba(80, 50, 20, 0.26)`, `#23201b`                                                                                                                 |
-| `--widget-accent-strong`              |    2 | `rgba(255, 159, 10, 0.28)`, `rgba(249, 115, 22, 0.28)`                                                                                                                        |
-| `--widget-gradient-orange`            |    2 | `#FF9500`, `#FF6B00`                                                                                                                                                          |
-| `.empty-meal-alert__action`           |    2 | `rgba(154, 52, 18, 0.24)`, `rgba(194, 65, 12, 0.28)`                                                                                                                          |
-| `.empty-meal-alert__copy`             |    2 | `#7c2d12`                                                                                                                                                                     |
-| `.empty-meal-alert__icon`             |    2 | `#ea580c`, `rgba(194, 65, 12, 0.2)`                                                                                                                                           |
-| `.page-reports`                       |    2 | `#141210`                                                                                                                                                                     |
-| `.reports-overview-card__body`        |    2 | `rgba(124, 45, 18, 0.82)`, `rgba(255, 237, 213, 0.82)`                                                                                                                        |
-| `.reports-overview-card__stat-label`  |    2 | `rgba(124, 45, 18, 0.62)`, `rgba(255, 237, 213, 0.64)`                                                                                                                        |
-| `.widget-insulin__status`             |    2 | `rgba(249, 115, 22, 0.12)`, `rgba(234, 179, 8, 0.12)`                                                                                                                         |
-| `.widget-macros__bar-fill`            |    2 | `#FFD60A`, `#FFEA80`                                                                                                                                                          |
-| `.widget-relapse-risk__modal-content` |    2 | `rgba(251, 191, 36, 0.08)`                                                                                                                                                    |
-| `.widget-streak__record`              |    2 | `#FFD60A`, `#FF9F0A`                                                                                                                                                          |
-| `.widget-streak__value`               |    2 | `#FF9500`, `#FF6B00`                                                                                                                                                          |
-| `.widget-wd`                          |    2 | `#c67139`, `#2f2820`                                                                                                                                                          |
-| `.widgets-longpress-hint`             |    2 | `rgba(80, 50, 20, 0.1)`, `rgba(80, 50, 20, 0.3)`                                                                                                                              |
-| `.widgets-quick-fab`                  |    2 | `rgba(80, 50, 20, 0.14)`, `rgba(120, 60, 20, 0.28)`                                                                                                                           |
-| `.widgets-quick-minus`                |    2 | `#3a241a`\*, `#e2a468`                                                                                                                                                        |
-| `.widgets-quick-sheet__chip`          |    2 | `#2f2820`, `#e2a468`                                                                                                                                                          |
-| `0%, 100%`                            |    2 | `rgba(249, 115, 22, 0.4)`, `rgba(255, 214, 10, 0.4)`                                                                                                                          |
-| `50%`                                 |    2 | `rgba(249, 115, 22, 0.6)`, `rgba(255, 214, 10, 0)`                                                                                                                            |
-| `--chip-bg`                           |    1 | `rgba(245, 158, 11, 0.12)`                                                                                                                                                    |
-| `--chip-border`                       |    1 | `rgba(245, 158, 11, 0.24)`                                                                                                                                                    |
-| `--water-dim-text`                    |    1 | `#6b5f4f`                                                                                                                                                                     |
-| `--widget-accent`                     |    1 | `rgba(255, 159, 10, 0.14)`                                                                                                                                                    |
-| `.heys-android`                       |    1 | `#141210`                                                                                                                                                                     |
-| `.page-day`                           |    1 | `#141210`                                                                                                                                                                     |
-| `.pct-badge`                          |    1 | `rgba(234, 179, 8, 0.12)`                                                                                                                                                     |
-| `.reports-fullscreen-modal`           |    1 | `rgba(67, 20, 7, 0.98)`                                                                                                                                                       |
-| `.widget-cascade__badge`              |    1 | `rgba(245, 158, 11, 0.16)`                                                                                                                                                    |
-| `.widget-cascade__dot`                |    1 | `#facc15`                                                                                                                                                                     |
-| `.widget-crash-risk`                  |    1 | `#fb923c`                                                                                                                                                                     |
-| `.widget-sleep__star`                 |    1 | `rgba(255, 214, 10, 0.4)`                                                                                                                                                     |
-| `.widget-streak__fire`                |    1 | `rgba(249, 115, 22, 0.4)`                                                                                                                                                     |
-| `.widget-v4-catalog__blocked-text`    |    1 | `#e08a72`                                                                                                                                                                     |
-| `.widget-v4-hold-hint__pill`          |    1 | `rgba(198, 113, 57, 0.16)`                                                                                                                                                    |
-| `.widget-v4-tile`                     |    1 | `#c67139`                                                                                                                                                                     |
-| `.widget-wd-sheet`                    |    1 | `rgba(80, 50, 20, 0.22)`                                                                                                                                                      |
-| `.widget-wd-sheet__opt`               |    1 | `rgba(207, 129, 68, 0.18)`                                                                                                                                                    |
-| `.widgets-grid`                       |    1 | `#c67139`                                                                                                                                                                     |
-| `.widgets-quick-scrim`                |    1 | `rgba(43, 22, 8, 0.34)`                                                                                                                                                       |
-| `.widgets-quick-sheet__row-icon`      |    1 | `#e2a468`                                                                                                                                                                     |
+| семейство                          | мест | литералы                                                                                                                                   |
+| ---------------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `.widgets-quick-pencil`            |    8 | `rgba(80, 50, 20, 0.1)`, `rgba(80, 50, 20, 0.14)`, `#2f2820`, `#e2a468`, `#3a241a`\*, `#cf8144`                                            |
+| `.widget`                          |    7 | `rgba(251, 191, 36, 0.4)`, `rgba(251, 191, 36, 0.25)`, `rgba(249, 115, 22, 0.4)`, `rgba(255, 214, 10, 0.12)`, `#FFD60A`, `#FFEA80`, … (+1) |
+| `.widgets-tab`                     |    7 | `#141210`, `#23201b`, `#2f2820`, `rgba(80, 50, 20, 0.22)`                                                                                  |
+| `.widgets-settings-fab`            |    5 | `rgba(80, 50, 20, 0.1)`, `rgba(80, 50, 20, 0.14)`, `rgba(20, 18, 16, 0.85)`, `#23201b`, `#e2a468`                                          |
+| `.widgets-quick-chip`              |    4 | `rgba(80, 50, 20, 0.1)`, `rgba(80, 50, 20, 0.14)`, `#23201b`, `#e2a468`                                                                    |
+| `.widget-heatmap__cell`            |    3 | `#eab308`, `#fbbf24`, `rgba(234, 179, 8, 0.3)`                                                                                             |
+| `.widget-macros__bar`              |    3 | `#FFD60A`, `#FFEA80`, `rgba(255, 214, 10, 0.3)`                                                                                            |
+| `.widget-v4-catalog__remove-btn`   |    3 | `#c67139`, `#cf8144`, `#e2a468`                                                                                                            |
+| `.widgets-quick-sheet`             |    3 | `rgba(80, 50, 20, 0.14)`, `rgba(80, 50, 20, 0.26)`, `#23201b`                                                                              |
+| `--widget-gradient-orange`         |    2 | `#FF9500`, `#FF6B00`                                                                                                                       |
+| `.page-reports`                    |    2 | `#141210`                                                                                                                                  |
+| `.widget-macros__bar-fill`         |    2 | `#FFD60A`, `#FFEA80`                                                                                                                       |
+| `.widget-streak__record`           |    2 | `#FFD60A`, `#FF9F0A`                                                                                                                       |
+| `.widget-streak__value`            |    2 | `#FF9500`, `#FF6B00`                                                                                                                       |
+| `.widget-wd`                       |    2 | `#c67139`, `#2f2820`                                                                                                                       |
+| `.widgets-longpress-hint`          |    2 | `rgba(80, 50, 20, 0.1)`, `rgba(80, 50, 20, 0.3)`                                                                                           |
+| `.widgets-quick-fab`               |    2 | `rgba(80, 50, 20, 0.14)`, `rgba(120, 60, 20, 0.28)`                                                                                        |
+| `.widgets-quick-minus`             |    2 | `#3a241a`\*, `#e2a468`                                                                                                                     |
+| `.widgets-quick-sheet__chip`       |    2 | `#2f2820`, `#e2a468`                                                                                                                       |
+| `0%, 100%`                         |    2 | `rgba(249, 115, 22, 0.4)`, `rgba(255, 214, 10, 0.4)`                                                                                       |
+| `50%`                              |    2 | `rgba(249, 115, 22, 0.6)`, `rgba(255, 214, 10, 0)`                                                                                         |
+| `--water-dim-text`                 |    1 | `#6b5f4f`                                                                                                                                  |
+| `--widget-accent`                  |    1 | `rgba(255, 159, 10, 0.14)`                                                                                                                 |
+| `--widget-accent-strong`           |    1 | `rgba(255, 159, 10, 0.28)`                                                                                                                 |
+| `.heys-android`                    |    1 | `#141210`                                                                                                                                  |
+| `.page-day`                        |    1 | `#141210`                                                                                                                                  |
+| `.pct-badge`                       |    1 | `rgba(234, 179, 8, 0.12)`                                                                                                                  |
+| `.reports-fullscreen-modal`        |    1 | `rgba(67, 20, 7, 0.98)`                                                                                                                    |
+| `.widget-cascade__badge`           |    1 | `rgba(245, 158, 11, 0.16)`                                                                                                                 |
+| `.widget-cascade__dot`             |    1 | `#facc15`                                                                                                                                  |
+| `.widget-insulin__status`          |    1 | `rgba(234, 179, 8, 0.12)`                                                                                                                  |
+| `.widget-sleep__star`              |    1 | `rgba(255, 214, 10, 0.4)`                                                                                                                  |
+| `.widget-streak__fire`             |    1 | `rgba(249, 115, 22, 0.4)`                                                                                                                  |
+| `.widget-v4-catalog__blocked-text` |    1 | `#e08a72`                                                                                                                                  |
+| `.widget-v4-hold-hint__pill`       |    1 | `rgba(198, 113, 57, 0.16)`                                                                                                                 |
+| `.widget-v4-tile`                  |    1 | `#c67139`                                                                                                                                  |
+| `.widget-wd-sheet`                 |    1 | `rgba(80, 50, 20, 0.22)`                                                                                                                   |
+| `.widget-wd-sheet__opt`            |    1 | `rgba(207, 129, 68, 0.18)`                                                                                                                 |
+| `.widgets-grid`                    |    1 | `#c67139`                                                                                                                                  |
+| `.widgets-quick-scrim`             |    1 | `rgba(43, 22, 8, 0.34)`                                                                                                                    |
+| `.widgets-quick-sheet__row-icon`   |    1 | `#e2a468`                                                                                                                                  |
 
-### `000-base-and-gamification.css` — 144
+### `500-pwa-and-offline.css` — 17
 
-Зоны: `nutrition-tab`
+Зоны: `checkin-morning`, `settings-system`
 
-| семейство                          | мест | литералы                                                                                                                        |
-| ---------------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------- |
-| `.game-daily-mult`                 |    6 | `#fbbf24`, `rgba(251, 191, 36, 0.2)`, `#f97316`, `rgba(249, 115, 22, 0.3)`, `rgba(234, 88, 12, 0.3)`, `rgba(249, 115, 22, 0.5)` |
-| `.ct-wb-ex-remove`                 |    5 | `#fde68a`, `rgba(120, 53, 15, 0.4)`, `rgba(245, 158, 11, 0.5)`, `rgba(146, 64, 14, 0.55)`, `rgba(251, 191, 36, 0.65)`           |
-| `.compact-train`                   |    4 | `rgba(249, 115, 22, 0.08)`, `rgba(249, 115, 22, 0.2)`, `rgba(249, 115, 22, 0.12)`, `rgba(249, 115, 22, 0.3)`                    |
-| `.ct-wb-ex-grid`                   |    4 | `rgba(120, 53, 15, 0.4)`, `rgba(245, 158, 11, 0.5)`, `rgba(146, 64, 14, 0.55)`, `rgba(251, 191, 36, 0.65)`                      |
-| `.ct-wb-rest-watch`                |    4 | `rgba(245, 158, 11, 0.65)`, `rgba(245, 158, 11, 0.14)`, `rgba(245, 158, 11, 0.22)`                                              |
-| `.ct-wb-stepper`                   |    4 | `rgba(120, 53, 15, 0.4)`, `rgba(245, 158, 11, 0.5)`, `rgba(146, 64, 14, 0.55)`, `rgba(251, 191, 36, 0.65)`                      |
-| `.ct-wb-summary-cell`              |    4 | `rgba(254, 243, 199, 0.85)`, `rgba(245, 158, 11, 0.55)`, `rgba(120, 53, 15, 0.6)`                                               |
-| `.ews-badge`                       |    4 | `rgba(249, 115, 22, 0.25)`, `rgba(249, 115, 22, 0.3)`, `#ca8a04`, `rgba(202, 138, 4, 0.22)`                                     |
-| `.game-notification`               |    4 | `#b45309`, `#d97706`, `rgba(251, 191, 36, 0.3)`, `rgba(234, 179, 8, 0.4)`                                                       |
-| `--profile-tone-line`              |    3 | `rgba(198, 113, 57, 0.18)`, `rgba(226, 164, 104, 0.22)`                                                                         |
-| `.ct-wb-ex-name-header-fav`        |    3 | `rgba(245, 158, 11, 0.45)`, `rgba(120, 53, 15, 0.35)`                                                                           |
-| `.ct-wb-ex-row`                    |    3 | `#f59e0b`, `rgba(245, 158, 11, 0.08)`, `rgba(245, 158, 11, 0.12)`                                                               |
-| `.ct-wb-workout-pill-pr`           |    3 | `rgba(245, 158, 11, 0.18)`, `rgba(245, 158, 11, 0.45)`, `rgba(245, 158, 11, 0.30)`                                              |
-| `.game-xp`                         |    3 | `#fbbf24`, `#fde047`, `rgba(253, 224, 71, 0.9)`                                                                                 |
-| `.profile-section`                 |    3 | `rgba(138, 74, 32, 0.06)`, `rgba(198, 113, 57, 0.12)`, `rgba(226, 164, 104, 0.14)`                                              |
-| `--profile-tone-ink`               |    2 | `#cf8144`                                                                                                                       |
-| `--profile-tone-swatch`            |    2 | `rgba(207, 129, 68, 0.22)`                                                                                                      |
-| `--profile-tone-wash`              |    2 | `rgba(207, 129, 68, 0.12)`                                                                                                      |
-| `.compact-badge`                   |    2 | `#f97316`, `#ea580c`                                                                                                            |
-| `.compact-train-fold-btn`          |    2 | `rgba(249, 115, 22, 0.45)`, `rgba(251, 146, 60, 0.45)`                                                                          |
-| `.compact-zone-inline`             |    2 | `#fef3c7`, `#fde68a`                                                                                                            |
-| `.ct-wb-ex-ss-connector`           |    2 | `rgba(245, 158, 11, 0.65)`, `rgba(245, 158, 11, 0.08)`                                                                          |
-| `.game-daily-bonus`                |    2 | `#f59e0b`, `#d97706`                                                                                                            |
-| `.game-expand-btn`                 |    2 | `#f59e0b`, `rgba(245, 158, 11, 0.5)`                                                                                            |
-| `.game-multiplier`                 |    2 | `#fbbf24`, `rgba(251, 191, 36, 0.2)`                                                                                            |
-| `.game-panel-expanded`             |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)`                                                                              |
-| `.meal-collapsed-plaque`           |    2 | `rgba(255, 237, 213, 0.98)`, `rgba(254, 215, 170, 0.9)`                                                                         |
-| `.meal-header-inside`              |    2 | `#ffedd5`, `#fed7aa`                                                                                                            |
-| `.meal-sticky-bar`                 |    2 | `rgba(255, 237, 213, 0.92)`, `rgba(254, 215, 170, 0.6)`                                                                         |
-| `.profile-accordion`               |    2 | `rgba(138, 74, 32, 0.12)`, `rgba(138, 74, 32, 0.14)`                                                                            |
-| `.profile-advice-chip`             |    2 | `rgba(138, 74, 32, 0.1)`, `rgba(198, 113, 57, 0.35)`                                                                            |
-| `.profile-hr-zone__chip`           |    2 | `rgba(138, 74, 32, 0.08)`, `rgba(138, 74, 32, 0.12)`                                                                            |
-| `.profile-message`                 |    2 | `rgba(138, 74, 32, 0.1)`, `rgba(161, 71, 28, 0.18)`                                                                             |
-| `.tab-settings-menu`               |    2 | `#c67139`, `rgba(20, 18, 16, 0.55)`                                                                                             |
-| `.xp-bar-fill`                     |    2 | `#fbbf24`, `#f59e0b`                                                                                                            |
-| `0%`                               |    2 | `rgba(253, 224, 71, 0.6)`, `rgba(245, 158, 11, 0.4)`                                                                            |
-| `0%, 100%`                         |    2 | `rgba(234, 179, 8, 0.3)`                                                                                                        |
-| `100%`                             |    2 | `rgba(253, 224, 71, 0.7)`, `rgba(245, 158, 11, 0.0)`                                                                            |
-| `50%`                              |    2 | `rgba(234, 179, 8, 0.6)`                                                                                                        |
-| `--activity-border`                |    1 | `#f5e6a3`                                                                                                                       |
-| `.achievement-badge`               |    1 | `rgba(234, 179, 8, 0.5)`                                                                                                        |
-| `.ct-wb-ex-ap-pr`                  |    1 | `rgba(245, 158, 11, 0.55)`                                                                                                      |
-| `.ct-wb-ex-ap-row`                 |    1 | `rgba(245, 158, 11, 0.5)`                                                                                                       |
-| `.ct-wb-ex-folded-pr`              |    1 | `rgba(245, 158, 11, 0.55)`                                                                                                      |
-| `.ct-wb-ex-name-suggest-fav`       |    1 | `rgba(245, 158, 11, 0.12)`                                                                                                      |
-| `.ct-wb-summary-emoji`             |    1 | `rgba(245, 158, 11, 0.55)`                                                                                                      |
-| `.default-home-badge`              |    1 | `rgba(249, 115, 22, 0.5)`                                                                                                       |
-| `.game-personal-best`              |    1 | `#fbbf24`                                                                                                                       |
-| `.game-progress`                   |    1 | `rgba(255, 215, 0, 0.6)`                                                                                                        |
-| `.game-weekly-card`                |    1 | `rgba(234, 179, 8, 0.4)`                                                                                                        |
-| `.hdr-settings-sheet__chip`        |    1 | `#c67139`                                                                                                                       |
-| `.measurements-card`               |    1 | `#fed7aa`                                                                                                                       |
-| `.notify-detail`                   |    1 | `rgba(80, 50, 20, 0.1)`                                                                                                         |
-| `.profile-consent-row`             |    1 | `rgba(138, 74, 32, 0.1)`                                                                                                        |
-| `.profile-field-group`             |    1 | `rgba(198, 113, 57, 0.12)`                                                                                                      |
-| `.profile-goal-metric`             |    1 | `rgba(138, 74, 32, 0.08)`                                                                                                       |
-| `.profile-goal-panel`              |    1 | `rgba(138, 74, 32, 0.1)`                                                                                                        |
-| `.profile-goal-panel__source`      |    1 | `rgba(138, 74, 32, 0.08)`                                                                                                       |
-| `.profile-goal-progress`           |    1 | `rgba(138, 74, 32, 0.08)`                                                                                                       |
-| `.profile-hr-zone`                 |    1 | `rgba(138, 74, 32, 0.08)`                                                                                                       |
-| `.profile-hr-zone__name`           |    1 | `rgba(138, 74, 32, 0.1)`                                                                                                        |
-| `.profile-inline-checks`           |    1 | `rgba(138, 74, 32, 0.1)`                                                                                                        |
-| `.profile-ios-install`             |    1 | `rgba(138, 74, 32, 0.12)`                                                                                                       |
-| `.profile-progress-bar`            |    1 | `rgba(138, 74, 32, 0.08)`                                                                                                       |
-| `.profile-push-input`              |    1 | `rgba(138, 74, 32, 0.16)`                                                                                                       |
-| `.profile-push-status`             |    1 | `rgba(138, 74, 32, 0.08)`                                                                                                       |
-| `.profile-push-status__btn`        |    1 | `rgba(138, 74, 32, 0.28)`                                                                                                       |
-| `.profile-subscription-card`       |    1 | `rgba(198, 113, 57, 0.18)`                                                                                                      |
-| `.roadmap-item`                    |    1 | `rgba(255, 215, 0, 0.15)`                                                                                                       |
-| `.roadmap-you`                     |    1 | `#fbbf24`                                                                                                                       |
-| `.tab`                             |    1 | `rgba(249, 115, 22, 0.4)`                                                                                                       |
-| `.tab-settings-diary-toggle__knob` |    1 | `rgba(80, 50, 20, 0.3)`                                                                                                         |
-| `.tone-green`                      |    1 | `#f9c58d`                                                                                                                       |
-| `.weekly-progress-fill`            |    1 | `#eab308`                                                                                                                       |
-| `.xp-bar-value`                    |    1 | `#fbbf24`                                                                                                                       |
-| `30%`                              |    1 | `#fbbf24`                                                                                                                       |
-| `40%`                              |    1 | `rgba(253, 224, 71, 1)`                                                                                                         |
-| `70%`                              |    1 | `rgba(245, 158, 11, 0.7)`                                                                                                       |
+| семейство                             | мест | литералы                                           |
+| ------------------------------------- | ---: | -------------------------------------------------- |
+| `.ca-modal`                           |    2 | `rgba(40, 20, 0, 0.34)`, `#191613`                 |
+| `.household-steps-hint`               |    2 | `#9a3412`, `#fed7aa`                               |
+| `.ios-home-install-modal`             |    2 | `#1a1714`, `rgba(40, 24, 8, 0.34)`                 |
+| `.wn-modal`                           |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)` |
+| `.ca-modal__later-btn`                |    1 | `rgba(198, 113, 57, 0.35)`                         |
+| `.ios-home-install-modal__close`      |    1 | `rgba(26, 23, 20, 0.42)`                           |
+| `.ios-home-install-modal__lead`       |    1 | `rgba(26, 23, 20, 0.5)`                            |
+| `.ios-home-install-modal__step-hint`  |    1 | `rgba(26, 23, 20, 0.5)`                            |
+| `.ios-home-install-modal__step-icon`  |    1 | `rgba(26, 23, 20, 0.28)`                           |
+| `.ios-home-install-modal__step-title` |    1 | `#1a1714`                                          |
+| `.ios-home-install-modal__title`      |    1 | `#1a1714`                                          |
+| `.ios-pwa-banner`                     |    1 | `rgba(80, 50, 20, 0.1)`                            |
+| `.pwa-banner-content`                 |    1 | `rgba(80, 50, 20, 0.1)`                            |
 
-### `heys-components.css` — 107
+### `400-water-and-hydration.css` — 11
 
-Зоны: `checkin-morning`, `pwa-update`, `spinners`, `undo-bar`
+Зоны: `nutrition-tab`, `service-curator`, `water-add`
 
-| семейство                                          | мест | литералы                                                                                                                                                    |
-| -------------------------------------------------- | ---: | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `.meal-role-coach-card`                            |    9 | `rgba(245, 158, 11, 0.2)`, `#f59e0b`, `rgba(245, 158, 11, 0.14)`, `#b45309`, `rgba(120, 53, 15, 0.3)`, `rgba(245, 158, 11, 0.15)`, … (+1)                   |
-| `.meal-rec-card__advisory`                         |    8 | `rgba(251, 191, 36, 0.08)`, `#fbbf24`, `#78350f`, `rgba(245, 158, 11, 0.08)`, `#f59e0b`, `rgba(251, 191, 36, 0.12)`, … (+1)                                 |
-| `.monthly-reports-legend__item`                    |    8 | `#92400e`, `rgba(250, 204, 21, 0.2)`, `rgba(245, 158, 11, 0.24)`, `#fde68a`, `rgba(250, 204, 21, 0.16)`, `rgba(250, 204, 21, 0.28)`                         |
-| `.client-dropdown-leaderboard__head-balance-badge` |    7 | `rgba(254, 240, 138, 0.7)`, `rgba(251, 191, 36, 0.38)`, `#92400e`, `rgba(120, 53, 15, 0.62)`, `rgba(113, 63, 18, 0.86)`, `rgba(251, 191, 36, 0.28)`, … (+1) |
-| `.weekly-wrap-step__badge`                         |    6 | `#ffedd5`, `#c2410c`, `#fdba74`, `rgba(251, 146, 60, 0.2)`, `#f97316`                                                                                       |
-| `.weekly-wrap-step__stat`                          |    6 | `rgba(255, 237, 213, 0.96)`, `rgba(253, 186, 116, 0.82)`, `#fbbf24`, `#f97316`, `rgba(194, 65, 12, 0.24)`, `rgba(251, 146, 60, 0.34)`                       |
-| `.weekly-wrap-breakdown__note`                     |    5 | `rgba(253, 186, 116, 0.5)`, `#9a3412`, `rgba(124, 45, 18, 0.24)`, `rgba(251, 146, 60, 0.36)`, `#fdba74`                                                     |
-| `.confirm-modal-btn`                               |    4 | `#f59e0b`, `#d97706`, `#b45309`, `rgba(180, 83, 9, 0.65)`                                                                                                   |
-| `.monthly-week-card`                               |    4 | `rgba(250, 204, 21, 0.2)`, `rgba(245, 158, 11, 0.3)`, `rgba(250, 204, 21, 0.18)`, `rgba(250, 204, 21, 0.32)`                                                |
-| `.reports-legacy-banner`                           |    4 | `#fde68a`, `#92400e`, `rgba(251, 191, 36, 0.12)`, `rgba(251, 191, 36, 0.3)`                                                                                 |
-| `.action-card__priority`                           |    3 | `#f97316`, `#ea580c`, `#ca8a04`                                                                                                                             |
-| `.advice-diagnostics-stat-card`                    |    3 | `rgba(254, 243, 199, 0.92)`, `rgba(245, 158, 11, 0.22)`, `rgba(120, 53, 15, 0.92)`                                                                          |
-| `.completeness-score`                              |    3 | `#92400e`, `#78350f`, `#fcd34d`                                                                                                                             |
-| `.info-modal__debug`                               |    3 | `rgba(120, 53, 15, 0.18)`, `rgba(251, 191, 36, 0.18)`, `#fde68a`                                                                                            |
-| `.meal-rec-card__macro-chip`                       |    3 | `#92400e`, `rgba(251, 191, 36, 0.2)`, `#fcd34d`                                                                                                             |
-| `.meal-rec-card__meal-badge`                       |    3 | `#92400e`, `rgba(251, 191, 36, 0.15)`, `#fcd34d`                                                                                                            |
-| `.weekly-wrap-breakdown__badge`                    |    3 | `#ffedd5`, `#c2410c`, `#fdba74`                                                                                                                             |
-| `.widget`                                          |    3 | `rgba(120, 53, 15, 0.36)`, `#fde68a`, `rgba(251, 191, 36, 0.22)`                                                                                            |
-| `--pi-warning`                                     |    2 | `#f59e0b`                                                                                                                                                   |
-| `.confidence-badge`                                |    2 | `#facc15`                                                                                                                                                   |
-| `.info-modal__section`                             |    2 | `rgba(120, 53, 15, 0.22)`, `rgba(251, 191, 36, 0.34)`                                                                                                       |
-| `.mc-modal`                                        |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)`                                                                                                          |
-| `.reports-legacy-banner__text`                     |    2 | `#b45309`, `#fcd34d`                                                                                                                                        |
-| `.advice-diagnostics-grade`                        |    1 | `#b45309`                                                                                                                                                   |
-| `.dual-risk-panel__status-warn`                    |    1 | `#fcd34d`                                                                                                                                                   |
-| `.heys-system-banner`                              |    1 | `#1c1712`                                                                                                                                                   |
-| `.heys-update-prompt__backdrop`                    |    1 | `rgba(42, 26, 12, 0.9)`                                                                                                                                     |
-| `.meal-plate-guide__effect`                        |    1 | `#ea580c`                                                                                                                                                   |
-| `.meal-rec-card__timeline-dot`                     |    1 | `#f59e0b`                                                                                                                                                   |
-| `.meal-rec-card__timeline-track`                   |    1 | `#fef3c7`                                                                                                                                                   |
-| `.score-explainer-modal__signal-chip`              |    1 | `#fed7aa`                                                                                                                                                   |
-| `.weekly-wrap-step__delta-pct`                     |    1 | `#f59e0b`                                                                                                                                                   |
-| `.weekly-wrap-step__macros`                        |    1 | `#f59e0b`                                                                                                                                                   |
-| `.weekly-wrap-step__stat-value`                    |    1 | `#f59e0b`                                                                                                                                                   |
-| `.widget-relapse-risk__dev-compare-card`           |    1 | `rgba(254, 243, 199, 0.94)`                                                                                                                                 |
-
-### `300-modals-and-day.css` — 56
-
-Зоны: `checkin-morning`
-
-| семейство                               | мест | литералы                                                                                                                                                     |
-| --------------------------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.day-wave-overview`                    |    8 | `rgba(245, 158, 11, 0.22)`, `rgba(254, 243, 199, 0.82)`, `rgba(254, 243, 199, 0)`, `rgba(245, 158, 11, 0.14)`, `#b45309`, `rgba(245, 158, 11, 0.24)`, … (+2) |
-| `.meal-timer-hint`                      |    6 | `rgba(245, 158, 11, 0.1)`, `rgba(245, 158, 11, 0.2)`, `#d97706`, `rgba(251, 191, 36, 0.15)`, `rgba(251, 191, 36, 0.3)`, `#fcd34d`                            |
-| `.smart-tip`                            |    6 | `#fef3c7`, `#fde68a`, `#92400e`, `rgba(251, 191, 36, 0.15)`, `rgba(245, 158, 11, 0.15)`, `#fcd34d`                                                           |
-| `.sleep-breakdown-cta`                  |    5 | `#2e1e0c`, `#3d2a10`, `rgba(251, 146, 60, 0.35)`, `#fdba74`, `rgba(249, 115, 22, 0.12)`                                                                      |
-| `.day-wave-overview__interaction-zone`  |    4 | `rgba(245, 158, 11, 0.075)`, `rgba(245, 158, 11, 0.16)`, `rgba(245, 158, 11, 0.1)`, `rgba(251, 191, 36, 0.16)`                                               |
-| `.mood-slider-negative`                 |    4 | `#f59e0b`, `#f97316`                                                                                                                                         |
-| `.mood-slider-positive`                 |    4 | `#f97316`, `#f59e0b`                                                                                                                                         |
-| `.sleep-quality-preset-ok`              |    3 | `rgba(234, 179, 8, 0.1)`, `#ca8a04`, `rgba(251, 191, 36, 0.2)`                                                                                               |
-| `--iw-bg-mid`                           |    2 | `rgba(255, 237, 213, 0.72)`, `rgba(254, 249, 195, 0.72)`                                                                                                     |
-| `--iw-bg-to`                            |    2 | `rgba(254, 215, 170, 0.72)`, `rgba(253, 230, 138, 0.72)`                                                                                                     |
-| `.grams-preview-kcal`                   |    2 | `#ff9500`, `#ffd60a`                                                                                                                                         |
-| `.insulin-almost`                       |    2 | `rgba(249, 115, 22, 0.1)`, `#c2410c`                                                                                                                         |
-| `.day-wave-overview__interaction-label` |    1 | `#92400e`                                                                                                                                                    |
-| `.day-wave-overview__overlaps`          |    1 | `#92400e`                                                                                                                                                    |
-| `.rating-progress-dot`                  |    1 | `#fbbf24`                                                                                                                                                    |
-| `.sleep-breakdown-reason`               |    1 | `#fdba74`                                                                                                                                                    |
-| `.sleep-quality-stars`                  |    1 | `#fbbf24`                                                                                                                                                    |
-| `.sleep-quality-value`                  |    1 | `#f59e0b`                                                                                                                                                    |
-| `0%, 100%`                              |    1 | `#fbbf24`                                                                                                                                                    |
-| `50%`                                   |    1 | `#fbbf24`                                                                                                                                                    |
-
-### `500-pwa-and-offline.css` — 31
-
-Зоны: `checkin-morning`
-
-| семейство                             | мест | литералы                                                                    |
-| ------------------------------------- | ---: | --------------------------------------------------------------------------- |
-| `.mc-steps-footer-hint`               |    5 | `#fef3c7`, `#fcd34d`, `rgba(251, 191, 36, 0.15)`, `rgba(251, 191, 36, 0.3)` |
-| `.ca-modal`                           |    2 | `rgba(40, 20, 0, 0.34)`, `#191613`                                          |
-| `.household-steps-hint`               |    2 | `#9a3412`, `#fed7aa`                                                        |
-| `.ios-home-install-modal`             |    2 | `#1a1714`, `rgba(40, 24, 8, 0.34)`                                          |
-| `.mc-rest-consent-banner`             |    2 | `rgba(198, 113, 57, 0.08)`, `rgba(198, 113, 57, 0.18)`                      |
-| `.mc-steps-bonus`                     |    2 | `#ea580c`, `#fb923c`                                                        |
-| `.wn-modal`                           |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)`                          |
-| `.ca-modal__later-btn`                |    1 | `rgba(198, 113, 57, 0.35)`                                                  |
-| `.ios-home-install-modal__close`      |    1 | `rgba(26, 23, 20, 0.42)`                                                    |
-| `.ios-home-install-modal__lead`       |    1 | `rgba(26, 23, 20, 0.5)`                                                     |
-| `.ios-home-install-modal__step-hint`  |    1 | `rgba(26, 23, 20, 0.5)`                                                     |
-| `.ios-home-install-modal__step-icon`  |    1 | `rgba(26, 23, 20, 0.28)`                                                    |
-| `.ios-home-install-modal__step-title` |    1 | `#1a1714`                                                                   |
-| `.ios-home-install-modal__title`      |    1 | `#1a1714`                                                                   |
-| `.ios-pwa-banner`                     |    1 | `rgba(80, 50, 20, 0.1)`                                                     |
-| `.mc-recorded-card`                   |    1 | `#2c231c`                                                                   |
-| `.mc-rest-consent-card`               |    1 | `rgba(198, 113, 57, 0.28)`                                                  |
-| `.mc-steps-value`                     |    1 | `#f59e0b`                                                                   |
-| `.mc-streak-count`                    |    1 | `#b45309`                                                                   |
-| `.mc-streak-text`                     |    1 | `#d97706`                                                                   |
-| `.pwa-banner-content`                 |    1 | `rgba(80, 50, 20, 0.1)`                                                     |
-
-### `400-water-and-hydration.css` — 27
-
-Зоны: `nutrition-tab`, `service-curator`
-
-| семейство                    | мест | литералы                                                                              |
-| ---------------------------- | ---: | ------------------------------------------------------------------------------------- |
-| `.advice-fab`                |    6 | `#fbbf24`, `#f59e0b`, `rgba(251, 191, 36, 0.4)`, `#d97706`, `rgba(245, 158, 11, 0.3)` |
-| `--advice-gradient`          |    4 | `#fde047`, `#f59e0b`, `#fdba74`, `#f97316`                                            |
-| `.advice-list-container`     |    3 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)`, `rgba(198, 113, 57, 0.22)`        |
-| `--advice-bg`                |    2 | `rgba(245, 158, 11, 0.1)`, `rgba(249, 115, 22, 0.1)`                                  |
-| `--wr-alarm`                 |    2 | `#e0704f`\*, `#f08a6a`                                                                |
-| `.advice-list-item-bg-right` |    2 | `#f59e0b`, `#d97706`                                                                  |
-| `.advice-v4-disclaimer-card` |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.16)`                                    |
-| `.advice-v4-toast-card`      |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.14)`                                    |
-| `--wr-dim`                   |    1 | `#6b5f4f`                                                                             |
-| `.advice-v4-science`         |    1 | `rgba(80, 50, 20, 0.12)`                                                              |
-| `0%, 100%`                   |    1 | `rgba(251, 191, 36, 0.4)`                                                             |
-| `50%`                        |    1 | `rgba(251, 191, 36, 0.6)`                                                             |
-
-### `610-aps-meal-flow.css` — 21
-
-Зоны: `nutrition-tab`
-
-| семейство                     | мест | литералы                                                                 |
-| ----------------------------- | ---: | ------------------------------------------------------------------------ |
-| `.mpc-save-preset-btn`        |    8 | `#fef3c7`, `#fde68a`, `#fbbf24`, `#fcd34d`, `#f59e0b`, `#78350f`, … (+1) |
-| `.meal-quality-streak-banner` |    7 | `#fef3c7`, `#fde68a`, `rgba(251, 191, 36, 0.3)`, `#78350f`, `#92400e`    |
-| `.meal-mood-scale__slider`    |    2 | `rgba(80, 50, 20, 0.25)`                                                 |
-| `.meal-night-hint`            |    2 | `#3a2620`, `#e2a468`                                                     |
-| `.aps-grams-slider`           |    1 | `#eab308`                                                                |
-| `.meal-time-value`            |    1 | `#8a4a20`                                                                |
-
-### `715-yesterday-verify.css` — 21
-
-Зоны: `checkin-morning`
-
-| семейство            | мест | литералы                                                                 |
-| -------------------- | ---: | ------------------------------------------------------------------------ |
-| `.yv-info`           |    7 | `#fef3c7`, `#fde68a`, `#fbbf24`, `#713f12`, `#78350f`, `#f97316`, … (+1) |
-| `.yv-slider-value`   |    3 | `#d4a574`, `#e08a5a`, `#a86b2a`                                          |
-| `.yv-v4-slider-fill` |    3 | `#b8925a`, `#c67139`, `#d4844a`                                          |
-| `.yv-info-date`      |    2 | `#92400e`, `#fcd34d`                                                     |
-| `.yv-info-stats`     |    2 | `#78350f`, `#fed7aa`                                                     |
-| `.yv-info-target`    |    2 | `#78350f`, `#fed7aa`                                                     |
-| `.yv-info-percent`   |    1 | `#b45309`                                                                |
-| `.yv-option`         |    1 | `rgba(249, 115, 22, 0.15)`                                               |
-
-### `heys_steps_v1.js` — 16
-
-Зоны: `checkin-morning`, `undo-bar`
-
-| где в коде            | мест | литералы                                                          |
-| --------------------- | ---: | ----------------------------------------------------------------- |
-| `suffix`              |    6 | `rgba(245, 158, 11, 0.35)`, `rgba(245, 158, 11, 0.12)`, `#b45309` |
-| `isSelected`          |    4 | `#f97316`, `rgba(249, 115, 22, 0.1)`, `#ea580c`                   |
-| `getColor`            |    2 | `#eab308`                                                         |
-| `getSleepAdviceColor` |    2 | `#fef08a`, `#854d0e`                                              |
-| `estimatedHint`       |    1 | `#efe3cf`                                                         |
-| `thumbPx`             |    1 | `rgba(80, 50, 20, 0.25)`                                          |
-
-### `heys_consents_v1.js` — 15
-
-Зоны: `spinners`
-
-| где в коде         | мест | литералы                                                |
-| ------------------ | ---: | ------------------------------------------------------- |
-| `handleClick`      |    4 | `#fef3c7`, `#fbbf24`, `#92400e`, `rgba(146,64,14,0.15)` |
-| `res`              |    3 | `#fef3c7`, `#92400e`, `#fcd34d`                         |
-| `version`          |    3 | `#fef3c7`, `#92400e`, `#fcd34d`                         |
-| `clientId`         |    2 | `#fef3c7`, `#92400e`                                    |
-| `NotMedicineBadge` |    2 | `#fef3c7`, `#b45309`                                    |
-| `done`             |    1 | `#d97642`                                               |
-
-### `heys_board_tab_v1.js` — 7
-
-Зоны: `spinners`
-
-| где в коде | мест | литералы                                                                                                                  |
-| ---------- | ---: | ------------------------------------------------------------------------------------------------------------------------- |
-| `style`    |    7 | `rgba(234,179,8,.06)`, `rgba(234,179,8,.25)`, `rgba(251,191,36,.1)`, `rgba(251,191,36,.28)`, `#f59e0b`, `#eab308`, … (+1) |
-
-### `heys_cascade_card_v1.js` — 7
-
-Зоны: `nutrition-tab`
-
-| где в коде     | мест | литералы                                             |
-| -------------- | ---: | ---------------------------------------------------- |
-| `badGrad`      |    2 | `#f97316`, `#fde047`                                 |
-| `badShadow`    |    2 | `rgba(253, 224, 71, 0.7)`, `rgba(249, 115, 22, 0.6)` |
-| `STATE_CONFIG` |    2 | `#eab308`, `#f59e0b`                                 |
-| `cebColor`     |    1 | `#f59e0b`                                            |
+| семейство                    | мест | литералы                                                                       |
+| ---------------------------- | ---: | ------------------------------------------------------------------------------ |
+| `.advice-list-container`     |    3 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)`, `rgba(198, 113, 57, 0.22)` |
+| `--wr-alarm`                 |    2 | `#e0704f`\*, `#f08a6a`                                                         |
+| `.advice-v4-disclaimer-card` |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.16)`                             |
+| `.advice-v4-toast-card`      |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.14)`                             |
+| `--wr-dim`                   |    1 | `#6b5f4f`                                                                      |
+| `.advice-v4-science`         |    1 | `rgba(80, 50, 20, 0.12)`                                                       |
 
 ### `heys_iw_ui.js` — 7
 
@@ -450,53 +194,69 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `isCuratorSession` |    2 | `rgba(245,183,49,.10)`, `#795500`                                    |
 | `rangeWasCapped`   |    1 | `#9A6700`                                                            |
 
-### `heys_scales_v1.js` — 6
+### `600-steps-and-aps.css` — 6
 
-Зоны: `gamification`
+Зоны: `product-card`
 
-| где в коде             | мест | литералы                        |
-| ---------------------- | ---: | ------------------------------- |
-| `C`                    |    3 | `#eab308`, `#f97316`, `#f59e0b` |
-| `MACRO_GRADIENT_STOPS` |    2 | `#fde68a`, `#f59e0b`            |
-| `CLASSIC_STEP_COLOR`   |    1 | `#eab308`                       |
+| семейство                      | мест | литералы                                           |
+| ------------------------------ | ---: | -------------------------------------------------- |
+| `.aps-v4-preset-confirm__card` |    2 | `rgba(80, 50, 20, 0.16)`, `rgba(80, 50, 20, 0.22)` |
+| `.mc-modal`                    |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)` |
+| `.photo-viewer-action`         |    1 | `#e2a468`                                          |
+| `.photo-viewer-overlay`        |    1 | `#141210`                                          |
 
-### `_meals.js` — 5
+### `715-yesterday-verify.css` — 6
 
-Зоны: `nutrition-tab`, `undo-bar`
+Зоны: `checkin-morning`
 
-| где в коде               | мест | литералы                            |
-| ------------------------ | ---: | ----------------------------------- |
-| `getActivityContextTone` |    3 | `#eab30833`, `#ca8a04`, `#eab30855` |
-| `rect`                   |    2 | `#fef3c7`, `#b45309`                |
+| семейство            | мест | литералы                        |
+| -------------------- | ---: | ------------------------------- |
+| `.yv-slider-value`   |    3 | `#d4a574`, `#e08a5a`, `#a86b2a` |
+| `.yv-v4-slider-fill` |    3 | `#b8925a`, `#c67139`, `#d4844a` |
 
-### `heys_day_stats_v1.js` — 5
+### `heys-components.css` — 6
 
-Зоны: `norm-correction`
+Зоны: `checkin-morning`, `product-card`, `pwa-update`, `spinners`, `undo-bar`
 
-| где в коде      | мест | литералы             |
-| --------------- | ---: | -------------------- |
-| `carbsOverData` |    2 | `#fde68a`, `#f59e0b` |
-| `gradient`      |    2 | `#eab308`            |
-| `color`         |    1 | `#eab308`            |
+| семейство                                          | мест | литералы                                           |
+| -------------------------------------------------- | ---: | -------------------------------------------------- |
+| `.mc-modal`                                        |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)` |
+| `.client-dropdown-leaderboard__head-balance-badge` |    1 | `rgba(254, 240, 138, 0.7)`                         |
+| `.completeness-score`                              |    1 | `#78350f`                                          |
+| `.heys-system-banner`                              |    1 | `#1c1712`                                          |
+| `.heys-update-prompt__backdrop`                    |    1 | `rgba(42, 26, 12, 0.9)`                            |
 
-### `heys_gamification_v1.js` — 5
+### `733-ui-v4-login-theme.css` — 5
 
-Зоны: `gamification`, `nutrition-tab`
+Зоны: `login`
 
-| где в коде     | мест | литералы                             |
-| -------------- | ---: | ------------------------------------ |
-| `float`        |    2 | `#f59e0b`, `#fbbf24`                 |
-| `fly`          |    2 | `#fbbf24`, `rgba(251, 191, 36, 0.6)` |
-| `LEVEL_TITLES` |    1 | `#eab308`                            |
+| семейство                             | мест | литералы                |
+| ------------------------------------- | ---: | ----------------------- |
+| `.consent-fulltext`                   |    1 | `rgba(40, 20, 0, 0.34)` |
+| `.consent-fulltext__badge`            |    1 | `#2c231c`               |
+| `.consent-fulltext-backdrop`          |    1 | `rgba(42, 26, 12, 0.5)` |
+| `.heys-consent-sign-sheet`            |    1 | `rgba(40, 20, 0, 0.28)` |
+| `.heys-consent-sign-sheet__done-icon` |    1 | `#2c231c`               |
 
 ### `heys_weekly_reports_v2.js` — 5
 
-Зоны: `norm-correction`
+Зоны: `norm-correction`, `reports-insights`
 
 | где в коде           | мест | литералы             |
 | -------------------- | ---: | -------------------- |
 | `_DYNAMIC_GRADIENTS` |    3 | `#f59e0b`, `#fde68a` |
 | `_staticGradient`    |    2 | `#fde68a`, `#f59e0b` |
+
+### `611-aps-product-card.css` — 4
+
+Зоны: `product-card`
+
+| семейство                   | мест | литералы                   |
+| --------------------------- | ---: | -------------------------- |
+| `.aps-barcode-error`        |    1 | `#b45309`                  |
+| `.aps-product-name`         |    1 | `rgba(255, 213, 0, 0.4)`   |
+| `.aps-v4-create-auto-field` |    1 | `rgba(198, 113, 57, 0.12)` |
+| `.aps-v4-harm-radio`        |    1 | `rgba(198, 113, 57, 0.12)` |
 
 ### `heys_paywall_v1.js` — 4
 
@@ -516,6 +276,15 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `--nut-dim-icon`      |    1 | `#7a6b58`                |
 | `.nutrition-v4-sheet` |    1 | `rgba(33, 30, 25, 0.34)` |
 
+### `heys_login_theme_picker_v1.js` — 3
+
+Зоны: `login`
+
+| где в коде         | мест | литералы             |
+| ------------------ | ---: | -------------------- |
+| `PALETTE_VARIANTS` |    2 | `#c67139`, `#efe3cf` |
+| `paletteSwatch`    |    1 | `#c67139`            |
+
 ### `heys_ratio_zones_v1.js` — 3
 
 Зоны: `gamification`
@@ -527,11 +296,19 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `731-ui-v4-activity.css` — 2
 
-Зоны: `checkin-morning`, `tab-activity`
+Зоны: `checkin-morning`
 
 | семейство                    | мест | литералы                 |
 | ---------------------------- | ---: | ------------------------ |
 | `.activity-v4-steps__slider` |    2 | `rgba(80, 50, 20, 0.28)` |
+
+### `740-cascade-card.css` — 2
+
+Зоны: `reports-insights`
+
+| семейство      | мест | литералы             |
+| -------------- | ---: | -------------------- |
+| `.cascade-dot` |    2 | `#facc15`, `#f97316` |
 
 ### `heys_day_diary_section.js` — 2
 
@@ -541,6 +318,15 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | -------------- | ---: | -------------------- |
 | `numericScore` |    2 | `#eab308`, `#f97316` |
 
+### `heys_steps_v1.js` — 2
+
+Зоны: `checkin-morning`, `date-remainders`, `undo-bar`
+
+| где в коде      | мест | литералы                 |
+| --------------- | ---: | ------------------------ |
+| `estimatedHint` |    1 | `#efe3cf`                |
+| `thumbPx`       |    1 | `rgba(80, 50, 20, 0.25)` |
+
 ### `heys_supplements_v1.js` — 2
 
 Зоны: `nutrition-tab`
@@ -549,22 +335,71 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | ---------------- | ---: | -------------------- |
 | `priorityColors` |    2 | `#fde047`, `#ca8a04` |
 
+### `heys_theme_v1.js` — 2
+
+Зоны: `app-splash`, `settings-system`
+
+| где в коде         | мест | литералы             |
+| ------------------ | ---: | -------------------- |
+| `THEME_COLOR_META` |    2 | `#c67139`, `#23201b` |
+
+### `heys_trial_intake_v1.js` — 2
+
+Зоны: `questionnaire`
+
+| где в коде      | мест | литералы                |
+| --------------- | ---: | ----------------------- |
+| `cardStyle`     |    1 | `rgba(40, 24, 8, 0.08)` |
+| `storageNotice` |    1 | `rgba(40, 24, 8, 0.16)` |
+
 ### `heys-boot-mark.css` — 2
 
-Зоны: `spinners`
+Зоны: `app-splash`, `spinners`
 
 | семейство            | мест | литералы  |
 | -------------------- | ---: | --------- |
 | `--boot-fail-disc`   |    1 | `#35211c` |
 | `--boot-fail-stroke` |    1 | `#d97b62` |
 
+### `pi_early_warning.js` — 2
+
+Зоны: `reports-insights`
+
+| где в коде    | мест | литералы  |
+| ------------- | ---: | --------- |
+| `isFirstCall` |    2 | `#ffaa00` |
+
 ### `heys_add_product_step_v1.js` — 1
 
-Зоны: `nutrition-tab`
+Зоны: `nutrition-tab`, `product-card`
 
 | где в коде | мест | литералы    |
 | ---------- | ---: | ----------- |
 | `h`        |    1 | `#d99a63`\* |
+
+### `heys_day_day_handlers.js` — 1
+
+Зоны: `water-add`
+
+| где в коде | мест | литералы  |
+| ---------- | ---: | --------- |
+| `colors`   |    1 | `#f59e0b` |
+
+### `heys_kernel_bibliography_ui_v1.js` — 1
+
+Зоны: `reports-insights`
+
+| где в коде | мест | литералы  |
+| ---------- | ---: | --------- |
+| `typeMeta` |    1 | `#1c1b19` |
+
+### `heys_scales_v1.js` — 1
+
+Зоны: `gamification`
+
+| где в коде            | мест | литералы  |
+| --------------------- | ---: | --------- |
+| `GAMIFICATION_LEVELS` |    1 | `#eab308` |
 
 ### `heys_step_modal_v1.js` — 1
 
@@ -576,7 +411,7 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 
 ### `widget_data.js` — 1
 
-Зоны: `checkin-morning`
+Зоны: `checkin-morning`, `water-add`
 
 | где в коде | мест | литералы  |
 | ---------- | ---: | --------- |
@@ -652,23 +487,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.fingers-tb__chart-delta`                |    1 | `#c0561f`                                                                                                                                                                    |
 | `.fingers-tb__due`                        |    1 | `#c0561f`                                                                                                                                                                    |
 
-### `200-dark-and-effects.css` — 32
-
-| семейство                 | мест | литералы                                               |
-| ------------------------- | ---: | ------------------------------------------------------ |
-| `.insulin-almost`         |    5 | `#fdba74`, `rgba(251, 146, 60, 0.15)`, `#fb923c`       |
-| `.meal-header-inside`     |    5 | `#431407`, `#7c2d12`, `#9a3412`, `#fb923c`             |
-| `.insulin-soon`           |    4 | `#fcd34d`, `rgba(251, 191, 36, 0.15)`                  |
-| `.meal-sep`               |    3 | `#fb923c`, `rgba(251, 146, 60, 0.2)`, `#fde68a`        |
-| `.meal-time-badge-inside` |    3 | `#78350f`, `#fcd34d`, `#92400e`                        |
-| `--iw-bg-from`            |    2 | `rgba(154, 52, 18, 0.2)`, `rgba(133, 77, 14, 0.2)`     |
-| `--iw-bg-mid`             |    2 | `rgba(194, 65, 12, 0.17)`, `rgba(161, 98, 7, 0.17)`    |
-| `--iw-bg-to`              |    2 | `rgba(251, 146, 60, 0.12)`, `rgba(250, 204, 21, 0.12)` |
-| `.meal-time-badge`        |    2 | `rgba(251, 146, 60, 0.2)`, `#fde68a`                   |
-| `.tone-amber`             |    2 | `#2e2a1a`, `#4a4020`                                   |
-| `--activity-bg`           |    1 | `#3d3520`                                              |
-| `--activity-border`       |    1 | `#d4a76a`                                              |
-
 ### `drums-finger-trainer.css` — 23
 
 | семейство                     | мест | литералы                                                                             |
@@ -686,56 +504,12 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.drums-ft-technique__step`   |    1 | `#f59e0b`                                                                            |
 | `.drums-ft-technique__tip`    |    1 | `#f59e0b`                                                                            |
 
-### `750-strength-builder.css` — 19
-
-| семейство         | мест | литералы                                               |
-| ----------------- | ---: | ------------------------------------------------------ |
-| `--sb-accbg`      |    3 | `rgba(249, 115, 22, 0.12)`, `rgba(249, 115, 22, 0.18)` |
-| `--sb-accTx`      |    3 | `#9a3412`, `#fdba74`                                   |
-| `.sb-card-badge`  |    2 | `rgba(249, 115, 22, 0.14)`, `#9a3412`                  |
-| `.sb-card-bar`    |    2 | `#f97316`, `#c2410c`                                   |
-| `.sb-card-cta`    |    2 | `#c2410c`, `#9a3412`                                   |
-| `.sb-chip`        |    2 | `rgba(249, 115, 22, 0.45)`, `rgba(249, 115, 22, 0.14)` |
-| `--sb-acc`        |    1 | `#c2410c`                                              |
-| `--sb-acc-strong` |    1 | `#9a3412`                                              |
-| `.sb-card`        |    1 | `rgba(249, 115, 22, 0.35)`                             |
-| `.sb-cat-add`     |    1 | `rgba(249, 115, 22, 0.45)`                             |
-| `.sb-star`        |    1 | `#f97316`                                              |
-
-### `710-refeed.css` — 14
-
-| семейство                | мест | литералы                                                                                                                                   |
-| ------------------------ | ---: | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `.metrics-card`          |   10 | `rgba(254, 243, 199, 0.3)`, `rgba(253, 230, 138, 0.2)`, `rgba(245, 158, 11, 0.4)`, `rgba(245, 158, 11, 0.2)`, `#f59e0b`, `#d97706`, … (+3) |
-| `.week-heatmap-day`      |    2 | `#f59e0b`, `rgba(245, 158, 11, 0.3)`                                                                                                       |
-| `.sparkline-point`       |    1 | `#f59e0b`                                                                                                                                  |
-| `.sparkline-refeed-flag` |    1 | `#f59e0b`                                                                                                                                  |
-
 ### `906-planning-goal-map.css` — 8
 
 | семейство            | мест | литералы                                   |
 | -------------------- | ---: | ------------------------------------------ |
 | `.goal-map-node`     |    6 | `#b88465`, `#452e26`, `#b29c61`, `#3b3523` |
 | `--goal-map-warning` |    2 | `#8a4b08`, `#ffd19a`                       |
-
-### `600-steps-and-aps.css` — 7
-
-| семейство                      | мест | литералы                                                      |
-| ------------------------------ | ---: | ------------------------------------------------------------- |
-| `.mc-modal`                    |    3 | `#2b1608`, `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)` |
-| `.aps-v4-preset-confirm__card` |    2 | `rgba(80, 50, 20, 0.16)`, `rgba(80, 50, 20, 0.22)`            |
-| `.photo-viewer-action`         |    1 | `#e2a468`                                                     |
-| `.photo-viewer-overlay`        |    1 | `#141210`                                                     |
-
-### `733-ui-v4-login-theme.css` — 5
-
-| семейство                             | мест | литералы                |
-| ------------------------------------- | ---: | ----------------------- |
-| `.consent-fulltext`                   |    1 | `rgba(40, 20, 0, 0.34)` |
-| `.consent-fulltext__badge`            |    1 | `#2c231c`               |
-| `.consent-fulltext-backdrop`          |    1 | `rgba(42, 26, 12, 0.5)` |
-| `.heys-consent-sign-sheet`            |    1 | `rgba(40, 20, 0, 0.28)` |
-| `.heys-consent-sign-sheet__done-icon` |    1 | `#2c231c`               |
 
 ### `907-planning-reading.css` — 5
 
@@ -746,14 +520,13 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.reading-cover__editorial-role`  |    1 | `#51472f`            |
 | `.reading-reader__palette-option` |    1 | `#f6d977`            |
 
-### `611-aps-product-card.css` — 4
+### `200-dark-and-effects.css` — 4
 
-| семейство                   | мест | литералы                   |
-| --------------------------- | ---: | -------------------------- |
-| `.aps-barcode-error`        |    1 | `#b45309`                  |
-| `.aps-product-name`         |    1 | `rgba(255, 213, 0, 0.4)`   |
-| `.aps-v4-create-auto-field` |    1 | `rgba(198, 113, 57, 0.12)` |
-| `.aps-v4-harm-radio`        |    1 | `rgba(198, 113, 57, 0.12)` |
+| семейство           | мест | литералы             |
+| ------------------- | ---: | -------------------- |
+| `.tone-amber`       |    2 | `#2e2a1a`, `#4a4020` |
+| `--activity-bg`     |    1 | `#3d3520`            |
+| `--activity-border` |    1 | `#d4a76a`            |
 
 ### `critical.css` — 4
 
@@ -770,12 +543,6 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | `.ts-slider`          |    1 | `#eab308` |
 | `.ts-slider-negative` |    1 | `#eab308` |
 
-### `740-cascade-card.css` — 2
-
-| семейство      | мест | литералы             |
-| -------------- | ---: | -------------------- |
-| `.cascade-dot` |    2 | `#facc15`, `#f97316` |
-
 ### `912-planning-game-assemble-day.css` — 2
 
 | семейство                   | мест | литералы  |
@@ -788,3 +555,39 @@ HLS-насыщенность раздута по построению: `#f7f5f0`
 | семейство               | мест | литералы  |
 | ----------------------- | ---: | --------- |
 | `.whatif-custom__field` |    1 | `#eab308` |
+
+---
+
+## Декор, вне набора
+
+Медали, пламя, лучи, XP и прочая иллюстрация геймификации. Роли не получает — и
+в долг не входит. Список живёт здесь, чтобы гейт ролей их не искал.
+
+Всего: **38** в 1 файлах.
+
+### `000-base-and-gamification.css` — 38
+
+Зоны: `date-remainders`, `nutrition-tab`
+
+| семейство              | мест | литералы                                                                                                                        |
+| ---------------------- | ---: | ------------------------------------------------------------------------------------------------------------------------------- |
+| `.game-daily-mult`     |    6 | `#fbbf24`, `rgba(251, 191, 36, 0.2)`, `#f97316`, `rgba(249, 115, 22, 0.3)`, `rgba(234, 88, 12, 0.3)`, `rgba(249, 115, 22, 0.5)` |
+| `.game-notification`   |    4 | `#b45309`, `#d97706`, `rgba(251, 191, 36, 0.3)`, `rgba(234, 179, 8, 0.4)`                                                       |
+| `.game-xp`             |    3 | `#fbbf24`, `#fde047`, `rgba(253, 224, 71, 0.9)`                                                                                 |
+| `.game-daily-bonus`    |    2 | `#f59e0b`, `#d97706`                                                                                                            |
+| `.game-expand-btn`     |    2 | `#f59e0b`, `rgba(245, 158, 11, 0.5)`                                                                                            |
+| `.game-multiplier`     |    2 | `#fbbf24`, `rgba(251, 191, 36, 0.2)`                                                                                            |
+| `.game-panel-expanded` |    2 | `rgba(80, 50, 20, 0.09)`, `rgba(80, 50, 20, 0.12)`                                                                              |
+| `0%`                   |    2 | `rgba(253, 224, 71, 0.6)`, `rgba(245, 158, 11, 0.4)`                                                                            |
+| `0%, 100%`             |    2 | `rgba(234, 179, 8, 0.3)`                                                                                                        |
+| `100%`                 |    2 | `rgba(253, 224, 71, 0.7)`, `rgba(245, 158, 11, 0.0)`                                                                            |
+| `50%`                  |    2 | `rgba(234, 179, 8, 0.6)`                                                                                                        |
+| `.achievement-badge`   |    1 | `rgba(234, 179, 8, 0.5)`                                                                                                        |
+| `.game-personal-best`  |    1 | `#fbbf24`                                                                                                                       |
+| `.game-progress`       |    1 | `rgba(255, 215, 0, 0.6)`                                                                                                        |
+| `.game-weekly-card`    |    1 | `rgba(234, 179, 8, 0.4)`                                                                                                        |
+| `.roadmap-item`        |    1 | `rgba(255, 215, 0, 0.15)`                                                                                                       |
+| `.roadmap-you`         |    1 | `#fbbf24`                                                                                                                       |
+| `30%`                  |    1 | `#fbbf24`                                                                                                                       |
+| `40%`                  |    1 | `rgba(253, 224, 71, 1)`                                                                                                         |
+| `70%`                  |    1 | `rgba(245, 158, 11, 0.7)`                                                                                                       |

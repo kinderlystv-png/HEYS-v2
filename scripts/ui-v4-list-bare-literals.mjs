@@ -43,6 +43,46 @@ const isDead = (file, family, value) =>
     (d) => d.file === file && d.family === family && d.value.toLowerCase() === value.toLowerCase(),
   );
 
+// Декор геймификации — иллюстрация, не интерфейс; роли не получает и в долг
+// не входит. docs/ui/UI_V4_BARE_LITERALS_DECISION.md §ведро 2.3
+const GAME_DECOR_FAMILY =
+  /^\.(?:game|achievement|roadmap|onboarding-fusion|flying-xp)(?:$|[-_])/;
+const GAME_DECOR_SELECTOR =
+  /\.(?:game|achievement|roadmap|onboarding-fusion|flying-xp)(?:[-_.]|$)/;
+const GAME_KEYFRAME =
+  /^(?:game|xp(?:Glow|Pop|Count|Bar|Skeleton)|notifPulse|legendaryNotif|mythicNotif|almostThere|achievementUnlock)/i;
+
+function keyframeRegions(src) {
+  const out = [];
+  for (const km of src.matchAll(/@keyframes\s+([\w-]+)\s*\{/g)) {
+    const name = km[1];
+    let start = km.index + km[0].length;
+    let depth = 1;
+    let i = start;
+    while (i < src.length && depth > 0) {
+      if (src[i] === '{') depth++;
+      else if (src[i] === '}') depth--;
+      i++;
+    }
+    out.push({ name, start: km.index, end: i });
+  }
+  return out;
+}
+
+function keyframeAt(regions, offset) {
+  for (const r of regions) {
+    if (offset >= r.start && offset < r.end) return r.name;
+  }
+  return null;
+}
+
+function isGameDecor(family, head, keyframeName) {
+  if (GAME_DECOR_FAMILY.test(family)) return true;
+  if (GAME_DECOR_SELECTOR.test(head)) return true;
+  if (keyframeName && GAME_KEYFRAME.test(keyframeName)) return true;
+  return false;
+}
+
 // ── что считается литералом ────────────────────────────────────────────────
 const COMMENT = /\/\*[\s\S]*?\*\//g;
 const COLOR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\([^()]*\)/g;
@@ -140,7 +180,8 @@ function alphaOf(literal) {
 // ── чтение файлов ──────────────────────────────────────────────────────────
 function scanCss(file) {
   const src = fs.readFileSync(file, 'utf8').replace(COMMENT, ' ');
-  const out = new Map();
+  const hits = [];
+  const kfRegions = keyframeRegions(src);
   for (const m of src.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
     const head = m[1].trim().replace(/\s+/g, ' ');
     // Сам @media местом не бывает; его внутренности разбираются отдельно.
@@ -149,23 +190,18 @@ function scanCss(file) {
     // Правило без класса — шаг keyframes, :root, элементный селектор — не
     // выбрасывается: иначе место исчезает из счёта молча.
     const family = cls ? '.' + cls[1].split('--')[0] : head.slice(0, 40);
+    const keyframe = keyframeAt(kfRegions, m.index);
     for (const decl of m[2].split(';')) {
       const i = decl.indexOf(':');
       if (i < 0) continue;
       const prop = decl.slice(0, i).trim();
-      // Объявление роли в файле палитры — это и есть палитра, а не место; такие
-      // файлы сюда не попадают вовсе. Но модуль, объявляющий СВОЮ переменную с
-      // зашитым цветом (--profile-tone-wash: #d97e3b), палитре не следует так
-      // же, как литерал, и первая опись его тоже не видит: имени набора в нём
-      // нет. Считаем — под именем самой переменной, оно и есть локатор.
       const key = prop.startsWith('--') ? prop : family;
       for (const c of stripVarFallbacks(decl.slice(i + 1)).matchAll(COLOR)) {
-        if (!out.has(key)) out.set(key, []);
-        out.get(key).push(c[0].trim());
+        hits.push({ key, color: c[0].trim(), head, keyframe, family });
       }
     }
   }
-  return out;
+  return hits;
 }
 
 function stripJsLineComments(src) {
@@ -190,7 +226,7 @@ function scanJs(file) {
   const lines = stripJsLineComments(fs.readFileSync(file, 'utf8').replace(COMMENT, ' ')).split(
     '\n',
   );
-  const out = new Map();
+  const hits = [];
   lines.forEach((line, idx) => {
     for (const c of stripVarFallbacks(line).matchAll(COLOR)) {
       // Ближайшее объемлющее имя — единственный локатор, который есть у
@@ -203,11 +239,16 @@ function scanJs(file) {
           break;
         }
       }
-      if (!out.has(owner)) out.set(owner, []);
-      out.get(owner).push(c[0].trim());
+      hits.push({
+        key: owner,
+        color: c[0].trim(),
+        head: '',
+        keyframe: null,
+        family: owner,
+      });
     }
   });
-  return out;
+  return hits;
 }
 
 // ── охват ──────────────────────────────────────────────────────────────────
@@ -301,28 +342,31 @@ for (const [p, zones] of byPath) {
   const raw = isCss ? scanCss(p) : scanJs(p);
   const base = path.basename(p);
   const fam = new Map();
-  for (const [k, arr] of raw) {
-    const keep = arr.filter((c) => {
-      if (!isWarm(c)) return false;
-      if (isDead(base, k, c)) {
-        deadHits++;
-        return false;
-      }
-      return true;
-    });
-    if (keep.length) fam.set(k, keep);
+  const decor = new Map();
+  for (const hit of raw) {
+    if (!isWarm(hit.color)) continue;
+    if (isDead(base, hit.key, hit.color)) {
+      deadHits++;
+      continue;
+    }
+    const bucket = isCss && isGameDecor(hit.family, hit.head, hit.keyframe) ? decor : fam;
+    if (!bucket.has(hit.key)) bucket.set(hit.key, []);
+    bucket.get(hit.key).push(hit.color);
   }
   files.push({
     name: path.basename(p),
     zones: [...zones].sort(),
     fam,
-    total: [...raw.values()].reduce((s, a) => s + a.length, 0),
+    decor,
+    total: raw.length,
     isCss,
   });
 }
 
 const size = (f) => [...f.fam.values()].reduce((s, a) => s + a.length, 0);
+const decorSize = (f) => [...f.decor.values()].reduce((s, a) => s + a.length, 0);
 const all = files.flatMap((f) => [...f.fam.values()].flat());
+const allDecor = files.flatMap((f) => [...f.decor.values()].flat());
 const totalLiterals = files.reduce((s, f) => s + f.total, 0);
 const counts = {
   'только hex': all.filter((c) => c.startsWith('#') && alphaOf(c) >= 0.999).length,
@@ -343,9 +387,16 @@ if (deadHits !== DEAD.length) {
 if (process.argv.includes('--counts')) {
   console.log(`Просмотрено: ${scannedCss} модулей стилей, ${scannedJs} файлов кода.`);
   console.log(
-    `Голых литералов ${totalLiterals}, из них тёплых ${all.length} (вычтено мёртвых: ${deadHits}).`,
+    `Голых литералов ${totalLiterals}, из них тёплых ${all.length} (вычтено мёртвых: ${deadHits}, ` +
+      `декор вне набора: ${allDecor.length}).`,
   );
   for (const [k, v] of Object.entries(counts)) console.log(`  ${k.replace(/`/g, '')}: ${v}`);
+  if (allDecor.length) {
+    console.log('Декор, вне набора, по файлам:');
+    for (const f of files.filter((x) => decorSize(x)).sort((a, b) => decorSize(b) - decorSize(a))) {
+      console.log(`  ${decorSize(f)}  ${f.name}`);
+    }
+  }
   if (unresolved.length) console.log(`Не найдено на диске: ${unresolved.join(', ')}`);
   process.exit(0);
 }
@@ -597,7 +648,11 @@ W('7. Тёплый цвет: оттенок 12–55°, насыщенность 
 W('   влияет** — тёплая тень под 8 % на синей поверхности всё равно тёплая.');
 W('8. Мёртвый цвет вычитается: значение в таблице данных, ключ которой никто не');
 W(`   читает, до экрана не доходит вовсе. Вычтено ${deadHits} — разбор в`);
-W('   [`UI_V4_DEAD_COLORS.md`](UI_V4_DEAD_COLORS.md), список в скрипте поимённо.', '');
+W('   [`UI_V4_DEAD_COLORS.md`](UI_V4_DEAD_COLORS.md), список в скрипте поимённо.');
+W('9. **Декор геймификации** вычитается из долга: `.game-*`, `.achievement-*`,');
+W('   `.roadmap-*`, `.onboarding-fusion__*`, `.flying-xp-item`, `.game-panel-expanded--v4`');
+W('   и `@keyframes` с game/xp/achievement-именами. Это иллюстрация, не интерфейс;');
+W(`   роли не получает. Вычтено ${allDecor.length} — отдельный раздел «декор, вне набора».`, '');
 W('**Насыщенность считается как chroma, а не как saturation из HLS** — это');
 W('ловушка, стоившая одной перепроверке целого захода. У почти белых тёплых тонов');
 W('HLS-насыщенность раздута по построению: `#f7f5f0` даёт по HLS 0,30 при chroma');
@@ -613,7 +668,9 @@ W(`Просмотрены все модули стилей (${scannedCss}) и ф
 W(`вердиктов закрытых зон (${scannedJs}). Закрытых зон ${zoneNames.length - openZones.length};`);
 W(`незакрытой считается та, где ещё стоят «?» — сейчас это`);
 W(`${openZones.map((z) => '`' + z + '`').join(', ')}. Всего голых`);
-W(`литералов в этих файлах ${totalLiterals}; тёплых ${all.length}. Остальные палитре тоже не`);
+W(`литералов в этих файлах ${totalLiterals}; тёплых ${all.length}` +
+  (allDecor.length ? ` (декор вне набора: ${allDecor.length})` : '') +
+  '. Остальные палитре тоже не');
 W('следуют, но песочными экран не делают, и это отдельный разговор.', '');
 W('Файл, которого здесь нет, **просмотрен и чист**: его отсутствие означает ноль, а');
 W('не «не смотрели». Так, `733-ui-v4-reports.css` и `734-ui-v4-curator-panel.css` не');
@@ -623,17 +680,19 @@ W(`**Звёздочка** у литерала означает, что это в
 W(`одной синей — такое место переводится на роль без разговора. Их ${exact}.`, '');
 W(`Всего мест: **${all.length}** в ${named.length + unnamed.length} файлах.`, '', '---', '');
 
-function table(group) {
+function table(group, famKey = 'fam') {
   for (const f of group) {
-    W(`### \`${f.name}\` — ${size(f)}`, '');
+    const famMap = f[famKey];
+    const n = [...famMap.values()].reduce((s, a) => s + a.length, 0);
+    W(`### \`${f.name}\` — ${n}`, '');
     if (f.zones.length) W(`Зоны: ${f.zones.map((z) => '`' + z + '`').join(', ')}`, '');
     W(`| ${f.isCss ? 'семейство' : 'где в коде'} | мест | литералы |`, '| --- | ---: | --- |');
-    const rows = [...f.fam].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+    const rows = [...famMap].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
     for (const [fam, arr] of rows) {
       const uniq = [...new Set(arr)];
       let shown = uniq
         .slice(0, 6)
-        .map((u) => `\`${u}\`${star(u)}`)
+        .map((u) => `\`${u}\`${famKey === 'fam' ? star(u) : ''}`)
         .join(', ');
       if (uniq.length > 6) shown += `, … (+${uniq.length - 6})`;
       W(`| \`${fam}\` | ${arr.length} | ${shown} |`);
@@ -653,5 +712,19 @@ W('Такие места разметки требуют наравне с пе�
 W('только просмотром по имени файла, а не по обоснованиям.', '');
 table(unnamed);
 
+const decorFiles = files.filter((f) => decorSize(f)).sort((a, b) => decorSize(b) - decorSize(a));
+if (decorFiles.length) {
+  W('---', '');
+  W('## Декор, вне набора', '');
+  W('Медали, пламя, лучи, XP и прочая иллюстрация геймификации. Роли не получает —');
+  W('и в долг не входит. Список живёт здесь, чтобы гейт ролей их не искал.', '');
+  W(`Всего: **${allDecor.length}** в ${decorFiles.length} файлах.`, '');
+  table(decorFiles, 'decor');
+}
+
 fs.writeFileSync(OUT, L.join('\n') + '\n');
-console.log(`${OUT}: ${all.length} мест в ${named.length + unnamed.length} файлах.`);
+console.log(
+  `${OUT}: ${all.length} мест в ${named.length + unnamed.length} файлах` +
+    (allDecor.length ? `; декор вне набора: ${allDecor.length}` : '') +
+    '.',
+);
