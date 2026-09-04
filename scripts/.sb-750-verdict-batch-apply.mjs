@@ -21,10 +21,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { applyVerdictToRow } = await import(
-  pathToFileURL(path.join(ROOT, 'scripts/ui-v4-set-verdict.mjs')).href
-);
-const { readZone, writeZone, shouldSkipStaleHandoff } = await import(
+const { readZone, setVerdictKey, shouldSkipStaleHandoff } = await import(
   pathToFileURL(path.join(ROOT, 'scripts/lib/ui-v4-verdicts.mjs')).href
 );
 
@@ -177,16 +174,20 @@ function seedMetaContractKeys(source, handoff, rows) {
   return seeded;
 }
 
-function queueRow(ctx, source, rowKey, verdict, fact, options = {}) {
-  if (ctx.batchMap.has(rowKey) && ctx.batchMap.get(rowKey)[4] !== source) {
-    ctx.log(`override ${rowKey}: ${ctx.batchMap.get(rowKey)[4]} → ${source}`);
+function queueRow(ctx, source, rowKey, verdict, fact, options = {}, handoffH = null) {
+  if (ctx.batchMap.has(rowKey) && ctx.batchMap.get(rowKey)[5] !== source) {
+    ctx.log(`override ${rowKey}: ${ctx.batchMap.get(rowKey)[5]} → ${source}`);
   }
-  ctx.batchMap.set(rowKey, [rowKey, verdict, fact, options, source]);
+  ctx.batchMap.set(rowKey, [rowKey, verdict, fact, options, handoffH, source]);
   ctx.perFileCounts[source] = (ctx.perFileCounts[source] || 0) + 1;
 }
 
-function shouldSkipNeqDowngrade(rows, rowKey, verdict, allowDowngrade) {
-  return shouldSkipStaleHandoff(rows[rowKey], verdict, { allowDowngrade });
+function shouldSkipNeqDowngrade(rows, rowKey, verdict, allowDowngrade, handoffH) {
+  return shouldSkipStaleHandoff(rows[rowKey], verdict, {
+    allowDowngrade,
+    handoffH,
+    handoff: true,
+  }).skip;
 }
 
 function ingestStandardRow(source, row, rows, ctx) {
@@ -221,6 +222,7 @@ function ingestStandardRow(source, row, rows, ctx) {
   if (row['na-kind']) options['na-kind'] = row['na-kind'];
   if (row.reasonCode) options['reason-code'] = row.reasonCode;
   if (row.decisionRef) options['decision-ref'] = row.decisionRef;
+  const handoffH = row.h ?? null;
   if (verdict === '≠') {
     if (!options['reason-code']) options['reason-code'] = 'canvas-conflict';
     if (!options['decision-ref']) {
@@ -228,7 +230,7 @@ function ingestStandardRow(source, row, rows, ctx) {
         || 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
     }
   }
-  queueRow(ctx, source, rowKey, verdict, fact, options);
+  queueRow(ctx, source, rowKey, verdict, fact, options, handoffH);
 }
 
 function ingestNeqAuditRow(source, row, rows, ctx, isNeqAudit) {
@@ -242,7 +244,7 @@ function ingestNeqAuditRow(source, row, rows, ctx, isNeqAudit) {
   }
   const verdict = row.recommend;
   if (!verdict) return;
-  if (isNeqAudit && shouldSkipNeqDowngrade(rows, rowKey, verdict, ctx.allowDowngrade)) {
+  if (isNeqAudit && shouldSkipNeqDowngrade(rows, rowKey, verdict, ctx.allowDowngrade, row.h ?? null)) {
     ctx.skippedNeqStale += 1;
     return;
   }
@@ -253,7 +255,7 @@ function ingestNeqAuditRow(source, row, rows, ctx, isNeqAudit) {
     options['reason-code'] = 'canvas-conflict';
     options['decision-ref'] = 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
   }
-  queueRow(ctx, source, rowKey, verdict, fact, options);
+  queueRow(ctx, source, rowKey, verdict, fact, options, row.h ?? null);
 }
 
 function ingestOutOfScopeCssRow(source, row, rows, ctx) {
@@ -280,7 +282,7 @@ function ingestOutOfScopeCssRow(source, row, rows, ctx) {
         || 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
     }
   }
-  queueRow(ctx, source, rowKey, verdict, fact, options);
+  queueRow(ctx, source, rowKey, verdict, fact, options, row.h ?? null);
 }
 
 function ingestOutOfScopeRuntimeRow(source, row, rows, ctx) {
@@ -307,7 +309,7 @@ function ingestOutOfScopeRuntimeRow(source, row, rows, ctx) {
         || 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
     }
   }
-  queueRow(ctx, source, rowKey, verdict, fact, options);
+  queueRow(ctx, source, rowKey, verdict, fact, options, row.h ?? null);
 }
 
 export function buildBatchMap(handoffFiles, { withInline = false, allowDowngrade = false, log = console.log } = {}) {
@@ -345,23 +347,29 @@ export function applyBatchMap(batchMap, { dryRun = false, allowDowngrade = false
   let skippedSame = 0;
   let skippedStale = 0;
 
-  for (const [key, verdict, fact, options] of batchMap.values()) {
+  for (const [key, verdict, fact, options, handoffH] of batchMap.values()) {
     const zone = readZone(ZONE_ID);
     if (!zone) throw new Error(`zone ${ZONE_ID} not found`);
     const row = zone.rows[key];
     if (!row) continue;
 
-    if (shouldSkipStaleHandoff(row, verdict, { allowDowngrade })) {
-      skippedStale += 1;
-      continue;
-    }
     if (row.v === verdict && row.f === fact) {
       skippedSame += 1;
       continue;
     }
 
-    applyVerdictToRow(row, { verdict, fact, options }, ROOT);
-    if (!dryRun) writeZone(ZONE_ID, zone);
+    const result = setVerdictKey(
+      ZONE_ID,
+      key,
+      { verdict, fact, options },
+      { handoff: true, handoffH, allowDowngrade, dryRun, root: ROOT },
+    );
+    if (result.skipped) {
+      if (result.reason === 'skipIf') continue;
+      skippedStale += 1;
+      if (result.message) log(`skip ${key}: ${result.message}`);
+      continue;
+    }
     applied += 1;
   }
 

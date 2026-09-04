@@ -580,29 +580,87 @@ export function applyVerdictToRow(row, { verdict, fact, options = {} }, root = R
   return row;
 }
 
+export const STALE_HANDOFF_SKIP_MESSAGE = 'строка уже сведена позже, пропущена';
+
+const SETTLED_VERDICTS = new Set(['=', '≠', '—']);
+
 /**
- * Skip applying stale handoff «≠» over a fresher live «=» (parallel lane resolved the row).
+ * Handoff apply guard: overwrite a live row only when it is still «?» or the handoff
+ * snapshot `h` matches the live row (idempotent re-apply). Otherwise skip stale payload.
+ *
+ * @param {object|null|undefined} liveRow
+ * @param {string} handoffVerdict verdict from handoff payload (`v` / recommend)
+ * @param {{ allowDowngrade?: boolean, handoffH?: string|null, handoff?: boolean }} opts
+ * @returns {{ skip: boolean, reason?: string, message?: string }}
  */
-export function shouldSkipStaleHandoff(liveRow, handoffVerdict, { allowDowngrade = false } = {}) {
-  if (allowDowngrade || handoffVerdict !== '≠') return false;
-  return liveRow?.v === '=';
+export function shouldSkipStaleHandoff(liveRow, handoffVerdict, {
+  allowDowngrade = false,
+  handoffH,
+  handoff = handoffH != null,
+} = {}) {
+  if (allowDowngrade) return { skip: false };
+
+  const liveV = liveRow?.v;
+  if (liveV === '?') return { skip: false };
+
+  const liveH = liveRow?.h;
+  if (handoffH != null && handoffH === liveH) return { skip: false };
+
+  if (handoff || handoffH != null) {
+    if (SETTLED_VERDICTS.has(liveV)) {
+      return {
+        skip: true,
+        reason: handoffH != null && handoffH !== liveH ? 'row-settled-later' : 'stale-handoff-settled',
+        message: STALE_HANDOFF_SKIP_MESSAGE,
+      };
+    }
+    return { skip: false };
+  }
+
+  // Legacy path (callers without handoff flag): neq-audit «≠» must not downgrade live «=».
+  if (handoffVerdict === '≠' && liveV === '=') {
+    return {
+      skip: true,
+      reason: 'stale-handoff-neq-over-eq',
+      message: STALE_HANDOFF_SKIP_MESSAGE,
+    };
+  }
+  return { skip: false };
 }
 
 /**
  * Etalon: fresh readZone → mutate one key → writeZone. Use for every batch verdict write.
+ * Handoff re-runs: pass `{ handoff: true, handoffH }` — settled rows with a newer `h` are skipped.
  */
 export function setVerdictKey(zoneId, key, patch, opts = {}) {
-  const { root = ROOT, skipIf, dryRun = false } = opts;
+  const {
+    root = ROOT,
+    skipIf,
+    dryRun = false,
+    handoffH,
+    handoff = handoffH != null,
+    allowDowngrade = false,
+  } = opts;
   const zone = readZone(zoneId);
   if (!zone) throw new Error(`Зоны «${zoneId}» нет.`);
   const row = zone.rows[key];
   if (!row) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
-  if (skipIf?.(row)) return { skipped: true, reason: 'skipIf', was: { v: row.v, f: row.f } };
+  if (skipIf?.(row)) return { skipped: true, reason: 'skipIf', was: { v: row.v, f: row.f, h: row.h } };
 
-  const was = { v: row.v, f: row.f };
+  const guard = shouldSkipStaleHandoff(row, patch.verdict, { allowDowngrade, handoffH, handoff });
+  if (guard.skip) {
+    return {
+      skipped: true,
+      reason: guard.reason,
+      message: guard.message,
+      was: { v: row.v, f: row.f, h: row.h },
+    };
+  }
+
+  const was = { v: row.v, f: row.f, h: row.h };
   applyVerdictToRow(row, patch, root);
   if (!dryRun) writeZone(zoneId, zone);
-  return { skipped: false, was, now: { v: row.v, f: row.f } };
+  return { skipped: false, was, now: { v: row.v, f: row.f, h: row.h } };
 }
 
 /**

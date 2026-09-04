@@ -24,6 +24,7 @@ describe('sb-750 batch apply stale handoff guard', () => {
         rows: [{
           key: staleKey,
           recommend: '≠',
+          h: 'stale-handoff-hash',
           fDraft: 'stale neq-audit handoff must not win',
         }],
       }),
@@ -43,6 +44,7 @@ describe('sb-750 batch apply stale handoff guard', () => {
         ...zone.rows[staleKey],
         v: '=',
         f: 'fresh parallel lane resolved this row',
+        h: 'fresh-live-hash',
       };
       writeZone('strength-builder', zone);
 
