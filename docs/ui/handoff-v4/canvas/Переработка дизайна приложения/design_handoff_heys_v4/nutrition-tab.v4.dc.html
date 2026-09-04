@@ -554,7 +554,7 @@
     <div class="spec"><b>заметность чипа</b><span data-v="чип обязан отличаться от подложки не меньше чем на 3:1 — сам чип, а не текст в нём: включённый заливкой акцента, выключенный обводкой 2 px тем же акцентом"></span><i>обводка — единственная граница выключенного чипа, и она несёт состояние «блок выключен»; на 1,5 px в альфе .16 она давала 1,45:1, и состояние пропадало. Правило и число те же, что у минус-чипа воды</i></div>
     <div class="spec"><b>синие наборы</b><span data-v="покрыты полностью, включая капсулу даты и плашку куратора"></span><i>капсула оставалась песочной в синей палитре, плашка куратора не имела правил для сине-тёмной</i></div>
   <div class="spec" style="border-bottom:none"><b>ожидание данных</b><span data-v="скелетонов нет: до прихода данных блоки показывают прочерки, а не нули"></span><i>нули читаются как факт «ничего не съел»</i></div>
-                                                                            <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                                                <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Питание · блок · Шапка · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Питание · блок · Шапка · 02</b><span data-v="«Питание» — имя экрана"></span></div>
@@ -1070,7 +1070,7 @@
   <div class="stripWrap">
   <div class="strip">
     <div class="sLab"><b>Шапка и капсула</b><span>имя вкладки, дата и число приёмов с продуктами; капсула липкая, остальное едет</span></div>
-    <div class="sPh sTop" data-demo="stop" data-screen-label="Питание · блок · Шапка">
+    <div class="sPh sTop" data-demo="stop" data-screen-label="Питание · блок · Шапка" data-vid="вид блока">
       <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
       <div class="dcap">
         <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
@@ -1080,7 +1080,7 @@
     </div>
 
     <div class="sLab"><b>Плашка куратора</b><span>первый блок карточки, когда есть неподтверждённые правки</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Плашка куратора">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Плашка куратора" data-vid="вид блока">
       <div class="cur">
         <b>Куратор обновил этот день<span>2 изменения · посмотреть</span></b>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--ac);flex:none;"><path d="M9 6l6 6-6 6"/></svg>
@@ -1088,7 +1088,7 @@
     </div>
 
     <div class="sLab"><b>Осталось на сегодня</b><span>герой: число, полоса, «съедено» и «бюджет» одним числом на весь экран</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Герой">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Герой" data-vid="вид · блок «Герой»">
       <div class="hero">
         <div class="hk">Осталось на сегодня</div>
         <div class="hn"><b>642</b><i>ккал</i></div>
@@ -1098,12 +1098,12 @@
     </div>
 
     <div class="sLab"><b>Окно приёмов</b><span>одна строка состояния; шалфей только когда окно правда открыто</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Окно приёмов">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Окно приёмов" data-vid="вид блока окна">
       <div class="sec"><div class="win open"><span>Окно приёмов</span><span>закроется в 19:40<br>через 1:20</span></div></div>
     </div>
 
     <div class="sLab"><b>Дневник приёмов</b><span>строка нажимается целиком и открывает лист правки; пустой приём называет цену</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Дневник">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Дневник" data-vid="вид списка приёмов">
       <div class="sec"><div class="dry">
         <div class="meal">
           <div class="mt"><b><span style="display:inline-flex;align-items:center;gap:8px;"><span class="mnum">1</span>08:20 · Завтрак</span></b><s>418</s></div>
@@ -1126,12 +1126,12 @@
     </div>
 
     <div class="sLab"><b>Добавить приём пищи</b><span>единственная кнопка каркаса; на прошлом дне спрашивает дату</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавить приём">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавить приём" data-vid="вид блока">
       <div class="sec"><div class="cta"><span>Добавить приём пищи</span><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div></div>
     </div>
 
     <div class="sLab"><b>Итоги дня</b><span>пять строк с полосами вместо таблицы; процентов нет</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня" data-vid="вид · блок «Итоги дня»">
       <div class="sec"><div class="tot">
         <div class="totH">Итоги дня</div>
         <div class="tr"><div class="trh"><b>Калории</b><span><em>1 289</em> из 1 931 ккал</span></div><div class="trk"><i class="zUnder" style="width:67%"></i><u class="tick" style="left:77%"></u></div></div>
@@ -1143,7 +1143,7 @@
     </div>
 
     <div class="sLab"><b>Вода</b><span>второй дневной итог, сразу за макросами. Компактный вид — кнопка воды включена и добавление на ней; полный — кадр «Вода без кнопки»</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода" data-vid="вид · блок «Вода»">
       <div class="sec"><div class="wCardB" style="margin-top:10px;">
         <div class="bTop"><span class="k">Вода</span><span class="k">в среднем 2,5 л</span></div>
         <div class="bMini">
@@ -1160,7 +1160,7 @@
     </div>
 
     <div class="sLab"><b>Качество еды</b><span>две метрики: вредность по шкале 0–10 и гликемический индекс</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Качество еды">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Качество еды" data-vid="вид карточек качества">
       <div class="sec">
         <div class="totH" style="margin:16px 0 0;">Качество еды</div>
         <div class="qual">
@@ -1171,7 +1171,7 @@
     </div>
 
     <div class="sLab"><b>Приёмы за день</b><span>полосы длительности волн; пересечение красным сегментом</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Приёмы за день">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Приёмы за день" data-vid="вид · блок «Приёмы за день»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Приёмы за день</b><span class="warn">нахлёст 1:20</span></div>
         <div class="tl">
@@ -1184,7 +1184,7 @@
     </div>
 
     <div class="sLab"><b>Голод и энергия</b><span>две мини-карточки со шкалой 1–10</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Голод и энергия">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Голод и энергия" data-vid="вид мини-карточек">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Голод и энергия</b></div>
         <div class="hg">
@@ -1195,7 +1195,7 @@
     </div>
 
     <div class="sLab"><b>Добавки</b><span>чипы группами времени, без дозировок; тап по чипу — выпито, тап по названию группы — вся группа. Остальные состояния — в колонке вариаций</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · частично">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · частично" data-vid="вид · блок «Добавки»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Добавки</b><div class="blkA"><span><em>3</em> из 6</span><span class="suP act">Курс</span><span class="suP">Всё сразу</span></div></div>
         <div class="suG"><span class="suL"><b>Утро</b><i class="done"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></i></span><span class="suC"><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Витамин D3</span><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Йод</span></span></div>
@@ -1206,7 +1206,7 @@
     </div>
 
     <div class="sLab"><b>Что показывать</b><span>ряд чипов после всего содержимого: решение принимается там, где виден результат</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Ряд чипов">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Ряд чипов" data-vid="вид ряда чипов">
       <div class="cfg">
         <div class="cfgH">Что показывать на этой вкладке</div>
         <div class="cfgR">
@@ -1222,7 +1222,7 @@
     </div>
 
     <div class="sLab"><b>Нижняя навигация</b><span>конец экрана; на вкладке всегда</span></div>
-    <div class="sPh sBot" data-demo="stop" data-screen-label="Питание · блок · Нижняя навигация">
+    <div class="sPh sBot" data-demo="stop" data-screen-label="Питание · блок · Нижняя навигация" data-vid="вид блока">
       <div class="nav" style="margin-top:22px;">
         <span class="navI on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/></svg>Питание</span>
         <span class="navI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>Главная</span>
@@ -1237,7 +1237,7 @@
     <div class="varH">Вариации · Итоги дня<span>полоса слева показывает основной вид; здесь — то же место экрана в другие часы дня и легенда шкалы</span></div>
 
     <div class="sLab vLab"><b>Итоги дня · шкала зон</b><span>цвет — отклонение от ожидаемого к этому часу, риска на дорожке — само ожидаемое</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня · шкала зон">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня · шкала зон" data-vid="вид · блок «Итоги дня»">
       <div class="sec"><div class="tot">
         <div class="totH">Шкала зон</div>
         <div class="tr"><div class="zleg"><span><em>до 8 %</em> · по графику</span><span>шалфей</span></div><div class="trk"><i class="zOk" style="width:62%"></i><u class="tick" style="left:68%"></u></div></div>
@@ -1249,7 +1249,7 @@
     </div>
 
     <div class="sLab vLab"><b>Итоги дня · утро, 09:30</b><span>один завтрак: полосы короткие, но ровно такие, как ожидается к этому часу — шалфей</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня · утро">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня · утро" data-vid="вид · блок «Итоги дня»">
       <div class="sec"><div class="tot">
         <div class="totH">Итоги дня</div>
         <div class="tr"><div class="trh"><b>Калории</b><span><em>373</em> из 1 931 ккал</span></div><div class="trk"><i class="zOk" style="width:19%"></i><u class="tick" style="left:19%"></u></div></div>
@@ -1261,7 +1261,7 @@
     </div>
 
     <div class="sLab vLab"><b>Итоги дня · вечер, 19:30</b><span>есть полчаса до конца еды: клетчатка отстала на два приёма — красная</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня · вечер">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Итоги дня · вечер" data-vid="вид · блок «Итоги дня»">
       <div class="sec"><div class="tot">
         <div class="totH">Итоги дня</div>
         <div class="tr"><div class="trh"><b>Калории</b><span><em>1 520</em> из 1 931 ккал</span></div><div class="trk"><i class="zUnder" style="width:79%"></i><u class="tick" style="left:96%"></u></div></div>
@@ -1275,7 +1275,7 @@
     <div class="varH" style="margin-top:34px">Вариации · Вода<span>в полосе стоит обычный день; здесь — набранная норма и день без отметок</span></div>
 
     <div class="sLab vLab"><b>Вода · норма набрана</b><span>кольцо замкнуто, «осталось» сменилось словами; тон не меняется — вода не повод для похвалы и не повод для тревоги</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода · норма набрана">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода · норма набрана" data-vid="вид · блок «Вода»">
       <div class="sec"><div class="wCardB" style="margin-top:10px;">
         <div class="bTop"><span class="k">Вода</span><span class="k">в среднем 2,7 л</span></div>
         <div class="bMini">
@@ -1292,7 +1292,7 @@
     </div>
 
     <div class="sLab vLab"><b>Вода · пустой день</b><span>сегодня не отмечено ничего: кольцо и линия розовые, линия спускается в ноль вместо обрыва — карточка просит внести воду, а не молчит</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода · пустой день">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода · пустой день" data-vid="вид · блок «Вода»">
       <div class="sec"><div class="wCardB" style="margin-top:10px;">
         <div class="bTop"><span class="k">Вода</span><span class="k">в среднем 2,3 л</span></div>
         <div class="bMini">
@@ -1310,7 +1310,7 @@
     </div>
 
     <div class="sLab vLab"><b>Вода · отстаёт к этому часу</b><span>16:20, выпито 0,6 л при ожидаемых 2,1 — отставание больше четверти нормы: тот же розовый тон, что и у пустого дня</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода · отстаёт">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Вода · отстаёт" data-vid="вид · блок «Вода»">
       <div class="sec"><div class="wCardB" style="margin-top:10px;">
         <div class="bTop"><span class="k">Вода</span><span class="k">в среднем 2,3 л</span></div>
         <div class="bMini">
@@ -1331,7 +1331,7 @@
     <div class="varH" style="margin-top:34px">Вариации · Добавки<span>в полосе стоит частично отмеченный день; здесь — остальные состояния того же блока</span></div>
 
     <div class="sLab vLab"><b>Добавки · ничего не отмечено</b><span>начало дня: все чипы в нейтральной заливке, счётчик «0 из 6»</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки" data-vid="вид · блок «Добавки»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Добавки</b><div class="blkA"><span>0 из 6</span><span class="suP act">Курс</span><span class="suP">Всё сразу</span></div></div>
         <div class="suG"><span class="suL"><b>Утро</b><i>0 из 2</i></span><span class="suC"><span class="suCh">Витамин D3</span><span class="suCh">Йод</span></span></div>
@@ -1342,7 +1342,7 @@
     </div>
 
     <div class="sLab vLab"><b>Добавки · группа отмечена</b><span>тап по названию группы — все её чипы выделились, счётчик сменился галочкой</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · группа отмечена">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · группа отмечена" data-vid="вид · блок «Добавки»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Добавки</b><div class="blkA"><span><em>2</em> из 6</span><span class="suP act">Курс</span><span class="suP">Всё сразу</span></div></div>
         <div class="suG"><span class="suL"><b>Утро</b><i class="done"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></i></span><span class="suC"><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Витамин D3</span><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Йод</span></span></div>
@@ -1353,7 +1353,7 @@
     </div>
 
     <div class="sLab vLab"><b>Добавки · всё принято</b><span>счётчик шапки заменяется словами, пилюля — на «Снять всё»; празднования нет</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · всё принято">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · всё принято" data-vid="вид · блок «Добавки»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Добавки</b><div class="blkA"><span class="open">всё принято</span><span class="suP act">Курс</span><span class="suP">Снять всё</span></div></div>
         <div class="suG"><span class="suL"><b>Утро</b><i class="done"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></i></span><span class="suC"><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Витамин D3</span><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Йод</span></span></div>
@@ -1364,7 +1364,7 @@
     </div>
 
     <div class="sLab vLab"><b>Добавки · длинные названия</b><span>имя не обрезается: чип тянется до ширины ряда, дальше текст переносится внутри него</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · длинные названия">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · длинные названия" data-vid="вид · блок «Добавки»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Добавки</b><div class="blkA"><span><em>1</em> из 4</span><span class="suP act">Курс</span><span class="suP">Всё сразу</span></div></div>
         <div class="suG"><span class="suL"><b>Утро</b><i><em>1</em> из 2</i></span><span class="suC"><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Витамин D3</span><span class="suCh">Магний глицинат</span></span></div>
@@ -1373,7 +1373,7 @@
     </div>
 
     <div class="sLab vLab"><b>Добавки · длинный курс</b><span>больше шести позиций в группе — первые шесть и чип «ещё N», который раскрывает остаток на месте</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · длинный курс">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · длинный курс" data-vid="вид · блок «Добавки»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Добавки</b><div class="blkA"><span><em>2</em> из 11</span><span class="suP act">Курс</span><span class="suP">Всё сразу</span></div></div>
         <div class="suG"><span class="suL"><b>Утро</b><i><em>2</em> из 8</i></span><span class="suC"><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Витамин D3</span><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Йод</span><span class="suCh">Цинк</span><span class="suCh">Селен</span><span class="suCh">Витамин C</span><span class="suCh">Фолат</span><span class="suCh mo">ещё 2</span></span></div>
@@ -1383,7 +1383,7 @@
     </div>
 
     <div class="sLab vLab"><b>Добавки · прошлый день</b><span>вид тот же, напоминаний нет. «Цинк» убрали из курса после того дня — отметка осталась и видна, но в счётчик не идёт</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · прошлый день">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · прошлый день" data-vid="вид · блок «Добавки»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Добавки</b><div class="blkA"><span class="open">всё принято</span><span class="suP act">Курс</span><span class="suP">Снять всё</span></div></div>
         <div class="suG"><span class="suL"><b>Утро</b><i class="done"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></i></span><span class="suC"><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Витамин D3</span><span class="suCh on"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Йод</span><span class="suCh gh"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Цинк · не в курсе</span></span></div>
@@ -1393,7 +1393,7 @@
     </div>
 
     <div class="sLab vLab"><b>Добавки · курса нет</b><span>чип включён, позиций нет — блок не исчезает, а зовёт завести курс</span></div>
-    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · курса нет">
+    <div class="sPh" data-demo="stop" data-screen-label="Питание · блок · Добавки · курса нет" data-vid="вид · блок «Добавки»">
       <div class="sec"><div class="blk">
         <div class="blkH"><b>Добавки</b></div>
         <div class="suInv">Курс не заведён. Добавьте позиции из справочника — и здесь появятся отметки приёма.</div>
@@ -1407,7 +1407,7 @@
   <div class="row4">
     <div>
       <div class="lab"><b>Пустой день</b><span>прочерки, а не нули</span></div>
-      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · пустой день">
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · пустой день" data-vid="вид блока">
         <div class="top"><span class="ttl">Питание</span><span class="capM">чт, 21 авг</span></div>
         <div class="dcap">
           <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
@@ -1436,7 +1436,7 @@
 
     <div>
       <div class="lab"><b>Перебор · зона «Переел»</b><span>113 % бюджета: подпись сменилась на 100 %, цвет — предупреждение</span></div>
-      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · перебор">
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · перебор" data-vid="вид · блок «Итоги дня»">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 5 приёмов</span></div>
         <div class="dcap">
           <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
@@ -1465,7 +1465,7 @@
 
     <div>
       <div class="lab"><b>Прошлый день</b><span>герой меняется, порогов «к этому часу» нет</span></div>
-      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · прошлый день">
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · прошлый день" data-vid="вид блока">
         <div class="top"><span class="ttl">Питание</span><span class="capM">вт, 19 авг · 4 приёма</span></div>
         <div class="dcap">
           <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
@@ -1538,7 +1538,7 @@
 
     <div>
       <div class="lab"><b>Блоки выключены</b><span>остался каркас: герой, окно, дневник, итоги</span></div>
-      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · блоки выключены">
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · блоки выключены" data-vid="вид блока">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="sec" style="margin-top:16px;">
           <div class="tot">
@@ -1574,7 +1574,7 @@
 
     <div>
       <div class="lab"><b>Только чтение</b><span>триал закончился: экран читается, записи заблокированы</span></div>
-      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · только чтение">
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · только чтение" data-vid="вид «только чтение»">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="roB">Пробный период закончился<span>День и история открыты для чтения. Чтобы записывать снова — напишите куратору.</span></div>
         <div class="hero">
@@ -1598,7 +1598,7 @@
 
     <div>
       <div class="lab"><b>Офлайн без данных</b><span>первый вход дня без сети: показывать нечего</span></div>
-      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · офлайн без данных">
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · офлайн без данных" data-vid="вид карточки офлайна">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг</span></div>
         <div class="dcap">
           <span class="darr"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
@@ -1623,7 +1623,7 @@
     <div style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;">
       <div>
       <div class="lab"><b>Перебор · нейтральная зона</b><span>до 110 % подпись уже «Перебор», но цвет нейтральный: обычный день</span></div>
-      <div class="ph" style="height:250px;" data-demo="stop" data-screen-label="Питание · зона нейтральная">
+      <div class="ph" style="height:250px;" data-demo="stop" data-screen-label="Питание · зона нейтральная" data-vid="вид · блок «Итоги дня»">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="hero">
             <div class="hk">Осталось на сегодня</div>
@@ -1635,7 +1635,7 @@
     </div>
       <div>
       <div class="lab"><b>Перебор · предупреждение</b><span>110–130 % — тон предупреждения у числа, процента и сегмента за нормой</span></div>
-      <div class="ph" style="height:250px;" data-demo="stop" data-screen-label="Питание · зона предупреждения">
+      <div class="ph" style="height:250px;" data-demo="stop" data-screen-label="Питание · зона предупреждения" data-vid="вид · блок «Итоги дня»">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="hero">
             <div class="hk">Осталось на сегодня</div>
@@ -1647,7 +1647,7 @@
     </div>
       <div>
       <div class="lab"><b>Перебор · красная зона</b><span>от 130 % — красный; выше этого ничего не меняется</span></div>
-      <div class="ph" style="height:250px;" data-demo="stop" data-screen-label="Питание · зона красная">
+      <div class="ph" style="height:250px;" data-demo="stop" data-screen-label="Питание · зона красная" data-vid="вид · блок «Итоги дня»">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="hero">
             <div class="hk">Осталось на сегодня</div>
@@ -1661,7 +1661,7 @@
 
     <div>
       <div class="lab"><b>Волна сейчас</b><span>чип-зависимый блок: только текущая волна и когда она закончится; истории и графика за день здесь нет</span></div>
-      <div class="ph" style="height:340px;" data-demo="stop" data-screen-label="Питание · блок · Волна сейчас">
+      <div class="ph" style="height:340px;" data-demo="stop" data-screen-label="Питание · блок · Волна сейчас" data-vid="вид блока">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="sec" style="margin-top:14px;"><div class="blk">
           <div class="blkH"><b>Волна сейчас</b><span class="warn">нахлёст 1:20</span></div>
@@ -1680,7 +1680,7 @@
 
     <div>
       <div class="lab"><b>Оценка и риск</b><span>чип-зависимый блок: оценка дня словом и одна причина риска; баллов и звёзд нет</span></div>
-      <div class="ph" style="height:340px;" data-demo="stop" data-screen-label="Питание · блок · Оценка и риск">
+      <div class="ph" style="height:340px;" data-demo="stop" data-screen-label="Питание · блок · Оценка и риск" data-vid="вид мини-карточек">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="sec" style="margin-top:14px;"><div class="blk">
           <div class="blkH"><b>Оценка и риск</b><span>сегодня</span></div>
@@ -1721,7 +1721,7 @@
     </div>
 
      <div class="lab"><b>Куда перенести приём</b><span>цель приёма — день целиком, не приём: исходный помечен «откуда» и погашен; вчера и завтра есть всегда, даже пустые</span></div>
-      <div class="ph" style="height:560px;" data-demo="stop" data-screen-label="Питание · куда перенести приём">
+      <div class="ph" style="height:560px;" data-demo="stop" data-screen-label="Питание · куда перенести приём" data-vid="вид · лист переноса приёма">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="hero" style="opacity:.5">
           <div class="hk">Осталось на сегодня</div>
@@ -1814,7 +1814,7 @@
     
 
      <div class="lab"><b>Куда переместить</b><span>цель продукта — приём (дни раскрываются), цель приёма — день целиком; вчера и завтра есть всегда, даже пустые; исходное — «откуда», погашено</span></div>
-      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · куда переместить">
+      <div class="ph" style="height:640px;" data-demo="stop" data-screen-label="Питание · куда переместить" data-vid="вид · лист переноса приёма">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="hero" style="opacity:.5">
           <div class="hk">Осталось на сегодня</div>
@@ -1837,7 +1837,7 @@
     
 
      <div class="lab"><b>Вода без кнопки</b><span>чип кнопки воды выключен — карточка снова полная: добавление чипами, норма ссылкой в строке значения</span></div>
-      <div class="ph" style="height:700px;" data-demo="stop" data-screen-label="Питание · вода без кнопки">
+      <div class="ph" style="height:700px;" data-demo="stop" data-screen-label="Питание · вода без кнопки" data-vid="вид · блок «Вода»">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 3 приёма</span></div>
         <div class="sec"><div class="wCardB">
         <div class="bTop"><span class="k">Вода</span><span style="display:flex;align-items:center;gap:10px;"><span class="k">в среднем 2,5 л</span><span class="bSub">−200</span></span></div>
@@ -1866,7 +1866,7 @@
 
     <div>
       <div class="lab"><b>Загрузочный день</b><span>чип-зависимый блок: показывается только в рефид, называет прибавку и что она уже в бюджете героя. Планера здесь нет — блок живёт в «Инсайтах»</span></div>
-      <div class="ph" style="height:420px;" data-demo="stop" data-screen-label="Питание · блок · Рефид">
+      <div class="ph" style="height:420px;" data-demo="stop" data-screen-label="Питание · блок · Рефид" data-vid="вид блока">
         <div class="top"><span class="ttl">Питание</span><span class="capM">сб, 23 авг · 2 приёма</span></div>
         <div class="hero">
           <div class="hk">Осталось на сегодня</div>
@@ -1894,7 +1894,7 @@
   <div class="row4">
     <div>
       <div class="lab"><b>1 · Трассировка расчёта</b><span>окно сжигания жира: три вклада и честная неопределённость</span></div>
-      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · окно и трассировка">
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · окно и трассировка" data-vid="вид блока окна">
         <div class="sec" style="margin-top:18px;">
           <div class="blk">
             <div class="blkH"><b>Окно для сжигания жира</b><span>21:00</span></div>
@@ -1956,7 +1956,7 @@
 
     <div>
       <div class="lab"><b>4 и 5 · Замена продукта и оценка словом</b><span>раскрытый приём: одна оценка, одно предложение</span></div>
-      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · приём раскрыт">
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · приём раскрыт" data-vid="вид списка приёмов">
         <div class="sec" style="margin-top:18px;">
           <div class="blk">
             <div class="blkH"><b>Обед · 13:05</b><span>870 ккал</span></div>
@@ -1976,7 +1976,7 @@
 
     <div>
       <div class="lab"><b>7 · Приёмы за день полосами</b><span style="display:block;font:500 10px/1.4 Figtree,sans-serif;color:#6b5f4f;margin-top:2px;">пункт 6 (вода) не пропал — переехал в полосу, блок «Вода»</span><span>видно длительность и нахлёст, кривые в протоколе</span></div>
-      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · приёмы полосами">
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · приёмы полосами" data-vid="вид · блок «Приёмы за день»">
         <div class="sec" style="margin-top:18px;">
           <div class="blk">
             <div class="blkH"><b>Приёмы за день</b><span class="warn">нахлёст 45 мин</span></div>
@@ -1996,7 +1996,7 @@
 
     <div>
       <div class="lab"><b>8, 9 и 10 · Дневник: номера, серия, пустой приём</b><span>свежие сверху, номер — язык для куратора</span></div>
-      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · дневник с номерами">
+      <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · дневник с номерами" data-vid="вид списка приёмов">
         <div class="sec" style="margin-top:18px;">
           <div class="dry">
             <div class="meal mempty">
