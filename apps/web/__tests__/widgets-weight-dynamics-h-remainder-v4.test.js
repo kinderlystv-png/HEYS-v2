@@ -117,8 +117,9 @@ describe('Динамика · H сброшено и остаток — свед�
     expect(rules.get('.widget-wd__spark').flex).toBe('none');
     expect(rules.get('.widget-wd__chart.widget-v4-val--good').color)
       .toContain('--v4-sand-ok-fill');
-    expect(rules.get('.widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__weeks').height)
-      .toBe('22px');
+    expect(rules.get('.widget-wd__weeks').height).toBe('24px');
+    expect(rules.get('.widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__weeks'))
+      .toBeUndefined();
   });
 
   it('дорожка и заливка следуют набору; песок ≠ синий у --gr2', () => {
