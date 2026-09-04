@@ -1,4 +1,5 @@
 import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const PROTO = 'кадр data-demo="protocol" — отвергнутый вариант сравнения; строка «демо»: такие кадры не реализуются';
 const WHEEL = 'контракт колеса каноничен в home-widgets, но кадры «Колесо · …» в этом заходе не сводились — отдельный scope; код не трогали';

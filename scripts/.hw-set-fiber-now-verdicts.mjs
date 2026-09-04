@@ -1,4 +1,5 @@
 import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const rows = [
   ['Клетчатка · Как сейчас · 01', '=',

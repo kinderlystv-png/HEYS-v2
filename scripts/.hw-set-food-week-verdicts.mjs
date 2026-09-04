@@ -1,5 +1,5 @@
-import { applyVerdictToRow } from './ui-v4-set-verdict.mjs';
-import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const ITEMS = [
   [
@@ -52,15 +52,10 @@ const ITEMS = [
   ],
 ];
 
+let applied = 0;
 for (const [key, fact] of ITEMS) {
-  const zone = readZone('home-widgets');
-  const row = zone.rows[key];
-  if (!row) {
-    console.error('нет строки', key);
-    process.exit(1);
-  }
-  const was = row.v;
-  applyVerdictToRow(row, { verdict: '=', fact, options: {} });
-  writeZone('home-widgets', zone);
-  console.log(`${key}  ${was} → =`);
+  const result = setVerdictKey('home-widgets', key, { verdict: '=', fact, options: {} });
+  applied += 1;
+  console.log(`${key}  ${result.was.v} → =`);
 }
+console.log(`applied ${applied}`);

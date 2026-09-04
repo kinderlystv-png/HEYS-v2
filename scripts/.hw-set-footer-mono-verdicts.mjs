@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const F30 =
   'heys_widgets_ui_v1.js:3191-3192 .widget-v4-val--good «3 приёма»; 730-widgets-dashboard.css:11749-11753,10787-10789 — 700 9.5px/1, --v4-sand-ok-text (= var(--gr)): sand+blue rgb(92,106,69)';

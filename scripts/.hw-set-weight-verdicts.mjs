@@ -1,4 +1,5 @@
 import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const SMOKE = 'widgets-weight-v4-contract.test.js';
 const UI = 'heys_widgets_ui_v1.js';

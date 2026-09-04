@@ -1,4 +1,5 @@
 import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+// Per-key merge via setVerdictKey — assertForeignRowsUnchanged outside scope keys.
 
 const SMOKE = 'widgets-insulin-wave-v4-contract.test.js';
 const SCHEME = 'widgets-insulin-scheme-v4.test.js';
