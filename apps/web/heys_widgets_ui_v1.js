@@ -6304,7 +6304,7 @@
         // Выпавший пункт объясняем вместо точек: на 2×1 обе строки не встают,
         // а необъяснённый знаменатель дороже перечня точками.
         droppedText
-          ? React.createElement('span', { className: 'widget-v4-muted' }, droppedText)
+          ? React.createElement('span', { className: 'widget-v4-sleepready-check__dropped' }, droppedText)
           : items.map((item) => React.createElement('span', {
             key: item.key,
             className: 'widget-v4-checklist__chip'

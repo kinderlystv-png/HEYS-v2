@@ -13228,6 +13228,15 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   opacity: 1;
 }
 
+/* Кадр «Готовность ко сну · пункт без данных»: объяснение вместо чипов.
+   Общий .widget-v4-muted остаётся 10 px / 700. */
+.widget-v4-sleepready-check__dropped {
+  font-size: 8.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
+}
+
 /* Блок «Рекомендуемый экран»: между каталогом и пустым состоянием
    (контракт home-widgets, строка «сброс к дефолту»). */
 .widget-v4-recommended {
