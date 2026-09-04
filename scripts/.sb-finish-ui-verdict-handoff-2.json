@@ -1,0 +1,25 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_finish_ui_v1.js",
+  "generated": "2026-09-04",
+  "agent": "finish-ui subagent D2",
+  "block": "состав итогов (prose · FinishScreen)",
+  "summary": {
+    "processed": 1,
+    "recommendEquals": 1,
+    "recommendNotEquals": 0,
+    "recommendQuestion": 0,
+    "outOfScopeCss": 0,
+    "codeChanged": false,
+    "codeChange": null
+  },
+  "rows": [
+    {
+      "key": "состав итогов",
+      "verdict": "=",
+      "f": "FinishScreen (heys_strength_finish_ui_v1.js:314-407): hero .sb-finish-hero на --gr-bg с сеткой 2×2 — длительность fmtClock 54:30, тоннаж fmtTonnage 8,6 т + formatPct ↑ 12 % (previousComparableTonnageKg), макс. вес fmtTonnage(agg.maxWeight) 75 кг, рекорды records.length=1 .is-accent; detail .sb-finish-detail — 19 рабочих, 4 · вне объёма, рекорд recordLabel «Жим лёжа · 75 × 8», «Без объёма»+unmeasuredRows 1 упр.; «Готово» .sb-finish-done min-height 48px bg var(--acs). Смоук: strength-builder-finish-v4-canvas-contract.test.js it «состав итогов — hero…» + canvasProps fixture.",
+      "outOfScopeCss": false
+    }
+  ],
+  "outOfScopeCssRows": []
+}

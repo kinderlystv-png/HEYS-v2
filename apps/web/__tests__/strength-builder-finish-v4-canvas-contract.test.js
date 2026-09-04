@@ -203,6 +203,38 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
     }]);
   });
 
+  it('состав итогов — hero на --gr-bg, четыре плитки, detail и «Готово» 48 на --acs', () => {
+    render(React.createElement(Finish.FinishScreen, canvasProps()));
+
+    const hero = document.querySelector('.sb-finish-hero');
+    expect(hero).toBeTruthy();
+    expect(getComputedStyle(hero).backgroundColor).toBe(CANVAS_COLORS.grBg);
+
+    const metricExpectations = [
+      ['Длительность', '54:30', false],
+      ['Макс. вес', '75 кг', false],
+      ['Рекорды', '1', true]
+    ];
+    metricExpectations.forEach(([label, value, accent]) => {
+      const tile = screen.getByText(label).closest('.sb-finish-metric');
+      expect(tile?.textContent).toContain(label + value);
+      expect(tile?.classList.contains('is-accent')).toBe(accent);
+    });
+    const tonnageTile = screen.getByText('Тоннаж').closest('.sb-finish-metric');
+    expect(tonnageTile?.textContent).toBe('Тоннаж8,6 т↑ 12 %');
+
+    expect(screen.getByText('Рабочих подходов').closest('.sb-finish-row')?.querySelector('b')?.textContent).toBe('19');
+    expect(screen.getByText('Разминочных').closest('.sb-finish-row')?.querySelector('b')?.textContent).toBe('4 · вне объёма');
+    expect(screen.getByText('Рекорд').closest('.sb-finish-row')?.querySelector('b')?.textContent).toBe('Жим лёжа · 75 × 8');
+    expect(screen.getByText('Без объёма').closest('.sb-finish-row')?.querySelector('b')?.textContent).toBe('1 упр.');
+
+    const doneBtn = screen.getByRole('button', { name: 'Готово' });
+    const doneStyle = getComputedStyle(doneBtn);
+    expect(parseFloat(doneStyle.minHeight)).toBe(48);
+    expect(doneStyle.backgroundColor).toBe(CANVAS_COLORS.acs);
+    expect(doneStyle.color).toBe(CANVAS_COLORS.onAcs);
+  });
+
   it('доказывает построчный DOM/computed-style контракт непротиворечивой части кадра', () => {
     render(React.createElement(Finish.FinishScreen, canvasProps()));
 
