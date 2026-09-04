@@ -12539,6 +12539,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 21px;
 }
 
+/* Кадр «Клетчатка · нет данных · 04»: прочерк 21/600 тоном 42 %.
+   Ступени 42 % лестница не заводит — тот же ход, что у калорий пустого дня:
+   --v4-ink-3. Живое число ниже нормы остаётся --v4-ink через val--neutral. */
+.widget-v4-mini.widget-v4-fiber .widget-v4-goal-value--empty {
+  color: var(--v4-ink-3) /* v4-intentional */;
+}
+
 .widget-v4-stack .widget-v4-goal-value {
   font-size: 19px;
   letter-spacing: -0.03em;
