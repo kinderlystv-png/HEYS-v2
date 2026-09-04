@@ -144,6 +144,6 @@ describe('Шаги · Месяц — сведённый кусок', () => {
     expect(sandFill).toBe('#7a8a5e');
     expect(blueFill).toBe('#4f9a78');
     expect(sandFill).not.toBe(blueFill);
-    expect(css).toMatch(/\.widget-v4-stepbars__bar \{[\s\S]*?background:\s*#b7c29b/);
+    expect(css).toMatch(/\.widget-v4-stepbars__bar \{[^}]*background:\s*#b7c29b/);
   });
 });

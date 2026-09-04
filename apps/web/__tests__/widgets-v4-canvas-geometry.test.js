@@ -208,10 +208,10 @@ describe('геометрия виджетов Главной против кад
   it('однозначные мини-графики совпадают с новой строкой вида', () => {
     const css = fs.readFileSync(CSS, 'utf8');
 
-    expect(css).toMatch(/\.widget-v4-stepbars \{[\s\S]*?height:\s*30px/);
-    expect(css).toMatch(/\.widget-v4-stepbars--month \{[\s\S]*?height:\s*30px/);
-    expect(css).toMatch(/\.widget-v4-stepbars__bar \{[\s\S]*?background:\s*#b7c29b/);
-    expect(css).toMatch(/\.widget-v4-stepbars__bar\.is-goal \{[\s\S]*?background:\s*var\(--v4-ok-fill, #7a8a5e\)/);
+    expect(css).toMatch(/\.widget-v4-stepbars \{[^}]*height:\s*30px/);
+    expect(css).toMatch(/\.widget-v4-stepbars--month \{[^}]*height:\s*44px/);
+    expect(css).toMatch(/\.widget-v4-stepbars__bar \{[^}]*background:\s*#b7c29b/);
+    expect(css).toMatch(/\.widget-v4-stepbars__bar\.is-goal \{[^}]*background:\s*var\(--v4-ok-fill, #7a8a5e\)/);
 
     expect(css).toMatch(/\.widget-v4-heat__bar--d1 \{[\s\S]*?background:\s*var\(--v4-line/);
     expect(css).toMatch(/\.widget-v4-heat__bar--d2 \{[\s\S]*?background:\s*var\(--v4-wave-overlap/);
