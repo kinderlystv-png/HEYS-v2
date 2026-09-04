@@ -9852,36 +9852,29 @@ NOVA: 1
         }, 'Это другой продукт')
       ),
 
-      calculatedHarm != null && e('div', { className: 'aps-v4-harm-calc-card' },
-        e('div', { className: 'aps-v4-harm-calc-card__head' },
-          e('span', { className: 'aps-v4-harm-calc-card__label' }, 'Расчёт по формуле'),
-          e('span', { className: 'aps-v4-harm-calc-card__value' }, `${Number(systemHarmValue).toFixed(1)} из 10`)
+      calculatedHarm != null && e('div', { className: 'aps-v4-harm-compare' },
+        e('button', {
+          type: 'button',
+          className: 'aps-v4-harm-compare__card aps-v4-harm-compare__card--own' + (harmSourceMode === 'own' ? ' is-active' : ''),
+          onClick: () => {
+            haptic('light');
+            setHarmSourceMode('own');
+            if (hasManualHarm) setSelectedHarm(manualHarm);
+            else setShowCustom(true);
+          }
+        },
+          e('div', { className: 'aps-v4-harm-compare__label' }, hasManualHarm ? 'из описания' : 'Указать значение'),
+          hasManualHarm && e('div', { className: 'aps-v4-harm-compare__value' }, Number(manualHarm).toFixed(1)),
+          e('div', { className: 'aps-v4-harm-compare__dot' })
         ),
-        e('div', { className: 'aps-v4-harm-calc-card__category' }, systemCategory.name || '—')
-      ),
-
-      e('div', { className: 'aps-v4-harm-radio-group', role: 'radiogroup', 'aria-label': 'Выбор вредности' },
-        e('label', { className: 'aps-v4-harm-radio' + (harmSourceMode === 'system' ? ' is-active' : '') },
-          e('input', {
-            type: 'radio',
-            name: 'harmSourceMode',
-            checked: harmSourceMode === 'system',
-            onChange: () => { haptic('light'); setHarmSourceMode('system'); setShowCustom(false); }
-          }),
-          e('span', null, 'Оставить расчёт')
-        ),
-        e('label', { className: 'aps-v4-harm-radio' + (harmSourceMode === 'own' ? ' is-active' : '') },
-          e('input', {
-            type: 'radio',
-            name: 'harmSourceMode',
-            checked: harmSourceMode === 'own',
-            onChange: () => {
-              haptic('light');
-              setHarmSourceMode('own');
-              if (hasManualHarm) setSelectedHarm(manualHarm);
-            }
-          }),
-          e('span', null, hasManualHarm ? 'Из описания продукта' : 'Указать значение')
+        e('button', {
+          type: 'button',
+          className: 'aps-v4-harm-compare__card aps-v4-harm-compare__card--system' + (harmSourceMode === 'system' ? ' is-active' : ''),
+          onClick: () => { haptic('light'); setHarmSourceMode('system'); setShowCustom(false); }
+        },
+          e('div', { className: 'aps-v4-harm-compare__label' }, 'расчёт по формуле'),
+          e('div', { className: 'aps-v4-harm-compare__value' }, Number(systemHarmValue).toFixed(1)),
+          e('div', { className: 'aps-v4-harm-compare__dot' })
         )
       ),
 
@@ -9897,7 +9890,7 @@ NOVA: 1
         type: 'button',
         className: 'aps-v4-harm-custom-toggle',
         onClick: () => { setShowCustom(!showCustom); haptic('light'); }
-      }, showCustom ? 'Скрыть шкалу' : 'Настроить на шкале'),
+      }, showCustom ? 'Скрыть шкалу' : 'Указать своё значение'),
 
       harmSourceMode === 'own' && showCustom && WheelPicker && e('div', { className: 'aps-v4-harm-wheel' },
         e('div', { className: 'aps-v4-harm-wheel__picker' },

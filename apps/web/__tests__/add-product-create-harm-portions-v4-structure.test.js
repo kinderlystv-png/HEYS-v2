@@ -37,10 +37,10 @@ describe('add product create/harm/portions v4 canvas structure', () => {
     expect(addProductSource).not.toContain('aps-portions-icon');
   });
 
-  it('uses v4 harm shell with calc card, radios and save CTA', () => {
+  it('uses v4 harm shell with compare cards, breakdown and save CTA', () => {
     expect(addProductSource).toContain('aps-v4-harm-step');
-    expect(addProductSource).toContain('aps-v4-harm-calc-card');
-    expect(addProductSource).toContain('aps-v4-harm-radio');
+    expect(addProductSource).toContain('aps-v4-harm-compare');
+    expect(addProductSource).toContain('aps-v4-harm-breakdown');
     expect(addProductSource).toContain('Сохранить продукт');
     expect(addProductSource).toContain('Куда попадёт продукт');
     expect(addProductSource).toContain('renderApsCreateDots(2)');
@@ -63,7 +63,7 @@ describe('add product create/harm/portions v4 canvas structure', () => {
   });
 
   it('paints new v4 classes', () => {
-    expect(cssSource).toContain('.aps-v4-harm-calc-card');
+    expect(cssSource).toContain('.aps-v4-harm-compare');
     expect(cssSource).toContain('.aps-v4-portions-list');
     expect(cssSource).toContain('.aps-v4-create-auto-field');
     expect(cssSource).toContain('.photo-viewer-overlay--v4');

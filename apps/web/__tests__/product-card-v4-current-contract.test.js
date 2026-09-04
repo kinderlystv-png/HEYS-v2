@@ -118,15 +118,24 @@ describe('product-card current v4 contract', () => {
   });
 
   it('names formula and imported values by neutral source, not guessed author', () => {
-    expect(PRODUCT).toContain("'Расчёт по формуле'");
-    expect(PRODUCT).toContain("'Из описания продукта'");
-    expect(PRODUCT).toContain("'Указать значение'");
+    expect(PRODUCT).toContain("'расчёт по формуле'");
+    expect(PRODUCT).toContain("'из описания'");
+    expect(PRODUCT).toContain("'Указать своё значение'");
     expect(PRODUCT).toContain("harmSourceMode === 'system'");
     expect(PRODUCT).toContain("harmSourceMode === 'own'");
-    expect(PRODUCT).toContain("aps-v4-harm-calc-card");
+    expect(PRODUCT).toContain('aps-v4-harm-compare');
     expect(PRODUCT).not.toContain("'Расчёт системы'");
     expect(PRODUCT).not.toContain("'Оставить расчёт системы'");
     expect(PRODUCT).not.toContain("'Поставить свою оценку'");
+  });
+
+  it('maps portions and NOVA segment geometry to reviewed contract rows', () => {
+    expect(rule(CSS_611, '.aps-v4-portions-row')).toContain('grid-template-columns: minmax(0, 1fr) 78px 44px');
+    expect(rule(CSS_611, '.aps-v4-portions-row__remove')).toContain('width: 44px');
+    expect(rule(CSS_611, '.aps-v4-portions-add')).toContain('margin-top: 8px');
+    expect(rule(COMPONENTS, '.pe-segment-btn')).toContain('min-height: 40px');
+    expect(rule(COMPONENTS, '.pe-segment-btn')).toContain('var(--v4-ink-data');
+    expect(rule(CSS_611, '.aps-v4-harm-compare__card--own .aps-v4-harm-compare__label')).toContain('font-size: 10px');
   });
 
   it('does not turn graphical and interaction opacity into text data color', () => {
