@@ -60,6 +60,10 @@
     return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + ' кг';
   }
 
+  function fmtVolumeKg(kg) {
+    return String(Math.round(kg || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + ' кг';
+  }
+
   function fmtTime(ms) {
     const d = new Date(ms || 0);
     return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
@@ -78,6 +82,92 @@
     if (unit === 'distance') return 'единица — метры';
     if (unit === 'bodyweight') return 'свой вес';
     return '';
+  }
+
+  function formatFactorLabel(factor) {
+    const n = parseFloat(String(factor == null ? '' : factor).replace(',', '.'));
+    if (!isFinite(n)) return null;
+    return n.toFixed(1).replace('.', ',');
+  }
+
+  function bodyweightHeadKey(ex) {
+    const label = formatFactorLabel(ex && ex.bodyweightFactor);
+    return label ? ('свой вес · коэффициент ' + label) : 'свой вес';
+  }
+
+  function approachAddonKg(approach) {
+    const SK = kernel();
+    if (SK && typeof SK.approachExtraWeight === 'function') {
+      const extra = SK.approachExtraWeight(approach);
+      if (extra > 0) return extra;
+    }
+    const w = parseFloat(String((approach && approach.weightKg) || '').replace(',', '.'));
+    return isFinite(w) && w > 0 ? w : 0;
+  }
+
+  function bodyweightGroupTitle(startWorkNo, count, hasAddon) {
+    if (count === 2 && startWorkNo === 1) return 'Первые два подхода';
+    if (count === 1 && hasAddon) {
+      const ord = { 1: 'Первый', 2: 'Второй', 3: 'Третий', 4: 'Четвёртый', 5: 'Пятый' };
+      return (ord[startWorkNo] || (startWorkNo + '-й')) + ' · с довесом';
+    }
+    if (count === 1) return startWorkNo + '-й подход';
+    return 'Подходы ' + startWorkNo + '–' + (startWorkNo + count - 1);
+  }
+
+  function perRepBodyweightLabel(ownKg, addon) {
+    const own = Math.round(ownKg);
+    const add = Math.round(addon);
+    if (add > 0) return own + ' + ' + add + ' = ' + (own + add) + ' кг за повтор';
+    return own + ' кг за повтор';
+  }
+
+  function bodyweightEntrySummary(ex, bodyWeightKg) {
+    const SK = kernel();
+    if (!ex || (ex.unit || 'weight_reps') !== 'bodyweight') return null;
+    const factor = parseFloat(String(ex.bodyweightFactor == null ? '' : ex.bodyweightFactor).replace(',', '.'));
+    const ownKg = isFinite(factor) && factor > 0 && bodyWeightKg > 0 ? bodyWeightKg * factor : null;
+    if (ownKg === null) return null;
+
+    const groups = [];
+    let current = null;
+    let workNo = 0;
+    (Array.isArray(ex.approaches) ? ex.approaches : []).forEach(function (approach) {
+      if (SK && (SK.isWarmupApproach(approach) || SK.isBlankApproach(approach))) return;
+      if (!SK || !SK.isApproachDone(approach)) return;
+      workNo += 1;
+      const addon = approachAddonKg(approach);
+      const reps = +approach.reps || 0;
+      const eff = ownKg + addon;
+      const volume = Math.round(eff * reps);
+      if (current && current.addon === addon) {
+        current.count += 1;
+        current.volume += volume;
+      } else {
+        if (current) groups.push(current);
+        current = {
+          startWorkNo: workNo,
+          count: 1,
+          addon: addon,
+          eff: eff,
+          volume: volume
+        };
+      }
+    });
+    if (current) groups.push(current);
+    if (!groups.length) return null;
+
+    const rows = groups.map(function (group) {
+      return {
+        title: bodyweightGroupTitle(group.startWorkNo, group.count, group.addon > 0),
+        subtitle: perRepBodyweightLabel(ownKg, group.addon),
+        volume: group.volume,
+        isTotal: false
+      };
+    });
+    const total = rows.reduce(function (sum, row) { return sum + row.volume; }, 0);
+    rows.push({ title: 'Упражнение', subtitle: '', volume: total, isTotal: true });
+    return { rows: rows, total: total, ownKg: ownKg };
   }
 
   function approachCountLabel(n) {
@@ -1492,7 +1582,30 @@
           ),
           h('p', { className: 'sb-time-entry-footnote' },
             'Метры и время устроены одинаково: одна колонка значений, свой итог в «Объёме другими величинами», в тоннаж не идут. Своя строка, а не пропуск — иначе человек решит, что работа потерялась.')
-        )
+        ),
+        ((ex.unit || 'weight_reps') === 'bodyweight') && (function () {
+          const summary = bodyweightEntrySummary(ex, bodyWeightKg);
+          if (!summary) return null;
+          return h('div', { className: 'sb-time-entry-block sb-bw-entry-block' },
+            h('div', { className: 'sb-bw-entry-summary' },
+              summary.rows.map(function (row, rowIdx) {
+                return h('div', {
+                  key: 'bw-sum-' + rowIdx,
+                  className: 'sb-bw-entry-summary-row' + (row.isTotal ? ' is-total' : '')
+                    + (rowIdx === summary.rows.length - 1 ? ' is-last' : '')
+                },
+                  row.isTotal
+                    ? h('span', { className: 'sb-bw-entry-summary-title' }, row.title)
+                    : h('span', { className: 'sb-bw-entry-summary-copy' },
+                      h('b', null, row.title),
+                      row.subtitle && h('span', null, row.subtitle)),
+                  h('b', { className: 'sb-bw-entry-summary-val' }, fmtVolumeKg(row.volume)));
+              })
+            ),
+            h('p', { className: 'sb-time-entry-footnote sb-bw-entry-footnote' },
+              'Прочерк в довесе значит «только вес тела», а не забытое поле: галочку он не блокирует. Довес живёт на подходе, а не на упражнении — сегодня без блина, через месяц с блином на поясе.')
+          );
+        })()
       ));
     });
 
@@ -1511,6 +1624,7 @@
         + (openIdx >= 0 ? ' is-exercise-open' : '')
         + (openUnit === 'time' ? ' is-time-entry' : '')
         + (openUnit === 'distance' ? ' is-distance-entry' : '')
+        + (openUnit === 'bodyweight' ? ' is-bodyweight-entry' : '')
         + (rest
         ? ' sb-root--rest-docked ' + (rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded')
         : '')
@@ -1526,9 +1640,11 @@
             : (wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises))),
           h('div', { className: 'sb-head-sub' }, rest && !rest.collapsed
             ? 'отдых между подходами'
-            : openEx && unitEntryLabel(openUnit)
-              ? unitEntryLabel(openUnit)
-              : (proposalWho && startedAt > 0 && !completedAt
+            : openEx && openUnit === 'bodyweight'
+              ? bodyweightHeadKey(openEx)
+              : openEx && unitEntryLabel(openUnit)
+                ? unitEntryLabel(openUnit)
+                : (proposalWho && startedAt > 0 && !completedAt
                 ? 'по плану ' + proposalWho + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : '')
                 : compactSessionDate(dateKey)
                   + (startedAt ? ' · начата в ' + fmtTime(startedAt) : '')))
