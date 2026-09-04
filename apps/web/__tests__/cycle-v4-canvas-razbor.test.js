@@ -139,10 +139,9 @@ describe('«Цикл» · разбор кадров канваса · шаг 5',
     expect(used.has('Цикл · копия шага 5, с карточкой')).toBe(false);
   });
 
-  // padding-bottom 70px — запас прокрутки под «Готово»; перебор 74 px — замер
-  // полной стопки в строке «прокрутка на неделе периода», не то же число.
-  it('неделя периода резервирует 70 px прокрутки под «Готово»', () => {
-    expect(rules.get('.mc-rest-step--cycle-week')['padding-bottom']).toBe('70px');
+  // padding-bottom 74px — перебор полной стопки по контракту «прокрутка на неделе периода».
+  it('неделя периода резервирует 74 px прокрутки под «Готово»', () => {
+    expect(rules.get('.mc-rest-step--cycle-week')['padding-bottom']).toBe('74px');
     expect(STEPS_SRC).toContain("cycleWeekTop ? ' mc-rest-step--cycle-week' : ''");
   });
 
@@ -176,11 +175,11 @@ describe('«Цикл» · разбор кадров канваса · шаг 5',
     expect(card?.[1]).toContain('перебор 41 px');
   });
 
-  it('прокрутка на неделе: перебор 74 px в контракте, padding-bottom 70px в CSS', () => {
+  it('прокрутка на неделе: перебор 74 px в контракте и padding-bottom 74px в CSS', () => {
     const scroll = source.match(/<b>прокрутка на неделе периода<\/b><span data-v="([^"]*)"/);
     expect(scroll?.[1]).toContain('перебор 74 px');
     expect(scroll?.[1]).toContain('высота шага · обычный день со строкой');
-    expect(rules.get('.mc-rest-step--cycle-week')['padding-bottom']).toBe('70px');
+    expect(rules.get('.mc-rest-step--cycle-week')['padding-bottom']).toBe('74px');
   });
 
   it('осознанные отступления не разрослись', () => {

@@ -96,7 +96,7 @@ describe('чек-ин v4 · неделя периода в стопке', () => 
     expect(STEPS_SRC).toContain('Замеры отложены. Задержка воды искажает обхваты, вернутся после периода');
     expect(STEPS_SRC).toContain('mc-rest-cycle-week-card');
     expect(CSS).toContain('.mc-rest-step--cycle-week');
-    expect(CSS).toMatch(/\.mc-rest-step--cycle-week[\s\S]*padding-bottom:\s*70px/);
+    expect(CSS).toMatch(/\.mc-rest-step--cycle-week[\s\S]*padding-bottom:\s*74px/);
     expect(CSS).toContain('.mc-rest-card-title--muted');
     expect(CSS).toContain('rgba(0, 0, 0, 0.62)');
     expect(CSS).toContain('rgba(0, 0, 0, 0.5)');

@@ -149,7 +149,7 @@ describe('cycle v4 · step height and week scroll', () => {
 
   it('week step reserves ~68px scroll slack via padding-bottom', () => {
     expect(CSS_SRC).toContain('.mc-rest-step--cycle-week');
-    expect(CSS_SRC).toMatch(/\.mc-rest-step--cycle-week[\s\S]*padding-bottom:\s*70px/);
+    expect(CSS_SRC).toMatch(/\.mc-rest-step--cycle-week[\s\S]*padding-bottom:\s*74px/);
   });
 });
 

@@ -73,7 +73,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   cycle: Object.freeze({
     // 04.09: typed-v1 gate — 4 typed «≠»; legacy 32 → 21 после типизации и снятия строк.
-    mismatch: [21, '6fcb3a8be28b36cb'],
+    // 04.09 (вечер): bde48fd79 закрыл последний «?» — legacy mismatch 21 → 20.
+    mismatch: [20, '0ac57e2a54fd9cd3'],
     typedMismatch: [4, '73d74685b79f4e13'],
     notApplicable: [23, '7558e003ad93df9c'],
   }),
