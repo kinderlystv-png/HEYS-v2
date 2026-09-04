@@ -869,68 +869,68 @@
       "h": "dc9a9f96f519"
     },
     "Регистрация · персональные данные · 01": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "шапка шага — общая .mc-header--nav (500-pwa-and-offline.css:688)",
       "h": "175bdcc2e73a",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 02": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "кнопка назад 44×44 margin −8px 0 — .mc-header-btn--back (500-pwa-and-offline.css:717; registration-v4-canvas-razbor.test.js)",
       "h": "cdd83dd04883",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 03": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "правый угол шапки — .mc-header-spacer width 44px (500-pwa-and-offline.css:710)",
       "h": "3c293f360446",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 04": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "область прокрутки — .mc-step-content overflow auto padding 16/18/0 (500-pwa-and-offline.css:743)",
       "h": "c629f84f9712",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 05": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "«Расскажите о себе» — 700 20/1.3 var(--v4-ink) marginTop 6 (heys_profile_step_v1.js:561-563; registration-v4-canvas-razbor.test.js)",
       "h": "bd860c641fba",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 06": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "первый блок поля — gap-4 16px + profile-personal-name margin-top 0 (500-pwa-and-offline.css:5371; registration-v4-canvas-razbor.test.js)",
       "h": "66c221472c6e",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 07": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "«*» — color #8a4a20 / var(--v4-sand-act-text) у обязательных меток (heys_profile_step_v1.js:567; registration-v4-canvas-razbor.test.js)",
       "h": "cf5c31dfca7a",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 08": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "placeholder «Имя» — color-mix ink 30% (500-pwa-and-offline.css:5394; registration-v4-canvas-razbor.test.js)",
       "h": "82bb3ee519c6",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 09": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "блок фамилии — gap-4 + profile-personal-family margin-top −4 → 12px (500-pwa-and-offline.css:5375)",
       "h": "7f9aee8f3e6d",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 10": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "placeholder «Фамилия» — color-mix ink 42% (500-pwa-and-offline.css:5398; registration-v4-canvas-razbor.test.js)",
       "h": "14f2cbdd967a",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 11": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "пояснение пола — 500 11/1.5 INK_DATA marginTop 6 (heys_profile_step_v1.js:669; registration-v4-canvas-razbor.test.js)",
       "h": "0da925bef3b3",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
@@ -941,62 +941,62 @@
       "evidence": ["computed-style: apps/web/__tests__/registration-v4-contract-sweep.test.js"]
     },
     "Регистрация · персональные данные · 13": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "колесо даты — profile-personal-wheel-card position relative (500-pwa-and-offline.css:5402)",
       "h": "3836defc615f",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 14": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "верхний градиент приглушения — ::before height 14px linear-gradient (500-pwa-and-offline.css:5418)",
       "h": "46ea98e82bc4",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 15": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "нижний градиент приглушения — ::after height 14px linear-gradient (500-pwa-and-offline.css:5423)",
       "h": "28ea9f9c6ffb",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 16": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "ряд колёс — gap 6 text-align center (500-pwa-and-offline.css:5404; registration-v4-canvas-razbor.test.js)",
       "h": "2becf8941949",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 17": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "колонка дня — flex 1 1 0 (500-pwa-and-offline.css:5428; registration-v4-canvas-razbor.test.js)",
       "h": "55bfcd532bba",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 18": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "соседний день — 600 12.5/2.1 ink 40% (500-pwa-and-offline.css:5451; registration-v4-canvas-razbor.test.js)",
       "h": "1ab49f6ccea3",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 19": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "выбранный день — 700 26/1.4 --v4-sand-act-text (500-pwa-and-offline.css:5459; registration-v4-canvas-razbor.test.js)",
       "h": "0f42725d7543",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 20": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "колонка месяца — flex-grow 1.3 (500-pwa-and-offline.css:5433; registration-v4-canvas-razbor.test.js)",
       "h": "b5d211d952a4",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 21": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "соседний месяц — те же 600 12.5/2.1 ink 40% что у дня (500-pwa-and-offline.css:5451)",
       "h": "bbfa973fdd66",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 22": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "выбранный месяц — те же 700 26/1.4 --v4-sand-act-text (500-pwa-and-offline.css:5459)",
       "h": "7a8494eabeeb",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
@@ -1007,14 +1007,14 @@
       "evidence": ["computed-style: apps/web/__tests__/registration-v4-contract-sweep.test.js"]
     },
     "Регистрация · персональные данные · 24": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "подвал — .mc-daily-footer padding 12/18/20 (500-pwa-and-offline.css:871)",
       "h": "1df511bb5a89",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · 25": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "неактивная «Дальше» — .mc-daily-footer-primary:disabled фон --v4-sand-surface текст ink 30% (500-pwa-and-offline.css:5469; registration-v4-canvas-razbor.test.js)",
       "h": "88df948a2ccc",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
@@ -2429,14 +2429,14 @@
       "h": "2f2b6477120d"
     },
     "Регистрация · персональные данные · рисунок 01": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "шеврон назад — svg 17×17 viewBox 0 0 24 24 (.mc-header-back-icon; heys_step_modal_v1.js:1417)",
       "h": "57f7c5e99afc",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
     "Регистрация · персональные данные · рисунок 02": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "путь M15 18l-6-6 6-6 (heys_step_modal_v1.js:1425; registration-v4-canvas-razbor.test.js)",
       "h": "2166f24e07e2",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
@@ -2716,8 +2716,8 @@
       "h": "7d5f81d7ae70"
     },
     "Регистрация · персональные данные · текст": {
-      "v": "?",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "копия сверена пословно в registration-v4-canvas-razbor.test.js; «Дальше» — nextLabel шага",
       "h": "ec570465827d",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
     },
@@ -2807,13 +2807,13 @@
       "h": "2980f36bef51"
     },
     "одно слово, два разных элемента": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "tier('Цель') на шаге 3 vs ProfileV4Subtier «Цель» в профиле — разные элементы (registration-v4-canvas-razbor.test.js)",
       "h": "46c981c9b6e0"
     },
     "вид колеса значений": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "тройное compact-колесо даты scoped в profile-personal-wheel-card; одиночные колёса тела — padding 13/0/14 и WheelPicker height 100 (500-pwa-and-offline.css:5402-5463; heys_profile_step_v1.js:682-714,897-907)",
       "h": "df575f079c1e"
     }
   },

@@ -5367,19 +5367,19 @@
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-name {
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-family {
-  margin-top: 5px;
+  margin-top: -4px;
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-gender {
-  margin-top: -6px;
+  margin-top: -4px;
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-birth {
-  margin-top: 5px;
+  margin-top: -4px;
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-step input[type="text"],
