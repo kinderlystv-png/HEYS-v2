@@ -139,7 +139,8 @@ describe('«Цикл» · разбор кадров канваса · шаг 5',
     expect(used.has('Цикл · копия шага 5, с карточкой')).toBe(false);
   });
 
-  // Строка контракта «высота шага»: неделя периода перебирает на 70 px.
+  // padding-bottom 70px — запас прокрутки под «Готово»; перебор 74 px — замер
+  // полной стопки в строке «прокрутка на неделе периода», не то же число.
   it('неделя периода резервирует 70 px прокрутки под «Готово»', () => {
     expect(rules.get('.mc-rest-step--cycle-week')['padding-bottom']).toBe('70px');
     expect(STEPS_SRC).toContain("cycleWeekTop ? ' mc-rest-step--cycle-week' : ''");
@@ -162,10 +163,23 @@ describe('«Цикл» · разбор кадров канваса · шаг 5',
     expect(rules.get('.mc-rest-cycle-week-title')['font-weight']).toBe('700');
   });
 
-  it('контракт «высота шага» vs продукт: 74 px в канвасе, 70 px в CSS (FINDINGS)', () => {
-    const contract = source.match(/<b>высота шага<\/b><span data-v="([^"]*)"/);
-    expect(contract?.[1]).toContain('перебор 74 px');
-    expect(contract?.[1]).toContain('перебор 38 px');
+  it('контракт: три строки «высота шага · …» вместо общего пула', () => {
+    expect(source).toContain('<b>высота шага · канон</b>');
+    expect(source).toContain('<b>высота шага · обычный день со строкой</b>');
+    expect(source).toContain('<b>высота шага · карточка с двумя кнопками</b>');
+    expect(source).not.toMatch(/<b>высота шага<\/b><span data-v=/);
+    const canon = source.match(/<b>высота шага · канон<\/b><span data-v="([^"]*)"/);
+    const rowDay = source.match(/<b>высота шага · обычный день со строкой<\/b><span data-v="([^"]*)"/);
+    const card = source.match(/<b>высота шага · карточка с двумя кнопками<\/b><span data-v="([^"]*)"/);
+    expect(canon?.[1]).toContain('запас 80 px');
+    expect(rowDay?.[1]).toContain('запас 6 px');
+    expect(card?.[1]).toContain('перебор 41 px');
+  });
+
+  it('прокрутка на неделе: перебор 74 px в контракте, padding-bottom 70px в CSS', () => {
+    const scroll = source.match(/<b>прокрутка на неделе периода<\/b><span data-v="([^"]*)"/);
+    expect(scroll?.[1]).toContain('перебор 74 px');
+    expect(scroll?.[1]).toContain('высота шага · обычный день со строкой');
     expect(rules.get('.mc-rest-step--cycle-week')['padding-bottom']).toBe('70px');
   });
 
