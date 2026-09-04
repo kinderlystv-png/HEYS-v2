@@ -5793,17 +5793,26 @@
 
     if (variantId === 'add') {
       const sources = Array.isArray(data?.sources) ? data.sources.slice(0, 3) : [];
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-fiber' },
-        v4Kicker('Клетчатка'),
-        React.createElement('div', { className: 'widget-v4-goal-hero' },
-          React.createElement('span', {
-            className: 'widget-v4-goal-value ' + v4ValueStateClass(state)
-          }, hasData ? `${fiber} из ${norm}` : '—'),
-          hasData ? React.createElement('span', { className: 'widget-v4-unit' }, 'г') : null
+      const remaining = Number(data?.remaining) || 0;
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-fiber widget-v4-fiber-add' },
+        React.createElement('div', { className: 'widget-v4-fiber-add__head' },
+          v4Kicker('Клетчатка'),
+          hasData
+            ? React.createElement('span', { className: 'widget-v4-fiber-add__now' }, `${fiber} из ${norm} г`)
+            : null
         ),
-        hasData && data.remaining > 0
-          ? React.createElement('span', { className: 'widget-v4-muted' }, `+${formatRuUnit(data.remaining, 'г')} добрать`)
-          : null,
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          hasData && remaining > 0
+            ? React.createElement('span', {
+                className: 'widget-v4-goal-value widget-v4-val--neutral'
+              }, `+${remaining}`)
+            : (hasData ? null : React.createElement('span', {
+                className: 'widget-v4-goal-value'
+              }, '—')),
+          hasData && remaining > 0
+            ? React.createElement('span', { className: 'widget-v4-unit' }, 'г добрать')
+            : null
+        ),
         // Пустой словарь — строка не показывается, плитка не ужимается.
         hasData && sources.length
           ? React.createElement('span', { className: 'widget-v4-hint' }, sources.join(' · '))

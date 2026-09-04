@@ -12605,6 +12605,30 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   line-height: 1;
 }
 
+/* Клетчатка · Добрать · 02: ключ и «N из M г» в одном ряду. */
+.widget-v4-fiber-add__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Клетчатка · Добрать · 04: факт дня 9/600 тоном данных, не героя. */
+.widget-v4-fiber-add__now {
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Клетчатка · Добрать · 06: трекинг кадра -.02em; общий stack -.03em
+   остаётся неделе и белку. */
+.widget-v4-fiber-add .widget-v4-goal-value {
+  letter-spacing: -0.02em;
+}
+
 /* Неделя столбиками: сегодня всегда правый и глубоким тоном. */
 .widget-v4-weekbars {
   display: flex;
