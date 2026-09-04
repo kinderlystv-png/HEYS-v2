@@ -13470,11 +13470,6 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   color: var(--v4-sand-ok-text, #5c6a45);
 }
 
-.widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__bar-track {
-  margin-top: 5px;
-  height: 4px;
-}
-
 .widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__weeks {
   height: 22px;
 }
