@@ -11,7 +11,7 @@ const css = fs.readFileSync(path.join(WEB, 'styles/modules/750-strength-builder.
 describe('strength builder · Своё упражнение v4 canvas contract', () => {
   it('keeps screen copy and unit-driven third question in NewExerciseScreen', () => {
     expect(catalogSource).toContain("'Новое упражнение'");
-    expect(catalogSource).toContain("'Три поля, третье — только иногда'");
+    expect(catalogSource).toContain("'три поля, третье — только иногда'");
     expect(catalogSource).toContain("'1 · Что меряем'");
     expect(catalogSource).toContain("'2 · Группы мышц'");
     expect(catalogSource).toContain("'3 · На что похоже движение'");

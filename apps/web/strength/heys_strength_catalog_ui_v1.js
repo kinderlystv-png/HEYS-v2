@@ -268,7 +268,7 @@
         }, '✕'),
         h('div', { className: 'sb-head-title' },
           h('b', null, 'Новое упражнение'),
-          h('div', { className: 'sb-head-sub' }, 'Три поля, третье — только иногда')
+          h('div', { className: 'sb-head-sub' }, 'три поля, третье — только иногда')
         )
       ),
       h('div', { className: 'sb-list' },

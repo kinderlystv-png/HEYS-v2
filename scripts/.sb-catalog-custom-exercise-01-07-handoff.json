@@ -1,0 +1,61 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_catalog_ui_v1.js (NewExerciseScreen · Своё упражнение ·01–07)",
+  "generated": "2026-09-04",
+  "agent": "catalog subagent",
+  "summary": {
+    "block": "Своё упражнение ·01–07",
+    "contractLines": 7,
+    "recommendEquals": 7,
+    "recommendNotEquals": 0,
+    "recommendDash": 0,
+    "recommendQuestion": 0,
+    "codeChanged": true,
+    "codeChange": "CATALOG_V4_BRIDGE уже на корне (b01dd7af7); подзаголовок ·04 приведён к канвасу «три поля…» lowercase; шапка/скролл/поле имени/ярус — через 750 :has(.sb-ex-name) + catalog_ui"
+  },
+  "rows": [
+    {
+      "contractLine": "Своё упражнение · 01",
+      "verdict": "=",
+      "f": ".sb-head на NewExerciseScreen — heys_strength_catalog_ui_v1.js:265–273; геометрия gap 10px padding 16px 18px 0 — 750-strength-builder.css:1231–1236 (:has(.sb-ex-name)). ✕ слева — продуктовый выход, кадр .top без второго ребёнка."
+    },
+    {
+      "contractLine": "Своё упражнение · 02",
+      "verdict": "=",
+      "f": ".sb-head-title flex column gap 3px padding-left 10px — catalog_ui:269–272; CSS :1238–1243. Сверка strength-builder-custom-exercise-v4-canvas-contract.test.js."
+    },
+    {
+      "contractLine": "Своё упражнение · 03",
+      "verdict": "=",
+      "f": "Copy «Новое упражнение» — catalog_ui:270 b; contract test."
+    },
+    {
+      "contractLine": "Своё упражнение · 04",
+      "verdict": "=",
+      "f": "Copy «три поля, третье — только иногда» lowercase как в кадре .k — catalog_ui:271 .sb-head-sub; contract test (исправлено в этом ходе)."
+    },
+    {
+      "contractLine": "Своё упражнение · 05",
+      "verdict": "=",
+      "f": ".sb-list overflow-y auto flex column — catalog_ui:274; 750-strength-builder.css:155–163."
+    },
+    {
+      "contractLine": "Своё упражнение · 06",
+      "verdict": "=",
+      "f": "input.sb-ap-field.sb-ex-name — catalog_ui:275–281; 750 :1217–1227 min-height 44 radius 14 padding 0 14 margin-top 12 font 700 13px/1 text-align center; фон через --v4-c1/--sb-card + CATALOG_V4_BRIDGE :47–48."
+    },
+    {
+      "contractLine": "Своё упражнение · 07",
+      "verdict": "=",
+      "f": ".sb-step «1 · Что меряем» — catalog_ui:284–286; носитель .sb-step (750 :1752–1765), текст яруса совпадает с кадром .tier."
+    }
+  ],
+  "outOfScope": {
+    "note": "Геометрия/тон .sb-step vs .tier и шапка с ✕ — в 750; strength-builder.json не трогали. Блок ·08–23 — scripts/.sb-catalog-custom-exercise-handoff.json (b01dd7af7).",
+    "cssOwner": "750-strength-builder.css:1217–1256, 155–163, 1752–1765",
+    "tests": [
+      "apps/web/__tests__/strength-builder-custom-exercise-v4-canvas-contract.test.js",
+      "apps/web/__tests__/role-fallback-truth.test.js"
+    ]
+  }
+}
