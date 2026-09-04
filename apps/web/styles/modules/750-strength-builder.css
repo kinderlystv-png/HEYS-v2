@@ -4885,6 +4885,23 @@
   box-shadow: inset 0 0 0 1.5px var(--acs);
 }
 
+/* Г4 ·06 — карточка .grp вокруг таблицы подходов: margin-top 12px */
+.sb-builder-screen.is-weight-entry.is-exercise-open .sb-ex.is-open .sb-ex-body {
+  margin-top: 12px;
+  border-radius: 14px;
+  background: var(--sb-card);
+  padding: 12px 13px;
+  border-top: 0;
+}
+
+.sb-builder-screen.is-weight-entry.is-exercise-open .sb-aps-head {
+  margin-top: 0;
+}
+
+.sb-builder-screen.is-weight-entry.is-exercise-open .sb-aps {
+  margin-top: 0;
+}
+
 .sb-authorship-pill {
   display: flex;
   align-items: center;
@@ -6807,6 +6824,12 @@
 
 /* ── И1 · Назначено против сделано ─────────────────────────────────────── */
 
+.sb-plan-vs-done .sb-head-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
 .sb-plan-vs-done .sb-plan-vs-scroll {
   flex: 1;
   overflow-y: auto;
@@ -6817,11 +6840,37 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   padding: 12px 13px;
   border-radius: 14px;
   background: var(--sb-card);
   border: 1px solid var(--sb-br);
+}
+
+.sb-plan-vs-row:last-child {
+  margin-bottom: 0;
+}
+
+.sb-plan-vs-cd {
+  margin-top: 10px;
+  border-radius: 14px;
+  background: var(--sb-card);
+  border: 1px solid var(--sb-br);
+  overflow: hidden;
+}
+
+.sb-plan-vs-cd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 13px;
+  border-bottom: 1px solid var(--sb-br);
+}
+
+.sb-plan-vs-cd-row.is-last,
+.sb-plan-vs-cd-row:last-child {
+  border-bottom: none;
 }
 
 .sb-plan-vs-row.is-diff {

@@ -67,6 +67,8 @@ describe('Г4 · Правка веса в сессии · canvas contract', () =
     expect(CSS).toMatch(/\.is-weight-entry\.is-exercise-open \.sb-ap\.is-current \.sb-ap-num[\s\S]*var\(--acs\)/);
     expect(CSS).toMatch(/\.sb-authorship-pill[\s\S]*gap:\s*7px/);
     expect(CSS).toMatch(/\.sb-weight-edit-cd[\s\S]*margin-top:\s*10px/);
+    expect(CSS).toMatch(/\.is-weight-entry\.is-exercise-open \.sb-ex\.is-open \.sb-ex-body[\s\S]*margin-top:\s*12px/);
+    expect(CSS).toMatch(/\.is-weight-entry\.is-exercise-open \.sb-ex\.is-open \.sb-ex-body[\s\S]*border-radius:\s*14px/);
   });
 
   it('показывает имя, ключ «подход N из M», метку авторства и карточку при живой правке', () => {
