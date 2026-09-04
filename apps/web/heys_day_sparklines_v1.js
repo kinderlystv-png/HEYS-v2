@@ -6,6 +6,10 @@
 
   HEYS.daySparklines = HEYS.daySparklines || {};
 
+  // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, ведро 2).
+  const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const V4_WARN_1 = 'var(--v4-warn-1, #d99a63)';
+
   HEYS.daySparklines.renderSparkline = function renderSparkline(ctx) {
     const {
       data,
@@ -632,7 +636,7 @@
       forecastPathD = d;
 
       // Цвет прогнозной линии — всегда оранжевый для чёткого отличия от реальных данных
-      forecastColor = '#f97316'; // orange-500 — прогноз всегда оранжевый
+      forecastColor = V4_WARN_1; // прогноз — внимание, отличие от факта
     }
 
     // Прогнозная линия НОРМЫ (goal) — продолжение тренда за 7 дней
@@ -1751,8 +1755,8 @@
             className: 'sparkline-slider-tooltip-tag',
             style: {
               backgroundColor: sliderPoint.sleepQuality <= 3 ? '#ef4444' :
-                sliderPoint.sleepQuality <= 5 ? '#f97316' :
-                  sliderPoint.sleepQuality <= 7 ? '#eab308' : '#22c55e',
+                sliderPoint.sleepQuality <= 5 ? V4_WARN_1 :
+                  sliderPoint.sleepQuality <= 7 ? V4_WARN_SOFT : '#22c55e',
               color: sliderPoint.sleepQuality <= 5 ? '#fff' : '#000'
             }
           }, 'Оценка сна: ' + sliderPoint.sleepQuality),
@@ -1772,8 +1776,8 @@
             className: 'sparkline-slider-tooltip-tag',
             style: {
               backgroundColor: sliderPoint.dayScore <= 3 ? '#ef4444' :
-                sliderPoint.dayScore <= 5 ? '#f97316' :
-                  sliderPoint.dayScore <= 7 ? '#eab308' : '#22c55e',
+                sliderPoint.dayScore <= 5 ? V4_WARN_1 :
+                  sliderPoint.dayScore <= 7 ? V4_WARN_SOFT : '#22c55e',
               color: sliderPoint.dayScore <= 5 ? '#fff' : '#000'
             }
           }, 'Оценка дня: ' + sliderPoint.dayScore)
@@ -1790,8 +1794,8 @@
           const getDayScoreColor = (score) => {
             if (!score || score <= 0) return 'transparent'; // нет данных — прозрачный пропуск
             if (score <= 3) return '#ef4444'; // 😢 плохо — красный
-            if (score <= 5) return '#f97316'; // 😐 средне — оранжевый
-            if (score <= 7) return '#eab308'; // 🙂 нормально — жёлтый
+            if (score <= 5) return V4_WARN_1; // 😐 средне — внимание
+            if (score <= 7) return V4_WARN_SOFT; // 🙂 нормально — мягкое предупреждение
             return '#22c55e'; // 😊 хорошо — зелёный
           };
 
@@ -1990,8 +1994,8 @@
     const weightTrend = avgSecond - avgFirst; // положительный = вес растёт
 
     // Фиксированный акцент для линии тренда и градиента под ней
-    const trendColor = '#f97316';
-    const trendAreaTopColor = '#fb923c';
+    const trendColor = V4_WARN_1;
+    const trendAreaTopColor = V4_WARN_SOFT;
 
     // Цвет прогноза — серый для нейтральности (прогноз — это неизвестность)
     const forecastColor = '#9ca3af'; // gray-400
@@ -2133,9 +2137,8 @@
         fill: 'url(#weightAreaGrad)',
         className: 'weight-sparkline-area sparkline-area-animated'
       }),
-      // Линия графика. Тон задаёт CSS: в прежнем виде — правила тренда
-      // (#f97316), в карточке v4 — роль --v4-ok-fill. Инлайновый градиент
-      // #fb923c→#f97316 перебивал оба и делал линию оранжевой в любом наборе.
+      // Линия графика. Тон задаёт CSS: в прежнем виде — правила тренда,
+      // в карточке v4 — роль --v4-ok-fill. Инлайновый градиент перебивал оба.
       React.createElement('path', {
         d: pathD,
         className: 'weight-sparkline-line weight-sparkline-line-animated'
