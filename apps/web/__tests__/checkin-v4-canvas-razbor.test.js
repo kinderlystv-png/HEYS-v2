@@ -862,6 +862,8 @@ describe('«Утренний чек-ин» · разбор кадров канв
   // первой поверхности. Обе поверхности были взяты ступенью ниже кадра.
   it('карточка недели периода видна, клетки дня внутри неё — тоже', () => {
     expect(rules.get('.mc-rest-cycle-week-card').background).toMatch(/^var\(--v4-chip\b/);
+    expect(rules.get('.mc-rest-cycle-week-card .mc-rest-cycle-day-btn').background)
+      .toMatch(/^var\(--v4-sand-surface\b/);
     expect(rules.get('.mc-rest-cycle-day-btn').background).toMatch(/^var\(--v4-bg\b/);
     expect(rules.get('.mc-rest-cycle-mark-chip').background).toMatch(/^var\(--v4-chip\b/);
   });

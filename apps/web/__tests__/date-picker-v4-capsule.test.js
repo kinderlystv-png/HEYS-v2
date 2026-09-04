@@ -64,4 +64,17 @@ describe('DatePicker v4 капсула', () => {
             /\.date-picker--v4 \.date-picker-day-nav[\s\S]{0,160}height:\s*44px/,
         );
     });
+
+    it('иконки капсулы — размеры и path по кадру ночи', () => {
+        expect(pickersSrc).toContain("className: 'date-picker-day-nav-icon'");
+        expect(pickersSrc).toContain("className: 'date-picker-icon'");
+        expect(pickersSrc).toContain("viewBox: '0 0 24 24'");
+        expect(pickersSrc).toContain('width: 14');
+        expect(pickersSrc).toContain('height: 14');
+        expect(pickersSrc).toContain('width: 12');
+        expect(pickersSrc).toContain('height: 12');
+        expect(pickersSrc).toContain("d: direction === 'left' ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6'");
+        expect(pickersSrc).toContain("React.createElement('rect', { x: 3, y: 5, width: 18, height: 16, rx: 4 })");
+        expect(pickersSrc).toContain("React.createElement('path', { d: 'M8 3v4M16 3v4M3 11h18' }");
+    });
 });

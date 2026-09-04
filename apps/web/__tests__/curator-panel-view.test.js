@@ -727,10 +727,13 @@ describe('панель куратора · окно', () => {
     expect(lead).toContain('getInitials');
     expect(lead).not.toContain('📱');
     expect(lead).not.toContain('linear-gradient');
-    // Отклонение — круг 32, а не красный квадрат с эмодзи.
+    // Отклонение — круг 44, а не красный квадрат с эмодзи.
     expect(lead).toContain("className: 'cur-cab__deny'");
     expect(lead).not.toContain('❌');
     expect(CSS).toMatch(/\.cur-cab__deny \{[\s\S]{0,200}width: 44px/);
+    // «Создать приглашение» — вторичная подложка с акцентным тоном текста.
+    expect(lead).toContain("className: 'cur-cab__open is-soft'");
+    expect(CSS).toMatch(/\.cur-cab__open\.is-soft[\s\S]{0,120}var\(--v4-act-text/);
     // Телефон и дата решения одной строкой.
     expect(lead).toContain("' · ' + formatDate(item.created_at)");
   });

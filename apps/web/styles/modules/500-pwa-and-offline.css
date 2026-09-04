@@ -1887,16 +1887,16 @@
   min-height: 44px;
   border: none;
   border-radius: 14px;
-  /* Тот же кадр, элемент 11: клетки дня — фон страницы на второй поверхности
-     карточки. Обе поверхности были взяты на ступень ниже. */
+  /* Строка «вид · выбор дня»: внутри карточки --c1 (.day.wl) клетка на грунт --bg. */
   background: var(--v4-bg, #fffaf1);
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  /* Тот же элемент 11: номер невыбранного дня — тон данных (56 % чернил).
-     Стоял литералом 50 %: своей ступени у него нет, и в тёмных наборах он
-     не следовал за чернилами вовсе. */
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
+}
+
+.mc-rest-cycle-week-card .mc-rest-cycle-day-btn {
+  background: var(--v4-sand-surface, #f7efe2);
 }
 
 .mc-rest-cycle-day-btn.is-on {

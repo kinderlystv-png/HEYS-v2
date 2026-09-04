@@ -70,6 +70,16 @@ const PAST = [
   [20, `${V4} .date-picker-inline-today`, ['height', 'fontWeight', 'lineHeight']],
 ];
 
+// Кадр «Капсула · ночь на 21 августа» — нейтральная капсула 00:00–03:00.
+const NIGHT = [
+  [2, '.date-picker-row', ['align']],
+  [2, '.date-picker--v4 > .date-picker-row', ['gap']],
+  [3, `${V4} .date-picker-day-nav`, ['radius', 'background', 'align', 'justify']],
+  [4, `${V4} .date-picker-trigger`, ['height', 'radius', 'background', 'align', 'justify']],
+  [4, `${V4} .date-picker-lbl-inner`, ['gap']],
+  [4, `${V4} .date-picker-lbl-inner .date-picker-main`, ['fontWeight', 'fontSize']],
+];
+
 // Кадр «Календарь · легенда» — нижний лист календаря целиком.
 const SHEET = [
   [3, '.date-picker-sheet__card', ['background']],
@@ -93,7 +103,7 @@ const SHEET = [
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 20;
+const COVERAGE_FLOOR = 23;
 
 describe('«Дата и остатки» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -101,6 +111,10 @@ describe('«Дата и остатки» · разбор кадров канва
 
   it('кадр «Дата · чужой день» совпадает с капсулой прошлого дня', () => {
     expect(compare({ razbor, rules, frame: 'Дата · чужой день', pairs: PAST })).toEqual([]);
+  });
+
+  it('кадр «Капсула · ночь на 21 августа» совпадает с ночной капсулой', () => {
+    expect(compare({ razbor, rules, frame: 'Капсула · ночь на 21 августа', pairs: NIGHT })).toEqual([]);
   });
 
   it('кадр «Календарь · легенда» совпадает с нижним листом календаря', () => {
@@ -114,6 +128,7 @@ describe('«Дата и остатки» · разбор кадров канва
     expect(rules.get(`${V4} .date-picker-trigger`).height).toBe('36px');
     expect(rules.get(`${V4} .date-picker-lbl-inner`).gap).toBe('7px');
     expect(rules.get(`${V4} .date-picker-day-nav`).width).toBe('44px');
+    expect(rules.get(`${V4} > .date-picker-row`).gap).toBe('8px');
   });
 
   it('клетка и точка следуют строке «вид клетки», а не кадру', () => {

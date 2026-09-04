@@ -162,11 +162,11 @@ describe('«Цикл» · разбор кадров канваса · шаг 5',
     expect(rules.get('.mc-rest-cycle-week-title')['font-weight']).toBe('700');
   });
 
-  it('контракт «высота шага» называет перебор 70 px на неделе периода', () => {
+  it('контракт «высота шага» vs продукт: 74 px в канвасе, 70 px в CSS (FINDINGS)', () => {
     const contract = source.match(/<b>высота шага<\/b><span data-v="([^"]*)"/);
-    expect(contract?.[1]).toContain('перебор 70 px');
-    expect(contract?.[1]).toContain('запас 8 px');
+    expect(contract?.[1]).toContain('перебор 74 px');
     expect(contract?.[1]).toContain('перебор 38 px');
+    expect(rules.get('.mc-rest-step--cycle-week')['padding-bottom']).toBe('70px');
   });
 
   it('осознанные отступления не разрослись', () => {

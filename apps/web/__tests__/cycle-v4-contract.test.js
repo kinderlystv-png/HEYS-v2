@@ -9,6 +9,7 @@ const PICKERS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_pickers
 const PROFILE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_user_tab_impl_v1.js'), 'utf8');
 const CARD_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_cycle_card_v1.js'), 'utf8');
 const CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/500-pwa-and-offline.css'), 'utf8');
+const NUTRITION_CSS_SRC = fs.readFileSync(path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css'), 'utf8');
 const SPARK_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_sparklines_v1.js'), 'utf8');
 const STATS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_stats_v1.js'), 'utf8');
 const POPUPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_popups_state_v1.js'), 'utf8');
@@ -123,6 +124,16 @@ describe('cycle v4 · CSS tokens', () => {
     expect(CSS_SRC).toContain('.mc-rest-cycle-mark-chip');
     expect(CSS_SRC).toContain('min-height: 44px');
     expect(CSS_SRC).toContain('.mc-rest-cycle-week-card');
+  });
+
+  it('day picker cells follow card surface (.day.wl vs week card)', () => {
+    expect(CSS_SRC).toMatch(/\.mc-rest-cycle-day-btn[\s\S]*background: var\(--v4-bg/);
+    expect(CSS_SRC).toMatch(
+      /\.mc-rest-cycle-week-card \.mc-rest-cycle-day-btn[\s\S]*background: var\(--v4-sand-surface/
+    );
+    expect(CSS_SRC).toMatch(/\.cycle-card-v4__day-btn[\s\S]*background: var\(--v4-sand-surface-soft/);
+    expect(NUTRITION_CSS_SRC).toMatch(/\.nutrition-v4-cycle-day[\s\S]*background: var\(--v4-bg/);
+    expect(NUTRITION_CSS_SRC).toMatch(/\.nutrition-v4-cycle-day\.is-on[\s\S]*background: var\(--v4-sand-act/);
   });
 });
 

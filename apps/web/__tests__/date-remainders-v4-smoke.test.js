@@ -120,6 +120,52 @@ describe('date-remainders · ночь до 03:00', () => {
   });
 });
 
+describe('date-remainders · ночная капсула · цвет sand и blue', () => {
+  const CSS_FILES = [
+    'styles/modules/002-ui-v4-palette-roles.css',
+    'styles/modules/000-base-and-gamification.css',
+  ];
+  const SURFACE = { sand: '#f7efe2', blue: '#eef3f9' };
+  const TINT = { sand: '#f6e6dd', blue: '#fbe6e2' };
+
+  beforeAll(() => {
+    for (const rel of CSS_FILES) {
+      const style = document.createElement('style');
+      style.textContent = fs.readFileSync(path.join(WEB_DIR, rel), 'utf8');
+      document.head.appendChild(style);
+    }
+  });
+
+  function applySet(id) {
+    document.documentElement.setAttribute('data-theme-id', id);
+    document.documentElement.setAttribute('data-theme', id);
+  }
+
+  function normColor(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'transparent' || raw === 'rgba(0, 0, 0, 0)') return 'none';
+    const rgb = raw.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+    if (!rgb) return raw;
+    const hex = (n) => Number(n).toString(16).padStart(2, '0');
+    return `#${hex(rgb[1])}${hex(rgb[2])}${hex(rgb[3])}`;
+  }
+
+  it('01:30 — нейтральный --v4-surface на песочной и синей, не тинт чужого дня', () => {
+    vi.setSystemTime(new Date(2026, 7, 21, 1, 30, 0));
+    for (const id of ['sand', 'blue']) {
+      applySet(id);
+      const { host } = renderPicker({ valueISO: '2026-08-20' });
+      const trigger = host.querySelector('.date-picker-trigger');
+      const nav = host.querySelector('.date-picker-day-nav');
+      expect(trigger.className).toContain('date-picker-trigger--night');
+      expect(host.querySelector('.date-picker--past')).toBeNull();
+      expect(normColor(getComputedStyle(trigger).backgroundColor)).toBe(SURFACE[id]);
+      expect(normColor(getComputedStyle(nav).backgroundColor)).toBe(SURFACE[id]);
+      expect(normColor(getComputedStyle(trigger).backgroundColor)).not.toBe(TINT[id]);
+    }
+  });
+});
+
 describe('date-remainders · чужой день и выходной', () => {
   // Контракт «вид чужого дня»: заливка капсулы и ОБОИХ КРУЖКОВ — тинт, текст
   // остаётся чернилами, справа «Сегодня»; обе стрелки живые.
