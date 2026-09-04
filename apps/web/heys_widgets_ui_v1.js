@@ -79,6 +79,16 @@
   const NUM_GROUP_SEP = '\u202F';
   const NUM_UNIT_SEP = '\u00A0';
 
+  // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, ведро 2)
+  const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const V4_WARN_1 = 'var(--v4-warn-1, #d99a63)';
+  const V4_WARN_2 = 'var(--v4-warn-2, #c67139)';
+  const v4MixRole = (role, pct) => `color-mix(in srgb, ${role} ${pct}%, transparent)`;
+  const V4_AMBER_GRADIENT = Object.freeze([v4MixRole(V4_WARN_1, 40), V4_WARN_1]);
+  const V4_WARN_HIGH_GRADIENT = Object.freeze([v4MixRole(V4_WARN_2, 35), V4_WARN_2]);
+  const V4_WARN_ELEVATED_GRADIENT = Object.freeze([v4MixRole(V4_WARN_1, 40), V4_WARN_1]);
+  const V4_WARN_GUARDED_GRADIENT = Object.freeze([v4MixRole(V4_WARN_SOFT, 35), V4_WARN_SOFT]);
+
   function formatRuNumber(value, options) {
     const n = Number(value);
     if (!Number.isFinite(n)) return '—';
@@ -4756,7 +4766,7 @@
 
     const getStreakColor = () => {
       if (current >= 7) return '#22c55e';
-      if (current >= 3) return '#f97316';
+      if (current >= 3) return V4_WARN_2;
       return '#ef4444';
     };
 
@@ -6419,15 +6429,16 @@
       // Динамические градиенты по соблюдению нормы (берём цвет из HEYS.MacroRings):
       // красный/жёлтый/зелёный/серый. Если core не загружен — fallback на статичный по toneClass.
       const _coreColor = (data && data._rings && data._rings[toneClass]) ? data._rings[toneClass].color : null;
+      const _macroAmberKey = HEYS.scales?.C?.amberMacro;
       const _DYNAMIC_GRADIENTS = {
         '#ef4444': ['#fecaca', '#ef4444'], // red
-        '#f59e0b': ['#fde68a', '#f59e0b'], // amber
         '#22c55e': ['#bbf7d0', '#22c55e'], // green
         '#6b7280': ['#d1d5db', '#6b7280'], // gray (no norm)
+        ...(_macroAmberKey ? { [_macroAmberKey]: V4_AMBER_GRADIENT } : {}),
       };
       const _staticGradient = toneClass === 'protein'
         ? ['#fecaca', '#ef4444']
-        : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
+        : (toneClass === 'fat' ? V4_AMBER_GRADIENT : ['#bbf7d0', '#22c55e']);
       const gradientStops = (_coreColor && _DYNAMIC_GRADIENTS[_coreColor]) || _staticGradient;
       const gradientId = `widget-macro-ring-${widget?.id || '0'}-${toneClass}-${(_coreColor || 'default').replace('#', '')}`;
       const _isWarning = _coreColor === '#ef4444';
@@ -6700,8 +6711,8 @@
 
     const getStatusInfo = () => {
       switch (status) {
-        case 'active': return { emoji: '📈', label: 'Волна активна', color: '#f97316', short: 'Активна' };
-        case 'almost': return { emoji: '📉', label: 'Почти закончилась', color: 'var(--v4-warn-soft, #eab308)', short: 'Завершается' };
+        case 'active': return { emoji: '📈', label: 'Волна активна', color: V4_WARN_2, short: 'Активна' };
+        case 'almost': return { emoji: '📉', label: 'Почти закончилась', color: V4_WARN_SOFT, short: 'Завершается' };
         case 'soon': return { emoji: '⏳', label: 'Скоро закончится', color: '#22c55e', short: 'Скоро' };
         case 'lipolysis': return { emoji: '✓', label: 'Окно завершено', color: '#10b981', short: 'Завершено' };
         default: return { emoji: '❓', label: 'Нет данных', color: '#94a3b8', short: '—' };
@@ -6863,9 +6874,9 @@
           v4Kicker('Серия'),
           // Серию нельзя объявить плохой или хорошей: её длина — факт, а не
           // оценка (канвас v4, строка 97) — число всегда чернила.
-          React.createElement('div', { className: 'widget-v4-mini__value widget-v4-val--neutral' },
+          React.createElement('div', { className: 'widget-v4-mini__value widget-v4-mini__value--pair widget-v4-val--neutral' },
             streak,
-            React.createElement('span', { className: 'widget-v4-unit' }, ' дня')
+            React.createElement('span', { className: 'widget-v4-unit' }, 'дня')
           )
         );
       }
@@ -6922,12 +6933,22 @@
           return 'empty';
         };
         return React.createElement('div', { className: 'widget-heatmap widget-heatmap--2x2 widget-v4-stack' },
-          v4Kicker('Тепловая карта'),
+          v4Kicker('Месяц целиком'),
           React.createElement('div', { className: 'widget-heatmap__month-grid' },
-            monthDays.map((day, index) => React.createElement('span', {
-              key: `${day?.date || 'empty'}-${index}`,
-              className: `widget-heatmap__cell widget-heatmap__cell--month widget-heatmap__cell--${day?.status || 'empty'}`
-            }))
+            monthDays.map((day, index) => {
+              const isToday = highlightToday && day?.date === todayIso;
+              const tone = isToday ? 'today' : barTone(day?.status);
+              return React.createElement('span', {
+                key: `${day?.date || 'empty'}-${index}`,
+                className: [
+                  'widget-heatmap__cell',
+                  'widget-heatmap__cell--month',
+                  tone === 'today'
+                    ? 'widget-heatmap__cell--today'
+                    : `widget-v4-heat__bar--${tone}`
+                ].filter(Boolean).join(' ')
+              });
+            })
           ),
           // Полоса последней недели под сеткой снята 31 августа: кадр «Месяц
           // целиком» её не рисует, а нижний ряд самой сетки — это те же семь
@@ -7587,7 +7608,7 @@
 
   function getRelapseRiskColor(level) {
     if (level === 'critical') return 'var(--heys-ratio-crash)';
-    if (level === 'high') return '#f97316';
+    if (level === 'high') return V4_WARN_2;
     if (level === 'elevated') return 'var(--heys-ratio-over)';
     if (level === 'guarded') return 'var(--heys-ratio-low)';
     return 'var(--heys-ratio-good)';
@@ -7595,9 +7616,9 @@
 
   function getRelapseGradientColors(level) {
     if (level === 'critical') return ['#fca5a5', '#ef4444'];
-    if (level === 'high') return ['#fdba74', '#f97316'];
-    if (level === 'elevated') return ['#fcd34d', '#f59e0b'];
-    if (level === 'guarded') return ['#fde68a', '#eab308'];
+    if (level === 'high') return V4_WARN_HIGH_GRADIENT;
+    if (level === 'elevated') return V4_WARN_ELEVATED_GRADIENT;
+    if (level === 'guarded') return V4_WARN_GUARDED_GRADIENT;
     return ['#86efac', '#22c55e'];
   }
 
