@@ -1,0 +1,2133 @@
+{
+  "zone": "strength-builder",
+  "generated": "2026-09-04",
+  "agent": "neq audit subagent",
+  "summary": {
+    "checked": 185,
+    "confirmedNeq": 146,
+    "suggestQuestion": 39,
+    "suggestEquals": 0
+  },
+  "rows": [
+    {
+      "key": "каталог",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "Поведение =; расхождение в строке «каталог»: контракт «60 кг × 8», кадр/код «60 × 8». catalog_ui:78-89,164-167; strength-builder-ui.test.js:512."
+    },
+    {
+      "key": "третий пропуск подряд — сигнал куратору",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "Счётчика трёх назначенных подряд и curator signal нет; SkipSheet (superset_ui:1494+) — локальный пропуск."
+    },
+    {
+      "key": "вес выше плана — прогресс, а не нарушение",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "Цвет «сделано больше — зелёный» не рендерится; PlanVsDoneScreen :2143 is-match/is-diff без over-plan green."
+    },
+    {
+      "key": "шторка нужна разработчику первой",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "sheetRows (superset_ui:2160-2199) без «отчёт цикла»; контракт dev-first шторку с cycle report не закрыт."
+    },
+    {
+      "key": "прочерк — значение, а не пустота",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "Прочерки «—» в .sb-cell.is-blank (superset_ui:242,718), не .dash 56 % из контракта."
+    },
+    {
+      "key": "Конструктор · итоги · 58",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "«В шаблоны» в FinishScreen нет; save-flow снят (UI_V4 § Б3). finish-v4-canvas-contract.test.js row 58 исключён."
+    },
+    {
+      "key": "Программа · цикл · 01",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 02",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 03",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 04",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 05",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 06",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 07",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 08",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 09",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 10",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 11",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 12",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 13",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 14",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 15",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 16",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 17",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 18",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 19",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 20",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 21",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 22",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 23",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 24",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 25",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 26",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 27",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 28",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 29",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 30",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 31",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 32",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · цикл · 33",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа · назначено против сделано · 01",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 02",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 03",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 04",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 05",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 06",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 07",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 08",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 09",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 10",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 11",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 12",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 13",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 14",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 15",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 16",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 17",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 18",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 19",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 20",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 21",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 22",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 23",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 24",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 25",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 26",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 27",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 28",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 29",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 30",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 31",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 32",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 33",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 34",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 35",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 36",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Программа · назначено против сделано · 37",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "PlanVsDoneScreen (heys_strength_superset_ui_v1.js:2108-2152) сравнивает planSnapshot vs workoutLog; f «нет сравнения» устарел. Canvas-кадры Г2 ·01-37 — full-screen отчёт цикла, геометрия не сведена с in-session sheet.",
+      "note": "Причина «нет экрана» мертва; ≠ по кадру Г2 — пересмотреть с усиленным f."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 18",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "f «canvas: нет механизма» vs runtime movedTo/sb-plan-badge (superset_ui:2397-2402). Контракт «перенос — не отдельный мехanism» описывает target-first; кадр ·18 — пилюля «занят» rgba(ink,.4) — сверить геометрию.",
+      "note": "Причина «runtime нет переноса» мертва; пересмотреть ≠ vs обновить контракт."
+    },
+    {
+      "key": "Программа пройдена · 01",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 02",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 03",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 04",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 05",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 06",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 11",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 12",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 13",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 14",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 15",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 16",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 17",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 18",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 19",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 20",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 21",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 22",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 23",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Программа пройдена · 24",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Подход · таблица ввода · 04",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3»."
+    },
+    {
+      "key": "Подход · таблица ввода · 05",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3»."
+    },
+    {
+      "key": "Подход · таблица ввода · 06",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3»."
+    },
+    {
+      "key": "Подход · таблица ввода · 23",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "key": "Подход · таблица ввода · 24",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "key": "Подход · таблица ввода · 25",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "key": "Подход · таблица ввода · 26",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "key": "Подход · таблица ввода · 27",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "key": "Подход · таблица ввода · 28",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "key": "Куратор и зал · 03",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "sessionTitle(exercises), не «Тренировка идёт»: builder_ui:1208, superset_ui sessionTitle:405."
+    },
+    {
+      "key": "Куратор и зал · 04",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "Подзаголовок fmtTime, без «что приходит от куратора…»: builder_ui:1209-1212."
+    },
+    {
+      "key": "Куратор и зал · 12",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CuratorPlanStrip showActions:false mid-session: builder_ui:1257-1262."
+    },
+    {
+      "key": "Куратор и зал · 13",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "«Начать по плану» не рендерится mid-session: superset_ui CuratorPlanStrip:2026-2028."
+    },
+    {
+      "key": "Куратор и зал · 14",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "«Своя» не рендерится mid-session: superset_ui:2027-2028."
+    },
+    {
+      "key": "Куратор и зал · 23",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "«Снять подход» disabled — video не поддерживается: superset_ui:1653-1658."
+    },
+    {
+      "key": "Куратор и зал · 32",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "«отправлено в …» — var(--sb-mut), не var(--gr): 750-strength-builder.css:5703-5706."
+    },
+    {
+      "key": "Куратор и зал · 36",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "«не отправлена» только при notePending+sync pending: buildSyncQueueRows:2071-2077."
+    },
+    {
+      "key": "План в ленте дня · 18",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "Unsafe early start намеренно absent — owner contract без fact-date rule.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "План в ленте дня · 19",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "Transfer — sole primary action после снятия unsafe early start (owner decision).",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "День не состоялся · 17",
+      "current": "≠",
+      "recommend": "?",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": false,
+        "frameStable": true
+      },
+      "fDraft": "Kernel исключает assigned/skipped/moved из тоннажа; canvas помечает как «долг кода». Расхождение контракт↔ядро — не UI-дефект.",
+      "note": "Код соответствует kernel; ≠ по canvas-footnote — пересмотреть контракт или снять."
+    },
+    {
+      "key": "Правка · пропущен раньше · 01",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 02",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 03",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 04",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 05",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 06",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 07",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 08",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 09",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 10",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 11",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 12",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 13",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 14",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 15",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 16",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 17",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 18",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 19",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 20",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Правка · пропущен раньше · 21",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 01",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 02",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 03",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 04",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 05",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 06",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 07",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 08",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 09",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 10",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 11",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 12",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 13",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 14",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 15",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 16",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 17",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 18",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 19",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 20",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · 21",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Программа · цикл · текст",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся."
+    },
+    {
+      "key": "Программа пройдена · текст",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "key": "Правка · пропущен раньше · текст",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "Сессия · брошена вчера · текст",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": false,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся.",
+      "note": "f слабый — усилить file:line при применении."
+    },
+    {
+      "key": "вид · отчёт за период",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Конструктор · тренировка идёт · спокойнее · 11",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "⠿ намеренно не рендерится (нет reorder persistence); calm-canvas-contract.test.js:243-244, UI_V4_CODEX § intentional."
+    },
+    {
+      "key": "Программа · отчёт за период · 01",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 02",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 03",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 04",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 05",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 06",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 07",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 08",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 09",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 10",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 11",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 12",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 13",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 14",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 15",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 16",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 17",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 18",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · 19",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "key": "Программа · отчёт за период · текст",
+      "current": "≠",
+      "recommend": "≠",
+      "checks": {
+        "fConcrete": true,
+        "reasonAlive": true,
+        "frameStable": true
+      },
+      "fDraft": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    }
+  ]
+}
