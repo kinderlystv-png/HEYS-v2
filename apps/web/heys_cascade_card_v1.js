@@ -26,8 +26,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     EMPTY: { icon: '🌅', color: '#94a3b8', label: 'Ещё нет сигнала' },
     BUILDING: { icon: '🔗', color: '#3b82f6', label: 'Разгон каскада' },
     GROWING: { icon: '⚡', color: '#22c55e', label: 'Устойчивый рост' },
-    STRONG: { icon: '🔥', color: '#eab308', label: 'Пиковая инерция' },
-    BROKEN: { icon: '💪', color: '#f59e0b', label: 'Быстрый старт' },
+    STRONG: { icon: '🔥', color: 'var(--v4-act, #c67139)', label: 'Пиковая инерция' },
+    BROKEN: { icon: '💪', color: 'var(--v4-warn-1, #d99a63)', label: 'Быстрый старт' },
     RECOVERY: { icon: '🌱', color: '#0ea5e9', label: 'База есть' }
   };
 
@@ -3992,7 +3992,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (typeof props.ceb === 'number' && events.length > 0) {
       var cebVal = props.ceb;
       var conf = typeof props.cebConfidence === 'number' ? props.cebConfidence : 1;
-      var cebColor = cebVal >= 8.0 ? '#22c55e' : (cebVal >= 6.0 ? '#f59e0b' : '#ef4444');
+      var cebColor = cebVal >= 8.0 ? '#22c55e' : (cebVal >= 6.0 ? 'var(--v4-warn-1, #d99a63)' : '#ef4444');
       var isEarly = conf < 1;
       // Opacity: от 0.45 (самый ранний) до 1.0 (полная уверенность)
       var badgeOpacity = 0.45 + conf * 0.55;
@@ -6092,8 +6092,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     // --- Цвет правой линии: фиксированный градиент жёлтый → оранжевый → красный ---
     // Цвет определяется позицией на шкале, а не значением CRS — не меняется при движении точки
-    var badGrad = 'linear-gradient(90deg, #dc2626, #f97316, #fde047)';
-    var badShadow = '0 0 4px rgba(253, 224, 71, 0.7), 0 0 10px rgba(249, 115, 22, 0.6), 0 0 16px rgba(220, 38, 38, 0.4)';
+    var badGrad = 'linear-gradient(90deg, #dc2626, var(--v4-warn-2, #c67139), var(--v4-warn-soft, #c9922e))';
+    var badShadow = '0 0 4px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 70%, transparent), 0 0 10px color-mix(in srgb, var(--v4-warn-2, #c67139) 60%, transparent), 0 0 16px rgba(220, 38, 38, 0.4)';
 
     return React.createElement(
       'div',
