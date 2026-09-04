@@ -1213,11 +1213,46 @@
 }
 
 /* Название упражнения — первое обязательное поле, поэтому шире и заметнее
- * числовых ячеек. */
+ * числовых ячеек. Кадр «Своё упражнение · 06»: radius 14, поля 0 14, отступ 12. */
 .sb-ex-name {
-  text-align: left;
-  font-weight: 700;
+  min-height: 44px;
+  margin-top: 12px;
   margin-bottom: 9px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--v4-c1, var(--sb-card));
+  text-align: center;
+  font: 700 13px/1 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+/* Экран «Новое упражнение» (CatUI.NewExerciseScreen) — единственный sb-screen без
+ * модификатора; ловим по полю названия. Кадры «Своё упражнение · 01–02». */
+.sb-root.sb-screen:has(.sb-ex-name) .sb-head {
+  gap: 10px;
+  padding: 16px 18px 0;
+  border-bottom: 0;
+  background: transparent;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-head-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 10px;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-head-title b {
+  font: 700 15px/1 Figtree, sans-serif;
+  color: var(--sb-tx);
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-panel-column .sb-finish {
+  margin-top: 12px;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-panel-column .sb-btn {
+  margin-top: 9px;
 }
 
 .sb-suggest {
