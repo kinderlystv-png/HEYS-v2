@@ -1,0 +1,178 @@
+{
+  "zone": "strength-builder",
+  "scope": "З2 «Трисет в работе» · heys_strength_superset_ui_v1.js TriSetWorkScreen + 750-strength-builder.css",
+  "generated": "2026-09-04",
+  "agent": "superset z2 triset-work handoff",
+  "summary": {
+    "rows": 32,
+    "block": "Трисет в работе · 01–31 + текст",
+    "codeChanged": false,
+    "testFile": "apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js",
+    "recommendEquals": 32,
+    "recommendNotEquals": 0,
+    "recommendDash": 0,
+    "recommendQuestion": 0
+  },
+  "rows": [
+    {
+      "key": "Трисет в работе · 01",
+      "verdict": "=",
+      "f": "Шапка .sb-head в TriSetWorkScreen — apps/web/styles/modules/750-strength-builder.css:5556-5562; apps/web/strength/heys_strength_superset_ui_v1.js:1438-1451."
+    },
+    {
+      "key": "Трисет в работе · 02",
+      "verdict": "=",
+      "f": "«✕»: .sb-triset-work-screen .sb-icon-btn { flex:none; 36×36; radius 999; bg var(--sb-card); font 600 13px; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5564-5573; apps/web/strength/heys_strength_superset_ui_v1.js:1439-1442."
+    },
+    {
+      "key": "Трисет в работе · 03",
+      "verdict": "=",
+      "f": ".sb-head-title { flex:1; min-width:0; column; gap 3px; padding 0 10px } — apps/web/styles/modules/750-strength-builder.css:5579-5586."
+    },
+    {
+      "key": "Трисет в работе · 04",
+      "verdict": "=",
+      "f": "«Трисет B · плечи»: trisetWorkTitle+muscleLabel — apps/web/strength/heys_strength_superset_ui_v1.js:1320-1325,1388-1391; DOM apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 04."
+    },
+    {
+      "key": "Трисет в работе · 05",
+      "verdict": "=",
+      "f": "«раунд 2 из 3 · 9 подходов»: trisetWorkHeadKey+activeTrisetRoundIndex — apps/web/strength/heys_strength_superset_ui_v1.js:1327-1331,1361-1371,1392; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 05."
+    },
+    {
+      "key": "Трисет в работе · 06",
+      "verdict": "=",
+      "f": "Пилюля «связка»: .sb-tw-badge { bg var(--sb-soft); color var(--sb-acc); 9px uppercase } — apps/web/styles/modules/750-strength-builder.css:5593-5602; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 06."
+    },
+    {
+      "key": "Трисет в работе · 07",
+      "verdict": "=",
+      "f": "«⋯»: .sb-head > .sb-icon-btn:last-child { font-weight 700 } — apps/web/styles/modules/750-strength-builder.css:5575-5577; apps/web/strength/heys_strength_superset_ui_v1.js:1448-1451."
+    },
+    {
+      "key": "Трисет в работе · 08",
+      "verdict": "=",
+      "f": ".sb-tw-scroll { flex:1; overflow-y:auto; padding 6px 18px 18px } — apps/web/styles/modules/750-strength-builder.css:5604-5608."
+    },
+    {
+      "key": "Трисет в работе · 09",
+      "verdict": "=",
+      "f": ".sb-tw-actions { gap 7px; margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:5610-5614."
+    },
+    {
+      "key": "Трисет в работе · 10",
+      "verdict": "=",
+      "f": "«местами»: .sb-tw-pill.is-accent { flex:1; bg var(--sb-accbg); color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5630-5633; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 10."
+    },
+    {
+      "key": "Трисет в работе · 11",
+      "verdict": "=",
+      "f": "«разъединить»: .sb-tw-pill { flex:1; bg var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:5616-5628; apps/web/strength/heys_strength_superset_ui_v1.js:1461-1466."
+    },
+    {
+      "key": "Трисет в работе · 12",
+      "verdict": "=",
+      "f": ".sb-tw-grp { margin-top 10px; padding 16px; radius 20px; bg var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:5635-5640."
+    },
+    {
+      "key": "Трисет в работе · 13",
+      "verdict": "=",
+      "f": ".sb-tw-member-row { gap 6px } — apps/web/styles/modules/750-strength-builder.css:5642-5645."
+    },
+    {
+      "key": "Трисет в работе · 14",
+      "verdict": "=",
+      "f": ".sb-tw-member-card { flex:1; column; gap 2px; bg var(--sb-soft); radius 12px; padding 8px 9px } — apps/web/styles/modules/750-strength-builder.css:5647-5656; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js static CSS check."
+    },
+    {
+      "key": "Трисет в работе · 15",
+      "verdict": "=",
+      "f": "«A1»: .sb-tw-member-card i { font 700 10px; color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5658-5662; apps/web/strength/heys_strength_superset_ui_v1.js:1333-1335,1472; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 14."
+    },
+    {
+      "key": "Трисет в работе · 16",
+      "verdict": "=",
+      "f": "«Жим гантелей»: .sb-tw-member-card span { font 600 11px/1.2; color var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:5664-5667; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 16."
+    },
+    {
+      "key": "Трисет в работе · 17",
+      "verdict": "=",
+      "f": ".sb-tw-warmup { margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:5679-5681."
+    },
+    {
+      "key": "Трисет в работе · 18",
+      "verdict": "=",
+      "f": "«разм.»: .sb-tw-warmup-tag { width 44px; height 26px; radius 8px; bg rgba(ink,.06) } — apps/web/styles/modules/750-strength-builder.css:5683-5695; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 18."
+    },
+    {
+      "key": "Трисет в работе · 19",
+      "verdict": "=",
+      "f": "«общая для связки · 2 подхода»: .sb-tw-warmup-copy { font 600 11.5px; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5697-5701; apps/web/strength/heys_strength_superset_ui_v1.js:1477-1481."
+    },
+    {
+      "key": "Трисет в работе · 20",
+      "verdict": "=",
+      "f": "«✓» разминки: .sb-tw-warmup-done { font 700 12px; color rgba(ink,.42) } — apps/web/styles/modules/750-strength-builder.css:5703-5706; apps/web/strength/heys_strength_superset_ui_v1.js:1482."
+    },
+    {
+      "key": "Трисет в работе · 21",
+      "verdict": "=",
+      "f": "«Р1»: .sb-tw-round-num { width 36px; font 700 10.5px uppercase; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5722-5728; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 21."
+    },
+    {
+      "key": "Трисет в работе · 22",
+      "verdict": "=",
+      "f": "«22 × 10 ✓»: .sb-tw-cell.is-done { flex:1; color rgba(ink,.55); tabular-nums } — apps/web/styles/modules/750-strength-builder.css:5745-5747; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 22."
+    },
+    {
+      "key": "Трисет в работе · 23",
+      "verdict": "=",
+      "f": ".sb-tw-round-footer { border-bottom none } — apps/web/styles/modules/750-strength-builder.css:5757-5760."
+    },
+    {
+      "key": "Трисет в работе · 24",
+      "verdict": "=",
+      "f": ".sb-tw-round-spacer { flex none; width 36px } — apps/web/styles/modules/750-strength-builder.css:5762-5765."
+    },
+    {
+      "key": "Трисет в работе · 25",
+      "verdict": "=",
+      "f": "«круг закрыт · отдых 2:00»: .sb-tw-round-closed { flex:1; font 600 10.5px/1.3; color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5767-5771; apps/web/strength/heys_strength_superset_ui_v1.js:1431-1432; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 25."
+    },
+    {
+      "key": "Трисет в работе · 26",
+      "verdict": "=",
+      "f": ".sb-tw-round.is-current { box-shadow inset 0 0 0 2px var(--sb-acc-strong); radius 10px } — apps/web/styles/modules/750-strength-builder.css:5716-5720; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js static CSS check."
+    },
+    {
+      "key": "Трисет в работе · 27",
+      "verdict": "=",
+      "f": "«Р2» текущий: .sb-tw-round-num.is-current { color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5730-5732; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 27."
+    },
+    {
+      "key": "Трисет в работе · 28",
+      "verdict": "=",
+      "f": "«10 × 12» активная: .sb-tw-cell.is-active { flex:1; color var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:5749-5751; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 28."
+    },
+    {
+      "key": "Трисет в работе · 29",
+      "verdict": "=",
+      "f": "«20 × 10» будущая: .sb-tw-cell.is-pending { flex:1; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5753-5755; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 29."
+    },
+    {
+      "key": "Трисет в работе · 30",
+      "verdict": "=",
+      "f": "«+ Раунд · добавит 3 подхода»: .sb-tw-add-round { margin-top 10px; bg var(--sb-accbg); color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5773-5776; apps/web/strength/heys_strength_superset_ui_v1.js:1397-1398,1486-1491; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 30."
+    },
+    {
+      "key": "Трисет в работе · 31",
+      "verdict": "=",
+      "f": "Сноска: .sb-tw-footnote { margin-top 12px; font 500 11px/1.55 } — apps/web/styles/modules/750-strength-builder.css:5778-5782; текст apps/web/strength/heys_strength_superset_ui_v1.js:1492-1496."
+    },
+    {
+      "key": "Трисет в работе · текст",
+      "verdict": "=",
+      "f": "Composite кадра З2: заголовок, ключ, связка, A1, круг закрыт, +Раунд — apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js composite; строки apps/web/strength/heys_strength_superset_ui_v1.js:1376-1497."
+    }
+  ]
+}
