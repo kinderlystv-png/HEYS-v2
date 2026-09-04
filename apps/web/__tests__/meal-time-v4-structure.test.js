@@ -145,7 +145,7 @@ describe('meal time step v4 structure', () => {
     expect(mealCreateCss).toContain('width: 16px');
     // Активная точка прогресса — акцент набора. Сторожим роль, а не литерал:
     // --v4-tint-warm объявлена во всех четырёх наборах и в каждом равна
-    // акценту (#c67139 песочный, #cf8144 песочно-тёмный, #2e7cc0 оба синих),
+    // акценту (#c67139 песочный, #cf8144 песочно-тёмный, #1d5e96/#3f8fd0 синие),
     // поэтому прежний голый #c67139 держал песочный цвет в синих наборах.
     expect(mealCreateCss).toMatch(/background: var\(--v4-tint-warm[,)]/);
     expect(mealCreateCss).toContain('.mc-header-btn--close::before');

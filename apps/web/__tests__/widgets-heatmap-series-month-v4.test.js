@@ -134,7 +134,7 @@ describe('Тепловая карта · Серия и Месяц целиком
     expect(blueOverlap).toBe('#b03a24');
     expect(sandOverlap).not.toBe(blueOverlap);
     expect(sandAct).toBe('#c67139');
-    expect(blueAct).toBe('#2e7cc0');
+    expect(blueAct).toBe('#1d5e96');
     expect(sandAct).not.toBe(blueAct);
 
     expect(rules.get('.widget-heatmap__cell--month.widget-v4-heat__bar--d3').background)

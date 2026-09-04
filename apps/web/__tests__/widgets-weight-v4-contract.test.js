@@ -158,7 +158,7 @@ describe('Вес · сведённые stop-кадры', () => {
     const act = (block) => block.match(/--v4-act:\s*(#[0-9a-f]{6})/i)?.[1];
     const okFill = (block) => block.match(/--v4-ok-fill:\s*(#[0-9a-f]{6})/i)?.[1];
     expect(act(sand)).toBe('#c67139');
-    expect(act(blue)).toBe('#2e7cc0');
+    expect(act(blue)).toBe('#1d5e96');
     expect(okFill(sand)).toBe('#7a8a5e');
     expect(okFill(blue)).toBe('#4f9a78');
     expect(act(sand)).not.toBe(act(blue));

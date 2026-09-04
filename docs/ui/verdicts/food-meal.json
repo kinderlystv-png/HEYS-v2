@@ -370,13 +370,13 @@
       "naKind": "handoff"
     },
     "вид · лист копирования и переноса": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04",
+      "v": "=",
+      "f": "610-aps-meal-flow.css:4303–4835 (.meal-transfer-v4__*): шапка .meal-transfer-v4__close 44×44, ярус «Продукты N/M» + «Снять всё» 11px/700, карточка --v4-card r16 p12/14 gap8, галка 20, ±28, ползунок 4/14, кнопки cancel+primary. heys_day_copy_meal_modal_v1.js + heys_move_modal_v1.js без inline style; food-meal-transfer-v4.test.js зелёный.",
       "h": "cba7827eaf5a"
     },
     "выбор цели": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04",
+      "v": "=",
+      "f": ".meal-transfer-v4__target — --v4-card r16 p14, radio 18 inset 2/5 (--v4-act); copy: «Куда копировать · сегодня» + «+ Создать новый приём» текстом (heys_day_copy_meal_modal_v1.js:454–473); move: дата+«В какой приём» (heys_move_modal_v1.js:241–378). copy-meal-empty-target-v4 + food-meal-transfer-v4.",
       "h": "323a58f3930a"
     },
     "целей нет": {
@@ -825,8 +825,8 @@
       "h": "9c90ba8485ef"
     },
     "Добавление · выбор способа · 10": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04",
+      "v": "=",
+      "f": ".aps-search-field — center, gap 10, --v4-sand-surface (--c1), r16, p14/16 (610:2386–2396, 600-steps:2571–2580); под вкладками по «порядок сверху вниз» =; кадр line 241 margin-top 12 — отступ даёт .aps-fixed-header gap 16.",
       "h": "39f7e5a95b21"
     },
     "Добавление · выбор способа · 11": {
@@ -2005,8 +2005,8 @@
       "h": "54d1145c6f83"
     },
     "Приём · правка · 17": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04",
+      "v": "=",
+      "f": ".nutrition-v4-sheet__row-remove — 44×44, margin -13/-8/-13/2, center, ink 30% (732:1325–1338); heys_day_nutrition_v1.js:1294–1320 без swipe; nutrition-v4-canvas-razbor «крестик удаления» + «свайпа во флоу нет» =.",
       "h": "40883ac92ed2"
     },
     "Приём · правка · 18": {
@@ -5335,8 +5335,8 @@
     },
     "главная кнопка шага приёма · заливка во всех наборах": {
       "v": "=",
-      "f": ".meal-time-cta — background var(--v4-act) / color var(--v4-btn-on-act) 610:323–327; --v4-btn-on-act #2b1608 песок / #ffffff синий 002:281,570,721; blue-override снят из 600; песок #c67139+#2b1608, синий #2e7cc0+#ffffff.",
-      "h": "64300ba8c798"
+      "f": ".meal-time-cta — background var(--v4-act) color var(--v4-btn-on-act) 610:308-323; blue-override [data-palette=blue] .mc-modal--meal-create .meal-time-cta снят из 600; --v4-act #c67139 песок / #1d5e96 синий / #3f8fd0 сине-тёмный 002:461,598; --v4-btn-on-act #2b1608 песок / #ffffff синие 002:281,570,719; meal-time-v4-structure.test.js:131-139.",
+      "h": "c8398fb90b6e"
     }
   },
   "frames": {
