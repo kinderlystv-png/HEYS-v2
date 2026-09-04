@@ -49,10 +49,13 @@
 }
 
 .confirm-modal:has(.flow-add-products) .confirm-modal-btn.cancel {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  margin-top: 8px;
-  padding: 8px 16px 18px;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 16px 18px;
   border: none;
   background: none;
   font-size: 12px;

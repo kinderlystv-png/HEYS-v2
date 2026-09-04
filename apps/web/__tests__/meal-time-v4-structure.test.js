@@ -7,6 +7,14 @@ const mealStepSource = fs.readFileSync(
   path.resolve(__dirname, '../heys_meal_step_v1.js'),
   'utf8',
 );
+const stepModalSource = fs.readFileSync(
+  path.resolve(__dirname, '../heys_step_modal_v1.js'),
+  'utf8',
+);
+const pwaCssSource = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/500-pwa-and-offline.css'),
+  'utf8',
+);
 // Файл разрезан по зонам 31 августа: оболочка осталась в 600, экраны уехали
 // в 610–613. Тест смотрит на поток добавления целиком, поэтому читает всю
 // группу — иначе он проверял бы половину правил и молчал о второй.
@@ -66,12 +74,21 @@ describe('meal time step v4 structure', () => {
     expect(cssSource).toMatch(/\.meal-type-chip \{[\s\S]*?var\(--v4-sand-surface/);
     expect(cssSource).toMatch(/\.meal-time-step \.meal-type-label \{[\s\S]*?background: none;/);
     expect(cssSource).toContain('.meal-time-hero .mc-wheel-value--current');
-    // Строка «вид · колесо времени»: три ряда по 64 при общей высоте 192,
-    // выбранное значение 40 px, соседние 24. Стояли 132 / 54 / 16.
+    // «колесо — общий кадр»: шаг КРУПНОЕ — 36 px текущее, соседи 16 px.
     expect(cssSource).toMatch(
-      /\.meal-time-hero \.mc-wheel-value--current \{[^}]*font-size: 40px;/s);
+      /\.meal-time-hero \.mc-wheel-value--current \{[^}]*font: 700 36px\/1/s);
     expect(cssSource).toMatch(
-      /\.meal-time-hero \.mc-wheel-picker--compact \.mc-wheel-values \{[^}]*height: 192px;/s);
+      /\.meal-time-hero \.mc-wheel-picker--compact \.mc-wheel-values \{[^}]*height: 64px;/s);
+    expect(cssSource).not.toMatch(/meal-time-hero[\s\S]*mask-image: linear-gradient/);
+  });
+
+  it('shared WheelPicker renders three rows without far neighbors', () => {
+    expect(stepModalSource).not.toContain('showFar');
+    expect(stepModalSource).not.toContain('mc-wheel-value--far');
+    expect(stepModalSource).toContain('mc-wheel-picker--row');
+    expect(stepModalSource).toContain('mc-wheel-picker--large');
+    expect(pwaCssSource).toMatch(/\.mc-wheel-value--current \{[^}]*font-size: 32px/s);
+    expect(cssSource).toMatch(/\.meal-time-hero \.mc-wheel-value--current \{[^}]*36px/s);
   });
 
   it('шаг самочувствия называет источник чисел и края шкал', () => {

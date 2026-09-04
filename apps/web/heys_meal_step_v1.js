@@ -981,7 +981,7 @@
           strokeLinejoin: 'round', 'aria-hidden': 'true'
         },
           React.createElement('circle', { cx: 12, cy: 12, r: 9 }),
-          React.createElement('path', { d: 'M12 8v5l3 2' })
+          React.createElement('path', { d: 'M12 7v5l4 2' })
         ),
         React.createElement('span', null, prefillHint)
       ),
