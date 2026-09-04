@@ -3346,7 +3346,7 @@
         'aria-hidden': 'true'
       });
     }
-    return React.createElement('div', { className: 'widget-v4-stack' },
+    return React.createElement('div', { className: 'widget-v4-stack widget-trend-now' },
       v4Kicker('Тренд здоровья'),
       React.createElement('div', { className: 'widget-v4-hero-num' },
         React.createElement('span', {

@@ -14483,6 +14483,18 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   fill: var(--v4-val-bad, #a8382b);
 }
 
+/* Тренд 2×2 «Как сейчас»: число --gr текстовой ролью, не sand-ok.
+   Компакт 2×1 свои тона не делит. */
+.widget-trend-now .widget-v4-hero-num {
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.widget-trend-now .widget-v4-hero-num__val.widget-v4-val--good {
+  color: var(--v4-ok-text, #5c6a45);
+}
+
 /* Перебор красит число и его подпись — эти правила стоят после базовых цветов
    плитки, иначе терракота героя перекрыла бы красный. */
 .widget-calories__hero-value .widget-calories__value--lg.widget-v4-val--bad,
