@@ -12586,6 +12586,16 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink-data) /* v4-intentional */;
 }
 
+/* Кадр «Окно до сна · нет данных»: прочерк 21/600 тоном 42 %, «не ел» 7.5 px.
+   Живое «чисто» 8.5 px и val--good now не трогал. Evening не открывал. */
+.widget-v4-mini.widget-v4-sleepwindow .widget-v4-goal-value--empty {
+  color: var(--v4-ink-3) /* v4-intentional */;
+}
+
+.widget-v4-mini.widget-v4-sleepwindow .widget-v4-unit.widget-v4-unit--empty {
+  font-size: 7.5px;
+}
+
 .widget-v4-stack .widget-v4-goal-value {
   font-size: 19px;
   letter-spacing: -0.03em;
