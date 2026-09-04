@@ -7507,11 +7507,11 @@
         ? formatAnimDeltaKg(motion.delta)
         : formatAnimDeltaKg(dyn?.deltaKg ?? 0);
       inner = React.createElement('div', { className: 'widget-v4-mini' },
-        v4Kicker('Динамика'),
-        React.createElement('span', { className: 'widget-v4-mini__value ' + stateClass },
+        v4Kicker('Мес'),
+        React.createElement('span', { className: 'widget-v4-mini__value widget-v4-mini__value--pair widget-wd__compact-val ' + stateClass },
           delta.sign,
           delta.text,
-          React.createElement('span', { className: 'widget-v4-unit' }, ' кг')
+          React.createElement('span', { className: 'widget-v4-unit' }, 'кг')
         )
       );
     } else {

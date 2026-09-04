@@ -13458,6 +13458,11 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
     box-shadow 160ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
+/* Кадр «Динамика · F компакт · 04»: 17 px. Общий mini остаётся 1.3125 rem. */
+.widget-wd__compact-val {
+  font-size: 17px;
+}
+
 /* 2×1 на сетке 64px: без лишнего padding crash-risk, чуть компактнее цифра */
 .widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__delta,
 .widget--crashRisk.widget--2x1 .widget-wd:not(.widget-wd--preview) .widget-wd__goal-main {
