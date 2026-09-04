@@ -68,6 +68,11 @@
 
   // ========== КОНФИГУРАЦИЯ ==========
 
+  // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, ведро 2)
+  const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const V4_WARN_1 = 'var(--v4-warn-1, #d99a63)';
+  const V4_WARN_SOFT_GLOW = `color-mix(in srgb, ${V4_WARN_SOFT} 60%, transparent)`;
+
   /**
    * Пороги уровней (XP необходимый для достижения уровня)
    * Уровень 1 = 0 XP, Уровень 2 = 100 XP, и т.д.
@@ -107,7 +112,7 @@
     { min: 1, max: 4, title: 'Новичок', icon: '🌱', color: '#94a3b8' },
     { min: 5, max: 9, title: 'Ученик', icon: '📚', color: '#3b82f6' },
     { min: 10, max: 14, title: 'Практик', icon: '💪', color: '#22c55e' },
-    { min: 15, max: 19, title: 'Эксперт', icon: '⭐', color: '#eab308' },
+    { min: 15, max: 19, title: 'Эксперт', icon: '⭐', color: V4_WARN_SOFT },
     { min: 20, max: 25, title: 'Мастер', icon: '👑', color: '#a855f7' }
   ];
 
@@ -3336,7 +3341,7 @@
       transform: translateX(-50%);
       font-size: ${isCombo ? '18px' : '16px'};
       font-weight: 700;
-      color: ${isCombo ? '#f59e0b' : '#fbbf24'};
+      color: ${isCombo ? V4_WARN_1 : V4_WARN_SOFT};
       text-shadow: 0 2px 8px rgba(0,0,0,0.3);
       pointer-events: none;
       z-index: 9999;
@@ -3380,8 +3385,8 @@
       top: ${sourceRect.top + sourceRect.height / 2}px;
       font-size: 16px;
       font-weight: 700;
-      color: #fbbf24;
-      text-shadow: 0 0 8px rgba(251, 191, 36, 0.6);
+      color: ${V4_WARN_SOFT};
+      text-shadow: 0 0 8px ${V4_WARN_SOFT_GLOW};
       pointer-events: none;
       z-index: 1150;
       transform: translate(-50%, -50%);
