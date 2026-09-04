@@ -1,0 +1,329 @@
+{
+  "zone": "strength-builder",
+  "scope": "heys_strength_proposal_ui_v1.js",
+  "generated": "2026-09-04",
+  "agent": "proposal-ui subagent",
+  "architecture": {
+    "canonical": "apps/web/strength/heys_strength_proposal_ui_v1.js",
+    "exhausted": false,
+    "note": "Файл не исчерпан: ProposalCard/Review/Strip/Outcome/ProgramDoneScreen и describePlanEdit/describeSupersetBoundaries живут здесь. Полоса 14b не уехала — ProposalStrip рендерится из heys_strength_builder_ui_v1.js:1277 (read-only). Монтаж и accept/decline/expire — heys_day_trainings_v1.js:4307–4357, 4136–4161. Ядро — heys_kernel_strength_v1.js acceptPlanProposal/declinePlanProposal/expirePlanProposal/applyPlanEdit. SupersetBoundariesBody — heys_strength_superset_ui_v1.js:1527+. ProposalOutcome на итогах — heys_strength_finish_ui_v1.js:349."
+  },
+  "summary": {
+    "contractLines": 42,
+    "codeAligned": 14,
+    "needsCode": 24,
+    "exhausted": false,
+    "frameRowsTotal": 279,
+    "frameRowsInHandoff": 13,
+    "outOfScopeNote": "Перенос/пропуск дня, куратор в зале, вид · сравнение ветвей — вне proposal_ui; закрывает day_trainings/superset_ui/750 или протокол."
+  },
+  "rows": [
+    {
+      "key": "границы (scope)",
+      "recommend": "—",
+      "fDraft": "proposal_ui — presentation слой правки куратора (кадры 14a–14c, 15b, 16e). Бизнес-правила и applyPlanEdit — kernel; монтаж — day_trainings + builder_ui + finish_ui.",
+      "codePath": "apps/web/strength/heys_strength_proposal_ui_v1.js",
+      "note": "Служебная строка handoff."
+    },
+    {
+      "key": "правило, из которого всё следует",
+      "recommend": "=",
+      "fDraft": "Отмеченные подходы не трогаются: describePlanEdit вызывает ks.applyPlanEdit и строит frozen/ahead из результата, не из сравнения списков на глаз. apps/web/strength/heys_strength_proposal_ui_v1.js:70–124; kernel applyPlanEdit :745+.",
+      "codePath": "proposal_ui describePlanEdit + kernel applyPlanEdit",
+      "note": "Контрактная строка; геометрия кадров — владелец 750."
+    },
+    {
+      "key": "отмеченный подход не меняется ничем и никогда",
+      "recommend": "=",
+      "fDraft": "Инвариант ядра; UI только показывает frozen-блок в ProposalReview. kernel-strength + kernel-plan-edit.test.js.",
+      "codePath": "apps/web/_kernel/heys_kernel_strength_v1.js applyPlanEdit",
+      "note": "Вердикт уже =; proposal_ui не дублирует логику."
+    },
+    {
+      "key": "незакрытые подходы начатого упражнения править можно",
+      "recommend": "=",
+      "fDraft": "ahead.kind=changed с before/after из openTailSummary — apps/web/strength/heys_strength_proposal_ui_v1.js:106–111.",
+      "codePath": "proposal_ui describePlanEdit",
+      "note": "Вердикт уже =."
+    },
+    {
+      "key": "начатое упражнение нельзя убрать из плана",
+      "recommend": "=",
+      "fDraft": "Kernel отклоняет remove начатого; UI показывает removed только для не начатых. strength-proposal-ui.test.js accept с done approach.",
+      "codePath": "kernel applyPlanEdit",
+      "note": "Вердикт уже =."
+    },
+    {
+      "key": "граница защиты — подход",
+      "recommend": "=",
+      "fDraft": "ProposalReview prose «Сделанное не тронется» + frozen list; describePlanEdit frozen[] по hasDoneApproach. proposal_ui :303–305, 385–397.",
+      "codePath": "proposal_ui ProposalReview + describePlanEdit",
+      "note": "Кадр Л3; 20 frame-строк ? — геометрия/CSS, не логика."
+    },
+    {
+      "key": "принимается только целиком",
+      "recommend": "=",
+      "fDraft": "acceptPlanProposal без чекбоксов по упражнениям; ProposalCard/Review — одна кнопка «Принять»/«Взять правку». day_trainings acceptProposal :4321–4327.",
+      "codePath": "kernel acceptPlanProposal + proposal_ui ProposalCard",
+      "note": "Вердикт уже =."
+    },
+    {
+      "key": "живое предложение всегда одно",
+      "recommend": "=",
+      "fDraft": "plan.proposal один объект; pendingPlanProposal возвращает null после accept/decline/expire. kernel :1066+; strength-proposal-ui.test.js «второй раз не применяется».",
+      "codePath": "kernel pendingPlanProposal",
+      "note": "Вердикт уже =; кадр Л4 — 17 frame ? на геометрию."
+    },
+    {
+      "key": "где живёт предложение куратора — решено",
+      "recommend": "=",
+      "fDraft": "ProposalCard на дне до старта (proposalBlocksDay); полоска ProposalStrip в конструкторе после первого подхода. day_trainings :4316–4357; builder_ui :1277.",
+      "codePath": "day_trainings + proposal_ui ProposalCard/Strip",
+      "note": "Вердикт уже =; ветка чата снята протоколом."
+    },
+    {
+      "key": "у предложения три исхода, и все нарисованы",
+      "recommend": "≠",
+      "fDraft": "Kernel: accept/decline/expire (strength-proposal-ui.test.js). Полноэкранных кадров Л10–Л12 («План обновлён», «предложение отклонено», «без ответа») в proposal_ui нет — только смена plan.proposal.status и частичный ProposalOutcome на итогах.",
+      "codePath": "kernel accept/decline/expire; proposal_ui ProposalOutcome partial",
+      "note": "59 frame-строк Исход · * — ?; нужен отдельный UI scope или ≠ пакетом."
+    },
+    {
+      "key": "молчаливого «не применилось» не бывает",
+      "recommend": "=",
+      "fDraft": "ProposalOutcome при accepted+rejected[]: applied/rejected rows с REASONS, copy «Эта же строка уйдёт ему». proposal_ui :451–495; finish_ui :349.",
+      "codePath": "proposal_ui ProposalOutcome",
+      "note": "Кадр D2 / Правка легла не полностью; 9 frame = на CSS уже стоят."
+    },
+    {
+      "key": "связка меняется целиком",
+      "recommend": "=",
+      "fDraft": "describeSupersetBoundaries: replacements[] с beforeLines/afterLines для не начатой связки. proposal_ui :211–215; SupersetBoundariesBody superset_ui :1527+.",
+      "codePath": "proposal_ui describeSupersetBoundaries + superset_ui SupersetBoundariesBody",
+      "note": "23 frame Связка · границы правки уже =."
+    },
+    {
+      "key": "начатая связка заморожена",
+      "recommend": "=",
+      "fDraft": "frozen[] с badge «закрыта», title «Связка X · раунд N из M». proposal_ui :198–207.",
+      "codePath": "proposal_ui describeSupersetBoundaries",
+      "note": "Сверено strength-superset-boundaries-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "пропущен сегодня и пропущен раньше — два разных случая",
+      "recommend": "?",
+      "fDraft": "Канвас Л5 vs Л6: замена на месте vs отдельная тренировка. proposalBlocksDay не смотрит plan.status skipped — только hasDoneApproach; отдельного UI «пропущен раньше» нет (22 frame уже ≠).",
+      "codePath": "day_trainings proposalBlocksDay :4316–4318",
+      "note": "Нужно решение: разрешить proposal на skipped (серверный guard в канвасе) + отдельный кадр Л6."
+    },
+    {
+      "key": "сторона куратора видит исход",
+      "recommend": "—",
+      "fDraft": "Вне proposal_ui: кадр Л9 «Правка · сторона куратора» (18 frame ?) — кураторский кабинет, не клиентский proposal_ui.",
+      "codePath": "out of scope → curator UI",
+      "note": "Не закрывать из proposal_ui handoff."
+    },
+    {
+      "key": "вид · кадры правки куратора",
+      "recommend": "?",
+      "fDraft": "ProposalCard/Review/Strip в proposal_ui; стили .sb-proposal-* в 750-strength-builder.css. Контрактный тест strength-proposal-v4-canvas-contract.test.js покрывает знаки/копию, не все 98+ frame-строк Л1–Л5.",
+      "codePath": "proposal_ui + 750-strength-builder.css (владелец 750)",
+      "note": "Перед = — построчная сверка кадров Л1–Л5 владельцем 750."
+    },
+    {
+      "key": "вид · исходы предложения",
+      "recommend": "≠",
+      "fDraft": "Три полноэкранных исхода (Л10–Л12) не реализованы как отдельные экраны; есть kernel status + ProposalOutcome на finish.",
+      "codePath": "missing UI screens",
+      "note": "58 frame ? → batch ≠ или отдельная задача на outcome screens."
+    },
+    {
+      "key": "вид · сравнение ветвей принятия",
+      "recommend": "—",
+      "fDraft": "Протокол: ветка А (кнопка в чате) снята; реализована ветка Б (карточка дня). Кадры оставлены для сравнения, не для прода.",
+      "codePath": "protocol only",
+      "note": "Не scope proposal_ui."
+    },
+    {
+      "key": "итог программы называет рост, а не провалы",
+      "recommend": "=",
+      "fDraft": "ProgramDoneScreen: hero «N из M», programGrowth rows или held block, skips одной строкой без имён. proposal_ui :505–563; kernel programGrowth.",
+      "codePath": "proposal_ui ProgramDoneScreen",
+      "note": "Контрактная строка; кадры Программа пройдена · NN — см. ниже."
+    },
+    {
+      "key": "Правка · план ещё не начат (кадр Л1)",
+      "recommend": "?",
+      "fDraft": "ProposalCard not started: badge «{who} поменял план», «Принять план», список diff.ahead. proposal_ui :309–348; activity-proposal-card-frame.test.js.",
+      "codePath": "proposal_ui ProposalCard + day_trainings :4319",
+      "note": "23 frame ? — геометрия .sb-proposal-list--card / .cdIn; логика на месте."
+    },
+    {
+      "key": "Правка · клиент уже начал (кадр Л2)",
+      "recommend": "?",
+      "fDraft": "ProposalReview: frozen + ahead + boundaries; заголовок «Что поменял {who}». proposal_ui :356–424; openProposalReview :588+.",
+      "codePath": "proposal_ui ProposalReview",
+      "note": "35 frame (2=, 33 ?); 2 = уже по CSS frozen title."
+    },
+    {
+      "key": "Правка · граница защиты (кадр Л3)",
+      "recommend": "?",
+      "fDraft": "Тот же ProposalReview/describePlanEdit; кадр про «сбавь вес» — copy в proposal.note, не отдельный экран.",
+      "codePath": "proposal_ui ProposalReview",
+      "note": "20 frame ? — visual сверка с Л3."
+    },
+    {
+      "key": "Правка · одно живое предложение (кадр Л4)",
+      "recommend": "=",
+      "fDraft": "Один plan.proposal; новое перезаписывает pending через kernel setProposal (не очередь). UI не рисует «прочитано».",
+      "codePath": "kernel + proposal_ui",
+      "note": "17 frame ? — визуал приглушённого снятого; механика =."
+    },
+    {
+      "key": "Правка · пропущен сегодня (кадр Л5)",
+      "recommend": "?",
+      "fDraft": "Канвас: замена на месте, отказ «не сегодня» без причины. ProposalCard может показаться на skipped если proposalBlocksDay; declinePlanProposal без формы причины. Нет копии «не сегодня» — кнопка «Оставить прежнюю».",
+      "codePath": "proposal_ui ProposalCard onDecline + kernel declinePlanProposal",
+      "note": "20 frame ?; проверить server guard skipped+proposal."
+    },
+    {
+      "key": "Правка · пропущен раньше (кадр Л6)",
+      "recommend": "≠",
+      "fDraft": "Отдельный исход/экран для прошедшего пропущенного дня в клиентском UI отсутствует — 22 frame уже ≠.",
+      "codePath": "not implemented",
+      "note": "Исчерпано для proposal_ui: код не планировался здесь; замена — новая тренировка на свободный день (day_trainings move)."
+    },
+    {
+      "key": "Исход · правка принята (кадр Л10)",
+      "recommend": "≠",
+      "fDraft": "Нет полноэкрана «План обновлён · N изменений» с ярусами frozen/changed после accept; клиент остаётся на дне/конструкторе.",
+      "codePath": "missing — kernel sets status accepted",
+      "note": "23 frame ? → рекомендую ≠ пакетом или отложить до product Q."
+    },
+    {
+      "key": "Исход · отказ (кадр Л11)",
+      "recommend": "≠",
+      "fDraft": "Нет экрана «предложение отклонено» + «Посмотреть, что он предлагал»; decline только меняет status.",
+      "codePath": "kernel declinePlanProposal",
+      "note": "18 frame ?."
+    },
+    {
+      "key": "Исход · без ответа (кадр Л12)",
+      "recommend": "=",
+      "fDraft": "expirePlanProposal при onFinishProposal (day_trainings :4136–4141); предложение гаснет, workoutLog не меняется. strength-proposal-ui.test.js.",
+      "codePath": "kernel expirePlanProposal + day_trainings onFinishProposal",
+      "note": "17 frame ? на визуал «Тренировка закрыта» — экран не рисуется, поведение =."
+    },
+    {
+      "key": "Правка · сторона куратора (кадр Л9)",
+      "recommend": "—",
+      "fDraft": "Кураторский вид исхода — вне proposal_ui (18 frame ?).",
+      "codePath": "curator cabinet / out of scope",
+      "note": "Handoff для другого владельца."
+    },
+    {
+      "key": "Правка легла не полностью (кадр D2 / 15b)",
+      "recommend": "?",
+      "fDraft": "ProposalOutcome: title/prose/rows is-applied|is-rejected. 9 frame = на типографику, 9 ? на остаток кадра.",
+      "codePath": "proposal_ui ProposalOutcome + 750-strength-builder.css",
+      "note": "Владелец 750 закрывает ? после computed на sand+blue."
+    },
+    {
+      "key": "Программа пройдена (кадр 16e)",
+      "recommend": "≠",
+      "fDraft": "ProgramDoneScreen есть (hero 9 из 12, growth/held, skips строка), но 21/25 frame ≠ — «не воспроизводит состав и геометрию canvas» (блоки рекордов, CTA, отступы).",
+      "codePath": "proposal_ui ProgramDoneScreen :505–563; day_trainings mount :3128+",
+      "note": "Частично в proposal_ui; доводка геометрии — владелец 750 + proposal_ui copy."
+    },
+    {
+      "key": "Связка · границы правки (кадр Д3)",
+      "recommend": "=",
+      "fDraft": "23/23 frame =; describeSupersetBoundaries + SupersetBoundariesBody + strength-superset-boundaries-v4-canvas-contract.test.js.",
+      "codePath": "proposal_ui :168–218 + superset_ui :1527+",
+      "note": "Закрыто; proposal_ui считает, superset_ui рисует."
+    },
+    {
+      "key": "ProposalCard · активная правка (14a started)",
+      "recommend": "=",
+      "fDraft": "Заголовок «{who} поправил сегодняшнюю тренировку», acceptLabel с счётчиком, «Оставить прежнюю», «что изменилось ›». proposal_ui :311–347.",
+      "codePath": "proposal_ui ProposalCard",
+      "note": "strength-proposal-v4-canvas-contract.test.js + activity-proposal-card-frame.test.js."
+    },
+    {
+      "key": "ProposalStrip · полоса в сессии (14b)",
+      "recommend": "=",
+      "fDraft": "Полоса не модалка: icon, «подправил план», «Сделанное не тронется», кнопка «Смотреть». proposal_ui :431–444; builder_ui mount :1277.",
+      "codePath": "proposal_ui ProposalStrip",
+      "note": "Полоса не уехала из proposal_ui."
+    },
+    {
+      "key": "openProposalReview · fullscreen слой",
+      "recommend": "=",
+      "fDraft": "TK.fullscreen.mount id strength-proposal-review; accept/decline до api.close. proposal_ui :588–608; day_trainings + builder onReviewProposal.",
+      "codePath": "proposal_ui openProposalReview",
+      "note": "Регресс сериализации в strength-proposal-ui.test.js."
+    },
+    {
+      "key": "describePlanEdit · публичный API",
+      "recommend": "=",
+      "fDraft": "Parts.describePlanEdit экспортирован для тестов/разбора; ядро — единственный источник diff.",
+      "codePath": "proposal_ui :619",
+      "note": "kernel-plan-edit.test.js — отдельно ядро."
+    },
+    {
+      "key": "перенос и пропуск — разные исходы",
+      "recommend": "—",
+      "fDraft": "Вне proposal_ui: PlanCard/move/skip в heys_day_trainings_v1.js :4359+.",
+      "codePath": "day_trainings PlanCard",
+      "note": "Исчерпано для proposal_ui."
+    },
+    {
+      "key": "перенос — не отдельный механизм",
+      "recommend": "—",
+      "fDraft": "transferId/movedFrom в day_trainings, не proposal_ui. 22 frame Перенос · * — зона day_trainings.",
+      "codePath": "day_trainings move flow",
+      "note": "Исчерпано для proposal_ui."
+    },
+    {
+      "key": "третий пропуск подряд — сигнал куратору",
+      "recommend": "≠",
+      "fDraft": "В strength/ нет счётчика трёх подряд; SkipSheet пишет причину (superset_ui). Вне proposal_ui.",
+      "codePath": "not in proposal_ui",
+      "note": "Исчерпано для proposal_ui."
+    },
+    {
+      "key": "случай 7 · запись куратора поверх вашей",
+      "recommend": "—",
+      "fDraft": "Curator stamp после finish — builder_ui/superset_ui, не proposal plan-edit flow.",
+      "codePath": "builder_ui curator meta",
+      "note": "Исчерпано для proposal_ui."
+    },
+    {
+      "key": "вид · замена связки",
+      "recommend": "=",
+      "fDraft": "SupersetBoundariesBody в ProposalReview; вердикт уже ссылается proposal_ui+superset_ui.",
+      "codePath": "proposal_ui ProposalReview :377–384",
+      "note": "Дублирует Связка · границы правки."
+    },
+    {
+      "key": "Правка легла не полностью · текст",
+      "recommend": "=",
+      "fDraft": "ProposalOutcome copy «легла не полностью» + applied/rejected — strength-proposal-v4-canvas-contract.test.js.",
+      "codePath": "proposal_ui ProposalOutcome",
+      "note": "Frame-level copy row."
+    }
+  ],
+  "tests": [
+    "apps/web/__tests__/strength-proposal-ui.test.js",
+    "apps/web/__tests__/strength-proposal-v4-canvas-contract.test.js",
+    "apps/web/__tests__/activity-proposal-card-frame.test.js",
+    "apps/web/__tests__/kernel-plan-edit.test.js",
+    "apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js"
+  ],
+  "gates": {
+    "drift": "node scripts/ui-v4-check-contract-drift.mjs --zone strength-builder",
+    "undefinedRoles": "node scripts/ui-v4-check-undefined-roles.mjs",
+    "roleFallbackTruth": "pnpm exec vitest run apps/web/__tests__/role-fallback-truth.test.js",
+    "proposalTests": "pnpm exec vitest run apps/web/__tests__/strength-proposal-ui.test.js apps/web/__tests__/strength-proposal-v4-canvas-contract.test.js apps/web/__tests__/activity-proposal-card-frame.test.js"
+  }
+}
