@@ -17,7 +17,12 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '..', '..');
-export const VERDICTS_DIR = path.join(ROOT, 'docs/ui/verdicts');
+// Guard tests redirect writes to a temp copy (HEYS_VERDICT_GUARD_TEST + HEYS_VERDICTS_DIR).
+export const VERDICTS_DIR = (
+  process.env.HEYS_VERDICT_GUARD_TEST === '1' && process.env.HEYS_VERDICTS_DIR
+)
+  ? path.resolve(process.env.HEYS_VERDICTS_DIR)
+  : path.join(ROOT, 'docs/ui/verdicts');
 
 export const VERDICT_SCHEMA_VERSION = 'typed-v1';
 export const ALLOWED_MISMATCH_REASON_CODES = Object.freeze([

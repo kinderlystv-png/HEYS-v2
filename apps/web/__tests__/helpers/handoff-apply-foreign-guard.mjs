@@ -1,9 +1,9 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { applyVerdictToRow } from '../../../../scripts/lib/ui-v4-verdicts.mjs';
+import { createVerdictGuardSandbox, runGuardNodeScript } from './verdict-guard-sandbox.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '../../../..');
@@ -132,36 +132,28 @@ export function runPreFixBrokenApply(zone, handoffPath, root = ROOT) {
 }
 
 /**
- * Run production buildBatchMap + applyBatchMap against a fixture zone written to the real zone path.
- * Restores the production file in finally.
+ * Run production .sb-750-verdict-batch-apply.mjs against a fixture zone in a temp verdicts dir.
+ * Never touches docs/ui/verdicts/strength-builder.json.
  */
 export async function runProductionApplyOnFixture(fixtureZone, handoffPath, root = ROOT) {
-  const zonePath = path.join(root, 'docs/ui/verdicts/strength-builder.json');
-  const backupPath = path.join(os.tmpdir(), `heys-sb-zone-backup-${process.pid}.json`);
-  fs.copyFileSync(zonePath, backupPath);
-  fs.writeFileSync(zonePath, `${JSON.stringify(fixtureZone, null, 2)}\n`, 'utf8');
+  const sandbox = createVerdictGuardSandbox(root, { 'strength-builder': fixtureZone });
 
   try {
-    const { buildBatchMap, applyBatchMap } = await import(
-      pathToFileURL(path.join(root, 'scripts/.sb-750-verdict-batch-apply.mjs')).href
-    );
-    const { readZone } = await import(
-      pathToFileURL(path.join(root, 'scripts/lib/ui-v4-verdicts.mjs')).href
-    );
-
     const handoffKeys = loadHandoffKeys(handoffPath);
     const beforeSnap = snapshotForeignRowStrings(fixtureZone.rows, handoffKeys);
 
-    const ctx = buildBatchMap([handoffPath], { withInline: false, allowDowngrade: false, log: () => {} });
-    let applyError = null;
-    try {
-      applyBatchMap(ctx.batchMap, { dryRun: false, log: () => {} });
-    } catch (error) {
-      applyError = error;
-    }
+    const script = path.join(root, 'scripts/.sb-750-verdict-batch-apply.mjs');
+    const run = await runGuardNodeScript(
+      script,
+      [`--file=${handoffPath}`],
+      { cwd: root, env: sandbox.guardEnv() },
+    );
 
-    const afterZone = readZone('strength-builder');
+    const afterZone = JSON.parse(fs.readFileSync(sandbox.zonePath('strength-builder'), 'utf8'));
     const violations = collectForeignViolations(beforeSnap, afterZone.rows);
+    const applyError = run.code !== 0
+      ? new Error(`batch apply exit ${run.code}: ${(run.stderr || run.stdout).trim()}`)
+      : null;
 
     return {
       handoffKeys,
@@ -169,10 +161,9 @@ export async function runProductionApplyOnFixture(fixtureZone, handoffPath, root
       violations,
       applyError,
       afterZone,
-      queued: ctx.batchMap.size,
+      queued: handoffKeys.size,
     };
   } finally {
-    fs.copyFileSync(backupPath, zonePath);
-    fs.unlinkSync(backupPath);
+    sandbox.cleanup();
   }
 }

@@ -1,6 +1,4 @@
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import {
@@ -8,6 +6,7 @@ import {
   formatForeignViolations,
   snapshotForeignRowStrings,
 } from './handoff-apply-foreign-guard.mjs';
+import { createVerdictGuardSandbox, runGuardNodeScript } from './verdict-guard-sandbox.mjs';
 import {
   GUARD_FOREIGN_PREFIX,
   detectStaticWholesaleRisk,
@@ -83,48 +82,10 @@ export function zoneFilePath(root, zoneId) {
 /**
  * @param {string} scriptPath
  * @param {string[]} args
- * @param {{ cwd: string, timeoutMs?: number }} options
+ * @param {{ cwd: string, timeoutMs?: number, env?: Record<string, string> }} options
  */
-export function runNodeScript(scriptPath, args, { cwd, timeoutMs = 180_000 }) {
-  return new Promise((resolve) => {
-    const child = spawn(process.execPath, [scriptPath, ...args], {
-      cwd,
-      env: {
-        ...process.env,
-        HEYS_VERDICT_GUARD_TEST: '1',
-        NODE_NO_WARNINGS: '1',
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: true,
-    });
-
-    let stdout = '';
-    let stderr = '';
-    let timedOut = false;
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill('SIGTERM');
-    }, timeoutMs);
-
-    child.stdout?.on('data', (chunk) => {
-      stdout += chunk.toString();
-    });
-    child.stderr?.on('data', (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on('close', (code, signal) => {
-      clearTimeout(timer);
-      resolve({
-        code: timedOut ? 124 : (code ?? 1),
-        signal,
-        stdout,
-        stderr,
-        timedOut,
-      });
-    });
-  });
+export function runNodeScript(scriptPath, args, { cwd, timeoutMs = 180_000, env: extraEnv = {} }) {
+  return runGuardNodeScript(scriptPath, args, { cwd, timeoutMs, env: extraEnv });
 }
 
 const zoneLocks = new Map();
@@ -158,31 +119,6 @@ async function writeTextFile(filePath, text, attempts = 8) {
     }
   }
   throw lastError;
-}
-
-async function copyFileWithRetry(src, dest, attempts = 8) {
-  let lastError;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    try {
-      fs.copyFileSync(src, dest);
-      return;
-    } catch (error) {
-      lastError = error;
-      await sleep(40 * (attempt + 1));
-    }
-  }
-  throw lastError;
-}
-
-async function restoreZoneFromBackup(backupPath, zonePath) {
-  if (!fs.existsSync(backupPath)) return;
-  try {
-    await copyFileWithRetry(backupPath, zonePath);
-  } catch {
-    const restored = await readJsonFile(backupPath);
-    await writeTextFile(zonePath, `${JSON.stringify(restored, null, 2)}\n`);
-  }
-  fs.unlinkSync(backupPath);
 }
 
 /**
@@ -253,15 +189,15 @@ export async function testVerdictWriterForeignGuard(root, writer) {
  * @param {VerdictWriterMeta} writer
  */
 async function testVerdictWriterForeignGuardUnlocked(root, writer) {
-  const zonePath = zoneFilePath(root, writer.zoneId);
-  if (!fs.existsSync(zonePath)) {
+  const liveZonePath = zoneFilePath(root, writer.zoneId);
+  if (!fs.existsSync(liveZonePath)) {
     return { writer, status: 'skip', detail: `zone file missing: ${writer.zoneId}.json` };
   }
 
-  const backupPath = path.join(os.tmpdir(), `heys-verdict-guard-${process.pid}-${writer.zoneId}.json`);
-  await copyFileWithRetry(zonePath, backupPath);
+  const sandbox = createVerdictGuardSandbox(root, { [writer.zoneId]: 'copy-from-live' });
 
   try {
+    const zonePath = sandbox.zonePath(writer.zoneId);
     const zone = await readJsonFile(zonePath);
     if (!zone.rows || typeof zone.rows !== 'object') {
       return { writer, status: 'skip', detail: 'zone has no rows object' };
@@ -271,7 +207,10 @@ async function testVerdictWriterForeignGuardUnlocked(root, writer) {
     const beforeSnap = snapshotForeignRowStrings(zone.rows, injectedKeys);
     await writeTextFile(zonePath, `${JSON.stringify(zone, null, 2)}\n`);
 
-    const run = await runNodeScript(writer.absPath, writer.runArgs || [], { cwd: root });
+    const run = await runNodeScript(writer.absPath, writer.runArgs || [], {
+      cwd: root,
+      env: sandbox.guardEnv(),
+    });
 
     if (run.timedOut) {
       return { writer, status: 'error', detail: 'subprocess timeout', exitCode: run.code };
@@ -311,7 +250,7 @@ async function testVerdictWriterForeignGuardUnlocked(root, writer) {
 
     return { writer, status: 'pass', detail: 'foreign rows byte-identical', exitCode: 0 };
   } finally {
-    await restoreZoneFromBackup(backupPath, zonePath);
+    sandbox.cleanup();
   }
 }
 
@@ -327,14 +266,13 @@ async function testSafeSetVerdictCli(root, writer) {
 
 async function testSafeSetVerdictCliUnlocked(root, writer) {
   const zoneId = 'strength-builder';
-  const zonePath = zoneFilePath(root, zoneId);
-  const backupPath = path.join(os.tmpdir(), `heys-verdict-guard-safe-${process.pid}.json`);
-  await copyFileWithRetry(zonePath, backupPath);
+  const sandbox = createVerdictGuardSandbox(root, { [zoneId]: 'copy-from-live' });
 
   const targetKey = `${GUARD_FOREIGN_PREFIX}safe-target`;
   const foreignKey = `${GUARD_FOREIGN_PREFIX}safe-foreign`;
 
   try {
+    const zonePath = sandbox.zonePath(zoneId);
     const zone = await readJsonFile(zonePath);
     zone.rows[targetKey] = { v: '?', f: 'before safe cli', h: 'safetarget01' };
     zone.rows[foreignKey] = JSON.parse(JSON.stringify(FOREIGN_ROW_TEMPLATE.alpha));
@@ -345,7 +283,7 @@ async function testSafeSetVerdictCliUnlocked(root, writer) {
     const run = await runNodeScript(
       script,
       [zoneId, targetKey, '=', 'safe cli applied fact'],
-      { cwd: root },
+      { cwd: root, env: sandbox.guardEnv() },
     );
 
     const afterZone = await readJsonFile(zonePath);
@@ -367,7 +305,7 @@ async function testSafeSetVerdictCliUnlocked(root, writer) {
     }
     return { writer, status: 'pass', detail: 'single-key CLI preserves foreign rows' };
   } finally {
-    await restoreZoneFromBackup(backupPath, zonePath);
+    sandbox.cleanup();
   }
 }
 
