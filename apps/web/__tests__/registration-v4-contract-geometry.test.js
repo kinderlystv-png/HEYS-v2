@@ -129,6 +129,15 @@ describe('регистрация v4: решения контракта', () => {
 
   // Цвета снятой системы на шагах профиля: белый фон невыбранной цели, серые
   // рамки полей и --color-gray-500 у подсказок.
+  it('персональные данные · 08/10/11 — плейсхолдеры и пояснение пола по контракту', () => {
+    expect(pwaCss).toMatch(/profile-personal-name input\[type="text"\]::placeholder[\s\S]*30%/);
+    expect(pwaCss).toMatch(/profile-personal-family input\[type="text"\]::placeholder[\s\S]*42%/);
+    expect(profile).toMatch(/fontSize: 11, fontWeight: 500, lineHeight: 1\.5, marginTop: 6, color: INK_DATA/);
+    expect(profile).toMatch(/color: 'var\(--v4-ink, #201e1d\)'/);
+  });
+
+  // Цвета снятой системы на шагах профиля: белый фон невыбранной цели, серые
+  // рамки полей и --color-gray-500 у подсказок.
   it('на сведённых шагах не осталось цветов снятой системы', () => {
     // Комментарии не в счёт: в них эти имена названы как то, что убрано.
     const code = profile.replace(/\/\/[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');

@@ -559,7 +559,7 @@
     // «вид шага»: поля экрана общие для слоя (.mc-step-content 18px) — свой p-4/p-3 давал 34px по бокам
     return React.createElement('div', { className: 'profile-personal-step flex flex-col gap-4' },
       React.createElement('div', {
-        style: { fontSize: 20, fontWeight: 700, color: '#201e1d', marginTop: 6, lineHeight: 1.3 }
+        style: { fontSize: 20, fontWeight: 700, color: 'var(--v4-ink, #201e1d)', marginTop: 6, lineHeight: 1.3 }
       }, 'Расскажите о себе'),
       React.createElement('div', { className: 'profile-personal-name flex flex-col gap-2' },
         React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
@@ -665,8 +665,9 @@
         !gender && isValidGivenName(firstName)
           ? React.createElement('div', { className: 'text-xs font-semibold', style: { color: '#a1471c' } },
             'Выберите один вариант')
-          : React.createElement('div', { className: 'text-xs', style: { color: INK_DATA } },
-            'Формула основного обмена у мужчин и женщин разная.')
+          : React.createElement('div', {
+            style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, marginTop: 6, color: INK_DATA }
+          }, 'Формула основного обмена у мужчин и женщин разная.')
       ),
 
       // Дата рождения (WheelPickers v2)
