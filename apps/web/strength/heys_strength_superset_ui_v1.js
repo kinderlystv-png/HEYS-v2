@@ -92,10 +92,16 @@
   }
 
   function flatApproachKey(members, SK) {
-    return members.map(function (member) {
-      const count = workApproaches(member, SK).length;
-      return count + ' ' + ruPlural(count, 'подход', 'подхода', 'подходов');
-    }).join(' и ');
+    const counts = members.map(function (member) {
+      return workApproaches(member, SK).length;
+    });
+    if (!counts.length) return '';
+    if (counts.length === 1) {
+      return counts[0] + ' ' + ruPlural(counts[0], 'подход', 'подхода', 'подходов');
+    }
+    const last = counts[counts.length - 1];
+    return counts.slice(0, -1).map(String).join(' и ')
+      + ' и ' + last + ' ' + ruPlural(last, 'подход', 'подхода', 'подходов');
   }
 
   function roundCellLabel(exercise, approach) {
