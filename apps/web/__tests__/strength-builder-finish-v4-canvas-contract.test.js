@@ -14,23 +14,35 @@ const CANVAS_COLORS = Object.freeze({
   ac: '#8a4a20', ac2: '#a1471c', acs: '#c67139', onAcs: '#2b1608',
   gr: '#5c6a45', grBg: '#eaefe0', ink56: 'rgba(0, 0, 0, .56)', ink55: 'rgba(0, 0, 0, .55)'
 });
-const FINISH_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8')
+const BLUE_COLORS = Object.freeze({
+  bg: '#ffffff', c1: '#eef3f9', c2: '#e2ecf6', tint: '#e2ecf6', tx: '#101826',
+  ac: '#1d5e96', ac2: '#1d5e96', acs: '#2e7cc0', onAcs: '#ffffff',
+  gr: '#5c6a45', grBg: '#eaefe0', ink56: 'rgba(16, 24, 38, 0.64)', ink55: 'rgba(16, 24, 38, 0.55)'
+});
+
+function finishPaletteCss(paletteName) {
+  const palette = paletteName === 'blue' ? BLUE_COLORS : CANVAS_COLORS;
+  const inkRgb = paletteName === 'blue' ? '16, 24, 38' : '0, 0, 0';
   // jsdom does not resolve nested custom properties inside rgba() and rejects
   // env() in shorthand. Compile only the canonical Canvas palette for this
   // computed-style regression; the production stylesheet remains untouched.
-  .replaceAll('var(--bg)', CANVAS_COLORS.bg)
-  .replaceAll('var(--c1)', CANVAS_COLORS.c1)
-  .replaceAll('var(--c2)', CANVAS_COLORS.c2)
-  .replaceAll('var(--tint)', CANVAS_COLORS.tint)
-  .replaceAll('var(--tx)', CANVAS_COLORS.tx)
-  .replaceAll('var(--ink)', '0, 0, 0')
-  .replaceAll('var(--ac)', CANVAS_COLORS.ac)
-  .replaceAll('var(--ac2)', CANVAS_COLORS.ac2)
-  .replaceAll('var(--acs)', CANVAS_COLORS.acs)
-  .replaceAll('var(--on-acs)', CANVAS_COLORS.onAcs)
-  .replaceAll('var(--gr)', CANVAS_COLORS.gr)
-  .replaceAll('var(--gr-bg)', CANVAS_COLORS.grBg)
-  .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
+  return fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8')
+    .replaceAll('var(--bg)', palette.bg)
+    .replaceAll('var(--c1)', palette.c1)
+    .replaceAll('var(--c2)', palette.c2)
+    .replaceAll('var(--tint)', palette.tint)
+    .replaceAll('var(--tx)', palette.tx)
+    .replaceAll('var(--ink)', inkRgb)
+    .replaceAll('var(--ac)', palette.ac)
+    .replaceAll('var(--ac2)', palette.ac2)
+    .replaceAll('var(--acs)', palette.acs)
+    .replaceAll('var(--on-acs)', palette.onAcs)
+    .replaceAll('var(--gr)', palette.gr)
+    .replaceAll('var(--gr-bg)', palette.grBg)
+    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
+}
+
+const FINISH_CSS = finishPaletteCss('sand');
 
 function loadFinish() {
   if (!globalThis.window) globalThis.window = globalThis;
@@ -266,6 +278,12 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
       }],
       ['23', '.sb-finish-detail > .sb-finish-row--reason', null, { borderBottom: '0px' }],
       ['24', '.sb-finish-row--reason > span', null, { display: 'flex', flexDirection: 'column', gap: '3px' }],
+      ['25', '.sb-finish-row--reason small', null, {
+        fontSize: '11px', fontWeight: '500', lineHeight: '1.3', color: CANVAS_COLORS.ink56
+      }],
+      ['26', '.sb-finish-row--reason > b.is-quiet', '1 упр.', {
+        color: CANVAS_COLORS.ink56, fontSize: '12.5px', fontWeight: '600', lineHeight: '1', fontVariantNumeric: 'tabular-nums'
+      }],
       ['27', '.sb-finish-tier', 'Как оно прошло', {
         marginTop: '20px', marginBottom: '10px', color: CANVAS_COLORS.ac, fontSize: '10px', fontWeight: '700',
         lineHeight: '1', textTransform: 'uppercase'
@@ -352,7 +370,7 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
     ];
 
     expect(rows.map(([id]) => id)).toEqual([
-      ...Array.from({ length: 24 }, (_, index) => String(index + 1).padStart(2, '0')),
+      ...Array.from({ length: 26 }, (_, index) => String(index + 1).padStart(2, '0')),
       ...Array.from({ length: 33 }, (_, index) => String(index + 27).padStart(2, '0'))
         .filter((id) => id !== '58')
     ]);
@@ -391,6 +409,34 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
       if (actual !== expected) {
         mismatches.push({ id, selector, field: `authored.${property}`, expected, actual });
       }
+    });
+    expect(mismatches).toEqual([]);
+  });
+
+  it('держит акценты финала на синем наборе', () => {
+    finishStyle.textContent = `${BASE_CSS}\n${finishPaletteCss('blue')}`;
+    render(React.createElement(Finish.FinishScreen, canvasProps()));
+
+    const colorRows = [
+      ['27', '.sb-finish-tier', { color: BLUE_COLORS.ac }],
+      ['16', '.sb-finish-metric.is-accent .sb-finish-metric-line b', { color: BLUE_COLORS.ac }],
+      ['49', '.sb-finish-chart-column.is-latest > b', { color: BLUE_COLORS.ac }],
+      ['50', '.sb-finish-chart-column.is-latest > i', { backgroundColor: BLUE_COLORS.acs }],
+      ['59', '.sb-finish-done', { backgroundColor: BLUE_COLORS.acs, color: BLUE_COLORS.onAcs }]
+    ];
+    const mismatches = [];
+    colorRows.forEach(([id, selector, expectedStyle]) => {
+      const node = document.querySelector(selector);
+      if (!node) {
+        mismatches.push({ id, selector, field: 'selector', expected: 'present', actual: 'missing' });
+        return;
+      }
+      const actualStyle = getComputedStyle(node);
+      Object.entries(expectedStyle).forEach(([property, expected]) => {
+        if (actualStyle[property] !== expected) {
+          mismatches.push({ id, selector, field: `computed.${property}`, expected, actual: actualStyle[property], palette: 'blue' });
+        }
+      });
     });
     expect(mismatches).toEqual([]);
   });
