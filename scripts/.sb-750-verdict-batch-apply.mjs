@@ -32,42 +32,88 @@ function queueRow(source, rowKey, verdict, fact, options = {}) {
 }
 
 const handoffDir = path.join(ROOT, 'scripts');
-const handoffPattern = /^\.sb-.+-verdict-handoff\.json$/;
-const handoffFiles = fs.readdirSync(handoffDir)
-  .filter((name) => handoffPattern.test(name))
-  .sort()
-  .map((name) => path.join(handoffDir, name));
+const handoffPattern = /^\.sb-.+-verdict-handoff(?:-\d+)?\.json$/;
+const extraHandoffs = ['.sb-neq-audit-handoff.json'];
+const handoffFiles = [
+  ...fs.readdirSync(handoffDir)
+    .filter((name) => handoffPattern.test(name))
+    .sort()
+    .map((name) => path.join(handoffDir, name)),
+  ...extraHandoffs
+    .filter((name) => fs.existsSync(path.join(handoffDir, name)))
+    .map((name) => path.join(handoffDir, name)),
+];
 
 const loadedHandoffs = [];
+let skippedMissing = 0;
+
+function ingestStandardRow(source, row) {
+  const rowKey = row.key || row.contractLine;
+  if (!rowKey) {
+    console.warn(`skip row without key in ${source}`);
+    return;
+  }
+  if (!rows[rowKey]) {
+    skippedMissing += 1;
+    console.warn(`skip missing contract key in ${source}: ${rowKey}`);
+    return;
+  }
+  const verdict = row.verdict ?? row.recommend;
+  let fact = row.f ?? row.fDraft ?? '';
+  if (!verdict) {
+    console.warn(`skip row without verdict in ${source}: ${rowKey}`);
+    return;
+  }
+  if (!fact) {
+    console.warn(`skip row without fact in ${source}: ${rowKey}`);
+    return;
+  }
+  if (row.note) fact = `${fact} ${row.note}`;
+  const options = row.options || {};
+  if (verdict === '—') {
+    if (!options['na-kind']) {
+      options['na-kind'] = rowKey === 'границы' ? 'handoff' : 'foreign-zone';
+    }
+  }
+  if (row['na-kind']) options['na-kind'] = row['na-kind'];
+  if (row.reasonCode) options['reason-code'] = row.reasonCode;
+  if (row.decisionRef) options['decision-ref'] = row.decisionRef;
+  if (verdict === '≠') {
+    if (!options['reason-code']) options['reason-code'] = 'canvas-conflict';
+    if (!options['decision-ref']) {
+      options['decision-ref'] = row.decisionRef
+        || 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
+    }
+  }
+  queueRow(source, rowKey, verdict, fact, options);
+}
+
+function ingestNeqAuditRow(source, row) {
+  const rowKey = row.key;
+  if (!rowKey) return;
+  if (!rows[rowKey]) {
+    skippedMissing += 1;
+    console.warn(`skip missing contract key in ${source}: ${rowKey}`);
+    return;
+  }
+  const verdict = row.recommend;
+  if (!verdict) return;
+  let fact = row.fDraft || '';
+  if (row.note) fact = fact ? `${fact} ${row.note}` : row.note;
+  const options = {};
+  if (verdict === '≠') {
+    options['reason-code'] = 'canvas-conflict';
+    options['decision-ref'] = 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
+  }
+  queueRow(source, rowKey, verdict, fact, options);
+}
 
 for (const filePath of handoffFiles) {
   const source = path.basename(filePath);
   const handoff = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   loadedHandoffs.push(source);
-  for (const row of handoff.rows) {
-    const rowKey = row.key || row.contractLine;
-    if (!rowKey) {
-      console.warn(`skip row without key in ${source}`);
-      continue;
-    }
-    const options = row.options || {};
-    if (row.verdict === '—') {
-      if (!options['na-kind']) {
-        options['na-kind'] = row.key === 'границы' ? 'handoff' : 'foreign-zone';
-      }
-    }
-    if (row['na-kind']) options['na-kind'] = row['na-kind'];
-    if (row.reasonCode) options['reason-code'] = row.reasonCode;
-    if (row.decisionRef) options['decision-ref'] = row.decisionRef;
-    if (row.verdict === '≠') {
-      if (!options['reason-code']) options['reason-code'] = 'canvas-conflict';
-      if (!options['decision-ref']) {
-        options['decision-ref'] = row.decisionRef
-          || 'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754';
-      }
-    }
-    queueRow(source, rowKey, row.verdict, row.f, options);
-  }
+  const ingest = source === '.sb-neq-audit-handoff.json' ? ingestNeqAuditRow : ingestStandardRow;
+  for (const row of handoff.rows || []) ingest(source, row);
 }
 
 // Inline rows not yet in separate handoff chats (proposal L2, program-done hero)
@@ -95,6 +141,7 @@ let applied = 0;
 let skippedSame = 0;
 for (const [key, verdict, fact, options] of batchMap.values()) {
   const row = rows[key];
+  if (!row) continue;
   if (row.v === verdict && row.f === fact) {
     skippedSame += 1;
     continue;
@@ -110,5 +157,5 @@ console.log(`handoff files (${loadedHandoffs.length}): ${loadedHandoffs.join(', 
 for (const name of [...loadedHandoffs, 'inline-equals']) {
   if (perFileCounts[name]) console.log(`  ${name}: ${perFileCounts[name]} rows queued`);
 }
-console.log(`unique keys queued: ${batchMap.size}; applied ${applied}; skipped unchanged ${skippedSame}`);
+console.log(`unique keys queued: ${batchMap.size}; applied ${applied}; skipped unchanged ${skippedSame}; skipped missing ${skippedMissing}`);
 console.log(`totals: =${counts['=']} · ?=${counts['?']} · ≠=${counts['≠']} · —=${counts['—']} · всего ${Object.keys(rows).length}`);
