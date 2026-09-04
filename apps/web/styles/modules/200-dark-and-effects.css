@@ -344,10 +344,11 @@
   /* Green 400 */
 }
 
-/* Meal badges */
+/* Meal badges — warn-роли: на песочном/синем тёмном наборе тон внимания
+   следует палитре, не янтарной лестнице Tailwind. */
 [data-theme$="dark"] .meal-time-badge {
-  background: rgba(251, 146, 60, 0.2);
-  color: #fde68a;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 20%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .meal-type-label {
@@ -400,13 +401,13 @@
 }
 
 [data-theme$="dark"] .meal-time-badge-inside {
-  background: #78350f;
-  color: #fcd34d;
+  background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 35%, var(--v4-hero, #2f2820));
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .meal-time-badge-inside:hover {
-  background: #92400e;
+  background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 55%, var(--v4-hero, #2f2820));
 }
 }
 
@@ -596,11 +597,11 @@
 }
 
 [data-theme$="dark"] .insulin-almost .insulin-wave-label {
-  color: #fdba74;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 [data-theme$="dark"] .insulin-soon .insulin-wave-label {
-  color: #fcd34d;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .insulin-wave-progress {
@@ -624,11 +625,11 @@
 }
 
 [data-theme$="dark"] .insulin-almost .insulin-time-end {
-  color: #fdba74;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 [data-theme$="dark"] .insulin-soon .insulin-time-end {
-  color: #fcd34d;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .insulin-wave-suggestion {
@@ -644,14 +645,14 @@
 }
 
 [data-theme$="dark"] .insulin-almost .insulin-wave-suggestion {
-  background: rgba(251, 146, 60, 0.15);
-  color: #fdba74;
-  border-left-color: #fb923c;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 15%, transparent);
+  color: var(--v4-warn-text, #a1471c);
+  border-left-color: var(--v4-warn-1, #d99a63);
 }
 
 [data-theme$="dark"] .insulin-soon .insulin-wave-suggestion {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fcd34d;
+  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 15%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
   border-left-color: var(--v4-warn-soft, #c9922e);
 }
 
