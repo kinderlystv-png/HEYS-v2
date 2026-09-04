@@ -3811,7 +3811,7 @@
   --sb-tx: var(--v4-ink, #201e1d);
   --sb-mut: var(--v4-ink-data, rgba(32, 30, 29, 0.56));
   --sb-br: var(--v4-line, rgba(32, 30, 29, 0.1));
-  --sb-soft: var(--v4-c2, #efe3cf);
+  --sb-soft: var(--v4-accent-bg, #f0dcc6);
   --sb-acc: var(--v4-act-text, #8a4a20);
   --sb-acc-strong: var(--v4-act, #c67139);
   --sb-accbg: var(--v4-accent-bg, #f6e6dd);
