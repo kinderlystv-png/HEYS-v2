@@ -488,8 +488,8 @@
       "h": "44759456dbab"
     },
     "режим куратора": {
-      "v": "?",
-      "f": "старая причина ≠ (явный гард не закреплён) снята: heys_morning_checkin_v1.js:1257-1259 isCuratorSession() → false; hasPartialCoreCheckinPrefill + isCuratorAuthored проверены. Промоут в = — отдельная сверка кадра, не в аудите ≠, 2026-09-04",
+      "v": "=",
+      "f": "heys_morning_checkin_v1.js:1257-1259 isCuratorSession()→false — мастер самоотчёта только у клиента (morning-checkin-flow-resume.test.js:878-886); hasPartialCoreCheckinPrefill+coreCheckinDataMissing — core от куратора не открывает полный мастер (:889-899); isCuratorAuthored (models:1616-1623, MCP day.js _curatorEdits) + heys_day_main_block_v1.js:98-101 и heys_day_side_block_v1.js:175-184 «✎ куратор» — правки листом приходят плашкой; gamification:4453 — стрик не от чужой руки",
       "h": "42754c49e7d4"
     },
     "чек-ин не пройден до вечера": {
