@@ -256,7 +256,10 @@ describe('cold-start spinner mark', () => {
     expect(disc.body).not.toContain('filter');
     expect(disc.body).not.toMatch(/(^|[;\s])border\s*:/);
     expect(disc.body).not.toMatch(/(^|[;\s])outline\s*:/);
-    expect(css).toContain('--boot-disc: #efe3cf;');
+    // Песочный набор: тон диска — роль героя, а не литерал. Проверка сторожит
+    // роль и сохранённое значение: перевод на var() не должен ронять её, как
+    // это случилось 4 сентября при миграции литералов.
+    expect(css).toMatch(/--boot-disc:\s*var\(--v4-hero,\s*#efe3cf\)/);
   });
 
   it('splits the caption threshold from the reason threshold', () => {

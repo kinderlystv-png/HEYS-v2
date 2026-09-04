@@ -164,9 +164,13 @@ describe('добавление воды — канвас water-add v4, ветк�
   });
 
   it('тон воды один на все палитры, новых оттенков нет', () => {
-    expect(widgetsCss).toContain('--water-tone: #7d98a6');
-    expect(widgetsCss).toContain('--water-tone: #8fb3c2');
-    expect(widgetsCss).toContain('--water-tone: #3d7f9e');
+    // Тоны воды объявлены в файле своей зоны, а не в дашборде виджетов:
+    // переехали коммитом 3645f3c9e вместе со сведением зоны. Проверка
+    // сторожит наличие трёх ступеней тона, а не файл, в котором они лежат.
+    const waterCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/400-water-and-hydration.css'), 'utf8');
+    expect(waterCss).toContain('--water-tone: #7d98a6');
+    expect(waterCss).toContain('--water-tone: #8fb3c2');
+    expect(waterCss).toContain('--water-tone: #3d7f9e');
     expect(widgetsCss).toContain('--water-tone: #7fb6d0');
   });
 

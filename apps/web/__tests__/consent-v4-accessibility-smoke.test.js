@@ -243,7 +243,13 @@ describe('согласия · вид шага и подпись обязател
     expect(primary.disabled).toBe(true);
     // Гашение, а не перекраска: заливка и тон текста те же, что у активной.
     expect(primary.style.opacity).toBe('0.45');
-    expect(primary.style.backgroundColor).toBe('#c67139');
+    // Правило — «гашение, а не перекраска», и сторожить надо именно его.
+    // Прежняя запись требовала литерал #c67139 инлайном; заливка переехала
+    // на роль в CSS (.heys-consent-sign-sheet__primary), и проверка упала на
+    // починке. Теперь проверяем, что неактивная кнопка НЕ красится заново:
+    // гашение делает opacity выше, а инлайновой заливки своим цветом нет.
+    const inlineStyle = primary.getAttribute('style') || '';
+    expect(inlineStyle).not.toMatch(/background(-color)?:\s*#[0-9a-fA-F]{3,8}/);
     expect(primary.style.cursor).toBe('not-allowed');
   });
 
