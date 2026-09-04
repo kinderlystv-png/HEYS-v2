@@ -12555,6 +12555,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink-3) /* v4-intentional */;
 }
 
+/* Кадр «Белок · нет данных · 04»: тот же прочерк 21/600 и --v4-ink-3.
+   Правило клетчатки не трогал. Живое число now остаётся --v4-ink. */
+.widget-v4-mini.widget-v4-protein .widget-v4-goal-value--empty {
+  color: var(--v4-ink-3) /* v4-intentional */;
+}
+
 .widget-v4-stack .widget-v4-goal-value {
   font-size: 19px;
   letter-spacing: -0.03em;
