@@ -613,7 +613,11 @@
       "frames": [
         {
           "zone": "strength-builder",
-          "frame": "Конструктор · пусто"
+          "frame": "Конструктор · пусто · плана нет"
+        },
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · пусто · план назначен"
         },
         {
           "zone": "strength-builder",
@@ -640,6 +644,42 @@
         {
           "zone": "strength-builder",
           "frame": "Конструктор · итоги"
+        }
+      ]
+    },
+    "sb-order-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Порядок · режим перестановки"
+        }
+      ]
+    },
+    "sb-renumber-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Перенумерация"
+        }
+      ]
+    },
+    "sb-ss-bound-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Связка · границы правки"
+        }
+      ]
+    },
+    "sb-warmup-drop-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · разминка и дроп-сет"
         }
       ]
     },

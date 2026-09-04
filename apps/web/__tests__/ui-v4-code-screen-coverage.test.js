@@ -55,10 +55,14 @@ describe('UI v4 code→canvas screen coverage', () => {
     const registry = readScreenCoverageRegistry();
     const report = buildCodeScreenCoverageReport(roots, readCanvasPackage(), registry);
 
-    expect(roots).toHaveLength(131);
+    expect(roots).toHaveLength(135);
+    // +4 strength-builder roots зарегистрированы 4 сентября: sb-order-screen,
+    // sb-renumber-screen, sb-ss-bound-screen, sb-warmup-drop-screen (131→135,
+    // covered 32→36). Кадр А1→А1б: «Конструктор · тренировка идёт» переименован
+    // в «… · снято» (protocol), prod — «… · спокойнее» (sb-builder-screen).
     expect(report.totals).toMatchObject({
-      codeRoots: 131,
-      covered: 32,
+      codeRoots: 135,
+      covered: 36,
       excluded: 21,
       gaps: 78,
       pending: 0,
