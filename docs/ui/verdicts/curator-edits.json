@@ -135,8 +135,10 @@
     },
     "переход по строке": {
       "v": "≠",
-      "f": "тап скрывает конкретное действие локально, но если после этого у серверной записи не осталось видимых действий, maybeAckFullyHiddenEntries подтверждает запись на сервере. Это намеренная продуктовая защита от повторного показа полностью просмотренной записи, но контракт требует никогда не подтверждать сервер с перехода по строке",
-      "h": "444afd7ab26d"
+      "f": "heys_curator_actions_banner_v1.js:2236-2237 — тап строки зовёт hideActionLocally и maybeAckFullyHiddenEntries; при нуле видимых действий (:1902-1915) enqueueAckForEntries + flushPendingAcks подтверждают запись на сервере. Контракт data-v: «не подтверждает записи на сервере». Смоук curator-actions-banner.test.js «acks only when no visible actions remain»",
+      "h": "444afd7ab26d",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/heys_curator_actions_banner_v1.js:2237"
     },
     "подтверждение": {
       "v": "=",
