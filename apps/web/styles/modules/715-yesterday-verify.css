@@ -798,6 +798,11 @@
   justify-content: space-between;
   align-items: baseline;
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+}
+
+/* Кадр «Чек-ин · вчерашний день», элемент 09: подпись слева («Еда» и др.) —
+   тон rgba(var(--ink),.55), не значение справа. */
+.yv-food-label {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 

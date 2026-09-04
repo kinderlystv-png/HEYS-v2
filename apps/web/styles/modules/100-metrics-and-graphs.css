@@ -175,7 +175,7 @@
 .kcal-sparkline-title {
   font-size: 13px;
   font-weight: 600;
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* Header right: badge + pills */
@@ -212,7 +212,7 @@
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -224,7 +224,7 @@
 
 .kcal-period-pill.active {
   background: var(--color-white);
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
@@ -235,7 +235,7 @@
   gap: 10px;
   margin: -4px 0 6px;
   font-size: 10px;
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
   opacity: 0.75;
 }
 
@@ -764,7 +764,7 @@
 .sparkline-popup-v2 .sparkline-popup-date {
   font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
 }
 
 .sparkline-popup-v2 .sparkline-popup-pct {
@@ -819,12 +819,12 @@
 
 .sparkline-popup-v2 .sparkline-popup-compare.up {
   background: var(--v4-ok-bg, #dcfce7);
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .sparkline-popup-v2 .sparkline-popup-compare.down {
-  background: #fee2e2;
-  color: #991b1b;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .sparkline-popup-v2 .sparkline-popup-motivation-v2 {
@@ -854,7 +854,7 @@
   padding: 3px 6px;
   border-radius: 4px;
   background: var(--v4-chip, #efe3cf);
-  color: #475569;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
@@ -863,7 +863,7 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
   color: var(--v4-warn-2, #dc2626);
 }
 
@@ -881,7 +881,7 @@
   border-radius: 8px;
   font-size: 12px;
   font-weight: 500;
-  color: #475569;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -1046,12 +1046,12 @@
 
 .tdee-row-label {
   flex: 1;
-  color: #475569;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .tdee-row-value {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
   white-space: nowrap;
 }
 
@@ -1100,7 +1100,7 @@
 .sparkline-popup-header {
   font-size: 12px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
   margin-bottom: 6px;
   display: flex;
   align-items: center;
@@ -1125,7 +1125,7 @@
 }
 
 .sparkline-popup-header .popup-pct.bad {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
   color: var(--v4-warn-2, #dc2626);
 }
 
@@ -1133,7 +1133,7 @@
 .sparkline-popup-main {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
   margin-bottom: 6px;
   letter-spacing: -0.3px;
 }
@@ -1168,7 +1168,7 @@
   padding: 2px 5px;
   border-radius: 4px;
   background: var(--v4-chip, #efe3cf);
-  color: #475569;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .sparkline-popup-tag.good {
@@ -1182,7 +1182,7 @@
 }
 
 .sparkline-popup-tag.bad {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
   color: var(--v4-warn-2, #dc2626);
 }
 
@@ -1213,7 +1213,7 @@
 
 .sparkline-popup-value {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
 }
 
 .sparkline-popup-value.good {
@@ -1237,7 +1237,7 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 500;
-  color: #475569;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -1367,8 +1367,8 @@
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-compare.down {
-  background: #450a0a;
-  color: #f87171;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 85%, #000);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2 {
@@ -1382,8 +1382,8 @@
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
-  background: #450a0a;
-  color: #f87171;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 85%, #000);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
@@ -1479,12 +1479,12 @@
 
 /* нет данных */
 .sparkline-heatmap-day.level-1 {
-  background: #bbf7d0;
+  background: var(--v4-ok-bg, #eaefe0);
 }
 
 /* <80% */
 .sparkline-heatmap-day.level-2 {
-  background: #4ade80;
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 /* 80-95% */
@@ -1846,7 +1846,7 @@
 .sparkline-slider-tooltip-date {
   font-size: 10px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
 }
 
 .sparkline-slider-tooltip-ratio {
@@ -1867,7 +1867,7 @@
 }
 
 .sparkline-slider-tooltip-ratio.ratio-over {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
   color: var(--v4-warn-2, #dc2626);
 }
 
@@ -1875,7 +1875,7 @@
 .sparkline-slider-tooltip-kcal {
   font-size: 11px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
   letter-spacing: -0.3px;
 }
 
@@ -1902,7 +1902,7 @@
   padding: 1px 4px;
   border-radius: 3px;
   background: var(--v4-chip, #efe3cf);
-  color: #475569;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .sparkline-slider-tooltip-tag.good {
@@ -1916,7 +1916,7 @@
 }
 
 .sparkline-slider-tooltip-tag.bad {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
   color: var(--v4-warn-2, #dc2626);
 }
 
@@ -2000,7 +2000,7 @@
 
 /* Пунктирная линия от эмодзи тренировки к точке — синхронизирована с точкой */
 .sparkline-training-line {
-  stroke: #60a5fa;
+  stroke: var(--v4-wgt-link, #c67139);
   /* светло-фиолетовый */
   stroke-width: 1;
   stroke-dasharray: 2 2;
@@ -2021,7 +2021,7 @@
 }
 
 .weight-sparkline-point-line {
-  stroke: #c084fc;
+  stroke: var(--v4-wgt-violet, #a68b7a);
   /* purple-400 — для веса, ярче */
 }
 
@@ -2377,7 +2377,7 @@
 
 .correlation-block.positive {
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border-color: #a7f3d0;
+  border-color: var(--v4-ok-bg, #eaefe0);
 }
 
 .correlation-block.warning {
@@ -2534,7 +2534,7 @@
   font-size: 14px;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
 }
 
 .week-heatmap-streak {
@@ -2940,11 +2940,11 @@
 [data-theme$="dark"] .week-heatmap-action {
   background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
   border-color: rgba(71, 85, 105, 0.6);
-  color: #cbd5e1;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 [data-theme$="dark"] .week-heatmap-date {
-  color: #e2e8f0;
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .week-heatmap-cell {
@@ -3792,7 +3792,7 @@
 }
 
 [data-theme$="dark"] .debt-card-label {
-  color: #e2e8f0;
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .debt-insight-row.protein-debt {
@@ -4336,14 +4336,14 @@
 .weight-single-number {
   font-size: 36px;
   font-weight: 700;
-  color: #7c3aed;
+  color: var(--v4-wgt-purple, #a68b7a);
   line-height: 1;
 }
 
 .weight-single-unit {
   font-size: 16px;
   font-weight: 500;
-  color: #60a5fa;
+  color: var(--v4-wgt-link, #c67139);
 }
 
 .weight-single-hint {
@@ -4363,7 +4363,7 @@
 .weight-sparkline-title {
   font-size: 13px;
   font-weight: 600;
-  color: #6b21a8;
+  color: var(--v4-wgt-purple, #a68b7a);
 }
 
 .weight-trend-badge {
@@ -4375,18 +4375,18 @@
 }
 
 .weight-trend-badge.down {
-  background: #d1fae5;
-  color: #059669;
+  background: var(--v4-ok-bg, #eaefe0);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .weight-trend-badge.up {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
   color: var(--v4-warn-2, #dc2626);
 }
 
 .weight-trend-badge.same {
-  background: #f3e8ff;
-  color: #7c3aed;
+  background: var(--v4-wgt-lilac, #f7efe2);
+  color: var(--v4-wgt-purple, #a68b7a);
 }
 
 .weight-sparkline-badges {
@@ -4406,17 +4406,17 @@
 
 .weight-forecast-badge.down {
   background: var(--v4-ok-bg, #dcfce7);
-  color: #15803d;
+  color: var(--v4-wgt-ok-deep, #5c6a45);
 }
 
 .weight-forecast-badge.up {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
+  color: var(--v4-val-bad, #a8382b);
 }
 
 /* === ЗАДЕРЖКА ВОДЫ — CYCLE INTEGRATION === */
 
-/* Бейдж "чистый тренд" */
+/* Бейдж «чистый тренд»: розовая семантика задержки воды — роли набора нет. */
 .weight-clean-trend-badge {
   font-size: 10px;
   font-weight: 500;
@@ -4455,6 +4455,7 @@
   flex-shrink: 0;
 }
 
+/* Сноска задержки воды — розовый тон вне ролей набора. */
 .weight-retention-note-text {
   font-size: 11px;
   line-height: 1.4;
@@ -4476,7 +4477,7 @@
 /* Прогноз нормализации */
 .weight-retention-forecast {
   font-size: 11px;
-  color: #9d174d;
+  color: #9d174d; /* задержка воды — роли нет */
   font-weight: 500;
 }
 
@@ -4497,7 +4498,7 @@
 }
 
 .weight-retention-stats b {
-  color: #be185d;
+  color: #be185d; /* задержка воды — роли нет */
   font-weight: 600;
 }
 
@@ -4614,11 +4615,11 @@
 }
 
 .weight-period-pills .kcal-period-pill {
-  color: #6d28d9;
+  color: var(--v4-wgt-violet, #a68b7a);
 }
 
 .weight-period-pills .kcal-period-pill.active {
-  color: #6d28d9;
+  color: var(--v4-wgt-violet, #a68b7a);
 }
 
 /* Прогнозные метки (даты и веса) */
@@ -4660,26 +4661,26 @@
 
 /* Горизонтальная линия целевого веса */
 .weight-goal-line {
-  stroke: #10b981;
+  stroke: var(--v4-ok-fill, #7a8a5e);
   stroke-width: 1.5;
   stroke-opacity: 0.6;
 }
 
 .weight-goal-label {
   font-size: 9px;
-  fill: #10b981;
+  fill: var(--v4-ok-fill, #7a8a5e);
   font-weight: 500;
   opacity: 0.8;
 }
 
 .weight-sparkline-label {
   font-size: 9px;
-  fill: #60a5fa;
+  fill: var(--v4-wgt-link, #c67139);
   font-weight: 500;
 }
 
 .weight-sparkline-label-today {
-  fill: #7c3aed;
+  fill: var(--v4-wgt-purple, #a68b7a);
   font-weight: 600;
 }
 
@@ -4792,7 +4793,7 @@
 
   50% {
     box-shadow: 0 0 0 8px rgba(16, 185, 129, 0), 0 0 20px rgba(16, 185, 129, 0.3);
-    border-color: #34d399;
+    border-color: var(--v4-ok-fill, #7a8a5e);
   }
 }
 
@@ -4837,7 +4838,7 @@
 .goal-progress-card-heading {
   width: 100%;
   margin: 0 0 18px;
-  color: #334155;
+  color: var(--v4-ink, #201e1d);
   font-size: 18px;
   font-weight: 850;
   line-height: 1.12;
@@ -4862,7 +4863,7 @@
 }
 
 [data-theme$="dark"] .goal-progress-card-heading {
-  color: #cbd5e1;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .goal-progress-stats {
@@ -4930,7 +4931,7 @@
 .goal-target {
   font-size: 16px;
   font-weight: 500;
-  color: #334155;
+  color: var(--v4-ink, #201e1d);
 }
 
 .goal-target-label {
@@ -4944,7 +4945,7 @@
 .goal-bonus-value {
   font-size: 13px;
   font-weight: 800;
-  color: #10b981;
+  color: var(--v4-ok-fill, #7a8a5e);
 }
 
 .goal-bonus-label {
@@ -5217,7 +5218,7 @@
 /* Circadian badge — time-based urgency */
 .context-badge-circadian {
   background: var(--v4-accent-bg, #dbeafe);
-  color: #1e40af;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .context-badge-circadian.high-urgency {
@@ -5228,12 +5229,12 @@
 /* Training badge — nutrition priority */
 .context-badge-training {
   background: var(--v4-ok-bg, #dcfce7);
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .context-badge-training.strength {
   background: var(--v4-accent-bg, #e0e7ff);
-  color: #3730a3;
+  color: var(--v4-wgt-indigo, #a68b7a);
 }
 
 /* Emotional risk badge — binge warning */
@@ -5243,8 +5244,8 @@
 }
 
 .context-badge-emotional.high-risk {
-  background: #fee2e2;
-  color: #991b1b;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
+  color: var(--v4-bad-text, #a83c22);
   animation: pulse 2s infinite;
 }
 
@@ -5255,17 +5256,17 @@
 
 .dark .context-badge-circadian {
   background: rgba(59, 130, 246, 0.2);
-  color: #93c5fd;
+  color: var(--v4-water, #7d98a6);
 }
 
 .dark .context-badge-training {
   background: rgba(34, 197, 94, 0.2);
-  color: #86efac;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .dark .context-badge-emotional {
   background: rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
+  color: var(--v4-bad-text, #a83c22);
 }
 
 /* === Остаток калорий внутри заполненной части бара (когда >80%) === */
@@ -5302,23 +5303,23 @@
 
 /* 🔥 Мотивация при приближении к цели */
 .goal-remaining.almost-there {
-  color: #059669;
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: 600;
   animation: almostThere 1.5s ease-in-out infinite;
 }
 
 .goal-remaining.almost-there b {
-  color: #059669;
+  color: var(--v4-ok-text, #5c6a45);
   font-size: 18px;
 }
 
 .goal-remaining.getting-close {
-  color: #0d9488;
+  color: var(--v4-wgt-teal, #5c6a45);
   font-weight: 500;
 }
 
 .goal-remaining.getting-close b {
-  color: #0d9488;
+  color: var(--v4-wgt-teal, #5c6a45);
 }
 
 @keyframes almostThere {
@@ -5408,7 +5409,7 @@
 /* Фон трека - очень прозрачный серый, не грязный */
 .macro-ring-bg {
   fill: none;
-  stroke: #f1f5f9;
+  stroke: var(--v4-hero, #efe3cf);
   /* Slate-100 - очень светлый */
   stroke-width: 5;
 }
@@ -5451,7 +5452,7 @@
 
 /* Чёрная линия-маркер на позиции нормы (100%) */
 .macro-ring-norm-marker {
-  stroke: #1e293b;
+  stroke: var(--v4-ink, #201e1d);
   /* Slate-800 — тёмный, контрастный */
   stroke-width: 1.5;
   stroke-linecap: round;
@@ -5511,7 +5512,7 @@
   font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
   /* Slate-800 */
   z-index: 2;
 }
@@ -5519,7 +5520,7 @@
 .macro-ring-label {
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: var(--v4-ink, #201e1d);
   /* Slate-700 */
   letter-spacing: -0.01em;
 }
@@ -5622,7 +5623,7 @@
 .macro-badge-popup-title {
   font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
 }
 
 .macro-badge-popup-pct {
@@ -5781,12 +5782,12 @@
 
 .macro-badge-popup-compare.up {
   background: var(--v4-ok-bg, #dcfce7);
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .macro-badge-popup-compare.down {
-  background: #fee2e2;
-  color: #991b1b;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .macro-badge-popup-desc {
@@ -5803,7 +5804,7 @@
   align-items: flex-start;
   gap: 8px;
   font-size: 12px;
-  color: #475569;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   line-height: 1.4;
 }
 
@@ -5822,7 +5823,7 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
   border: 1px solid #bbf7d0;
 }
 
@@ -5912,7 +5913,7 @@
 .metric-popup-title {
   font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
 }
 
 .metric-popup-pct {
@@ -5983,12 +5984,12 @@
 
 .metric-popup-compare.up {
   background: var(--v4-ok-bg, #dcfce7);
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .metric-popup-compare.down {
-  background: #fee2e2;
-  color: #991b1b;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 /* Extra info */
@@ -6003,7 +6004,7 @@
 
 .metric-popup-extra b {
   font-weight: 600;
-  color: #1e293b;
+  color: var(--v4-ink, #201e1d);
 }
 
 /* Streak */
@@ -6243,7 +6244,7 @@
 .weight-value-number {
   font-size: 17px;
   font-weight: 700;
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .weight-card-empty .weight-value-number {
@@ -6386,7 +6387,7 @@
 .deficit-value-number {
   font-size: 17px;
   font-weight: 700;
-  color: #4f46e5;
+  color: var(--v4-wgt-indigo, #a68b7a);
 }
 
 .deficit-value-number.deficit-negative {
@@ -6433,7 +6434,7 @@
 
 .deficit-actual-value {
   font-weight: 600;
-  color: #4f46e5;
+  color: var(--v4-wgt-indigo, #a68b7a);
 }
 
 .deficit-actual-value.deficit-negative {
@@ -6517,7 +6518,7 @@
 }
 
 .activity-charge-card-title {
-  color: #334155;
+  color: var(--v4-ink, #201e1d);
   font-size: 16px;
   font-weight: 800;
 }
@@ -6593,7 +6594,7 @@
 }
 
 .ma-skip-notice-title {
-  color: #be123c;
+  color: var(--v4-bad-text, #a83c22);
   font-size: 14px;
   font-weight: 800;
 }
@@ -6627,7 +6628,7 @@
 }
 
 .ma-done-notice-text {
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
   font-size: 14px;
   font-weight: 800;
 }
@@ -6686,7 +6687,7 @@
 .household-activity-title {
   font-size: 12px;
   font-weight: 600;
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .household-activity-value {
@@ -6705,7 +6706,7 @@
 
 .household-value-unit {
   font-size: 13px;
-  color: #15803d;
+  color: var(--v4-wgt-ok-deep, #5c6a45);
   font-weight: 500;
 }
 
@@ -6861,7 +6862,7 @@
 .household-activity-title {
   font-size: 14px;
   font-weight: 600;
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .household-activity-value {
@@ -6878,7 +6879,7 @@
 
 .household-value-unit {
   font-size: 14px;
-  color: #15803d;
+  color: var(--v4-wgt-ok-deep, #5c6a45);
   font-weight: 500;
 }
 
@@ -6914,7 +6915,7 @@
 .formula-card-title {
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .formula-card-rows {
@@ -6936,7 +6937,7 @@
 
 .formula-value {
   font-weight: 600;
-  color: #374151;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .formula-row.formula-total {
@@ -6947,7 +6948,7 @@
 
 .formula-row.formula-total .formula-label {
   font-weight: 600;
-  color: #374151;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .formula-row.formula-total .formula-value {
@@ -6971,12 +6972,12 @@
 }
 
 .formula-row.ndte-row .formula-label {
-  color: #10b981;
+  color: var(--v4-ok-fill, #7a8a5e);
   font-weight: 500;
 }
 
 .formula-row.ndte-row .formula-value {
-  color: #10b981;
+  color: var(--v4-ok-fill, #7a8a5e);
   font-weight: 600;
 }
 
@@ -6987,7 +6988,7 @@
 
 .formula-row.formula-subtotal .formula-value {
   font-weight: 600;
-  color: #374151;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .formula-row.deficit .formula-label {
@@ -7344,7 +7345,7 @@
 }
 
 .training-zone-header.zone-color-4 {
-  background: #fee2e2;
+  background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
   color: var(--v4-warn-2, #dc2626);
 }
 
@@ -7406,7 +7407,7 @@
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 500;
-  color: #374151;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   background: var(--v4-hero, #f8fafc);
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 10px;
@@ -7471,7 +7472,7 @@
   flex: 1;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .training-rating-value {
@@ -7533,7 +7534,7 @@
 }
 
 .training-comment-prompt.positive .training-comment-text {
-  color: #059669;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .training-comment-prompt.negative .training-comment-text {
@@ -7547,7 +7548,7 @@
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 14px;
-  color: #1c1c1e;
+  color: var(--v4-ink, #201e1d);
   outline: none;
 }
 
@@ -7644,7 +7645,7 @@
 }
 
 .training-card-rating.wellbeing .training-card-rating-value {
-  color: #7c3aed;
+  color: var(--v4-wgt-purple, #a68b7a);
 }
 
 /* Mood (настроение) - зелёный */
@@ -7695,7 +7696,7 @@
 }
 
 .training-card-rating.feel .training-card-rating-value {
-  color: #7c3aed;
+  color: var(--v4-wgt-purple, #a68b7a);
 }
 
 .training-card-comment {
@@ -7789,7 +7790,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #d1d5db;
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   transition: background 0.2s ease;
 }
 
@@ -7883,7 +7884,7 @@
 .weight-picker-dot {
   font-size: 28px;
   font-weight: 600;
-  color: #000;
+  color: var(--v4-ink, #201e1d);
   padding: 0 4px;
   align-self: center;
 }
@@ -7891,7 +7892,7 @@
 .weight-picker-unit {
   font-size: 20px;
   font-weight: 600;
-  color: #000;
+  color: var(--v4-ink, #201e1d);
   align-self: center;
   margin-left: 4px;
 }
@@ -7909,7 +7910,7 @@
 .steps-goal-wheel-unit {
   font-size: 20px;
   font-weight: 600;
-  color: #000;
+  color: var(--v4-ink, #201e1d);
   align-self: center;
   margin-left: 8px;
 }

@@ -2175,31 +2175,31 @@
         emptyDay
           ? React.createElement('div', { className: 'yv-food-card' },
             React.createElement('div', { className: 'yv-food-row' },
-              React.createElement('span', null, 'Еда'),
+              React.createElement('span', { className: 'yv-food-label' }, 'Еда'),
               React.createElement('span', { className: 'yv-food-value' }, 'записей нет')
             ),
             React.createElement('div', { className: 'yv-food-row' },
-              React.createElement('span', null, 'Норма того дня'),
+              React.createElement('span', { className: 'yv-food-label' }, 'Норма того дня'),
               React.createElement('span', { className: 'yv-food-muted' }, kcalLine(day.target) + ' ккал')
             ),
             React.createElement('div', { className: 'yv-food-row' },
-              React.createElement('span', null, 'Шаги и вес'),
+              React.createElement('span', { className: 'yv-food-label' }, 'Шаги и вес'),
               React.createElement('span', { className: 'yv-food-muted' }, 'есть, не трогаем')
             )
           )
           : React.createElement('div', { className: 'yv-food-card' },
             React.createElement('div', { className: 'yv-food-row' },
-              React.createElement('span', null, 'Еда'),
+              React.createElement('span', { className: 'yv-food-label' }, 'Еда'),
               React.createElement('span', { className: 'yv-food-value' }, kcalLine(day.kcal) + ' из ' + kcalLine(day.target) + ' ккал')
             ),
             React.createElement('div', { className: 'yv-food-row' },
-              React.createElement('span', null, 'Приёмы'),
+              React.createElement('span', { className: 'yv-food-label' }, 'Приёмы'),
               React.createElement('span', { className: 'yv-food-value' },
                 day.mealCount > 0 ? shortMealCount(day.mealCount) + ' за день' : 'нет приёмов'
               )
             ),
             React.createElement('div', { className: 'yv-food-row' },
-              React.createElement('span', null, 'Последняя запись'),
+              React.createElement('span', { className: 'yv-food-label' }, 'Последняя запись'),
               React.createElement('span', { className: 'yv-food-muted' }, lastMealCaption(day))
             )
           ),
@@ -2352,17 +2352,17 @@
 
       single && React.createElement('div', { className: 'yv-food-card' },
         React.createElement('div', { className: 'yv-food-row' },
-          React.createElement('span', null, 'Еда'),
+          React.createElement('span', { className: 'yv-food-label' }, 'Еда'),
           React.createElement('span', { className: 'yv-food-value' }, kcalLine(single.kcal) + ' из ' + kcalLine(single.target) + ' ккал')
         ),
         React.createElement('div', { className: 'yv-food-row' },
-          React.createElement('span', null, 'Приёмы'),
+          React.createElement('span', { className: 'yv-food-label' }, 'Приёмы'),
           React.createElement('span', { className: 'yv-food-value' },
             single.mealCount > 0 ? shortMealCount(single.mealCount) + ' за день' : 'нет приёмов'
           )
         ),
         React.createElement('div', { className: 'yv-food-row' },
-          React.createElement('span', null, 'Последняя запись'),
+          React.createElement('span', { className: 'yv-food-label' }, 'Последняя запись'),
           React.createElement('span', { className: 'yv-food-muted' }, lastMealCaption(single))
         )
       ),
@@ -2374,11 +2374,10 @@
       isPack && React.createElement('div', { className: 'yv-days' },
         visibleDays.map((day) => {
           const quickFill = quickFillByDate[day.date] || null;
-          const resolved = quickFill || confirmedSet.has(day.date);
           return React.createElement('button', {
             key: day.date,
             type: 'button',
-            className: 'yv-pack-day' + (resolved ? ' yv-pack-day--resolved' : ''),
+            className: 'yv-pack-day',
             onClick: () => openPackDay(day.date)
           },
             React.createElement('div', { className: 'yv-pack-day-copy' },
