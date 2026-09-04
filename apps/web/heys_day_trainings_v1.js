@@ -4332,16 +4332,15 @@
             // Начатую тренировку подменять нельзя: тогда правка запирает вход
             // в конструктор, а человек не может продолжить, не ответив на неё.
             // Ему она приходит полоской внутри конструктора (экран 14b).
+            const planSkipped = !!(rawT.plan && rawT.plan.status === 'skipped');
             const proposalBlocksDay = pendingProposal
               && !(Array.isArray(wlLive && wlLive.exercises) ? wlLive.exercises : [])
                 .some(function (ex) { return TKs && TKs.hasDoneApproach(ex); });
-            if (proposalBlocksDay && Parts.ProposalCard) {
+            if (proposalBlocksDay) {
               const trainingWithProposal = { workoutLog: wlLive, plan: rawT.plan, planSnapshot: rawT.planSnapshot };
               const acceptProposal = function () {
                 patchTraining(ti, function (t0) {
                   const res = TKs.acceptPlanProposal(t0, Date.now());
-                  // Не легло целиком (разрыв связки) — тренировку не трогаем:
-                  // испорченная раскладка тише отказа и потому опаснее.
                   return res.ok ? res.training : t0;
                 });
               };
@@ -4351,29 +4350,41 @@
                   return res.ok ? res.training : t0;
                 });
               };
-              return React.createElement(Parts.ProposalCard, {
-                key: 'wb-proposal-' + ti,
-                training: trainingWithProposal,
-                onReview: function (e) {
-                  if (e && e.stopPropagation) e.stopPropagation();
-                  Parts.openProposalReview({
-                    training: trainingWithProposal,
-                    onAccept: acceptProposal,
-                    onDecline: declineProposal
-                  });
-                },
-                // Ответить можно с самой карточки: кадр «Актив · правка
-                // куратора» даёт «Принять» главной кнопкой, а разбор — вторым
-                // слоем (контракт «три элемента программы», строка 8).
-                onAccept: function (e) {
-                  if (e && e.stopPropagation) e.stopPropagation();
-                  acceptProposal();
-                },
-                onDecline: function (e) {
-                  if (e && e.stopPropagation) e.stopPropagation();
-                  declineProposal();
-                }
-              });
+              const openProposalReview = function (e) {
+                if (e && e.stopPropagation) e.stopPropagation();
+                Parts.openProposalReview({
+                  training: trainingWithProposal,
+                  onAccept: acceptProposal,
+                  onDecline: declineProposal
+                });
+              };
+              if (planSkipped && Parts.MissedTodayProposalScreen) {
+                return React.createElement(Parts.MissedTodayProposalScreen, {
+                  key: 'wb-missed-proposal-' + ti,
+                  training: trainingWithProposal,
+                  nowMs: Date.now(),
+                  onDecline: function (e) {
+                    if (e && e.stopPropagation) e.stopPropagation();
+                    declineProposal();
+                  },
+                  onReview: openProposalReview
+                });
+              }
+              if (Parts.ProposalCard) {
+                return React.createElement(Parts.ProposalCard, {
+                  key: 'wb-proposal-' + ti,
+                  training: trainingWithProposal,
+                  onReview: openProposalReview,
+                  onAccept: function (e) {
+                    if (e && e.stopPropagation) e.stopPropagation();
+                    acceptProposal();
+                  },
+                  onDecline: function (e) {
+                    if (e && e.stopPropagation) e.stopPropagation();
+                    declineProposal();
+                  }
+                });
+              }
             }
             if (rawT.plan && (rawT.plan.status === 'assigned' || rawT.plan.status === 'skipped' || rawT.plan.status === 'moved') && Parts.PlanCard) {
               const isFutureDay = String(dateKey) > todayDateKeyForPlan();

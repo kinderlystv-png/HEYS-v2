@@ -6732,98 +6732,98 @@
       "h": "ba88bf3b56ea"
     },
     "Правка · пропущен сегодня · 01": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": ".sb-cycle-top.sb-missed-today-head — шапка кадра Л5; proposal_ui MissedTodayProposalScreen; contract test row 01 display:flex.",
       "h": "175bdcc2e73a"
     },
     "Правка · пропущен сегодня · 02": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": ".sb-missed-today-head-main MISSED_TODAY_STYLE.headCol flex-direction:column gap:3px; contract test row 02.",
       "h": "07ffbada0ee7"
     },
     "Правка · пропущен сегодня · 03": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "buildMissedTodaySnapshot.titleLine → .sb-missed-today-title «Верх тела B вы отпустили» color var(--tx); contract test row 03.",
       "h": "c7e8324693fd"
     },
     "Правка · пропущен сегодня · 04": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "plan.skipReason → .sb-missed-today-key «причина: …»; contract test row 04.",
       "h": "b6f9c8ffba68"
     },
     "Правка · пропущен сегодня · 05": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": ".sb-list.sb-missed-today-scroll overflow-y:auto (750 .sb-list); contract test row 05.",
       "h": "c629f84f9712"
     },
     "Правка · пропущен сегодня · 06": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "snapshot.badgeLine → .sb-missed-today-badge «{who} предлагает замену»; contract test row 06.",
       "h": "53b3a815d90d"
     },
     "Правка · пропущен сегодня · 07": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": ".sb-missed-today-note MISSED_TODAY_STYLE.noteCard — var(--c2) radius 12px padding 11px 12px margin-top 10px; contract test row 07.",
       "h": "d3a641a6b252"
     },
     "Правка · пропущен сегодня · 08": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "proposal.note → .sb-missed-today-note-text 500 12px/1.5 Figtree var(--tx); contract test row 08.",
       "h": "c070cfc1c99f"
     },
     "Правка · пропущен сегодня · 09": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "fmtMissedTodayAgo → .sb-missed-today-note-meta 500 10.5px/1 rgba(var(--ink),.56) margin-top 7px; contract test row 09.",
       "h": "3eb1bb786d33"
     },
     "Правка · пропущен сегодня · 10": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": ".sb-missed-today-list margin-top 10px; contract test row 10.",
       "h": "d641122bb122"
     },
     "Правка · пропущен сегодня · 11": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "missedTodayChangeRow → .sb-missed-today-row display:flex; contract test row 11.",
       "h": "af81bb6e54c6"
     },
     "Правка · пропущен сегодня · 12": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": ".sb-missed-today-row-name color var(--tx); contract test row 12.",
       "h": "52817c64fcd9"
     },
     "Правка · пропущен сегодня · 13": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "buildMissedTodayChanges same → label «оставили» 600 11px/1 var(--gr); contract test row 13.",
       "h": "862d232ff710"
     },
     "Правка · пропущен сегодня · 14": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "removed → label «убрали» 600 11px/1 var(--ac2); contract test row 14.",
       "h": "65712ab5513a"
     },
     "Правка · пропущен сегодня · 15": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "последняя .sb-missed-today-row noBorder borderBottom none; contract test row 15.",
       "h": "6b286135ed76"
     },
     "Правка · пропущен сегодня · 16": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": ".sb-missed-today-actions display:flex gap 7px margin-top 12px; contract test row 16.",
       "h": "77e4b4025f38"
     },
     "Правка · пропущен сегодня · 17": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "«Не сегодня» .sb-missed-today-decline flex:1 min-height 44px; contract test row 17.",
       "h": "09819a9fc6cb"
     },
     "Правка · пропущен сегодня · 18": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "«Посмотреть» .sb-missed-today-review flex:1 background var(--acs) color var(--on-acs); contract test row 18 sand+blue.",
       "h": "a0c9b0235255"
     },
     "Правка · пропущен сегодня · 19": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "MISSED_TODAY_FOOTNOTE → .sb-missed-today-footnote 500 11px/1.55 var(--ink56); contract test row 19.",
       "h": "a633acd39bd6"
     },
     "Правка · пропущен раньше · 01": {
@@ -8814,8 +8814,8 @@
       "h": "6e7e71ade183"
     },
     "Правка · пропущен сегодня · текст": {
-      "v": "?",
-      "f": "proposalBlocksDay не смотрит plan.status skipped; отдельного кадра «пропущен раньше» нет. Нужно продуктовое решение + day_trainings guard.",
+      "v": "=",
+      "f": "buildMissedTodaySnapshot агрегирует все строки кадра Л5 (заголовок, причина, бейдж, заметка, список, CTA, сноска); contract test «текст».",
       "h": "600d05c9f6b0"
     },
     "Правка · пропущен раньше · текст": {

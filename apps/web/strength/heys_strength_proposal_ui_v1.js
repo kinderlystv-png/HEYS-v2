@@ -719,6 +719,259 @@
     );
   }
 
+  const MISSED_TODAY_FOOTNOTE = 'Отмеченных подходов нет, поэтому правка безопасна технически. Опасность другая: пропуск был решением человека, и предложение не должно читаться как «ну всё-таки сделай». День остаётся пропущенным, пока клиент сам не возьмёт замену; отказ называется «не сегодня» и причины не спрашивает. Причину, если она указана, куратор видит — но спрашивать её интерфейс не будет.';
+
+  const MISSED_TODAY_STYLE = {
+    headCol: { display: 'flex', flexDirection: 'column', gap: '3px' },
+    title: { font: '700 15px/1 Figtree, sans-serif', color: 'var(--tx)' },
+    key: { font: '600 10.5px/1 Figtree, sans-serif', color: 'var(--ink56)' },
+    badge: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      padding: '4px 10px',
+      borderRadius: '999px',
+      background: 'var(--c2)',
+      font: '600 11px/1 Figtree, sans-serif',
+      color: 'var(--tx)',
+    },
+    noteCard: {
+      background: 'var(--c2)',
+      borderRadius: '12px',
+      padding: '11px 12px',
+      marginTop: '10px',
+    },
+    noteText: { font: '500 12px/1.5 Figtree, sans-serif', color: 'var(--tx)' },
+    noteMeta: {
+      font: '500 10.5px/1 Figtree, sans-serif',
+      color: 'rgba(var(--ink), .56)',
+      marginTop: '7px',
+    },
+    list: { marginTop: '10px' },
+    row: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '11px 0',
+      borderBottom: '1px solid rgba(var(--ink), .07)',
+      font: '600 12.5px/1 Figtree, sans-serif',
+    },
+    rowName: { color: 'var(--tx)' },
+    labelKept: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--gr)' },
+    labelRemoved: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--ac2)' },
+    actions: { display: 'flex', gap: '7px', marginTop: '12px' },
+    btn: {
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '44px',
+      borderRadius: '14px',
+      border: 'none',
+      background: 'var(--c2)',
+      color: 'var(--tx)',
+      font: '600 13px/1 Figtree, sans-serif',
+      cursor: 'pointer',
+    },
+    btnAccent: {
+      background: 'var(--acs)',
+      color: 'var(--on-acs)',
+    },
+    footnote: {
+      marginTop: '12px',
+      font: '500 11px/1.55 Figtree, sans-serif',
+      color: 'var(--ink56)',
+    },
+  };
+
+  function pluralMinutes(n) {
+    const t = Math.abs(n) % 100;
+    const d = t % 10;
+    if (t > 10 && t < 20) return 'минут';
+    if (d === 1) return 'минуту';
+    if (d >= 2 && d <= 4) return 'минуты';
+    return 'минут';
+  }
+
+  function fmtMissedTodayAgo(ms, nowMs) {
+    const at = +ms || 0;
+    if (!at) return '';
+    const diff = Math.max(0, (+nowMs || Date.now()) - at);
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return 'только что';
+    if (min < 60) return min + ' ' + pluralMinutes(min) + ' назад';
+    const hrs = Math.floor(min / 60);
+    return hrs + ' ч назад';
+  }
+
+  function baselineExercisesForProposal(training) {
+    const snap = training && training.planSnapshot;
+    if (snap && Array.isArray(snap.exercises) && snap.exercises.length) return snap.exercises;
+    const wl = training && training.workoutLog;
+    return wl && Array.isArray(wl.exercises) ? wl.exercises : [];
+  }
+
+  function exerciseIdentityKey(ex) {
+    if (!ex) return '';
+    if (ex.id != null && ex.id !== '') return String(ex.id);
+    return String(ex.name || '');
+  }
+
+  /** Список строк кадра Л5: порядок снимка плана, затем новые упражнения. */
+  function buildMissedTodayChanges(baseline, proposed) {
+    const base = Array.isArray(baseline) ? baseline : [];
+    const prop = Array.isArray(proposed) ? proposed : [];
+    const propMap = {};
+    prop.forEach(function (ex) {
+      if (ex) propMap[exerciseIdentityKey(ex)] = ex;
+    });
+    const seen = {};
+    const changes = [];
+    base.forEach(function (ex) {
+      if (!ex) return;
+      const key = exerciseIdentityKey(ex);
+      seen[key] = true;
+      if (propMap[key]) {
+        changes.push({ key: key, name: ex.name, kind: 'same', label: 'оставили', tone: 'kept' });
+      } else {
+        changes.push({ key: key, name: ex.name, kind: 'removed', label: 'убрали', tone: 'removed' });
+      }
+    });
+    prop.forEach(function (ex) {
+      if (!ex) return;
+      const key = exerciseIdentityKey(ex);
+      if (seen[key]) return;
+      changes.push({ key: key, name: ex.name, kind: 'added', label: 'добавили', tone: 'kept' });
+    });
+    return changes;
+  }
+
+  /**
+   * Кадр Л5: правка на пропущенный сегодня день. База сравнения — снимок плана
+   * до пропуска, а не пустой workoutLog.
+   */
+  function buildMissedTodaySnapshot(props) {
+    const training = props && props.training;
+    const ks = kernel();
+    const proposal = ks && training ? ks.pendingPlanProposal(training) : null;
+    if (!proposal) return null;
+    const plan = training.plan || {};
+    const nowMs = props && props.nowMs ? +props.nowMs : Date.now();
+    const dayLabel = plan.dayLabel || '';
+    const skipReason = plan.skipReason ? String(plan.skipReason).trim() : '';
+    const who = proposal.proposedBy || 'Куратор';
+    const changes = buildMissedTodayChanges(
+      baselineExercisesForProposal(training),
+      proposal.exercises
+    );
+    return {
+      titleLine: dayLabel ? (dayLabel + ' вы отпустили') : 'Тренировку вы отпустили',
+      reasonLine: skipReason ? ('причина: ' + skipReason.toLowerCase()) : '',
+      badgeLine: who + ' предлагает замену',
+      noteText: proposal.note || '',
+      noteMeta: [who, 'куратор', fmtMissedTodayAgo(+proposal.proposedAt || +proposal.sentAt, nowMs)]
+        .filter(Boolean)
+        .join(' · '),
+      changes: changes,
+      declineLabel: 'Не сегодня',
+      reviewLabel: 'Посмотреть',
+      footnote: MISSED_TODAY_FOOTNOTE,
+      hasDoneApproaches: (Array.isArray(training.workoutLog && training.workoutLog.exercises)
+        ? training.workoutLog.exercises
+        : []).some(function (ex) { return ks && ks.hasDoneApproach(ex); }),
+    };
+  }
+
+  function missedTodayChangeRow(row, opts) {
+    const o = opts || {};
+    const rowStyle = Object.assign({}, MISSED_TODAY_STYLE.row);
+    if (o.noBorder) {
+      rowStyle.borderBottom = 'none';
+    }
+    const labelStyle = row.tone === 'removed'
+      ? MISSED_TODAY_STYLE.labelRemoved
+      : MISSED_TODAY_STYLE.labelKept;
+    return h('div', {
+      key: o.key || row.key || row.name,
+      className: 'sb-missed-today-row',
+      style: rowStyle,
+    },
+      h('span', { className: 'sb-missed-today-row-name', style: MISSED_TODAY_STYLE.rowName }, row.name),
+      h('span', {
+        className: 'sb-missed-today-row-label is-' + row.tone,
+        style: labelStyle,
+      }, row.label)
+    );
+  }
+
+  /**
+   * Правка · пропущен сегодня (кадр Л5): замена на месте, отказ без причины.
+   */
+  function MissedTodayProposalScreen(props) {
+    const snapshot = buildMissedTodaySnapshot(props);
+    if (!snapshot) return null;
+    const onDecline = props && props.onDecline;
+    const onReview = props && props.onReview;
+
+    return h('div', {
+      className: 'sb-root sb-missed-today',
+      style: { '--ink56': 'rgba(var(--ink), .56)' },
+    },
+      h('div', { className: 'sb-cycle-top sb-missed-today-head' },
+        h('span', { className: 'sb-missed-today-head-main', style: MISSED_TODAY_STYLE.headCol },
+          h('span', { className: 'sb-missed-today-title', style: MISSED_TODAY_STYLE.title },
+            snapshot.titleLine),
+          snapshot.reasonLine
+            && h('span', { className: 'sb-missed-today-key', style: MISSED_TODAY_STYLE.key },
+              snapshot.reasonLine)
+        )
+      ),
+      h('div', { className: 'sb-list sb-missed-today-scroll' },
+        h('span', { className: 'sb-missed-today-badge', style: MISSED_TODAY_STYLE.badge },
+          snapshot.badgeLine),
+        (snapshot.noteText || snapshot.noteMeta) && h('div', {
+          className: 'sb-missed-today-note',
+          style: MISSED_TODAY_STYLE.noteCard,
+        },
+          snapshot.noteText
+            && h('div', { className: 'sb-missed-today-note-text', style: MISSED_TODAY_STYLE.noteText },
+              snapshot.noteText),
+          snapshot.noteMeta
+            && h('div', { className: 'sb-missed-today-note-meta', style: MISSED_TODAY_STYLE.noteMeta },
+              snapshot.noteMeta)
+        ),
+        snapshot.changes.length > 0 && h('div', {
+          className: 'sb-missed-today-list',
+          style: MISSED_TODAY_STYLE.list,
+        },
+          snapshot.changes.map(function (row, i) {
+            return missedTodayChangeRow(row, {
+              key: row.key || row.name || i,
+              noBorder: i === snapshot.changes.length - 1,
+            });
+          })
+        ),
+        h('div', { className: 'sb-missed-today-actions', style: MISSED_TODAY_STYLE.actions },
+          h('button', {
+            type: 'button',
+            className: 'sb-missed-today-decline',
+            style: MISSED_TODAY_STYLE.btn,
+            onClick: onDecline,
+          }, snapshot.declineLabel),
+          h('button', {
+            type: 'button',
+            className: 'sb-missed-today-review',
+            style: Object.assign({}, MISSED_TODAY_STYLE.btn, MISSED_TODAY_STYLE.btnAccent),
+            onClick: onReview,
+          }, snapshot.reviewLabel)
+        ),
+        h('p', { className: 'sb-missed-today-footnote', style: MISSED_TODAY_STYLE.footnote },
+          snapshot.footnote)
+      )
+    );
+  }
+
   /**
    * Программа пройдена (экран 16e). Про сделанное, а не про пропуски.
    *
@@ -1184,4 +1437,6 @@
   Parts.ProposalOutcome = ProposalOutcome;
   Parts.CuratorEditStatusScreen = CuratorEditStatusScreen;
   Parts.buildCuratorEditSnapshot = buildCuratorEditSnapshot;
+  Parts.MissedTodayProposalScreen = MissedTodayProposalScreen;
+  Parts.buildMissedTodaySnapshot = buildMissedTodaySnapshot;
 })(window);

@@ -1,0 +1,157 @@
+{
+  "zone": "strength-builder",
+  "block": "Правка · пропущен сегодня",
+  "canvasOid": "Л5",
+  "canvasPath": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html",
+  "frameCount": 1,
+  "frameNote": "stop-кадр data-oid=Л5 data-demo=stop data-screen-label=Правка · пропущен сегодня — замена на пропущенный день, отказ «не сегодня» без причины",
+  "buildSpec": {
+    "component": "MissedTodayProposalScreen",
+    "snapshot": "buildMissedTodaySnapshot",
+    "file": "apps/web/strength/heys_strength_proposal_ui_v1.js",
+    "mount": "apps/web/heys_day_trainings_v1.js — proposalBlocksDay + plan.status===skipped → MissedTodayProposalScreen вместо ProposalCard/PlanCard",
+    "props": {
+      "training": "{ workoutLog, plan { status skipped, skipReason, dayLabel, proposal }, planSnapshot.exercises }",
+      "nowMs": "Date.now() для «N минут назад»",
+      "onDecline": "TKs.declinePlanProposal — кнопка «Не сегодня»",
+      "onReview": "Parts.openProposalReview — кнопка «Посмотреть»"
+    },
+    "cssStrategy": "inline MISSED_TODAY_STYLE в proposal_ui (как CuratorEditStatusScreen); 750 не трогали — геометрия/цвета через inline + роли var(--tx|--c2|--gr|--ac2|--acs|--on-acs|--ink56)",
+    "test": "apps/web/__tests__/strength-builder-missed-today-v4-canvas-contract.test.js"
+  },
+  "finishMetaReadOnly": {
+    "вид · экран истории": "v=? — HistoryScreen в finish_ui (heys_strength_finish_ui_v1.js:530+), кадр Д1; не в scope missed-today",
+    "вид · итог программы": "v=? — ProgramDoneScreen в proposal_ui (16e), mount из day_trainings ProgramDoneLine; соседний flow, не Л5",
+    "состав итогов": "v=? — trainingTonnage + finish_ui; итог сессии ≠ предложение на пропущенный день"
+  },
+  "scope": "apps/web/strength/heys_strength_proposal_ui_v1.js, apps/web/heys_day_trainings_v1.js",
+  "generated": "2026-09-05",
+  "summary": {
+    "rows": 20,
+    "recommendEquals": 20,
+    "codeChanged": true,
+    "cssTouched": false
+  },
+  "rows": [
+    {
+      "key": "Правка · пропущен сегодня · 01",
+      "v": "=",
+      "f": ".sb-cycle-top.sb-missed-today-head — шапка кадра Л5; proposal_ui MissedTodayProposalScreen; contract test row 01 display:flex.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 02",
+      "v": "=",
+      "f": ".sb-missed-today-head-main MISSED_TODAY_STYLE.headCol flex-direction:column gap:3px; contract test row 02.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 03",
+      "v": "=",
+      "f": "buildMissedTodaySnapshot.titleLine → .sb-missed-today-title «Верх тела B вы отпустили» color var(--tx); contract test row 03.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 04",
+      "v": "=",
+      "f": "plan.skipReason → .sb-missed-today-key «причина: …»; contract test row 04.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 05",
+      "v": "=",
+      "f": ".sb-list.sb-missed-today-scroll overflow-y:auto (750 .sb-list); contract test row 05.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 06",
+      "v": "=",
+      "f": "snapshot.badgeLine → .sb-missed-today-badge «{who} предлагает замену»; contract test row 06.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 07",
+      "v": "=",
+      "f": ".sb-missed-today-note MISSED_TODAY_STYLE.noteCard — var(--c2) radius 12px padding 11px 12px margin-top 10px; contract test row 07.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 08",
+      "v": "=",
+      "f": "proposal.note → .sb-missed-today-note-text 500 12px/1.5 Figtree var(--tx); contract test row 08.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 09",
+      "v": "=",
+      "f": "fmtMissedTodayAgo → .sb-missed-today-note-meta 500 10.5px/1 rgba(var(--ink),.56) margin-top 7px; contract test row 09.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 10",
+      "v": "=",
+      "f": ".sb-missed-today-list margin-top 10px; contract test row 10.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 11",
+      "v": "=",
+      "f": "missedTodayChangeRow → .sb-missed-today-row display:flex; contract test row 11.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 12",
+      "v": "=",
+      "f": ".sb-missed-today-row-name color var(--tx); contract test row 12.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 13",
+      "v": "=",
+      "f": "buildMissedTodayChanges same → label «оставили» 600 11px/1 var(--gr); contract test row 13.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 14",
+      "v": "=",
+      "f": "removed → label «убрали» 600 11px/1 var(--ac2); contract test row 14.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 15",
+      "v": "=",
+      "f": "последняя .sb-missed-today-row noBorder borderBottom none; contract test row 15.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 16",
+      "v": "=",
+      "f": ".sb-missed-today-actions display:flex gap 7px margin-top 12px; contract test row 16.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 17",
+      "v": "=",
+      "f": "«Не сегодня» .sb-missed-today-decline flex:1 min-height 44px; contract test row 17.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 18",
+      "v": "=",
+      "f": "«Посмотреть» .sb-missed-today-review flex:1 background var(--acs) color var(--on-acs); contract test row 18 sand+blue.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · 19",
+      "v": "=",
+      "f": "MISSED_TODAY_FOOTNOTE → .sb-missed-today-footnote 500 11px/1.55 var(--ink56); contract test row 19.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен сегодня · текст",
+      "v": "=",
+      "f": "buildMissedTodaySnapshot агрегирует все строки кадра Л5 (заголовок, причина, бейдж, заметка, список, CTA, сноска); contract test «текст».",
+      "notes": ""
+    }
+  ]
+}
