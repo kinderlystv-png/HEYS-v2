@@ -1282,6 +1282,205 @@
     );
   }
 
+  function trisetKindLabel(memberCount) {
+    if (memberCount >= 4) return 'Круговая';
+    if (memberCount === 3) return 'Трисет';
+    return 'Суперсет';
+  }
+
+  function trisetMuscleLabel(members) {
+    const metaApi = HEYS.exerciseMeta;
+    if (!metaApi || typeof metaApi.get !== 'function' || typeof metaApi.groupLabel !== 'function') {
+      return '';
+    }
+    for (let i = 0; i < members.length; i++) {
+      const meta = metaApi.get(members[i] && members[i].name);
+      if (meta && meta.primaryGroup) return metaApi.groupLabel(meta.primaryGroup).toLowerCase();
+    }
+    return '';
+  }
+
+  function trisetWorkTitle(group, members) {
+    const letter = supersetGroupLetter(group.groupId);
+    const muscle = trisetMuscleLabel(members);
+    const kind = trisetKindLabel(members.length);
+    return kind + ' ' + letter + (muscle ? ' · ' + muscle : '');
+  }
+
+  function trisetWorkHeadKey(rounds, activeRoundIndex, memberCount) {
+    const totalApproaches = rounds.length * memberCount;
+    const displayRound = activeRoundIndex >= 0 ? (activeRoundIndex + 1) : rounds.length;
+    return 'раунд ' + displayRound + ' из ' + rounds.length + ' · ' + totalApproaches + ' подходов';
+  }
+
+  function trisetSlotLabel(index) {
+    return 'A' + (index + 1);
+  }
+
+  function sharedWarmupApproaches(members, SK) {
+    if (!members.length) return [];
+    const aps = Array.isArray(members[0].approaches) ? members[0].approaches : [];
+    return aps.filter(function (approach) {
+      return SK && typeof SK.isWarmupApproach === 'function'
+        ? SK.isWarmupApproach(approach)
+        : approach && (approach.type === 'warmup' || approach.kind === 'warmup');
+    });
+  }
+
+  function roundCellDisplay(exercise, approach, SK) {
+    const label = roundCellLabel(exercise, approach);
+    const done = SK ? SK.isApproachDone(approach) && !SK.isBlankApproach(approach) : !!approach.done;
+    return done ? label + ' ✓' : label;
+  }
+
+  function isRoundComplete(cells, exercises, SK) {
+    for (let ci = 0; ci < cells.length; ci++) {
+      const a = exercises[cells[ci].exerciseIndex].approaches[cells[ci].approachIndex];
+      if (SK.isBlankApproach(a) || !SK.isApproachDone(a)) return false;
+    }
+    return true;
+  }
+
+  function activeTrisetRoundIndex(rounds, exercises, SK) {
+    for (let ri = 0; ri < rounds.length; ri++) {
+      const cells = rounds[ri];
+      for (let ci = 0; ci < cells.length; ci++) {
+        const a = exercises[cells[ci].exerciseIndex].approaches[cells[ci].approachIndex];
+        if (SK.isBlankApproach(a)) continue;
+        if (!SK.isApproachDone(a)) return ri;
+      }
+    }
+    return rounds.length > 0 ? rounds.length - 1 : -1;
+  }
+
+  /**
+   * общей разминкой, «местами» / «разъединить» и добавлением раунда.
+   */
+  function TriSetWorkScreen(props) {
+    const {
+      group, exercises, onBack, onOpenSheet, onToggleCell, onAddRound, onSwap, onDissolve,
+      readOnly, muscleLabel
+    } = props;
+    const SK = kernel();
+    if (!SK || !group) return null;
+    const members = group.indexes.map(function (i) { return exercises[i]; });
+    const rounds = SK.supersetRounds(exercises, group.groupId);
+    if (!rounds) return null;
+
+    const activeRound = activeTrisetRoundIndex(rounds, exercises, SK);
+    const title = trisetWorkTitle(group, members);
+    const resolvedTitle = muscleLabel && title.indexOf(' · ') < 0
+      ? title + ' · ' + muscleLabel
+      : (muscleLabel && !trisetMuscleLabel(members) ? title + ' · ' + muscleLabel : title);
+    const headKey = trisetWorkHeadKey(rounds, activeRound, members.length);
+    const warmups = sharedWarmupApproaches(members, SK);
+    const warmupsDone = warmups.length > 0 && warmups.every(function (approach) {
+      return SK.isApproachDone(approach);
+    });
+    const addRoundLabel = '+ Раунд · добавит ' + members.length + ' '
+      + ruPlural(members.length, 'подход', 'подхода', 'подходов');
+
+    const roundBlocks = [];
+    rounds.forEach(function (cells, ri) {
+      const isCurrent = ri === activeRound;
+      const complete = isRoundComplete(cells, exercises, SK);
+      roundBlocks.push(h('div', {
+        className: 'sb-tw-set sb-tw-round' + (isCurrent ? ' is-current' : ''),
+        key: 'round' + ri
+      },
+        h('span', { className: 'sb-tw-round-num' + (isCurrent ? ' is-current' : '') }, 'Р' + (ri + 1)),
+        cells.map(function (cell, ci) {
+          const ex = exercises[cell.exerciseIndex];
+          const approach = ex.approaches[cell.approachIndex];
+          const done = SK.isApproachDone(approach) && !SK.isBlankApproach(approach);
+          const blank = SK.isBlankApproach(approach);
+          return h('button', {
+            key: 'cell' + ci,
+            type: 'button',
+            className: 'sb-tw-cell n'
+              + (done ? ' is-done' : '')
+              + (isCurrent && !done && !blank ? ' is-active' : '')
+              + (!isCurrent && !done ? ' is-pending' : ''),
+            disabled: readOnly || blank,
+            onClick: function () {
+              if (!readOnly && onToggleCell) onToggleCell(cell.exerciseIndex, cell.approachIndex);
+            }
+          }, blank ? '—' : roundCellDisplay(ex, approach, SK));
+        })
+      ));
+      if (complete && ri < rounds.length - 1) {
+        roundBlocks.push(h('div', { className: 'sb-tw-set sb-tw-round-footer', key: 'footer' + ri },
+          h('span', { className: 'sb-tw-round-spacer', 'aria-hidden': 'true' }),
+          h('span', { className: 'sb-tw-round-closed' },
+            'круг закрыт · отдых ' + fmtClock(group.restSec))
+        ));
+      }
+    });
+
+    return h('div', { className: 'sb-root sb-triset-work-screen' },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: onBack, 'aria-label': 'Назад'
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, resolvedTitle),
+          h('div', { className: 'sb-head-sub sb-tw-head-key' }, headKey)
+        ),
+        h('span', { className: 'sb-tw-badge' }, 'связка'),
+        h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: onOpenSheet, 'aria-label': 'Ещё'
+        }, '⋯')
+      ),
+      h('div', { className: 'sb-tw-scroll' },
+        h('div', { className: 'sb-tw-actions' },
+          h('button', {
+            type: 'button',
+            className: 'sb-tw-pill is-accent',
+            disabled: readOnly,
+            onClick: function () { if (onSwap) onSwap(group.groupId); }
+          }, 'местами'),
+          h('button', {
+            type: 'button',
+            className: 'sb-tw-pill',
+            disabled: readOnly,
+            onClick: function () { if (onDissolve) onDissolve(group.groupId); }
+          }, 'разъединить')
+        ),
+        h('div', { className: 'sb-tw-grp' },
+          h('div', { className: 'sb-tw-member-row' },
+            members.map(function (member, mi) {
+              return h('div', { className: 'sb-tw-member-card', key: 'member' + mi },
+                h('i', null, trisetSlotLabel(mi)),
+                h('span', null, member.name || 'Без названия')
+              );
+            })
+          ),
+          warmups.length > 0 && h('div', { className: 'sb-tw-set sb-tw-warmup' },
+            h('span', { className: 'sb-tw-warmup-tag' }, 'разм.'),
+            h('span', { className: 'sb-tw-warmup-copy' },
+              'общая для связки · ' + warmups.length + ' '
+              + ruPlural(warmups.length, 'подход', 'подхода', 'подходов')),
+            warmupsDone && h('span', { className: 'sb-tw-warmup-done' }, '✓')
+          ),
+          roundBlocks
+        ),
+        !readOnly && h('button', {
+          type: 'button',
+          className: 'sb-tw-pill sb-tw-add-round is-accent',
+          onClick: function () { if (onAddRound) onAddRound(group.groupId); }
+        }, addRoundLabel),
+        readOnly && h('div', { className: 'sb-tw-pill sb-tw-add-round is-accent', 'aria-hidden': 'true' }, addRoundLabel),
+        h('p', { className: 'sb-tw-footnote' },
+          'Раунд — строка, а не три карточки: в зале человек делает A1 → A2 → A3 подряд и только потом садится, '
+          + 'а три карточки заставляют трижды листать экран за круг. «Местами» меняет участников внутри связки, '
+          + 'данные подходов едут за упражнением. «Разъединить» превращает участников в обычные упражнения: '
+          + 'подходы сохраняются, раунды исчезают.')
+      )
+    );
+  }
+
   function ExerciseCard(props) {
     const { ex, index, open, onToggleOpen, onPatchApproach, onToggleType,
       onAddApproach, onAddDrop, onRpe, onRename, onRestManual, onStartRest, onLink,
@@ -1580,6 +1779,9 @@
   Parts.WarmupDropScreen = WarmupDropScreen;
   Parts.ApproachTypesScreen = ApproachTypesScreen;
   Parts.DropSetScreen = DropSetScreen;
+  Parts.TriSetWorkScreen = TriSetWorkScreen;
+  Parts.trisetWorkTitle = trisetWorkTitle;
+  Parts.trisetWorkHeadKey = trisetWorkHeadKey;
   Parts.RenumberScreen = RenumberScreen;
   Parts.RestEndedPocket = RestEndedPocket;
   Parts.exerciseVolumeKg = exerciseVolumeKg;
