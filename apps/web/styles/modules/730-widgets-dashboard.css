@@ -10975,6 +10975,25 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   white-space: nowrap;
 }
 
+/* Кадр «Шаги · Месяц»: ключ отдельно, герой 26px/.9, цель справа, ряд 44 px. */
+.widget-v4-steps--month .widget-v4-steps__hero--month {
+  align-items: baseline;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.widget-v4-steps--month .widget-v4-steps__hero--month .widget-v4-steps__value {
+  font-size: 26px;
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  color: var(--v4-ink, #201e1d);
+  margin-top: 0;
+}
+
+.widget-v4-steps--month .widget-v4-steps__goal {
+  margin-left: auto;
+}
+
 /* Тренд шагов: столбики недели и месяца. День с целью — шалфей, ниже цели —
    средний тон; дня без записи в ряду нет (строки «шаги · цвет» и
    «шаги · нет данных»). */
@@ -10987,8 +11006,22 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-stepbars--month {
-  gap: 1.5px;
-  height: 30px;
+  position: relative;
+  gap: 2px;
+  height: 44px;
+}
+
+.widget-v4-stepbars--month .widget-v4-stepbars__bar {
+  border-radius: 1px 1px 0 0;
+}
+
+.widget-v4-stepbars__norm {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  border-top: 1.5px dashed rgba(var(--v4-ink-rgb), 0.22); /* v4-intentional */
+  pointer-events: none;
 }
 
 .widget-v4-stepbars__bar {

@@ -86,7 +86,7 @@ describe('Шаги · Неделя — сведённый кусок', () => {
     expect(month).toContain("v4Kicker('Шаги · месяц')");
     expect(month).not.toContain('widget-v4-steps--week');
     expect(bars).toContain('widget-v4-stepbars__bar');
-    expect(bars).toContain("Math.max(2, Math.round((value / max) * 30)) + 'px'");
+    expect(bars).toContain("Math.max(2, Math.round((value / max) * plotPx)) + 'px'");
     expect(bars).toContain('is-goal');
     expect(uiSrc).toContain("'Мес'");
     expect(uiSrc).toContain("'Вес по неделям'");

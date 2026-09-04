@@ -5622,10 +5622,16 @@
    * Столбики тренда шагов. День с целью — шалфей, ниже цели — средний тон;
    * дня без записи в ряду нет вовсе (строки «шаги · цвет» и «шаги · нет данных»).
    */
-  function v4StepsBars(series, goal, extraClass) {
+  function v4StepsBars(series, goal, extraClass, opts) {
     const list = Array.isArray(series) ? series : [];
+    const plotPx = Number(opts?.plotPx) || 30;
+    const showNorm = Boolean(opts?.showNorm);
     const max = Math.max(Number(goal) || 0, ...list.map((item) => Number(item?.value) || 0), 1);
+    const normLine = showNorm && goal > 0
+      ? React.createElement('span', { className: 'widget-v4-stepbars__norm' })
+      : null;
     return React.createElement('div', { className: 'widget-v4-stepbars ' + (extraClass || '') },
+      normLine,
       list.map((item) => {
         const value = Number(item?.value) || 0;
         const done = goal > 0 && value >= goal;
@@ -5634,7 +5640,7 @@
           className: 'widget-v4-stepbars__bar'
             + (item?.hasData ? '' : ' is-empty')
             + (done ? ' is-goal' : ''),
-          style: { height: item?.hasData ? Math.max(2, Math.round((value / max) * 30)) + 'px' : '2px' }
+          style: { height: item?.hasData ? Math.max(2, Math.round((value / max) * plotPx)) + 'px' : '2px' }
         });
       })
     );
@@ -5650,19 +5656,18 @@
     if (variantId === 'month') {
       const avg = data?.avgMonth;
       const state = v4StepsState(avg != null && goal > 0 ? (avg / goal) * 100 : 0);
-      return React.createElement('div', { className: 'widget-v4-stack widget-v4-steps' },
-        React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
-          v4Kicker('Шаги · месяц'),
-          React.createElement('span', { className: 'widget-v4-row__meta' }, `цель ${formatRuThousands(goal)}`)
-        ),
-        React.createElement('div', { className: 'widget-v4-steps__hero' },
+      return React.createElement('div', { className: 'widget-v4-stack widget-v4-steps widget-v4-steps--month' },
+        v4Kicker('Шаги · месяц'),
+        React.createElement('div', { className: 'widget-v4-steps__hero widget-v4-steps__hero--month' },
           React.createElement('span', {
             className: 'widget-v4-steps__value ' + v4ValueStateClass(state)
           }, avg != null ? formatRuThousands(avg) : '—'),
-          avg != null ? React.createElement('span', { className: 'widget-v4-unit' }, 'в день') : null
+          avg != null ? React.createElement('span', { className: 'widget-v4-unit' }, 'в день') : null,
+          React.createElement('span', { className: 'widget-v4-row__meta widget-v4-steps__goal' },
+            `цель ${formatRuThousands(goal)}`)
         ),
         enoughDays
-          ? v4StepsBars(data?.month, goal, 'widget-v4-stepbars--month')
+          ? v4StepsBars(data?.month, goal, 'widget-v4-stepbars--month', { plotPx: 40, showNorm: true })
           : React.createElement('span', { className: 'widget-v4-muted' },
             daysWithData ? `нужно ${2 - daysWithData} день` : 'нужно 2 дня')
       );
