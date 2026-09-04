@@ -91,6 +91,33 @@ test('копия модуля в heys-api-rpc не разошлась с это�
   assert.equal(lf(RPC_LIB), lf(MCP_LIB), 'heys_tasks_kv.cjs разошёлся с lib/tasks.js — дельта-запись пойдёт по старому коду');
 });
 
+/**
+ * Проверка на две названные копии слепа к третьей.
+ *
+ * 04.09 нашлась ещё одна — heys-api-rest/lib/heys_tasks_kv.cjs: последний
+ * коммит 13.08, никем не подключена (index.js грузит из lib/ только
+ * heys_sync_merge_v1.cjs), и при этом отстала на правку порядка стенограммы.
+ * Вреда она не делала, но выглядела третьим рабочим путём и стоила часа
+ * разбора и одного ложного вывода. Файл удалён.
+ *
+ * Поэтому тест сторожит не пару файлов, а их число: копия, заведённая мимо
+ * этой проверки, роняет её, а не остаётся невидимой.
+ */
+test('копий модуля ровно две, третья не завелась', () => {
+  const root = path.resolve(__dirname, '..', '..');
+  const found = [];
+  for (const dir of fs.readdirSync(root, { withFileTypes: true })) {
+    if (!dir.isDirectory()) continue;
+    const candidate = path.join(root, dir.name, 'lib', 'heys_tasks_kv.cjs');
+    if (fs.existsSync(candidate)) found.push(`${dir.name}/lib/heys_tasks_kv.cjs`);
+  }
+  assert.deepEqual(
+    found,
+    ['heys-api-rpc/lib/heys_tasks_kv.cjs'],
+    'появилась копия heys_tasks_kv.cjs, которую не сверяет ни один тест — либо подключите её к сверке, либо удалите',
+  );
+});
+
 test('дельта mode=chrono принимается той копией, которая пишет файл', () => {
   const kv = require(RPC_LIB);
   const file = kv.ensureFile(null, 'transcript/2026-09-02.md');
