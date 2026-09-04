@@ -212,6 +212,20 @@ describe('вид · значок вместо эмодзи — сведённы�
     expect(water.querySelector('.widget-v4-catalog__name').textContent).toBe('Вода');
   });
 
+  it('держит поле значка 15×15 из рисунок 01, не пути кадра', () => {
+    // Строка «контуры иконок совпадения не требуют»: обязательны поле,
+    // обводка, тон и место. Пути 02–13 — приближение канваса, не спецификация.
+    expect(contractValue(canvas, 'Каталог · значки вместо эмодзи · рисунок 01'))
+      .toBe('поле рисунка 15×15 (viewBox 0 0 24 24)');
+    expect(uiSrc).toContain('function WidgetGlyph');
+    expect(uiSrc).toContain('width: 15');
+    expect(uiSrc).toContain('height: 15');
+    expect(uiSrc).toContain("viewBox: '0 0 24 24'");
+    expect(uiSrc).toContain('strokeWidth: 2.75');
+    expect(contractValue(canvas, 'контуры иконок совпадения не требуют'))
+      .toContain('совпадение путей с канвасом не назначается');
+  });
+
   it('не оставляет пластину 40×40 и розовый чип в исходнике зоны', () => {
     expect(uiSrc).not.toContain('widgets-catalog__item-icon');
     expect(uiSrc).not.toContain('widget-weight__stat--pink');
