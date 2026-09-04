@@ -2156,235 +2156,169 @@
       "h": "88e598cbe64b"
     },
     "Программа · цикл · 01": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "175bdcc2e73a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-top + back .sb-icon-btn — шапка экрана; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "175bdcc2e73a"
     },
     "Программа · цикл · 02": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "07ffbada0ee7",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-top-main flex column gap 3px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "07ffbada0ee7"
     },
     "Программа · цикл · 03": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "ff887629869e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-title — program.title · weeks; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "ff887629869e"
     },
     "Программа · цикл · 04": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "6564b1096382",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-key — assignedBy · startDate; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "6564b1096382"
     },
     "Программа · цикл · 05": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "408ad5afab65",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-badge — неделя N; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "408ad5afab65"
     },
     "Программа · цикл · 06": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "c629f84f9712",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-scroll — прокрутка; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "c629f84f9712"
     },
     "Программа · цикл · 07": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "2bff45192fc0",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-metrics gap 8px margin-top 12px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "2bff45192fc0"
     },
     "Программа · цикл · 08": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "c9d2da3b8d57",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-metric c1 radius 14 pad 10/11; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "c9d2da3b8d57"
     },
     "Программа · цикл · 09": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "64069e4a2476",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-metric-label uppercase 9.5px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "64069e4a2476"
     },
     "Программа · цикл · 10": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "36d225f4a2a5",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-metric-value 17/800 done/total; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "36d225f4a2a5"
     },
     "Программа · цикл · 11": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "fa0912aa4180",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-metric.is-accent tint inset acs; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "fa0912aa4180"
     },
     "Программа · цикл · 12": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "8d57a164224b",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-metric-value.is-accent — recordCount; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "8d57a164224b"
     },
     "Программа · цикл · 13": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "e7692761d16d",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-tier «Фазы недель»; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "e7692761d16d"
     },
     "Программа · цикл · 14": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "f0c294cf743f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase.is-active inset acs radius 16; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "f0c294cf743f"
     },
     "Программа · цикл · 15": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "4f95fa757d2e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-head gap 9px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "4f95fa757d2e"
     },
     "Программа · цикл · 16": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "c8323a8b26cb",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-num.is-active 26×26 acs; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "c8323a8b26cb"
     },
     "Программа · цикл · 17": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "7590f4699d43",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-copy column gap 2px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "7590f4699d43"
     },
     "Программа · цикл · 18": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "9e043e358931",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-name 12.5/700; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "9e043e358931"
     },
     "Программа · цикл · 19": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "dd5472b124cf",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-detail 11/500 mut; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "dd5472b124cf"
     },
     "Программа · цикл · 20": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "84794a68154a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-pct.is-done gr; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "84794a68154a"
     },
     "Программа · цикл · 21": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "964292fe9ce4",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-weeks gap 5 margin-top 9px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "964292fe9ce4"
     },
     "Программа · цикл · 22": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "b86b0476705d",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-week-cell.is-done gr-bg ✓; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "b86b0476705d"
     },
     "Программа · цикл · 23": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "02410b689bf7",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-week-cell.is-plan bg inset ·; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "02410b689bf7"
     },
     "Программа · цикл · 24": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "5d044c8296c8",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase radius 16 mb 8; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "5d044c8296c8"
     },
     "Программа · цикл · 25": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "db178f5ba8c1",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-num plan 26×26; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "db178f5ba8c1"
     },
     "Программа · цикл · 26": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "19c917d09e53",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-phase-pct «план»; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "19c917d09e53"
     },
     "Программа · цикл · 27": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "d9a337aab838",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-week-list cd; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "d9a337aab838"
     },
     "Программа · цикл · 28": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-week-row; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "af81bb6e54c6"
     },
     "Программа · цикл · 29": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "d735669c1ee3",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-week-label tx; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "d735669c1ee3"
     },
     "Программа · цикл · 30": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "b57d6c61a777",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-week-status.is-done gr; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "b57d6c61a777"
     },
     "Программа · цикл · 31": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "6b286135ed76",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-week-row.is-last border none; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "6b286135ed76"
     },
     "Программа · цикл · 32": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "5f0b3e3988e9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-week-status.is-today ac; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "5f0b3e3988e9"
     },
     "Программа · цикл · 33": {
-      "v": "≠",
-      "f": "CycleScreen по grep отсутствует; ProgramDoneScreen (proposal_ui:505+) — итог, не экран цикла. Кадры «Программа · цикл · 01-34» не рендерятся.",
-      "h": "3a10bafed6ea",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-footnote sm prose; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "3a10bafed6ea"
     },
     "Программа · назначено против сделано · 01": {
       "v": "?",
