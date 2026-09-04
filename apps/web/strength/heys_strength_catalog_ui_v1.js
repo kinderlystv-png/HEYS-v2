@@ -448,70 +448,249 @@
     );
   }
 
+  /** Тост «Подход засчитан · … · Отменить» — общий для списка и режима порядка. */
+  function ApproachUndoToast(props) {
+    const toast = props && props.toast;
+    if (!toast) return null;
+    return h('div', { className: 'sb-order-toast', role: 'status' },
+      h('span', { className: 'sb-order-toast-mark', 'aria-hidden': true }, '✓'),
+      h('span', { className: 'sb-order-toast-copy' },
+        h('b', null, toast.label || ''),
+        toast.hint && h('span', null, toast.hint)
+      ),
+      h('button', {
+        type: 'button',
+        className: 'obtn sb-order-toast-undo',
+        onClick: function () { if (typeof toast.onUndo === 'function') toast.onUndo(); }
+      }, 'Отменить')
+    );
+  }
+
   /**
-   * Режим порядка (экран 06): тот же список, не отдельное место. Стрелки для
-   * пальца — перетаскивание мышью остаётся в обычном режиме конструктора.
-   * Связка двигается блоком целиком: разорвать её здесь нельзя.
+   * Ж1 · режим порядка: стрелки .sqb для пальца, ⠿ — перетаскивание мышью.
+   * Связка двигается блоком; место вставки — полоса 2 px, не тень.
    */
   function OrderScreen(props) {
-    const { exercises, onApply, onCancel } = props;
+    const { exercises, onApply, onCancel, undoToast } = props;
     const [list, setList] = React.useState(exercises || []);
+    const [dragFrom, setDragFrom] = React.useState(null);
+    const [insertBefore, setInsertBefore] = React.useState(null);
+    const listRef = React.useRef(null);
+    const dragRef = React.useRef(null);
     const TK = HEYS.TrainingKernel;
     const SK = (TK && TK.strength) ? TK.strength : null;
+    const Parts = HEYS.StrengthBuilderParts || {};
+    const planExerciseSummary = typeof Parts.planExerciseSummary === 'function'
+      ? Parts.planExerciseSummary
+      : function () { return ''; };
+
+    React.useEffect(function () {
+      setList(exercises || []);
+    }, [exercises]);
+
     if (!SK) return null;
     const blocks = SK.orderBlocks(list);
+
+    function workApproaches(exercise) {
+      const approaches = exercise && Array.isArray(exercise.approaches) ? exercise.approaches : [];
+      return approaches.filter(function (approach) {
+        return !(SK && SK.isWarmupApproach(approach));
+      });
+    }
+
+    function groupLetter(block, blockIdx) {
+      const gid = block && block.groupId;
+      if (Number.isInteger(gid) && gid > 0 && gid <= 26) return String.fromCharCode(64 + gid);
+      return String.fromCharCode(65 + blockIdx);
+    }
+
+    function blockMeta(block, blockIdx) {
+      if (block.groupId > 0) {
+        const names = block.indexes.map(function (i) { return list[i].name || 'Без названия'; });
+        const totalApproaches = block.indexes.reduce(function (sum, i) {
+          return sum + workApproaches(list[i]).length;
+        }, 0);
+        const approachWord = totalApproaches % 10 === 1 && totalApproaches % 100 !== 11
+          ? 'подход'
+          : totalApproaches % 10 >= 2 && totalApproaches % 10 <= 4 && !(totalApproaches % 100 >= 12 && totalApproaches % 100 <= 14)
+            ? 'подхода'
+            : 'подходов';
+        return {
+          isGroup: true,
+          title: 'Связка ' + groupLetter(block, blockIdx),
+          subtitle: names.join(' ⇄ ') + ' · ' + totalApproaches + ' ' + approachWord
+        };
+      }
+      const ex = list[block.indexes[0]] || {};
+      return {
+        isGroup: false,
+        title: ex.name || 'Без названия',
+        subtitle: planExerciseSummary(ex)
+      };
+    }
+
+    function applyInsert(fromIdx, beforeIdx) {
+      if (fromIdx == null || beforeIdx == null) return;
+      if (fromIdx === beforeIdx || fromIdx + 1 === beforeIdx) return;
+      const order = blocks.slice();
+      const moved = order.splice(fromIdx, 1)[0];
+      let insertAt = beforeIdx;
+      if (beforeIdx > fromIdx) insertAt -= 1;
+      order.splice(insertAt, 0, moved);
+      const out = [];
+      order.forEach(function (block) {
+        block.indexes.forEach(function (i) { out.push(list[i]); });
+      });
+      setList(out);
+    }
 
     function move(blockIdx, dir) {
       setList(SK.moveBlock(list, blockIdx, dir));
     }
 
-    return h('div', { className: 'sb-root sb-screen' },
+    function insertBeforeFromPointer(clientY) {
+      const root = listRef.current;
+      if (!root) return blocks.length;
+      const rows = root.querySelectorAll('[data-order-row]');
+      for (let i = 0; i < rows.length; i++) {
+        const rect = rows[i].getBoundingClientRect();
+        if (clientY < rect.top + rect.height / 2) return i;
+      }
+      return rows.length;
+    }
+
+    function finishDrag() {
+      const from = dragRef.current.from;
+      const before = dragRef.current.before;
+      dragRef.current = { from: null, before: null, active: false };
+      setDragFrom(null);
+      setInsertBefore(null);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      applyInsert(from, before);
+    }
+
+    function onPointerMove(e) {
+      if (!dragRef.current.active) return;
+      setInsertBefore(insertBeforeFromPointer(e.clientY));
+    }
+
+    function onPointerUp() {
+      if (!dragRef.current.active) return;
+      finishDrag();
+    }
+
+    function startDrag(blockIdx, e) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      dragRef.current = { from: blockIdx, before: blockIdx, active: true };
+      setDragFrom(blockIdx);
+      setInsertBefore(blockIdx);
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
+    }
+
+    React.useEffect(function () {
+      return function () {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        window.removeEventListener('pointercancel', onPointerUp);
+      };
+    }, []);
+
+    function renderRow(block, bi, opts) {
+      const options = opts || {};
+      const meta = blockMeta(block, bi);
+      const isDragging = dragFrom === bi && !options.isPreview;
+      const isDropTarget = options.isPreview;
+      const rowClass = 'sb-order-row'
+        + (meta.isGroup ? ' is-group' : '')
+        + (isDropTarget ? ' is-drop-target' : '')
+        + (isDragging ? ' is-dragging' : '');
+      const subtitle = isDropTarget ? 'переносится сюда' : meta.subtitle;
+      return h('div', {
+        key: options.key || ('b' + bi),
+        className: 'sb-order-ex',
+        'data-order-row': true
+      },
+        h('div', { className: rowClass },
+          h('span', {
+            className: 'sb-order-handle' + (isDropTarget ? ' is-accent' : ''),
+            onPointerDown: options.isPreview ? undefined : function (e) { startDrag(bi, e); },
+            'aria-hidden': true
+          }, '⠿'),
+          h('span', {
+            className: 'sb-ex-num'
+              + (isDropTarget ? ' is-accent' : '')
+              + (meta.isGroup && !isDropTarget ? ' is-group-num' : '')
+          }, String(bi + 1)),
+          h('div', { className: 'sb-cat-title' },
+            h('b', null, meta.title),
+            subtitle && h('span', { className: isDropTarget ? 'is-accent' : '' }, subtitle)
+          ),
+          !options.isPreview && h('div', { className: 'sb-order-arrows' },
+            h('button', {
+              type: 'button', className: 'sqb',
+              disabled: bi === 0,
+              onClick: function () { move(bi, -1); },
+              'aria-label': 'Выше'
+            }, '▲'),
+            h('button', {
+              type: 'button', className: 'sqb',
+              disabled: bi === blocks.length - 1,
+              onClick: function () { move(bi, 1); },
+              'aria-label': 'Ниже'
+            }, '▼')
+          )
+        )
+      );
+    }
+
+    const rows = [];
+    blocks.forEach(function (block, bi) {
+      if (dragFrom !== null && insertBefore === bi) {
+        rows.push(h('div', { key: 'ins-' + bi, className: 'sb-order-insert', 'aria-hidden': true }));
+        rows.push(renderRow(blocks[dragFrom], bi, { isPreview: true, key: 'preview-' + bi }));
+      }
+      if (dragFrom === bi) return;
+      rows.push(renderRow(block, bi));
+    });
+    if (dragFrom !== null && insertBefore === blocks.length) {
+      rows.push(h('div', { key: 'ins-end', className: 'sb-order-insert', 'aria-hidden': true }));
+    }
+
+    return h('div', { className: 'sb-root sb-screen sb-order-screen' },
       h('div', { className: 'sb-head' },
         h('button', {
-          type: 'button', className: 'sb-icon-btn', onClick: onCancel, 'aria-label': 'Отменить'
+          type: 'button',
+          className: 'sb-icon-btn sb-icon-btn--close',
+          onClick: onCancel,
+          'aria-label': 'Отменить'
         }, '✕'),
         h('div', { className: 'sb-head-title' },
           h('b', null, 'Тот же список · режим порядка'),
-          h('div', { className: 'sb-head-sub' }, 'Стрелки двигают блок целиком')
+          h('div', { className: 'sb-head-sub' }, 'стрелки для пальца, ⠿ — мышью')
         ),
         h('button', {
-          type: 'button', className: 'sb-order-done',
+          type: 'button',
+          className: 'obtn sb-order-done',
           onClick: function () { onApply(list); }
         }, 'Готово')
       ),
-      h('div', { className: 'sb-list' },
-        blocks.map(function (block, bi) {
-          const isGroup = block.groupId > 0;
-          const names = block.indexes.map(function (i) { return list[i].name || 'Без названия'; });
-          return h('div', {
-            key: bi,
-            className: 'sb-order-row' + (isGroup ? ' is-group' : '')
-          },
-            h('span', { className: 'sb-ex-num' }, String(bi + 1)),
-            h('div', { className: 'sb-cat-title' },
-              h('b', null, isGroup ? 'Связка ' + names.join(' ⇄ ') : names[0]),
-              isGroup && h('span', null, block.indexes.length + ' упражнения подряд')
-            ),
-            h('div', { className: 'sb-order-arrows' },
-              h('button', {
-                type: 'button', className: 'sb-icon-btn',
-                disabled: bi === 0,
-                onClick: function () { move(bi, -1); },
-                'aria-label': 'Выше'
-              }, '▲'),
-              h('button', {
-                type: 'button', className: 'sb-icon-btn',
-                disabled: bi === blocks.length - 1,
-                onClick: function () { move(bi, 1); },
-                'aria-label': 'Ниже'
-              }, '▼')
-            )
-          );
-        })
-      )
+      h('div', { className: 'sb-list sb-order-list', ref: listRef },
+        rows.length ? rows : null
+      ),
+      undoToast && h(ApproachUndoToast, { toast: undoToast }),
+      h('p', { className: 'sb-order-foot' },
+        'Связка перетаскивается целиком, как один блок: порядок внутри неё меняется в самой связке. '
+        + 'Стрелки «выше / ниже» стоят рядом с ⠿ — пальцем тащить список в скролле невозможно. '
+        + 'Случайная галочка снимается тостом, а не долгим тапом.')
     );
   }
 
+  Cat.ApproachUndoToast = ApproachUndoToast;
   Cat.OrderScreen = OrderScreen;
 
   Cat.SupersetScreen = SupersetScreen;

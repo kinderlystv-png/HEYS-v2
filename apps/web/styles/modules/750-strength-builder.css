@@ -2377,8 +2377,240 @@
   font-size: 20px;
 }
 
-/* ── Режим порядка (экран 06) ────────────────────────────────────────────── */
+/* ── Ж1 · режим порядка ──────────────────────────────────────────────────── */
 
+.sqb {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--v4-hero, var(--sb-soft));
+  color: var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
+  font: 700 11px/1 Figtree, -apple-system, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.sqb:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.obtn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 999px;
+  font: 700 11.5px/1 Figtree, -apple-system, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.sb-order-screen .sb-head {
+  padding: 10px 12px;
+}
+
+.sb-order-screen .sb-icon-btn--close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-c1, var(--sb-card));
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56)); /* v4-intentional */
+}
+
+.sb-order-screen .sb-head-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 10px;
+}
+
+.sb-order-screen .sb-head-title b {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.sb-order-screen .sb-head-sub {
+  font-size: 10.5px;
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.sb-order-done.obtn {
+  height: 36px;
+  padding: 0 15px;
+  background: var(--v4-tint, var(--sb-accbg));
+  box-shadow: inset 0 0 0 1.5px var(--v4-act, var(--sb-acc-strong));
+  color: var(--v4-act-text, var(--sb-acc));
+}
+
+.sb-order-list {
+  padding: 0 12px 12px;
+}
+
+.sb-order-list > .sb-order-ex:first-child {
+  margin-top: 12px;
+}
+
+.sb-order-ex + .sb-order-ex {
+  margin-top: 0;
+}
+
+.sb-order-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.sb-order-row.is-drop-target {
+  box-shadow: inset 0 0 0 2px var(--v4-act, var(--sb-acc-strong));
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.sb-order-row.is-group {
+  border-left: 3px solid var(--v4-act, var(--sb-acc-strong));
+  padding-left: 8px;
+}
+
+.sb-order-row.is-dragging {
+  opacity: 0.35;
+}
+
+.sb-order-handle {
+  flex: 0 0 auto;
+  font: 600 14px/1 Figtree, -apple-system, system-ui, sans-serif;
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.32); /* v4-intentional */
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.sb-order-handle.is-accent {
+  color: var(--v4-act-text, var(--sb-acc));
+}
+
+.sb-order-row .sb-ex-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
+}
+
+.sb-order-row .sb-ex-num.is-accent {
+  background: var(--v4-act, var(--sb-acc-strong));
+  color: var(--v4-btn-on-act, var(--sb-accTx));
+}
+
+.sb-order-row .sb-ex-num.is-group-num {
+  background: var(--v4-tint, var(--sb-accbg));
+  color: var(--v4-act-text, var(--sb-acc));
+}
+
+.sb-order-row .sb-cat-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sb-order-row .sb-cat-title b {
+  font: 700 12.5px/1.2 Figtree, -apple-system, system-ui, sans-serif;
+  color: var(--v4-ink, var(--sb-tx));
+}
+
+.sb-order-row .sb-cat-title span {
+  font: 500 11px/1.3 Figtree, -apple-system, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+}
+
+.sb-order-row .sb-cat-title span.is-accent {
+  color: var(--v4-act-text, var(--sb-acc));
+}
+
+.sb-order-arrows {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sb-order-insert {
+  height: 2px;
+  margin: 2px 0 6px;
+  border-radius: 999px;
+  background: var(--v4-act, var(--sb-acc-strong));
+}
+
+.sb-order-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 12px 0;
+  padding: 9px 10px 9px 13px;
+  border-radius: 16px;
+  background: var(--v4-ok-bg, var(--sb-okbg));
+}
+
+.sb-order-toast-mark {
+  flex: 0 0 auto;
+  font: 700 12px/1 Figtree, -apple-system, system-ui, sans-serif;
+  color: var(--v4-ok, var(--sb-okTx));
+}
+
+.sb-order-toast-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sb-order-toast-copy b {
+  font: 700 12px/1.2 Figtree, -apple-system, system-ui, sans-serif;
+  color: var(--v4-ok, var(--sb-okTx));
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-order-toast-copy span {
+  font: 500 11px/1.3 Figtree, -apple-system, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+}
+
+.sb-order-toast-undo.obtn {
+  height: 44px;
+  background: var(--v4-bg, var(--sb-bg));
+  box-shadow: inset 0 0 0 1.5px var(--v4-ok, var(--sb-okTx));
+  color: var(--v4-ok, var(--sb-okTx));
+}
+
+.sb-order-foot {
+  margin: 10px 12px 16px;
+  font: 500 11px/1.45 Figtree, -apple-system, system-ui, sans-serif;
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+}
+
+/* legacy alias kept for older selectors */
 .sb-order-done {
   min-height: 36px;
   padding: 0 14px;
@@ -2389,27 +2621,6 @@
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
-}
-
-.sb-order-row {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 10px 12px;
-  border-radius: 13px;
-  border: 1px solid var(--sb-br);
-  background: var(--sb-card);
-  margin-bottom: 8px;
-}
-
-.sb-order-row.is-group {
-  border-left: 3px solid var(--sb-acc);
-}
-
-.sb-order-arrows {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
 }
 
 /* ── Пустая тренировка · Б1 ──────────────────────────────────────────────── */

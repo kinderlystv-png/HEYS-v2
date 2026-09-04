@@ -189,6 +189,8 @@
     const [emptyActionPending, setEmptyActionPending] = React.useState(false);
     const [consumedPlanRevision, setConsumedPlanRevision] = React.useState(null);
     const [renumberCtx, setRenumberCtx] = React.useState(null);
+    const [approachUndo, setApproachUndo] = React.useState(null);
+    const skipUndoToastRef = React.useRef(false);
     const [rest, setRest] = React.useState(function () {
       return restoreActiveRest(wl.activeRest, Date.now());
     });
@@ -254,6 +256,12 @@
       const id = global.setInterval(function () { setTick(function (t) { return t + 1; }); }, 1000);
       return function () { global.clearInterval(id); };
     }, [startedAt, completedAt]);
+
+    React.useEffect(function () {
+      if (!approachUndo) return undefined;
+      const id = global.setTimeout(function () { setApproachUndo(null); }, 5000);
+      return function () { global.clearTimeout(id); };
+    }, [approachUndo]);
 
     React.useEffect(function () {
       if (!closeConfirm || !global.document) return undefined;
@@ -465,6 +473,21 @@
         if (!(+sessionRef.current.startedAt > 0)) lifecyclePatch.startedAt = markedAt;
         if (!(+sessionRef.current.firstMarkAt > 0)) lifecyclePatch.firstMarkAt = markedAt;
         patchSession(lifecyclePatch);
+        if (!skipUndoToastRef.current) {
+          const marked = aps[apIdx];
+          const weightLabel = marked && marked.weightKg ? String(marked.weightKg).replace('.', ',') : 'свой';
+          const repsLabel = marked && marked.reps ? marked.reps : '—';
+          setApproachUndo({
+            label: 'Подход засчитан · ' + weightLabel + ' кг × ' + repsLabel,
+            hint: 'тост живёт несколько секунд',
+            onUndo: function () {
+              skipUndoToastRef.current = true;
+              patchApproach(exIdx, apIdx, { done: false });
+              setApproachUndo(null);
+            }
+          });
+        }
+        skipUndoToastRef.current = false;
       }
       // Таймер — событие, а не виджет: одиночный стартует от подхода, связка —
       // только от перехода последней клетки раунда в закрытое состояние.
@@ -828,6 +851,7 @@
     if (view === 'order' && CatUI.OrderScreen) {
       return h(CatUI.OrderScreen, {
         exercises: exercises,
+        undoToast: approachUndo,
         onApply: function (next) { patchExercises(next); setView('list'); },
         onCancel: function () { setView('list'); }
       });
@@ -1236,6 +1260,7 @@
         )
       ),
       h('div', { className: 'sb-panel' },
+        approachUndo && CatUI.ApproachUndoToast && h(CatUI.ApproachUndoToast, { toast: approachUndo }),
         h('button', {
           type: 'button', className: 'sb-panel-add', 'aria-label': 'Добавить упражнение',
           onClick: function () { setView('catalog'); }
