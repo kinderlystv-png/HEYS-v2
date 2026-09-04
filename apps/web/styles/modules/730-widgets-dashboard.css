@@ -3474,7 +3474,6 @@ body:has(.page-reports) .hdr::after {
 
 .widget-v4-catalog__budget {
   display: block;
-  margin-bottom: 8px;
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
@@ -11994,7 +11993,64 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-catalog {
-  padding: 0 16px 8px;
+  padding: 0 0 8px;
+}
+
+/* Кадр «Каталог · значки вместо эмодзи · 02–08»: шапка листа —
+   Отмена / «Каталог» + счётчик / Готово. Счётчик сам — строка
+   «вид счётчика места», не 9.5 mono кадра. */
+.widget-v4-catalog__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 0;
+}
+
+.widget-v4-catalog__bar-cancel,
+.widget-v4-catalog__bar-done {
+  flex: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: -16px 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.widget-v4-catalog__bar-cancel {
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
+}
+
+.widget-v4-catalog__bar-done {
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.widget-v4-catalog__bar-mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.widget-v4-catalog__bar-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+}
+
+.widget-v4-catalog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 16px 16px 0;
 }
 
 .widget-v4-catalog__tier {

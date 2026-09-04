@@ -10192,17 +10192,33 @@
     );
 
     return React.createElement('div', { className: 'widget-v4-catalog' },
-      // Строка контракта «вид счётчика места»: при полном экране красится
-      // само число, а не вся строка — поэтому N вынесен отдельным узлом.
-      React.createElement('div', { className: 'widget-v4-catalog__budget n' },
-        'занято ',
-        React.createElement('span', {
-          className: 'widget-v4-catalog__budget__num'
-            + (budget.used >= budget.total ? ' is-full' : '')
-        }, String(budget.used)),
-        ` из ${budget.total}`
+      // Кадр «Каталог · значки вместо эмодзи · 01–08»: шапка листа —
+      // Отмена / «Каталог» + счётчик / Готово. Те же выходы, что у шапки
+      // расстановки: Отмена откатывает, Готово пишет.
+      React.createElement('div', { className: 'widget-v4-catalog__bar' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'widget-v4-catalog__bar-cancel',
+          onClick: () => HEYS.Widgets.exitEditMode?.({ revert: true })
+        }, 'Отмена'),
+        React.createElement('span', { className: 'widget-v4-catalog__bar-mid' },
+          React.createElement('span', { className: 'widget-v4-catalog__bar-name' }, 'Каталог'),
+          React.createElement('span', { className: 'widget-v4-catalog__budget n' },
+            'занято ',
+            React.createElement('span', {
+              className: 'widget-v4-catalog__budget__num'
+                + (budget.used >= budget.total ? ' is-full' : '')
+            }, String(budget.used)),
+            ` из ${budget.total}`
+          )
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'widget-v4-catalog__bar-done',
+          onClick: () => HEYS.Widgets.exitEditMode?.()
+        }, 'Готово')
       ),
-      React.createElement('div', { className: 'widget-v4-catalog__tier' }, 'Каталог'),
+      React.createElement('div', { className: 'widget-v4-catalog__body' },
       React.createElement('div', { className: 'widget-v4-catalog__grid' },
         grouped.flatMap(({ key, cat, types }) => {
           const nodes = [];
@@ -10318,6 +10334,7 @@
           });
           return nodes;
         })
+      )
       )
     );
   }
