@@ -636,8 +636,8 @@
 .planning-goals-card__course--review,
 .planning-goals-card__course--criterion,
 .planning-goals-card__course--action {
-    background: rgba(245, 158, 11, 0.11) !important;
-    color: #a16207 !important;
+    background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 11%, transparent) !important;
+    color: var(--v4-warn-text, #a1471c) !important;
 }
 
 .planning-goals-card__course--blocked {
@@ -889,8 +889,8 @@
 .planning-goals-workspace__course--review,
 .planning-goals-workspace__course--criterion,
 .planning-goals-workspace__course--action {
-    border-left-color: #d97706;
-    background: rgba(245, 158, 11, 0.08);
+    border-left-color: var(--v4-warn-2, #c67139);
+    background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 8%, transparent);
 }
 
 .planning-goals-workspace__course--blocked {
@@ -1523,7 +1523,7 @@
 [data-theme$="dark"] .planning-goals-workspace__course--review,
 [data-theme$="dark"] .planning-goals-workspace__course--criterion,
 [data-theme$="dark"] .planning-goals-workspace__course--action {
-    background: rgba(245, 158, 11, 0.12);
+    background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 12%, transparent);
 }
 
 [data-theme$="dark"] .planning-goals-workspace__course--blocked {
@@ -2072,9 +2072,9 @@
 }
 
 .planning-checklists-screen__group:nth-child(12n + 3) {
-    --planning-checklist-group-border: rgba(245, 158, 11, 0.42);
-    --planning-checklist-group-bg: rgba(245, 158, 11, 0.08);
-    --planning-checklist-group-text: #b45309;
+    --planning-checklist-group-border: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 42%, transparent);
+    --planning-checklist-group-bg: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 8%, transparent);
+    --planning-checklist-group-text: var(--v4-warn-text, #a1471c);
 }
 
 .planning-checklists-screen__group:nth-child(12n + 4) {
@@ -2096,9 +2096,9 @@
 }
 
 .planning-checklists-screen__group:nth-child(12n + 7) {
-    --planning-checklist-group-border: rgba(249, 115, 22, 0.38);
-    --planning-checklist-group-bg: rgba(249, 115, 22, 0.07);
-    --planning-checklist-group-text: #c2410c;
+    --planning-checklist-group-border: color-mix(in srgb, var(--v4-warn-2, #c67139) 38%, transparent);
+    --planning-checklist-group-bg: color-mix(in srgb, var(--v4-warn-2, #c67139) 7%, transparent);
+    --planning-checklist-group-text: var(--v4-warn-3, #a1471c);
 }
 
 .planning-checklists-screen__group:nth-child(12n + 8) {
@@ -4074,9 +4074,9 @@
 }
 
 .planning-add-btn--done-task {
-    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    background: linear-gradient(135deg, var(--v4-act, #c67139) 0%, var(--v4-warn-3, #a1471c) 100%);
     box-shadow:
-        0 4px 14px rgba(249, 115, 22, 0.34),
+        0 4px 14px color-mix(in srgb, var(--v4-warn-2, #c67139) 34%, transparent),
         inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
@@ -4407,9 +4407,9 @@
 }
 
 .planning-task-row--priority-urgent {
-    background-color: rgba(255, 237, 213, 0.88);
-    background-image: linear-gradient(180deg, rgba(249, 115, 22, 0.18) 0%, rgba(251, 146, 60, 0.12) 100%);
-    box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.16);
+    background-color: color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 88%, transparent);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--v4-warn-2, #c67139) 18%, transparent) 0%, color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, transparent) 100%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent);
 }
 
 .planning-task-row--menu-open,
@@ -4421,8 +4421,8 @@
 
 .planning-task-group__header .planning-task-row--priority-urgent,
 .planning-project-group--subgroup .planning-task-group__tasks>.planning-task-node .planning-task-row--priority-urgent {
-    background-color: rgba(255, 237, 213, 0.88);
-    background-image: linear-gradient(180deg, rgba(249, 115, 22, 0.18) 0%, rgba(251, 146, 60, 0.12) 100%);
+    background-color: color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 88%, transparent);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--v4-warn-2, #c67139) 18%, transparent) 0%, color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, transparent) 100%);
     border-radius: 7px;
 }
 
@@ -4431,9 +4431,9 @@
     border-top-left-radius: 0;
     border-top-right-radius: 0;
     box-shadow:
-        inset 1px 0 0 rgba(249, 115, 22, 0.16),
-        inset -1px 0 0 rgba(249, 115, 22, 0.16),
-        inset 0 -1px 0 rgba(249, 115, 22, 0.16);
+        inset 1px 0 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent),
+        inset -1px 0 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent);
 }
 
 .planning-task-node:has(+ .planning-task-node .planning-task-row--priority-urgent) .planning-task-row--priority-urgent {
@@ -4441,9 +4441,9 @@
     border-bottom-right-radius: 0;
     border-bottom-color: transparent;
     box-shadow:
-        inset 1px 0 0 rgba(249, 115, 22, 0.16),
-        inset -1px 0 0 rgba(249, 115, 22, 0.16),
-        inset 0 1px 0 rgba(249, 115, 22, 0.16);
+        inset 1px 0 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent),
+        inset -1px 0 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent);
 }
 
 .planning-project-group--subgroup:has(.planning-task-group__header .planning-task-row--priority-urgent):has(.planning-task-group__tasks>.planning-task-node:first-child .planning-task-row--priority-urgent) .planning-task-group__tasks {
@@ -4455,9 +4455,9 @@
     border-bottom-right-radius: 0;
     border-bottom-color: transparent;
     box-shadow:
-        inset 1px 0 0 rgba(249, 115, 22, 0.16),
-        inset -1px 0 0 rgba(249, 115, 22, 0.16),
-        inset 0 1px 0 rgba(249, 115, 22, 0.16);
+        inset 1px 0 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent),
+        inset -1px 0 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent),
+        inset 0 1px 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent);
 }
 
 .planning-project-group--subgroup:has(.planning-task-group__header .planning-task-row--priority-urgent) .planning-task-group__tasks>.planning-task-node:first-child .planning-task-row--priority-urgent {
@@ -4465,9 +4465,9 @@
     border-top-left-radius: 0;
     border-top-right-radius: 0;
     box-shadow:
-        inset 1px 0 0 rgba(249, 115, 22, 0.16),
-        inset -1px 0 0 rgba(249, 115, 22, 0.16),
-        inset 0 -1px 0 rgba(249, 115, 22, 0.16);
+        inset 1px 0 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent),
+        inset -1px 0 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent),
+        inset 0 -1px 0 color-mix(in srgb, var(--v4-warn-2, #c67139) 16%, transparent);
 }
 
 .planning-task-row__indent {
@@ -4549,12 +4549,12 @@
 }
 
 .planning-task-row__meta-chip--due {
-    color: #b45309;
+    color: var(--v4-warn-text, #a1471c);
 }
 
 .planning-task-row__meta-chip--due-today {
-    background: rgba(245, 158, 11, 0.18);
-    color: #92400e;
+    background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 18%, transparent);
+    color: var(--v4-warn-text, #a1471c);
     min-height: 14px;
     padding: 0 4px;
     border-radius: 999px;
@@ -4782,10 +4782,10 @@
 }
 
 .planning-action-menu__item--edit {
-    --planning-action-accent: #d97706;
-    --planning-action-accent-strong: #92400e;
-    --planning-action-bg: rgba(255, 251, 235, 0.94);
-    --planning-action-border: rgba(245, 158, 11, 0.24);
+    --planning-action-accent: var(--v4-act, #c67139);
+    --planning-action-accent-strong: var(--v4-act-text, #8a4a20);
+    --planning-action-bg: color-mix(in srgb, var(--v4-accent-bg, #f0dcc6) 94%, transparent);
+    --planning-action-border: color-mix(in srgb, var(--v4-act, #c67139) 24%, transparent);
 }
 
 .planning-action-menu__item--open {
@@ -5337,7 +5337,7 @@
 }
 
 .planning-task-matrix-quadrant--critical {
-    --matrix-tone: #f97316;
+    --matrix-tone: var(--v4-warn-2, #c67139);
 }
 
 .planning-task-matrix-quadrant--growth {
@@ -5345,7 +5345,7 @@
 }
 
 .planning-task-matrix-quadrant--warning {
-    --matrix-tone: var(--v4-warn-soft, #eab308);
+    --matrix-tone: var(--v4-warn-soft, #c9922e);
 }
 
 .planning-task-matrix-quadrant--quiet {
@@ -7856,7 +7856,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-calendar-drag-conflict span {
-    color: #b45309;
+    color: var(--v4-warn-text, #a1471c);
     font-weight: 700;
 }
 
@@ -8142,8 +8142,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-calendar-day-pressure--loaded {
-    color: #b45309;
-    background: rgba(245, 158, 11, 0.14);
+    color: var(--v4-warn-text, #a1471c);
+    background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 14%, transparent);
 }
 
 .planning-calendar-day-pressure--overloaded {
@@ -8162,8 +8162,8 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 [data-theme$="dark"] .planning-calendar-day-pressure--loaded {
-    color: #fcd34d;
-    background: rgba(245, 158, 11, 0.18);
+    color: var(--v4-warn-soft, #c9922e);
+    background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 18%, transparent);
 }
 
 [data-theme$="dark"] .planning-calendar-day-pressure--overloaded {
@@ -8742,9 +8742,9 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-calendar-context-block--meal {
-    border-color: rgba(180, 83, 9, 0.2);
-    background: rgba(251, 191, 36, 0.2);
-    color: #92400e;
+    border-color: color-mix(in srgb, var(--v4-warn-text, #a1471c) 20%, transparent);
+    background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 20%, transparent);
+    color: var(--v4-warn-text, #a1471c);
 }
 
 .planning-calendar-context-block--training {
@@ -8813,7 +8813,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-calendar-state-marker--attention {
-    background: #c1842f;
+    background: var(--v4-warn-soft, #c9922e);
 }
 
 .planning-calendar-state-marker--alert {
@@ -11015,11 +11015,11 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-gantt2-bar.is-conflict {
-    box-shadow: 0 0 0 2px var(--v4-warn-soft, #eab308), 0 1px 2px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 0 0 2px var(--v4-warn-soft, #c9922e), 0 1px 2px rgba(15, 23, 42, 0.18);
 }
 
 .planning-gantt2-bar.is-critical.is-conflict {
-    box-shadow: 0 0 0 2px var(--v4-warn-1, #ef4444), 0 0 0 4px var(--v4-warn-soft, #eab308), 0 1px 2px rgba(15, 23, 42, 0.18);
+    box-shadow: 0 0 0 2px var(--v4-warn-1, #ef4444), 0 0 0 4px var(--v4-warn-soft, #c9922e), 0 1px 2px rgba(15, 23, 42, 0.18);
 }
 
 .planning-gantt2-bar.is-behind::after {
@@ -11762,9 +11762,9 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 [data-theme$="dark"] .planning-add-btn--done-task {
-    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    background: linear-gradient(135deg, var(--v4-act, #c67139) 0%, var(--v4-warn-3, #a1471c) 100%);
     box-shadow:
-        0 4px 12px rgba(249, 115, 22, 0.28),
+        0 4px 12px color-mix(in srgb, var(--v4-warn-2, #c67139) 28%, transparent),
         inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
@@ -11923,7 +11923,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 [data-theme$="dark"] .planning-calendar-drag-conflict span {
-    color: #fcd34d;
+    color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .planning-calendar-header--sticky {
@@ -11961,9 +11961,9 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 [data-theme$="dark"] .planning-calendar-context-block--meal {
-    border-color: rgba(251, 191, 36, 0.22);
-    background: rgba(180, 83, 9, 0.24);
-    color: #fde68a;
+    border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 22%, transparent);
+    background: color-mix(in srgb, var(--v4-warn-text, #a1471c) 24%, transparent);
+    color: var(--v4-warn-soft, #c9922e);
     box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.18);
 }
 
@@ -12279,12 +12279,12 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 
 [data-theme$="dark"] .planning-task-row__meta-chip--due {
     background: transparent;
-    color: #fde68a;
+    color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .planning-task-row__meta-chip--due-today {
-    background: rgba(245, 158, 11, 0.2);
-    color: #fde68a;
+    background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 20%, transparent);
+    color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .planning-task-row__meta-chip--due-overdue {
@@ -12298,15 +12298,15 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 [data-theme$="dark"] .planning-task-row--priority-urgent {
-    background-color: rgba(67, 20, 7, 0.92);
-    background-image: linear-gradient(180deg, rgba(249, 115, 22, 0.24) 0%, rgba(194, 65, 12, 0.2) 100%);
-    box-shadow: inset 0 0 0 1px rgba(251, 146, 60, 0.22);
+    background-color: color-mix(in srgb, var(--v4-warn-3, #a1471c) 92%, black);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--v4-warn-2, #c67139) 24%, transparent) 0%, color-mix(in srgb, var(--v4-warn-3, #a1471c) 20%, transparent) 100%);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
 }
 
 [data-theme$="dark"] .planning-task-group__header .planning-task-row--priority-urgent,
 [data-theme$="dark"] .planning-project-group--subgroup .planning-task-group__tasks>.planning-task-node .planning-task-row--priority-urgent {
-    background-color: rgba(67, 20, 7, 0.92);
-    background-image: linear-gradient(180deg, rgba(249, 115, 22, 0.24) 0%, rgba(194, 65, 12, 0.2) 100%);
+    background-color: color-mix(in srgb, var(--v4-warn-3, #a1471c) 92%, black);
+    background-image: linear-gradient(180deg, color-mix(in srgb, var(--v4-warn-2, #c67139) 24%, transparent) 0%, color-mix(in srgb, var(--v4-warn-3, #a1471c) 20%, transparent) 100%);
 }
 
 [data-theme$="dark"] .planning-load-date-picker__legend-hint {

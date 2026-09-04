@@ -1820,16 +1820,16 @@ button.messenger-day-checklist__chip:active {
   gap: 10px;
   margin: 0 14px;
   padding: 10px 12px;
-  border: 1px solid #efe1c2;
+  border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 35%, transparent);
   border-radius: 14px;
-  background: #fff8ea;
-  color: #6e5a2e;
+  background: var(--v4-tint, #f6e6dd);
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .messenger-food-hint__icon {
   flex: none;
   margin-top: 1px;
-  color: #b58b36;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 .messenger-food-hint__body {
@@ -1847,7 +1847,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-food-hint__text b {
   font-weight: 700;
-  color: #4a3a14;
+  color: var(--v4-warn-3, #a1471c);
 }
 
 .messenger-food-hint__actions {
@@ -1859,9 +1859,9 @@ button.messenger-day-checklist__chip:active {
 .messenger-food-hint__pill {
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid #e9d9b4;
+  border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, transparent);
   background: var(--v4-bg, #ffffff);
-  color: #8a6d2b;
+  color: var(--v4-warn-text, #a1471c);
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
@@ -1874,7 +1874,7 @@ button.messenger-day-checklist__chip:active {
   padding: 0;
   border: none;
   background: transparent;
-  color: #8a7549;
+  color: var(--v4-warn-2, #c67139);
   font-family: inherit;
   font-size: 11.5px;
   cursor: pointer;
@@ -2316,23 +2316,23 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme$="dark"] .messenger-food-hint {
-  background: #201c15;
-  border-color: #33291a;
-  color: #b7a582;
+  background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 12%, var(--v4-bg, #141210));
+  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 22%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .messenger-food-hint__icon {
-  color: #c2a164;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .messenger-food-hint__text b {
-  color: #e4d3a9;
+  color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 75%, var(--v4-bg, #ffffff));
 }
 
 [data-theme$="dark"] .messenger-food-hint__pill {
   background: var(--v4-bg, #15181c);
-  border-color: #3a3020;
-  color: #d3be8e;
+  border-color: color-mix(in srgb, var(--v4-warn-3, #a1471c) 45%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .messenger-recording-live,
@@ -2694,8 +2694,8 @@ button.messenger-day-checklist__chip:active {
 .messenger-apply__note {
   font-size: 11.5px;
   line-height: 1.4;
-  color: #8a7549;
-  background: #fff8ea;
+  color: var(--v4-warn-2, #c67139);
+  background: var(--v4-tint, #f6e6dd);
   border-radius: 10px;
   padding: 7px 9px;
 }
@@ -2860,8 +2860,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme$="dark"] .messenger-apply__note {
-  background: #201c15;
-  color: #b7a582;
+  background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 12%, var(--v4-bg, #141210));
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .msg-applied-card__name {
@@ -3018,8 +3018,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-search__snippet mark {
-  background: #fff0c9;
-  color: #4a3a14;
+  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 22%, var(--v4-bg, #ffffff));
+  color: var(--v4-warn-3, #a1471c);
   border-radius: 3px;
 }
 
@@ -3061,8 +3061,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme$="dark"] .messenger-search__snippet mark {
-  background: #3a3020;
-  color: #e4d3a9;
+  background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 55%, transparent);
+  color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 80%, var(--v4-bg, #ffffff));
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -3084,7 +3084,7 @@ button.messenger-day-checklist__chip:active {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #c9ae7a;
+  background: var(--v4-warn-soft, #c9922e);
 }
 
 .messenger-offline-bar__text {
@@ -3119,7 +3119,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-subtitle__dot.is-offline {
-  background: #c9ae7a;
+  background: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .messenger-offline-bar {
@@ -3141,9 +3141,9 @@ button.messenger-day-checklist__chip:active {
 
 /* Степпер «своё время» — второй слой плашки. */
 .messenger-food-hint__pill.is-custom {
-  background: #4a3a14;
-  border-color: #4a3a14;
-  color: #fff8ea;
+  background: var(--v4-warn-3, #a1471c);
+  border-color: var(--v4-warn-3, #a1471c);
+  color: var(--v4-tint, #f6e6dd);
 }
 
 .messenger-food-hint__stepper {
@@ -3157,9 +3157,9 @@ button.messenger-day-checklist__chip:active {
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  border: 1px solid #e9d9b4;
+  border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, transparent);
   background: var(--v4-bg, #ffffff);
-  color: #8a6d2b;
+  color: var(--v4-warn-text, #a1471c);
   font-family: inherit;
   font-size: 15px;
   cursor: pointer;
@@ -3169,10 +3169,10 @@ button.messenger-day-checklist__chip:active {
   min-width: 74px;
   height: 30px;
   padding: 0 8px;
-  border: 1.5px solid #b58b36;
+  border: 1.5px solid var(--v4-warn-soft, #c9922e);
   border-radius: 9px;
   background: var(--v4-bg, #ffffff);
-  color: #4a3a14;
+  color: var(--v4-warn-3, #a1471c);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 15px;
   font-weight: 600;
@@ -3180,7 +3180,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-food-hint__step-note {
   font-size: 10.5px;
-  color: #8a7549;
+  color: var(--v4-warn-2, #c67139);
 }
 
 .messenger-food-hint__done {
@@ -3251,8 +3251,8 @@ button.messenger-day-checklist__chip:active {
 [data-theme$="dark"] .messenger-food-hint__step,
 [data-theme$="dark"] .messenger-food-hint__time {
   background: var(--v4-bg, #15181c);
-  border-color: #3a3020;
-  color: #d3be8e;
+  border-color: color-mix(in srgb, var(--v4-warn-3, #a1471c) 45%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .messenger-transcript-draft {
@@ -3629,14 +3629,14 @@ button.messenger-day-checklist__chip:active {
 }
 
 @keyframes messenger-highlight {
-  0%, 55% { box-shadow: 0 0 0 3px rgba(255, 240, 201, 0.9); }
-  100% { box-shadow: 0 0 0 3px rgba(255, 240, 201, 0); }
+  0%, 55% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 90%, transparent); }
+  100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 0%, transparent); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .msg-row.is-highlighted .msg-bubble {
     animation: none;
-    box-shadow: 0 0 0 3px rgba(255, 240, 201, 0.9);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 90%, transparent);
   }
 }
 
@@ -3651,8 +3651,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 @keyframes messenger-highlight-dark {
-  0%, 55% { box-shadow: 0 0 0 3px rgba(58, 48, 32, 0.95); }
-  100% { box-shadow: 0 0 0 3px rgba(58, 48, 32, 0); }
+  0%, 55% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-warn-3, #a1471c) 95%, transparent); }
+  100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--v4-warn-3, #a1471c) 0%, transparent); }
 }
 
 /* Полоса ошибки в тёмной теме: светлый вариант слепил на тёмном треде. */

@@ -53,10 +53,10 @@
 /* Янтарный — 2-4 негативных события */
 .cascade-card--tone-amber {
   --cascade-tone-overlay: radial-gradient(circle at top left,
-      rgba(245, 158, 11, 0.24) 0%,
-      rgba(245, 158, 11, 0.11) 34%,
-      rgba(245, 158, 11, 0.05) 58%,
-      rgba(245, 158, 11, 0.02) 74%,
+      color-mix(in srgb, var(--v4-warn-2, #c67139) 24%, transparent) 0%,
+      color-mix(in srgb, var(--v4-warn-2, #c67139) 11%, transparent) 34%,
+      color-mix(in srgb, var(--v4-warn-2, #c67139) 5%, transparent) 58%,
+      color-mix(in srgb, var(--v4-warn-2, #c67139) 2%, transparent) 74%,
       transparent 100%);
 }
 
@@ -154,15 +154,15 @@
 .cascade-card__hint {
   font-size: 11px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  background: rgba(245, 158, 11, 0.08);
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 8%, transparent);
   border-radius: 6px;
   padding: 4px 8px;
   margin-top: 2px;
 }
 
 .cascade-card__hint--training {
-  background: rgba(245, 158, 11, 0.08);
-  color: #b45309;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 8%, transparent);
+  color: var(--v4-warn-text, #a1471c);
 }
 
 /* ─────────────────────────────────────────────────────
@@ -353,7 +353,7 @@
 }
 
 .cascade-dot--warn {
-  background: #f97316;
+  background: var(--v4-wgt-orange, #c67139);
 }
 
 .cascade-dot--neutral {
@@ -369,7 +369,7 @@
 }
 
 .cascade-dot--peak {
-  background: #10b981;
+  background: var(--v4-wgt-emerald, #7a8a5e);
 }
 
 /* CEB badge — "Баланс X.X" pill after last dot */
@@ -428,7 +428,7 @@
 
 .cascade-dot-connector--warning {
   background: transparent;
-  border-top: 2px dashed #fbbf24;
+  border-top: 2px dashed var(--v4-warn-soft, #c9922e);
   height: 0;
   margin-top: 1px;
 }
@@ -439,7 +439,7 @@
 }
 
 .cascade-dot--training {
-  background: #f59e0b;
+  background: var(--v4-wgt-amber, #d99a63);
 }
 
 .cascade-dot--household {
@@ -471,8 +471,8 @@
 }
 
 .cascade-dot--warning {
-  background: #f59e0b !important;
-  border: 1.5px solid #d97706;
+  background: var(--v4-warn-soft, #c9922e) !important;
+  border: 1.5px solid var(--v4-warn-3, #a1471c);
   width: 11px;
   height: 11px;
 }
@@ -629,8 +629,8 @@
 }
 
 .cascade-timeline-row--warning .cascade-timeline-badge {
-  background: rgba(245, 158, 11, 0.12);
-  color: #b45309;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, transparent);
+  color: var(--v4-warn-text, #a1471c);
   font-size: 10px;
 }
 
@@ -650,7 +650,7 @@
 }
 
 .cascade-timeline-weight--neg {
-  color: #b45309;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .cascade-timeline-weight--zero {
@@ -683,13 +683,13 @@
 .cascade-card__breaks-info {
   margin-top: 8px;
   padding: 6px 8px;
-  background: rgba(245, 158, 11, 0.07);
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 7%, transparent);
   border-radius: 6px;
 }
 
 .cascade-card__breaks-label {
   font-size: 11px;
-  color: #b45309;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .cascade-card__stats {
@@ -943,12 +943,12 @@
 }
 
 [data-theme$="dark"] .cascade-dot-connector--warning {
-  border-top-color: #b45309;
+  border-top-color: var(--v4-warn-text, #a1471c);
 }
 
 [data-theme$="dark"] .cascade-dot--warning {
-  background: #d97706 !important;
-  border-color: #b45309;
+  background: var(--v4-warn-3, #a1471c) !important;
+  border-color: var(--v4-warn-text, #a1471c);
 }
 
 [data-theme$="dark"] .cascade-timeline-row {
@@ -966,8 +966,8 @@
 }
 
 [data-theme$="dark"] .cascade-timeline-row--warning .cascade-timeline-badge {
-  background: rgba(245, 158, 11, 0.18);
-  color: var(--v4-warn-soft, #fbbf24);
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 18%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .cascade-next-step {
@@ -1028,7 +1028,7 @@
 }
 
 [data-theme$="dark"] .cascade-card__breaks-info {
-  background: rgba(245, 158, 11, 0.1);
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 10%, transparent);
 }
 
 /* dark: tone-green */
@@ -1044,10 +1044,10 @@
 /* dark: tone-amber */
 [data-theme$="dark"] .cascade-card--tone-amber {
   --cascade-tone-overlay: radial-gradient(circle at top left,
-      rgba(245, 158, 11, 0.30) 0%,
-      rgba(245, 158, 11, 0.15) 34%,
-      rgba(245, 158, 11, 0.06) 58%,
-      rgba(245, 158, 11, 0.02) 74%,
+      color-mix(in srgb, var(--v4-warn-2, #c67139) 30%, transparent) 0%,
+      color-mix(in srgb, var(--v4-warn-2, #c67139) 15%, transparent) 34%,
+      color-mix(in srgb, var(--v4-warn-2, #c67139) 6%, transparent) 58%,
+      color-mix(in srgb, var(--v4-warn-2, #c67139) 2%, transparent) 74%,
       transparent 100%);
 }
 

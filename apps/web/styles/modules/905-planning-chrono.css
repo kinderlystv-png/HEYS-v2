@@ -416,12 +416,14 @@ html.chrono-bubble-dragging .chrono-screen {
     color: var(--v4-bg, #fff);
 }
 
+/* Режим «Лимит»: заливка предупреждения, не goal-blue. hsl(28,85%,52%) был
+   янтарной лестницей; --v4-warn-2 держит смысл «лимит» на песочном и синем. */
 .chrono-duration__target.is-budget .chrono-duration__target-kind-btn.active {
-    background: hsl(28, 85%, 52%);
+    background: var(--v4-warn-2, #c67139);
 }
 
 .chrono-duration__target.is-budget .chrono-duration__target-save:not(.is-saved):not(:disabled) {
-    background: hsl(28, 85%, 52%);
+    background: var(--v4-warn-2, #c67139);
 }
 
 /* --- Scope bar (День/Неделя + дата + Сегодня — одна строка) --- */
@@ -1516,7 +1518,9 @@ html.chrono-bubble-dragging .chrono-screen {
     flex: 0 0 auto;
 }
 
-/* --- Стрики попадания в цель --- */
+/* --- Стрики попадания в цель ---
+   Янтарная лестница → роли warn (внимание к серии). Замер на песочном и синем:
+   фон color-mix от --v4-warn-1, подпись --v4-warn-text; наборы различаются. */
 .chrono-overview__streaks {
     display: flex;
     align-items: center;
@@ -1530,16 +1534,16 @@ html.chrono-bubble-dragging .chrono-screen {
     gap: 4px;
     border-radius: 999px;
     padding: 5px 9px;
-    background: rgba(234, 88, 12, 0.10);
-    color: #9a3412;
+    background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 10%, transparent);
+    color: var(--v4-warn-text, #a1471c);
     font-size: 11px;
     font-weight: 800;
     line-height: 1;
 }
 
 .chrono-overview__streak.is-best {
-    background: rgba(234, 88, 12, 0.18);
-    box-shadow: inset 0 0 0 1px rgba(234, 88, 12, 0.35);
+    background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 18%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-warn-1, #d99a63) 35%, transparent);
 }
 
 .chrono-overview__streak.is-budget {
@@ -1651,7 +1655,7 @@ html.chrono-bubble-dragging .chrono-screen {
 .tone-teal { --chrono-category-color: #0f766e; }
 .tone-rose { --chrono-category-color: #e11d48; }
 .tone-slate { --chrono-category-color: var(--v4-ink-2, #64748b); }
-.tone-amber { --chrono-category-color: #d97706; }
+.tone-amber { --chrono-category-color: var(--v4-wgt-amber, #d99a63); }
 .tone-red { --chrono-category-color: var(--v4-warn-2, #dc2626); }
 
 /* --- Cloud (bubbles) ---
@@ -3765,8 +3769,8 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .theme-dark .chrono-overview__streak,
 [data-theme$="dark"] .chrono-overview__streak {
-    background: rgba(234, 88, 12, 0.22);
-    color: #fdba74;
+    background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
+    color: var(--v4-warn-soft, #c9922e);
 }
 
 .theme-dark .chrono-overview__streak.is-budget,
