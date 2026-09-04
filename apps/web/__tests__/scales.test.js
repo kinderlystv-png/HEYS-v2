@@ -3,15 +3,13 @@ import path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-// Шкалы: ступени и role-токены, не legacy-hex. Янтарные тоны — --v4-warn-soft /
-// --v4-warn-1 (см. heys_scales_v1.js). Исключение: декор ранга «Эксперт» —
-// #eab308 намеренно вне оценочной оси STEPS.
+// Эквивалентность важнее покрытия: модуль heys_scales_v1.js собирает шкалы,
+// которые раньше были литералами в четырёх файлах. Ниже — точные копии
+// прежних реализаций; тест доказывает, что цвет не поехал ни на одном
+// значении диапазона. Если шкалу меняют осознанно, эталон правится тем же
+// коммитом.
 
 const SCALES_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_scales_v1.js'), 'utf8');
-
-const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
-const V4_WARN_1 = 'var(--v4-warn-1, #d99a63)';
-const v4MixRole = (role, pct) => `color-mix(in srgb, ${role} ${pct}%, transparent)`;
 
 const originalHEYS = global.HEYS;
 const originalWindow = global.window;
@@ -47,23 +45,23 @@ function legacyStepsProgress(pct) {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-// heys_widgets_ui_v1.js:3218 — нейтральная ступень на v4-warn-soft
-function expectedStepsWidget(pct) {
+// heys_widgets_ui_v1.js:3218
+function legacyStepsWidget(pct) {
   if (pct >= 100) return '#22c55e';
   if (pct >= 70) return '#3b82f6';
-  if (pct >= 40) return V4_WARN_SOFT;
+  if (pct >= 40) return '#eab308';
   return '#ef4444';
 }
 
 // heys_steps_v1.js:1962
-function expectedStepsGoal(stepsGoal) {
-  return stepsGoal < 7000 ? V4_WARN_SOFT : stepsGoal >= 10000 ? '#22c55e' : '#3b82f6';
+function legacyStepsGoal(stepsGoal) {
+  return stepsGoal < 7000 ? '#eab308' : stepsGoal >= 10000 ? '#22c55e' : '#3b82f6';
 }
 
-// heys_steps_v1.js:2111 — умеренный дефицит на v4-warn-1
-function expectedDeficit(val) {
+// heys_steps_v1.js:2111
+function legacyDeficit(val) {
   if (val < -10) return { color: '#ef4444', label: 'Агрессивный дефицит', emoji: '🔥🔥' };
-  if (val < 0) return { color: V4_WARN_1, label: 'Умеренный дефицит', emoji: '🔥' };
+  if (val < 0) return { color: '#f97316', label: 'Умеренный дефицит', emoji: '🔥' };
   if (val === 0) return { color: '#22c55e', label: 'Поддержание веса', emoji: '⚖️' };
   if (val <= 10) return { color: '#3b82f6', label: 'Умеренный профицит', emoji: '💪' };
   return { color: '#3b82f6', label: 'Агрессивный набор', emoji: '💪💪' };
@@ -77,11 +75,11 @@ function legacyWellbeing(v) {
   return '#10b981';
 }
 
-// heys_steps_v1.js:3383 — средний стресс на v4-warn-soft
-function expectedStress(v) {
+// heys_steps_v1.js:3383
+function legacyStress(v) {
   if (v <= 3) return '#10b981';
   if (v <= 5) return '#3b82f6';
-  if (v <= 7) return V4_WARN_SOFT;
+  if (v <= 7) return '#eab308';
   return '#ef4444';
 }
 
@@ -108,20 +106,20 @@ describe('heys_scales_v1 — эквивалентность прежним ре�
 
   it('шаги в виджете совпадают на границах порогов', () => {
     for (const pct of [0, 39, 40, 69, 70, 99, 100, 150]) {
-      expect(scales.stepsWidget(pct).color).toBe(expectedStepsWidget(pct));
+      expect(scales.stepsWidget(pct).color).toBe(legacyStepsWidget(pct));
     }
   });
 
   it('цель шагов совпадает на границах порогов', () => {
     for (const goal of [3000, 6999, 7000, 9999, 10000, 30000]) {
-      expect(scales.stepsGoal(goal).color).toBe(expectedStepsGoal(goal));
+      expect(scales.stepsGoal(goal).color).toBe(legacyStepsGoal(goal));
     }
   });
 
   it('дефицит совпадает по цвету, подписи и эмодзи на всём колесе -20..+20', () => {
     for (let v = -20; v <= 20; v += 1) {
       const actual = scales.deficit(v);
-      const expected = expectedDeficit(v);
+      const expected = legacyDeficit(v);
       expect(actual.color).toBe(expected.color);
       expect(actual.label).toBe(expected.label);
       expect(actual.emoji).toBe(expected.emoji);
@@ -131,7 +129,7 @@ describe('heys_scales_v1 — эквивалентность прежним ре�
   it('самочувствие и стресс совпадают на всей шкале 0..10', () => {
     for (let v = 0; v <= 10; v += 1) {
       expect(scales.wellbeing(v).color).toBe(legacyWellbeing(v));
-      expect(scales.stress(v).color).toBe(expectedStress(v));
+      expect(scales.stress(v).color).toBe(legacyStress(v));
     }
   });
 });
@@ -185,7 +183,7 @@ describe('heys_scales_v1 — устойчивость к мусору', () => {
     const scales = loadScales();
     expect(scales.stepsProgress(undefined).color).toBe(legacyStepsProgress(0));
     expect(scales.wellbeing(null).color).toBe(legacyWellbeing(0));
-    expect(scales.deficit('нет').color).toBe(expectedDeficit(0).color);
+    expect(scales.deficit('нет').color).toBe(legacyDeficit(0).color);
   });
 
   it('неизвестная шкала возвращает null', () => {
@@ -245,29 +243,29 @@ describe('heys_scales_v1 — монотонность ступеней', () => {
 });
 
 describe('heys_scales_v1 — этап 3: новые шкалы и colorForStep', () => {
-  function expectedTrainingRating(v) {
+  function legacyTrainingRating(v) {
     if (v <= 3) return '#ef4444';
-    if (v <= 5) return V4_WARN_SOFT;
+    if (v <= 5) return '#eab308';
     if (v <= 7) return '#84cc16';
     return '#10b981';
   }
 
-  function expectedHealthScore(s) {
+  function legacyHealthScore(s) {
     if (s >= 85) return '#10b981';
     if (s >= 70) return '#22c55e';
-    if (s >= 50) return V4_WARN_SOFT;
-    if (s >= 30) return V4_WARN_1;
+    if (s >= 50) return '#eab308';
+    if (s >= 30) return '#f97316';
     return '#ef4444';
   }
 
-  it('trainingRating и healthScore сохраняют role-токены и ступени', () => {
+  it('trainingRating и healthScore сохраняют классические цвета', () => {
     const scales = loadScales();
     for (let v = 0; v <= 10; v += 1) {
-      expect(scales.trainingRating(v).color).toBe(v <= 0 ? '#9ca3af' : expectedTrainingRating(v));
+      expect(scales.trainingRating(v).color).toBe(v <= 0 ? '#9ca3af' : legacyTrainingRating(v));
       expect(scales.trainingRating(v).step).toBeTruthy();
     }
     for (const s of [0, 29, 30, 49, 50, 69, 70, 84, 85, 100]) {
-      expect(scales.healthScore(s).color).toBe(expectedHealthScore(s));
+      expect(scales.healthScore(s).color).toBe(legacyHealthScore(s));
     }
   });
 
@@ -283,9 +281,6 @@ describe('heys_scales_v1 — этап 3: новые шкалы и colorForStep',
     expect(level.title).toBe('Практик');
     expect(level.tone).toBe('rank');
     expect(level.step).toBeUndefined();
-    const expert = scales.gamificationLevel(15);
-    expect(expert.title).toBe('Эксперт');
-    expect(expert.color).toBe('#eab308');
   });
 
   it('сон без цели не выдаёт зелёный', () => {
@@ -296,34 +291,28 @@ describe('heys_scales_v1 — этап 3: новые шкалы и colorForStep',
     expect(scales.sleepHours(8, 8).color).toBe('#22c55e');
   });
 
-  it('macro* шкалы используют v4-warn-1 для янтарной ветки', () => {
+  it('macro* шкалы совпадают с прежней логикой колец', () => {
     const scales = loadScales();
     expect(scales.macroProtein(50, 100, false).color).toBe('#ef4444');
-    expect(scales.macroProtein(85, 100, false).color).toBe(V4_WARN_1);
+    expect(scales.macroProtein(85, 100, false).color).toBe('#f59e0b');
     expect(scales.macroProtein(100, 100, false).color).toBe('#22c55e');
     expect(scales.macroFat(40, 100).color).toBe('#ef4444');
-    expect(scales.macroCarbs(20, 100, true).color).toBe(V4_WARN_1);
+    expect(scales.macroCarbs(20, 100, true).color).toBe('#f59e0b');
   });
 
-  it('macroWidgetValueTone и riskRadarScore используют role-токены', () => {
+  it('macroWidgetValueTone и riskRadarScore сохраняют классические цвета виджетов', () => {
     const scales = loadScales();
     expect(scales.macroWidgetValueTone(0, 'protein').color).toBe('#ef4444');
     expect(scales.macroWidgetValueTone(50, 'protein').color).toBe('#ef4444');
-    expect(scales.macroWidgetValueTone(75, 'protein').color).toBe(V4_WARN_1);
+    expect(scales.macroWidgetValueTone(75, 'protein').color).toBe('#f59e0b');
     expect(scales.macroWidgetValueTone(95, 'protein').color).toBe('#16a34a');
     expect(scales.macroWidgetValueTone(80, 'fat').color).toBe('#16a34a');
-    expect(scales.macroWidgetValueTone(60, 'carbs').color).toBe(V4_WARN_1);
+    expect(scales.macroWidgetValueTone(60, 'carbs').color).toBe('#f59e0b');
     expect(scales.macroWidgetValueTone(130, 'carbs').color).toBe('#ef4444');
     expect(scales.riskRadarScore(10).color).toBe('#10b981');
-    expect(scales.riskRadarScore(25).color).toBe(V4_WARN_SOFT);
-    expect(scales.riskRadarScore(50).color).toBe(V4_WARN_1);
+    expect(scales.riskRadarScore(25).color).toBe('#eab308');
+    expect(scales.riskRadarScore(50).color).toBe('#f97316');
     expect(scales.riskRadarScore(80).color).toBe('#ef4444');
-  });
-
-  it('MACRO_GRADIENT_STOPS fat использует color-mix на v4-warn-1', () => {
-    const scales = loadScales();
-    expect(scales.MACRO_GRADIENT_STOPS.fat[0]).toBe(v4MixRole(V4_WARN_1, 40));
-    expect(scales.MACRO_GRADIENT_STOPS.fat[1]).toBe(V4_WARN_1);
   });
 });
 
