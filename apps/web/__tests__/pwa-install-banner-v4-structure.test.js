@@ -43,7 +43,7 @@ describe('pwa install banner v4 structure', () => {
     // Контракт «вид шага»: карточка ПЕРВОЙ поверхности, радиус 16, поля 10/13.
     // Обводки в контракте нет; #faf7f2 не был ни фоном экрана, ни поверхностью.
     const step = css.match(/\.ios-home-install-modal__step \{([\s\S]*?)\}/)[1];
-    expect(step).toMatch(/background:\s*#f7efe2/);
+    expect(step).toMatch(/background:\s*var\(--v4-c1,\s*#f7efe2\)/);
     expect(step).not.toMatch(/\bborder:/);
     expect(step).toMatch(/border-radius:\s*16px/);
     expect(step).toMatch(/padding:\s*10px 13px/);

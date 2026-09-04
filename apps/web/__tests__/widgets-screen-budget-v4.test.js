@@ -176,7 +176,7 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
 
   it('CSS: вид кнопки «+» — заливка акцентом, «+» 21 px, тени, без обводки', () => {
     expect(UI_SRC).toMatch(/width:\s*21,\s*height:\s*21/);
-    expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*background:\s*#c67139/);
+    expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*background:\s*var\(--v4-act,\s*#c67139\)/);
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*color:\s*#2b1608/);
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*border:\s*none/);
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*0 2px 4px/);

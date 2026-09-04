@@ -362,7 +362,7 @@ describe('UI v4 chrome paint — рама', () => {
         expect(lightRule).not.toMatch(/color:\s*#8a4a20\s*;/);
         // Тёмная sand-nav: литералы после classic-drift fix (#e2a468 / #2f2820).
         expect(baseCss).toMatch(
-            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*#e2a468[\s\S]*?background:\s*#2f2820/,
+            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-soft,\s*#e2a468\)[\s\S]*?background:\s*#2f2820/,
         );
     });
 
@@ -427,7 +427,7 @@ describe('UI v4 chrome paint — рама', () => {
             /\[data-theme\$="dark"\] \.tabs\.tabs--v4-primary \{[\s\S]*?background:\s*#141210/,
         );
         expect(baseCss).toMatch(
-            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*#e2a468[\s\S]*?background:\s*#2f2820/,
+            /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-soft,\s*#e2a468\)[\s\S]*?background:\s*#2f2820/,
         );
         const start = baseCss.indexOf('.tab-primary-nav-row');
         expect(start).toBeGreaterThan(-1);
