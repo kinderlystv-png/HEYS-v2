@@ -1,0 +1,1552 @@
+{
+  "zone": "reports-insights",
+  "date": "2026-09-04",
+  "checked": 144,
+  "confirmed_ne": 144,
+  "demoted_to_q": 0,
+  "improved_f_kept_ne": 2,
+  "batch_generic_f_lines": 65,
+  "code_missing_reason": 0,
+  "frame_superseded": 0,
+  "blocks": {
+    "месяц нулей — вопрос к норме": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "состав фенотипа": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "расчёт и отказ": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "вид · панель и состояния": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "сетка и грунт": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "шкала кеглей": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "роли цвета": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "графики": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "пустое место в блоке": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · плитка Score": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · график «съедено против плана»": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · график веса": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · строка дня в ленте": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · каскад разбора Score": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · действие в «Сделай сегодня»": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · планер «Что съесть сейчас»": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · Ритм приёмов": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · БЖУ по приёмам": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · абзац раскрывашки": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · скелетон расчёта": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "карточка · «Что из этого следует»": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "копия · голос куратора": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "вид · Баланс за период": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "вид · экран разбора Score": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "вид · шапка зрелости": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "вид · лист раскрывашки": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "Визуал v4 · Отчёты": {
+      "total": 45,
+      "confirmed": 45,
+      "demoted": 0
+    },
+    "Разбор Score · 08": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "Разбор Score · 10": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "Отчёты · мало данных": {
+      "total": 2,
+      "confirmed": 2,
+      "demoted": 0
+    },
+    "Инсайты · 21": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "Инсайты · подробно": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "Инсайты · ярус Питание": {
+      "total": 4,
+      "confirmed": 4,
+      "demoted": 0
+    },
+    "Инсайты · день без заданий": {
+      "total": 2,
+      "confirmed": 2,
+      "demoted": 0
+    },
+    "Инсайты · риск срыва": {
+      "total": 5,
+      "confirmed": 5,
+      "demoted": 0
+    },
+    "Отчёты · нулевая строка матрицы": {
+      "total": 11,
+      "confirmed": 11,
+      "demoted": 0
+    },
+    "Стоит внимания · голос куратора": {
+      "total": 3,
+      "confirmed": 3,
+      "demoted": 0
+    },
+    "Стоит внимания · панель Ещё": {
+      "total": 2,
+      "confirmed": 2,
+      "demoted": 0
+    },
+    "Инсайты · считаем": {
+      "total": 14,
+      "confirmed": 14,
+      "demoted": 0
+    },
+    "Отчёты · нет веса": {
+      "total": 4,
+      "confirmed": 4,
+      "demoted": 0
+    },
+    "Неделя к неделе · одна закрытая": {
+      "total": 8,
+      "confirmed": 8,
+      "demoted": 0
+    },
+    "Ярус Питание · после последнего приёма": {
+      "total": 3,
+      "confirmed": 3,
+      "demoted": 0
+    },
+    "День под порогом · выбор": {
+      "total": 5,
+      "confirmed": 5,
+      "demoted": 0
+    },
+    "День пустой · выбор": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "Мало калорий · подтверждение": {
+      "total": 2,
+      "confirmed": 1,
+      "demoted": 1
+    },
+    "Разбор Score · рисунок 01": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    },
+    "Разбор Score · рисунок 02": {
+      "total": 1,
+      "confirmed": 0,
+      "demoted": 1
+    },
+    "вид · ярус «На чём основано»": {
+      "total": 1,
+      "confirmed": 1,
+      "demoted": 0
+    }
+  },
+  "rows": [
+    {
+      "key": "месяц нулей — вопрос к норме",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "norm discussion CTA removed with ZeroActions",
+      "f": "строка от 29 августа требует вход «Обсудить норму с куратором»; компонент Report"
+    },
+    {
+      "key": "состав фенотипа",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "four axes from engine",
+      "f": "четыре оси из движка (metabolic→углеводы, satiety→белок, circadian→хронотип, str"
+    },
+    {
+      "key": "расчёт и отказ",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "вид · панель и состояния",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "сетка и грунт",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "tier spacing 20/10",
+      "f": "грунт --v4-bg, расстояние между блоками задаёт ярус — 20 сверху, 10 снизу в обеи"
+    },
+    {
+      "key": "шкала кеглей",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "contract lists 6 sizes contradicts neighbors",
+      "f": "строка перечисляет шесть кеглей и говорит «других кеглей в зоне нет», но её же с"
+    },
+    {
+      "key": "роли цвета",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "matrix drop uses --v4-bad-text not --val-bad",
+      "f": "Правило соблюдено кроме одного места: падение показателя матрицы стоит красным ("
+    },
+    {
+      "key": "графики",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "both charts rounded caps --v4-act",
+      "f": "к одному языку сведены оба графика блока: ломаная 2,5 с округлыми концами ролью "
+    },
+    {
+      "key": "пустое место в блоке",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "карточка · плитка Score",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "score block .grp not equal tile",
+      "f": "снят кант 1 px светлым литералом и тень: ни того, ни другого нет ни у одной карт"
+    },
+    {
+      "key": "карточка · график «съедено против плана»",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "plan dashed --v4-edge fact solid --v4-act",
+      "f": "линии и круг сведены: план — пунктир 4 4 толщиной 2 ролью --v4-edge, факт — лома"
+    },
+    {
+      "key": "карточка · график веса",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_sparklines_v1.js:1909 width=360 vs кадр 262×52; линия --v4-ok-fill; дни цикла не исключены",
+      "f": "сведено 1 сентября и проверено замером живого дерева в четырёх наборах: линия ро"
+    },
+    {
+      "key": "карточка · строка дня в ленте",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "bar in row 8px vs contract under-row 4px",
+      "f": "точка зоны слева, дата, справа ±ккал моноцифрами и оценка. Роли точки приведены "
+    },
+    {
+      "key": "карточка · каскад разбора Score",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "733-ui-v4-reports.css:1655 --v4-bad-text vs кадр --val-bad (#a8382b)",
+      "f": "четыре строки вклада: имя 12,5/600 --v4-ink шириной 88, вклад 12,5/700 моноцифра"
+    },
+    {
+      "key": "карточка · действие в «Сделай сегодня»",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "actions as cards not divider rows",
+      "f": "точка приоритета переведена на --v4-act (--acs): и строка, и кадр задают её так,"
+    },
+    {
+      "key": "карточка · планер «Что съесть сейчас»",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "planner window 13.5/700 CTA 44px",
+      "f": "окно времени 13,5/700, кнопка «Выбрать продукты · N вариантов» 44 на --v4-act ра"
+    },
+    {
+      "key": "карточка · Ритм приёмов",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "--v4-chip vs --v4-track",
+      "f": "перемычка между временами переведена с --v4-chip на --v4-track (третье место в з"
+    },
+    {
+      "key": "карточка · БЖУ по приёмам",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "BZH layout roles",
+      "f": "имя приёма слева, полоса доли, ккал справа моноцифрами; сегменты взяты ролями ко"
+    },
+    {
+      "key": "карточка · абзац раскрывашки",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "paragraph 12/1.55 62% no markers",
+      "f": "абзацы 12/1,55 чернил 62 % с зазором 10, без маркеров и нумерации, числа моноциф"
+    },
+    {
+      "key": "карточка · скелетон расчёта",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "карточка · «Что из этого следует»",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "phrase list not time rows",
+      "f": "ярус собран списком фраз, а не тремя строками .row: продукт выводит «Углеводы в "
+    },
+    {
+      "key": "копия · голос куратора",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "no reason phrase in product",
+      "f": "запрет соблюдён, устройство фразы — нет. Человек причиной не назван ни разу: 75 "
+    },
+    {
+      "key": "вид · Баланс за период",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "hero card assembled per contract not frame",
+      "f": "карточка героя собрана: ярус с подписью периода, число со знаком и единица рядом"
+    },
+    {
+      "key": "вид · экран разбора Score",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "hero disputes with score frame",
+      "f": "герой экрана спорит с кадром дважды: кегль числа (30/800 здесь, 56/.9 в кадре, 4"
+    },
+    {
+      "key": "вид · шапка зрелости",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "counter copy vs frame",
+      "f": "имя вкладки 15/700 и счётчик истории в одной строке — по кадру. Отступление: стр"
+    },
+    {
+      "key": "вид · лист раскрывашки",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "sheet scrim 2.5px product invariant",
+      "f": "скрим с продуктовым blur 2,5px и dim набора, лист на --v4-bg радиусом 28 сверху,"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 23",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "hero 44/600 vs contract 30/800",
+      "f": "главное число: строка «вид · Баланс за период» даёт 30/800, строка «вид · баланс"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 24",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "unit tone --v4-ink-3 vs canvas 42%",
+      "f": "«ккал» 13/600 сведено, тон нет: кадр просит 42 %, ближайшая ступень --v4-ink-3 ("
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 27",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "съедено·план 11.5 vs canvas 12",
+      "f": "«съедено · план»: кегль 11,5 по строке контракта против 12 у кадра, тон 50 % про"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 37",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "discipline name tone --v4-ink-2 vs 50%",
+      "f": "надпись входа 600 12/1 сведена, тон нет: кадр просит 50 %, у набора ближайший --"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 42",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "делитель из 6: --v4-ink-4 vs 35%",
+      "f": "делитель «из 6» просит тон 35 %, у набора ближайшая ступень --v4-ink-4 (38 %); н"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 50",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "bar track --v4-track 12% vs canvas 7%",
+      "f": "у набора нет запрошенного тона или роли; ближайшая названа в списке отступлений "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 56",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "delta color --v4-ink-data vs --val-bad",
+      "f": "геометрия и типографика −2 совпадают; цвет намеренно --v4-ink-data: именованный "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 59",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "zero delta tone --v4-ink-4",
+      "f": "у набора нет запрошенного тона или роли; ближайшая названа в списке отступлений "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 63",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "+17% badge not rendered",
+      "f": "числа «+17 %» шапка графика не выводит: правило .reports-v4-dynamics-card__badge"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 64",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "no days axis under dynamics card",
+      "f": "отдельной оси дней под карточкой нет: сетки repeat(7,1fr) с числами 10/600 черни"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 65",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "follows from 64 — no highlighted day",
+      "f": "выделенного акцентом числа дня в оси нет, потому что нет самой оси — см. строку "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 68",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "contract line format·вес vs frame",
+      "f": "верна строка контракта, а не кадр: «формат · вес и его подпись» и «карточка · пр"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 72",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "curves not three average tiles",
+      "f": "блок «Сон и самочувствие» намеренно перерисован: три плитки со средними числами "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 73",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "curves not three average tiles",
+      "f": "блок «Сон и самочувствие» намеренно перерисован: три плитки со средними числами "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 74",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "curves not three average tiles",
+      "f": "блок «Сон и самочувствие» намеренно перерисован: три плитки со средними числами "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 75",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "curves not three average tiles",
+      "f": "блок «Сон и самочувствие» намеренно перерисован: три плитки со средними числами "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 76",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "curves not three average tiles",
+      "f": "блок «Сон и самочувствие» намеренно перерисован: три плитки со средними числами "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 79",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "weeks sheet tone ladder",
+      "f": "у набора нет запрошенного тона (35 % и 50 %), стоит ближайший; названо в списке "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 80",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "weeks sheet tone ladder",
+      "f": "у набора нет запрошенного тона (35 % и 50 %), стоит ближайший; названо в списке "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 81",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "weeks sheet tone ladder",
+      "f": "у набора нет запрошенного тона (35 % и 50 %), стоит ближайший; названо в списке "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 82",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "weeks sheet tone ladder",
+      "f": "у набора нет запрошенного тона (35 % и 50 %), стоит ближайший; названо в списке "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 89",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "weeks sheet tone ladder",
+      "f": "у набора нет запрошенного тона (35 % и 50 %), стоит ближайший; названо в списке "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 91",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "dash in open column --v4-ink-30 vs 32%",
+      "f": "прочерк в незакрытой колонке: кадр просит чернила 32 %, ближайшая ступень набора"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 93",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "weeks footnote tone",
+      "f": "сноска листа недель 500 10,5/1.5 сведена, тон нет: кадр просит 42 %, ближайший -"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 97",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "days right uses --v4-sand-ink",
+      "f": "«+823 · 5/10» набрано ролью с именем набора --v4-sand-ink (.reports-v4-days__rig"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 103",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js:811 — заголовок «Замеры тела» снят намеренно",
+      "f": "заголовок «Замеры тела» снят намеренно: он называл карточку, которая и так одна "
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 104",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "contract карточка·призыв vs frame accent",
+      "f": "верна строка контракта, а не кадр: «формат · вес и его подпись» и «карточка · пр"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · 105",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "CTA not on --acs per contract",
+      "f": "верна строка контракта, а не кадр: «формат · вес и его подпись» и «карточка · пр"
+    },
+    {
+      "key": "Разбор Score · 08",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "hero number 30/800 vs 44 in code",
+      "f": "главное число: строка контракта даёт 30/800, кадр 56/.9 с трекингом −.04em, в ко"
+    },
+    {
+      "key": "Разбор Score · 10",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "state word 12/600 vs 13/1.45",
+      "f": "слово состояния: строка контракта даёт 12/600 чернил 55 %, кадр 12,5/1,5 тоном -"
+    },
+    {
+      "key": "Отчёты · мало данных · 04",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "frame stale vs contract шапка и период",
+      "f": "кадр отстал от контракта: рисует границы окна 500 11px тоном 38 %, а строка «вид"
+    },
+    {
+      "key": "Отчёты · мало данных · 16",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "list row 12 vs 12.5",
+      "f": "строка списка следует шаблону .row по полям 13/0, зазору 12, распорке и линии 7 "
+    },
+    {
+      "key": "Инсайты · 21",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "action row as card not bare row",
+      "f": "строка действия — отдельная карточка на --bg радиусом 16 с полями 13/15. Контрак"
+    },
+    {
+      "key": "Инсайты · подробно · 01",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "734-ui-v4-insights.css:331-336 — у __head только flex/gap/margin, не 16/18/0",
+      "f": "полей 16/18/0 в зоне нет вовсе: ни у .insights-v4-detail__head (734-ui-v4-insigh"
+    },
+    {
+      "key": "Инсайты · ярус Питание · 03",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "meal rec from 720-predictive-insights.css",
+      "f": "рекомендация приёма рисуется .meal-rec-card__title из 720-predictive-insights.cs"
+    },
+    {
+      "key": "Инсайты · ярус Питание · 06",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "meal rec from 720-predictive-insights.css",
+      "f": "объяснение под рекомендацией — часть той же карточки из 720-predictive-insights."
+    },
+    {
+      "key": "Инсайты · ярус Питание · 08",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "meal rec from 720-predictive-insights.css",
+      "f": "строка ритма описана двумя кадрами по-разному: «Инсайты · ярус Питание» даёт 600"
+    },
+    {
+      "key": "Инсайты · ярус Питание · 14",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "meal rec from 720-predictive-insights.css",
+      "f": "время последнего приёма против границы окна: кадр рисует «до 20:30» 700 тоном --"
+    },
+    {
+      "key": "Инсайты · день без заданий · 06",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "hero padding 24/20 vs frame 24/20/20",
+      "f": "карточка героя — поля 24/20/20 в коде; кадр «день без заданий» просит 24/20, а к"
+    },
+    {
+      "key": "Инсайты · день без заданий · 11",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "attention text 600 13/1.45 vs 500 12.5",
+      "f": "текст «Пока всё спокойно» — 500 12,5 против 600 13/1,45 кадра; тот же класс .ins"
+    },
+    {
+      "key": "Инсайты · риск срыва · 07",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "risk card --v4-accent-bg vs canvas --tint",
+      "f": "карточка риска стоит на --v4-accent-bg, кадр просит --tint. Роли разные и обе за"
+    },
+    {
+      "key": "Инсайты · риск срыва · 11",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "risk card --v4-accent-bg vs canvas --tint",
+      "f": "текст риска — 500 12,5 против 600 13/1,45 кадра; тот же класс .insights-v4-atten"
+    },
+    {
+      "key": "Инсайты · риск срыва · 12",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "risk card --v4-accent-bg vs canvas --tint",
+      "f": "строка меты — отступ 6, кадр даёт 10 (734-ui-v4-insights:405)"
+    },
+    {
+      "key": "Инсайты · риск срыва · 16",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "risk card --v4-accent-bg vs canvas --tint",
+      "f": "текст второго сигнала — тот же класс, то же расхождение начертания (734-ui-v4-in"
+    },
+    {
+      "key": "Инсайты · риск срыва · 17",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "risk card --v4-accent-bg vs canvas --tint",
+      "f": "кнопка «Ещё N» описана двумя кадрами по-разному: «Стоит внимания · голос куратор"
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 16",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "hatch step 4px contract vs canvas 4 through 4",
+      "f": "контракт «вид · нулевая строка» задаёт штриховке шаг 4 px, кадр рисует 4 через 4"
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 19",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "строка 19: тон --v4-ink-3 (45%) vs кадр --ovl",
+      "f": "вердикт «=» ссылался на пары гейта, но в этом кадре строка 19 парой не покрыта: "
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 20",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "avg share uses --v4-ink-data",
+      "f": "геометрия и типографика −2 совпадают; цвет намеренно --v4-ink-data: именованный "
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 21",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "hatch step 4px contract vs canvas 4 through 4",
+      "f": "контракт «вид · нулевая строка» задаёт штриховке шаг 4 px, кадр рисует 4 через 4"
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 22",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "падение: --v4-bad-text (#b4442a) vs кадр --val-bad (#a8382b)",
+      "f": "падение показателя: кадр просит --val-bad (#a8382b), у продукта ближайшая роль -"
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 29",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "ReportsV4ZeroActions removed 2026-08-30",
+      "f": "список действий нулевой строки в продукте не рисуется: компонент удалён 30 авгус"
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 30",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "ReportsV4ZeroActions removed 2026-08-30",
+      "f": "список действий нулевой строки в продукте не рисуется: компонент удалён 30 авгус"
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 31",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "ReportsV4ZeroActions removed 2026-08-30",
+      "f": "список действий нулевой строки в продукте не рисуется: компонент удалён 30 авгус"
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 32",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "ReportsV4ZeroActions removed 2026-08-30",
+      "f": "список действий нулевой строки в продукте не рисуется: компонент удалён 30 авгус"
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · 33",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "ReportsV4ZeroActions removed 2026-08-30",
+      "f": "список действий нулевой строки в продукте не рисуется: компонент удалён 30 авгус"
+    },
+    {
+      "key": "Стоит внимания · голос куратора · 06",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "attention typography shared class",
+      "f": "текст сигнала — 500 12,5 чернилами 55 %, кадр даёт 600 13/1,45 чернилами. Класс "
+    },
+    {
+      "key": "Стоит внимания · голос куратора · 07",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "attention typography shared class",
+      "f": "вторая строка сигнала — следствие или опора по строке «копия · голос куратора». "
+    },
+    {
+      "key": "Стоит внимания · голос куратора · 08",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "attention typography shared class",
+      "f": "строка меты — отступ 6, кадр даёт 10 (.insights-v4-attention__meta, 734-ui-v4-in"
+    },
+    {
+      "key": "Стоит внимания · панель Ещё · 07",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "Ещё panel meta offset",
+      "f": "текст сигнала — 500 12,5 против 600 12,5/1,45 кадра; тот же класс, что в кадре г"
+    },
+    {
+      "key": "Стоит внимания · панель Ещё · 08",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "Ещё panel meta offset",
+      "f": "строка меты — отступ 6, кадр даёт 9 (734-ui-v4-insights:405)"
+    },
+    {
+      "key": "Инсайты · считаем · 01",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 02",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 03",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 04",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 05",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 06",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 07",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 08",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 09",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 10",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 11",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 12",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Инсайты · считаем · 13",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "canvas skeleton vs spinners acceptance; SkeletonCard never called",
+      "f": "Canvas конфликтует сам с собой: reports-insights просит отдельный skeleton, а AC"
+    },
+    {
+      "key": "Отчёты · нет веса · 09",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "badge not rendered",
+      "f": "числа «+205 в день» шапка графика не выводит вовсе, правило .reports-v4-dynamics"
+    },
+    {
+      "key": "Отчёты · нет веса · 16",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "one caption class two sizes",
+      "f": "один класс подписи под графиком служит двум размерам: кадр главного экрана даёт "
+    },
+    {
+      "key": "Неделя к неделе · одна закрытая · 10",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "closed week tone --v4-ink-4 vs 35%",
+      "f": "у набора нет запрошенного тона 35 %, стоит ближайший --v4-ink-4 (38 %); названо "
+    },
+    {
+      "key": "Неделя к неделе · одна закрытая · 11",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "closed week tone --v4-ink-4 vs 35%",
+      "f": "у набора нет запрошенного тона 35 %, стоит ближайший --v4-ink-4 (38 %); названо "
+    },
+    {
+      "key": "Неделя к неделе · одна закрытая · 12",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "closed week tone --v4-ink-4 vs 35%",
+      "f": "у набора нет запрошенного тона 35 %, стоит ближайший --v4-ink-4 (38 %); названо "
+    },
+    {
+      "key": "Неделя к неделе · одна закрытая · 13",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "closed week tone --v4-ink-4 vs 35%",
+      "f": "у набора нет запрошенного тона 35 %, стоит ближайший --v4-ink-4 (38 %); названо "
+    },
+    {
+      "key": "Неделя к неделе · одна закрытая · 18",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "dash tone --v4-ink-30 vs 32%",
+      "f": "у набора нет тона 32 %, ближайший --v4-ink-30; названо в списке отступлений гейт"
+    },
+    {
+      "key": "Неделя к неделе · одна закрытая · 23",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "dash tone --v4-ink-30 vs 32%",
+      "f": "у набора нет тона 32 %, ближайший --v4-ink-30; названо в списке отступлений гейт"
+    },
+    {
+      "key": "Неделя к неделе · одна закрытая · 24",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "dash tone --v4-ink-30 vs 32%",
+      "f": "у набора нет тона 32 %, ближайший --v4-ink-30; названо в списке отступлений гейт"
+    },
+    {
+      "key": "Неделя к неделе · одна закрытая · 26",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "footnote tone",
+      "f": "текст сноски 500 10,5/1.5 совпадает, тон нет: кадр просит 42 %, у набора ближайш"
+    },
+    {
+      "key": "Ярус Питание · после последнего приёма · 14",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "rhythm track same class, frames disagree on typography",
+      "f": "дорожка ритма — тот же .insights-v4-nutrition__rhythm-* из дашборда, что в кадре"
+    },
+    {
+      "key": "Ярус Питание · после последнего приёма · 15",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "rhythm track same class, frames disagree on typography",
+      "f": "дорожка ритма — тот же .insights-v4-nutrition__rhythm-* из дашборда, что в кадре"
+    },
+    {
+      "key": "Ярус Питание · после последнего приёма · 16",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "rhythm track same class, frames disagree on typography",
+      "f": "дорожка ритма — тот же .insights-v4-nutrition__rhythm-* из дашборда, что в кадре"
+    },
+    {
+      "key": "День под порогом · выбор · 11",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "state frame schematic vs main Визуал v4·Отчёты",
+      "f": "кадр состояния перерисовывает блок баланса схематично и расходится с основным ка"
+    },
+    {
+      "key": "День под порогом · выбор · 12",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "state frame schematic vs main Визуал v4·Отчёты",
+      "f": "кадр состояния перерисовывает блок баланса схематично и расходится с основным ка"
+    },
+    {
+      "key": "День под порогом · выбор · 13",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "state frame schematic vs main Визуал v4·Отчёты",
+      "f": "кадр состояния перерисовывает блок баланса схематично и расходится с основным ка"
+    },
+    {
+      "key": "День под порогом · выбор · 14",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "state frame schematic vs main Визуал v4·Отчёты",
+      "f": "кадр состояния перерисовывает блок баланса схематично и расходится с основным ка"
+    },
+    {
+      "key": "День под порогом · выбор · 15",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "state frame schematic vs main Визуал v4·Отчёты",
+      "f": "кадр состояния перерисовывает блок баланса схематично и расходится с основным ка"
+    },
+    {
+      "key": "День пустой · выбор · 10",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "кадр — dev-сноска про свежие дни; продукт — сноска «три пути решения»",
+      "f": "у пустого дня кадр даёт сноску «Показывается только у свежих дней — исторические"
+    },
+    {
+      "key": "Мало калорий · подтверждение · 16",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "secondary button tone 58% vs --v4-ink-2 55%",
+      "f": "тон вторичной кнопки: кадр и строка «кнопки и области нажатия» просят чернила 58"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 10",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "chevron is glyph not svg path",
+      "f": "шеврон строки периода в продукте — типографский глиф 14 px (.reports-v4-periods_"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 11",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "path M9 6l6 6 not in product",
+      "f": "путь M9 6l6 6-6 6 в продукте не рисуется: шеврон собран глифом, не svg"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 12",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 13",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 14",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 15",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 16",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 17",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 18",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 19",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 20",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 21",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 22",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 23",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 24",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 25",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Визуал v4 · Отчёты · рисунок 26",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "холст графика: код строит его по контейнеру (W=296, H=96 в heys_day_stats_v1.js:"
+    },
+    {
+      "key": "Разбор Score · рисунок 01",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "back chevron glyph not svg frame",
+      "f": "возврат: кадр рисует голый шеврон 17×17 обводкой чернил 45 % без подложки, в про"
+    },
+    {
+      "key": "Разбор Score · рисунок 02",
+      "status": "WEAK_F",
+      "factInF": false,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "то же возвратное «‹» глифом, не svg 17×17 кадра — см. рисунок 01",
+      "f": "точки той же кривой возврата — см. строку выше"
+    },
+    {
+      "key": "Отчёты · нет веса · рисунок 01",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_stats_v1.js W=296 H=96 vs canvas 292×84",
+      "f": "поле рисунка: код строит холст 360×158 и тянет его по ширине карточки (heys_day_"
+    },
+    {
+      "key": "Мало калорий · подтверждение · рисунок 01",
+      "status": "WEAK_F",
+      "factInF": false,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "heys_day_sparklines_v1.js:348 width=360×158 vs кадр 262×56 (то же поле, что графики блока)",
+      "f": "то же поле рисунка: холст 360×158 по контейнеру против фикса 262×56 в кадре; 68 "
+    },
+    {
+      "key": "Отчёты · нулевая строка матрицы · текст",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "copy differs in two places per f",
+      "f": "копия кадра расходится в двух местах: вторая строка «в среднем N % нормы · ни од"
+    },
+    {
+      "key": "Инсайты · считаем · текст",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "loading state «считаем» not shown — tab empty/spinner only",
+      "f": "состояния «считаем» в продукте нет: SkeletonCard объявлен и экспортирован, но не"
+    },
+    {
+      "key": "Отчёты · нет веса · текст",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "+205 in header not in chart badge",
+      "f": "копия кадра расходится в одном месте: числа «+205 в день» в шапке графика нет; о"
+    },
+    {
+      "key": "вид · ярус «На чём основано»",
+      "status": "CONFIRMED",
+      "factInF": true,
+      "aliveInCode": true,
+      "frameOk": true,
+      "notes": "sources tier card rows vs bare rows",
+      "f": "подпись яруса сведена (10px/700, .16em, --v4-act-text). Строки — форма кадра: ка"
+    }
+  ],
+  "demote_keys": ["Разбор Score · рисунок 02", "Мало калорий · подтверждение · рисунок 01"]
+}

@@ -1,0 +1,62 @@
+reports-insights ≠ audit — 2026-09-04
+
+проверено: 144
+подтвердилось: 144
+ушло в ?: 0
+улучшен f, оставлено ≠: 2
+
+batch-generic f (same boilerplate groups): 65 lines in shared-f groups (71 lines share 13 f texts)
+code-missing-reason: 0
+frame-superseded: 0
+
+Blocks:
+  вид · Баланс за период: 1/1 confirmed, 0 demoted
+  вид · лист раскрывашки: 1/1 confirmed, 0 demoted
+  вид · панель и состояния: 1/1 confirmed, 0 demoted
+  вид · шапка зрелости: 1/1 confirmed, 0 demoted
+  вид · экран разбора Score: 1/1 confirmed, 0 demoted
+  вид · ярус «На чём основано»: 1/1 confirmed, 0 demoted
+  Визуал v4 · Отчёты: 45/45 confirmed, 0 demoted
+  графики: 1/1 confirmed, 0 demoted
+  День под порогом · выбор: 5/5 confirmed, 0 demoted
+  День пустой · выбор: 1/1 confirmed, 0 demoted
+  Инсайты · 21: 1/1 confirmed, 0 demoted
+  Инсайты · день без заданий: 2/2 confirmed, 0 demoted
+  Инсайты · подробно: 1/1 confirmed, 0 demoted
+  Инсайты · риск срыва: 5/5 confirmed, 0 demoted
+  Инсайты · считаем: 14/14 confirmed, 0 demoted
+  Инсайты · ярус Питание: 4/4 confirmed, 0 demoted
+  карточка · «Что из этого следует»: 1/1 confirmed, 0 demoted
+  карточка · абзац раскрывашки: 1/1 confirmed, 0 demoted
+  карточка · БЖУ по приёмам: 1/1 confirmed, 0 demoted
+  карточка · график «съедено против плана»: 1/1 confirmed, 0 demoted
+  карточка · график веса: 1/1 confirmed, 0 demoted
+  карточка · действие в «Сделай сегодня»: 1/1 confirmed, 0 demoted
+  карточка · каскад разбора Score: 1/1 confirmed, 0 demoted
+  карточка · планер «Что съесть сейчас»: 1/1 confirmed, 0 demoted
+  карточка · плитка Score: 1/1 confirmed, 0 demoted
+  карточка · Ритм приёмов: 1/1 confirmed, 0 demoted
+  карточка · скелетон расчёта: 1/1 confirmed, 0 demoted
+  карточка · строка дня в ленте: 1/1 confirmed, 0 demoted
+  копия · голос куратора: 1/1 confirmed, 0 demoted
+  Мало калорий · подтверждение: 1/2 confirmed, 1 demoted
+  месяц нулей — вопрос к норме: 1/1 confirmed, 0 demoted
+  Неделя к неделе · одна закрытая: 8/8 confirmed, 0 demoted
+  Отчёты · мало данных: 2/2 confirmed, 0 demoted
+  Отчёты · нет веса: 4/4 confirmed, 0 demoted
+  Отчёты · нулевая строка матрицы: 11/11 confirmed, 0 demoted
+  пустое место в блоке: 1/1 confirmed, 0 demoted
+  Разбор Score · 08: 1/1 confirmed, 0 demoted
+  Разбор Score · 10: 1/1 confirmed, 0 demoted
+  Разбор Score · рисунок 01: 1/1 confirmed, 0 demoted
+  Разбор Score · рисунок 02: 0/1 confirmed, 1 demoted
+  расчёт и отказ: 1/1 confirmed, 0 demoted
+  роли цвета: 1/1 confirmed, 0 demoted
+  сетка и грунт: 1/1 confirmed, 0 demoted
+  состав фенотипа: 1/1 confirmed, 0 demoted
+  Стоит внимания · голос куратора: 3/3 confirmed, 0 demoted
+  Стоит внимания · панель Ещё: 2/2 confirmed, 0 demoted
+  шкала кеглей: 1/1 confirmed, 0 demoted
+  Ярус Питание · после последнего приёма: 3/3 confirmed, 0 demoted
+
+Demoted keys: (none)
