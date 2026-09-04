@@ -10,8 +10,9 @@
     },
     "границы": {
       "v": "—",
-      "f": "Служебная строка handoff описывает границы/чтение макета, а не отдельное поведение runtime.",
-      "h": "50c734543663"
+      "f": "Служебная строка handoff; runtime-арифметика — HEYS.TrainingKernel.strength в apps/web/_kernel/heys_kernel_strength_v1.js:20–1290.",
+      "h": "50c734543663",
+      "naKind": "handoff"
     },
     "источник механики": {
       "v": "—",
@@ -40,7 +41,7 @@
     },
     "связка — один объект любого размера": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "supersetGroups без лимита 2; restSec=max участников :403–412. kernel-strength-supersets.test.js.",
       "h": "75ce48edc2fe"
     },
     "дроп — продолжение подхода": {
@@ -50,18 +51,19 @@
     },
     "единица измерения даёт или не даёт тоннаж": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "unit time/distance → seconds/meters, totalVolume не растёт. apps/web/_kernel/heys_kernel_strength_v1.js:1132–1138; тест kernel-strength-approach-schema.test.js «время и метры копятся отдельно».",
       "h": "8b978385221b"
     },
     "коэффициент своего веса — физический факт": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Снимок ex.bodyweightFactor при добавлении; без factor или bodyWeightKg — unmeasuredExercises и totalVolume=0. apps/web/_kernel/heys_kernel_strength_v1.js:1108–1115, 1148–1150; тест «без массы тела или коэффициента» kernel-strength-approach-schema.test.js.",
       "h": "73db60f7fb7f"
     },
     "группы мышц — основная плюс синергисты": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
-      "h": "ff58271bc7be"
+      "v": "—",
+      "f": "Веса групп — HEYS.exerciseMeta.groupWeights (SYNERGIST_SHARE=0.5) в apps/web/heys_exercise_catalog_v1.js:668–677; снимок primaryGroup/secondaryGroups тащит heys_day_trainings_v1.js:42 EXERCISE_CARRY_FIELDS. Ядро тоннажа группы не делит — потребитель heys_day_activity_v1.js:450 groupVolumesForTraining.",
+      "h": "ff58271bc7be",
+      "naKind": "foreign-zone"
     },
     "вид · где единицы учёта видны": {
       "v": "?",
@@ -75,17 +77,17 @@
     },
     "тип подхода": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "approachType: пусто=work, warmup вне totalApproaches и тоннажа. apps/web/_kernel/heys_kernel_strength_v1.js:72–80, 1121–1127.",
       "h": "6c836c2d6e31"
     },
     "дроп-сет — продолжение подхода": {
       "v": "=",
-      "f": "Дроп остаётся drops[] внутри одного подхода; SupersetBlock не предлагает действие, а writer независимо блокирует groupByIndex. Evidence apps/web/__tests__/strength-builder-calm-canvas-contract.test.js:73.",
+      "f": "approachStages + все ступени в plannedVolume/totalVolume; maxWeight только основная. apps/web/_kernel/heys_kernel_strength_v1.js:87–106, 1155–1157.",
       "h": "39f172586541"
     },
     "шкала отдыха": {
-      "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "v": "?",
+      "f": "Предложение 180/120/60/90 по hardness — логика в UI writer (heys_strength_builder_ui), не в kernel/day_trainings. REST_PRESETS [60,90,120,180] day_trainings :721 — только пресеты ручной правки.",
       "h": "af2f515cb773"
     },
     "«тяжесть», а не «RPE»": {
@@ -140,7 +142,7 @@
     },
     "перенумерация пересчитывает тоннаж": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "warmup исключается из тоннажа при смене type; пересчёт через trainingTonnage. Ядро + UI writer; арифметика kernel-strength-approach-schema.test.js «разминка не идёт».",
       "h": "63701ecdeb7d"
     },
     "кольцо над «Завершить», список жив": {
@@ -169,8 +171,8 @@
       "h": "9b2c1d8f4a33"
     },
     "перестановка — стрелками и за ручку": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "orderBlocks/moveBlock/moveSupersetGroup/insertRespectingGroups apps/web/_kernel/heys_kernel_strength_v1.js; UI рендер — strength-builder order tests.",
       "h": "a3966800696b"
     },
     "связка едет целиком": {
@@ -235,12 +237,12 @@
     },
     "план в ленте — назначение, а не факт": {
       "v": "?",
-      "f": "Карточка и правило нагрузки реализованы, но полный контракт строки ещё не закрыт: будущий early-start не имеет owner-семантики, а mesocycle label отсутствует в схеме.",
+      "f": "isPlannedWorkout/heys_day_trainings_v1.js:936–943 зеркалит kernel isPlanned; dayTonnage не считает план фактом. Early-start и mesocycle label — открытый product gap в f прежнего вердикта.",
       "h": "031a43f74339"
     },
     "пропущенный день — выбор, а не упрёк": {
       "v": "?",
-      "f": "Kernel исключает skipped из объёма, но полный контракт строки не закрыт: отдельного missed-pending с выбором перенести/отпустить и owner-cutoff пока нет.",
+      "f": "Kernel/dayTonnage: isPlanned пропускает assigned/skipped/moved (heys_kernel_strength_v1.js:36–38, 1186–1194). UX «перенести/отпустить», причина, пилюли — day_trainings ProgramPathScreen/UI; полный контракт не закрыт без UI-кадров.",
       "h": "a5bcabdd63c8"
     },
     "инвариант · подход — единица учёта": {
@@ -290,17 +292,17 @@
     },
     "инвариант · расчётный максимум — Эпли": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "epleyOneRepMax(w,r)=w×(1+r/30); estimatedMaxFromExercise(ex) от workingTopSet. apps/web/_kernel/heys_kernel_strength_v1.js:963–971, 989–994; fixture Math.round(epley(75,8))=95 — kernel-strength-approach-schema.test.js.",
       "h": "3b6030cd8702"
     },
     "случай 1 · тап по закрытому во время отдыха": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
+      "f": "К1: collapsedExerciseRow onClick setOpenIdx+patchRest({collapsed:true}) heys_strength_builder_ui_v1.js:380-382.",
       "h": "a72e1d6037ab"
     },
     "случай 2 · подход добавлен к закрытому упражнению": {
       "v": "=",
-      "f": "Lifecycle закрытая сессия → новый подход → active-state, очистка completedAt, прогресс 1/2 и точная кнопка «Завершить · 1 не закрыто» закреплены focused regression apps/web/__tests__/strength-builder-ui.test.js:300.",
+      "f": "К2: addApproach + session completedAt:null — heys_strength_builder_ui_v1.js addApproach/finishRemainderLabel.",
       "h": "2074037db30c"
     },
     "случай 3 · рабочий подход переключили в разминку": {
@@ -364,13 +366,13 @@
       "h": "e5d824b3d9bb"
     },
     "один повтор своего веса": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "(bodyWeightKg×factor+extraWeightKg)×reps; bodyWeightKg из opts на дату. apps/web/_kernel/heys_kernel_strength_v1.js:1148–1150; тест «свой вес считается по формуле» с (70×1+10)×10.",
       "h": "923d98260b18"
     },
     "одиннадцать групп, список закрыт": {
       "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "f": "Каталог MUSCLE_GROUPS — 14 id (apps/web/heys_exercise_catalog_v1.js:31–46), канвас/fixture называют 11 русских ярлыков. Сверить с дизайном: traps/forearms/addductors — лишние или скрытые в UI?",
       "h": "9bd66f1be697"
     },
     "вид · карточка упражнения": {
@@ -419,8 +421,8 @@
       "h": "d8e3b463bec5"
     },
     "длительность — от первой отметки до последней": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "workoutLog.firstMarkAt/lastMarkAt пишутся при галочке (:2095–2096), duration = completedAt|now − startedAt (:1582, :2269). mergeWorkoutLifecyclePatch :724–735.",
       "h": "efe9e4bb1c16"
     },
     "вчерашняя ждёт решения, а не закрывается сама": {
@@ -430,7 +432,7 @@
     },
     "у брошенной сессии три исхода": {
       "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "f": "Lifecycle completedAt/activeRest mergeWorkoutLifecyclePatch day_trainings :724–753; три исхода UI — вне kernel.",
       "h": "fe46a75c4acf"
     },
     "вид · служебная шапка сессии": {
@@ -485,12 +487,12 @@
     },
     "состав итогов": {
       "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "f": "trainingTonnage отдаёт totalVolume, warmupApproaches, seconds, meters, unmeasuredExercises; состав экрана итогов — heys_strength_finish_ui_v1.js (UI scope).",
       "h": "8d06f4f745f6"
     },
     "сравнение только с такой же": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "findLastWorkoutBuilderExercises с workoutCompositionKey :924–990 heys_day_trainings_v1.js — повтор только при том же составе упражнений.",
       "h": "007e7c72216f"
     },
     "состав экрана цикла": {
@@ -544,8 +546,8 @@
       "h": "02e2bde89138"
     },
     "объём назначенного и сделанного": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Ядро: totalVolume (done) vs plannedVolume (all). apps/web/_kernel/heys_kernel_strength_v1.js:1073–1075, 1159–1160; day_trainings calcWorkoutBuilderVolumeKg → plannedVolume :361–368. Отображение двух строк — UI/program screen, вне kernel.",
       "h": "6067fef87119"
     },
     "рекорд — подход с датой": {
@@ -569,8 +571,8 @@
       "h": "df34e4ed2eff"
     },
     "рост рабочего веса": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "programGrowth по workingTopSet, порог GROWTH_STEP_KG=2.5, min 3 сессии. apps/web/_kernel/heys_kernel_strength_v1.js:980–1044; regression apps/web/__tests__/kernel-plan-edit.test.js describe programGrowth.",
       "h": "6a5696db25fe"
     },
     "молчаливого «не применилось» не бывает": {
@@ -624,8 +626,8 @@
       "h": "766d20d90af6"
     },
     "контекст подхода — числа": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Прошлый раз/рекord: findExerciseLastSnapshot :266–347, findExerciseHistoricalRecord :646–711, historyFor API :4167–4172 heys_day_trainings_v1.js. Числа из истории LS, не из канваса.",
       "h": "d0c0b3aa6a88"
     },
     "вид · строка подхода": {
@@ -845,7 +847,7 @@
     },
     "пропущен сегодня и пропущен раньше — два разных случая": {
       "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "f": "Различие статусов в program days — day_trainings ProgramPathScreen; kernel не различает «когда» пропуск, только isPlanned на training blob.",
       "h": "591a8a28f14b"
     },
     "где живёт предложение куратора — решено": {
@@ -924,8 +926,8 @@
       "h": "75f247d1aa3d"
     },
     "4 · статус «пропущено» вне факта": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "plan.status skipped|assigned|moved → isPlanned → dayTonnage=0 для этой тренировки. kernel :36–38; day_trainings isPlannedWorkout :936–943.",
       "h": "48c844770a0e"
     },
     "5 · карточка упражнения несёт три вещи": {
@@ -934,8 +936,8 @@
       "h": "b3521d848d5c"
     },
     "6 · довес на подходе, индекс раунда не заводим": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "approachExtraWeight на подходе; раунд выводится supersetRounds из позиции. apps/web/_kernel/heys_kernel_strength_v1.js:121–124, 374–396.",
       "h": "63ae34bbabe0"
     },
     "7 · четыре поля под обещания экранов": {
@@ -999,8 +1001,8 @@
       "h": "bdeef242585f"
     },
     "открыто · формулы Эпли в коде нет": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Закрыто в этом заходе: epleyOneRepMax в ядре (см. инвариант выше). Дубликат в apps/web/strength/heys_strength_finish_ui_v1.js:40 — UI-writer может перевести на TK.strength.epleyOneRepMax отдельной задачей.",
       "h": "564518c92246"
     },
     "чего нет в этом заходе": {
@@ -1010,7 +1012,7 @@
     },
     "фикстура на 23 подхода": {
       "v": "=",
-      "f": "docs/ui/handoff-v4/canvas/.../fixtures/workout-23-sets.json с expected.workingSets=23 и tonnageKg=10870; прогон в kernel-strength-approach-schema.test.js «сходится с канонической Canvas-fixture».",
+      "f": "fixtures/workout-23-sets.json: workingSets=23, tonnageKg=10870, estimatedMaxBenchKg=95; kernel-strength-approach-schema.test.js прогон trainingTonnage + estimatedMaxFromExercise.",
       "h": "fedba98775e4"
     },
     "изменения данных": {
@@ -2707,23 +2709,23 @@
       "h": "c629f84f9712"
     },
     "Программа пройдена · 07": {
-      "v": "≠",
-      "f": "Итог программы реализован частично и не воспроизводит состав и геометрию canvas-кадра.",
+      "v": "=",
+      "f": ".program-done-hero — margin-top 12px, padding 12px, radius 14px, bg var(--gr-bg); 750-strength-builder.css:4634-4640.",
       "h": "fc7be4d18780"
     },
     "Программа пройдена · 08": {
-      "v": "≠",
-      "f": "Итог программы реализован частично и не воспроизводит состав и геометрию canvas-кадра.",
+      "v": "=",
+      "f": ".program-done-hero-label — 600 10.5px/.12em uppercase rgba(var(--ink),.56); heys_strength_proposal_ui_v1.js.",
       "h": "200727d27e2b"
     },
     "Программа пройдена · 09": {
-      "v": "≠",
-      "f": "Итог программы реализован частично и не воспроизводит состав и геометрию canvas-кадра.",
+      "v": "=",
+      "f": ".program-done-hero b — 800 30px/1 tabular-nums var(--tx); strength-proposal-v4-canvas-contract.test.js «9 из 12».",
       "h": "dc75130a41b3"
     },
     "Программа пройдена · 10": {
-      "v": "≠",
-      "f": "Итог программы реализован частично и не воспроизводит состав и геометрию canvas-кадра.",
+      "v": "=",
+      "f": ".program-done-hero p — 500 11.5px/1.4 rgba(var(--ink),.56); ProgramDoneScreen copy.",
       "h": "796cf355f726"
     },
     "Программа пройдена · 11": {
@@ -2797,13 +2799,13 @@
       "h": "1909f720f5fc"
     },
     "История упражнения · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-screen .sb-finish-head — flex, padding 16px 18px 0; strength-builder-history-v4-canvas-contract.test.js row 01.",
       "h": "175bdcc2e73a"
     },
     "История упражнения · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-icon-btn 36×36, radius 999px, bg var(--c1); contract test row 02 computed.",
       "h": "105caa5a37d3"
     },
     "История упражнения · 03": {
@@ -2812,8 +2814,8 @@
       "h": "b4a4fa9ae422"
     },
     "История упражнения · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title b «Жим лёжа» — 15px/700 var(--tx); contract test row 04.",
       "h": "8b6e5bbba08b"
     },
     "История упражнения · 05": {
@@ -2832,8 +2834,8 @@
       "h": "2bff45192fc0"
     },
     "История упражнения · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-finish-metric.is-accent — bg var(--tint), inset 1.5px var(--acs); contract test row 08.",
       "h": "fa0912aa4180"
     },
     "История упражнения · 09": {
@@ -2842,8 +2844,8 @@
       "h": "c0fd6dd187a9"
     },
     "История упражнения · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Рекord chip 75×8 — 17px/800 var(--ac); contract test row 10.",
       "h": "42426141041b"
     },
     "История упражнения · 11": {
@@ -2852,13 +2854,13 @@
       "h": "c9d2da3b8d57"
     },
     "История упражнения · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Максимум 95 кг — 17px/800 var(--tx); contract test row 12.",
       "h": "ef10775d39b6"
     },
     "История упражнения · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-finish-tier uppercase 10px var(--ac); contract test row 13.",
       "h": "48d990841b7f"
     },
     "История упражнения · 14": {
@@ -2887,8 +2889,8 @@
       "h": "7f1143f08756"
     },
     "История упражнения · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-badge.is-record — bg var(--tint), color var(--ac); contract test row 19.",
       "h": "0cab08daa010"
     },
     "История упражнения · 20": {
@@ -2897,18 +2899,18 @@
       "h": "f7de00825557"
     },
     "История упражнения · 21": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-set 32px pill, bg var(--bg), inset border; contract test row 21.",
       "h": "b0a00bce3de0"
     },
     "История упражнения · 22": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-session > b tonnage 12.5px/600 var(--tx); contract test row 22.",
       "h": "8acc718bd14c"
     },
     "История упражнения · 23": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-badge.is-quiet «по плану» — color rgba(var(--ink),.56); contract test row 23.",
       "h": "eaf5ccc8d64d"
     },
     "История упражнения · 24": {
@@ -2917,8 +2919,8 @@
       "h": "6b286135ed76"
     },
     "История упражнения · 25": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-badge.is-warning «дискомфорт» — bg var(--tint), color var(--ac2); contract test row 25.",
       "h": "a78f349f877f"
     },
     "История упражнения · 26": {
@@ -2942,8 +2944,8 @@
       "h": "07ffbada0ee7"
     },
     "История упражнения · 30": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-growth-note — 11px/500 rgba(var(--ink),.56); contract test row 30.",
       "h": "4a1fabfa3e1e"
     },
     "История упражнения · 31": {
@@ -2972,8 +2974,8 @@
       "h": "2480d4192cbf"
     },
     "История упражнения · 36": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-chart .sb-finish-chart height 112px, gap 6px; contract test row 36.",
       "h": "4eb89dd57364"
     },
     "История упражнения · 37": {
@@ -3037,8 +3039,8 @@
       "h": "c8a38a9343bf"
     },
     "История упражнения · 49": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-finish-footnote 11px/500 rgba(var(--ink),.56); contract test row 49.",
       "h": "cdcd2c4c8221"
     },
     "Правка легла не полностью · 01": {
@@ -3067,18 +3069,18 @@
       "h": "c629f84f9712"
     },
     "Правка легла не полностью · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-outcome — bg var(--tint), radius 14px, padding 12px; 750-strength-builder.css:4357-4361.",
       "h": "c0e90d9587d5"
     },
     "Правка легла не полностью · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-outcome-title — 700 12.5px/1.35 var(--ac2); ProposalOutcome heys_strength_proposal_ui_v1.js.",
       "h": "d43fa4c15c22"
     },
     "Правка легла не полностью · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-outcome-prose — 500 11.5px rgba(var(--ink),.56); strength-proposal-v4-canvas-contract.test.js.",
       "h": "4c6b29cb91f7"
     },
     "Правка легла не полностью · 09": {
@@ -3092,28 +3094,28 @@
       "h": "af81bb6e54c6"
     },
     "Правка легла не полностью · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-outcome-main b — 600 12px var(--tx); applied/rejected rows.",
       "h": "6602ef9c9870"
     },
     "Правка легла не полностью · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-applied .sb-proposal-outcome-detail — color var(--gr); 750-strength-builder.css.",
       "h": "5a65406697e1"
     },
     "Правка легла не полностью · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-applied .sb-proposal-outcome-mark «✓» — color var(--gr); proposal contract test.",
       "h": "4668dbccd211"
     },
     "Правка легла не полностью · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-rejected .sb-proposal-outcome-detail — color var(--ac2); CSS is-rejected row.",
       "h": "e001501ab80e"
     },
     "Правка легла не полностью · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-rejected .sb-proposal-outcome-mark «—» — color var(--ac2); proposal contract test.",
       "h": "ccf0d4abcf6f"
     },
     "Правка легла не полностью · 16": {
@@ -5260,18 +5262,18 @@
       "h": "6b286135ed76"
     },
     "Спорное · тап по закрытому во время отдыха · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Свёрнутая полоска .sb-rest-compact b — color var(--tx), tabular-nums; heys_strength_superset_ui_v1.js RestRing collapsed.",
       "h": "03ca3a96df77"
     },
     "Спорное · тап по закрытому во время отдыха · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-rest-compact span — font 500 11px/1.3 Figtree, color rgba(var(--ink),.56); 750-strength-builder.css.",
       "h": "a4c3da126eda"
     },
     "Спорное · тап по закрытому во время отдыха · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "onExpand в RestRing — label «развернуть», font 700 11.5px, color var(--ac); strength-builder-ui.test.js кликает «Развернуть».",
       "h": "f8a6cf1bc4c3"
     },
     "Спорное · тап по закрытому во время отдыха · 11": {
@@ -5290,8 +5292,8 @@
       "h": "7c91f7740c38"
     },
     "Спорное · тап по закрытому во время отдыха · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-ex--collapsed .sb-ex-title b — font 700 12.5px/1.2, color var(--tx); collapsedExerciseRow heys_strength_builder_ui_v1.js:387-388.",
       "h": "34bb4503ef04"
     },
     "Спорное · тап по закрытому во время отдыха · 15": {
@@ -5380,8 +5382,8 @@
       "h": "a82bb13fc535"
     },
     "Спорное · подход добавлен к закрытому · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Строка «было N из M · стало…» — stateLabel в collapsedExerciseRow при reopened; тест видит «1 / 2 ✓».",
       "h": "8ba3e1ec9380"
     },
     "Спорное · подход добавлен к закрытому · 15": {
@@ -5400,13 +5402,13 @@
       "h": "f5eb6b4713c0"
     },
     "Спорное · подход добавлен к закрытому · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кнопка «Завершить · 1 не закрыто» — finishRemainderLabel; strength-builder-ui.test.js после +Подход.",
       "h": "21c64c87457f"
     },
     "Спорное · подход добавлен к закрытому · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "completedAt сбрасывается onPatchSession {completedAt:null}; addApproach на закрытом — strength-builder-ui.test.js.",
       "h": "7191ed3ac375"
     },
     "Спорное · рабочий стал разминкой · 01": {
@@ -6240,13 +6242,13 @@
       "h": "e84bd909b0fc"
     },
     "Правка · клиент уже начал · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-review .sb-head — gap 10px, padding 16px 18px 0; 750-strength-builder.css:4108-4114.",
       "h": "175bdcc2e73a"
     },
     "Правка · клиент уже начал · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-review .sb-head-title column gap 3px; 750-strength-builder.css:4116-4122.",
       "h": "dbd19d6c8f05"
     },
     "Правка · клиент уже начал · 03": {
@@ -8211,13 +8213,13 @@
       "h": "a3158812f216"
     },
     "История упражнения · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "HistoryScreen DOM: рекорд/95 кг/теги/10 чипов — strength-builder-history-v4-canvas-contract.test.js первый it.",
       "h": "fcaf2fd1487c"
     },
     "Правка легла не полностью · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "ProposalOutcome copy «легла не полностью» + applied/rejected — strength-proposal-v4-canvas-contract.test.js.",
       "h": "089f594db600"
     },
     "Связка · границы правки · текст": {
@@ -8306,13 +8308,13 @@
       "h": "359d6e9d001a"
     },
     "Спорное · тап по закрытому во время отдыха · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Сценарий: тап по закрытому → .sb-rest--collapsed, ring скрыт, таймер идёт — strength-builder-ui.test.js «тап по закрытому упражнению…».",
       "h": "caf8ada47665"
     },
     "Спорное · подход добавлен к закрытому · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "К2 copy: «Завершить · 1 не закрыто» + 1/2 ✓ — strength-builder-ui.test.js «добавление подхода к закрытому…».",
       "h": "e9a5a828e090"
     },
     "Спорное · рабочий стал разминкой · текст": {
@@ -9266,8 +9268,8 @@
       "h": "c17297c7846f"
     },
     "Спорное · тап по закрытому во время отдыха · 19": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Таймер не сбрасывается при collapsed:true — patchRest сохраняет startedAt; strength-builder-ui.test.js advanceTimersByTime(5000) → «1:13».",
       "h": "eebc148f09c5"
     },
     "Правка · план ещё не начат · 20": {
@@ -9319,7 +9321,7 @@
     },
     "Программа · назначено против сделано · текст": {
       "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "f": "plannedVolume/totalVolume в ядре готовы; экран «41 т / 26 т» и program aggregate — UI/program module, не найден в day_trainings grep.",
       "h": "ff1ae87aa25f"
     },
     "Программа · отчёт за период · текст": {
