@@ -529,7 +529,7 @@
     },
     "прокрутка на неделе периода": {
       "v": "=",
-      "f": "mc-rest-step--cycle-week { padding-bottom: 70px } даёт дополнительную прокрутку шага на днях 1–7 — heys_steps_v1.js, 500-pwa-and-offline.css. Запас 29 px вместо 181 — следствие блока «Последний кофе» (§8 MORNING_CHECKIN_V4_PROTOCOL.md), механика прокрутки не менялась",
+      "f": "mc-rest-step--cycle-week { padding-bottom: 74px } даёт дополнительную прокрутку шага на днях 1–7 — apps/web/heys_steps_v1.js:7159, apps/web/styles/modules/500-pwa-and-offline.css:1794-1795. Запас 29 px вместо 181 — следствие блока «Последний кофе» (§8 MORNING_CHECKIN_V4_PROTOCOL.md), механика прокрутки не менялась",
       "h": "1e555518aaf7"
     },
     "доступность · период в стопке": {
