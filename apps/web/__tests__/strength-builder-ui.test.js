@@ -504,8 +504,8 @@ describe('конструктор: связка', () => {
     }));
     expect(screen.getByText('Р1')).toBeTruthy();
     expect(screen.getByText('Р2')).toBeTruthy();
-    expect(screen.getByText('A1')).toBeTruthy();
-    expect(screen.getByText('A2')).toBeTruthy();
+    expect(screen.getByText('A')).toBeTruthy();
+    expect(screen.getByText('B')).toBeTruthy();
   });
 
   it('не предлагает сброс веса внутри связки', () => {
