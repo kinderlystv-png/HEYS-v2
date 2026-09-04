@@ -582,8 +582,8 @@
   min-width: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  background: var(--v4-sand-warn-bg, #fef3c7);
-  color: #b45309;
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
+  color: var(--v4-warn-text, #a1471c);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
@@ -5110,7 +5110,7 @@ body.tour-active .ios-pwa-banner {
   border-radius: 10px;
   border: none;
   background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
-  color: #92400e;
+  color: var(--v4-warn-text, #a1471c);
   font-size: 12px;
 }
 
@@ -5208,13 +5208,13 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme$="dark"] .pe-warning {
-  background: #2a1f0a;
-  border-color: #713f12;
-  color: #facc15;
+  background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 30%, transparent);
+  border-color: color-mix(in srgb, var(--v4-warn-3, #a1471c) 45%, transparent);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .pe-warning__text {
-  color: var(--v4-warn-soft, #fbbf24);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 /* === StepModal header right (count + edit) === */
@@ -6926,8 +6926,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme$="dark"] .product-name-cell__badge {
-  background: rgba(251, 191, 36, 0.2);
-  color: #fcd34d;
+  background: color-mix(in srgb, var(--v4-warn-1, #d39673) 20%, transparent);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .product-owner-badge {
