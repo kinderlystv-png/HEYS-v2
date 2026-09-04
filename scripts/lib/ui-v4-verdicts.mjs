@@ -536,3 +536,93 @@ export function writeZone(zoneId, zone) {
   fs.mkdirSync(VERDICTS_DIR, { recursive: true });
   fs.writeFileSync(zonePath(zoneId), `${JSON.stringify(zone, null, 2)}\n`, 'utf8');
 }
+
+const VALID_VERDICTS = new Set(['=', '≠', '?', '—']);
+
+/** Mutate one row's verdict fields (does not read/write zone file). */
+export function applyVerdictToRow(row, { verdict, fact, options = {} }, root = ROOT) {
+  if (!VALID_VERDICTS.has(verdict)) throw new Error(`Вердикт «${verdict}» не из набора = ≠ ? —`);
+  if (!fact) throw new Error('Факт обязателен: назовите доказательство или причину неизвестности.');
+
+  const reasonCode = options['reason-code'];
+  const decisionRef = options['decision-ref'];
+  const naKind = options['na-kind'];
+
+  if (verdict === '≠') {
+    if (!MISMATCH_REASON_CODE_SET.has(reasonCode)) {
+      throw new Error(`Для ≠ нужен --reason-code: ${ALLOWED_MISMATCH_REASON_CODES.join(', ')}`);
+    }
+    const decision = resolveDecisionRef(decisionRef, root);
+    if (!decision.ok) {
+      throw new Error(`Для ≠ нужен разрешимый --decision-ref (получено: ${decisionRef || 'пусто'})`);
+    }
+    if (naKind) throw new Error('--na-kind допустим только для —');
+  } else if (verdict === '—') {
+    if (!NA_KIND_SET.has(naKind)) {
+      throw new Error(`Для — нужен --na-kind: ${ALLOWED_NA_KINDS.join(', ')}`);
+    }
+    if (reasonCode || decisionRef) throw new Error('--reason-code/--decision-ref допустимы только для ≠');
+  } else if (reasonCode || decisionRef || naKind) {
+    throw new Error('Typed-поля допустимы только для ≠ или —');
+  }
+
+  row.v = verdict;
+  row.f = fact;
+  delete row.reasonCode;
+  delete row.decisionRef;
+  delete row.naKind;
+  if (verdict === '≠') {
+    row.reasonCode = reasonCode;
+    row.decisionRef = decisionRef;
+  } else if (verdict === '—') {
+    row.naKind = naKind;
+  }
+  return row;
+}
+
+/**
+ * Skip applying stale handoff «≠» over a fresher live «=» (parallel lane resolved the row).
+ */
+export function shouldSkipStaleHandoff(liveRow, handoffVerdict, { allowDowngrade = false } = {}) {
+  if (allowDowngrade || handoffVerdict !== '≠') return false;
+  return liveRow?.v === '=';
+}
+
+/**
+ * Etalon: fresh readZone → mutate one key → writeZone. Use for every batch verdict write.
+ */
+export function setVerdictKey(zoneId, key, patch, opts = {}) {
+  const { root = ROOT, skipIf, dryRun = false } = opts;
+  const zone = readZone(zoneId);
+  if (!zone) throw new Error(`Зоны «${zoneId}» нет.`);
+  const row = zone.rows[key];
+  if (!row) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
+  if (skipIf?.(row)) return { skipped: true, reason: 'skipIf', was: { v: row.v, f: row.f } };
+
+  const was = { v: row.v, f: row.f };
+  applyVerdictToRow(row, patch, root);
+  if (!dryRun) writeZone(zoneId, zone);
+  return { skipped: false, was, now: { v: row.v, f: row.f } };
+}
+
+/**
+ * Fresh read → mutate one row (any fields, e.g. rehash `h`) → write.
+ */
+export function patchZoneRow(zoneId, key, mutator, { dryRun = false } = {}) {
+  const zone = readZone(zoneId);
+  if (!zone?.rows?.[key]) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
+  const before = JSON.stringify(zone.rows[key]);
+  mutator(zone.rows[key], zone);
+  const changed = JSON.stringify(zone.rows[key]) !== before;
+  if (changed && !dryRun) writeZone(zoneId, zone);
+  return { changed, row: zone.rows[key] };
+}
+
+/** Delete one verdict row with fresh read before write (rehash «gone» keys). */
+export function deleteZoneRow(zoneId, key, { dryRun = false } = {}) {
+  const zone = readZone(zoneId);
+  if (!zone?.rows?.[key]) return { deleted: false };
+  delete zone.rows[key];
+  if (!dryRun) writeZone(zoneId, zone);
+  return { deleted: true };
+}

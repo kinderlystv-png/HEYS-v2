@@ -12,15 +12,14 @@ import { pathToFileURL } from 'node:url';
 import {
   ALLOWED_MISMATCH_REASON_CODES,
   ALLOWED_NA_KINDS,
+  applyVerdictToRow,
   listZoneIds,
   readZone,
-  resolveDecisionRef,
+  setVerdictKey,
   writeZone,
 } from './lib/ui-v4-verdicts.mjs';
 
-const VALID = new Set(['=', '≠', '?', '—']);
-const REASON_CODES = new Set(ALLOWED_MISMATCH_REASON_CODES);
-const NA_KINDS = new Set(ALLOWED_NA_KINDS);
+export { applyVerdictToRow, setVerdictKey };
 
 export function parseVerdictArgs(argv) {
   const [zone, key, verdict, ...tail] = argv;
@@ -42,46 +41,6 @@ export function parseVerdictArgs(argv) {
     index += 1;
   }
   return { zone, key, verdict, fact: fact.join(' ').trim(), options };
-}
-
-export function applyVerdictToRow(row, { verdict, fact, options }, root) {
-  if (!VALID.has(verdict)) throw new Error(`Вердикт «${verdict}» не из набора = ≠ ? —`);
-  if (!fact) throw new Error('Факт обязателен: назовите доказательство или причину неизвестности.');
-
-  const reasonCode = options['reason-code'];
-  const decisionRef = options['decision-ref'];
-  const naKind = options['na-kind'];
-
-  if (verdict === '≠') {
-    if (!REASON_CODES.has(reasonCode)) {
-      throw new Error(`Для ≠ нужен --reason-code: ${ALLOWED_MISMATCH_REASON_CODES.join(', ')}`);
-    }
-    const decision = resolveDecisionRef(decisionRef, root);
-    if (!decision.ok) {
-      throw new Error(`Для ≠ нужен разрешимый --decision-ref (получено: ${decisionRef || 'пусто'})`);
-    }
-    if (naKind) throw new Error('--na-kind допустим только для —');
-  } else if (verdict === '—') {
-    if (!NA_KINDS.has(naKind)) {
-      throw new Error(`Для — нужен --na-kind: ${ALLOWED_NA_KINDS.join(', ')}`);
-    }
-    if (reasonCode || decisionRef) throw new Error('--reason-code/--decision-ref допустимы только для ≠');
-  } else if (reasonCode || decisionRef || naKind) {
-    throw new Error('Typed-поля допустимы только для ≠ или —');
-  }
-
-  row.v = verdict;
-  row.f = fact;
-  delete row.reasonCode;
-  delete row.decisionRef;
-  delete row.naKind;
-  if (verdict === '≠') {
-    row.reasonCode = reasonCode;
-    row.decisionRef = decisionRef;
-  } else if (verdict === '—') {
-    row.naKind = naKind;
-  }
-  return row;
 }
 
 function usage() {
@@ -106,27 +65,22 @@ function runCli() {
     return 1;
   }
 
-  const zoneData = readZone(zone);
-  if (!zoneData) {
+  if (!readZone(zone)) {
     console.error(`Зоны «${zone}» нет. Есть: ${listZoneIds().join(', ')}`);
     return 1;
   }
-  const row = zoneData.rows[key];
-  if (!row) {
-    console.error(`Строки «${key}» в зоне «${zone}» нет.`);
-    return 1;
-  }
 
-  const was = row.v;
   try {
-    applyVerdictToRow(row, parsed);
+    const { was } = setVerdictKey(zone, key, {
+      verdict: parsed.verdict,
+      fact: parsed.fact,
+      options: parsed.options,
+    });
+    console.log(`${zone} :: ${key}   ${was.v} → ${verdict}`);
   } catch (error) {
     console.error(error.message);
     return 1;
   }
-
-  writeZone(zone, zoneData);
-  console.log(`${zone} :: ${key}   ${was} → ${verdict}`);
   return 0;
 }
 

@@ -24,7 +24,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { readAllZones, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { deleteZoneRow, patchZoneRow, readAllZones, readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ALLOWED_VERDICTS = new Set(['=', '≠', '?', '—']);
@@ -180,30 +180,36 @@ function runCli() {
     const changed = [];
     for (const [key, value] of state.current) {
       const next = hash(value);
-      const row = zone.rows[key];
-      if (!row) {
+      const existing = readZone(zoneId)?.rows?.[key];
+      if (!existing) {
         added.push(key);
-        zone.rows[key] = { v: '?', f: 'Строка добавлена дизайнером, вердикта нет' };
-      } else if (row.h && row.h !== next && row.v !== '?') {
-        changed.push(key);
-        // Строку переписал дизайнер, и прежний факт её больше не подтверждает.
-        // Раньше отпечаток переснимался, а вердикт оставался: гейт отвечал «в
-        // известном мне не поехало», и это читалось как «сведено». Так 2 сентября
-        // обновление пакета прошло по чек-ину и виджетам зелёным — при коде, не
-        // сведённом ни с одним новым кадром; красноту показали только гейты
-        // кадров, которые сверяют продукт, а не отпечаток. Вердикт снимается в
-        // долг, прежний факт остаётся в тексте — он подсказывает, где смотреть.
+        const zone = readZone(zoneId) || { rows: {} };
         zone.rows[key] = {
           v: '?',
-          f: `Дизайнер переписал строку, вердикт снят. Прежде: ${row.f}`,
+          f: 'Строка добавлена дизайнером, вердикта нет',
+          h: next,
         };
+        writeZone(zoneId, zone);
+        continue;
       }
-      zone.rows[key].h = next;
+      if (existing.h && existing.h !== next && existing.v !== '?') {
+        changed.push(key);
+        const prevFact = existing.f;
+        patchZoneRow(zoneId, key, (row) => {
+          row.v = '?';
+          row.f = `Дизайнер переписал строку, вердикт снят. Прежде: ${prevFact}`;
+          row.h = next;
+        });
+        continue;
+      }
+      patchZoneRow(zoneId, key, (row) => {
+        row.h = next;
+      });
     }
     const gone = [...state.gone];
-    for (const key of gone) delete zone.rows[key];
-    // Пишем только свою зону: чужая работа в чужой коммит больше не попадает.
-    writeZone(zoneId, zone);
+    for (const key of gone) {
+      deleteZoneRow(zoneId, key);
+    }
 
     const parts = [`строк ${state.current.size}`];
     if (added.length) parts.push(`новых ${added.length}`);
