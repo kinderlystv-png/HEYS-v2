@@ -22,16 +22,8 @@ const SCREENS = path.resolve(__dirname, '../heys_gamification_screens_v1.js');
 const G = '.game-v4-sheet__';
 
 const EXCEPTIONS = new Map([
-  // Строка «вид строки уровня в списке»: «номер и титул слева 12,5 px/600…
-  // пройденные гаснут до 45 %, текущий — чернилами с весом 700». Кадр «Уровни»
-  // рисует номер квадратом 34×34 радиусом 12 с заливкой по состоянию — как
-  // медаль достижения. Контракт старше кадра; вопрос дизайнеру заведён.
-  ['Уровни · 16|*', 'строка «вид строки уровня в списке»: номер текстом 12,5/600, не квадратом'],
-  ['Уровни · 17|fontWeight', 'та же строка: титул 600, вес 700 только у текущего уровня'],
-  // Кадр даёт строкам списка межстрочный 1; в коде он не задан и наследуется.
-  // Однострочные подписи от этого не меняются.
-  ['Уровни · 17|lineHeight', 'межстрочный однострочной подписи не задан'],
-  ['Уровни · 18|lineHeight', 'то же у номинала XP'],
+  // Кадр .row — space-between; продуктовая лестница — center + flex 1 у титула.
+  ['Уровни · 15|justify', 'кадр .row space-between; .game-v4-sheet__ladder-row — center, тот же вид'],
 ]);
 
 const ACHIEVEMENTS = [
@@ -70,25 +62,27 @@ const LEVELS = [
   [9, `${G}hero-unit`, ['fontWeight', 'fontSize', 'color']],
   [10, [`${G}bar`, `${G}bar--thin`], ['height', 'radius', 'background', 'marginTop']],
   [15, `${G}ladder-row`, ['align', 'gap', 'padding']],
-  [17, `${G}ladder-title`, ['fontSize']],
-  [18, `${G}ladder-xp`, ['fontWeight', 'fontSize', 'color']],
+  [16, `${G}ladder-title`, ['fontSize', 'fontWeight', 'color']],
+  [17, `${G}ladder-xp`, ['fontWeight', 'fontSize', 'color']],
+  [18, [`${G}ladder-title`, `${G}ladder-row.is-current ${G}ladder-title`], ['fontWeight', 'color']],
+  [19, `${G}ladder-mark`, ['width']],
   [2, `${G}header`, ['align', 'gap']],
   [5, `${G}hero--cream`, ['background', 'radius', 'padding', 'marginTop']],
   [7, `${G}hero-metric`, ['align', 'gap', 'marginTop']],
   [11, `${G}bar-fill`, ['radius', 'background']],
   [12, `${G}level-hero-meta`, ['justify', 'marginTop', 'fontWeight', 'fontSize', 'color']],
-  [22, `${G}ladder-row`, ['align', 'gap', 'padding']],
-  [23, [`${G}card`, `${G}mult-card`], ['background']],
-  [24, `${G}card-head`, ['justify', 'align', 'gap']],
-  [25, `${G}card-title`, ['fontWeight', 'fontSize', 'color']],
-  [26, [`${G}card-xp`, `${G}card-xp--ok`], ['flex', 'fontWeight', 'fontSize', 'color']],
-  [29, `${G}xp-label`, ['color']],
-  [30, `${G}xp-value`, ['fontWeight', 'fontSize', 'color']],
+  [21, [`${G}card`, `${G}mult-card`], ['background']],
+  [22, `${G}card-head`, ['justify', 'align', 'gap']],
+  [23, `${G}card-title`, ['fontWeight', 'fontSize', 'color']],
+  [24, [`${G}card-xp`, `${G}card-xp--ok`], ['flex', 'fontWeight', 'fontSize', 'color']],
+  [25, `${G}card-sub--mult`, ['lineHeight', 'marginTop']],
+  [27, `${G}xp-label`, ['color']],
+  [28, `${G}xp-value`, ['fontWeight', 'fontSize', 'color']],
 ];
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
 // что строка выпала из сверки, а вердикт на неё продолжает ссылаться.
-const COVERAGE_FLOOR = 44;
+const COVERAGE_FLOOR = 46;
 
 describe('«Геймификация» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -113,14 +107,19 @@ describe('«Геймификация» · разбор кадров канвас
 
   // Число, которое называет строка зоны, а кадр рисует иначе.
   it('строка уровня следует своей строке, а не кадру', () => {
-    expect(rules.get(`${G}ladder-num`)['font-size']).toBe('12.5px');
-    expect(rules.get(`${G}ladder-num`)['font-weight']).toBe('600');
-    expect(rules.get(`${G}ladder-num`).width).toBeUndefined();
-    expect(rules.get(`${G}ladder-row.is-current ${G}ladder-num`)['font-weight']).toBe('700');
+    expect(rules.get(`${G}ladder-title`)['font-size']).toBe('12.5px');
+    expect(rules.get(`${G}ladder-title`)['font-weight']).toBe('600');
+    expect(rules.get(`${G}ladder-mark`).width).toBe('12px');
+    expect(rules.get(`${G}ladder-mark`).height).toBe('12px');
+    expect(rules.get(`${G}ladder-row.is-current ${G}ladder-title`)['font-weight']).toBe('700');
+    const screens = fs.readFileSync(SCREENS, 'utf8');
+    expect(screens).toContain('renderLadderCheckMark');
+    expect(screens).toContain('game-v4-sheet__ladder-mark--spacer');
+    expect(screens).toMatch(/\$\{lvl\} · \$\{t\.title/);
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(4);
+    expect(EXCEPTIONS.size).toBe(1);
   });
 
   it('гейт называет свой охват', () => {
