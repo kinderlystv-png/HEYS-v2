@@ -54,8 +54,10 @@
 
   function fmtTonnage(kg) {
     const v = Math.round(kg || 0);
-    if (v >= 1000) return (v / 1000).toFixed(1).replace(/\.0$/, '') + ' т';
-    return v + ' кг';
+    if (v >= 1000) {
+      return (v / 1000).toFixed(1).replace(/\.0$/, '').replace('.', ',') + ' т';
+    }
+    return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0') + ' кг';
   }
 
   function fmtTime(ms) {
@@ -825,6 +827,20 @@
       const planPreviewRows = canStartPlan && typeof builderParts.planPreviewRows === 'function'
         ? builderParts.planPreviewRows(planExercises)
         : [];
+      const emptyPlanPreviewShown = planPreviewRows.slice(0, 3);
+      const emptyPlanPreviewHidden = planPreviewRows.slice(3).reduce(function (sum, row) {
+        return sum + (row.memberCount || 1);
+      }, 0);
+      function emptyPlanPreviewDose(row) {
+        if (row.memberCount > 1) return row.summary || '';
+        if (typeof builderParts.planEmptyPreviewDose !== 'function') return row.summary || '';
+        for (let pi = 0; pi < planExercises.length; pi += 1) {
+          const exercise = planExercises[pi];
+          const key = (exercise && exercise.id) || ('plan-exercise-' + pi);
+          if (key === row.key) return builderParts.planEmptyPreviewDose(exercise);
+        }
+        return row.summary || '';
+      }
       return h('div', { className: 'sb-root' },
         h('div', { className: 'sb-head is-empty' },
           closeIconButton(onClose, 'Закрыть конструктор'),
@@ -840,15 +856,25 @@
             h('p', null, canStartPlan
               ? 'Можно начать по плану куратора или собрать свою — план не обязателен.'
               : 'Добавляйте упражнения по ходу — план не обязан быть готов заранее.'),
-            planPreviewRows.length > 0 && h('ol', {
+            emptyPlanPreviewShown.length > 0 && h('ol', {
               className: 'sb-empty-plan-preview',
               'aria-label': 'Состав плана'
-            }, planPreviewRows.map(function (row) {
+            }, emptyPlanPreviewShown.map(function (row, rowIndex) {
+              const dose = emptyPlanPreviewDose(row);
               return h('li', { key: row.key },
-                h('span', null, row.name),
-                row.summary ? h('i', null, row.summary) : null
+                h('span', { className: 'sb-empty-plan-preview-num', 'aria-hidden': 'true' }, String(rowIndex + 1)),
+                h('span', { className: 'sb-empty-plan-preview-name' }, row.name),
+                dose ? h('i', { className: 'sb-empty-plan-preview-dose' }, dose) : null
               );
-            }))
+            }).concat(emptyPlanPreviewHidden > 0
+              ? [h('li', { key: 'more', className: 'sb-empty-plan-preview-more' },
+                'и ещё ' + emptyPlanPreviewHidden + ' '
+                + (emptyPlanPreviewHidden % 10 === 1 && emptyPlanPreviewHidden % 100 !== 11
+                  ? 'упражнение'
+                  : emptyPlanPreviewHidden % 10 >= 2 && emptyPlanPreviewHidden % 10 <= 4
+                    && !(emptyPlanPreviewHidden % 100 >= 12 && emptyPlanPreviewHidden % 100 <= 14)
+                    ? 'упражнения' : 'упражнений'))]
+              : []))
           ),
           canStartPlan && h(React.Fragment, null,
             h('button', {
@@ -912,8 +938,8 @@
               )
             ),
           h('p', { className: 'sb-empty-note' }, canStartPlan
-            ? 'Можно начать назначенный план или собрать свою тренировку. Повтор прошлой сессии остаётся быстрым способом старта.'
-            : 'Плана нет — главной становится «Собрать свою». Повтор прошлой сессии стоит строкой, а не кнопкой: это способ начать, а не решение.')
+            ? 'План назначен — главной становится кнопка плана, «Собрать свою» уходит вторичной. Повтор стоит строкой. Состав виден сразу внутри карточки, только для чтения: первые три упражнения с дозами и строка остатка.'
+            : 'Плана нет — главной становится «Собрать свою». Повтор стоит строкой, а не кнопкой: это способ начать, а не решение.')
         )
       );
     }

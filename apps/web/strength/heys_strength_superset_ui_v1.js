@@ -38,7 +38,12 @@
   }
 
   function fmtNumber(value) {
-    return String(value == null ? '' : value).replace('.', ',');
+    if (value == null || value === '') return '';
+    const raw = String(value);
+    if (!/^-?\d+(\.\d+)?$/.test(raw)) return raw.replace('.', ',');
+    const parts = raw.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+    return parts.length > 1 ? parts.join(',') : parts[0];
   }
 
   // ——— Связка (экраны 23, 26) ———
@@ -272,6 +277,24 @@
     return min === max ? String(min) : (String(min) + '–' + String(max));
   }
 
+  /** Доза для превью пустого конструктора: «4 × 8» без веса, как в кадре Б1. */
+  function planEmptyPreviewDose(exercise) {
+    const approaches = workApproaches(exercise);
+    if (!approaches.length) return '';
+    const count = approaches.length;
+    const unit = exercise && exercise.unit;
+    if (unit === 'time') {
+      const sec = numberRange(approaches.map(function (a) { return a && a.durationSec; }));
+      return sec ? count + ' × ' + sec + ' с' : '';
+    }
+    if (unit === 'distance') {
+      const dist = numberRange(approaches.map(function (a) { return a && a.distanceM; }));
+      return dist ? count + ' × ' + dist + ' м' : '';
+    }
+    const reps = numberRange(approaches.map(function (a) { return a && a.reps; }));
+    return reps ? count + ' × ' + reps : '';
+  }
+
   /** Короткая строка состава плана: число подходов, диапазон повторов и вес. */
   function planExerciseSummary(exercise) {
     const approaches = workApproaches(exercise);
@@ -349,6 +372,7 @@
   }
 
   Parts.planExerciseSummary = planExerciseSummary;
+  Parts.planEmptyPreviewDose = planEmptyPreviewDose;
   Parts.planPreviewRows = planPreviewRows;
 
   // ——— Строка подхода (экраны 07, 13, 24) ———
