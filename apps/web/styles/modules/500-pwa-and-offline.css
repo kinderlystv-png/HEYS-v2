@@ -911,7 +911,7 @@
 
 .mc-daily-header-caption {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.4);
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 .mc-daily-header-caption--layer {
