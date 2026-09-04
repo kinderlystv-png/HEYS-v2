@@ -44,10 +44,7 @@ const RAZBOR_EXCEPTIONS = new Map([
   // общего порога и 60 % у прозы «Где они работают», таких ступеней нет.
   // Междустрочие фразы «Стоит внимания»: кадр просит 1,45, продукт держит 1,4
   // — тот же шаг, что у соседних строк карточки.
-  ['Инсайты · 52|lineHeight', 'кадр 1,45, у продукта шаг 1,4 на всю карточку'],
-  // Подпись «окно наблюдения»: кадр наследует ей 10,5 от ряда, продукт задаёт
-  // 9,5 отдельным правилом — подпись мельче засечек, чтобы не спорить с ними.
-  ['Инсайты · 61|fontSize', 'кадр наследует 10,5 от ряда, у продукта своё 9,5'],
+  ['Инсайты · 53|lineHeight', 'кадр 1,45, у продукта шаг 1,4 на всю карточку'],
   // Дорожка оси фенотипа: кадр просит чернила 8 %, роль --v4-track держит 12 %.
   ['Инсайты · метаболизм · 09|background', 'кадр 8 %, роль --v4-track держит 12 %'],
   // Правое слово оси: кадр набирает 600, продукт 500 — тем же весом набраны
@@ -67,7 +64,7 @@ const RAZBOR_EXCEPTIONS = new Map([
 // Сколько строк разбора главного кадра гейт реально берёт в пары. Заморожено:
 // падение значит, что строка выпала из сверки и вердикт на неё больше ничем не
 // подкреплён; рост — что охват расширили и число пора поднять.
-const COVERAGE_FLOOR = 12;
+const COVERAGE_FLOOR = 16;
 
 const HEAD_AND_HERO = [
   [13, '.insights-v4-meta__row', ['align', 'gap']],
@@ -76,24 +73,26 @@ const HEAD_AND_HERO = [
   [17, '.insights-v4-hero', ['background', 'radius', 'padding', 'marginTop']],
   [19, '.insights-v4-hero__phrase',
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
-  // Окно наблюдения: ряд и выбранная засечка. Кегль подписи «окно наблюдения»
-  // в пары не идёт — кадр наследует ей 10,5 от ряда, продукт задаёт 9,5
-  // отдельным правилом; названо ниже.
-  [60, '.insights-v4-window', ['align', 'gap']],
-  [62, '.insights-v4-window__chip', ['minHeight', 'padding', 'radius']],
   // Строка «Стоит внимания» и её метка зрелости. Междустрочие фразы в пары не
   // идёт: кадр просит 1,45, продукт держит 1,4 — названо ниже.
-  [52, '.insights-v4-attention__line', ['fontWeight', 'fontSize', 'color']],
-  [54, '.insights-v4-maturity',
+  [53, '.insights-v4-attention__line', ['fontWeight', 'fontSize', 'color']],
+  [54, '.insights-v4-attention__meta', ['align', 'marginTop']],
+  [55, '.insights-v4-maturity',
     ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'padding', 'radius']],
-  // Список найденных правил: метка «правило» набрана тем же начертанием, что
+  // Шапка «Что заметили»: ярус и окно наблюдения в одном ряду.
+  [60, '.insights-v4-patterns__head', ['align', 'justify', 'gap']],
+  [61, '.insights-v4-window', ['align', 'gap']],
+  [62, '.insights-v4-window__label', ['color']],
+  [63, '.insights-v4-window__chip', ['minHeight', 'padding', 'radius']],
+  // Строка паттерна: метка «правило» набрана тем же начертанием, что
   // «наблюдение», и отличается только тоном — в пары идёт форма.
-  [68, ['.insights-v4-maturity', '.insights-v4-maturity--rule'],
+  [68, '.insights-v4-patterns__row', ['align']],
+  [69, ['.insights-v4-maturity', '.insights-v4-maturity--rule'],
     ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'padding', 'radius']],
   // Строка-вход во второй слой.
-  [71, '.insights-v4-detail-link',
-    ['align', 'justify', 'background', 'radius', 'padding']],
-  [72, '.insights-v4-detail-link__text',
+  [72, '.insights-v4-detail-link',
+    ['align', 'justify', 'background', 'radius', 'padding', 'marginTop']],
+  [73, '.insights-v4-detail-link__text',
     ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
@@ -332,7 +331,7 @@ describe('Инсайты · разбор кадров канваса', () => {
   });
 
   it('отступления инсайтовой половины названы и не разрастаются молча', () => {
-    expect(RAZBOR_EXCEPTIONS.size).toBe(10);
+    expect(RAZBOR_EXCEPTIONS.size).toBe(9);
   });
 
   // Реестр отступлений разделён так же, как гейт: ключи кадров «Инсайты · NN»

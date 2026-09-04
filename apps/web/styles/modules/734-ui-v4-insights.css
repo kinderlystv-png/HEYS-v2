@@ -301,10 +301,9 @@
   gap: 12px;
   width: 100%;
   min-height: 48px;
-  /* Кадр «Инсайты», элемент 71: строка входа отбита от блока над ней на 12 и
-     держит поля 16/18. Стояло 4 и 2/16 — высоту давала одна min-height, и
-     строка липла к предыдущему блоку. */
-  margin-top: 12px;
+  /* Кадр «Инсайты», элемент 72: строка входа отбита от блока над ней на 18 и
+     держит поля 16/18. */
+  margin-top: 18px;
   padding: 16px 18px;
   border: none;
   border-radius: 20px;
@@ -683,7 +682,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 10px;
 }
 
 /* Кадр «Инсайты · риск срыва», элемент 07: карточка риска — радиус 20 и
@@ -767,7 +766,8 @@
 
 .insights-v4-patterns__head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 10px;
 }
 
