@@ -1,0 +1,132 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_catalog_ui_v1.js (ExerciseSimilarScreen · М3) + heys_exercise_catalog_v1.js (bodyweightSimilarOptions)",
+  "generated": "2026-09-05",
+  "agent": "catalog subagent",
+  "summary": {
+    "block": "Упражнение · на что похоже ·01–19",
+    "contractLines": 19,
+    "recommendEquals": 12,
+    "recommendNotEquals": 7,
+    "recommendDash": 0,
+    "recommendQuestion": 0,
+    "codeChanged": true,
+    "codeChange": "ExerciseSimilarScreen + bodyweightSimilarOptions (5 образцов); CATALOG_V4_BRIDGE --tint/--ac2; preview .sb-grp inline --c2"
+  },
+  "rows": [
+    {
+      "contractLine": "Упражнение · на что похоже · 01",
+      "verdict": "=",
+      "f": ".sb-head с ‹ — ExerciseSimilarScreen + 750 catalog head."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 02",
+      "verdict": "=",
+      "f": ".sb-head-title column gap 3px."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 03",
+      "verdict": "=",
+      "f": "Заголовок «{имя} · свой вес» — catalog_ui."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 04",
+      "verdict": "=",
+      "f": "Ключ «сколько тела поднимается» — .sb-head-sub."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 05",
+      "verdict": "=",
+      "f": ".sb-catalog-scroll — область прокрутки."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 06",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2006",
+      "f": "Кадр .cd margin-top 12px; продукт .sb-block.sb-ex-similar-list без отдельного margin-top 12 в 750."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 07",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2007",
+      "f": "Выбранная строка: кадр inset 0 0 0 2px var(--acs) radius 12px; продукт .sb-radio.is-on --sb-accbg без inset-рамки."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 08",
+      "verdict": "=",
+      "f": "Подпись «Как подтягивания» — bodyweightSimilarOptions[0].label в b."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 09",
+      "verdict": "=",
+      "f": "Подсказка «поднимается всё тело» — span .sb-cat-title, цвет var(--ac) через bridge."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 10",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2007",
+      "f": "Коэффициент formatBodyweightFactor «1,0» =; моно 700 12.5px/1 на .sb-ex-similar-factor — не в 750."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 11",
+      "verdict": "=",
+      "f": "Строка списка — button.sb-radio.sb-ex-similar-row."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 12",
+      "verdict": "=",
+      "f": "Подсказка «почти всё, ноги на опоре» — option hint в span."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 13",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2008",
+      "f": "«0,85» formatBodyweightFactor =; muted mono стиль непропорционален без 750."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 14",
+      "verdict": "=",
+      "f": "Последняя строка .sb-ex-similar-row.is-last — без нижнего разделителя (наследует .sb-radio layout)."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 15",
+      "verdict": "=",
+      "f": "«упражнение пойдёт без объёма» — unknown option; color var(--ac2) inline на span."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 16",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2013",
+      "f": "Карточка .sb-grp.sb-ex-similar-preview: inline margin-top 10px background var(--c2); 750 .sb-grp padding/radius ≠ кадр .grp."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 17",
+      "verdict": "=",
+      "f": "Формула «{bw} кг × {factor} = {perRep} кг за повтор» — b в preview при bw>0."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 18",
+      "verdict": "=",
+      "f": "Проза «Вес тела берётся из профиля…» — .sb-ex-similar-prose."
+    },
+    {
+      "contractLine": "Упражнение · на что похоже · 19",
+      "verdict": "=",
+      "f": "Сноска .sb-catalog-note — полный текст канваса про образец vs число."
+    }
+  ],
+  "outOfScope": {
+    "note": "Inset-рамка выбранной строки и моно-цифры коэффициента — canvas-conflict без 750. Подключение экрана в builder flow — владелец sb (forbidden scope).",
+    "cssOwner": "750-strength-builder.css:1782+, 6538+",
+    "tests": [
+      "apps/web/__tests__/strength-builder-exercise-similar-v4-canvas-contract.test.js",
+      "apps/web/__tests__/exercise-catalog-meta.test.js",
+      "apps/web/__tests__/role-fallback-truth.test.js"
+    ]
+  }
+}

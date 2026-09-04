@@ -52,8 +52,27 @@
     '--sb-acc': 'var(--v4-act-text, #8a4a20)',
     '--sb-acc-strong': 'var(--v4-act, #c67139)',
     '--sb-accbg': 'var(--v4-accent-bg, #f6e6dd)',
-    '--sb-accTx': 'var(--v4-act-text, #8a4a20)'
+    '--sb-accTx': 'var(--v4-act-text, #8a4a20)',
+    '--tint': 'var(--v4-accent-bg, #f6e6dd)',
+    '--ac2': 'var(--v4-warn-text, #a1471c)'
   };
+
+  function formatFactorLabel(factor) {
+    const api = metaApi();
+    if (api && typeof api.formatBodyweightFactor === 'function') {
+      return api.formatBodyweightFactor(factor);
+    }
+    const n = parseFloat(String(factor == null ? '' : factor).replace(',', '.'));
+    if (!isFinite(n)) return '';
+    return n.toFixed(1).replace('.', ',');
+  }
+
+  function formatVolumeKg(kg) {
+    const api = metaApi();
+    if (api && typeof api.formatVolumeKg === 'function') return api.formatVolumeKg(kg);
+    const n = Math.round(+kg || 0);
+    return n.toLocaleString('ru-RU').replace(/\u00A0/g, '\u202F') + ' кг';
+  }
 
   /** Каталог с фильтром по группе и поиском (экран 03). */
   function CatalogScreen(props) {
@@ -369,6 +388,203 @@
         }, 'Создать · без тоннажа'),
         unit && h('p', { className: 'sb-catalog-note' },
           'Без ответа на третий вопрос упражнение в объём не идёт — и об этом будет строка в итогах, а не тишина.')
+      )
+    );
+  }
+
+  /**
+   * М2 · группы мышц упражнения: одна основная, синергисты, превью объёма.
+   */
+  function ExerciseMuscleGroupsScreen(props) {
+    const {
+      exerciseName, primaryGroup, secondaryGroups, previewTonnageKg, onSave, onBack
+    } = props;
+    const api = metaApi();
+    const [primary, setPrimary] = React.useState(primaryGroup || '');
+    const [secondary, setSecondary] = React.useState(Array.isArray(secondaryGroups)
+      ? secondaryGroups.slice()
+      : []);
+
+    if (!api) return null;
+
+    const share = typeof api.synergistShare === 'number' ? api.synergistShare : 0.5;
+    const volumeRows = typeof api.muscleVolumePreviewRows === 'function'
+      ? api.muscleVolumePreviewRows(previewTonnageKg, primary, secondary, share)
+      : [];
+    const titleName = String(exerciseName || '').trim() || 'Упражнение';
+
+    function selectPrimary(id) {
+      setPrimary(id);
+      if (secondary.indexOf(id) >= 0) {
+        setSecondary(secondary.filter(function (x) { return x !== id; }));
+      }
+    }
+
+    function toggleSecondary(id) {
+      if (id === primary) return;
+      if (secondary.indexOf(id) >= 0) {
+        setSecondary(secondary.filter(function (x) { return x !== id; }));
+        return;
+      }
+      setSecondary(secondary.concat([id]));
+    }
+
+    function save() {
+      if (!primary) return;
+      if (typeof onSave === 'function') onSave(primary, secondary);
+    }
+
+    return h('div', {
+      className: 'sb-root sb-screen sb-catalog-screen sb-ex-muscle-screen',
+      style: CATALOG_V4_BRIDGE
+    },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
+        }, '‹'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, titleName + ' · мышцы'),
+          h('div', { className: 'sb-head-sub' }, 'одна основная, синергисты по желанию')
+        )
+      ),
+      h('div', { className: 'sb-catalog-scroll' },
+        h('div', { className: 'sb-tier' }, 'Основная — одна'),
+        h('div', { className: 'sb-chips sb-ex-muscle-primary' },
+          api.groups.map(function (g) {
+            return h('button', {
+              key: g.id,
+              type: 'button',
+              className: 'sb-chip' + (g.id === primary ? ' is-on' : ''),
+              onClick: function () { selectPrimary(g.id); }
+            }, g.label.toLowerCase());
+          })
+        ),
+        h('div', { className: 'sb-tier' }, 'Синергисты — сколько нужно'),
+        h('div', { className: 'sb-chips sb-ex-muscle-secondary' },
+          api.groups.map(function (g) {
+            if (g.id === primary) return null;
+            const isOn = secondary.indexOf(g.id) >= 0;
+            return h('button', {
+              key: g.id,
+              type: 'button',
+              className: 'sb-chip' + (isOn ? ' is-secondary' : ''),
+              style: isOn ? { background: 'var(--tint)', color: 'var(--ac)' } : undefined,
+              onClick: function () { toggleSecondary(g.id); }
+            }, g.label.toLowerCase());
+          })
+        ),
+        primary && volumeRows.length > 0 && h('div', { className: 'sb-tier' }, 'Как это ляжет в объём'),
+        primary && volumeRows.length > 0 && h('div', { className: 'sb-ex-card-cd sb-ex-muscle-volume' },
+          volumeRows.map(function (row, idx) {
+            return h('div', {
+              key: row.groupId,
+              className: 'sb-ex-card-row' + (idx === volumeRows.length - 1 ? ' is-last' : '')
+            },
+              h('span', { className: 'sb-ex-card-row-copy' },
+                h('b', null, row.label)
+              ),
+              h('span', {
+                className: 'sb-ex-muscle-kg' + (row.isPrimary ? ' is-primary' : '')
+              }, formatVolumeKg(row.kg))
+            );
+          })
+        ),
+        h('p', { className: 'sb-catalog-note' },
+          'Список закрыт одиннадцатью и своих групп не принимает: иначе объём по группам перестаёт складываться между людьми, а движок нагрузки — сравнивать неделю с неделей. Числа показаны сразу под выбором — видно, что синергист берёт ровно половину.'),
+        primary && h('button', {
+          type: 'button',
+          className: 'sb-finish',
+          onClick: save
+        }, 'Сохранить группы')
+      )
+    );
+  }
+
+  /**
+   * М3 · на что похоже: коэффициент своего веса выбором образца, не числом.
+   */
+  function ExerciseSimilarScreen(props) {
+    const {
+      exerciseName, bodyWeightKg, selectedKey, bodyweightFactor, onSave, onBack
+    } = props;
+    const api = metaApi();
+    const options = api && typeof api.bodyweightSimilarOptions === 'function'
+      ? api.bodyweightSimilarOptions()
+      : [];
+    const initialKey = selectedKey || (bodyweightFactor == null
+      ? 'unknown'
+      : (options.find(function (row) {
+        return row.bodyweightFactor === bodyweightFactor;
+      }) || {}).key || '');
+    const [choiceKey, setChoiceKey] = React.useState(initialKey);
+
+    if (!api) return null;
+
+    const selected = options.filter(function (row) { return row.key === choiceKey; })[0] || null;
+    const factor = selected ? selected.bodyweightFactor : null;
+    const bw = +bodyWeightKg > 0 ? +bodyWeightKg : 0;
+    const perRepKg = factor != null && bw > 0 ? Math.round(bw * factor) : null;
+    const factorLabel = formatFactorLabel(factor);
+    const titleName = String(exerciseName || '').trim() || 'Упражнение';
+
+    function save() {
+      if (typeof onSave === 'function') onSave(selected);
+    }
+
+    return h('div', {
+      className: 'sb-root sb-screen sb-catalog-screen sb-ex-similar-screen',
+      style: CATALOG_V4_BRIDGE
+    },
+      h('div', { className: 'sb-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
+        }, '‹'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, titleName + ' · свой вес'),
+          h('div', { className: 'sb-head-sub' }, 'сколько тела поднимается')
+        )
+      ),
+      h('div', { className: 'sb-catalog-scroll' },
+        h('div', { className: 'sb-block sb-ex-similar-list' },
+          options.map(function (row, idx) {
+            const isOn = row.key === choiceKey;
+            const isLast = idx === options.length - 1;
+            return h('button', {
+              key: row.key,
+              type: 'button',
+              className: 'sb-radio sb-ex-similar-row'
+                + (isOn ? ' is-on' : '')
+                + (isLast ? ' is-last' : ''),
+              onClick: function () { setChoiceKey(row.key); }
+            },
+              h('div', { className: 'sb-cat-title' },
+                h('b', null, row.label),
+                h('span', {
+                  className: row.isUnknown ? 'sb-ex-similar-warn' : '',
+                  style: row.isUnknown ? { color: 'var(--ac2)' } : undefined
+                }, row.hint)
+              ),
+              row.bodyweightFactor != null && h('span', {
+                className: 'sb-ex-similar-factor' + (isOn ? ' is-on' : '')
+              }, formatFactorLabel(row.bodyweightFactor))
+            );
+          })
+        ),
+        perRepKg != null && factorLabel && h('div', {
+          className: 'sb-grp sb-ex-similar-preview',
+          style: { marginTop: '10px', background: 'var(--c2)' }
+        },
+          h('b', null, bw + ' кг × ' + factorLabel + ' = ' + perRepKg + ' кг за повтор'),
+          h('p', { className: 'sb-ex-similar-prose' },
+            'Вес тела берётся из профиля на день тренировки и задним числом не меняется.')
+        ),
+        h('p', { className: 'sb-catalog-note' },
+          'Спрашиваем не число, а образец: «на что похоже» человек ответит, а «0,64» — нет. Коэффициент при этом физический факт, а не настройка: он один для всех и правится только в справочнике.'),
+        h('button', {
+          type: 'button',
+          className: 'sb-finish',
+          onClick: save
+        }, 'Сохранить')
       )
     );
   }
@@ -734,4 +950,6 @@
 
   Cat.CatalogScreen = CatalogScreen;
   Cat.NewExerciseScreen = NewExerciseScreen;
+  Cat.ExerciseMuscleGroupsScreen = ExerciseMuscleGroupsScreen;
+  Cat.ExerciseSimilarScreen = ExerciseSimilarScreen;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -695,9 +695,70 @@
       });
   }
 
+  /**
+   * Канонический набор «на что похоже» для экрана выбора коэффициента: короткий
+   * список образцов с подсказками, а не весь каталог bodyweight-упражнений.
+   */
+  const BODYWEIGHT_SIMILAR_OPTIONS = [
+    { key: 'pullups', label: 'Как подтягивания', hint: 'поднимается всё тело', bodyweightFactor: 1.0 },
+    { key: 'single_leg_squat', label: 'Как приседания на одной', hint: 'почти всё, ноги на опоре', bodyweightFactor: 0.85 },
+    { key: 'pushups_floor', label: 'Как отжимания от пола', hint: 'часть веса на ногах', bodyweightFactor: 0.64 },
+    { key: 'crunches', label: 'Как скручивания', hint: 'поднимается корпус', bodyweightFactor: 0.35 },
+    { key: 'unknown', label: 'Не знаю', hint: 'упражнение пойдёт без объёма', bodyweightFactor: null, isUnknown: true }
+  ];
+
+  function bodyweightSimilarOptions() {
+    return BODYWEIGHT_SIMILAR_OPTIONS.map(function (row) {
+      return {
+        key: row.key,
+        label: row.label,
+        hint: row.hint,
+        bodyweightFactor: row.bodyweightFactor,
+        isUnknown: !!row.isUnknown
+      };
+    });
+  }
+
+  function formatBodyweightFactor(factor) {
+    const n = parseFloat(String(factor == null ? '' : factor).replace(',', '.'));
+    if (!isFinite(n)) return '';
+    return n.toFixed(1).replace('.', ',');
+  }
+
+  function formatVolumeKg(kg) {
+    const n = Math.round(+kg || 0);
+    return n.toLocaleString('ru-RU').replace(/\u00A0/g, '\u202F') + ' кг';
+  }
+
+  function muscleVolumePreviewRows(tonnageKg, primaryGroup, secondaryGroups, share) {
+    if (!(+tonnageKg > 0) || !primaryGroup) return [];
+    const weights = groupWeights({
+      primaryGroup: primaryGroup,
+      secondaryGroups: secondaryGroups || []
+    }, share);
+    const rows = [];
+    Object.keys(weights).forEach(function (groupId) {
+      rows.push({
+        groupId: groupId,
+        label: groupLabel(groupId),
+        kg: +tonnageKg * (Number(weights[groupId]) || 0),
+        isPrimary: groupId === primaryGroup
+      });
+    });
+    rows.sort(function (a, b) {
+      if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+      return b.kg - a.kg;
+    });
+    return rows;
+  }
+
   HEYS.exerciseCatalog = exerciseCatalog;
   HEYS.exerciseMeta = {
     bodyweightReferences: bodyweightReferences,
+    bodyweightSimilarOptions: bodyweightSimilarOptions,
+    formatBodyweightFactor: formatBodyweightFactor,
+    formatVolumeKg: formatVolumeKg,
+    muscleVolumePreviewRows: muscleVolumePreviewRows,
     groups: MUSCLE_GROUPS,
     units: EXERCISE_UNITS,
     synergistShare: SYNERGIST_SHARE,

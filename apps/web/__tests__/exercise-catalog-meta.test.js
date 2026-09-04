@@ -192,6 +192,27 @@ describe('справочник упражнений: коэффициент по
     const factors = refs.map((r) => r.bodyweightFactor);
     expect(factors).toEqual([...factors].sort((a, b) => b - a));
   });
+
+  it('канонический экран «на что похоже» — пять образцов и «Не знаю»', () => {
+    const { meta } = loadCatalog();
+    const opts = meta.bodyweightSimilarOptions();
+    expect(opts).toHaveLength(5);
+    expect(opts[0]).toMatchObject({ label: 'Как подтягивания', bodyweightFactor: 1.0 });
+    expect(opts.find((o) => o.key === 'unknown')).toMatchObject({
+      label: 'Не знаю',
+      bodyweightFactor: null,
+      isUnknown: true,
+    });
+  });
+
+  it('превью объёма по группам делит тоннаж с долей синергиста', () => {
+    const { meta } = loadCatalog();
+    const rows = meta.muscleVolumePreviewRows(2980, 'chest', ['triceps', 'shoulders']);
+    expect(rows.find((r) => r.groupId === 'chest')).toMatchObject({ kg: 2980, isPrimary: true });
+    expect(rows.find((r) => r.groupId === 'triceps')).toMatchObject({ kg: 1490, isPrimary: false });
+    expect(meta.formatVolumeKg(2980)).toBe('2\u202F980 кг');
+    expect(meta.formatBodyweightFactor(1)).toBe('1,0');
+  });
 });
 
 describe('справочник упражнений: снимок и объём по группам', () => {

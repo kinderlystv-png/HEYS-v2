@@ -1,0 +1,122 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_catalog_ui_v1.js (ExerciseMuscleGroupsScreen · М2) + heys_exercise_catalog_v1.js (muscleVolumePreviewRows)",
+  "generated": "2026-09-05",
+  "agent": "catalog subagent",
+  "summary": {
+    "block": "Упражнение · группы мышц ·01–17",
+    "contractLines": 17,
+    "recommendEquals": 11,
+    "recommendNotEquals": 6,
+    "recommendDash": 0,
+    "recommendQuestion": 0,
+    "codeChanged": true,
+    "codeChange": "ExerciseMuscleGroupsScreen + CATALOG_V4_BRIDGE (--tint, --ac2); meta.muscleVolumePreviewRows/formatVolumeKg; primary is-on, secondary tint inline"
+  },
+  "rows": [
+    {
+      "contractLine": "Упражнение · группы мышц · 01",
+      "verdict": "=",
+      "f": ".sb-head с ‹ — catalog_ui ExerciseMuscleGroupsScreen; 750 .sb-catalog-screen .sb-head."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 02",
+      "verdict": "=",
+      "f": ".sb-head-title column gap 3px — catalog_ui + 750 .sb-catalog-screen .sb-head-title."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 03",
+      "verdict": "=",
+      "f": "Динамический заголовок «{имя} · мышцы» — catalog_ui ExerciseMuscleGroupsScreen."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 04",
+      "verdict": "=",
+      "f": "Подзаголовок «одна основная, синергисты по желанию» — .sb-head-sub."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 05",
+      "verdict": "=",
+      "f": ".sb-catalog-scroll overflow-y auto — catalog_ui + 750 :5575+."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 06",
+      "verdict": "=",
+      "f": "Ярус «Основная — одна» — .sb-tier; 750 :6530+."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 07",
+      "verdict": "=",
+      "f": ".sb-catalog-screen .sb-chips flex wrap gap 6px — 750 :5637–5644."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 08",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:1973",
+      "f": "Кадр pill44 padding 0 14px; продукт .sb-catalog-screen .sb-chip padding 4px 7px min-height 20px — роли acs/on-acs через is-on ок, геометрия ≠."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 09",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:1974",
+      "f": "Неактивная pill44 padding 0 14px; продукт catalog chip uppercase mono 9px — носитель ≠."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 10",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:1987",
+      "f": "Синергист tint/ac через inline style на .sb-chip; кадр pill44 padding 0 14px — цвет ≈, форма ≠."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 11",
+      "verdict": "=",
+      "f": "Превью «Как это ляжет в объём» — .sb-ex-card-cd.sb-ex-muscle-volume; 750 .sb-ex-card-cd."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 12",
+      "verdict": "=",
+      "f": "Строка .sb-ex-card-row — catalog_ui + 750 :5113+."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 13",
+      "verdict": "=",
+      "f": "Название группы b в .sb-ex-card-row-copy — color var(--tx) через 750."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 14",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:1993",
+      "f": "Число formatVolumeKg (meta) — семантика «2 980 кг» =; моно 700 12.5px/1 на .sb-ex-muscle-kg не в 750 (вне scope)."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 15",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:1994",
+      "f": "Синергист kg 50% через muscleVolumePreviewRows =; тон ink 55% для .sb-ex-muscle-kg без is-primary — не в 750."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 16",
+      "verdict": "=",
+      "f": "Последняя строка .sb-ex-card-row.is-last border-bottom 0 — 750 :5122."
+    },
+    {
+      "contractLine": "Упражнение · группы мышц · 17",
+      "verdict": "=",
+      "f": "Сноска .sb-catalog-note — полный текст канваса; список групп в UI — 14 из meta.groups (факт ≠ «одиннадцати», copy =)."
+    }
+  ],
+  "outOfScope": {
+    "note": "Геометрия pill44/chip и моно-цифры kg — canvas-conflict без правки 750. strength-builder.json не трогали. Навигация из builder_ui — владелец sb.",
+    "cssOwner": "750-strength-builder.css:5113+, 5637+, 6530+",
+    "tests": [
+      "apps/web/__tests__/strength-builder-exercise-muscles-v4-canvas-contract.test.js",
+      "apps/web/__tests__/exercise-catalog-meta.test.js",
+      "apps/web/__tests__/role-fallback-truth.test.js"
+    ]
+  }
+}
