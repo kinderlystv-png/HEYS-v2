@@ -1383,7 +1383,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span {
 html[data-theme-id="blue"] .heys-login-theme__soft-mini-period > span.is-active,
 html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-active {
   color: var(--v4-act-text, #1d5e96);
-  border-bottom-color: var(--v4-act, #2e7cc0);
+  border-bottom-color: var(--v4-act, #1d5e96);
 }
 
 html[data-theme-id="blue"] .heys-login-theme__soft-mini-period > span.is-days,

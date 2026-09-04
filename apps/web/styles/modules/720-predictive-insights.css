@@ -2498,7 +2498,7 @@ body:has(.insights-tab) .hdr::after {
   [data-theme$="dark"] .early-warning-modal-card__science-toggle:hover {
   background: rgba(99, 102, 241, 0.1);
   border-color: rgba(99, 102, 241, 0.4);
-  color: var(--v4-act, #2e7cc0);
+  color: var(--v4-act, #cf8144);
 }
 }
 
@@ -8270,7 +8270,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 [data-theme$="dark"] .whatif-scenarios-panel__action.active {
-  border-color: var(--v4-act, #2e7cc0);
+  border-color: var(--v4-act, #cf8144);
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(16, 185, 129, 0.12));
 }
 
