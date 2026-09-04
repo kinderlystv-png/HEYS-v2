@@ -698,8 +698,8 @@
       "h": "447726f6ab10"
     },
     "вид · история упражнения": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "HistoryScreen рендерит .sb-history-screen с шапкой ‹, тремя плитками, списком сессий, ростом, графиком Эпли и сноской — heys_strength_finish_ui_v1.js:530–634; кадр Д1 data-demo=stop сверен структурой DOM.",
       "h": "61db05f6834a"
     },
     "вид · что не легло": {
@@ -1945,7 +1945,7 @@
     },
     "Связка · старая, без раундов · 04": {
       "v": "=",
-      "f": "Ключ «4 и 3 подхода»: flatApproachKey(members, SK) склеивает числа ruPlural через « и » — superset_ui:81-86, .sb-ss-key 750:534-537.",
+      "f": "Ключ «4 и 3 подхода»: flatApproachKey — числа через « и », слово подхода один раз в конце — superset_ui:94-105.",
       "h": "913bac40461d"
     },
     "Связка · старая, без раундов · 05": {
@@ -2807,33 +2807,35 @@
     },
     "История упражнения · 02": {
       "v": "=",
-      "f": ".sb-icon-btn 36×36, radius 999px, bg var(--c1); contract test row 02 computed.",
+      "f": ".sb-icon-btn 36×36, radius 999px, bg var(--c1); contract test row 02 sand+blue.",
       "h": "105caa5a37d3"
     },
     "История упражнения · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-head-title flex:1 column gap 3px padding-left 10px — contract test row 03 computed.",
       "h": "b4a4fa9ae422"
     },
     "История упражнения · 04": {
       "v": "=",
-      "f": ".sb-head-title b «Жим лёжа» — 15px/700 var(--tx); contract test row 04.",
+      "f": "props.name «Жим лёжа» в .sb-head-title b — finish_ui:536; contract test row 04.",
       "h": "8b6e5bbba08b"
     },
     "История упражнения · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Ключ groups · sessionCount «N тренировок» — meta.groupLabel + usages.length, finish_ui:537–538; формат совпадает, число из данных (3 в fixture, 14 в демо-кадре).",
       "h": "0daade33a93d"
     },
     "История упражнения · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-list.sb-finish-list overflow-y auto — contract test row 06.",
       "h": "c629f84f9712"
     },
     "История упражнения · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "2bff45192fc0"
+      "v": "≠",
+      "f": "Контракт: gap 8px + margin-top 12px у ряда плиток; продукт .sb-finish-metrics gap 8px margin-top 10px — contract test row 07.",
+      "h": "2bff45192fc0",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "История упражнения · 08": {
       "v": "=",
@@ -2841,53 +2843,55 @@
       "h": "fa0912aa4180"
     },
     "История упражнения · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "MetricTile label «Рекорд» — .sb-finish-metric-label uppercase 9.5px; contract test row 09.",
       "h": "c0fd6dd187a9"
     },
     "История упражнения · 10": {
       "v": "=",
-      "f": "Рекord chip 75×8 — 17px/800 var(--ac); contract test row 10.",
+      "f": "recordValue formatSetChip → «75 × 8» accent 17px/800 var(--ac); finish_ui:498–500,546; contract test row 10.",
       "h": "42426141041b"
     },
     "История упражнения · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c9d2da3b8d57"
+      "v": "≠",
+      "f": "Контракт: фон var(--c1) у «Максимум»/«Тоннаж»; продукт .sb-finish-metric background var(--bg) — contract test row 11.",
+      "h": "c9d2da3b8d57",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "История упражнения · 12": {
       "v": "=",
-      "f": "Максимум 95 кг — 17px/800 var(--tx); contract test row 12.",
+      "f": "oneRmNow Math.round → «95 кг» — finish_ui:548–549; contract test row 12.",
       "h": "ef10775d39b6"
     },
     "История упражнения · 13": {
       "v": "=",
-      "f": ".sb-finish-tier uppercase 10px var(--ac); contract test row 13.",
+      "f": ".sb-finish-tier «Последние тренировки» — finish_ui:557; contract test row 13.",
       "h": "48d990841b7f"
     },
     "История упражнения · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "section.sb-history-sessions.sb-finish-detail — finish_ui:559; contract test row 14 margin-top 10px.",
       "h": "d9a337aab838"
     },
     "История упражнения · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-session.sb-finish-row align-items flex-start — finish_ui:564–565; contract test row 15.",
       "h": "af81bb6e54c6"
     },
     "История упражнения · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Inline flex column gap 6px у левой колонки сессии — finish_ui:569–571; contract test row 16.",
       "h": "8b9ad4e2677b"
     },
     "История упражнения · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Inline flex center gap 7px у строки дата+бейдж — finish_ui:573; contract test row 17.",
       "h": "e7e38fcb6a6f"
     },
     "История упражнения · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "row.u.label «8 августа» color var(--tx) через .sb-finish-row — contract test row 18; date-remainder не правился.",
       "h": "7f1143f08756"
     },
     "История упражнения · 19": {
@@ -2896,178 +2900,188 @@
       "h": "0cab08daa010"
     },
     "История упражнения · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "approachChips wrap gap 5px — finish_ui:577; contract test row 20.",
       "h": "f7de00825557"
     },
     "История упражнения · 21": {
       "v": "=",
-      "f": ".sb-history-set 32px pill, bg var(--bg), inset border; contract test row 21.",
+      "f": ".sb-history-set 32px pill bg var(--bg) inset border — finish_ui:521–524; contract test row 21.",
       "h": "b0a00bce3de0"
     },
     "История упражнения · 22": {
       "v": "=",
-      "f": ".sb-history-session > b tonnage 12.5px/600 var(--tx); contract test row 22.",
+      "f": "fmtExactKg(row.volume) tonnage — finish_ui:579–580; contract test row 22 (2390 кг в fixture).",
       "h": "8acc718bd14c"
     },
     "История упражнения · 23": {
       "v": "=",
-      "f": ".sb-history-badge.is-quiet «по плану» — color rgba(var(--ink),.56); contract test row 23.",
+      "f": "historySessionTag fallback «по плану» .is-quiet — finish_ui:453–465; contract test row 23.",
       "h": "eaf5ccc8d64d"
     },
     "История упражнения · 24": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-session.is-last border-bottom 0 когда hiddenCount=0 — finish_ui:563–565; contract test row 24.",
       "h": "6b286135ed76"
     },
     "История упражнения · 25": {
       "v": "=",
-      "f": ".sb-history-badge.is-warning «дискомфорт» — bg var(--tint), color var(--ac2); contract test row 25.",
+      "f": "usageHasDiscomfort → «дискомфорт» .is-warning — finish_ui:433–435,454–455; contract test row 25.",
       "h": "a78f349f877f"
     },
     "История упражнения · 26": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "volumeQuiet → b.is-quiet rgba(ink,.55) — finish_ui:562,579; contract test row 26.",
       "h": "4b25667075fe"
     },
     "История упражнения · 27": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-history-sessions + .sb-history-growth через .sb-finish-detail margin-top 10px — contract test row 27 на sessions.",
       "h": "d641122bb122"
     },
     "История упражнения · 28": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«+N кг за M тренировок» из oneRmDelta/sessionCount — finish_ui:587–590; contract test regex +6 за 2 в fixture.",
       "h": "17458b0d4be5"
     },
     "История упражнения · 29": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Column gap 3px у «Оценка максимума» — finish_ui:593–595; contract test row 29.",
       "h": "07ffbada0ee7"
     },
     "История упражнения · 30": {
       "v": "=",
-      "f": ".sb-history-growth-note — 11px/500 rgba(var(--ink),.56); contract test row 30.",
+      "f": ".sb-history-growth-note copy — finish_ui:595; contract test row 30.",
       "h": "4a1fabfa3e1e"
     },
     "История упражнения · 31": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "b.is-quiet «95 кг» оценка — finish_ui:597–598; contract test row 31.",
       "h": "31174d9029ef"
     },
     "История упражнения · 32": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-finish-chart-card.sb-history-chart padding/radius/bg c1 — contract test row 32.",
       "h": "54643961e08d"
     },
     "История упражнения · 33": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-finish-chart-head baseline gap 8px — contract test row 33.",
       "h": "c46890146dce"
     },
     "История упражнения · 34": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Copy «шесть последних недель» — finish_ui:606; contract test row 34.",
       "h": "6bad099d084c"
     },
     "История упражнения · 35": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "2480d4192cbf"
+      "v": "≠",
+      "f": "Контракт: «+7 кг за 6 недель» 11px/700 var(--gr); продукт .sb-finish-chart-head b 17px/800 var(--tx) — contract test row 35 (текст +N кг за N недель из finish_ui:607 верен).",
+      "h": "2480d4192cbf",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "История упражнения · 36": {
       "v": "=",
-      "f": ".sb-history-chart .sb-finish-chart height 112px, gap 6px; contract test row 36.",
+      "f": ".sb-history-chart .sb-finish-chart height 112px gap 6px — contract test row 36.",
       "h": "4eb89dd57364"
     },
     "История упражнения · 37": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-finish-chart-column flex column center gap 5px — contract test row 37.",
       "h": "23da33de2767"
     },
     "История упражнения · 38": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Chart label b 9.5px/700 ink56 — historyOneRmSeries + contract test row 38.",
       "h": "946b09c6ac0d"
     },
     "История упражнения · 39": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Bar i width 100% radius 7px bg c2; height inline historyChartHeight — finish_ui:508–514,617; contract test row 39.",
       "h": "30e35c4d13f9"
     },
     "История упражнения · 40": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "small «н1» 9px/600 — finish_ui:618; contract test row 40.",
       "h": "3ad83eaddc2e"
     },
     "История упражнения · 41": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Bar heights 41–78px через historyChartHeight(min/max normalize) — finish_ui:508–514; contract test bars 41–78.",
       "h": "fb3e7f3476e1"
     },
     "История упражнения · 42": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Тот же столбец i — см. ·39/·41; высота из данных сессий.",
       "h": "e1e16f158dd2"
     },
     "История упражнения · 43": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "is-latest bar height 78px max в шкале — contract test latestBar ≥41.",
       "h": "e302148fd136"
     },
     "История упражнения · 44": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Промежуточные столбцы c2 — CSS .sb-finish-chart-column i; contract test row 39.",
       "h": "c50e1b3ae5f3"
     },
     "История упражнения · 45": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-latest b color var(--ac) — finish_ui:611–616; contract test row 45 sand+blue.",
       "h": "599205dd752d"
     },
     "История упражнения · 46": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-latest i bg var(--acs) — contract test row 46.",
       "h": "506d4b5e2301"
     },
     "История упражнения · 47": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".is-latest small color var(--ac) — contract test row 47.",
       "h": "48a631dc319a"
     },
     "История упражнения · 48": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Кнопка «Ещё N тренировок» hiddenCount>0, margin-top 10px — finish_ui:625–630; contract test expand + computed marginTop.",
       "h": "c8a38a9343bf"
     },
     "История упражнения · 49": {
       "v": "=",
-      "f": ".sb-finish-footnote 11px/500 rgba(var(--ink),.56); contract test row 49.",
+      "f": ".sb-finish-footnote copy про рекорд-подход — finish_ui:632–633; contract test row 49.",
       "h": "cdcd2c4c8221"
     },
     "Правка легла не полностью · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "175bdcc2e73a"
+      "v": "≠",
+      "f": "Кадр Д2: шапка .top; продукт — .sb-finish-head с ✕ и «Тренировка завершена» heys_strength_finish_ui_v1.js:302-311.",
+      "h": "175bdcc2e73a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
     },
     "Правка легла не полностью · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "07ffbada0ee7"
+      "v": "≠",
+      "f": "Кадр: column gap 3px в .top; продукт: row head с icon-btn + title column — 750:1931-1957.",
+      "h": "07ffbada0ee7",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
     },
     "Правка легла не полностью · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "a04292765ead"
+      "v": "≠",
+      "f": "Контракт «Верх тела B · завершена»; продукт b «Тренировка завершена» finish_ui:307.",
+      "h": "a04292765ead",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
     },
     "Правка легла не полностью · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "10cb2c396ec4"
+      "v": "≠",
+      "f": "Контракт mono «18 подходов · 4 120 кг · 52 мин»; продукт — плитки .sb-finish-metrics finish_ui:316-320.",
+      "h": "10cb2c396ec4",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
     },
     "Правка легла не полностью · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "ProposalOutcome внутри .sb-list.sb-finish-list overflow-y:auto — 750:155-158, finish_ui:313-349.",
       "h": "c629f84f9712"
     },
     "Правка легла не полностью · 06": {
@@ -3086,13 +3100,13 @@
       "h": "4c6b29cb91f7"
     },
     "Правка легла не полностью · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-outcome-list margin-top 10px — 750:4389-4393; strength-proposal-v4-canvas-contract.test.js computed.",
       "h": "d641122bb122"
     },
     "Правка легла не полностью · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": ".sb-proposal-outcome-row flex space-between gap 8px padding 7px 0 — 750:4395-4402; contract test display:flex.",
       "h": "af81bb6e54c6"
     },
     "Правка легла не полностью · 11": {
@@ -3121,14 +3135,16 @@
       "h": "ccf0d4abcf6f"
     },
     "Правка легла не полностью · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Разделители border-top; :first-child border-top:0 — 750:4401-4406; последняя строка без нижней границы по канону.",
       "h": "6b286135ed76"
     },
     "Правка легла не полностью · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "66303182f9a3"
+      "v": "≠",
+      "f": "Канвас .sm-сноска; ProposalOutcome не рендерит footnote — heys_strength_proposal_ui_v1.js:451-494 (CSS .sb-proposal-outcome-footnote заготовлен).",
+      "h": "66303182f9a3",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
     },
     "Связка · границы правки · 01": {
       "v": "=",
@@ -8240,12 +8256,12 @@
     },
     "История упражнения · текст": {
       "v": "=",
-      "f": "HistoryScreen DOM: рекорд/95 кг/теги/10 чипов — strength-builder-history-v4-canvas-contract.test.js первый it.",
+      "f": "HistoryScreen DOM: имя, группы, рекорд 75×8, 95 кг, теги, чипы, рост, график, сноска — strength-builder-history-v4-canvas-contract.test.js первый it.",
       "h": "fcaf2fd1487c"
     },
     "Правка легла не полностью · текст": {
       "v": "=",
-      "f": "ProposalOutcome copy «легла не полностью» + applied/rejected — strength-proposal-v4-canvas-contract.test.js.",
+      "f": "DOM ProposalOutcome: title/prose/Жим лёжа/Тяга/легло/не легло — strength-proposal-v4-canvas-contract.test.js D2 it.",
       "h": "089f594db600"
     },
     "Связка · границы правки · текст": {
