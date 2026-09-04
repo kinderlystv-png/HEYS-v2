@@ -1,0 +1,51 @@
+{
+  "zone": "strength-builder",
+  "scope": "copy · текст (M2/M3 + related)",
+  "generated": "2026-09-05",
+  "notes": {
+    "pool": "Из 109 строк strength-builder с v=? — 5 агрегатов «· текст» (72 таких агрегата всего, 67 уже закрыты). Ключ «copy · текст» в канвасе/вердиктах не встречается — искали по суффиксу «· текст» и data-v в strength-builder.v4.dc.html:4057+.",
+    "m2m3SubLines": "Построчные ·01–·NN для M2/M3 — в scripts/.sb-catalog-exercise-muscles-handoff.json и scripts/.sb-catalog-exercise-similar-handoff.json (геометрия/роли); этот handoff — только агрегаты «· текст».",
+    "searched": [
+      "docs/ui/verdicts/strength-builder.json — rows.*.v === \"?\" && key matches /· текст/",
+      "strength-builder.v4.dc.html — <b>… · текст</b> + data-v",
+      "apps/web/strength/heys_strength_catalog_ui_v1.js — ExerciseMuscleGroupsScreen, ExerciseSimilarScreen, NewExerciseScreen",
+      "apps/web/strength/heys_strength_superset_ui_v1.js — CustomExerciseScreen, PlanVsDoneScreen",
+      "apps/web/heys_exercise_catalog_v1.js — bodyweightSimilarOptions, muscleVolumePreviewRows"
+    ]
+  },
+  "summary": {
+    "rows": 5,
+    "equals": 3,
+    "notEquals": 1,
+    "question": 1,
+    "dash": 0,
+    "missingKeys": []
+  },
+  "rows": [
+    {
+      "key": "Своё упражнение · текст",
+      "verdict": "=",
+      "fact": "Канвас data-v (strength-builder.v4.dc.html:4070): «Новое упражнение › три поля… › 1·Что меряем › вес×повторы|свой вес|время|метры › 2·Какие мышцы › Основная|Помогают › 3·Только для своего веса › … › Создать упражнение › Создать без объёма › сноска». Продукт CustomExerciseScreen — heys_strength_superset_ui_v1.js:3134-3260: те же заголовки/ярусы/бейджи (CUSTOM_EX_UNIT_LABELS :3023-3028), строки «Основная»/«Помогают» (:3204-3213), подсказки и CTA дословно; смоук strength-superset-b3-custom-exercise-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Упражнение · группы мышц · текст",
+      "verdict": "=",
+      "fact": "Канвас :4121 data-v: «{имя}·мышцы › одна основная, синергисты по желанию › Основная — одна › …группы… › Синергисты — сколько нужно › Как это ляжет в объём › …кг… › сноска про одиннадцать групп». Код ExerciseMuscleGroupsScreen — catalog_ui:446-493: «· мышцы», подзаголовок, ярусы, превью muscleVolumePreviewRows, сноска дословно; опции групп из heys_exercise_catalog_v1.js MUSCLE_GROUPS :31-45. Контракт-тест strength-builder-exercise-muscles-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Упражнение · на что похоже · текст",
+      "verdict": "=",
+      "fact": "Канвас :4122 data-v: «{имя}·свой вес › сколько тела поднимается › Как подтягивания|приседания на одной|отжимания|скручивания|Не знаю › подсказки › 1,0|0,85|0,64|0,35 › превью 78 кг×1,0 › две сноски». Код ExerciseSimilarScreen — catalog_ui:543-582 + BODYWEIGHT_SIMILAR_OPTIONS heys_exercise_catalog_v1.js:702-707 (label/hint/factor 1:1); превью «{bw} кг × {factor} = {kg} кг за повтор» :577; сноски дословно. Тест strength-builder-exercise-similar-v4-canvas-contract.test.js."
+    },
+    {
+      "key": "Программа · назначено против сделано · текст",
+      "verdict": "≠",
+      "fact": "Канвас :4072 data-v начинается с «Отчёт по циклу › недели 1–2 · 6 назначено › …». Продукт PlanVsDoneScreen — superset_ui:2329 заголовок «Назначено против сделано» (не «Отчёт по циклу»); ключ planVsDoneHeaderKey :534-544 даёт «{dayLabel|weekRange} · N назначено». Остальная копия (План выполнен на %, Назначено/Сделано, «Вес выше плана — это прогресс», «пропущено», объёмы, CTA, сноска PLAN_VS_DONE_FOOTNOTE :672) совпадает — strength-builder-plan-vs-done-v4-canvas-contract.test.js:98-121. Агрегат ≠ из‑за другого верхнего заголовка кадра."
+    },
+    {
+      "key": "Правка · пропущен сегодня · текст",
+      "verdict": "?",
+      "fact": "Канвас :4112 data-v: «Верх тела B вы отпустили › причина: болит плечо › Артём предлагает замену › … › Не сегодня › Посмотреть › сноска про пропуск». В apps/web/strength/ — нет рендера этих строк (rg: «отпустили», «Не сегодня», «болит плечо», proposalBlocksDay — пусто). proposal_ui покрывает другие ветки правок, не кадр «пропущен сегодня». Нужно продуктовое решение + экран до сверки копии."
+    }
+  ]
+}
