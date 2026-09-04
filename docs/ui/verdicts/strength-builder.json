@@ -589,13 +589,13 @@
       "h": "020cfc27bf5e"
     },
     "вид · шапка сессии": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Шапка активной сессии: .sb-head 16/18/0, имя 15px/700, .sb-head-sub 10.5px моно, пилюли .sb-stat и badge «идёт» — apps/web/styles/modules/750-strength-builder.css:sb-head/sb-stats; А1 protocol не реализуется, prod = А1б apps/web/__tests__/strength-builder-calm-canvas-contract.test.js rows 01-10.",
       "h": "1ada421bed5f"
     },
     "вид · строка упражнения": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Кадр А2 «список свёрнут»: свёрнутые .sb-ex без раскрытия, состояния is-complete/is-current/is-pending и нижняя панель — apps/web/strength/heys_strength_builder_ui_v1.js; 26 numbered rows apps/web/__tests__/strength-builder-calm-canvas-contract.test.js describe('А2 · rendered Canvas contract').",
       "h": "cc3c64c9100a"
     },
     "вид · раскрытое упражнение": {
@@ -704,8 +704,8 @@
       "h": "732aa029b29b"
     },
     "вид · замена связки": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Кадр Д3: SupersetBoundariesScreen — .sb-ss-bound-pair с колонками was/will, .sb-ss-bound-tier, .sb-ss-bound-list и badge на --gr-bg/--gr; в разборе правки тот же SupersetBoundariesBody в .sb-proposal-boundaries — apps/web/strength/heys_strength_superset_ui_v1.js:1527-1545, apps/web/strength/heys_strength_proposal_ui_v1.js:309-315, apps/web/styles/modules/750-strength-builder.css:3816-3944; геометрия+цвет apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "df752e8f5407"
     },
     "вид · таблица ввода": {
@@ -3127,113 +3127,113 @@
       "h": "66303182f9a3"
     },
     "Связка · границы правки · 01": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Шапка кадра: .sb-ss-bound-screen .sb-head с .sb-icon-btn и .sb-head-title — apps/web/strength/heys_strength_superset_ui_v1.js:1533-1540; стандартная sb-head из apps/web/styles/modules/750-strength-builder.css.",
       "h": "175bdcc2e73a"
     },
     "Связка · границы правки · 02": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Колонка заголовка: .sb-ss-bound-head { flex-direction:column; gap:3px } — apps/web/styles/modules/750-strength-builder.css:3817-3820; computed row 02 в apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "07ffbada0ee7"
     },
     "Связка · границы правки · 03": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Имя экрана «{who} заменил связку»: h('b', …) — apps/web/strength/heys_strength_superset_ui_v1.js:1538; DOM apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "7da5a62a19e4"
     },
     "Связка · границы правки · 04": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Ключ «связка не начата»: .sb-head-sub из replacements[0].key — apps/web/strength/heys_strength_superset_ui_v1.js:1531,1539; apps/web/strength/heys_strength_proposal_ui_v1.js:211-214.",
       "h": "23525e7a7701"
     },
     "Связка · границы правки · 05": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Прокрутка: .sb-list.sb-ss-bound-scroll { flex:1; overflow-y:auto } — apps/web/strength/heys_strength_superset_ui_v1.js:1542; apps/web/styles/modules/750-strength-builder.css:3823-3825,156-160.",
       "h": "c629f84f9712"
     },
     "Связка · границы правки · 06": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Карточка пары: .sb-ss-bound-grp { margin-top:12px } — apps/web/styles/modules/750-strength-builder.css:3827-3829.",
       "h": "81d6d8e40a85"
     },
     "Связка · границы правки · 07": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Ряд было→станет: .sb-ss-bound-pair { display:flex; gap:9px; align-items:stretch } — apps/web/styles/modules/750-strength-builder.css:3831-3835.",
       "h": "dab99132536b"
     },
     "Связка · границы правки · 08": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Колонка «было»: .sb-ss-bound-col--was { flex:1; padding:10px; border-radius:12px; background:var(--sb-bg); inset border } — apps/web/styles/modules/750-strength-builder.css:3837-3847; computed row 08 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "8e27fbafc102"
     },
     "Связка · границы правки · 09": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Метка «было»: .sb-ss-bound-label--was { font:700 10px/1; letter-spacing:.04em; text-transform:uppercase; color:rgba(var(--ink),.56); margin-bottom:6px } — apps/web/styles/modules/750-strength-builder.css:3853-3863; apps/web/strength/heys_strength_superset_ui_v1.js:1491.",
       "h": "610fdbef2d50"
     },
     "Связка · границы правки · 10": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Строки A1… в «было»: .sb-ss-bound-col--was .sb-ss-bound-lines { font:600 11.5px/1.5; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:3869-3876; memberLines — apps/web/strength/heys_strength_superset_ui_v1.js:1492-1495.",
       "h": "67d125073689"
     },
     "Связка · границы правки · 11": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Стрелка «→»: .sb-ss-bound-arrow { flex:none; align-items:center; font:700 14px/1; color:rgba(var(--ink),.35) } — apps/web/styles/modules/750-strength-builder.css:3882-3888; apps/web/strength/heys_strength_superset_ui_v1.js:1497; computed row 11 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "18820f83e021"
     },
     "Связка · границы правки · 12": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Колонка «станет»: .sb-ss-bound-col--will { flex:1; padding:10px; border-radius:12px; background:var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:3849-3851; computed row 12 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "77e4edc59b29"
     },
     "Связка · границы правки · 13": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Метка «станет»: .sb-ss-bound-label--will { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:3865-3867; apps/web/strength/heys_strength_superset_ui_v1.js:1499.",
       "h": "53fd7bda1f72"
     },
     "Связка · границы правки · 14": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Строки A1… в «станет»: .sb-ss-bound-col--will .sb-ss-bound-lines { color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3878-3880; computed row 14 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "18928c901b35"
     },
     "Связка · границы правки · 15": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Сноска про целый блок: .sb-ss-bound-note после пары — текст apps/web/strength/heys_strength_superset_ui_v1.js:1506-1507; margin-top:10px apps/web/styles/modules/750-strength-builder.css:3890-3894.",
       "h": "4eeec6472c80"
     },
     "Связка · границы правки · 16": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Ярус «Связка начата»: .sb-ss-bound-tier { margin:20px 0 10px; color:var(--sb-acc); font:700 10px/1; letter-spacing:.16em; text-transform:uppercase } — apps/web/styles/modules/750-strength-builder.css:3896-3902; apps/web/strength/heys_strength_superset_ui_v1.js:1510.",
       "h": "a1b52c7e0ce9"
     },
     "Связка · границы правки · 17": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Список заморозки: .sb-ss-bound-list { border-radius:16px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:3904-3908; apps/web/strength/heys_strength_superset_ui_v1.js:1511-1520.",
       "h": "d9a337aab838"
     },
     "Связка · границы правки · 18": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Строка без разделителя: .sb-ss-bound-row { padding:12px 14px } без border-bottom — apps/web/styles/modules/750-strength-builder.css:3910-3916; одна строка в кадре apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "6b286135ed76"
     },
     "Связка · границы правки · 19": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«Связка A · раунд 2 из 3»: .sb-ss-bound-row-title { color:var(--sb-tx); font:600 12.5px/1.2 } — apps/web/styles/modules/750-strength-builder.css:3925-3928; title из currentSupersetRound — apps/web/strength/heys_strength_proposal_ui_v1.js:198-206.",
       "h": "6d5bf699038a"
     },
     "Связка · границы правки · 20": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "«состав заморожен до конца»: .sb-ss-bound-row-sub { font:500 11px/1.3; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:3930-3933; apps/web/strength/heys_strength_superset_ui_v1.js:1516.",
       "h": "e6f5fb81aac9"
     },
     "Связка · границы правки · 21": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Пилюля «закрыта»: .sb-ss-bound-badge { background:var(--sb-okbg); color:var(--sb-okTx) } — apps/web/styles/modules/750-strength-builder.css:3935-3944; computed row 21 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "3d107bcccbd0"
     },
     "Связка · границы правки · 22": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Нижняя сноска про начатую связку: .sb-ss-bound-note после списка — текст apps/web/strength/heys_strength_superset_ui_v1.js:1522-1523.",
       "h": "48c244229e17"
     },
     "Подход · таблица ввода · 01": {
@@ -4905,109 +4905,145 @@
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "175bdcc2e73a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "evidence": [
+        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
+      ]
     },
     "План в ленте дня · 02": {
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "07ffbada0ee7",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "evidence": [
+        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
+      ]
     },
     "План в ленте дня · 03": {
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "b948a7bf7ffa",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "evidence": [
+        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
+      ]
     },
     "План в ленте дня · 04": {
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "79f2acd79e23",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "evidence": [
+        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
+      ]
     },
     "План в ленте дня · 05": {
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "c629f84f9712",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "evidence": [
+        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
+      ]
     },
     "План в ленте дня · 06": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "81d6d8e40a85",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 07": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "869d1e5dd696",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 08": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "addb1ad16c00",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 09": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "b4a4fa9ae422",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 10": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "00ceac024a98",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 11": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "76deaf58abb7",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 12": {
       "v": "=",
       "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "410f53ff185c",
-      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 13": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "94a2209f25bb",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 14": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "7df83bd94c9e",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 15": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "f250c86095df",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 16": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "c0d7c8cb1544",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 17": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "77e4b4025f38",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 18": {
       "v": "≠",
       "f": "Unsafe early start is intentionally absent because the owner contract has no fact-date rule.",
       "h": "32404415abea",
-      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
+      "evidence": [
+        "semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ],
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
@@ -5015,7 +5051,9 @@
       "v": "≠",
       "f": "Transfer is intentionally the sole primary action after unsafe early start is removed.",
       "h": "096e30f25e4f",
-      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
+      "evidence": [
+        "semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ],
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
     },
@@ -5023,97 +5061,129 @@
       "v": "=",
       "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "5cf087fff7b6",
-      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 21": {
       "v": "=",
       "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "54643961e08d",
-      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 22": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "0e0d875194db",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 23": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "cbb5c1f8e50f",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 24": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "2612a29a6aa6",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 25": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "0712125d3ac4",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 26": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "ea40d5b7e5ed",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 27": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "c013a0005595",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 28": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "895d864e529b",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 29": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "c5fea7338543",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 30": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "0ddbabb4c903",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 31": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "d116851f82d0",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 32": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "d55c4db65a48",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 33": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "3c87cb21ff36",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 34": {
       "v": "=",
       "f": "Построчный computed-style контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "0b68cc8e46d1",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "План в ленте дня · 35": {
       "v": "=",
       "f": "Построчный dom контракт проверяет точное значение Canvas в изолированном DOM кадра И3.",
       "h": "3e002c1a437f",
-      "evidence": ["dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/ui-v4-dom-contracts.test.js"
+      ]
     },
     "День не состоялся · 01": {
       "v": "?",
@@ -8131,7 +8201,9 @@
       "v": "=",
       "f": "Rendered DOM тест доказывает точную составную строку текста А2.",
       "h": "98feae4e48c2",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · разминка и дроп-сет · текст": {
       "v": "?",
@@ -8199,8 +8271,8 @@
       "h": "089f594db600"
     },
     "Связка · границы правки · текст": {
-      "v": "?",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "v": "=",
+      "f": "Полный текст кадра Д3: шапка, пара было/станет с раундами, две сноски, ярус и замороженная строка — apps/web/strength/heys_strength_superset_ui_v1.js:1486-1524; DOM-смоук apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
       "h": "2934320fb407"
     },
     "Подход · таблица ввода · текст": {
@@ -8277,7 +8349,9 @@
       "v": "?",
       "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "47c4373b8180",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"]
+      "evidence": [
+        "unsupported: no exact row-level DOM/computed-style/semantic assertion for И3"
+      ]
     },
     "День не состоялся · текст": {
       "v": "?",
@@ -8445,8 +8519,8 @@
       "h": "c2852ab11069"
     },
     "вид · спокойный список": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Кадр А1б: спокойные сигналы — номер/галочка без --gr-bg заливки карточки, .sb-ex-num на --bg с рамкой, .sb-ap-check/.vl капсулы 44px — apps/web/styles/modules/750-strength-builder.css:3020-3140, apps/web/strength/heys_strength_builder_ui_v1.js; 49 строк А1б + геометрия apps/web/__tests__/strength-builder-calm-canvas-contract.test.js.",
       "h": "b92f27073b82"
     },
     "вид · шкала тяжести": {
@@ -8810,13 +8884,11 @@
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 11": {
-      "v": "?",
-      "f": "Canvas А1б требует drag-handle «⠿», соседний А2 его не показывает, а product-flow не умеет сохранять новый порядок; декоративный affordance не считается совпадением.",
+      "v": "≠",
+      "f": "Ручка «⠿» намеренно не рендерится: нет owner/persistence reorder-flow; А2 без ручки, декоративный affordance не считается — apps/web/__tests__/strength-builder-calm-canvas-contract.test.js:243-244, docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md.",
       "h": "ada3cfca3806",
-      "evidence": [
-        "unsupported: active strength builder has no reorder owner, persistence contract, touch flow or keyboard flow",
-        "designer-discrepancy: docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-а1б-и-а2-противоречат-друг-другу-по-ручкам-переноса"
-      ]
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md:1271"
     },
     "Конструктор · тренировка идёт · спокойнее · 12": {
       "v": "=",
@@ -9290,13 +9362,17 @@
       "v": "=",
       "f": "Rendered DOM тест доказывает точную составную строку текста А1б · текст 1/2.",
       "h": "e7b6b6c40a06",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · текст 2/2": {
       "v": "=",
       "f": "Rendered DOM тест доказывает точную составную строку текста А1б · текст 2/2.",
       "h": "92226772e9f4",
-      "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
+      "evidence": [
+        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
+      ]
     },
     "Программа · назначено против сделано · текст": {
       "v": "?",
