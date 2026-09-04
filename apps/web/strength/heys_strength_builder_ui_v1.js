@@ -955,6 +955,7 @@
           key: 'g' + g.groupId,
           group: g,
           exercises: exercises,
+          dateKey: dateKey,
           onToggleCell: function (exIdx, apIdx) {
             const a = exercises[exIdx].approaches[apIdx];
             patchApproach(exIdx, apIdx, { done: !(SK ? SK.isApproachDone(a) : a.done) });

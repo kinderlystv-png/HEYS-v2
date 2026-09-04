@@ -60,6 +60,31 @@
     return String.fromCharCode(65 + index);
   }
 
+  const MONTHS_RU_TITLE = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+  function supersetDateTitle(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!m) return 'Связка';
+    return 'Связка · ' + (+m[3]) + ' ' + MONTHS_RU_TITLE[+m[2] - 1];
+  }
+
+  function workApproaches(exercise, SK) {
+    return (Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [])
+      .filter(function (approach) {
+        return !(SK && typeof SK.isWarmupApproach === 'function'
+          ? SK.isWarmupApproach(approach)
+          : approach && (approach.type === 'warmup' || approach.kind === 'warmup'));
+      });
+  }
+
+  function flatApproachKey(members, SK) {
+    return members.map(function (member) {
+      const count = workApproaches(member, SK).length;
+      return count + ' ' + ruPlural(count, 'подход', 'подхода', 'подходов');
+    }).join(' и ');
+  }
+
   function roundCellLabel(exercise, approach) {
     const unit = exercise && exercise.unit;
     if (unit === 'time') {
@@ -94,26 +119,31 @@
   }
 
   function SupersetBlock(props) {
-    const { group, exercises, onToggleCell, onAddRound, onSwap } = props;
+    const { group, exercises, dateKey, onToggleCell, onAddRound, onSwap } = props;
     const SK = kernel();
     if (!SK) return null;
     const rounds = SK.supersetRounds(exercises, group.groupId);
     const members = group.indexes.map(function (i) { return exercises[i]; });
     const memberCount = members.length;
-    const title = 'Связка · ' + memberCount + ' '
-      + ruPlural(memberCount, 'упражнение', 'упражнения', 'упражнений');
+    const title = rounds
+      ? ('Связка · ' + memberCount + ' '
+        + ruPlural(memberCount, 'упражнение', 'упражнения', 'упражнений'))
+      : supersetDateTitle(dateKey);
 
     const head = h('div', { className: 'sb-ss-top' },
       h('div', { className: 'sb-ss-title-col' },
         h('b', { className: 'sb-ss-ttl' }, title),
-        rounds && h('span', { className: 'sb-ss-key' },
-          'по ' + rounds.length + ' '
-          + ruPlural(rounds.length, 'подход', 'подхода', 'подходов')
-          + ' · ' + rounds.length + ' '
-          + ruPlural(rounds.length, 'раунд', 'раунда', 'раундов'))
+        rounds
+          ? h('span', { className: 'sb-ss-key' },
+            'по ' + rounds.length + ' '
+            + ruPlural(rounds.length, 'подход', 'подхода', 'подходов')
+            + ' · ' + rounds.length + ' '
+            + ruPlural(rounds.length, 'раунд', 'раунда', 'раундов'))
+          : h('span', { className: 'sb-ss-key' }, flatApproachKey(members, SK))
       ),
-      h('span', { className: 'sb-ss-badge' }, 'связка'),
-      h('button', {
+      h('span', { className: 'sb-ss-badge' + (rounds ? '' : ' sb-ss-badge--history') },
+        rounds ? 'связка' : 'история'),
+      rounds && h('button', {
         type: 'button', className: 'sb-icon-btn sb-ss-swap',
         onClick: function () { onSwap(group.groupId); },
         title: 'Поменять участников местами',
@@ -124,11 +154,34 @@
     // Старая связка с неравным числом подходов: плоские списки без раундов,
     // историю не переписываем.
     if (!rounds) {
-      return h('div', { className: 'sb-ss' }, head,
+      const flatMembers = members.map(function (member, mi) {
+        const approaches = workApproaches(member, SK);
+        const count = approaches.length;
+        return h('div', {
+          className: 'sb-ss-flat-member' + (mi > 0 ? ' sb-ss-flat-member--spaced' : ''),
+          key: 'fm' + mi
+        },
+          h('div', { className: 'sb-ss-flat-head' },
+            h('span', { className: 'sb-ss-flat-letter' }, memberLetter(mi)),
+            h('b', { className: 'sb-ss-flat-name' }, member.name || 'Без названия'),
+            h('span', { className: 'sb-ss-flat-count' },
+              count + ' ' + ruPlural(count, 'подход', 'подхода', 'подходов'))
+          ),
+          h('div', { className: 'sb-ss-flat-chips' },
+            approaches.map(function (approach, ai) {
+              return h('span', { className: 'sb-ss-flat-chip', key: 'fc' + ai },
+                roundCellLabel(member, approach));
+            })
+          )
+        );
+      });
+
+      return h('div', { className: 'sb-ss sb-ss--flat' }, head,
         h('div', { className: 'sb-ss-scroll' },
-          h('div', { className: 'sb-ss-flat' },
-            'Подходов у участников поровну нет — раунды не показываем, чтобы не переписывать историю. '
-            + 'Выровняйте число подходов, и раунды появятся сами.')
+          h('div', { className: 'sb-ss-grp sb-ss-flat' }, flatMembers),
+          h('p', { className: 'sb-ss-footnote' },
+            'Историю не переписываем: плоские списки, объём и счёт считаются как обычно. '
+            + 'Раунды появятся, если выровнять число подходов — но задним числом мы этого не делаем.')
         )
       );
     }

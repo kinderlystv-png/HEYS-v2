@@ -578,7 +578,10 @@ describe('конструктор: связка', () => {
       dateKey: '2026-08-09', profile: {}, onPatch: () => {}, onClose: () => {},
     }));
     expect(screen.queryByText('Р1')).toBeNull();
-    expect(screen.getByText(/не переписывать историю/)).toBeTruthy();
+    expect(screen.getByText('история')).toBeTruthy();
+    expect(screen.getByText('3 подхода')).toBeTruthy();
+    expect(screen.getByText('1 подход')).toBeTruthy();
+    expect(screen.getByText(/Историю не переписываем/)).toBeTruthy();
   });
 
   it('прочерк участника по ходу не закрывается', () => {
