@@ -24,6 +24,8 @@ const BLOCK_SPLIT_RE = /^##\s*~?\d{1,2}:\d{2}(?:\s*[–—-]\s*~?\d{1,2}:\d{2})?
 const DEFAULT_WINDOW_MS = 5 * 60 * 1000;
 /** Допуск на собственные вызовы обмена — см. exchangeBounds. */
 const WRITE_TAIL_MS = 30 * 1000;
+/** Отрезок длиннее — повод усомниться в заголовке, а не молча им пользоваться. */
+const SPAN_WARN_MS = 6 * 60 * 60 * 1000;
 const TELEMETRY_RETENTION_DAYS = 180;
 /** @deprecated используйте TELEMETRY_RETENTION_DAYS */
 const LOG_RETENTION_DAYS = TELEMETRY_RETENTION_DAYS;
@@ -51,11 +53,24 @@ function pad(value) {
   return String(value).padStart(2, '0');
 }
 
-/** `## ЧЧ:ММ` стенограммы — московское время; с 2014 MSK = UTC+3 круглый год. */
+/**
+ * `## ЧЧ:ММ` стенограммы — московское время; с 2014 MSK = UTC+3 круглый год.
+ *
+ * Файл дня живёт по taskDay — сутки с 03:00 МСК (DAY_START_HOUR в lib/tasks.js,
+ * тот же порог у tasks_checkpoint и у аргумента date этого инструмента).
+ * Поэтому заголовок раньше трёх утра относится к следующему календарному
+ * числу: `## 01:30` в transcript/2026-09-04.md случился ночью пятого. Пока
+ * заголовок был только подписью в отчёте, промах в сутки ничего не портил;
+ * с тех пор как он задаёт начало отрезка связки, он стал данными.
+ */
+const DAY_START_HOUR = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function headingToUtcMs(date, hours, minutes) {
   if (!date || !Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
   const ms = Date.parse(`${date}T${pad(hours)}:${pad(minutes)}:00+03:00`);
-  return Number.isFinite(ms) ? ms : null;
+  if (!Number.isFinite(ms)) return null;
+  return hours < DAY_START_HOUR ? ms + DAY_MS : ms;
 }
 
 function callTimeMs(call) {
@@ -154,7 +169,20 @@ function exchangeBounds(exchanges) {
   const spans = (exchanges || []).map((exchange, index) => {
     const endMs = lastPinMs(exchange);
     const headingMs = Number.isFinite(exchange.headingMs) ? exchange.headingMs : endMs;
-    return { exchange, index, startMs: Math.min(headingMs, endMs), endMs };
+    // Заголовок ставит модель на глаз, и он больше не только подпись: теперь он
+    // граница связки. Ошибка в нём тихо уводит чужие вызовы в отрезок, поэтому
+    // два её вида называются вслух — перевёрнутый отрезок и слишком длинный.
+    // Перевёрнутый схлопывается в точку записи: заведомо неверной границе
+    // доверия меньше, чем её отсутствию.
+    const inverted = headingMs > endMs;
+    const startMs = Math.min(headingMs, endMs);
+    return {
+      exchange,
+      index,
+      startMs,
+      endMs,
+      unreliable: inverted || endMs - startMs > SPAN_WARN_MS,
+    };
   });
   const byEnd = [...spans].sort((a, b) => a.endMs - b.endMs || a.index - b.index);
   for (let i = 0; i < byEnd.length; i += 1) {
@@ -191,6 +219,32 @@ function ownerSpan(spans, byStart, ms) {
   return null;
 }
 
+/**
+ * Обмены, узнаваемые по псевдониму вызова.
+ *
+ * Связка временная, и этого мало: пока идёт разговор здесь, тот же человек
+ * может писать с телефона, и чужие вызовы лягут в чей-то отрезок молча. Если
+ * вызов назвал сессию или подключение, стоящее в метке конкретного обмена, —
+ * это прямое свидетельство, и оно сильнее времени.
+ *
+ * Псевдоним, встреченный у двух обменов, свидетельством не считается:
+ * `conn_id` живёт сутки и переживает несколько обменов подряд.
+ */
+function ownersByAlias(spans) {
+  const owners = new Map();
+  for (const span of spans) {
+    const marks = span.exchange.marks || (span.exchange.mark ? [span.exchange.mark] : []);
+    for (const mark of marks) {
+      for (const alias of [mark && mark.sessionId, mark && mark.connId]) {
+        if (!alias) continue;
+        if (!owners.has(alias)) owners.set(alias, span);
+        else if (owners.get(alias) !== span) owners.set(alias, null);
+      }
+    }
+  }
+  return owners;
+}
+
 function correlate({ exchanges, calls }) {
   const timed = (calls || [])
     .map((call) => ({ call, ms: callTimeMs(call) }))
@@ -200,10 +254,12 @@ function correlate({ exchanges, calls }) {
   // поэтому отрезки считаются по времени, а не по месту в файле.
   const spans = exchangeBounds(exchanges);
   const byStart = [...spans].sort((a, b) => a.startMs - b.startMs || a.index - b.index);
+  const owners = ownersByAlias(spans);
   const buckets = new Map(spans.map((span) => [span.exchange, []]));
   const unattached = [];
   for (const row of timed) {
-    const owner = ownerSpan(spans, byStart, row.ms);
+    const named = owners.get(row.call.session_id) || owners.get(row.call.conn_id) || null;
+    const owner = named || ownerSpan(spans, byStart, row.ms);
     if (!owner) unattached.push(row.call);
     else buckets.get(owner.exchange).push(row.call);
   }
@@ -219,6 +275,7 @@ function correlate({ exchanges, calls }) {
       calls: attached,
       tools: attached.map((call) => call.tool).filter(Boolean),
       total_ms: totalMs,
+      span_unreliable: Boolean((spans.find((s) => s.exchange === exchange) || {}).unreliable),
     };
   });
   return { rows, unattached };
@@ -503,6 +560,8 @@ module.exports = {
   BLOCK_SPLIT_RE,
   DEFAULT_WINDOW_MS,
   WRITE_TAIL_MS,
+  DAY_START_HOUR,
+  SPAN_WARN_MS,
   HEADING_RE,
   LOG_RETENTION_DAYS,
   TELEMETRY_RETENTION_DAYS,

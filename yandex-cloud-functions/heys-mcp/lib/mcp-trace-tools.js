@@ -103,10 +103,14 @@ function excludeSelfCalls(calls, { sessionId, seq } = {}) {
 /**
  * Границы запроса к телеметрии.
  *
- * Нижняя — начало московских суток, а не первый пин минус окно. Связка теперь
- * направленная: вызовы принадлежат следующему чекпоинту, значит первый блок дня
- * отвечает за всё, что случилось до него. При прежней границе эти вызовы просто
- * не доезжали из базы, и починка одной корреляции ничего бы не дала.
+ * Нижняя — начало суток задачника, а не первый пин минус окно. Связка теперь
+ * идёт по отрезкам, и первый блок дня отвечает за всё, что случилось до него;
+ * при прежней границе эти вызовы просто не доезжали из базы, и починка одной
+ * корреляции ничего бы не дала.
+ *
+ * Сутки берутся с 03:00 МСК — это `taskDay`, та же граница, что у аргумента
+ * `date` и у tasks_checkpoint. Полночь тут была бы четвёртой границей дня в
+ * проекте, и вызовы между 00:00 и 03:00 уехали бы не в тот день.
  *
  * Верхняя — последний пин плюс запас: там же лежит собственная запись обмена.
  */
@@ -115,7 +119,7 @@ function narrowLogWindow(exchanges, windowMs, date) {
   const pins = exchanges.map((e) => e.pinMs).filter((ms) => Number.isFinite(ms));
   if (!pins.length) return null;
   const max = Math.max(...pins);
-  const dayStart = Date.parse(`${date}T00:00:00+03:00`);
+  const dayStart = Date.parse(`${date}T${String(correlate.DAY_START_HOUR).padStart(2, '0')}:00:00+03:00`);
   const floor = Number.isFinite(dayStart)
     ? Math.min(dayStart, Math.min(...pins) - windowMs - LOG_PADDING_MS)
     : Math.min(...pins) - windowMs - LOG_PADDING_MS;
@@ -249,6 +253,12 @@ function createMcpTraceTools({
       }
       if (unattached.length > 0) {
         tail.push(`${unattached.length} вызовов позже последнего обмена — их заберёт следующий чекпоинт.`);
+      }
+      const unreliable = enriched.filter((row) => row.span_unreliable).map((row) => row.heading);
+      if (unreliable.length > 0) {
+        tail.push(
+          `Граница ненадёжна у ${unreliable.join(', ')}: заголовок ## ЧЧ:ММ позже записи или отрезок длиннее шести часов — цепочка могла забрать чужое.`,
+        );
       }
       if (telemetryTruncated) tail.push('Выборка обрезана по лимиту — цепочка может быть неполной.');
 

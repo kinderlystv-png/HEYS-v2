@@ -223,6 +223,82 @@ test('вызовы блока без метки становятся вероя�
   assert.deepEqual(enriched[1].confirmed_tools, ['heys_add_water']);
 });
 
+test('заголовок раньше трёх утра относится к следующему календарному числу', () => {
+  // Файл дня живёт по taskDay — сутки с 03:00 МСК. Пока заголовок был подписью
+  // в отчёте, промах в сутки ничего не портил; теперь он граница связки.
+  const text = `## 01:30
+**Кин:** ночью
+**Claude:** ок
+[mcp session=aaaaaaaaaaaa seq=1]
+`;
+  const { exchanges } = correlate.parseExchanges(text, { date: '2026-09-04' });
+  assert.equal(exchanges[0].headingMs, Date.parse('2026-09-05T01:30:00.000+03:00'));
+
+  const day = `## 03:10
+**Кин:** утром
+**Claude:** ок
+[mcp session=bbbbbbbbbbbb seq=1]
+`;
+  const parsed = correlate.parseExchanges(day, { date: '2026-09-04' });
+  assert.equal(parsed.exchanges[0].headingMs, Date.parse('2026-09-04T03:10:00.000+03:00'));
+});
+
+test('псевдоним вызова сильнее времени', () => {
+  // Связка временная, и этого мало: пока идёт разговор здесь, тот же человек
+  // пишет с телефона. Назвал вызов сессию конкретного обмена — это прямое
+  // свидетельство, и оно перевешивает попадание в чужой отрезок.
+  const text = `
+## 10:00
+**Кин:** первый
+**Claude:** ок
+[mcp session=aaaaaaaaaaaa seq=1 ts=2026-09-04T07:10:00.000Z]
+
+## 12:00
+**Кин:** второй
+**Claude:** ок
+[mcp session=bbbbbbbbbbbb seq=1 ts=2026-09-04T09:10:00.000Z]
+`;
+  const { exchanges } = correlate.parseExchanges(text, { date: '2026-09-04' });
+  const { rows } = correlate.correlate({
+    exchanges,
+    calls: [
+      // по времени попадает в отрезок второго обмена, но назвался первым
+      { ts: '2026-09-04T09:05:00.000Z', tool: 'свой_у_первого', session_id: 'aaaaaaaaaaaa', seq: 1, duration_ms: 10 },
+      { ts: '2026-09-04T09:06:00.000Z', tool: 'ничей', session_id: 'zzzzzzzzzzzz', seq: 1, duration_ms: 10 },
+    ],
+  });
+
+  assert.deepEqual(rows[0].tools, ['свой_у_первого']);
+  assert.deepEqual(rows[1].tools, ['ничей']);
+});
+
+test('ненадёжная граница отрезка называется вслух', () => {
+  const inverted = `## 23:00
+**Кин:** заголовок позже записи
+**Claude:** ок
+[mcp session=aaaaaaaaaaaa seq=1 ts=2026-09-04T07:00:00.000Z]
+`;
+  const { exchanges } = correlate.parseExchanges(inverted, { date: '2026-09-04' });
+  const { rows } = correlate.correlate({ exchanges, calls: [] });
+  assert.equal(rows[0].span_unreliable, true);
+
+  const long = `## 04:00
+**Кин:** отрезок в девять часов
+**Claude:** ок
+[mcp session=bbbbbbbbbbbb seq=1 ts=2026-09-04T10:00:00.000Z]
+`;
+  const parsedLong = correlate.parseExchanges(long, { date: '2026-09-04' });
+  assert.equal(correlate.correlate({ exchanges: parsedLong.exchanges, calls: [] }).rows[0].span_unreliable, true);
+
+  const ok = `## 12:00
+**Кин:** обычный
+**Claude:** ок
+[mcp session=cccccccccccc seq=1 ts=2026-09-04T09:30:00.000Z]
+`;
+  const parsedOk = correlate.parseExchanges(ok, { date: '2026-09-04' });
+  assert.equal(correlate.correlate({ exchanges: parsedOk.exchanges, calls: [] }).rows[0].span_unreliable, false);
+});
+
 test('parseLogText достаёт mcp_call из JSON и из текста yc logs', () => {
   const json = JSON.stringify([
     { t: 'mcp_call', tool: 'heys_add_water', ts: '2026-08-17T18:33:12.000Z' },
