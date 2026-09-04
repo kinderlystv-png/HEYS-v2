@@ -9,6 +9,7 @@ const WEB_DIR = path.resolve(__dirname, '..');
 const UI_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const CORE_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_core_v1.js'), 'utf8');
 const CSS_SRC = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
+const PALETTE_SRC = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/002-ui-v4-palette-roles.css'), 'utf8');
 
 const SIZES = {
   '1x1': { cols: 1, rows: 1 },
@@ -176,15 +177,26 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
 
   it('CSS: вид кнопки «+» — заливка акцентом, «+» 21 px, тени, без обводки', () => {
     expect(UI_SRC).toMatch(/width:\s*21,\s*height:\s*21/);
-    expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*background:\s*var\(--v4-act,\s*#c67139\)/);
-    expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*color:\s*#2b1608/);
+    expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*background:\s*var\(--v4-fab,\s*#c67139\)/);
+    expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*color:\s*var\(--v4-on-fab,\s*#2b1608\)/);
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*border:\s*none/);
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*0 2px 4px/);
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab[\s\S]*0 10px 22px/);
-    expect(CSS_SRC).toMatch(/\[data-theme\$="dark"\] \.widgets-quick-fab[\s\S]*#cf8144/);
-    expect(CSS_SRC).toMatch(/\[data-theme\$="dark"\] \.widgets-quick-fab[\s\S]*#1a0f04/);
-    expect(CSS_SRC).toMatch(/\[data-theme-id="blue"\] \.widgets-quick-fab[\s\S]*#286da9/);
-    expect(CSS_SRC).toMatch(/\[data-theme-id="blue-dark"\] \.widgets-quick-fab[\s\S]*#286da9/);
+    expect(PALETTE_SRC.match(/--v4-fab:/g)).toHaveLength(4);
+    expect(PALETTE_SRC.match(/--v4-on-fab:/g)).toHaveLength(4);
+    expect(PALETTE_SRC).toMatch(/--v4-fab:\s*#286da9/);
+    expect(PALETTE_SRC).not.toMatch(/--v4-fab:\s*#2e7cc0/);
+    for (const sel of [
+      '[data-theme$="dark"] .widgets-quick-fab',
+      '[data-theme-id="blue"] .widgets-quick-fab',
+      '[data-theme-id="blue-dark"] .widgets-quick-fab',
+    ]) {
+      const re = new RegExp(`${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]+)\\}`);
+      const block = CSS_SRC.match(re)?.[1] ?? '';
+      expect(block, sel).toMatch(/box-shadow:/);
+      expect(block, sel).not.toMatch(/background:/);
+      expect(block, sel).not.toMatch(/color:/);
+    }
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab--water[\s\S]*#547482/);
     expect(CSS_SRC).toMatch(/\[data-theme-id="blue"\] \.widgets-quick-fab--water[\s\S]*#37718b/);
     expect(CSS_SRC).toMatch(/\.widgets-settings-fab[\s\S]*background:\s*var\(--v4-bg/);

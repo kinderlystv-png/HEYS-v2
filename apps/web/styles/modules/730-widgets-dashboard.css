@@ -3300,8 +3300,11 @@ body:has(.page-reports) .hdr::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--v4-act, #c67139);
-  color: #2b1608;
+  /* Пара плавающей кнопки, а не общий акцент: в синем --v4-act это #2e7cc0,
+     на котором белый знак даёт 4,41 при пороге 4,5. --v4-fab затемнён до
+     #286da9 ради этого знака — 5,45. Пара берётся целиком, порознь нельзя. */
+  background: var(--v4-fab, #c67139);
+  color: var(--v4-on-fab, #2b1608);
   box-shadow:
     0 2px 4px rgba(80, 50, 20, 0.14),
     0 10px 22px rgba(120, 60, 20, 0.28);
@@ -3388,24 +3391,18 @@ body:has(.page-reports) .hdr::after {
 }
 
 [data-theme$="dark"] .widgets-quick-fab {
-  background: #cf8144;
-  color: #1a0f04;
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.45),
     0 10px 22px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme-id="blue"] .widgets-quick-fab {
-  background: #286da9;
-  color: #ffffff;
   box-shadow:
     0 2px 4px rgba(16, 24, 38, 0.12),
     0 10px 22px rgba(16, 24, 38, 0.28);
 }
 
 [data-theme-id="blue-dark"] .widgets-quick-fab {
-  background: #286da9;
-  color: #ffffff;
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.5),
     0 10px 22px rgba(0, 0, 0, 0.5);
