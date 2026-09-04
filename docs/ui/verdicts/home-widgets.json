@@ -20690,193 +20690,193 @@
       "h": "19610f96ee25"
     },
     "Калории · Как сейчас · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget--calories — 730-widgets-dashboard.css:10499 padding 14px, фон --v4-hero. 2) Кадр stop, data-vid «вид плитки». 3) Не цвет элемента. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "c42a53c0a1d9"
     },
     "Калории · Как сейчас · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-calories__hero-value — heys_widgets_ui_v1.js:4110. 2) baseline, gap 5px — 730-widgets-dashboard.css:10567-10569. 3) Не цвет. 4) «642» — formatKcal(remaining).",
       "h": "e15fa3cf74aa"
     },
     "Калории · Как сейчас · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-calories__value--lg — heys_widgets_ui_v1.js:4111. 2) 34px/600/.9/-.035em — 730-widgets-dashboard.css:10575-10581. 3) --v4-act-text: песок #8a4a20, синий #1d5e96 (002-ui-v4-palette-roles.css:147/467). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "bfda3a483a40"
     },
     "Калории · Как сейчас · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__hero-remaining-label — heys_widgets_ui_v1.js:4116. 2) 10px/500, margin-top 7 — 730-widgets-dashboard.css:10590-10595. 3) --v4-ink-data (56 %). 4) Текст «осталось».",
       "h": "d549d612e01b"
     },
     "Калории · Как сейчас · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Низ .widget-calories__hero-bar-wrap — heys_widgets_ui_v1.js:4121. 2) margin-top auto у wrap — 730-widgets-dashboard.css:10599-10601. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "19610f96ee25"
     },
     "Калории · Как сейчас · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка .widget-calories__hero-bar — caloriesHeroBar heys_widgets_ui_v1.js:3895. 2) relative, 6px, 999, overflow hidden — 730-widgets-dashboard.css:10604-10609. 3) Фон rgba(--v4-ink-rgb,.1). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "4a41446b8f91"
     },
     "Калории · Как сейчас · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка .widget-calories__hero-bar-fill — heys_widgets_ui_v1.js:3897 style width. 2) absolute внутри relative, 6px, 999 — 730-widgets-dashboard.css:10623-10627. 3) --v4-act (#c67139 / #2e7cc0). 4) Ширина из caloriesBarSplit, не хардкод кадра.",
       "h": "68d7cb11167e"
     },
     "Калории · Как сейчас · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подвал caloriesHeroBarFoot — heys_widgets_ui_v1.js:4123. 2) space-between, flex-start, margin-top 8 — 730-widgets-dashboard.css:10630-10635. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "d88a7e0dc1f4"
     },
     "Калории · Как сейчас · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Колонка .widget-calories__hero-bar-col — heys_widgets_ui_v1.js:3874. 2) column, gap 2 — 730-widgets-dashboard.css:10638-10642. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "28dc941f95bd"
     },
     "Калории · Как сейчас · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число съеденного .widget-calories__hero-bar-num--ink — heys_widgets_ui_v1.js:4101. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) rgba(--v4-ink-rgb,.85). 4) «1 289» — formatKcal(eaten).",
       "h": "7311705cf73a"
     },
     "Калории · Как сейчас · 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__hero-bar-cap — heys_widgets_ui_v1.js:3880. 2) 8.5px/500 — 730-widgets-dashboard.css:10671-10675. 3) --v4-ink-data. 4) «съедено».",
       "h": "d4591d8f1e47"
     },
     "Калории · Как сейчас · 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Правая колонка --end — heys_widgets_ui_v1.js:3887. 2) align flex-end — 730-widgets-dashboard.css:10645-10647. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "6ee65b7cb80a"
     },
     "Калории · Как сейчас · 13": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Норма .widget-calories__hero-bar-num--good — heys_widgets_ui_v1.js:4102-4105. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) --v4-sand-ok-text: песок #5c6a45, синий #1f6e4d (002-ui-v4-palette-roles.css:247/468). 4) «1 931» — formatKcal(target).",
       "h": "8d5fedda9d7e"
     },
     "Калории · Строка · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Корень .widget-calories--v4-line — heys_widgets_ui_v1.js:4062. 2) column 100 % — 730-widgets-dashboard.css:14163-14169. 3) Не цвет. 4) Вид line 2×1, heys_widgets_variants_v4.js:81.",
       "h": "25206af9a380"
     },
     "Калории · Строка · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Шапка .widget-calories__line-head — heys_widgets_ui_v1.js:4065. 2) baseline, space-between, gap 6, nowrap — 730-widgets-dashboard.css:14172-14177. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "3a971875d890"
     },
     "Калории · Строка · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Левая группа .widget-calories__line-value — heys_widgets_ui_v1.js:4066. 2) baseline, gap 4 — 730-widgets-dashboard.css:14180-14189. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "cbdc62b3888e"
     },
     "Калории · Строка · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-calories__line-value — heys_widgets_ui_v1.js:4066. 2) 19px/600/-.03em — 730-widgets-dashboard.css:14184-14188. 3) --v4-sand-act-text: #8a4a20 / #1d5e96. 4) «642» — formatKcal(remaining).",
       "h": "c1b7b96e2dbf"
     },
     "Калории · Строка · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__line-meta — heys_widgets_ui_v1.js:4072. 2) 8.5px/500 — 730-widgets-dashboard.css:14199-14205. 3) --v4-ink-data. 4) «осталось».",
       "h": "9cd124a05843"
     },
     "Калории · Строка · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Низ .widget-calories__line-foot — heys_widgets_ui_v1.js:4076. 2) center, gap 7, margin-top auto — 730-widgets-dashboard.css:14208-14212. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "4ab6986e9ad2"
     },
     "Калории · Строка · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Полоса в foot .widget-calories__hero-bar — heys_widgets_ui_v1.js:4077. 2) flex 1, height 5px — 730-widgets-dashboard.css:14215-14221. 3) track 10 %. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "4671f72ca899"
     },
     "Калории · Строка · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка 5px — 730-widgets-dashboard.css:14220-14221. 2) width inline из split. 3) --v4-act. 4) Демо 67 % — динамика.",
       "h": "a1b7ef70d184"
     },
     "Калории · Строка · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дробь .widget-calories__line-fraction — heys_widgets_ui_v1.js:4078. 2) 9px/600, flex none — 730-widgets-dashboard.css:14224-14230. 3) --v4-ink-data. 4) «1 289 / 1 931».",
       "h": "50e8a32681c3"
     },
     "Калории · Хватит на ужин · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-calories--v4-dinner — heys_widgets_ui_v1.js:4022. 2) column flex 1 — 730-widgets-dashboard.css:14235-14241. 3) Не цвет. 4) Вид dinner 2×2.",
       "h": "25206af9a380"
     },
     "Калории · Хватит на ужин · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-calories__hero-value — heys_widgets_ui_v1.js:4110. 2) baseline, gap 5px — 730-widgets-dashboard.css:10567-10569. 3) Не цвет. 4) «642» — formatKcal(remaining).",
       "h": "220a6e89fe81"
     },
     "Калории · Хватит на ужин · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-calories__value--md — heys_widgets_ui_v1.js:4024. 2) 26px/600/.9/-.035em — 730-widgets-dashboard.css:14244-14250. 3) --v4-sand-act-text. 4) formatKcal(remaining).",
       "h": "02cac6135928"
     },
     "Калории · Хватит на ужин · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Низ .widget-calories__hero-bar-wrap — heys_widgets_ui_v1.js:4121. 2) margin-top auto у wrap — 730-widgets-dashboard.css:10599-10601. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "19610f96ee25"
     },
     "Калории · Хватит на ужин · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-calories__dinner-row — heys_widgets_ui_v1.js:4028. 2) space-between, baseline, 10px/600 — 730-widgets-dashboard.css:14253-14260. 3) --v4-ink-data + budget --v4-sand-ink. 4) «обычный ужин» / «720».",
       "h": "0f1267230d1d"
     },
     "Калории · Хватит на ужин · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Бюджет .widget-calories__dinner-budget — heys_widgets_ui_v1.js:4030. 2) В строке dinner-row. 3) --v4-sand-ink (#201e1d / #101826). 4) formatKcal(dinnerBudget).",
       "h": "79eee6ab9ef9"
     },
     "Калории · Хватит на ужин · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Полоса в wrap — caloriesHeroBar heys_widgets_ui_v1.js:4032. 2) relative 6px, margin-top 7 — 730-widgets-dashboard.css:14268-14269. 3) track 10 %. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "1cfc3aa82e49"
     },
     "Калории · Хватит на ужин · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка dinnerFill width — heys_widgets_ui_v1.js:4019-4021. 2) absolute fill 89 % кадра — динамика. 3) --v4-act. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "10fb437aa35c"
     },
     "Калории · Хватит на ужин · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Красный хвост при нехватке — heys_widgets_ui_v1.js:4032 overPct. 2) .widget-calories__hero-bar-over. 3) --v4-bad-text. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "cb8006de2b66"
     },
     "Калории · Хватит на ужин · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заметка .widget-calories__dinner-note — heys_widgets_ui_v1.js:4033. 2) 10px/600, margin-top 7 — 730-widgets-dashboard.css:14272-14277. 3) val--bad при нехватке. 4) «не хватит … ккал».",
       "h": "f91ecc162ce5"
     },
     "Калории · С активностью · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Корень .widget-calories--v4-activity — heys_widgets_ui_v1.js:4062. 2) column 100 % — 730-widgets-dashboard.css:14163-14169. 3) Не цвет. 4) Вид activity 2×1, heys_widgets_variants_v4.js:81.",
       "h": "25206af9a380"
     },
     "Калории · С активностью · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Шапка .widget-calories__line-head — heys_widgets_ui_v1.js:4065. 2) baseline, space-between, gap 6, nowrap — 730-widgets-dashboard.css:14172-14177. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "3a971875d890"
     },
     "Калории · С активностью · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Левая группа .widget-calories__line-value — heys_widgets_ui_v1.js:4066. 2) baseline, gap 4 — 730-widgets-dashboard.css:14180-14189. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "cbdc62b3888e"
     },
     "Калории · С активностью · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-calories__line-value — heys_widgets_ui_v1.js:4066. 2) 19px/600/-.03em — 730-widgets-dashboard.css:14184-14188. 3) --v4-sand-act-text: #8a4a20 / #1d5e96. 4) «852» — formatKcal(remainingWithActivity).",
       "h": "230367ba29d9"
     },
     "Калории · С активностью · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Прибавка .widget-calories__line-meta--gain — heys_widgets_ui_v1.js:4001. 2) 9px/700 — 730-widgets-dashboard.css:14311-14313. 3) --v4-sand-ok-text: #5c6a45 / #1f6e4d. 4) «+210 актив».",
       "h": "861ea234b16f"
     },
     "Калории · С активностью · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Foot .widget-calories__activity-foot — heys_widgets_ui_v1.js:4010. 2) 8.5px/600, margin-top auto — 730-widgets-dashboard.css:14151-14157. 3) --v4-ink-data. 4) «съедено … из …».",
       "h": "f1aa75320e54"
     },
     "Кольца БЖУ · Как сейчас · 01": {
@@ -22100,78 +22100,78 @@
       "h": "85d8f005abf1"
     },
     "Калории · пустой день · 2×1 · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка 2×1 empty — heys_widgets_ui_v1.js:3978. 2) width/height кадра — сетка 143×64, не отдельное правило. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js / home-widgets-empty-day-v4.test.js.",
       "h": "8e920171f566"
     },
     "Калории · пустой день · 2×1 · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) v4Kicker('Калории') — heys_widgets_ui_v1.js:3979. 2) .widget-v4-kicker — 730-widgets-dashboard.css:10518. 3) Слово. 4) «Калории».",
       "h": "c6caef30e721"
     },
     "Калории · пустой день · 2×1 · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-calories__empty-row — heys_widgets_ui_v1.js:3980. 2) baseline, gap 5, margin-top auto — 730-widgets-dashboard.css:11778-11782. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "e02adb203c41"
     },
     "Калории · пустой день · 2×1 · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-calories__empty-dash — heys_widgets_ui_v1.js:3981. 2) 21px/600 — 730-widgets-dashboard.css:11785-11789. 3) --v4-ink-3 (42 %). 4) «—».",
       "h": "5429c3802150"
     },
     "Калории · пустой день · 2×1 · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-calories__empty-target — heys_widgets_ui_v1.js:3983. 2) 9px/600 — 730-widgets-dashboard.css:11792-11797. 3) --v4-ink-data. 4) «из N».",
       "h": "c30b90495fc2"
     },
     "Калории · пустой день · 2×2 · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) 2×2 empty hero — heys_widgets_ui_v1.js:3962. 2) padding 14, --v4-hero — 730-widgets-dashboard.css:10499-10501. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "7ae0154c45c8"
     },
     "Калории · пустой день · 2×2 · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-calories__hero-value — heys_widgets_ui_v1.js:4110. 2) baseline, gap 5px — 730-widgets-dashboard.css:10567-10569. 3) Не цвет. 4) «642» — formatKcal(remaining).",
       "h": "e15fa3cf74aa"
     },
     "Калории · пустой день · 2×2 · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) .widget-calories__value--lg «—» — heys_widgets_ui_v1.js:3965. 2) 34px/600/.9 — 730-widgets-dashboard.css:10575-10581 + empty override 730-widgets-dashboard.css:11773-11775. 3) --v4-ink-3. 4) Прочерк факта.",
       "h": "eeef60996bb1"
     },
     "Калории · пустой день · 2×2 · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__hero-remaining-label — heys_widgets_ui_v1.js:4116. 2) 10px/500, margin-top 7 — 730-widgets-dashboard.css:10590-10595. 3) --v4-ink-data (56 %). 4) Текст «осталось на пустом дне».",
       "h": "d549d612e01b"
     },
     "Калории · пустой день · 2×2 · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) wrap margin-top auto — heys_widgets_ui_v1.js:3970. 2) foot space-between — heys_widgets_ui_v1.js:3971-3974. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "1ebccabb5cdc"
     },
     "Калории · пустой день · 2×2 · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Колонка .widget-calories__hero-bar-col — heys_widgets_ui_v1.js:3874. 2) column, gap 2 — 730-widgets-dashboard.css:10638-10642. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "28dc941f95bd"
     },
     "Калории · пустой день · 2×2 · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Прочерк съеденного .widget-calories__hero-bar-num--ink на empty — heys_widgets_ui_v1.js:3972. 2) 11px/700 --ink-3 — 730-widgets-dashboard.css:11773-11775. 3) --v4-ink-3. 4) «—».",
       "h": "b72198e9ae5e"
     },
     "Калории · пустой день · 2×2 · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__hero-bar-cap — heys_widgets_ui_v1.js:3880. 2) 8.5px/500 — 730-widgets-dashboard.css:10671-10675. 3) --v4-ink-data. 4) «съедено».",
       "h": "d4591d8f1e47"
     },
     "Калории · пустой день · 2×2 · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Правая колонка --end — heys_widgets_ui_v1.js:3887. 2) align flex-end — 730-widgets-dashboard.css:10645-10647. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "6ee65b7cb80a"
     },
     "Калории · пустой день · 2×2 · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Норма .widget-calories__hero-bar-num--good — heys_widgets_ui_v1.js:4102-4105. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) --v4-sand-ok-text: песок #5c6a45, синий #1f6e4d (002-ui-v4-palette-roles.css:247/468). 4) «1 931» — formatKcal(target).",
       "h": "8d5fedda9d7e"
     },
     "Кольца БЖУ · пустой день · 01": {
@@ -23189,433 +23189,466 @@
       "h": "4f980474058c"
     },
     "Калории без заголовка · Остаток и рамки · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка без шапки: .widget:has(.widget-calories--2x2) .widget__header display none — 730-widgets-dashboard.css:2151-2152; padding 14 — 730-widgets-dashboard.css:10499-10501. 2) Кадр stop «Остаток и рамки». 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "3aab87e51f13"
     },
     "Калории без заголовка · Остаток и рамки · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-calories__hero-value — heys_widgets_ui_v1.js:4110. 2) baseline, gap 5px — 730-widgets-dashboard.css:10567-10569. 3) Не цвет. 4) «642» — formatKcal(remaining).",
       "h": "e15fa3cf74aa"
     },
     "Калории без заголовка · Остаток и рамки · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-calories__value--lg — heys_widgets_ui_v1.js:4111. 2) 34px/600/.9/-.035em — 730-widgets-dashboard.css:10575-10581. 3) --v4-act-text: песок #8a4a20, синий #1d5e96 (002-ui-v4-palette-roles.css:147/467). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "bfda3a483a40"
     },
     "Калории без заголовка · Остаток и рамки · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__hero-remaining-label — heys_widgets_ui_v1.js:4116. 2) 10px/500, margin-top 7 — 730-widgets-dashboard.css:10590-10595. 3) --v4-ink-data (56 %). 4) Текст «осталось».",
       "h": "d549d612e01b"
     },
     "Калории без заголовка · Остаток и рамки · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Низ .widget-calories__hero-bar-wrap — heys_widgets_ui_v1.js:4121. 2) margin-top auto у wrap — 730-widgets-dashboard.css:10599-10601. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "19610f96ee25"
     },
     "Калории без заголовка · Остаток и рамки · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка .widget-calories__hero-bar — caloriesHeroBar heys_widgets_ui_v1.js:3895. 2) relative, 6px, 999, overflow hidden — 730-widgets-dashboard.css:10604-10609. 3) Фон rgba(--v4-ink-rgb,.1). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "c9dfd2e47d5e"
     },
     "Калории без заголовка · Остаток и рамки · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка .widget-calories__hero-bar-fill — heys_widgets_ui_v1.js:3897 style width. 2) absolute внутри relative, 6px, 999 — 730-widgets-dashboard.css:10623-10627. 3) --v4-act (#c67139 / #2e7cc0). 4) Ширина из caloriesBarSplit, не хардкод кадра.",
       "h": "4befd355a603"
     },
     "Калории без заголовка · Остаток и рамки · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подвал caloriesHeroBarFoot — heys_widgets_ui_v1.js:4123. 2) space-between, flex-start, margin-top 8 — 730-widgets-dashboard.css:10630-10635. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "d88a7e0dc1f4"
     },
     "Калории без заголовка · Остаток и рамки · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Колонка .widget-calories__hero-bar-col — heys_widgets_ui_v1.js:3874. 2) column, gap 2 — 730-widgets-dashboard.css:10638-10642. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "28dc941f95bd"
     },
     "Калории без заголовка · Остаток и рамки · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) То же .widget-calories__hero-bar-num--ink, heys_widgets_ui_v1.js:4101. 2) 11px/700. 3) Кадр пишет var(--tx); продукт --ink 85 % (730-widgets-dashboard.css:10663-10664) как у «Как сейчас»·10. 4) formatKcal(eaten).",
       "h": "3f3e57713ca1"
     },
     "Калории без заголовка · Остаток и рамки · 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__hero-bar-cap — heys_widgets_ui_v1.js:3880. 2) 8.5px/500 — 730-widgets-dashboard.css:10671-10675. 3) --v4-ink-data. 4) «съедено».",
       "h": "d4591d8f1e47"
     },
     "Калории без заголовка · Остаток и рамки · 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Правая колонка --end — heys_widgets_ui_v1.js:3887. 2) align flex-end — 730-widgets-dashboard.css:10645-10647. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "6ee65b7cb80a"
     },
     "Калории без заголовка · Остаток и рамки · 13": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Норма .widget-calories__hero-bar-num--good — heys_widgets_ui_v1.js:4102-4105. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) --v4-sand-ok-text: песок #5c6a45, синий #1f6e4d (002-ui-v4-palette-roles.css:247/468). 4) «1 931» — formatKcal(target).",
       "h": "8d5fedda9d7e"
     },
     "Калории без заголовка · Подписи над числами · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3aab87e51f13"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "3aab87e51f13",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "e6bb3bb06911"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "e6bb3bb06911",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "6ff4785b7b3f"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "6ff4785b7b3f",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "e15fa3cf74aa"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "e15fa3cf74aa",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "8eaa138655c0"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "8eaa138655c0",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "19610f96ee25"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "19610f96ee25",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "c9dfd2e47d5e"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "c9dfd2e47d5e",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "4befd355a603"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "4befd355a603",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "86fa140bc30d"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "86fa140bc30d",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "07ffbada0ee7"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "07ffbada0ee7",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f3e57713ca1"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "3f3e57713ca1",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Подписи над числами · 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "2380a620b5db"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "2380a620b5db",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3aab87e51f13"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "3aab87e51f13",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "977226e7fe26"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "977226e7fe26",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "8c872cbbb8cd"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "8c872cbbb8cd",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "d4c3126ff3df"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "d4c3126ff3df",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "19610f96ee25"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "19610f96ee25",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "c9dfd2e47d5e"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "c9dfd2e47d5e",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "4befd355a603"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "4befd355a603",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "ba27237ecf19"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "ba27237ecf19",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Один факт · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3aab87e51f13"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "3aab87e51f13",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Один факт · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "d08b8dba4fe1"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "d08b8dba4fe1",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Один факт · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "977226e7fe26"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "977226e7fe26",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Один факт · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "d7fd0ef97ed3"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "d7fd0ef97ed3",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Один факт · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "7ee1fc1287e8"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "7ee1fc1287e8",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3aab87e51f13"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "3aab87e51f13",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "220a6e89fe81"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "220a6e89fe81",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "c1b7b96e2dbf"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "c1b7b96e2dbf",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3bb278df81d4"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "3bb278df81d4",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "55bfcd532bba"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "55bfcd532bba",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "c9dfd2e47d5e"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "c9dfd2e47d5e",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "4befd355a603"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "4befd355a603",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a93c77ce8d1e"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — альтернативная раскладка героя без шапки; в продукте дефолт hero 2×2 («Как сейчас» / «Остаток и рамки»), heys_widgets_variants_v4.js:80",
+      "h": "a93c77ce8d1e",
+      "naKind": "demo-only"
     },
     "Калории · состояние · В норме · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget--calories — 730-widgets-dashboard.css:10499 padding 14px, фон --v4-hero. 2) Кадр stop, data-vid «вид плитки». 3) Не цвет элемента. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "3aab87e51f13"
     },
     "Калории · состояние · В норме · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-calories__hero-value — heys_widgets_ui_v1.js:4110. 2) baseline, gap 5px — 730-widgets-dashboard.css:10567-10569. 3) Не цвет. 4) «642» — formatKcal(remaining).",
       "h": "e15fa3cf74aa"
     },
     "Калории · состояние · В норме · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число .widget-calories__value--lg — heys_widgets_ui_v1.js:4111. 2) 34px/600/.9/-.035em — 730-widgets-dashboard.css:10575-10581. 3) --v4-act-text: песок #8a4a20, синий #1d5e96 (002-ui-v4-palette-roles.css:147/467). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "bfda3a483a40"
     },
     "Калории · состояние · В норме · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__hero-remaining-label — heys_widgets_ui_v1.js:4116. 2) 10px/500, margin-top 7 — 730-widgets-dashboard.css:10590-10595. 3) --v4-ink-data (56 %). 4) Текст «осталось».",
       "h": "d549d612e01b"
     },
     "Калории · состояние · В норме · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Низ .widget-calories__hero-bar-wrap — heys_widgets_ui_v1.js:4121. 2) margin-top auto у wrap — 730-widgets-dashboard.css:10599-10601. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "19610f96ee25"
     },
     "Калории · состояние · В норме · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка .widget-calories__hero-bar — caloriesHeroBar heys_widgets_ui_v1.js:3895. 2) relative, 6px, 999, overflow hidden — 730-widgets-dashboard.css:10604-10609. 3) Фон rgba(--v4-ink-rgb,.1). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "c9dfd2e47d5e"
     },
     "Калории · состояние · В норме · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка .widget-calories__hero-bar-fill — heys_widgets_ui_v1.js:3897 style width. 2) absolute внутри relative, 6px, 999 — 730-widgets-dashboard.css:10623-10627. 3) --v4-act (#c67139 / #2e7cc0). 4) Ширина из caloriesBarSplit, не хардкод кадра.",
       "h": "4befd355a603"
     },
     "Калории · состояние · В норме · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подвал caloriesHeroBarFoot — heys_widgets_ui_v1.js:4123. 2) space-between, flex-start, margin-top 8 — 730-widgets-dashboard.css:10630-10635. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "d88a7e0dc1f4"
     },
     "Калории · состояние · В норме · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Колонка .widget-calories__hero-bar-col — heys_widgets_ui_v1.js:3874. 2) column, gap 2 — 730-widgets-dashboard.css:10638-10642. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "28dc941f95bd"
     },
     "Калории · состояние · В норме · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число съеденного .widget-calories__hero-bar-num--ink — heys_widgets_ui_v1.js:4101. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) rgba(--v4-ink-rgb,.85). 4) «1 289» — formatKcal(eaten).",
       "h": "3f3e57713ca1"
     },
     "Калории · состояние · В норме · 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись .widget-calories__hero-bar-cap — heys_widgets_ui_v1.js:3880. 2) 8.5px/500 — 730-widgets-dashboard.css:10671-10675. 3) --v4-ink-data. 4) «съедено».",
       "h": "d4591d8f1e47"
     },
     "Калории · состояние · В норме · 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Правая колонка --end — heys_widgets_ui_v1.js:3887. 2) align flex-end — 730-widgets-dashboard.css:10645-10647. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "6ee65b7cb80a"
     },
     "Калории · состояние · В норме · 13": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Норма .widget-calories__hero-bar-num--good — heys_widgets_ui_v1.js:4102-4105. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) --v4-sand-ok-text: песок #5c6a45, синий #1f6e4d (002-ui-v4-palette-roles.css:247/468). 4) «1 931» — formatKcal(target).",
       "h": "8d5fedda9d7e"
     },
     "Калории · состояние · Перебор · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget--calories — 730-widgets-dashboard.css:10499 padding 14px, фон --v4-hero. 2) Кадр stop, data-vid «вид плитки». 3) Не цвет элемента. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "3aab87e51f13"
     },
     "Калории · состояние · Перебор · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-calories__hero-value — heys_widgets_ui_v1.js:4110. 2) baseline, gap 5px — 730-widgets-dashboard.css:10567-10569. 3) Не цвет. 4) «642» — formatKcal(remaining).",
       "h": "e15fa3cf74aa"
     },
     "Калории · состояние · Перебор · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Перебор: heroValue «−…» + widget-v4-val--bad — heys_widgets_ui_v1.js:4090-4113. 2) 34px/600/.9 — 730-widgets-dashboard.css:10575-10581. 3) --v4-bad-text: песок #a8382b, синий #b03a24 (002-ui-v4-palette-roles.css:503). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "bafb9e2f53ca"
     },
     "Калории · состояние · Перебор · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись «перебор» + val--bad — heys_widgets_ui_v1.js:4093-4118. 2) 10px/500, margin-top 7 — 730-widgets-dashboard.css:10590-10595. 3) --v4-bad-text. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "4e332e883f6e"
     },
     "Калории · состояние · Перебор · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Низ .widget-calories__hero-bar-wrap — heys_widgets_ui_v1.js:4121. 2) margin-top auto у wrap — 730-widgets-dashboard.css:10599-10601. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "19610f96ee25"
     },
     "Калории · состояние · Перебор · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка .widget-calories__hero-bar — caloriesHeroBar heys_widgets_ui_v1.js:3895. 2) relative, 6px, 999, overflow hidden — 730-widgets-dashboard.css:10604-10609. 3) Фон rgba(--v4-ink-rgb,.1). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "c9dfd2e47d5e"
     },
     "Калории · состояние · Перебор · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Заливка до нормы + over сегмент — caloriesBarSplit heys_widgets_ui_v1.js:3911-3917 / caloriesHeroBar heys_widgets_ui_v1.js:3894. 2) .widget-calories__hero-bar-over absolute — 730-widgets-dashboard.css:10614-10620. 3) --v4-bad-text на хвосте. 4) Демо 94 % — динамический split.",
       "h": "7b8803d7863b"
     },
     "Калории · состояние · Перебор · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Красный хвост .widget-calories__hero-bar-over — heys_widgets_ui_v1.js:3900-3904. 2) position absolute, right 0 — 730-widgets-dashboard.css:10614-10618. 3) --v4-bad-text. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "cb8006de2b66"
     },
     "Калории · состояние · Перебор · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Колонка .widget-calories__hero-bar-col — heys_widgets_ui_v1.js:3874. 2) column, gap 2 — 730-widgets-dashboard.css:10638-10642. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "d88a7e0dc1f4"
     },
     "Калории · состояние · Перебор · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Число съеденного .widget-calories__hero-bar-num--ink — heys_widgets_ui_v1.js:4101. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) rgba(--v4-ink-rgb,.85). 4) «1 289» — formatKcal(eaten).",
       "h": "28dc941f95bd"
     },
     "Калории · состояние · Перебор · 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Съедено footLeft — heys_widgets_ui_v1.js:4101. 2) 11px/700 --ink. 3) Не bad: факт чернилами. 4) «2 051» — formatKcal(eaten).",
       "h": "cb0bec839286"
     },
     "Калории · состояние · Перебор · 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Правая колонка --end — heys_widgets_ui_v1.js:3887. 2) align flex-end — 730-widgets-dashboard.css:10645-10647. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "d4591d8f1e47"
     },
     "Калории · состояние · Перебор · 13": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Норма .widget-calories__hero-bar-num--good — heys_widgets_ui_v1.js:4102-4105. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) --v4-sand-ok-text: песок #5c6a45, синий #1f6e4d (002-ui-v4-palette-roles.css:247/468). 4) «1 931» — formatKcal(target).",
       "h": "6ee65b7cb80a"
     },
     "Калории · состояние · Перебор · 14": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Норма при переборе tone bad — heys_widgets_ui_v1.js:4102-4105. 2) 11px/700. 3) --v4-bad-text на числе нормы. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "9344c65f5225"
     },
     "Калории · состояние · Закрытый день · 01": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Плитка .widget--calories — 730-widgets-dashboard.css:10499 padding 14px, фон --v4-hero. 2) Кадр stop, data-vid «вид плитки». 3) Не цвет элемента. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "3aab87e51f13"
     },
     "Калории · состояние · Закрытый день · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Ряд .widget-calories__hero-value — heys_widgets_ui_v1.js:4110. 2) baseline, gap 5px — 730-widgets-dashboard.css:10567-10569. 3) Не цвет. 4) «642» — formatKcal(remaining).",
       "h": "e15fa3cf74aa"
     },
     "Калории · состояние · Закрытый день · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Закрытый день: heroValue = съедено — heys_widgets_ui_v1.js:4088-4090. 2) 34px/600/.9, --v4-act-text — 730-widgets-dashboard.css:10575-10581. 3) Песок/синий act-text. 4) «1 786» — formatKcal(eaten).",
       "h": "c28ca674102c"
     },
     "Калории · состояние · Закрытый день · 04": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись «съедено за день» — heys_widgets_ui_v1.js:4091-4093. 2) 10px/500, margin-top 7 — 730-widgets-dashboard.css:10590-10595. 3) --v4-ink-data. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "67a52e7b3da7"
     },
     "Калории · состояние · Закрытый день · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Низ .widget-calories__hero-bar-wrap — heys_widgets_ui_v1.js:4121. 2) margin-top auto у wrap — 730-widgets-dashboard.css:10599-10601. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "19610f96ee25"
     },
     "Калории · состояние · Закрытый день · 06": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Дорожка .widget-calories__hero-bar — caloriesHeroBar heys_widgets_ui_v1.js:3895. 2) relative, 6px, 999, overflow hidden — 730-widgets-dashboard.css:10604-10609. 3) Фон rgba(--v4-ink-rgb,.1). 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "c9dfd2e47d5e"
     },
     "Калории · состояние · Закрытый день · 07": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Полоса fill по eaten/target — caloriesBarSplit heys_widgets_ui_v1.js:4094. 2) relative 6px — 730-widgets-dashboard.css:10604-10609. 3) --v4-act fill. 4) Демо 92 % — динамика.",
       "h": "3964647f5bbe"
     },
     "Калории · состояние · Закрытый день · 08": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подвал caloriesHeroBarFoot — heys_widgets_ui_v1.js:4123. 2) space-between, flex-start, margin-top 8 — 730-widgets-dashboard.css:10630-10635. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "d88a7e0dc1f4"
     },
     "Калории · состояние · Закрытый день · 09": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Колонка .widget-calories__hero-bar-col — heys_widgets_ui_v1.js:3874. 2) column, gap 2 — 730-widgets-dashboard.css:10638-10642. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "28dc941f95bd"
     },
     "Калории · состояние · Закрытый день · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «не съедено» footLeft — heys_widgets_ui_v1.js:4097-4100. 2) 11px/700 --ink. 3) rgba 85 %. 4) «145» — formatKcal(remaining).",
       "h": "c1412051bc30"
     },
     "Калории · состояние · Закрытый день · 11": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Подпись «не съедено» — heys_widgets_ui_v1.js:4100. 2) cap 8.5px — 730-widgets-dashboard.css:10671-10675. 3) --v4-ink-data. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "cfd7e079356c"
     },
     "Калории · состояние · Закрытый день · 12": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Правая колонка --end — heys_widgets_ui_v1.js:3887. 2) align flex-end — 730-widgets-dashboard.css:10645-10647. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "6ee65b7cb80a"
     },
     "Калории · состояние · Закрытый день · 13": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Норма .widget-calories__hero-bar-num--good — heys_widgets_ui_v1.js:4102-4105. 2) 11px/700 — 730-widgets-dashboard.css:10650-10655. 3) --v4-sand-ok-text: песок #5c6a45, синий #1f6e4d (002-ui-v4-palette-roles.css:247/468). 4) «1 931» — formatKcal(target).",
       "h": "8d5fedda9d7e"
     },
     "Добавление · 1 колонка · рисунок 01": {
@@ -24160,23 +24193,23 @@
       "h": "8a738875801f"
     },
     "Калории · Как сейчас · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Слова кадра: «642», «ккал», «осталось», «1 289», «съедено», «1 931», «норма». 2) Номер «1» — .num клетки. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "0a2c0071267b"
     },
     "Калории · Строка · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «642», «ккал», «осталось», «1 289 / 1 931». 2) Номер клетки. 3) Не цвет. 4) Смоук: widgets-canvas-copy.test.js.",
       "h": "dd507fd21196"
     },
     "Калории · Хватит на ужин · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «642», «ккал осталось», «обычный ужин», «720», «не хватит 78 ккал». 2) Номер клетки. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "d8f1481542d9"
     },
     "Калории · С активностью · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «852», «ккал», «+210 актив», «съедено 1 289 из 2 141». 2) Номер клетки. 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "82749184d7c1"
     },
     "Кольца БЖУ · Как сейчас · текст": {
@@ -24330,13 +24363,13 @@
       "h": "eac717d42bd2"
     },
     "Калории · пустой день · 2×1 · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «Калории», «—», «из 1 931». 2) Не цвет. 3) Смоук: home-widgets-empty-day-v4.test.js.",
       "h": "3efdfae9d61a"
     },
     "Калории · пустой день · 2×2 · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «—», «ккал», «осталось», «съедено», «норма». 2) Не цвет. 3) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "644eaeebf78e"
     },
     "Кольца БЖУ · пустой день · текст": {
@@ -24492,19 +24525,21 @@
       "h": "ab92a2a7e463"
     },
     "Калории без заголовка · Остаток и рамки · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Те же слова, что «Как сейчас · текст»; кадр без шапки виджета. 2) Номер «1а». 3) Не цвет. 4) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "b3882d7e1b80"
     },
     "Калории без заголовка · Подписи над числами · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3a0511069142"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — текст отвергнутой раскладки; в продукте не реализуется",
+      "h": "3a0511069142",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Максимум цифры · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "341c667e331d"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — текст отвергнутой раскладки; в продукте не реализуется",
+      "h": "341c667e331d",
+      "naKind": "demo-only"
     },
     "Калории без заголовка · Один факт · текст": {
       "v": "—",
@@ -24513,23 +24548,24 @@
       "naKind": "demo-only"
     },
     "Калории без заголовка · Строка · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "2d341946a2ca"
+      "v": "—",
+      "f": "кадр data-demo=\"protocol\" — текст отвергнутой раскладки; в продукте не реализуется",
+      "h": "2d341946a2ca",
+      "naKind": "demo-only"
     },
     "Калории · состояние · В норме · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) Как hero: 642, ккал, осталось, 1 289, съедено, 1 931, норма. 2) Не цвет. 3) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "0a2c0071267b"
     },
     "Калории · состояние · Перебор · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «−120», «перебор», «2 051», «съедено», «1 931», «норма». 2) Не цвет. 3) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "df30f74df656"
     },
     "Калории · состояние · Закрытый день · текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "1) «1 786», «съедено за день», «145», «не съедено», «1 931», «норма». 2) Не цвет. 3) Смоук: widgets-calories-v4-contract.test.js.",
       "h": "2185bb3f5e1d"
     },
     "выход · что стирается": {
