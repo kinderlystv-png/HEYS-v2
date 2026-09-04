@@ -697,7 +697,7 @@
   font-size: 20px;
   font-weight: 700;
   line-height: 1.25;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink, #201e1d);
   text-wrap: pretty;
 }
 
@@ -798,7 +798,7 @@
   justify-content: space-between;
   align-items: baseline;
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .yv-food-row + .yv-food-row {
@@ -852,7 +852,7 @@
 
 .yv-force-title {
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .yv-force--on .yv-force-title {
@@ -1044,18 +1044,18 @@
 
 .yv-pack-day-title {
   font: 600 12.5px/1.4 Figtree, system-ui, sans-serif;
-  color: #201e1d;
+  color: var(--v4-ink, #201e1d);
 }
 
 .yv-pack-day-meta {
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   margin-top: 2px;
 }
 
 .yv-pack-chevron {
   font: 700 15px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.3);
+  color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
 .yv-canvas-foot {
@@ -1071,7 +1071,7 @@
   border: none;
   background: transparent;
   font: 700 12px/1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.45);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   cursor: pointer;
 }
 
