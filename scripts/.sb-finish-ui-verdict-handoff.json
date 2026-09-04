@@ -1,0 +1,385 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_finish_ui_v1.js",
+  "generated": "2026-09-04",
+  "agent": "finish-ui subagent",
+  "summary": {
+    "processed": 35,
+    "recommendEquals": 48,
+    "recommendNotEquals": 3,
+    "recommendQuestion": 0,
+    "outOfScopeCss": 15,
+    "codeChanged": false,
+    "codeChange": null
+  },
+  "rows": [
+    {
+      "key": "вид · история упражнения",
+      "verdict": "=",
+      "f": "HistoryScreen рендерит .sb-history-screen с шапкой ‹, тремя плитками, списком сессий, ростом, графиком Эпли и сноской — heys_strength_finish_ui_v1.js:530–634; кадр Д1 data-demo=stop сверен структурой DOM.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 01",
+      "verdict": "=",
+      "f": ".sb-history-screen .sb-finish-head — flex, padding 16px 18px 0; strength-builder-history-v4-canvas-contract.test.js row 01.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 02",
+      "verdict": "=",
+      "f": ".sb-icon-btn 36×36, radius 999px, bg var(--c1); contract test row 02 sand+blue.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 03",
+      "verdict": "=",
+      "f": ".sb-head-title flex:1 column gap 3px padding-left 10px — contract test row 03 computed.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 04",
+      "verdict": "=",
+      "f": "props.name «Жим лёжа» в .sb-head-title b — finish_ui:536; contract test row 04.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 05",
+      "verdict": "=",
+      "f": "Ключ groups · sessionCount «N тренировок» — meta.groupLabel + usages.length, finish_ui:537–538; формат совпадает, число из данных (3 в fixture, 14 в демо-кадре).",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 06",
+      "verdict": "=",
+      "f": ".sb-list.sb-finish-list overflow-y auto — contract test row 06.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 07",
+      "verdict": "≠",
+      "f": "Контракт: gap 8px + margin-top 12px у ряда плиток; продукт .sb-finish-metrics gap 8px margin-top 10px — contract test row 07.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 08",
+      "verdict": "=",
+      "f": ".sb-finish-metric.is-accent — bg var(--tint), inset 1.5px var(--acs); contract test row 08.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 09",
+      "verdict": "=",
+      "f": "MetricTile label «Рекорд» — .sb-finish-metric-label uppercase 9.5px; contract test row 09.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 10",
+      "verdict": "=",
+      "f": "recordValue formatSetChip → «75 × 8» accent 17px/800 var(--ac); finish_ui:498–500,546; contract test row 10.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 11",
+      "verdict": "≠",
+      "f": "Контракт: фон var(--c1) у «Максимум»/«Тоннаж»; продукт .sb-finish-metric background var(--bg) — contract test row 11.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 12",
+      "verdict": "=",
+      "f": "oneRmNow Math.round → «95 кг» — finish_ui:548–549; contract test row 12.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 13",
+      "verdict": "=",
+      "f": ".sb-finish-tier «Последние тренировки» — finish_ui:557; contract test row 13.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 14",
+      "verdict": "=",
+      "f": "section.sb-history-sessions.sb-finish-detail — finish_ui:559; contract test row 14 margin-top 10px.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 15",
+      "verdict": "=",
+      "f": ".sb-history-session.sb-finish-row align-items flex-start — finish_ui:564–565; contract test row 15.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 16",
+      "verdict": "=",
+      "f": "Inline flex column gap 6px у левой колонки сессии — finish_ui:569–571; contract test row 16.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 17",
+      "verdict": "=",
+      "f": "Inline flex center gap 7px у строки дата+бейдж — finish_ui:573; contract test row 17.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 18",
+      "verdict": "=",
+      "f": "row.u.label «8 августа» color var(--tx) через .sb-finish-row — contract test row 18; date-remainder не правился.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 19",
+      "verdict": "=",
+      "f": ".sb-history-badge.is-record — bg var(--tint), color var(--ac); contract test row 19.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 20",
+      "verdict": "=",
+      "f": "approachChips wrap gap 5px — finish_ui:577; contract test row 20.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 21",
+      "verdict": "=",
+      "f": ".sb-history-set 32px pill bg var(--bg) inset border — finish_ui:521–524; contract test row 21.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 22",
+      "verdict": "=",
+      "f": "fmtExactKg(row.volume) tonnage — finish_ui:579–580; contract test row 22 (2390 кг в fixture).",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 23",
+      "verdict": "=",
+      "f": "historySessionTag fallback «по плану» .is-quiet — finish_ui:453–465; contract test row 23.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 24",
+      "verdict": "=",
+      "f": ".sb-history-session.is-last border-bottom 0 когда hiddenCount=0 — finish_ui:563–565; contract test row 24.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 25",
+      "verdict": "=",
+      "f": "usageHasDiscomfort → «дискомфорт» .is-warning — finish_ui:433–435,454–455; contract test row 25.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 26",
+      "verdict": "=",
+      "f": "volumeQuiet → b.is-quiet rgba(ink,.55) — finish_ui:562,579; contract test row 26.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 27",
+      "verdict": "=",
+      "f": ".sb-history-sessions + .sb-history-growth через .sb-finish-detail margin-top 10px — contract test row 27 на sessions.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 28",
+      "verdict": "=",
+      "f": "«+N кг за M тренировок» из oneRmDelta/sessionCount — finish_ui:587–590; contract test regex +6 за 2 в fixture.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 29",
+      "verdict": "=",
+      "f": "Column gap 3px у «Оценка максимума» — finish_ui:593–595; contract test row 29.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 30",
+      "verdict": "=",
+      "f": ".sb-history-growth-note copy — finish_ui:595; contract test row 30.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 31",
+      "verdict": "=",
+      "f": "b.is-quiet «95 кг» оценка — finish_ui:597–598; contract test row 31.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 32",
+      "verdict": "=",
+      "f": ".sb-finish-chart-card.sb-history-chart padding/radius/bg c1 — contract test row 32.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 33",
+      "verdict": "=",
+      "f": ".sb-finish-chart-head baseline gap 8px — contract test row 33.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 34",
+      "verdict": "=",
+      "f": "Copy «шесть последних недель» — finish_ui:606; contract test row 34.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 35",
+      "verdict": "≠",
+      "f": "Контракт: «+7 кг за 6 недель» 11px/700 var(--gr); продукт .sb-finish-chart-head b 17px/800 var(--tx) — contract test row 35 (текст +N кг за N недель из finish_ui:607 верен).",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 36",
+      "verdict": "=",
+      "f": ".sb-history-chart .sb-finish-chart height 112px gap 6px — contract test row 36.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 37",
+      "verdict": "=",
+      "f": ".sb-finish-chart-column flex column center gap 5px — contract test row 37.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "История упражнения · 38",
+      "verdict": "=",
+      "f": "Chart label b 9.5px/700 ink56 — historyOneRmSeries + contract test row 38.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 39",
+      "verdict": "=",
+      "f": "Bar i width 100% radius 7px bg c2; height inline historyChartHeight — finish_ui:508–514,617; contract test row 39.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 40",
+      "verdict": "=",
+      "f": "small «н1» 9px/600 — finish_ui:618; contract test row 40.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 41",
+      "verdict": "=",
+      "f": "Bar heights 41–78px через historyChartHeight(min/max normalize) — finish_ui:508–514; contract test bars 41–78.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 42",
+      "verdict": "=",
+      "f": "Тот же столбец i — см. ·39/·41; высота из данных сессий.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 43",
+      "verdict": "=",
+      "f": "is-latest bar height 78px max в шкале — contract test latestBar ≥41.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 44",
+      "verdict": "=",
+      "f": "Промежуточные столбцы c2 — CSS .sb-finish-chart-column i; contract test row 39.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 45",
+      "verdict": "=",
+      "f": ".is-latest b color var(--ac) — finish_ui:611–616; contract test row 45 sand+blue.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 46",
+      "verdict": "=",
+      "f": ".is-latest i bg var(--acs) — contract test row 46.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 47",
+      "verdict": "=",
+      "f": ".is-latest small color var(--ac) — contract test row 47.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 48",
+      "verdict": "=",
+      "f": "Кнопка «Ещё N тренировок» hiddenCount>0, margin-top 10px — finish_ui:625–630; contract test expand + computed marginTop.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · 49",
+      "verdict": "=",
+      "f": ".sb-finish-footnote copy про рекорд-подход — finish_ui:632–633; contract test row 49.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "История упражнения · текст",
+      "verdict": "=",
+      "f": "HistoryScreen DOM: имя, группы, рекорд 75×8, 95 кг, теги, чипы, рост, график, сноска — strength-builder-history-v4-canvas-contract.test.js первый it.",
+      "outOfScopeCss": false
+    }
+  ],
+  "outOfScopeCssRows": [
+    {
+      "key": "История упражнения · 03",
+      "f": "750:1950–1957 .sb-finish-head .sb-head-title — flex:1 min-width:0 column gap 3px padding-left 10px"
+    },
+    {
+      "key": "История упражнения · 06",
+      "f": "750:155–158 .sb-list — overflow-y:auto прокрутка экрана"
+    },
+    {
+      "key": "История упражнения · 07",
+      "f": "750:1993–1998 .sb-finish-metrics — нужен margin-top:12px (сейчас 10px) у ряда плиток истории"
+    },
+    {
+      "key": "История упражнения · 09",
+      "f": "750:2014–2019 .sb-finish-metric-label — uppercase 9.5px tracking .11em ink 56%"
+    },
+    {
+      "key": "История упражнения · 11",
+      "f": "750:2000–2007 .sb-finish-metric — нужен background:var(--c1) у не-accent плиток на экране истории (сейчас var(--bg))"
+    },
+    {
+      "key": "История упражнения · 14",
+      "f": "750:2280–2282 .sb-history-sessions.sb-finish-detail — контейнер списка .cd"
+    },
+    {
+      "key": "История упражнения · 15",
+      "f": "750:2284–2287 .sb-history-session.sb-finish-row — строка списка, align-items:flex-start"
+    },
+    {
+      "key": "История упражнения · 18",
+      "f": "750:2062 .sb-finish-row color var(--tx) — цвет даты (date-remainder ·18, не трогали)"
+    },
+    {
+      "key": "История упражнения · 24",
+      "f": "750:2066–2068 .sb-finish-row.is-last — border-bottom:none у последней видимой сессии"
+    },
+    {
+      "key": "История упражнения · 26",
+      "f": "750:2079–2081 .sb-finish-row b.is-quiet — tonnage дискомфорта rgba(ink,.55) font 600"
+    },
+    {
+      "key": "История упражнения · 31",
+      "f": "750:2079–2081 .sb-finish-row b.is-quiet — «95 кг» оценка 12.5px/600 ink 55%"
+    },
+    {
+      "key": "История упражнения · 32",
+      "f": "750:1977–1981 .sb-finish-chart-card — карточка .grp padding 16px radius 20px bg c1"
+    },
+    {
+      "key": "История упражнения · 33",
+      "f": "750:2199–2203 .sb-finish-chart-head — baseline gap 8px"
+    },
+    {
+      "key": "История упражнения · 35",
+      "f": "750:2211–2214 .sb-finish-chart-head b — нужен 11px/700 var(--gr) для дельты недель (сейчас 17px/800 var(--tx))"
+    },
+    {
+      "key": "История упражнения · 37",
+      "f": "750:2226–2234 .sb-finish-chart-column — flex:1 column center gap 5px"
+    }
+  ]
+}
