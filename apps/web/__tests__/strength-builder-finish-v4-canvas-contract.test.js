@@ -55,6 +55,7 @@ function loadFinish() {
   ev('_kernel/heys_kernel_strength_v1.js');
   ev('heys_exercise_catalog_v1.js');
   ev('strength/heys_strength_superset_ui_v1.js');
+  ev('strength/heys_strength_proposal_ui_v1.js');
   ev('strength/heys_strength_finish_ui_v1.js');
   return globalThis.HEYS.StrengthFinishUI;
 }
@@ -517,6 +518,33 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
 
     const warning = screen.getByText('Остались незакрытые').closest('.sb-finish-row');
     expect(warning?.querySelector('b')?.textContent).toBe('1');
+  });
+
+  it('встраивает ProposalOutcome при частично принятой правке куратора', () => {
+    const props = canvasProps();
+    render(React.createElement(Finish.FinishScreen, {
+      ...props,
+      training: {
+        ...props.training,
+        plan: {
+          proposal: {
+            status: 'accepted',
+            proposedBy: 'Артём',
+            applied: [{ name: 'Жим лёжа · 25 кг', reason: 'approaches_changed' }],
+            rejected: [{ name: 'Тяга блока · 60 кг', reason: 'done_approaches_kept' }],
+          },
+        },
+      },
+    }));
+
+    expect(screen.getByText(/легла не полностью/)).toBeTruthy();
+    expect(screen.getByText(/Эта же строка уйдёт ему/)).toBeTruthy();
+    const rejected = document.querySelector('.sb-proposal-outcome-row.is-rejected');
+    expect(rejected?.querySelector('.sb-proposal-outcome-mark')?.textContent).toBe('—');
+    const applied = document.querySelector('.sb-proposal-outcome-row.is-applied');
+    expect(applied?.querySelector('.sb-proposal-outcome-mark')?.textContent).toBe('✓');
+    const rejectedDetail = rejected?.querySelector('.sb-proposal-outcome-detail');
+    expect(rejectedDetail && getComputedStyle(rejectedDetail).color).toBe(CANVAS_COLORS.ac2);
   });
 
   it('не делает дроп-сет личным рекордом и подписывает только основную ступень', () => {

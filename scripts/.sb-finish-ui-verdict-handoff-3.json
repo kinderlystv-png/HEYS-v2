@@ -1,0 +1,354 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_finish_ui_v1.js (D3 остаток)",
+  "generated": "2026-09-04",
+  "agent": "finish-ui subagent D3",
+  "block": "prose/lifecycle/перенос — остаток после D1/D2",
+  "summary": {
+    "processed": 27,
+    "recommendEquals": 24,
+    "recommendNotEquals": 3,
+    "recommendQuestion": 0,
+    "outOfScopeCss": 11,
+    "outOfScopeRuntime": 25,
+    "codeChanged": true,
+    "codeChange": "finish-v4-canvas-contract: ProposalOutcome integration test; load proposal_ui in fixture"
+  },
+  "rows": [
+    {
+      "key": "состав итогов",
+      "verdict": "=",
+      "f": "FinishScreen hero/detail (heys_strength_finish_ui_v1.js:314-407): длительность, тоннаж с delta, рекорды, detail-строки, «Готово» 48px. Смоук: strength-builder-finish-v4-canvas-contract.test.js it «состав итогов — hero…» + row 01-59 (кроме 58). D2 handoff подтверждён.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "вид · что не легло",
+      "verdict": "=",
+      "f": "ProposalOutcome (heys_strength_proposal_ui_v1.js:451-495) встроен в FinishScreen finish_ui:349; карточка .sb-proposal-outcome с applied/rejected, ✓/--, цвета --gr/--ac2. Смоук: strength-proposal-v4-canvas-contract.test.js + finish-v4 it «встраивает ProposalOutcome…».",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "у брошенной сессии три исхода",
+      "verdict": "=",
+      "f": "SummaryCard stale branch (heys_strength_superset_ui_v1.js:1953-1973): удалить/дописать/закрыть; completedAt через mergeWorkoutLifecyclePatch (heys_day_trainings_v1.js:724-753). Смоук: strength-builder-ui.test.js:1305.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "вид · след переноса",
+      "verdict": "≠",
+      "f": "Контракт: одна вторичная «Не смогу сегодня»; продукт PlanCard (superset_ui:2601-2627) разнёс перенос и пропуск («Перенести» + «Пропустить»). Следы moved/movedFrom есть (2398-2408, 2620-2621); геометрия кнопок ≠ кадру Г3.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 01",
+      "verdict": "=",
+      "f": "Контракт data-v «шапка .sb-head / .top»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: PlanCard+MoveSheet шапка дня; builder plan screen.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 02",
+      "verdict": "=",
+      "f": "Контракт data-v «column gap 3px у заголовка»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-head-title flex column gap 3px — 750:1950.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 03",
+      "verdict": "=",
+      "f": "Контракт data-v ««План на сегодня»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: PlanCard «Сегодня по программе» superset_ui:2615 (≠ буквальный заголовок).",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 04",
+      "verdict": "=",
+      "f": "Контракт data-v «ключ даты»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: humanDate(dateKey) в шапке дня — builder_ui.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 05",
+      "verdict": "=",
+      "f": "Контракт data-v «область прокрутки»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-list overflow-y — 750:155.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 06",
+      "verdict": "=",
+      "f": "Контракт data-v «карточка .grp margin-top 12px»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-card margin/padding — 750 sb-plan-card.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 07",
+      "verdict": "=",
+      "f": "Контракт data-v ««День B · верх тела» 15px/700»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-head b — 750.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 08",
+      "verdict": "=",
+      "f": "Контракт data-v «подпись 11.5px ink56»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-meta — 750.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 09",
+      "verdict": "=",
+      "f": "Контракт data-v ««Начать тренировку» CTA»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: PlanCard onStart «Начать» superset_ui:2622-2625; activity-plan-card-frame.test.js.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 10",
+      "verdict": "≠",
+      "f": "Контракт data-v ««Не смогу сегодня»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: ≠: кадр одна кнопка; продукт «Перенести»+«Пропустить» (superset_ui:2627+, test 1014-1017).",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 11",
+      "verdict": "=",
+      "f": "Контракт data-v «ярус «Куда перенести»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: MoveSheet title superset_ui:2300; activity-plan-card-frame.test.js:235.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 12",
+      "verdict": "=",
+      "f": "Контракт data-v «список .cd»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-days в MoveSheet superset_ui:2303.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 13",
+      "verdict": "=",
+      "f": "Контракт data-v «строка списка»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-day — 750.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 14",
+      "verdict": "=",
+      "f": "Контракт data-v «дата var(--tx)»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-day-copy b color tx — computed activity test.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 15",
+      "verdict": "=",
+      "f": "Контракт data-v ««Свободно» 11px ink56»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: MoveSheet span superset_ui:2313.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 16",
+      "verdict": "=",
+      "f": "Контракт data-v ««перенести» 11.5px ac»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: MoveSheet i superset_ui:2315.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 17",
+      "verdict": "=",
+      "f": "Контракт data-v «занятый день ink40»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-day.is-busy color — 750.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 18",
+      "verdict": "=",
+      "f": "Контракт data-v «пилюля «занят»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: MoveSheet busy i «занят» superset_ui:2315; activity-plan-card-frame.test.js:266.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 19",
+      "verdict": "=",
+      "f": "Контракт data-v «строка без разделителя»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-move-day:last-child border — 750.",
+      "outOfScopeCss": true
+    },
+    {
+      "key": "Перенос · след в обе стороны · 20",
+      "verdict": "=",
+      "f": "Контракт data-v ««выбрано» ac»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: pick===date «выбрано» superset_ui:2313.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 21",
+      "verdict": "=",
+      "f": "Контракт data-v «пилюля «план»»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-badge «план» superset_ui:2616-2617.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · 22",
+      "verdict": "=",
+      "f": "Контракт data-v «сноска про механизм»; runtime apps/web/strength/heys_strength_superset_ui_v1.js PlanCard/MoveSheet: .sb-plan-trace MoveSheet superset_ui:2333-2334.",
+      "outOfScopeCss": false
+    },
+    {
+      "key": "Перенос · след в обе стороны · текст",
+      "verdict": "≠",
+      "f": "Композит кадра Г3: план+move sheet+следы в обе стороны. Продукт покрыт activity-plan-card-frame.test.js (перенос/пропуск) и PlanCard moved traces (2398-2408); ≠ из-за разнесённых CTA и другого заголовка экрана.",
+      "outOfScopeCss": false
+    }
+  ],
+  "outOfScopeCssRows": [
+    {
+      "key": "вид · что не легло",
+      "f": "ProposalOutcome (heys_strength_proposal_ui_v1.js:451-495) встроен в FinishScreen finish_ui:349"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 02",
+      "f": "Контракт data-v «column gap 3px у заголовка»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 05",
+      "f": "Контракт data-v «область прокрутки»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 06",
+      "f": "Контракт data-v «карточка .grp margin-top 12px»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 07",
+      "f": "Контракт data-v ««День B · верх тела» 15px/700»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 08",
+      "f": "Контракт data-v «подпись 11.5px ink56»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 12",
+      "f": "Контракт data-v «список .cd»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 13",
+      "f": "Контракт data-v «строка списка»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 14",
+      "f": "Контракт data-v «дата var(--tx)»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 17",
+      "f": "Контракт data-v «занятый день ink40»"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 19",
+      "f": "Контракт data-v «строка без разделителя»"
+    }
+  ],
+  "outOfScopeRuntimeRows": [
+    {
+      "key": "у брошенной сессии три исхода",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js; apps/web/heys_day_trainings_v1.js",
+      "f": "SummaryCard + lifecycle, не finish_ui"
+    },
+    {
+      "key": "вид · след переноса",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 01",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 02",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 03",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 04",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 05",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 06",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 07",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 08",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 09",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 10",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 11",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 12",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 13",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 14",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 15",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 16",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 17",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 18",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 19",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 20",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 21",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · 22",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    },
+    {
+      "key": "Перенос · след в обе стороны · текст",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "f": "PlanCard/MoveSheet, не finish_ui"
+    }
+  ]
+}
