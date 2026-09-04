@@ -123,8 +123,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [211, 'c56b7bc960bb40c0'],
   }),
   'product-card': Object.freeze({
-    mismatch: [58, 'fe58a8ef1a7107cf'],
-    notApplicable: [74, '0c0055c6816e265a'],
+    // 04.09: e96ffbe90 закрыл 16 «?» rehash-долга — 12→=, 2→—, 2→≠; legacy 58→60, «—» 74→76.
+    mismatch: [60, '7fe9821f7ed05778'],
+    notApplicable: [76, 'ea3054255c5fd126'],
   }),
   'pwa-update': Object.freeze({
     mismatch: [10, '5e473419ff0364c9'],
@@ -135,7 +136,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [8, '93d4d16668687118'],
   }),
   registration: Object.freeze({
-    mismatch: [67, '453575158970e0b1'],
+    // 04.09: Phase1-2 re-review — 2 audit «?» закрыты в «=» (8467957d7, 116a79e09); legacy 67→65.
+    mismatch: [65, '1db0a216d57de58e'],
     notApplicable: [28, '1a861974e2dfd0f8'],
   }),
   'reports-insights': Object.freeze({
