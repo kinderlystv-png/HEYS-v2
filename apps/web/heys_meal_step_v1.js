@@ -217,6 +217,10 @@
   // ХЕЛПЕРЫ ЦВЕТОВ И ТЕКСТОВ
   // ============================================================
 
+  // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, food-meal).
+  const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const V4_WARN_SURFACE = 'color-mix(in srgb, var(--v4-warn-1, #d99a63) 8%, transparent)';
+
   // Цвета для позитивных шкал (mood, wellbeing)
   const getPositiveColor = (v) => HEYS.scales.wellbeing(v).color;
 
@@ -225,7 +229,7 @@
   // Цвет фона карточки (позитивная шкала)
   const getCardBg = (v) => {
     if (v <= 2) return 'rgba(239, 68, 68, 0.08)';
-    if (v <= 4) return 'rgba(245, 158, 11, 0.08)';
+    if (v <= 4) return V4_WARN_SURFACE;
     if (v <= 6) return 'rgba(59, 130, 246, 0.06)';
     if (v <= 8) return 'rgba(34, 197, 94, 0.08)';
     return 'rgba(16, 185, 129, 0.12)';
@@ -236,7 +240,7 @@
     if (v <= 2) return 'rgba(16, 185, 129, 0.12)';
     if (v <= 4) return 'rgba(34, 197, 94, 0.08)';
     if (v <= 6) return 'rgba(59, 130, 246, 0.06)';
-    if (v <= 8) return 'rgba(245, 158, 11, 0.08)';
+    if (v <= 8) return V4_WARN_SURFACE;
     return 'rgba(239, 68, 68, 0.08)';
   };
 
@@ -299,7 +303,7 @@
           cx: p.x,
           cy: p.y,
           r: i === points.length - 1 ? 4 : 3,
-          fill: i === points.length - 1 ? '#10b981' : (p.v >= 6 ? '#22c55e' : p.v >= 4 ? '#eab308' : '#ef4444'),
+          fill: i === points.length - 1 ? '#10b981' : (p.v >= 6 ? '#22c55e' : p.v >= 4 ? V4_WARN_SOFT : '#ef4444'),
           stroke: 'white',
           strokeWidth: 1.5
         })
@@ -491,7 +495,7 @@
             React.createElement('span', { className: 'meal-mood-history-name' }, m.name),
             React.createElement('span', {
               className: 'meal-mood-history-avg',
-              style: { color: m.avg >= 6 ? '#22c55e' : m.avg >= 4 ? '#eab308' : '#ef4444' }
+              style: { color: m.avg >= 6 ? '#22c55e' : m.avg >= 4 ? V4_WARN_SOFT : '#ef4444' }
             }, m.avg.toFixed(1))
           )
         ),
