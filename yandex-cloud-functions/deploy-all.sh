@@ -931,6 +931,25 @@ deploy_function() {
             exit 1
         fi
 
+        # 🔀 Модуль задачника — тем же способом, но пара другая: источник истины
+        # heys-mcp/lib/tasks.js, потребитель только heys-api-rpc (он разбирает
+        # дельту стенограммы). Копии держались руками и тестом на расхождение в
+        # git; выкатку это не покрывало. 2 сентября режим chrono доехал только
+        # до heys-mcp — тесты зелёные, а сервер отвечал invalid_mode на каждый
+        # checkpoint, и стенограмма не писалась вовсе. Тест ловит расхождение в
+        # исходниках, синк здесь — в том, что реально уезжает в облако.
+        if [[ "$func_name" == "heys-api-rpc" ]]; then
+            TASKS_KV_SRC="$SCRIPT_DIR/heys-mcp/lib/tasks.js"
+            TASKS_KV_DST="$DST_DIR/heys_tasks_kv.cjs"
+            if [ -f "$TASKS_KV_SRC" ]; then
+                cp "$TASKS_KV_SRC" "$TASKS_KV_DST"
+                echo -e "${BLUE}ℹ️  Synced tasks-kv module: lib/heys_tasks_kv.cjs${NC}"
+            else
+                echo -e "${RED}❌ ERROR: tasks-kv source not found at $TASKS_KV_SRC${NC}"
+                exit 1
+            fi
+        fi
+
         CONTRACT_SRC="$SCRIPT_DIR/shared/kv-payload-contracts.js"
         CONTRACT_DST_DIR="$SCRIPT_DIR/$func_name/shared"
         CONTRACT_DST="$CONTRACT_DST_DIR/kv-payload-contracts.js"
