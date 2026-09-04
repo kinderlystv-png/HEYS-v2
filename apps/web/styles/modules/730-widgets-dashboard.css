@@ -13004,10 +13004,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-ink, #201e1d);
 }
 
-/* Лента дня: точки приёмов на полосе 6:00–24:00, текущий момент — риска. */
+/* Кадр «Ритм приёмов · Лента дня»: поле 14 px, точки 8 px шалфеем набора,
+   риска 2 px чернилами. Общий row--tight / meta / kicker не трогал.
+   Интервалы эти классы не рисуют. */
 .widget-v4-rhythm__line {
   position: relative;
-  height: 18px;
+  height: 14px;
   margin-top: auto;
 }
 
@@ -13017,7 +13019,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   right: 0;
   top: 50%;
   height: 3px;
-  margin-top: -1.5px;
+  transform: translateY(-50%);
   border-radius: 999px;
   background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
@@ -13025,32 +13027,33 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-rhythm__dot {
   position: absolute;
   top: 50%;
-  width: 7px;
-  height: 7px;
-  margin: -3.5px 0 0 -3.5px;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
   border-radius: 999px;
-  background: var(--v4-sand-ok-fill, #7a8a5e);
+  background: var(--v4-ok-fill, #7a8a5e) /* v4-intentional */;
 }
 
 .widget-v4-rhythm__now {
   position: absolute;
-  top: 2px;
-  bottom: 2px;
-  width: 1.5px;
-  margin-left: -0.75px;
-  border-radius: 999px;
-  background: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  background: var(--v4-ink, #201e1d) /* v4-intentional */;
 }
 
 .widget-v4-rhythm__scale {
   display: flex;
   justify-content: space-between;
   margin-top: 4px;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
+  line-height: 1;
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
+
 
 /* Чек-лист вечера: закрытый пункт — шалфейная точка и шалфейное слово,
    открытый — нейтральные. Красного нет: вечером ругать поздно. */

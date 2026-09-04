@@ -6152,7 +6152,7 @@
       );
     }
 
-    return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm' },
+    return React.createElement('div', { className: 'widget-v4-stack widget-v4-rhythm widget-v4-rhythm-day' },
       React.createElement('div', { className: 'widget-v4-row widget-v4-row--tight' },
         v4Kicker('Ритм приёмов'),
         React.createElement('span', { className: 'widget-v4-row__meta' },
