@@ -954,8 +954,8 @@
       "h": "5e3385940a6e"
     },
     "Панель · работать не с кем · 13": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: tierLine с onClick → `.cur-row__line` color `--v4-ink` (734-ui-v4-curator-panel.css:155-160), как кадр ·13 var(--tx)",
+      "v": "=",
+      "f": ".cur-row__line flex 1, 600/12px/1.4, --v4-ink (= --tx) — tierLine «Все клиенты с состоянием» (734-ui-v4-curator-panel.css:155-160, heys_curator_panel_v1.js:365)",
       "h": "c17636ed69ea"
     },
     "Панель · работать не с кем · 14": {
@@ -1024,9 +1024,11 @@
       "h": "3e05aac599b9"
     },
     "Панель · клиентов ещё нет · 10": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: кнопки «Как добавить клиента» нет в heys_curator_panel_v1.js:402-415 — только карточка и ярус; ≠ про margin-top 14 не применим",
-      "h": "8814a4c59f1e"
+      "v": "≠",
+      "f": "кнопки «Как добавить клиента» нет в heys_curator_panel_v1.js:402-415; решение в строке «клиентов нет» — у панели нет своего пути добавления",
+      "h": "8814a4c59f1e",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/verdicts/curator-cabinet.json:86"
     },
     "Панель · клиентов ещё нет · 11": {
       "v": "=",
@@ -1629,9 +1631,11 @@
       "h": "c629f84f9712"
     },
     "Заявки · пусто · 05": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: heys_app_gate_flow_v1.js:1572 — `.cur-panel__empty--ok` на `--v4-ok-bg`, не на `--v4-surface`; gr-bg≈ok-bg (002-ui-v4-palette-roles.css:142)",
-      "h": "9681252375c4"
+      "v": "≠",
+      "f": "фон --v4-ok-bg (= --gr-bg); margin-top .cur-panel__empty 0, кадр ·05 — 14px (734-ui-v4-curator-panel.css:18)",
+      "h": "9681252375c4",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "apps/web/styles/modules/734-ui-v4-curator-panel.css:18"
     },
     "Заявки · пусто · 06": {
       "v": "=",
@@ -1934,19 +1938,25 @@
       "h": "6cb4a3f1a70e"
     },
     "Новый клиент · 16": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: при pinKeypadKit ряд PIN — 4×`.heys-auth-pin-box` (heys_auth_pin_keypad_v1.js:297-310, heys_app_gate_flow_v1.js:1271); канвас ·17–·18 и anchor «Форма и клавиатура — из Входа»",
-      "h": "54364aae1ab6"
+      "v": "≠",
+      "f": "зазор 8px у .heys-auth-pin-grid (733-ui-v4-login-theme.css:422); margin-top 7px кадра — у .heys-auth-pin-section 18px (733-ui-v4-login-theme.css:257)",
+      "h": "54364aae1ab6",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/curator-cabinet.v4.dc.html:712"
     },
     "Новый клиент · 17": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: активная клетка PIN через pinKeypadKit (`.heys-auth-pin-box.is-active`, login CSS 56×16), не отсутствие клетки",
-      "h": "6d4f07cf1892"
+      "v": "≠",
+      "f": "активная клетка: кадр flex 1/56px/r16/--c1+inset 2px --acs; продукт .heys-auth-pin-box 56x64, focus --v4-bg+inset 2px --v4-act (733-ui-v4-login-theme.css:435-472)",
+      "h": "6d4f07cf1892",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/curator-cabinet.v4.dc.html:712"
     },
     "Новый клиент · 18": {
-      "v": "?",
-      "f": "причина не найдена, 2026-09-04: вторая клетка есть в pinKeypadKit ([0,1,2,3].map), не одно поле",
-      "h": "e066b42342ef"
+      "v": "≠",
+      "f": "вторая клетка: кадр flex 1/56px/r16/--c1; продукт .heys-auth-pin-box 56x64 r16 --v4-surface (733-ui-v4-login-theme.css:435-456)",
+      "h": "e066b42342ef",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/curator-cabinet.v4.dc.html:712"
     },
     "Новый клиент · 19": {
       "v": "=",
