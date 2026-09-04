@@ -7821,6 +7821,10 @@ body:has(.offline-banner) .wrap {
 }
 
 .offline-nodata-retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 52px;
   margin-top: 10px;
   padding: 0 22px;

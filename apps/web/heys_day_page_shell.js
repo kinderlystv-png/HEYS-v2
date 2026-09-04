@@ -85,7 +85,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('button', {
                 className: 'offline-nodata-retry',
                 onClick: handleRetry
-            }, 'Обновить')
+            },
+                React.createElement('span', null, 'Обновить'),
+                React.createElement('svg', {
+                    width: 17,
+                    height: 17,
+                    viewBox: '0 0 24 24',
+                    fill: 'none',
+                    stroke: 'currentColor',
+                    strokeWidth: 2.75,
+                    strokeLinecap: 'round',
+                    strokeLinejoin: 'round',
+                    'aria-hidden': 'true'
+                },
+                    React.createElement('path', { d: 'M4 12a8 8 0 0 1 13.7-5.7M20 12a8 8 0 0 1-13.7 5.7' }),
+                    React.createElement('path', { d: 'M17 4v4h-4M7 20v-4h4' })
+                )
+            )
         );
     }
 

@@ -1382,6 +1382,39 @@
   margin: 0 18px 8px;
 }
 
+/* Кадры «советы приёма» 07–09: типографика совета в листе правки. */
+.nutrition-v4-sheet__tips-panel .meal-optimizer__header-title {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--v4-ink, #201e1d);
+}
+
+.nutrition-v4-sheet__tips-panel .meal-optimizer__header-reason {
+  margin-top: 3px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--nut-dim);
+}
+
+.nutrition-v4-sheet__tips-panel .meal-optimizer > .meal-optimizer__products {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  background: transparent;
+}
+
+.nutrition-v4-sheet__tips-panel .meal-optimizer__product {
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-act, #c67139);
+}
+
 .nutrition-v4-sheet__repeat {
   display: block;
   width: calc(100% - 36px);
