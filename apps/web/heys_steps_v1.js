@@ -5417,7 +5417,9 @@
         answerPill('Сделал', 'done', () => saveAnswer('done')),
         answerPill('Сделаю', 'plain', () => saveAnswer('planned')),
         answerPill('Не сегодня', 'plain', () => saveAnswer('skipped'))
-      )
+      ),
+      React.createElement('div', { className: 'ma-followup-footnote' },
+        'Шторка живёт только на днях, где утреннего ответа не было вовсе; любой из трёх ответов закрывает её до конца дня.')
     );
   }
 

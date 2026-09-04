@@ -1898,7 +1898,7 @@
   border-radius: 16px;
   background: var(--v4-ok-bg) /* v4-intentional */;
   padding: 12px 13px;
-  margin-top: 2px;
+  margin-top: 12px;
 }
 
 .ma-followup-note-title {
@@ -1920,12 +1920,15 @@
 .ma-followup-answers {
   display: flex;
   gap: 6px;
-  margin-top: 2px;
+  margin-top: 12px;
 }
 
 /* Три ответа стоят в ряд, а не стопкой: строка «резервный вопрос · снято»
    называет стопку на всю ширину среди снятых веток живого экрана. */
 .ma-followup-answer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   min-height: 44px;
   border: none;
@@ -1945,6 +1948,15 @@
   color: var(--v4-sand-ok-text) /* v4-intentional */;
 }
 
+.ma-followup-footnote {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-data) /* v4-intentional */;
+  margin-top: 11px;
+  text-wrap: pretty;
+}
+
 /* Кадр «Рутина · причина пропуска» и строка «вид · причина пропуска»: тот же
    лист, что у резервного вопроса. Прежде экран жил на прежней системе —
    инлайновые #fff, #0f172a, обводка rgba(148,163,184,.45) и радиус 12. */
@@ -1962,16 +1974,19 @@
 
 /* Обводки нет — строка контракта называет только заливку --c1. */
 .ma-skip-reason-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
   padding: 12px 14px;
   border: none;
   border-radius: 14px;
   background: var(--v4-c1, #f7efe2);
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink) /* v4-intentional */;
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.35;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 
