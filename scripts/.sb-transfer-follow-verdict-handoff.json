@@ -1,0 +1,141 @@
+{
+  "zone": "strength-builder",
+  "block": "Перенос · след в обе стороны",
+  "canvasOid": "Г3",
+  "canvasPath": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html",
+  "frameCount": 1,
+  "frameNote": "Один stop-кадр data-oid=Г3 data-demo=stop — коллаж: карточка плана + inline-список переноса + след откуда/куда + сноска; канон c01/c02 вне контрактных строк 01–22.",
+  "scope": "PlanCard + MoveSheet — apps/web/strength/heys_strength_superset_ui_v1.js; геометрия списка переноса на Активе — apps/web/styles/modules/731-ui-v4-activity.css (.activity-v4-program); базовые .sb-plan-* — apps/web/styles/modules/750-strength-builder.css",
+  "generated": "2026-09-04",
+  "agent": "transfer-follow audit subagent",
+  "summary": {
+    "rows": 23,
+    "recommendEquals": 5,
+    "recommendNotEquals": 13,
+    "recommendDash": 5,
+    "recommendQuestion": 0,
+    "codeChanged": false,
+    "testsRun": [
+      "apps/web/__tests__/activity-plan-card-frame.test.js — 30 passed",
+      "pnpm ui:v4:check:roles — ok",
+      "apps/web/__tests__/role-fallback-truth.test.js — 2 passed"
+    ]
+  },
+  "rows": [
+    {
+      "key": "Перенос · след в обе стороны · 01",
+      "verdict": "—",
+      "f": "Шапка .ph>.top — chrome вкладки «Актив»/day shell, не PlanCard. Кадр Г3 — композит; ui-v4-dom-contracts.mjs помечает строки 01–05 как visual-composite вне runtime-root ProgramPlanCard."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 02",
+      "verdict": "—",
+      "f": "Колонка заголовка (flex-direction:column; gap:3px) — day shell .top, не MoveSheet/PlanCard. Вне superset_ui."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 03",
+      "verdict": "—",
+      "f": "«План на сегодня» — ttl страницы дня в кадре Г3:636; в продукте нет этой строки в PlanCard (заголовок карточки «Сегодня по программе» — superset_ui:2615). Имя экрана — tab-activity/day shell."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 04",
+      "verdict": "—",
+      "f": "Ключ «пн, 10 авг» — .k в шапке кадра; владелец day shell, не builder_ui."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 05",
+      "verdict": "—",
+      "f": "Область прокрутки .sc — поверхность дня; PlanCard/MoveSheet не владеют scroll-контейнером страницы."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 06",
+      "verdict": "=",
+      "f": "Отступ блока плана 12px: .activity-v4-program { margin-top:12px } — apps/web/styles/modules/731-ui-v4-activity.css:876-878; кадр .grp margin-top:12px внутри .sc совпадает по числу."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 07",
+      "verdict": "≠",
+      "f": "Контракт: «День B · верх тела» 700 15px/1.32 var(--tx). Runtime: h('b','Сегодня по программе') — superset_ui:2615; CSS 700 13.5px/1.3 — 731:935-938. Зафиксировано apps/web/__tests__/activity-plan-card-frame.test.js:70-74."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 08",
+      "verdict": "≠",
+      "f": "Контракт: «7 упражнений · назначил Артём» 500 11.5px/1.4 rgba(ink,.56) margin-top 4px. Runtime: planProse «{dayLabel} · {n} упр. · … В расход не идёт…» — superset_ui:2609-2619; .sb-plan-meta 500 12px/1.55 margin 8px 0 0 — 731:954-957."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 09",
+      "verdict": "≠",
+      "f": "Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:226-229."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 10",
+      "verdict": "≠",
+      "f": "Контракт: одна вторичная «Не смогу сегодня» margin-top 9px. Runtime: ряд .sb-plan-actions «Перенести»+«Пропустить» margin-top 9px — superset_ui:2626-2634, 731:970-973; осознанный разнос перенос/пропуск — activity-plan-card-frame.test.js:3-7, 225-291."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 11",
+      "verdict": "=",
+      "f": "Ярус «Куда перенести · выбор дня»: h('b','Куда перенести · выбор дня') в MoveSheet — superset_ui:2300; открывается по «Перенести» — activity-plan-card-frame.test.js:232-238."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 12",
+      "verdict": "≠",
+      "f": "Контракт: список .cd. Runtime: .sb-move-days внутри .sb-sheet (модалка), не inline .cd на странице — superset_ui:2303-2317; вертикальный список — 731:1215-1223 vs кадр .cd:646-652."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 13",
+      "verdict": "≠",
+      "f": "Контракт: строка .cd .row. Runtime: button.sb-move-day flex row — superset_ui:2305-2316; геометрия 731:1225-1240 (min-height 52px, padding 10px 12px) — не класс .row кадра."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 14",
+      "verdict": "≠",
+      "f": "Контракт: дата свободного дня color var(--tx). CSS задаёт только font на .sb-move-day-copy b (600 12.5px) без color — 731:1255-1258; внутри <button> текст наследует buttontext, не --tx/--v4-ink."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 15",
+      "verdict": "≠",
+      "f": "Контракт: «Свободно» 500 11px/1.3 rgba(ink,.56). CSS: font 500 11px/1.3 на span без color — 731:1260-1262; подпись «Свободно» в MoveSheet — superset_ui:2313."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 16",
+      "verdict": "=",
+      "f": "«перенести»: font 700 11.5px/1 color var(--v4-act-text) — 731:1264-1267; песок #8a4a20, синий #1d5e96 из 002-ui-v4-palette-roles.css:147,470; DOM i «перенести» — superset_ui:2315."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 17",
+      "verdict": "≠",
+      "f": "Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопределено в 731 без dim текста."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 18",
+      "verdict": "≠",
+      "f": "Контракт: пилюля «занят» color rgba(ink,.4). Runtime: .sb-move-day.is-busy > i с color var(--v4-ink-3)=rgba(0,0,0,.45) + фон --v4-hero — 731:1269-1274; контракт .4 vs .45 и лишняя заливка."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 19",
+      "verdict": "=",
+      "f": "Последняя строка без разделителя: .sb-move-day:last-child { border-bottom:none } — 731:1242-1244; кадр row style border-bottom:none — strength-builder.v4.dc.html:651."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 20",
+      "verdict": "≠",
+      "f": "Контракт: «выбрано» 500 11px/1.3 color var(--ac). Runtime: span «выбрано» при pick — superset_ui:2313; CSS span без accent-color на .is-on — 731:1260-1262, 1276-1279."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 21",
+      "verdict": "=",
+      "f": "Пилюля «план»: .sb-plan-badge 9px ui-monospace, фон --v4-hero, color --v4-act-text — 731:941-951; на будущем дне h('span','план') — superset_ui:2530; moved-target в кадре — badge «план» :663."
+    },
+    {
+      "key": "Перенос · след в обе стороны · 22",
+      "verdict": "≠",
+      "f": "Контракт: сноска .sm про механизм переноса на экране. Runtime: короткий .sb-plan-trace только внутри MoveSheet — superset_ui:2333-2334; полный текст кадра :666 отсутствует на странице/в карточке."
+    },
+    {
+      "key": "Перенос · след в обе стороны · текст",
+      "verdict": "≠",
+      "f": "Агрегат кадра Г3 (план+inline-список+след+сноска) vs разнесённый runtime: PlanCard assigned/moved + MoveSheet modal + trace на is-moved/is-future. Механика есть (move/skip/movedTo/movedFrom — superset_ui:2398-2408, 2595-2621); копия и компоновка не совпадают с одним скроллом кадра."
+    }
+  ]
+}

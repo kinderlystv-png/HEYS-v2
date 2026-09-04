@@ -1,0 +1,67 @@
+[
+  {
+    "key": "Перенос · след в обе стороны · 07",
+    "issue": "Заголовок карточки и кегль не совпадают с кадром Г3: контракт «День B · верх тела» 15px, продукт «Сегодня по программе» 13.5px.",
+    "suggestedFix": "Решение владельца: оставить продуктовую копию (тест activity-plan-card-frame.test.js) или вернуть dayLabel в заголовок. CSS: apps/web/styles/modules/731-ui-v4-activity.css:935-938; copy: apps/web/strength/heys_strength_superset_ui_v1.js:2614-2616."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 08",
+    "issue": "Мета-строка другого формата и кегля (12px/1.55 prose vs 11.5px/1.4 «N упражнений · назначил …»).",
+    "suggestedFix": "apps/web/strength/heys_strength_superset_ui_v1.js:2609-2619 planProse; apps/web/styles/modules/731-ui-v4-activity.css:954-957 .sb-plan-meta."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 09",
+    "issue": "CTA «Начать» вместо «Начать тренировку»; margin-top 14px вместо 12px.",
+    "suggestedFix": "apps/web/strength/heys_strength_superset_ui_v1.js:2622-2625; apps/web/styles/modules/731-ui-v4-activity.css:960-961 .sb-btn.sb-plan-cta."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 10",
+    "issue": "Вместо одной «Не смогу сегодня» — два действия «Перенести»/«Пропустить» (осознанный разнос; кадр устарел по смыслу).",
+    "suggestedFix": "Если сводим к кадру: объединить в одну вторичную кнопку — superset_ui:2626-2634. Иначе обновить контракт/кадр под две кнопки."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 12",
+    "issue": "Список переноса в bottom sheet (.sb-sheet), не inline .cd на странице как в коллаже Г3.",
+    "suggestedFix": "apps/web/strength/heys_strength_superset_ui_v1.js:2294-2336 MoveSheet; опционально inline-режим на activity-v4-program или правка кадра под sheet."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 13",
+    "issue": "Разметка .sb-move-day (button) вместо .cd .row; иная геометрия строки.",
+    "suggestedFix": "apps/web/styles/modules/731-ui-v4-activity.css:1225-1240; при сведении — выровнять padding/gap с кадром .row."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 14",
+    "issue": "Цвет даты свободного дня не var(--tx)/--v4-ink — нет явного color на .sb-move-day-copy b внутри button.",
+    "suggestedFix": "apps/web/styles/modules/731-ui-v4-activity.css:1255-1258 — добавить color:var(--v4-ink) и color:inherit на .sb-move-day."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 15",
+    "issue": "Подпись «Свободно» без rgba(var(--ink),.56).",
+    "suggestedFix": "apps/web/styles/modules/731-ui-v4-activity.css:1260-1262 — color:rgba(var(--ink),.56) на .sb-move-day-copy span."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 17",
+    "issue": "Занятая дата не приглушена до rgba(var(--ink),.4).",
+    "suggestedFix": "apps/web/styles/modules/731-ui-v4-activity.css после :1262 — .activity-v4-program .sb-move-day.is-busy .sb-move-day-copy b { color:rgba(var(--ink),.4) }."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 18",
+    "issue": "Пилюля «занят» — color .45 и фон --v4-hero; кадр просит rgba(ink,.4) без заливки badge.",
+    "suggestedFix": "apps/web/styles/modules/731-ui-v4-activity.css:1269-1274 — убрать background, color:rgba(var(--ink),.4)."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 20",
+    "issue": "«выбрано» не окрашено в var(--ac)/--v4-act-text при .is-on.",
+    "suggestedFix": "apps/web/styles/modules/731-ui-v4-activity.css — .sb-move-day.is-on .sb-move-day-copy span { color:var(--v4-act-text) }."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 22",
+    "issue": "Полная сноска механизма переноса (.sm) отсутствует на экране дня; только короткий trace в sheet.",
+    "suggestedFix": "apps/web/strength/heys_strength_superset_ui_v1.js:2333-2334 или PlanCard footnote; стиль .sm — tab-activity/731 по аналогии с другими сносками."
+  },
+  {
+    "key": "Перенос · след в обе стороны · текст",
+    "issue": "Агрегированный текст кадра не собирается в одном DOM-состоянии.",
+    "suggestedFix": "Свести кадр Г3 с sheet+PlanCard или добавить contract test по фрагментам (эталон activity-plan-card-frame.test.js + новый гейт переноса)."
+  }
+]

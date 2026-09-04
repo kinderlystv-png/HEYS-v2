@@ -1,0 +1,4 @@
+docs(ui-v4): handoff «Перенос · след» strength-builder
+
+Read-only сверка 23 строк блока Г3: handoff-вердикты и список правок
+для PlanCard/MoveSheet (superset_ui + 731 activity CSS).
