@@ -1,9 +1,10 @@
 {
   "block": "Назначено против сделано",
   "generated": "2026-09-05",
-  "fixedCount": 34,
-  "remainingCount": 1,
+  "fixedCount": 35,
+  "remainingCount": 0,
   "fixedKeys": [
+    "01",
     "02",
     "03",
     "04",
@@ -39,8 +40,8 @@
     "37",
     "текст"
   ],
-  "remainingKeys": ["01"],
-  "remainingReason": "Кадр Г2 без навигационных кнопок; in-session экран оставляет ‹ и ✕.",
+  "remainingKeys": [],
+  "remainingReason": null,
   "files": [
     "apps/web/strength/heys_strength_superset_ui_v1.js",
     "apps/web/styles/modules/731-ui-v4-activity.css",

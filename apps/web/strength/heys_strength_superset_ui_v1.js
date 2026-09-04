@@ -533,14 +533,14 @@
 
   function planVsDoneHeaderKey(plan, exerciseCount) {
     const planObj = plan || {};
-    if (planObj.weekRange) {
-      return String(planObj.weekRange) + ' · ' + exerciseCount + ' назначено';
+    if (planObj.dayLabel) {
+      return String(planObj.dayLabel) + ' · ' + exerciseCount + ' назначено';
     }
     if (planObj.weekLabel) {
       return String(planObj.weekLabel) + ' · ' + exerciseCount + ' назначено';
     }
-    if (planObj.dayLabel) {
-      return String(planObj.dayLabel) + ' · ' + exerciseCount + ' назначено';
+    if (planObj.weekRange) {
+      return String(planObj.weekRange) + ' · ' + exerciseCount + ' назначено';
     }
     return exerciseCount + ' ' + ruPlural(exerciseCount, 'упражнение', 'упражнения', 'упражнений') + ' назначено';
   }
@@ -2320,21 +2320,15 @@
   Parts.SyncQueuePanel = SyncQueuePanel;
 
   function PlanVsDoneScreen(props) {
-    const { training, onBack, onClose, onMessageCurator, onWeekReport } = props;
+    const { training, onBack, onMessageCurator, onWeekReport } = props;
     const snapshot = buildPlanVsDoneSnapshot(training || {});
     const rows = snapshot.rows;
     return h('div', { className: 'sb-root sb-plan-vs-done' },
-      h('div', { className: 'sb-cycle-top' },
-        h('button', {
-          type: 'button', className: 'sb-icon-btn', onClick: onBack, 'aria-label': 'Назад'
-        }, '‹'),
+      h('div', { className: 'sb-cycle-top sb-plan-vs-top' },
         h('span', { className: 'sb-cycle-top-main' },
-          h('span', { className: 'sb-cycle-title' }, 'Отчёт по циклу'),
+          h('span', { className: 'sb-cycle-title' }, 'Назначено против сделано'),
           snapshot.headerKey && h('span', { className: 'sb-cycle-key' }, snapshot.headerKey)
-        ),
-        h('button', {
-          type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть'
-        }, '✕')
+        )
       ),
       h('div', { className: 'sb-plan-vs-scroll' },
         rows.length && h('div', { className: 'sb-plan-vs-summary' },

@@ -1683,6 +1683,10 @@ body:has(.activity-v4) .hdr::after {
 
 /* ── strength-builder · И1 «Назначено против сделано» (superset_ui DOM) ───── */
 
+.sb-plan-vs-done .sb-plan-vs-top {
+  justify-content: flex-start;
+}
+
 .sb-plan-vs-done .sb-plan-vs-summary {
   margin-top: 12px;
   padding: 12px 13px;

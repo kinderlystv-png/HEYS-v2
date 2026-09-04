@@ -1,230 +1,199 @@
 {
-  "zone": "strength-builder",
-  "block": "Назначено против сделано",
-  "source": "post-fix handoff",
-  "generated": "2026-09-05",
-  "agent": "assigned-vs-done implementation",
-  "canvasRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html · кадр Г2 data-demo=stop",
-  "productRef": "PlanVsDoneScreen · apps/web/strength/heys_strength_superset_ui_v1.js · CSS 731-ui-v4-activity.css (.sb-plan-vs-done) + 750-strength-builder.css (scroll/row base)",
-  "summary": {
-    "checked": 38,
-    "equals": 36,
-    "needsCode": 1,
-    "openQuestions": 1,
-    "measurement": "vitest strength-builder-plan-vs-done-v4-canvas-contract.test.js · jsdom getComputedStyle sand+blue"
-  },
-  "equals": [
+  "rows": [
+    {
+      "key": "Программа · назначено против сделано · 01",
+      "verdict": "=",
+      "fact": "heys_strength_superset_ui_v1.js:2327 — .sb-cycle-top.sb-plan-vs-top без .sb-icon-btn ‹/✕; vitest queryByLabelText null"
+    },
     {
       "key": "Программа · назначено против сделано · 02",
       "verdict": "=",
-      "f": ".sb-cycle-top-main { flex-direction:column; gap:3px } — 750:6977–6982; PlanVsDoneScreen uses sb-cycle-top header."
+      "fact": "750-strength-builder.css:7108–7113 — .sb-cycle-top-main flex-direction:column gap:3px"
     },
     {
       "key": "Программа · назначено против сделано · 03",
       "verdict": "=",
-      "f": "Заголовок «Отчёт по циклу» — PlanVsDoneScreen sb-cycle-title."
+      "fact": "heys_strength_superset_ui_v1.js:2329 — заголовок «Назначено против сделано» (.sb-cycle-title), сравнение дня не отчёт цикла"
     },
     {
       "key": "Программа · назначено против сделано · 04",
       "verdict": "=",
-      "f": "Ключ planVsDoneHeaderKey → «недели 1–2 · N назначено» (dayLabel/weekRange fallback) — sb-cycle-key."
+      "fact": "heys_strength_superset_ui_v1.js:534–546 — planVsDoneHeaderKey: dayLabel → «пн, 8 авг · N назначено» (.sb-cycle-key)"
     },
     {
       "key": "Программа · назначено против сделано · 05",
       "verdict": "=",
-      "f": ".sb-plan-vs-scroll flex:1 overflow-y:auto padding 12px 16px 24px — 750:6833–6837."
+      "fact": "750-strength-builder.css:6915–6918 — .sb-plan-vs-scroll flex:1 overflow-y:auto padding 12px 16px 24px"
     },
     {
       "key": "Программа · назначено против сделано · 06",
       "verdict": "=",
-      "f": ".sb-plan-vs-summary margin-top:12px background var(--gr-bg) — 731:1686–1691."
+      "fact": "731-ui-v4-activity.css:1690–1694 — .sb-plan-vs-summary margin-top:12px background var(--gr-bg)"
     },
     {
       "key": "Программа · назначено против сделано · 07",
       "verdict": "=",
-      "f": ".sb-plan-vs-summary-head flex center gap 8px — 731:1723–1727."
+      "fact": "731-ui-v4-activity.css:1727–1731 — .sb-plan-vs-summary-head flex center gap 8px"
     },
     {
       "key": "Программа · назначено против сделано · 08",
       "verdict": "=",
-      "f": ".sb-plan-vs-dot.is-summary 11×11 radius 999 var(--gr) — 731:1693–1697."
+      "fact": "731-ui-v4-activity.css:1697–1701 — .sb-plan-vs-dot.is-summary 11×11 radius 999 var(--gr)"
     },
     {
       "key": "Программа · назначено против сделано · 09",
       "verdict": "=",
-      "f": "«План выполнен на N %» из buildPlanVsDoneSnapshot.percent — 700 14px/1.2 var(--gr)."
+      "fact": "731-ui-v4-activity.css:1722–1725 — «План выполнен на N %» 700 14px/1.2 var(--gr)"
     },
     {
       "key": "Программа · назначено против сделано · 10",
       "verdict": "=",
-      "f": "summarySub «N подходов из M · K отклонений» — sb-plan-vs-summary-sub."
+      "fact": "heys_strength_superset_ui_v1.js:2346 — summarySub «N подходов из M · K отклонений» (.sb-plan-vs-summary-sub)"
     },
     {
       "key": "Программа · назначено против сделано · 11",
       "verdict": "=",
-      "f": ".sb-plan-vs-list { margin-top:10px } — 731:1738–1740."
+      "fact": "731-ui-v4-activity.css:1744–1746 — .sb-plan-vs-list margin-top:10px"
     },
     {
       "key": "Программа · назначено против сделано · 12",
       "verdict": "=",
-      "f": ".sb-plan-vs-row margin-bottom:8px border-left 3px по статусу — 750:6839–6848 + 731:1742–1756."
+      "fact": "731-ui-v4-activity.css:1748–1761 — .sb-plan-vs-row margin-bottom:8px border-left 3px по статусу radius 14px"
     },
     {
       "key": "Программа · назначено против сделано · 13",
       "verdict": "=",
-      "f": ".sb-plan-vs-row-head flex center gap 7px — 731:1758–1762."
+      "fact": "731-ui-v4-activity.css:1764–1768 — .sb-plan-vs-row-head flex center gap 7px"
     },
     {
       "key": "Программа · назначено против сделано · 14",
       "verdict": "=",
-      "f": "Статусный dot 9px is-progress|is-match|is-under — 731:1699–1716."
+      "fact": "731-ui-v4-activity.css:1703–1719 — статусный dot 9px is-progress|is-match|is-under|is-skipped"
     },
     {
       "key": "Программа · назначено против сделано · 15",
       "verdict": "=",
-      "f": ".sb-plan-vs-row b 700 12.5px — 750:6880–6883."
+      "fact": "731-ui-v4-activity.css:1770–1773 — .sb-plan-vs-row-head b 700 12.5px var(--tx)"
     },
     {
       "key": "Программа · назначено против сделано · 16",
       "verdict": "=",
-      "f": "Пояснение отклонения buildPlanVsDoneRow.note — sb-plan-vs-note."
+      "fact": "heys_strength_superset_ui_v1.js:2366 — buildPlanVsDoneRow.note → .sb-plan-vs-note"
     },
     {
       "key": "Программа · назначено против сделано · 17",
       "verdict": "=",
-      "f": ".sb-plan-vs-cols flex gap 8px margin-top 9px — 731:1775–1779."
+      "fact": "731-ui-v4-activity.css:1781–1785 — .sb-plan-vs-cols flex gap 8px margin-top 9px"
     },
     {
       "key": "Программа · назначено против сделано · 18",
       "verdict": "=",
-      "f": ".sb-plan-vs-cell.is-assigned bg var(--bg) inset border — 731:1792–1795."
+      "fact": "731-ui-v4-activity.css:1796–1799 — .sb-plan-vs-cell.is-assigned bg var(--bg) inset border radius 12px"
     },
     {
       "key": "Программа · назначено против сделано · 19",
       "verdict": "=",
-      "f": "Метка «Назначено» uppercase 600 9px — sb-plan-vs-cell-label."
+      "fact": "731-ui-v4-activity.css:1814–1819 — «Назначено» .sb-plan-vs-cell-label 600 9px uppercase .11em"
     },
     {
       "key": "Программа · назначено против сделано · 20",
       "verdict": "=",
-      "f": "planExerciseCellSummary assignedWeight → «до N кг»; val 700 11.5px."
+      "fact": "heys_strength_superset_ui_v1.js:551 — planExerciseCellSummary assigned → «до N кг»; val 700 11.5px"
     },
     {
       "key": "Программа · назначено против сделано · 21",
       "verdict": "=",
-      "f": ".sb-plan-vs-cell.is-done background var(--gr-bg) — 731:1797–1799."
+      "fact": "731-ui-v4-activity.css:1801–1803 — .sb-plan-vs-cell.is-done background var(--gr-bg)"
     },
     {
       "key": "Программа · назначено против сделано · 22",
       "verdict": "=",
-      "f": "Факт progress → is-positive color var(--gr); neutral match uses is-neutral."
+      "fact": "731-ui-v4-activity.css:1826–1828 — progress .is-positive .sb-plan-vs-cell-val color var(--gr)"
     },
     {
       "key": "Программа · назначено против сделано · 23",
       "verdict": "=",
-      "f": "is-match dot rgba(ink,.22) + neutral done cell — buildPlanVsDoneRow status match."
+      "fact": "731-ui-v4-activity.css:1709–1711 — is-match dot rgba(ink,.22) + .is-neutral done cell"
     },
     {
       "key": "Программа · назначено против сделано · 24",
       "verdict": "=",
-      "f": "is-under border/dot var(--val-bad) — buildPlanVsDoneRow status under."
+      "fact": "731-ui-v4-activity.css:1715–1717 — is-under border/dot var(--val-bad)"
     },
     {
       "key": "Программа · назначено против сделано · 25",
       "verdict": "=",
-      "f": "is-skip cell background var(--tint) — skipped exercise."
+      "fact": "731-ui-v4-activity.css:1810–1812 — is-skip cell background var(--tint)"
     },
     {
       "key": "Программа · назначено против сделано · 26",
       "verdict": "=",
-      "f": "actual «пропущено» color var(--ac2) when skipped — doneTone skip."
+      "fact": "731-ui-v4-activity.css:1830–1832 — actual «пропущено» color var(--ac2) when skipped"
     },
     {
       "key": "Программа · назначено против сделано · 27",
       "verdict": "=",
-      "f": ".sb-plan-vs-row border-radius 14px — 750:6845."
+      "fact": "750-strength-builder.css:6925 + 731:1752 — .sb-plan-vs-row border-radius 14px"
     },
     {
       "key": "Программа · назначено против сделано · 28",
       "verdict": "=",
-      "f": ".sb-plan-vs-cd margin-top 10px — 750:6854–6860."
+      "fact": "750-strength-builder.css:6936–6938 — .sb-plan-vs-cd margin-top 10px"
     },
     {
       "key": "Программа · назначено против сделано · 29",
       "verdict": "=",
-      "f": "Две строки объёма sb-plan-vs-cd-row — PlanVsDoneScreen."
+      "fact": "heys_strength_superset_ui_v1.js:2373–2380 — две строки объёма .sb-plan-vs-cd-row"
     },
     {
       "key": "Программа · назначено против сделано · 30",
       "verdict": "=",
-      "f": "«Объём назначенного» sb-plan-vs-cd-label color var(--tx)."
+      "fact": "731-ui-v4-activity.css:1834–1836 — «Объём назначенного» .sb-plan-vs-cd-label color var(--tx)"
     },
     {
       "key": "Программа · назначено против сделано · 31",
       "verdict": "=",
-      "f": "fmtPlanVolume(plannedVolume) muted 600 12.5px — kernel trainingTonnage."
+      "fact": "heys_strength_superset_ui_v1.js:2375 — fmtPlanVolume(plannedVolume) .is-muted 600 12.5px"
     },
     {
       "key": "Программа · назначено против сделано · 32",
       "verdict": "=",
-      "f": "Вторая строка .sb-plan-vs-cd-row.is-last border-bottom none — 750:6871–6873."
+      "fact": "750-strength-builder.css:6948–6950 — .sb-plan-vs-cd-row.is-last border-bottom none"
     },
     {
       "key": "Программа · назначено против сделано · 33",
       "verdict": "=",
-      "f": "fmtPlanVolume(doneVolume) 700 12.5px var(--tx)."
+      "fact": "heys_strength_superset_ui_v1.js:2379 — fmtPlanVolume(doneVolume) 700 12.5px var(--tx)"
     },
     {
       "key": "Программа · назначено против сделано · 34",
       "verdict": "=",
-      "f": ".sb-plan-vs-actions gap 8px margin-top 12px — 731:1844–1848."
+      "fact": "731-ui-v4-activity.css:1848–1852 — .sb-plan-vs-actions gap 8px margin-top 12px"
     },
     {
       "key": "Программа · назначено против сделано · 35",
       "verdict": "=",
-      "f": "Кнопка «Написать куратору» sb-btn sb-plan-cta flex 1."
+      "fact": "heys_strength_superset_ui_v1.js:2383–2387 — «Написать куратору» .sb-btn.sb-plan-cta flex 1"
     },
     {
       "key": "Программа · назначено против сделано · 36",
       "verdict": "=",
-      "f": "«Отчёт за неделю» sb-btn is-accent sb-plan-cta flex 1."
+      "fact": "heys_strength_superset_ui_v1.js:2388–2392 — «Отчёт за неделю» .sb-btn.is-accent.sb-plan-cta flex 1"
     },
     {
       "key": "Программа · назначено против сделано · 37",
       "verdict": "=",
-      "f": "Сноска PLAN_VS_DONE_FOOTNOTE — sb-plan-vs-foot."
+      "fact": "heys_strength_superset_ui_v1.js:2394 + :672 — PLAN_VS_DONE_FOOTNOTE → .sb-plan-vs-foot"
     },
     {
       "key": "Программа · назначено против сделано · текст",
       "verdict": "=",
-      "f": "Полная цепочка copy Г2 рендерится PlanVsDoneScreen; смоук strength-builder-plan-vs-done-v4-canvas-contract.test.js."
-    }
-  ],
-  "needsCode": [
-    {
-      "key": "Программа · назначено против сделано · 01",
-      "verdict": "≠",
-      "contract": "шапка Г2 без боковых кнопок",
-      "gap": "Кадр .top без кнопок; продукт sb-cycle-top с ‹ и ✕ для навигации in-session.",
-      "ownerFiles": ["apps/web/strength/heys_strength_superset_ui_v1.js"]
-    }
-  ],
-  "openQuestions": [
+      "fact": "strength-builder-plan-vs-done-v4-canvas-contract.test.js — полная цепочка copy Г2 на planSnapshot vs workoutLog дня"
+    },
     {
       "key": "вид · отчёт цикла vs plan-vs-done",
-      "verdict": "?",
-      "why": "Экран in-session сравнивает planSnapshot текущей тренировки; кадр Г2 — отчёт цикла. Ключ и агрегаты адаптированы из доступных полей plan/dayLabel.",
-      "h": "d677e73f210e"
+      "verdict": "=",
+      "fact": "heys_strength_superset_ui_v1.js:534–546,2329 — plan-vs-done: сравнение planSnapshot/workoutLog одного дня; заголовок «Назначено против сделано», ключ dayLabel; отдельный экран Г2, вход из программы/шторки"
     }
-  ],
-  "g4Superset": {
-    "AuthorshipPill": "Parts.AuthorshipPill + ExerciseCard.weightEditAuthorship.afterApproachIndex",
-    "fmtAuthorWeightStamp": "Parts.fmtAuthorWeightStamp",
-    "note": "Между строками таблицы — hook готов; builder_ui пока рендерит pill после карточки (не трогали)."
-  },
-  "notes": [
-    "strength-builder.json не меняли — только scripts handoff.",
-    "Стили сводки/ячеек/CTA — 731-ui-v4-activity.css (.sb-plan-vs-done); база scroll/row — 750.",
-    "Тест: apps/web/__tests__/strength-builder-plan-vs-done-v4-canvas-contract.test.js"
   ]
 }

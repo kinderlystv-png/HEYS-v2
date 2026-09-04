@@ -55,7 +55,7 @@ const work = (weight, reps, done) => ({
 
 function canvasTraining() {
   return {
-    plan: { dayLabel: 'недели 1–2', weekRange: 'недели 1–2' },
+    plan: { dayLabel: 'пн, 8 авг', weekRange: 'недели 1–2' },
     planSnapshot: {
       exercises: [
         { name: 'Жим лёжа', approaches: [work(70, 8, false), work(70, 8, false), work(70, 8, false), work(70, 8, false)] },
@@ -101,8 +101,11 @@ describe('strength builder · Г2 Назначено против сделано
       onBack: () => {},
       onClose: () => {}
     }));
-    expect(screen.getByText('Отчёт по циклу')).toBeTruthy();
-    expect(screen.getByText('недели 1–2 · 4 назначено')).toBeTruthy();
+    expect(screen.getByText('Назначено против сделано')).toBeTruthy();
+    expect(screen.getByText('пн, 8 авг · 4 назначено')).toBeTruthy();
+    expect(screen.queryByLabelText('Назад')).toBeNull();
+    expect(screen.queryByLabelText('Закрыть')).toBeNull();
+    expect(container.querySelector('.sb-plan-vs-top .sb-icon-btn')).toBeNull();
     expect(screen.getByText(/План выполнен на \d+ %/)).toBeTruthy();
     expect(screen.getByText('Жим лёжа')).toBeTruthy();
     expect(screen.getByText('Вес выше плана — это прогресс')).toBeTruthy();
@@ -146,8 +149,9 @@ describe('strength builder · Г2 Назначено против сделано
     expect(styleOf(summaryDot, 'background-color')).toBe(BLUE.gr);
   });
 
-  it('buildPlanVsDoneSnapshot classifies rows', () => {
+  it('buildPlanVsDoneSnapshot classifies rows and prefers dayLabel in header key', () => {
     const snapshot = Parts.buildPlanVsDoneSnapshot(canvasTraining());
+    expect(snapshot.headerKey).toBe('пн, 8 авг · 4 назначено');
     expect(snapshot.rows.find((row) => row.name === 'Жим лёжа').status).toBe('progress');
     expect(snapshot.rows.find((row) => row.name === 'Тяга штанги в наклоне').status).toBe('match');
     expect(snapshot.rows.find((row) => row.name === 'Разведение гантелей').status).toBe('skipped');
