@@ -183,7 +183,7 @@
 .meal-time-value {
   font-size: 48px;
   font-weight: 800;
-  color: #8a4a20;
+  color: var(--v4-act-text, #8a4a20);
   letter-spacing: -2px;
 }
 
@@ -231,11 +231,6 @@
 
 .meal-night-hint b {
   font-weight: 700;
-}
-
-[data-theme$='dark'] .meal-night-hint {
-  background: #3a2620;
-  color: #e2a468;
 }
 
 /* Meal type selection */
@@ -637,7 +632,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  box-shadow: 0 1px 4px rgba(80, 50, 20, 0.25);
+  box-shadow: 0 1px 4px rgba(var(--v4-ink-rgb), 0.25); /* v4-intentional */
   cursor: pointer;
 }
 
@@ -647,7 +642,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  box-shadow: 0 1px 4px rgba(80, 50, 20, 0.25);
+  box-shadow: 0 1px 4px rgba(var(--v4-ink-rgb), 0.25); /* v4-intentional */
   cursor: pointer;
 }
 
