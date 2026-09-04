@@ -28,6 +28,7 @@ describe('nutrition v4 · isolated Canvas shell', () => {
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-tab-title-group\s*\{[^}]*align-items:\s*center[^}]*justify-content:\s*space-between/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.date-picker-icon\s*\{[^}]*display:\s*none/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-sticky-strip\s*\{[^}]*padding:\s*11px 18px 0/);
+    expect(nutritionCss).toMatch(/\.nutrition-v4 \.water-review\s*\{[^}]*margin-top:\s*10px/);
     expect(nutritionCss).toMatch(/\.nutrition-v4\s*\{[^}]*margin-top:\s*0/);
   });
 

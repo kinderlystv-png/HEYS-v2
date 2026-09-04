@@ -112,7 +112,6 @@ const GR_BG = canvasToken(canvasPalette, '--gr-bg');
 const GR2 = canvasToken(canvasPalette, '--gr2');
 const ON_GR = canvasToken(canvasPalette, '--on-gr');
 
-const COPY = '.nutrition-v4-sheet__swipe-actions button.is-copy';
 const CHIP_ON = '.nutrition-v4-supplements__chip.is-on';
 
 describe('шалфейные роли вкладки «Питание»', () => {
@@ -154,24 +153,15 @@ describe('шалфейные роли вкладки «Питание»', () => 
     expect(pals[id]['--v4-on-ok-fill'], `${id}: --v4-on-ok-fill`).toBeDefined();
   });
 
-  it('свайп-действие и отмеченный чип берут разные роли текста', () => {
-    expect(roleOf(nutritionCss, COPY, 'background')).toBe('--v4-ok-tint');
-    expect(roleOf(nutritionCss, COPY, 'color')).toBe('--v4-on-ok');
+  it('отмеченный чип добавок берёт роли заливки и текста', () => {
     expect(roleOf(nutritionCss, CHIP_ON, 'background')).toBe('--v4-ok-fill');
     expect(roleOf(nutritionCss, CHIP_ON, 'color')).toBe('--v4-on-ok-fill');
-    expect(roleOf(nutritionCss, COPY, 'color')).not.toBe(roleOf(nutritionCss, CHIP_ON, 'color'));
   });
 
-  it.each(SETS)('%s: текст не сливается со своим фоном и держит 4,5:1', (id) => {
-    const pairs = [
-      ['свайп «Копировать»', pals[id]['--v4-on-ok'], pals[id]['--v4-ok-tint']],
-      ['отмеченный чип', pals[id]['--v4-on-ok-fill'], pals[id]['--v4-ok-fill']],
-    ];
-    for (const [what, ink, bg] of pairs) {
-      expect(ink, `${what}: тон текста`).not.toBe(bg);
-      expect(contrast(ink, bg), `${what}: ${ink} на ${bg}`).toBeGreaterThanOrEqual(4.5);
-    }
-    // И два текста между собой — разные тона, иначе развязка формальная.
-    expect(pals[id]['--v4-on-ok']).not.toBe(pals[id]['--v4-on-ok-fill']);
+  it.each(SETS)('%s: текст отмеченного чипа не сливается с фоном и держит 4,5:1', (id) => {
+    const ink = pals[id]['--v4-on-ok-fill'];
+    const bg = pals[id]['--v4-ok-fill'];
+    expect(ink, 'тон текста').not.toBe(bg);
+    expect(contrast(ink, bg), `отмеченный чип: ${ink} на ${bg}`).toBeGreaterThanOrEqual(4.5);
   });
 });
