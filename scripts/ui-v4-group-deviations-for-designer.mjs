@@ -55,7 +55,7 @@ const CLASSIFIERS = [
     proposal: 'одобрить как правило',
     test: (row, f) =>
       row.reasonCode === 'owner-decision'
-      || /контракт старше|кадр устар|только для нагляд|наглядност|демонстрац|решение владельц|намеренно|продуктов(?:ое|ый)\s+решен|снята делом|не в этот релиз/.test(
+      || /контракт старше|кадр устар|только для нагляд|наглядност|демонстрац|решение владельц|намеренно|продуктов(?:ое|ый)\s+решен|снята делом|не в этот релиз|то же решение контракта/.test(
         f,
       ),
   },
@@ -64,7 +64,7 @@ const CLASSIFIERS = [
     label: 'данных для состояния нет',
     proposal: 'спорно — разобрать поштучно',
     test: (row, f) =>
-      /состояни[ея]\s+нет|нет (?:данных|в коде|состояни)|не реализован|отсутству(?:ет|ют)|в коде нет|удалён|удален|0 совпад|не делит экран|не реализованы как отдельн|полноэкранн(?:ых|ые)\s+исход|outcome screen|в proposal_ui нет|curator signal нет|«в шаблоны».*нет|save-flow снят/.test(
+      /состояни[ея]\s+нет|нет (?:данных|в коде|состояни)|не реализован|отсутству(?:ет|ют)|в коде нет|удалён|удален|0 совпад|не делит экран|не реализованы как отдельн|полноэкранн(?:ых|ые)\s+исход|outcome screen|в proposal_ui нет|curator signal нет|«в шаблоны».*нет|save-flow снят|мёртв(?:ое|ая|ый)|не выводит(?: вовсе)?|не вызывается|в продукте нет|runtime-состояни[яе].*нет|skeletoncard.*не вызывается|элемента на экране нет|выделенного.*нет, потому что нет/.test(
         f,
       ),
   },
@@ -89,7 +89,7 @@ const CLASSIFIERS = [
     label: 'компонент переиспользован из другой зоны',
     proposal: 'одобрить как правило',
     test: (row, f) =>
-      /переиспольз|из другой зон|общ(?:ий|ая|ее)\s+(?:компонент|класс|паттерн)|foreign-zone|чуж(?:ая|ой)\s+зон|wrapper|эталон.*(?:друг|иной)|из зоны|пре-v4|pre-v4/.test(
+      /переиспольз|из другой зон|общ(?:ий|ая|ее)\s+(?:компонент|класс|паттерн|слой)|foreign-zone|чуж(?:ая|ой)\s+зон|wrapper|эталон.*(?:друг|иной)|из зоны|пре-v4|pre-v4|\.mc-wheel|mc-wheel-\*|значения колеса|делят его|для всех крестов зоны|одна на все размеры|прозрачность хвоста одна/.test(
         f,
       ),
   },
@@ -105,7 +105,9 @@ const CLASSIFIERS = [
     label: 'график/SVG: масштаб vs фиксированный кадр',
     proposal: 'спорно — разобрать поштучно',
     test: (row, f) =>
-      /svg\s*\d+×\d+|холст\s*\d+×\d+|поле рисунка|sparkline|360×|262×|растяж|эллипс|viewbox/.test(f),
+      /svg\s*\d+×\d+|холст\s*\d+×\d+|поле рисунка|sparkline|360×|262×|растяж|эллипс|viewbox|path\s+m\d+|дуг[аи]|крестом m\d|искра m\d|значок\s+\d+×\d+|галочк[аи]\s+\d+|шеврон.*custom|custom svg|хвост дуги/.test(
+        f,
+      ),
   },
   {
     id: 'theme-preview',
@@ -141,7 +143,7 @@ const CLASSIFIERS = [
     label: 'элемент кадра отсутствует в коде',
     proposal: 'мы починим кодом',
     test: (row, f) =>
-      /без (?:ссылки|надстроки|свёрнутого|строки|элемента|кнопки|чипов)|не рендерит|не поставлен|не имеет|отсутствует/.test(
+      /без (?:ссылки|надстроки|свёрнутого|строки|элемента|кнопки|чипов)|не рендерит|не поставлен|не имеет|отсутствует|не рисуется|круга r \d+.*нет|состоит из одного креста|разделител(?:ей|и).*нет|нет разделител|шеврон.*не рисуется/.test(
         f,
       ),
   },
@@ -150,20 +152,25 @@ const CLASSIFIERS = [
     label: 'текст и копия отличаются от кадра',
     proposal: 'спорно — разобрать поштучно',
     test: (row, f) =>
-      /заголовок|слова на экране|текст|фраз|копи|подпис|диалог|сообщен|требует «|рисует «|говорит|называет/.test(f),
+      /заголовок|слова на экране|текст|фраз|копи|подпис|диалог|сообщен|требует «|рисует «|говорит|называет|кадр\s*[·.]?\d+\s*—\s*«|друг(?:ие|ой)\s+(?:три\s+)?фрагмент|на\s+шаге\s+\d.*кадр|кнопка\s*«|cta\s*«|confirmmodal|mealdatewarning|heys_trial_intake|step_time_left|age_confirm|ответы сохранены|галочку выше|анкета отправлена|анкета не дозаполнена|закрыть.*44×64|мне есть 18/.test(
+        f,
+      ),
   },
   {
     id: 'functional-flow',
     label: 'функциональный поток отличается от кадра',
     proposal: 'спорно — разобрать поштучно',
-    test: (row, f) => /функци|поток|уводит|открывает|переход|тап|навигац|редактор|ввод/.test(f),
+    test: (row, f) =>
+      /функци|поток|уводит|открывает|переход|тап|навигац|редактор|ввод|native\s+<select>|native\s+select|системн(?:ого|ый)\s+select|custom absolute|камера|aspect|4:3|scanner|штрихкод|barcode|selectfield/.test(
+        f,
+      ),
   },
   {
     id: 'composition-ux',
     label: 'композиция и UX отличаются от кадра',
     proposal: 'спорно — разобрать поштучно',
     test: (row, f) =>
-      /состав|меню|собран|вместо|лист по|сетк|колонк|порядок|space-between|baseline|center|wrap|карточк|список/.test(
+      /состав|меню|собран|вместо|лист по|сетк|колонк|порядок|space-between|baseline|center|wrap|карточк|список|липк(?:ий|ом)\s+подвал|чипы\s+с\s+переносом|списком\s+строк|перерисовывает\s+блок|кадр\s+и\s+runtime|без\s+\.row|стрелк.*крест|замена креста|одной плашкой|сноска|раскрывашк|абзац/.test(
         f,
       ),
   },
@@ -179,11 +186,66 @@ const CLASSIFIERS = [
     label: 'геометрия и типографика: код vs кадр',
     proposal: 'спорно — разобрать поштучно',
     test: (row, f) =>
-      /\d+(?:[,.]\d+)?\s*px|height:|width:|margin|padding|gap:|font:|line-height|r\d+|min-height|радиус|крив|path\s|рисунок/.test(
+      /\d+(?:[,.]\d+)?\s*px|height:|width:|margin|padding|gap:|font:|line-height|r\d+|min-height|радиус|крив|path\s|рисунок|отступ\s+\d+|кадр\s+(?:даёт|просит|рисует)\s+\d+|строка\s+(?:меты|держит)\s+\d+|зазор\s+\d+|точки прижаты|поле\s+\d+\s*[×x]\s*\d+|размер общий|подгонять.*ради|спор\s+тр[ёе]х\s+источников|главное\s+число|трекинг/.test(
         f,
       ),
   },
 ];
+
+/**
+ * Однострочное объяснение, почему строка остаётся в хвосте (не образует класс ≥2).
+ * @param {DeviationRow & { inferredClass?: string }} row
+ * @param {string} f
+ */
+function inferSingletonReason(row, f) {
+  if (row.inferredClass) {
+    return `единственная строка класса «${row.inferredClass}» — нет второй с той же причиной`;
+  }
+  if (row.reasonCode === 'logic-invariant') {
+    return 'logic-invariant: единственная строка с этим reasonCode';
+  }
+  if (/prefers-reduced-motion|уменьшенн(?:ое|ый)\s+движен/.test(f)) {
+    return 'a11y reduced-motion: единственная строка зоны app-splash с этим контрактом';
+  }
+  if (/heys_client_access_code_setup/.test(f) && /плашк|сноск/.test(f)) {
+    return 'login: единственная строка — перечень правил одной плашкой vs сноска кадра';
+  }
+  if (/heys_client_access_code_setup/.test(f) && /продолжить|сохранить код/.test(f)) {
+    return 'login: единственная строка — подпись CTA «Продолжить» vs «Сохранить код»';
+  }
+  if (/mealdatewarning|confirmmodal/.test(f)) {
+    return 'nutrition-tab: единственная строка — другой диалог выбора даты vs кадр';
+  }
+  if (/aspect|4:3|камера/.test(f)) {
+    return 'product-card: единственная строка — aspect-ratio камеры vs растяжение кадра';
+  }
+  if (/стрелк.*крест|крест.*стрелк/.test(f)) {
+    return 'product-card: единственная строка — «назад» vs крест (блокер чужой сессии)';
+  }
+  if (/scanner|код не распознан|runtime-состояни/.test(f)) {
+    return 'product-card: единственная строка — нет отдельного состояния «код не распознан»';
+  }
+  if (/дорожка чернил|прогресса чтения/.test(f)) {
+    return 'registration: единственная строка — % чернил дорожки чтения vs кадр';
+  }
+  if (/спор\s+тр[ёе]х\s+источников/.test(f)) {
+    return 'reports-insights: единственная строка — три источника кегля главного числа';
+  }
+  if (/абзац.*раскрывашк|rаскрывашк.*абзац/.test(f)) {
+    return 'reports-insights: единственная строка — абзац раскрывашки vs кадр (см. соседнюю строку)';
+  }
+  if (/advice-service|service-curator|техлог|диагностика|служебн/.test(f)) {
+    return 'service-curator: единственная строка — состав служебного листа vs кадр';
+  }
+  if (/heys_curator_actions_banner/.test(f)) {
+    return 'curator-edits: единственная строка — ack при тапе строки баннера';
+  }
+  const short = String(row.f || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 120);
+  return short ? `${short}${row.f.length > 120 ? '…' : ''}` : 'причина не попала ни в один класс ≥2 строк';
+}
 
 /**
  * @param {ReturnType<typeof readAllZones>} data
@@ -310,11 +372,15 @@ export function buildSummary(grouped, listTally) {
     })),
     perZone,
     listByZone: listTally.byZone,
-    tail: grouped.tail.map((item) => ({
-      zoneId: item.zoneId,
-      key: item.key,
-      inferredClass: item.inferredClass || null,
-    })),
+    tail: grouped.tail.map((item) => {
+      const f = normalizeReason(item.f);
+      return {
+        zoneId: item.zoneId,
+        key: item.key,
+        inferredClass: item.inferredClass || null,
+        singletonReason: inferSingletonReason(item, f),
+      };
+    }),
     unclassified: grouped.tail
       .filter((item) => !item.inferredClass)
       .map((item) => ({ zoneId: item.zoneId, key: item.key })),
@@ -368,13 +434,16 @@ export function renderMarkdown(summary) {
     '',
     `Одиночные строки (${summary.tailCount} шт.) — не образуют класс (правило: класс ≥ 2 строк).`,
     '',
-    '| Зона | Ключ |',
-    '| ---- | ---- |',
+    '| Зона | Ключ | Почему единичная |',
+    '| ---- | ---- | ---------------- |',
   );
 
   for (const item of summary.tail) {
     const suffix = item.inferredClass ? ` _(был бы: ${item.inferredClass})_` : '';
-    lines.push(`| ${item.zoneId} | ${item.key.replace(/\|/g, '\\|')}${suffix} |`);
+    const reason = (item.singletonReason || '—').replace(/\|/g, '\\|');
+    lines.push(
+      `| ${item.zoneId} | ${item.key.replace(/\|/g, '\\|')}${suffix} | ${reason} |`,
+    );
   }
 
   lines.push(
