@@ -73,7 +73,7 @@ describe('Тепловая карта · Как сейчас — сведённ�
     expect(weekBar).toContain("return 'd2'");
     expect(weekBar).toContain("return 'd1'");
     expect(weekBar).not.toContain('widget-heatmap__month-grid');
-    expect(body.slice(size2x2At)).toContain("v4Kicker('Тепловая карта')");
+    expect(body.slice(size2x2At)).toContain("v4Kicker('Месяц целиком')");
     expect(body.slice(size2x2At)).toContain('widget-heatmap__month-grid');
   });
 

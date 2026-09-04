@@ -10811,7 +10811,8 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 }
 
 .widget-heatmap--2x1.widget-v4-stack,
-.widget-heatmap--3x1.widget-v4-stack {
+.widget-heatmap--3x1.widget-v4-stack,
+.widget-heatmap--2x2.widget-v4-stack {
   align-items: stretch;
   justify-content: space-between;
 }
@@ -11201,6 +11202,14 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   display: flex;
   align-items: baseline;
   gap: 2px;
+}
+
+.widget-heatmap.widget-v4-mini .widget-v4-mini__value--pair {
+  gap: 3px;
+}
+
+.widget-heatmap.widget-v4-mini .widget-v4-unit {
+  font-size: 9px;
 }
 
 .widget-v4-mini__value.widget-v4-val--good {
@@ -14217,36 +14226,24 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
-/* Строка контракта «тепловая карта»: клетка не носит роль состояния — только
-   ступень плотности в одном тоне. Прежний --v4-ok красил клетку ролью. */
-.widget-heatmap__cell--month.widget-heatmap__cell--red {
-  background: rgba(32, 30, 29, 0.18);
+/* Строка контракта «тепловая карта»: клетка месяца — та же шкала, что у полос
+   недели: норма --gr2, частичное --ovl, промах линией, сегодня --acs. */
+.widget-heatmap__cell--month.widget-v4-heat__bar--d3 {
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
-.widget-heatmap__cell--month.widget-heatmap__cell--yellow,
-.widget-heatmap__cell--month.widget-heatmap__cell--warn {
-  background: rgba(32, 30, 29, 0.36);
+.widget-heatmap__cell--month.widget-v4-heat__bar--d2 {
+  background: var(--v4-wave-overlap, #d99a63);
 }
 
-.widget-heatmap__cell--month.widget-heatmap__cell--green,
-.widget-heatmap__cell--month.widget-heatmap__cell--good,
-.widget-heatmap__cell--month.widget-heatmap__cell--ok {
-  background: rgba(32, 30, 29, 0.58);
+.widget-heatmap__cell--month.widget-v4-heat__bar--d1,
+.widget-heatmap__cell--month.widget-v4-heat__bar--empty {
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
-[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--red {
-  background: rgba(242, 237, 230, 0.2);
-}
-
-[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--yellow,
-[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--warn {
-  background: rgba(242, 237, 230, 0.4);
-}
-
-[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--green,
-[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--good,
-[data-theme$="dark"] .widget-heatmap__cell--month.widget-heatmap__cell--ok {
-  background: rgba(242, 237, 230, 0.62);
+.widget-heatmap__cell--month.widget-heatmap__cell--today {
+  background: var(--v4-act, #c67139);
+  box-shadow: none;
 }
 
 /* Риск-радар 2×1 «Главный риск» — уровень подписью справа в шапке,
