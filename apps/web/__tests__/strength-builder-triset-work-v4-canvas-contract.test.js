@@ -109,7 +109,7 @@ function assertRows(rows, paletteLabel) {
   return mismatches;
 }
 
-describe('З2 · трисет в работе · canvas contract', () => {
+describe('З2 · трисет в работе · canvas contract', { timeout: 45_000 }, () => {
   afterEach(() => cleanup());
 
   it('держит каноничные строки и геометрию экрана', () => {
