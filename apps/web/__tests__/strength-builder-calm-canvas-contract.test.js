@@ -607,7 +607,7 @@ describe('strength builder: спокойные состояния активно
   it('выделяет открытое упражнение спокойно, а ввод — рамкой полей', () => {
     expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ex.is-open'))
       .toContain('box-shadow: inset 0 0 0 1.5px rgba(var(--ink), 0.14)');
-    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-field'))
+    expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-field:not(.is-reps-missing)'))
       .toContain('box-shadow: inset 0 0 0 2px var(--sb-acc-strong)');
     expect(lastRule('.sb-ap.is-current .sb-ap-num')).not.toContain('background: var(--sb-acc)');
   });
@@ -653,7 +653,7 @@ describe('strength builder: спокойные состояния активно
     expect(lastRule('.sb-rest-value small')).toContain('rgba(var(--ink, 15, 23, 42), 0.56)');
     expect(lastRule('.sb-rest-context small')).toContain('rgba(var(--ink, 15, 23, 42), 0.56)');
     expect(lastRule('.sb-rest-next')).toContain('rgba(var(--ink, 15, 23, 42), 0.56)');
-    expect(lastRule('.sb-rest-compact-copy span')).toContain('rgba(var(--ink, 15, 23, 42), 0.45)');
+    expect(lastRule('.sb-rest-compact-copy span')).toContain('rgba(var(--ink, 15, 23, 42), 0.56)');
     expect(lastRule('.sb-rest-actions')).toContain('gap: 7px');
     expect(lastRule('.sb-rest-actions')).toContain('margin-top: 14px');
     expect(lastRule('.sb-rest-actions .sb-rest-collapse')).toContain('padding: 0 14px');

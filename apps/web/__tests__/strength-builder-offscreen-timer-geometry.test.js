@@ -2,24 +2,28 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { chromium } from '@playwright/test';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/750-strength-builder.css'), 'utf8');
 
 let browser;
+let browserPromise;
 
-beforeAll(async () => {
-  browser = await chromium.launch({ headless: true });
-});
+async function getBrowser() {
+  if (browser) return browser;
+  browserPromise ||= chromium.launch({ headless: true });
+  browser = await browserPromise;
+  return browser;
+}
 
 afterAll(async () => {
   await browser?.close();
 });
 
 async function renderCards() {
-  const page = await browser.newPage({ viewport: { width: 375, height: 812 } });
+  const page = await (await getBrowser()).newPage({ viewport: { width: 375, height: 812 } });
   await page.setContent(`
     <style>${CSS}</style>
     <main style="padding:12px">
