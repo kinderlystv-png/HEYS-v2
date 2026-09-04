@@ -1,0 +1,263 @@
+{
+  "_readme": "На чтение: handoff lane Г1 cycle/program + data schema lines. НЕ batch apply целиком — только rows[] с metadata; применять точечно через .sb-750-verdict-batch-apply.mjs --file=… после ревью владельца.",
+  "zone": "strength-builder",
+  "scope": "Г1 CycleScreen + schema/data lines (program, exercise card, zones)",
+  "protocol": "docs/ui/protocols/strength-builder-cycle-g1.md",
+  "generated": "2026-09-05",
+  "agent": "g1-cycle-program handoff subagent",
+  "meta": {
+    "purpose": "Document current verdicts, canvas refs, code anchors and post-Г1 recommendations for owner/reviewer — not an auto-wipe batch.",
+    "rowCount": 14,
+    "doNotFullFileApply": true,
+    "vidReportCycleOid": "Г2",
+    "vidReportCycleNote": "«вид · отчёт цикла» — кадр data-oid=Г2 (PlanVsDone / «Назначено против сделано»), НЕ lane Г1 CycleScreen (data-oid=Г1, data-vid=«вид · экран цикла»). В handoff не включён; см. meta.excludedKeys.",
+    "шторкаDecision": "EXCLUDED: «шторка — семь входов» — контракт in-session sheet (раздел «Куратор в сессии, офлайн, шторка», canvas :2241); живой код sheetRows в superset_ui :2411–2450 — 6 рабочих входов (порядок, каталог, история, круговой, назначено против сделано, заметка), без «шаблоны/повторить прошлую» из канваса. Owner lane: session sheet / dev-first «шторка нужна разработчику первой», не Г1 cycle.",
+    "excludedKeys": [
+      {
+        "key": "вид · отчёт цикла",
+        "reason": "G2 lane (PlanVsDoneScreen), not G1 CycleScreen",
+        "canvasRef": "strength-builder.v4.dc.html:594 data-oid=Г2 data-vid=«вид · отчёт цикла»",
+        "codeRef": "heys_strength_superset_ui_v1.js:2322+ PlanVsDoneScreen; assigned-vs-done handoff"
+      },
+      {
+        "key": "шторка — семь входов",
+        "reason": "In-session sheet scope, not cycle/program",
+        "canvasRef": "strength-builder.v4.dc.html:2241",
+        "codeRef": "heys_strength_superset_ui_v1.js:2411–2450 sheetRows (6 entries today)"
+      }
+    ],
+    "keysNotFound": []
+  },
+  "canvasRef": {
+    "g1": {
+      "oid": "Г1",
+      "vid": "вид · экран цикла",
+      "stopFrame": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:549",
+      "contractBlock": "2313–2315 (состав экрана цикла, фаза недели названа числом, один счёт на весь цикл)"
+    }
+  },
+  "summary": {
+    "rows": 14,
+    "recommendEquals": 5,
+    "recommendQuestion": 8,
+    "recommendNotEquals": 0,
+    "recommendDash": 1,
+    "codeChanged": false
+  },
+  "rows": [
+    {
+      "key": "состав экрана цикла",
+      "lane": "G1-cycle",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "8479a9686de9"
+      },
+      "recommend": {
+        "verdict": "=",
+        "f": "CycleScreen (Г1): герой .sb-cycle-metrics (выполнено/тоннаж/рекорды), ярус «Фазы недель» .sb-cycle-phase*, «Эта неделя» .sb-cycle-week-list — heys_strength_proposal_ui_v1.js:1041–1112; wire openPath day_trainings :3194–3201; геометрия strength-builder-cycle-v4-canvas-contract.test.js stop 375px."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2313; stop :549–587",
+      "codeRef": "docs/ui/protocols/strength-builder-cycle-g1.md; heys_strength_proposal_ui_v1.js CycleScreen + buildProgramCycleSnapshot"
+    },
+    {
+      "key": "фаза недели названа числом",
+      "lane": "G1-cycle",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "fd2fbbb8c675"
+      },
+      "recommend": {
+        "verdict": "=",
+        "f": "Имя фазы + detail с числом («70 % от рабочего») в .sb-cycle-phase-detail из program.phases[].detail; fallback defaultPhases :851–892 без % только если phases[] пуст — тогда ? до заполнения KV. Контракт-тест fixture canvasProgram() phases[0].detail."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2314; кадр :558 «Недели 1–3 · вес 70 % от рабочего»",
+      "codeRef": "heys_strength_proposal_ui_v1.js:851–892 defaultPhases, :1093–1094 phase.detail render"
+    },
+    {
+      "key": "один счёт на весь цикл",
+      "lane": "G1-cycle",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "439179e9a0cf"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "CycleScreen синхронизирует doneCount/totalCount и doneVolume/plannedVolume в одном snapshot (:1023–1031), но контракт data-v (правка 1 сент.) требует 4 фазы с пиком и 12×82 т, а stop-кадр Г1 и fixture — 3 фазы без пика (8 недель). Счётчики сходятся внутри экрана; расхождение модели периодизации — решение владельца до «=»."
+      },
+      "reasonCode": "product-model",
+      "canvasRef": "strength-builder.v4.dc.html:2315 (4 фазы канон) vs :549–577 (3 фазы кадр)",
+      "codeRef": "heys_strength_proposal_ui_v1.js:935–1031 buildProgramCycleSnapshot; __tests__/strength-builder-cycle-v4-canvas-contract.test.js canvasProgram"
+    },
+    {
+      "key": "3 · программа, фазы недель и снимок плана",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "75f247d1aa3d"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "planSnapshot на тренировке есть (kernel applyProposal :950–960, PlanVsDone buildPlanVsDoneSnapshot superset_ui:624+). program.phases в heys_training_program — опционально (protocol §Зависимости: fallback эвристика). Нужна схема KV с фазами/автором/периодом до «=» по всей строке."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2426",
+      "codeRef": "apps/web/_kernel/heys_kernel_strength_v1.js planSnapshot; heys_day_trainings_v1.js getKV heys_training_program :2821+"
+    },
+    {
+      "key": "вид · коэффициент своего веса",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "76bf7192e652"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "ExerciseSimilarScreen (М3) в catalog_ui :506+ — образцы коэффициента; контракт .cd/.grp геометрия — strength-builder-exercise-similar-v4-canvas-contract.test.js покрывает copy/options, не все CSS stop-пары. Сверить computed на sand+blue до «=»."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2003 data-oid=М3; spec :2279",
+      "codeRef": "heys_strength_catalog_ui_v1.js ExerciseSimilarScreen; heys_exercise_catalog_v1.js bodyweightSimilarOptions"
+    },
+    {
+      "key": "вид · таблица своего веса",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "1ea37795217a"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "Колонка «Довес, кг» + прочерк .dash для пустого довеса — builder_ui unit bodyweight + superset ExerciseCard; отдельного stop-geometry гейта под М6 нет. Проверить .sb-aps-head и разбор .cd под таблицей против canvas :2286."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2061 data-oid=М6; spec :2286",
+      "codeRef": "heys_strength_builder_ui_v1.js is-bodyweight-entry; heys_strength_superset_ui_v1.js ExerciseCard"
+    },
+    {
+      "key": "вид · таблица по времени и метрам",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "da4ca56b42c5"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "time/distance entry modes в builder_ui (.is-time-entry / distance); заголовок .tbh «Время»/«Метры» и сетка 44px — сверить с spec :2285 (М4/М5). Kernel: seconds/meters отдельно от totalVolume (:1132–1138)."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2023–2042 data-oid=М4/М5; spec :2285",
+      "codeRef": "heys_strength_builder_ui_v1.js unitEntryLabel; apps/web/_kernel/heys_kernel_strength_v1.js trainingTonnage"
+    },
+    {
+      "key": "вид · шкала тяжести",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "388a069469b9"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "Живой UI: .sb-rpe / .sb-rpe-dot (6–10) в ExerciseCard superset_ui:1905–1924; CSS 750:406+ и :3696+. Канвас унифицировал .hv/.hvOn — расхождение классов; нужен geometry гейт или CSS pass под единый stop-кадр :2345."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2345 spec «вид · шкала тяжести»",
+      "codeRef": "heys_strength_superset_ui_v1.js:1905–1924; 750-strength-builder.css .sb-rpe*"
+    },
+    {
+      "key": "три поля, которых требует схема",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "6474328352de"
+      },
+      "recommend": {
+        "verdict": "=",
+        "f": "ExerciseCardScreen: единица (.sb-ex-card-units), группы (tier «Какие мышцы»), коэффициент только для bodyweight — builder_ui + .sb-m1-exercise-card-handoff.json rows 01–19; контракт-тест strength-builder-exercise-card-v4-canvas-contract.test.js."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:1937 lab М1; spec :2273",
+      "codeRef": "heys_strength_builder_ui_v1.js ExerciseCardScreen; scripts/.sb-m1-exercise-card-handoff.json"
+    },
+    {
+      "key": "одиннадцать групп, список закрыт",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Каталог MUSCLE_GROUPS — 14 id (apps/web/heys_exercise_catalog_v1.js:31–46), канвас/fixture называют 11 русских ярлыков. Сверить с дизайном: traps/forearms/addductors — лишние или скрытые в UI?",
+        "h": "9bd66f1be697"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "MUSCLE_GROUPS 14 записей (traps, forearms, adductors сверх канонических 11) — heys_exercise_catalog_v1.js:31–46. ExerciseMuscleGroupsScreen рендерит каталог; решение владельца: скрыть/слить три id или обновить контракт."
+      },
+      "reasonCode": "schema-catalog",
+      "canvasRef": "strength-builder.v4.dc.html:2276",
+      "codeRef": "heys_exercise_catalog_v1.js MUSCLE_GROUPS; heys_strength_catalog_ui_v1.js ExerciseMuscleGroupsScreen"
+    },
+    {
+      "key": "7 · четыре поля под обещания экранов",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "6438f5e1e416"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "Частично: primaryGroup/secondaryGroups + unit + bodyweightFactor на упражнении; discomfort на подходе (kernel normalizeApproach :191–194, pain card superset_ui:1885+). «Вес тела в тоннаж» — bodyWeightKg opts + factor. Полный чеклист четырёх полей по всем экранам не закрыт одним тестом."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2430",
+      "codeRef": "heys_kernel_strength_v1.js approach/exercise fields; heys_strength_catalog_ui_v1.js + superset_ui discomfort"
+    },
+    {
+      "key": "8 · владелец минут по зонам",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "7b8c5d207ff6"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "workoutLog.zoneMinutes[4] пишется day_training_handlers + heys_day_calculations :498+; MET 2/3/5/8 vs fallback 2.5/6/8/10 — зона Актив/tab-activity, не CycleScreen. Блокер калорий из канваса (:2431 i) остаётся до owner decision."
+      },
+      "canvasRef": "strength-builder.v4.dc.html:2431",
+      "codeRef": "heys_day_calculations.js zoneMinutes; heys_day_training_handlers.js; tab-activity.v4.dc.html (discomfort precondition)"
+    },
+    {
+      "key": "открыто · распределение минут по зонам",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "67503052302e"
+      },
+      "recommend": {
+        "verdict": "—",
+        "f": "Открытый product gap: «Решение владельца, живёт в Активе — этот канвас минут не рисует» (canvas :2451). Не verdict сведения Г1; naKind owner-pending."
+      },
+      "reasonCode": "owner-pending",
+      "canvasRef": "strength-builder.v4.dc.html:2451",
+      "codeRef": "tab-activity.v4.dc.html; heys_day_energy_context_v1.js HR zones"
+    },
+    {
+      "key": "открыто · два режима ввода зон",
+      "lane": "data",
+      "current": {
+        "v": "?",
+        "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+        "h": "bdeef242585f"
+      },
+      "recommend": {
+        "verdict": "?",
+        "f": "Конструктор кладёт минуты в zone 2 (training-card-strength-hr-zones.test.js fixture zoneMinutes); «мастер делит пополам» — механика Актива. Ждём аудит механики (canvas :2452), не lane Г1."
+      },
+      "reasonCode": "owner-pending",
+      "canvasRef": "strength-builder.v4.dc.html:2452",
+      "codeRef": "apps/web/__tests__/training-card-strength-hr-zones.test.js; heys_day_training_handlers.js"
+    }
+  ]
+}
