@@ -5070,38 +5070,32 @@
     "План в ленте дня · 06": {
       "v": "=",
       "f": "margin-top 12px у .sb-plan-card--future: 750-strength-builder.css:5852-5854; dom-contract ·06 + day-feed contract test sand/blue.",
-      "h": "81d6d8e40a85",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "81d6d8e40a85"
     },
     "План в ленте дня · 07": {
       "v": "=",
       "f": "summary row flex center gap 10px: 731-ui-v4-activity.css .sb-plan-summary; PLAN_FEED ·07 dom-contracts.test.js.",
-      "h": "869d1e5dd696",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "869d1e5dd696"
     },
     "План в ленте дня · 08": {
       "v": "=",
       "f": "letter B 34×34 r11 var(--v4-act-text): 731 .sb-plan-letter; day-feed test ·08 sand+blue color.",
-      "h": "addb1ad16c00",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "addb1ad16c00"
     },
     "План в ленте дня · 09": {
       "v": "=",
       "f": "summary-copy flex column gap 3px: 731 .sb-plan-summary-copy; PLAN_FEED ·09.",
-      "h": "b4a4fa9ae422",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "b4a4fa9ae422"
     },
     "План в ленте дня · 10": {
       "v": "=",
       "f": "«Запланировано куратором» 700 12.5px var(--v4-ink): 731 b + superset_ui; day-feed ·10.",
-      "h": "00ceac024a98",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "00ceac024a98"
     },
     "План в ленте дня · 11": {
       "v": "=",
       "f": "meta rgba(ink,.56) 500 11px: 731 .sb-plan-meta; superset_ui meta string; day-feed ·11.",
-      "h": "76deaf58abb7",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "76deaf58abb7"
     },
     "План в ленте дня · 12": {
       "v": "=",
@@ -5112,32 +5106,27 @@
     "План в ленте дня · 13": {
       "v": "=",
       "f": "exercises column gap 6 margin-top 12: 731 .sb-plan-exercises; ·13.",
-      "h": "94a2209f25bb",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "94a2209f25bb"
     },
     "План в ленте дня · 14": {
       "v": "=",
       "f": "li baseline gap 10: 731 .sb-plan-exercises > li; PLAN_FEED ·14 match all.",
-      "h": "7df83bd94c9e",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "7df83bd94c9e"
     },
     "План в ленте дня · 15": {
       "v": "=",
       "f": "exercise name flex 1 600 12px: 731 li > span; superset_ui list; ·15.",
-      "h": "f250c86095df",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "f250c86095df"
     },
     "План в ленте дня · 16": {
       "v": "=",
       "f": "sets mono 600 11px ink-2: 731 li > i; day-feed ·16 sand ink56.",
-      "h": "c0d7c8cb1544",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "c0d7c8cb1544"
     },
     "План в ленте дня · 17": {
       "v": "=",
       "f": "future actions flex gap 7 margin-top 12: 731 .sb-plan-actions--future; ·17.",
-      "h": "77e4b4025f38",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "77e4b4025f38"
     },
     "План в ленте дня · 18": {
       "v": "=",
@@ -5166,80 +5155,67 @@
     "План в ленте дня · 22": {
       "v": "=",
       "f": "week-days flex gap 5: 731 .sb-plan-week-days; PLAN_FEED ·22.",
-      "h": "0e0d875194db",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "0e0d875194db"
     },
     "План в ленте дня · 23": {
       "v": "=",
       "f": "is-done cell gr-bg r10 pad 8: 731 .is-done; ·23.",
-      "h": "cbb5c1f8e50f",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "cbb5c1f8e50f"
     },
     "План в ленте дня · 24": {
       "v": "=",
       "f": "weekday label 600 9.5px ink-2: 731 .is-done > i; ·24.",
-      "h": "2612a29a6aa6",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "2612a29a6aa6"
     },
     "План в ленте дня · 25": {
       "v": "=",
       "f": "checkmark var(--v4-ok-text): 731 .is-done > b; day-feed ·25 sand+blue.",
-      "h": "0712125d3ac4",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "0712125d3ac4"
     },
     "План в ленте дня · 26": {
       "v": "=",
       "f": "rest cell bg r10: 731 .is-rest; ·26 all.",
-      "h": "ea40d5b7e5ed",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "ea40d5b7e5ed"
     },
     "План в ленте дня · 27": {
       "v": "=",
       "f": "rest dash 700 11px ink-2: 731 .is-rest > b; ·27.",
-      "h": "c013a0005595",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "c013a0005595"
     },
     "План в ленте дня · 28": {
       "v": "=",
       "f": "assigned cell c2 bg: 731 .is-assigned; ·28.",
-      "h": "895d864e529b",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "895d864e529b"
     },
     "План в ленте дня · 29": {
       "v": "=",
       "f": "assigned dot var(--v4-act-text): 731 .is-assigned > b; day-feed ·29 blue ac.",
-      "h": "c5fea7338543",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "c5fea7338543"
     },
     "План в ленте дня · 30": {
       "v": "=",
       "f": "legend row wrap gap 12 margin-top 10: 731 .sb-plan-week-legend; PLAN_FEED ·30.",
-      "h": "0ddbabb4c903",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "0ddbabb4c903"
     },
     "План в ленте дня · 31": {
       "v": "=",
       "f": "legend item flex gap 5: 731 .sb-plan-week-legend span; PLAN_FEED ·31.",
-      "h": "d116851f82d0",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "d116851f82d0"
     },
     "План в ленте дня · 32": {
       "v": "=",
       "f": "legend swatch 9×9 r3: 731 .sb-plan-week-legend i; PLAN_FEED ·32.",
-      "h": "d55c4db65a48",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "d55c4db65a48"
     },
     "План в ленте дня · 33": {
       "v": "=",
       "f": "assigned swatch var(--v4-act): 731 i.is-assigned; day-feed ·33 sand+blue acs.",
-      "h": "3c87cb21ff36",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "3c87cb21ff36"
     },
     "План в ленте дня · 34": {
       "v": "=",
       "f": "footnote sm plan-not-fact: superset_ui .sb-plan-foot; dom ·34.",
-      "h": "0b68cc8e46d1",
-      "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
+      "h": "0b68cc8e46d1"
     },
     "План в ленте дня · 35": {
       "v": "=",
