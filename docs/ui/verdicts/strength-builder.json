@@ -120,7 +120,7 @@
       "f": "Поведение =; расхождение в строке «каталог»: контракт «60 кг × 8», кадр/код «60 × 8». catalog_ui:78-89,164-167; strength-builder-ui.test.js:512.",
       "h": "7f47f0ab839a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2208"
     },
     "таблица, а не поля подряд": {
       "v": "=",
@@ -234,7 +234,7 @@
     },
     "шторка — семь входов": {
       "v": "≠",
-      "f": "Контракт :2241 — 7 строк (шаблоны, повторить прошлую, каталог…); product sheetRows superset_ui:2415–2449 — 6 (Порядок…Заметка); кадр И2 совпадает с product. Шаблоны/повторить в листе нет; owner builder_ui не меняет superset_ui.",
+      "f": "Контракт :2241 — 7 строк (шаблоны, повторить прошлую, каталог…); product sheetRows superset_ui:2420–2466 — 7 рабочих входов: Порядок, Каталог, История, Круговой, Назначено против сделано, Заметка, Повторить прошлую (:2455–2465). Расхождение не в счёте, а в подписи: контракт «шаблоны», продукт «Порядок упражнений»; отдельного экрана шаблонов нет.",
       "h": "f6d47f78e6af",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2241"
@@ -360,8 +360,8 @@
       "h": "9f7ab94b31d0"
     },
     "три поля, которых требует схема": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "ExerciseCardScreen: единица (.sb-ex-card-units), группы (tier «Какие мышцы»), коэффициент только для bodyweight — heys_strength_builder_ui_v1.js:387–542; strength-builder-exercise-card-v4-canvas-contract.test.js + .sb-m1-exercise-card-handoff.json.",
       "h": "6474328352de"
     },
     "коэффициент спрашивают образцом, а не числом": {
@@ -375,9 +375,11 @@
       "h": "923d98260b18"
     },
     "одиннадцать групп, список закрыт": {
-      "v": "?",
-      "f": "Каталог MUSCLE_GROUPS — 14 id (apps/web/heys_exercise_catalog_v1.js:31–46), канвас/fixture называют 11 русских ярлыков. Сверить с дизайном: traps/forearms/addductors — лишние или скрытые в UI?",
-      "h": "9bd66f1be697"
+      "v": "≠",
+      "f": "MUSCLE_GROUPS 14 id (heys_exercise_catalog_v1.js:31–46: traps, forearms, adductors сверх 11 русских ярлыков канваса :2276); ExerciseMuscleGroupsScreen рендерит все 14 — решение владельца: скрыть три id или обновить контракт.",
+      "h": "9bd66f1be697",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2276"
     },
     "вид · карточка упражнения": {
       "v": "=",
@@ -389,11 +391,11 @@
       "f": "Канвас :2278 (пилюли 44, превью объёма). Поведение ExerciseMuscleGroupsScreen catalog_ui:446-493 =; геометрия пилюль ·08-10 ≠ (scripts/.sb-catalog-exercise-muscles-handoff.json). Агрегат ≠ из-за носителя, не копии.",
       "h": "0fc799bb198f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2278"
     },
     "вид · коэффициент своего веса": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "ExerciseSimilarScreen (М3): bodyweightSimilarOptions, copy «· свой вес», «сколько тела поднимается», «Не знаю» — heys_strength_catalog_ui_v1.js:506+; strength-builder-exercise-similar-v4-canvas-contract.test.js.",
       "h": "76bf7192e652"
     },
     "четыре единицы, одна таблица": {
@@ -412,13 +414,13 @@
       "h": "ba18b9b1951d"
     },
     "вид · таблица по времени и метрам": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "is-time-entry / is-distance-entry: колонки «Время»/«Метры», сетка 44px, .dash в тоннаже — builder_ui + strength-builder-distance-entry-v4-canvas-contract.test.js; kernel seconds/meters отдельно heys_kernel_strength_v1.js:1132–1138.",
       "h": "da4ca56b42c5"
     },
     "вид · таблица своего веса": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "is-bodyweight-entry: колонка «Довес, кг», прочерк .is-bw::after «—», сводка .cd — builder_ui + strength-builder-weight-entry-v4-canvas-contract.test.js (М6).",
       "h": "1ea37795217a"
     },
     "возврат ничего не решает сам": {
@@ -492,8 +494,8 @@
       "h": "2318669824b6"
     },
     "состав итогов": {
-      "v": "?",
-      "f": "trainingTonnage отдаёт totalVolume, warmupApproaches, seconds, meters, unmeasuredExercises; состав экрана итогов — heys_strength_finish_ui_v1.js (UI scope).",
+      "v": "=",
+      "f": "FinishScreen: hero --gr-bg, четыре плитки, detail rows, «Готово» 48px --acs — heys_strength_finish_ui_v1.js; strength-builder-finish-v4-canvas-contract.test.js «состав итогов».",
       "h": "8d06f4f745f6"
     },
     "сравнение только с такой же": {
@@ -502,19 +504,21 @@
       "h": "007e7c72216f"
     },
     "состав экрана цикла": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "CycleScreen (Г1): .sb-cycle-metrics, «Фазы недель» .sb-cycle-phase*, «Эта неделя» — heys_strength_proposal_ui_v1.js:1041–1112; strength-builder-cycle-v4-canvas-contract.test.js stop 375px.",
       "h": "8479a9686de9"
     },
     "фаза недели названа числом": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Имя фазы + .sb-cycle-phase-detail с «70 % от рабочего» из program.phases[].detail — proposal_ui:1093–1094; fixture canvasProgram() strength-builder-cycle-v4-canvas-contract.test.js.",
       "h": "fd2fbbb8c675"
     },
     "один счёт на весь цикл": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
-      "h": "439179e9a0cf"
+      "v": "≠",
+      "f": "Контракт :2315 — 4 фазы с пиком, 12×82 т; stop-кадр Г1 и buildProgramCycleSnapshot — 3 фазы / 8 недель (canvasProgram fixture). Счётчики сходятся внутри экрана, модель периодизации ≠ канон data-v.",
+      "h": "439179e9a0cf",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2315"
     },
     "итог программы называет рост, а не провалы": {
       "v": "=",
@@ -544,9 +548,11 @@
       "h": "c2a09e9d64e8"
     },
     "отчёт называет дыру": {
-      "v": "?",
-      "f": "Канвас :2321 + «Программа · отчёт за период · текст» :4076 — карточка «Пропущенная не считается сделанной». PlanVsDoneScreen superset_ui:2322-2397 без этой карточки; kernel isPlanned уже исключает skipped из факта. Нужно решение: убрать сноску из канваса как ! или вернуть disclosure в UI.",
-      "h": "688b510c5f03"
+      "v": "≠",
+      "f": "Канвас :2321 + «Программа · отчёт за период · текст» :4076 — карточка «Пропущенная не считается сделанной». PlanVsDoneScreen superset_ui:2322–2397 без disclosure; kernel isPlanned уже исключает skipped.",
+      "h": "688b510c5f03",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2321"
     },
     "метка авторства вместо диалога версий": {
       "v": "=",
@@ -574,8 +580,8 @@
       "h": "ffba5bc2c778"
     },
     "вид · экран истории": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "HistoryScreen .sb-history-screen: hero --gr-bg, «Последние тренировки», строки .sb-list — heys_strength_finish_ui_v1.js; strength-builder-history-v4-canvas-contract.test.js.",
       "h": "df34e4ed2eff"
     },
     "рост рабочего веса": {
@@ -614,8 +620,8 @@
       "h": "23f4a3fd065c"
     },
     "вид · чипы контекста": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "ExerciseCard: .sb-hist pills «Прошлый раз» / «Рекорд» над полями — superset_ui ExerciseCard + calm composite A1b (strength-builder-calm-canvas-contract.test.js :322); контракт :2343.",
       "h": "b8b55c625a74"
     },
     "вид · таблица подходов в карточке": {
@@ -684,19 +690,21 @@
       "h": "5313399ce044"
     },
     "вид · отчёт цикла": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "PlanVsDoneScreen (Г2): «Назначено против сделано», ячейки назначено/сделано — superset_ui:2322+; strength-builder-plan-vs-done-v4-canvas-contract.test.js.",
       "h": "d677e73f210e"
     },
     "вид · итог программы": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "ProgramDoneScreen: hero «9 из 12» 30px, три карточки, «Что выросло» — heys_strength_proposal_ui_v1.js; strength-proposal-v4-canvas-contract.test.js ProgramDoneScreen.",
       "h": "cbfff8955272"
     },
     "вид · след переноса": {
-      "v": "?",
-      "f": "Механика movedFrom/movedTo + trace в PlanCard/MoveSheet есть (superset_ui:2398-2621); копия/компоновка кадра Г3 ≠ runtime — scripts/.sb-transfer-follow-verdict-handoff.json 13×≠. Owner: свести или принять modal-flow.",
-      "h": "f381a18a4925"
+      "v": "≠",
+      "f": "movedFrom/movedTo + MoveSheet есть (superset_ui:2398–2621), но кадр Г3 — композит day shell + PlanCard; 13 строк ≠ по .sb-transfer-follow-verdict-handoff.json (copy/геометрия PlanCard vs канвас).",
+      "h": "f381a18a4925",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2360"
     },
     "вид · метка авторства": {
       "v": "=",
@@ -784,8 +792,8 @@
       "h": "cc32b2cf1924"
     },
     "вид · день не состоялся": {
-      "v": "?",
-      "f": "Поведение PlanCard missed superset_ui:2412-2483 + day_trainings handlers =. Геометрия ·06-16 = (missed contract test). Composite ·01-05 day shell — —; aggregate ? до закрытия shell/copy.",
+      "v": "=",
+      "f": "PlanCard missed superset_ui:2412–2483 + day_trainings handlers; геометрия ·06–16 = strength-builder-day-missed-v4-canvas-contract.test.js. Composite ·01–05 day shell — —.",
       "h": "7b476fac97af"
     },
     "вид · кадры спорных состояний": {
@@ -805,7 +813,7 @@
       "f": "Три полноэкранных исхода (Л10–Л12) не реализованы как отдельные экраны; есть kernel status + ProposalOutcome на finish. 58 frame ? → batch ≠ или отдельная задача на outcome screens.",
       "h": "67419e72a689",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
     },
     "вид · сравнение ветвей принятия": {
       "v": "—",
@@ -848,7 +856,7 @@
       "f": "Kernel: accept/decline/expire (strength-proposal-ui.test.js). Полноэкранных кадров Л10–Л12 («План обновлён», «предложение отклонено», «без ответа») в proposal_ui нет — только смена plan.proposal.status и частичный ProposalOutcome на итогах. 59 frame-строк Исход · * — ?; нужен отдельный UI scope или ≠ пакетом.",
       "h": "65165e19065b",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2396"
     },
     "принимается только целиком": {
       "v": "=",
@@ -861,8 +869,8 @@
       "h": "3d60d921d9a0"
     },
     "пропущен сегодня и пропущен раньше — два разных случая": {
-      "v": "?",
-      "f": "Канвас :2399 + кадры Л5/Л6. day_trainings: onResumeSkipped только !isPastDay; прошлый skipped — missed-card без воскрешения. Кураторская замена «сегодня vs раньше» — proposal_ui, серверный guard в канвасе; отдельного Л6 UI нет.",
+      "v": "=",
+      "f": "Канвас :2399. day_trainings: onResumeSkipped только !isPastDay; прошлый skipped — missed-card без воскрешения. Л5/Л6 кадры — strength-builder-missed-today/earlier-v4-canvas-contract.test.js.",
       "h": "591a8a28f14b"
     },
     "где живёт предложение куратора — решено": {
@@ -938,8 +946,8 @@
       "h": "7b5e6f141443"
     },
     "3 · программа, фазы недель и снимок плана": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "planSnapshot на тренировке (kernel applyProposal :950–960); program.phases в heys_training_program KV — proposal_ui CycleScreen + PlanVsDone buildPlanVsDoneSnapshot superset_ui:624+.",
       "h": "75f247d1aa3d"
     },
     "4 · статус «пропущено» вне факта": {
@@ -958,14 +966,15 @@
       "h": "63ae34bbabe0"
     },
     "7 · четыре поля под обещания экранов": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "primaryGroup/secondaryGroups + unit + bodyweightFactor на упражнении; discomfort на подходе kernel normalizeApproach :191–194 + superset_ui pain card :1885+; bodyWeightKg в тоннаж.",
       "h": "6438f5e1e416"
     },
     "8 · владелец минут по зонам": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
-      "h": "7b8c5d207ff6"
+      "v": "—",
+      "f": "workoutLog.zoneMinutes[4] + MET 2/3/5/8 — heys_day_calculations.js; блокер плотности калорий (:2431) живёт в tab-activity, не strength-builder.",
+      "h": "7b8c5d207ff6",
+      "naKind": "foreign-zone"
     },
     "мишени и запись чисел": {
       "v": "=",
@@ -982,21 +991,21 @@
       "f": "Счётчика трёх назначенных подряд и curator signal нет; SkipSheet (superset_ui:1494+) — локальный пропуск.",
       "h": "bc6a85637671",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2325"
     },
     "вес выше плана — прогресс, а не нарушение": {
       "v": "≠",
       "f": "Цвет «сделано больше — зелёный» не рендерится; PlanVsDoneScreen :2143 is-match/is-diff без over-plan green.",
       "h": "4634fca2a383",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2143"
     },
     "шторка нужна разработчику первой": {
       "v": "≠",
       "f": "sheetRows (superset_ui:2160-2199) без «отчёт цикла»; контракт dev-first шторку с cycle report не закрыт.",
       "h": "33e01a22159b",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2245"
     },
     "переходы и анимации, кроме перенумерации, не описаны": {
       "v": "—",
@@ -1008,7 +1017,7 @@
       "f": "Прочерки «—» в .sb-cell.is-blank (superset_ui:242,718), не .dash 56 % из контракта.",
       "h": "661c1111ceda",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2413"
     },
     "структура канона разнесена не на все кадры": {
       "v": "—",
@@ -1016,14 +1025,16 @@
       "h": "cfd72defe9a1"
     },
     "открыто · распределение минут по зонам": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
-      "h": "67503052302e"
+      "v": "—",
+      "f": "Контракт :2451 — решение владельца в Активе; strength-builder канвас минут не рисует.",
+      "h": "67503052302e",
+      "naKind": "foreign-zone"
     },
     "открыто · два режима ввода зон": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
-      "h": "bdeef242585f"
+      "v": "—",
+      "f": "Контракт :2452 — конструктор кладёт zone 2, мастер Актива делит иначе; owner-pending tab-activity audit.",
+      "h": "bdeef242585f",
+      "naKind": "foreign-zone"
     },
     "открыто · формулы Эпли в коде нет": {
       "v": "=",
@@ -1249,13 +1260,15 @@
       ]
     },
     "Конструктор · список свёрнут · 23": {
-      "v": "?",
-      "f": "Рендер: .sb-ex.is-pending .sb-ex-title b 12.5px (К · 14, 750:3391) против 13px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
+      "v": "≠",
+      "f": ".sb-ex.is-pending .sb-ex-title b 12.5px (К ·14, 750:3391) против 13px канваса — спор А1б/Г4/К, CANVAS_CONFLICTS calm; не правим код до дизайна.",
       "h": "c4dc01779567",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
-      ]
+      ],
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3386"
     },
     "Конструктор · список свёрнут · 24": {
       "v": "=",
@@ -1819,7 +1832,7 @@
       "h": "08f3b8ef67d3",
       "f": "«В шаблоны» в FinishScreen нет; save-flow снят (UI_V4 § Б3). finish-v4-canvas-contract.test.js row 58 исключён.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2728"
     },
     "Конструктор · итоги · 59": {
       "v": "=",
@@ -2066,70 +2079,70 @@
       "f": "Кадр .cd badge-row; продукт — вертикальные .sb-radio (heys_strength_catalog_ui_v1.js:288–301). Роли v4 через CATALOG_V4_BRIDGE; носитель ≠ pill.",
       "h": "d9a337aab838",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2777"
     },
     "Своё упражнение · 09": {
       "v": "≠",
       "f": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px — 750-strength-builder.css:1782–1794.",
       "h": "931b461e2c48",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2778"
     },
     "Своё упражнение · 10": {
       "v": "≠",
       "f": "Кадр gap 6px wrap badges; продукт column .sb-radio без wrap — layout catalog_ui.",
       "h": "1a415932debe",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2779"
     },
     "Своё упражнение · 11": {
       "v": "≠",
       "f": "Выбранная .sb-radio.is-on --sb-accbg/--v4-act (750:1796–1799); кадр pill --acs/--on-acs — роли ok, форма ≠ badge.",
       "h": "3e8e3e3dd598",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2780"
     },
     "Своё упражнение · 12": {
       "v": "≠",
       "f": "Неактивная .sb-radio --sb-mut ≈ ink 62%; кадр badge rgba ink .62.",
       "h": "f98a6986f686",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2781"
     },
     "Своё упражнение · 13": {
       "v": "≠",
       "f": "Строка .cd в кадре; в runtime .sb-radio — см. ·08.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2782"
     },
     "Своё упражнение · 14": {
       "v": "≠",
       "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676–1680).",
       "h": "ecaed16b6441",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2783"
     },
     "Своё упражнение · 15": {
       "v": "≠",
       "f": "Primary chip --sb-accTx/--v4-act-text; кадр «спина» 700 11.5 var(--ac) — семантика совпадает, носитель chip.",
       "h": "f0df850468b9",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2784"
     },
     "Своё упражнение · 16": {
       "v": "≠",
       "f": "Кадр .cd divider none; продукт .sb-chips wrap без divider.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2785"
     },
     "Своё упражнение · 17": {
       "v": "≠",
       "f": "Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56%.",
       "h": "d5f325075b3e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2786"
     },
     "Своё упражнение · 18": {
       "v": "=",
@@ -2551,28 +2564,28 @@
       "f": "Контракт: «День B · верх тела» 700 15px/1.32 var(--tx). Runtime: h('b','Сегодня по программе') — superset_ui:2615; CSS 700 13.5px/1.3 — 731:935-938. Зафиксировано apps/web/__tests__/activity-plan-card-frame.test.js:70-74.",
       "h": "14a9e42b2548",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "apps/web/__tests__/activity-plan-card-frame.test.js:70"
     },
     "Перенос · след в обе стороны · 08": {
       "v": "≠",
       "f": "Контракт: «7 упражнений · назначил Артём» 500 11.5px/1.4 rgba(ink,.56) margin-top 4px. Runtime: planProse «{dayLabel} · {n} упр. · … В расход не идёт…» — superset_ui:2609-2619; .sb-plan-meta 500 12px/1.55 margin 8px 0 0 — 731:954-957.",
       "h": "a42f45fc79f6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2870"
     },
     "Перенос · след в обе стороны · 09": {
       "v": "≠",
       "f": "Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:226-229.",
       "h": "6911b98d3ef4",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2871"
     },
     "Перенос · след в обе стороны · 10": {
       "v": "≠",
       "f": "Контракт: одна вторичная «Не смогу сегодня» margin-top 9px. Runtime: ряд .sb-plan-actions «Перенести»+«Пропустить» margin-top 9px — superset_ui:2626-2634, 731:970-973; осознанный разнос перенос/пропуск — activity-plan-card-frame.test.js:3-7, 225-291.",
       "h": "d690b0422265",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2872"
     },
     "Перенос · след в обе стороны · 11": {
       "v": "=",
@@ -2584,28 +2597,28 @@
       "f": "Контракт: список .cd. Runtime: .sb-move-days внутри .sb-sheet (модалка), не inline .cd на странице — superset_ui:2303-2317; вертикальный список — 731:1215-1223 vs кадр .cd:646-652.",
       "h": "d9a337aab838",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2874"
     },
     "Перенос · след в обе стороны · 13": {
       "v": "≠",
       "f": "Контракт: строка .cd .row. Runtime: button.sb-move-day flex row — superset_ui:2305-2316; геометрия 731:1225-1240 (min-height 52px, padding 10px 12px) — не класс .row кадра.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2875"
     },
     "Перенос · след в обе стороны · 14": {
       "v": "≠",
       "f": "Контракт: дата свободного дня color var(--tx). CSS задаёт только font на .sb-move-day-copy b (600 12.5px) без color — 731:1255-1258; внутри <button> текст наследует buttontext, не --tx/--v4-ink.",
       "h": "78fa7e55efd8",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2876"
     },
     "Перенос · след в обе стороны · 15": {
       "v": "≠",
       "f": "Контракт: «Свободно» 500 11px/1.3 rgba(ink,.56). CSS: font 500 11px/1.3 на span без color — 731:1260-1262; подпись «Свободно» в MoveSheet — superset_ui:2313.",
       "h": "0faf541159e6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2877"
     },
     "Перенос · след в обе стороны · 16": {
       "v": "=",
@@ -2617,14 +2630,14 @@
       "f": "Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопределено в 731 без dim текста.",
       "h": "52b78efc80b1",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2879"
     },
     "Перенос · след в обе стороны · 18": {
       "v": "≠",
       "f": "Контракт: пилюля «занят» color rgba(ink,.4). Runtime: .sb-move-day.is-busy > i с color var(--v4-ink-3)=rgba(0,0,0,.45) + фон --v4-hero — 731:1269-1274; контракт .4 vs .45 и лишняя заливка.",
       "h": "616ba9d55e48",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2880"
     },
     "Перенос · след в обе стороны · 19": {
       "v": "=",
@@ -2636,7 +2649,7 @@
       "f": "Контракт: «выбрано» 500 11px/1.3 color var(--ac). Runtime: span «выбрано» при pick — superset_ui:2313; CSS span без accent-color на .is-on — 731:1260-1262, 1276-1279.",
       "h": "fd2c51fe496c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2882"
     },
     "Перенос · след в обе стороны · 21": {
       "v": "=",
@@ -2648,7 +2661,7 @@
       "f": "Контракт: сноска .sm про механизм переноса на экране. Runtime: короткий .sb-plan-trace только внутри MoveSheet — superset_ui:2333-2334; полный текст кадра :666 отсутствует на странице/в карточке.",
       "h": "32f6f04d630b",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:666"
     },
     "Правка веса в сессии · 01": {
       "v": "=",
@@ -2755,42 +2768,42 @@
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "175bdcc2e73a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2905"
     },
     "Программа пройдена · 02": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "07ffbada0ee7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2906"
     },
     "Программа пройдена · 03": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "c4b4208e3021",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2907"
     },
     "Программа пройдена · 04": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "0b934293a975",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2908"
     },
     "Программа пройдена · 05": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "a9e2a1582436",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2909"
     },
     "Программа пройдена · 06": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "c629f84f9712",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2910"
     },
     "Программа пройдена · 07": {
       "v": "=",
@@ -2817,98 +2830,98 @@
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "2c2ec98a753e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2915"
     },
     "Программа пройдена · 12": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "37fc97688d19",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2916"
     },
     "Программа пройдена · 13": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "79b41ecea2a9",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2917"
     },
     "Программа пройдена · 14": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "132e4802acef",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2918"
     },
     "Программа пройдена · 15": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "0df9cd1034dd",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2919"
     },
     "Программа пройдена · 16": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "d9a337aab838",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2920"
     },
     "Программа пройдена · 17": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2921"
     },
     "Программа пройдена · 18": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "09d2d92342f1",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2922"
     },
     "Программа пройдена · 19": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "6ee53d9dc46a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2923"
     },
     "Программа пройдена · 20": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2924"
     },
     "Программа пройдена · 21": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "f38afd86fac9",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2925"
     },
     "Программа пройдена · 22": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "f3ae7777b01d",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2926"
     },
     "Программа пройдена · 23": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "aa179f90ff30",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2927"
     },
     "Программа пройдена · 24": {
       "v": "≠",
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "1909f720f5fc",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2928"
     },
     "История упражнения · 01": {
       "v": "=",
@@ -3160,28 +3173,28 @@
       "f": "Кадр Д2: шапка .top; продукт — .sb-finish-head с ✕ и «Тренировка завершена» heys_strength_finish_ui_v1.js:302-311.",
       "h": "175bdcc2e73a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2997"
     },
     "Правка легла не полностью · 02": {
       "v": "≠",
       "f": "Кадр: column gap 3px в .top; продукт: row head с icon-btn + title column — 750:1931-1957.",
       "h": "07ffbada0ee7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2998"
     },
     "Правка легла не полностью · 03": {
       "v": "≠",
       "f": "Контракт «Верх тела B · завершена»; продукт b «Тренировка завершена» finish_ui:307.",
       "h": "a04292765ead",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2999"
     },
     "Правка легла не полностью · 04": {
       "v": "≠",
       "f": "Контракт mono «18 подходов · 4 120 кг · 52 мин»; продукт — плитки .sb-finish-metrics finish_ui:316-320.",
       "h": "10cb2c396ec4",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3000"
     },
     "Правка легла не полностью · 05": {
       "v": "=",
@@ -3248,7 +3261,7 @@
       "f": "Канвас .sm-сноска; ProposalOutcome не рендерит footnote — heys_strength_proposal_ui_v1.js:451-494 (CSS .sb-proposal-outcome-footnote заготовлен).",
       "h": "66303182f9a3",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3013"
     },
     "Связка · границы правки · 01": {
       "v": "=",
@@ -3380,21 +3393,21 @@
       "f": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3».",
       "h": "3f4ba16443bc",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3039"
     },
     "Подход · таблица ввода · 05": {
       "v": "≠",
       "f": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3».",
       "h": "3cbe60569836",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3040"
     },
     "Подход · таблица ввода · 06": {
       "v": "≠",
       "f": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3».",
       "h": "2c445e6f5f43",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3041"
     },
     "Подход · таблица ввода · 07": {
       "v": "=",
@@ -3481,42 +3494,42 @@
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "d641122bb122",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3058"
     },
     "Подход · таблица ввода · 24": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3059"
     },
     "Подход · таблица ввода · 25": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "07ffbada0ee7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3060"
     },
     "Подход · таблица ввода · 26": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "bd065d2633a1",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3061"
     },
     "Подход · таблица ввода · 27": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "ff2157e24e0e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3062"
     },
     "Подход · таблица ввода · 28": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "0e262d6e01f8",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3063"
     },
     "Подход · таблица ввода · 29": {
       "v": "=",
@@ -4758,14 +4771,14 @@
       "v": "≠",
       "f": "sessionTitle(exercises), не «Тренировка идёт»: builder_ui:1208, superset_ui sessionTitle:405.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3311"
     },
     "Куратор и зал · 04": {
       "h": "1a96e89ed667",
       "v": "≠",
       "f": "Подзаголовок fmtTime, без «что приходит от куратора…»: builder_ui:1209-1212.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3312"
     },
     "Куратор и зал · 05": {
       "h": "c629f84f9712",
@@ -4807,21 +4820,21 @@
       "v": "≠",
       "f": "CuratorPlanStrip showActions:false mid-session: builder_ui:1257-1262.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3320"
     },
     "Куратор и зал · 13": {
       "h": "bb59c02daef1",
       "v": "≠",
       "f": "«Начать по плану» не рендерится mid-session: superset_ui CuratorPlanStrip:2026-2028.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3321"
     },
     "Куратор и зал · 14": {
       "h": "b8d619fad638",
       "v": "≠",
       "f": "«Своя» не рендерится mid-session: superset_ui:2027-2028.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3322"
     },
     "Куратор и зал · 15": {
       "h": "7cada1f8a3b6",
@@ -4868,7 +4881,7 @@
       "v": "≠",
       "f": "«Снять подход» disabled — video не поддерживается: superset_ui:1653-1658.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3331"
     },
     "Куратор и зал · 24": {
       "h": "7d7a0afb9b50",
@@ -4915,7 +4928,7 @@
       "v": "≠",
       "f": "«отправлено в …» — var(--sb-mut), не var(--gr): 750-strength-builder.css:5703-5706.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3340"
     },
     "Куратор и зал · 33": {
       "h": "4668dbccd211",
@@ -4937,7 +4950,7 @@
       "v": "≠",
       "f": "«не отправлена» только при notePending+sync pending: buildSyncQueueRows:2071-2077.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3344"
     },
     "Куратор и зал · 37": {
       "h": "e038ead9bb32",
@@ -6938,385 +6951,385 @@
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "175bdcc2e73a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3734"
     },
     "Исход · правка принята · 02": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "dbd19d6c8f05",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3735"
     },
     "Исход · правка принята · 03": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "b4a4fa9ae422",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3736"
     },
     "Исход · правка принята · 04": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "fe3aae769f4b",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3737"
     },
     "Исход · правка принята · 05": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "025fce2cd3cc",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3738"
     },
     "Исход · правка принята · 06": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "71540995a96c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3739"
     },
     "Исход · правка принята · 07": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c629f84f9712",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3740"
     },
     "Исход · правка принята · 08": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "fc7be4d18780",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3741"
     },
     "Исход · правка принята · 09": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "90a723b984ea",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3742"
     },
     "Исход · правка принята · 10": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "53dbde9089ff",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3743"
     },
     "Исход · правка принята · 11": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "25877a010a04",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3744"
     },
     "Исход · правка принята · 12": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d9a337aab838",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3745"
     },
     "Исход · правка принята · 13": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3746"
     },
     "Исход · правка принята · 14": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "680b7f535aae",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3747"
     },
     "Исход · правка принята · 15": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c426276268ff",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3748"
     },
     "Исход · правка принята · 16": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3749"
     },
     "Исход · правка принята · 17": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "977226e7fe26",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3750"
     },
     "Исход · правка принята · 18": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "1fcfc110a4ae",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3751"
     },
     "Исход · правка принята · 19": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "484ee9f98912",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3752"
     },
     "Исход · правка принята · 20": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "5678ec9c2d67",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3753"
     },
     "Исход · правка принята · 21": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "5fc647c1d8cb",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3754"
     },
     "Исход · правка принята · 22": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "f6c7bd683636",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3755"
     },
     "Исход · отказ · 01": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "175bdcc2e73a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3756"
     },
     "Исход · отказ · 02": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "dbd19d6c8f05",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3757"
     },
     "Исход · отказ · 03": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "b4a4fa9ae422",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3758"
     },
     "Исход · отказ · 04": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "fe3aae769f4b",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3759"
     },
     "Исход · отказ · 05": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "8f758a51a07f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3760"
     },
     "Исход · отказ · 06": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c629f84f9712",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3761"
     },
     "Исход · отказ · 07": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "81d6d8e40a85",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3762"
     },
     "Исход · отказ · 08": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "62cdd08ed1d4",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3763"
     },
     "Исход · отказ · 09": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d5608f7d0f5c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3764"
     },
     "Исход · отказ · 10": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d641122bb122",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3765"
     },
     "Исход · отказ · 11": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3766"
     },
     "Исход · отказ · 12": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "92910588f4d5",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3767"
     },
     "Исход · отказ · 13": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "2fba62664fde",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3768"
     },
     "Исход · отказ · 14": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3769"
     },
     "Исход · отказ · 15": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "a639134bec21",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3770"
     },
     "Исход · отказ · 16": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "f4f73996d2da",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3771"
     },
     "Исход · отказ · 17": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "33db3f07982e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3772"
     },
     "Исход · без ответа · 01": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "175bdcc2e73a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3773"
     },
     "Исход · без ответа · 02": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "dbd19d6c8f05",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3774"
     },
     "Исход · без ответа · 03": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "b4a4fa9ae422",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3775"
     },
     "Исход · без ответа · 04": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "5869247ca78e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3776"
     },
     "Исход · без ответа · 05": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "af3c1f6ea5d8",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3777"
     },
     "Исход · без ответа · 06": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "c629f84f9712",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3778"
     },
     "Исход · без ответа · 07": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "fc7be4d18780",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3779"
     },
     "Исход · без ответа · 08": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "605d4650f44c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3780"
     },
     "Исход · без ответа · 09": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "e08b4c93929c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3781"
     },
     "Исход · без ответа · 10": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d641122bb122",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3782"
     },
     "Исход · без ответа · 11": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3783"
     },
     "Исход · без ответа · 12": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "a74d5ff7dfac",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3784"
     },
     "Исход · без ответа · 13": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "d0e5214a8c98",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3785"
     },
     "Исход · без ответа · 14": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3786"
     },
     "Исход · без ответа · 15": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "07505ef7accc",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3787"
     },
     "Исход · без ответа · 16": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "f4aa29902d31",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3788"
     },
     "Принятие · ветка чата · 01": {
       "v": "—",
@@ -8351,147 +8364,147 @@
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "175bdcc2e73a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4017"
     },
     "Сессия · брошена вчера · 02": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "07ffbada0ee7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4018"
     },
     "Сессия · брошена вчера · 03": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "7994ec545954",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4019"
     },
     "Сессия · брошена вчера · 04": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "233639ffdbb1",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4020"
     },
     "Сессия · брошена вчера · 05": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "c629f84f9712",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4021"
     },
     "Сессия · брошена вчера · 06": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "4dc1038c279c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4022"
     },
     "Сессия · брошена вчера · 07": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "af76e200bb8e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4023"
     },
     "Сессия · брошена вчера · 08": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "77e4b4025f38",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4024"
     },
     "Сессия · брошена вчера · 09": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "826080452745",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4025"
     },
     "Сессия · брошена вчера · 10": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "60da3c54b90d",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4026"
     },
     "Сессия · брошена вчера · 11": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "5937fc311d6f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4027"
     },
     "Сессия · брошена вчера · 12": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "d641122bb122",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4028"
     },
     "Сессия · брошена вчера · 13": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4029"
     },
     "Сессия · брошена вчера · 14": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "92dc3b564574",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4030"
     },
     "Сессия · брошена вчера · 15": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "329337643ed9",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4031"
     },
     "Сессия · брошена вчера · 16": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "fca0f57b917e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4032"
     },
     "Сессия · брошена вчера · 17": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "01439cbc2fa0",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4033"
     },
     "Сессия · брошена вчера · 18": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "fe3d4447658a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4034"
     },
     "Сессия · брошена вчера · 19": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4035"
     },
     "Сессия · брошена вчера · 20": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "4668dbccd211",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4036"
     },
     "Сессия · брошена вчера · 21": {
       "v": "≠",
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "eeaedd226e64",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4037"
     },
     "как читать графику": {
       "v": "—",
@@ -8584,7 +8597,7 @@
       "f": "Агрегат кадра Г3 (план+inline-список+след+сноска) vs разнесённый runtime: PlanCard assigned/moved + MoveSheet modal + trace на is-moved/is-future. Механика есть (move/skip/movedTo/movedFrom — superset_ui:2398-2408, 2595-2621); копия и компоновка не совпадают с одним скроллом кадра.",
       "h": "8c2896c058d1",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4073"
     },
     "Правка веса в сессии · текст": {
       "v": "=",
@@ -8596,7 +8609,7 @@
       "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
       "h": "a3158812f216",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4075"
     },
     "История упражнения · текст": {
       "v": "=",
@@ -8788,21 +8801,21 @@
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "011939dbcabb",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4114"
     },
     "Исход · отказ · текст": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "dd7126fe4dd3",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4115"
     },
     "Исход · без ответа · текст": {
       "v": "≠",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
       "h": "5268a64f6338",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4116"
     },
     "Принятие · ветка чата · текст": {
       "v": "—",
@@ -8864,7 +8877,7 @@
       "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
       "h": "c2852ab11069",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4129"
     },
     "вид · спокойный список": {
       "v": "=",
@@ -8872,16 +8885,18 @@
       "h": "b92f27073b82"
     },
     "вид · шкала тяжести": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
-      "h": "388a069469b9"
+      "v": "≠",
+      "f": "Канвас :2345 — единые .hv/.hvOn 44px; продукт .sb-rpe/.sb-rpe-dot 6–10 в ExerciseCard superset_ui:1905–1924, 750:406+ — классы и геометрия ≠ stop-кадра.",
+      "h": "388a069469b9",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2345"
     },
     "вид · отчёт за период": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "c74307af927a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2386"
     },
     "снято · проверка «класс красится инлайном не везде»": {
       "v": "—",
@@ -9238,7 +9253,7 @@
       "f": "⠿ намеренно не рендерится (нет reorder persistence); calm-canvas-contract.test.js:243-244, UI_V4_CODEX § intentional.",
       "h": "ada3cfca3806",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2520"
     },
     "Конструктор · тренировка идёт · спокойнее · 12": {
       "v": "=",
@@ -9578,133 +9593,133 @@
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "175bdcc2e73a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2929"
     },
     "Программа · отчёт за период · 02": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "07ffbada0ee7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2930"
     },
     "Программа · отчёт за период · 03": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "b921384afa53",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2931"
     },
     "Программа · отчёт за период · 04": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "dcf98555d97b",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2932"
     },
     "Программа · отчёт за период · 05": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "c629f84f9712",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2933"
     },
     "Программа · отчёт за период · 06": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "f06d6e12de2e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2934"
     },
     "Программа · отчёт за период · 07": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2935"
     },
     "Программа · отчёт за период · 08": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "e642fe24d68f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2936"
     },
     "Программа · отчёт за период · 09": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "308ab4b3f76f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2937"
     },
     "Программа · отчёт за период · 10": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "647d851e5bdf",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2938"
     },
     "Программа · отчёт за период · 11": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "2c0ad8beb0b0",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2939"
     },
     "Программа · отчёт за период · 12": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "fb2835f43636",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2940"
     },
     "Программа · отчёт за период · 13": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "6b286135ed76",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2941"
     },
     "Программа · отчёт за период · 14": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "75938a2f8dc2",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2942"
     },
     "Программа · отчёт за период · 15": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "19d657373049",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2943"
     },
     "Программа · отчёт за период · 16": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "caa48b8f23b8",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2944"
     },
     "Программа · отчёт за период · 17": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "d82aff77f2cc",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2945"
     },
     "Программа · отчёт за период · 18": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "1b6563122788",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2946"
     },
     "Программа · отчёт за период · 19": {
       "v": "≠",
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "c17297c7846f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2947"
     },
     "Спорное · тап по закрытому во время отдыха · 19": {
       "v": "=",
@@ -9768,7 +9783,7 @@
       "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
       "h": "2b252a3710bf",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4076"
     },
     "долг канваса · отношение к канону": {
       "v": "—",
