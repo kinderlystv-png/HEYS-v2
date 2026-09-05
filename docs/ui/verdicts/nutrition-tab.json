@@ -460,7 +460,7 @@
     },
     "вид чипа": {
       "v": "=",
-      "f": "732-ui-v4-nutrition.css:1063 .nutrition-v4-chip — min-height 44px (:1068), ::after content:none (:1081-1083); видимая цель без расширителя, как «состав чипа» 5 сент; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :620-625",
+      "f": "732-ui-v4-nutrition.css:1063 .nutrition-v4-chip — min-height 44px (:1068), ::after content:none (:1081-1083); видимая цель без расширителя; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :620-625",
       "h": "ee64712e5a56"
     },
     "что нельзя выключить": {
@@ -550,7 +550,7 @@
     },
     "состав чипа": {
       "v": "=",
-      "f": "Сведено. 732-ui-v4-nutrition.css:1063 .nutrition-v4-chip — min-height 44px (:1068), .nutrition-v4-chip::after content:none (:1081-1083). Прежний вердикт «≠ accessibility» описывал min-height 30px и ожидание strip touch — этого в коде нет с момента, когда чип свели; строку после правки не перечитали.",
+      "f": "732-ui-v4-nutrition.css:1608 .nutrition-v4-supplements__chip — min-height 44px (:1610), ::after content:none (:1629-1631); пакет 5 сент: 44 px видимым, не 30+expander; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :612-618",
       "h": "76e4d79bd4b9"
     },
     "доз и условий в блоке нет": {
@@ -615,7 +615,7 @@
     },
     "вход в настройку курса": {
       "v": "=",
-      "f": "732-ui-v4-nutrition.css:1520 .nutrition-v4-supplements__pill.is-course — min-height 44px, inline-flex, обводка --v4-act; heys_day_nutrition_v1.js:912-916; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :627-634",
+      "f": "732-ui-v4-nutrition.css:1520 .nutrition-v4-supplements__pill.is-course — min-height 44px (:1523), inline-flex, обводка --v4-act; heys_day_nutrition_v1.js:912-916; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :627-634",
       "h": "3e3696f9cfcd"
     },
     "курса нет": {
@@ -1620,7 +1620,7 @@
     },
     "Питание · вопрос о дате · 08": {
       "v": "=",
-      "f": "data-v «высота 16px» — подпись в кадре вопроса о дате; геометрия кадра, UX равного выбора — строка «равный выбор».",
+      "f": "Пакет 5 сент: кнопки «Отмена» в листе нет — day/_meals.js:148-186 только head, два row и CTA; кадр ·08 data-v «высота 16px» — нижний зазор листа, не отдельная кнопка; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :638-643",
       "h": "8957573deb57"
     },
     "Питание · куда перенести приём · 01": {
@@ -2559,7 +2559,7 @@
     },
     "Питание · вопрос о дате · текст": {
       "v": "=",
-      "f": "Сведено. day/_meals.js:156-185 — лист «На какой день записать?» (:159, :162), два равных ряда .nutrition-v4-sheet__row: открытый день (:167) и сегодня (:175), ниже CTA .nutrition-v4-sheet__cta (:183). ConfirmModal «Перейти на сегодня» / «Всё-таки записать» удалён и его возврат сторожит __tests__/nutrition-tab-v4-contract-fixes.test.js:630-637.",
+      "f": "day/_meals.js:156-185 — лист «На какой день записать?» (:159, :162), два равных .nutrition-v4-sheet__row (:165-180), CTA .nutrition-v4-sheet__cta (:181-185); notifyRecordedInForeignDay (:106-115) — Undo «Записано в …», 6000 ms; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :637-753",
       "h": "0d72cfdb4cbd"
     },
     "Питание · куда перенести приём · текст": {
