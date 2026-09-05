@@ -106,7 +106,7 @@
 
 .meal-time-shift {
   flex: 1;
-  min-height: 38px;
+  min-height: 44px;
   border: 0;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
@@ -1286,8 +1286,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -1574,8 +1574,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -1732,8 +1732,8 @@
 }
 
 .mpr-search-clear {
-  width: 20px;
-  height: 20px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: color-mix(in srgb, var(--v4-sand-ink, #201e1d) 10%, transparent);
   border-radius: 50%;
@@ -1940,11 +1940,12 @@
    рамка --color-border, подложка --color-bg-primary, чернила --color-text-
    secondary) и были 26×26 — меньше минимальной цели касания. Цель 44 дана
    отрицательными полями, чтобы строка набора не выросла в высоту. */
+/* Кадр: цель 44×44, иконка ± 16 px внутри. Отрицательные поля сняты —
+   норма держится видимым размером кнопки. */
 .mpr-grams-btn {
   box-sizing: border-box;
   width: 44px;
   height: 44px;
-  margin: -9px 0;
   border: 0;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
@@ -1953,6 +1954,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
 }
 
 .mpr-grams-btn:active {
@@ -2005,7 +2009,6 @@
   position: relative;
   width: 44px;
   height: 44px;
-  margin: -7px 0;
   padding: 0;
   border: 0;
   border-radius: 999px;
@@ -2483,19 +2486,21 @@
 
 .aps-search-clear {
   position: absolute;
-  right: 64px;
+  right: 58px;
+  top: 50%;
   z-index: 2;
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: var(--v4-line, #e5e7eb);
   color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   border-radius: 50%;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
+  transform: translateY(-50%);
 }
 
 [data-theme$='dark'] .aps-search-clear {
@@ -2531,7 +2536,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 500;
   color: var(--v4-ink-2, #6b7280);
   background: var(--card);
@@ -3387,7 +3392,11 @@ button.meal-quality-badge:active {
 }
 
 .aps-v4-search-tab {
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 44px;
   border: 0;
   background: transparent;
   padding: 0 0 6px;
@@ -3412,14 +3421,14 @@ button.meal-quality-badge:active {
 /* Строка «вид · чип «Общие»»: фильтр выдачи стоит справа в строке над списком,
    которая эту выдачу и описывает. Включён — заливка --c2 с текстом --ac;
    выключен — обводка 1,5 px тоном чернил 16 % и текст тоном 50 %. Цель — его
-   собственные 70 × 26. */
+   собственные 70 × 44 видимым размером пилюли, без невидимого расширителя. */
 .aps-v4-shared-filter {
   display: inline-flex;
   flex: none;
   align-items: center;
   gap: 5px;
   min-width: 70px;
-  min-height: 26px;
+  min-height: 44px;
   padding: 0 10px;
   border: 0;
   border-radius: 999px;
@@ -3503,7 +3512,7 @@ button.meal-quality-badge:active {
   border-radius: 999px;
   background: var(--v4-sand-surface-soft, #fffaf1);
   color: var(--v4-sand-act-deep, #8a4a20);
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 500;
   line-height: 1;
   cursor: pointer;
@@ -3547,7 +3556,7 @@ button.meal-quality-badge:active {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 7px;
   margin-top: 18px;
 }
 
@@ -3555,19 +3564,16 @@ button.meal-quality-badge:active {
   margin-top: 12px;
 }
 
-/* Строка «тач-цели» сама называет пресеты граммовки отступлением кадра: «~29 —
-   под норму 44 pt не попадают». В продукте цель поднята до 44 отрицательными
-   полями: ряд по высоте не растёт, а промахиваться по граммовке приходится
-   чаще, чем по любому другому чипу этого экрана. */
+/* Строка «тач-цели»: пресеты граммовки — пилюля 44 с полями 0/10, зазор 7.
+   Норма 44 держится видимым размером чипа, без margin-расширителя. */
 .aps-v4-grams-chip {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  margin: -7px 0;
   border: 0;
   border-radius: 999px;
-  padding: 0 14px;
+  padding: 0 10px;
   background: var(--v4-bg, #fffaf1);
   font-size: 12px;
   font-weight: 600;
@@ -3585,9 +3591,10 @@ button.meal-quality-badge:active {
    наборе: рисовались запасные, то есть песочный шалфей во всех четырёх.
    Заведённые роли того же смысла — --v4-ok-bg и --v4-ok-text. */
 .aps-v4-grams-chip--portion {
+  min-height: 44px;
   background: var(--v4-ok-bg, #eaefe0);
   color: var(--v4-ok-text, #5c6a45);
-  padding: 10px 12px;
+  padding: 0 12px;
 }
 
 .aps-v4-grams-chip--portion.is-active {
@@ -3596,7 +3603,7 @@ button.meal-quality-badge:active {
 }
 
 /* Строка контракта «граммы или ккал»: под пресетами два чипа единицы ввода —
-   высота 36, поля 0/16, зазор 8; выбранный заливкой --bg с текстом --ac,
+   высота 44, поля 0/16, зазор 8; выбранный заливкой --bg с текстом --ac,
    второй тоном чернил 50 %. */
 .aps-v4-grams-units {
   display: flex;
@@ -3606,7 +3613,7 @@ button.meal-quality-badge:active {
 }
 
 .aps-v4-grams-unit {
-  min-height: 36px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   padding: 0 16px;
@@ -4243,7 +4250,7 @@ button.meal-quality-badge:active {
 }
 
 .meal-type-section--sheet .meal-type-chip {
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 14px;
   border-radius: 999px;
 }
@@ -4521,7 +4528,7 @@ button.meal-quality-badge:active {
 /* «Заполнить» ведёт в карточку продукта — там дефект и живёт. */
 .meal-transfer-v4__product-fix {
   flex: none;
-  min-height: 32px;
+  min-height: 44px;
   padding: 0 12px;
   border: none;
   border-radius: 999px;

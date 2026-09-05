@@ -159,7 +159,7 @@ describe('meal time step v4 structure', () => {
     expect(mealStepSource).toContain("{ label: '−1 ч', minutes: 60 }");
     expect(mealStepSource).toContain('shiftTimeBack');
     expect(mealStepSource).toContain('isNowSelected');
-    expect(cssSource).toMatch(/\.meal-time-shift \{[^}]*min-height: 38px;/s);
+    expect(cssSource).toMatch(/\.meal-time-shift \{[^}]*min-height: 44px;/s);
     expect(cssSource).toMatch(/\.meal-time-hero__now \{[^}]*text-transform: uppercase;/s);
     // Подписи «Время» на карточке нет — её не содержат ни строка, ни кадр.
     expect(mealStepSource).not.toContain('meal-time-hero__label');

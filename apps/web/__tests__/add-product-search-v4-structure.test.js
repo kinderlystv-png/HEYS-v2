@@ -50,7 +50,7 @@ describe('add product search v4 canvas structure', () => {
     expect(cssSource).toMatch(/\.aps-v4-shared-filter \{[^}]*inset 0 0 0 1\.5px/s);
     expect(cssSource).toMatch(/\.aps-v4-shared-filter\.is-on \{[^}]*var\(--v4-hero/s);
     // Цель — его собственные 70 × 26.
-    expect(cssSource).toMatch(/\.aps-v4-shared-filter \{[^}]*min-width: 70px;[^}]*min-height: 26px;/s);
+    expect(cssSource).toMatch(/\.aps-v4-shared-filter \{[^}]*min-width: 70px;[^}]*min-height: 44px;/s);
   });
 
   it('общий продукт помечен в строке метаданных, а не частотой', () => {
