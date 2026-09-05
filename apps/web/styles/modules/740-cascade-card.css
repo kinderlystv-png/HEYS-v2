@@ -357,7 +357,7 @@
 }
 
 .cascade-dot--neutral {
-  background: #facc15;
+  background: var(--v4-warn-soft, #c9922e);
 }
 
 .cascade-dot--good {
@@ -443,7 +443,7 @@
 }
 
 .cascade-dot--household {
-  background: #f97316;
+  background: var(--v4-warn-1, #d99a63);
 }
 
 .cascade-dot--sleep {

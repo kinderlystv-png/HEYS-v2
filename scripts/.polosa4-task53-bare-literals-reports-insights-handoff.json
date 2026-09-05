@@ -1,0 +1,64 @@
+{
+  "task": "polosa4-task53-phase2",
+  "zone": "reports-insights",
+  "baseline": {
+    "warmTotal": 520,
+    "bucket2ReportsInsights": { "files": 3, "places": 24 }
+  },
+  "after": {
+    "warmTotal": 470,
+    "bucket2ReportsInsights": { "files": 0, "places": 0 }
+  },
+  "deltaWarmTotal": -50,
+  "deltaBucket2Zone": -24,
+  "files": [
+    {
+      "file": "apps/web/styles/modules/740-cascade-card.css",
+      "warmBefore": 2,
+      "warmAfter": 0,
+      "bucket": 2,
+      "changes": [
+        ".cascade-dot--neutral #facc15 → var(--v4-warn-soft, #c9922e)",
+        ".cascade-dot--household #f97316 → var(--v4-warn-1, #d99a63)"
+      ]
+    },
+    {
+      "file": "apps/web/insights/pi_ui_dashboard.js",
+      "warmBefore": 17,
+      "warmAfter": 0,
+      "bucket": 2,
+      "jsRequired": true,
+      "note": "inline style / SVG stopColor — роли через константы V4_WARN_SOFT, V4_WARN_2, V4_ACCENT_BG",
+      "semantics": "medium/warn → warn-soft; activity/amber accent → warn-2; breakfast tint → accent-bg"
+    },
+    {
+      "file": "apps/web/heys_weekly_reports_v2.js",
+      "warmBefore": 5,
+      "warmAfter": 0,
+      "bucket": 2,
+      "jsRequired": true,
+      "note": "fat macro ring gradient; ключ amber из HEYS.MacroRings.MACRO_COLORS.amber, stops → warn-soft/warn-2. Файл также в norm-correction — правка семантическая, не зонная изоляция."
+    }
+  ],
+  "skipped": {
+    "pi_early_warning.js": "2× #ffaa00 — dev console only, вне ведра 2",
+    "heys_kernel_bibliography_ui_v1.js": "1× #1c1b19 — вне ведра 2 (не янтарная лестница)",
+    "100-metrics-and-graphs.css": "сведено ранее (scripts/.metrics-bare-commit-msg.txt)",
+    "720-predictive-insights.css": "only var() fallbacks remain"
+  },
+  "computedSample": {
+    "sand": {
+      "cascade-dot--neutral": "#c9922e",
+      "cascade-dot--household": "#d99a63"
+    },
+    "blue": {
+      "cascade-dot--neutral": "#c0871c",
+      "cascade-dot--household": "#e59ea8"
+    }
+  },
+  "checks": {
+    "polosa4-task53-bare-literals-reports-insights.test.js": "pass",
+    "role-fallback-truth.test.js": "pass",
+    "ui:v4:check:roles": "foreign-fallbacks fail — 730-widgets-dashboard.css +7 (параллельный dirty, вне scope task53)"
+  }
+}

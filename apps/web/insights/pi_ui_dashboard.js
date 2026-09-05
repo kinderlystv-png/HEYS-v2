@@ -25,6 +25,10 @@
 
     const { createElement: h, useState, useEffect, useMemo, Component, useCallback, useRef } = React;
 
+    const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+    const V4_WARN_2 = 'var(--v4-warn-2, #c67139)';
+    const V4_ACCENT_BG = 'var(--v4-accent-bg, #f6e6dd)';
+
     const piStats = HEYS.InsightsPI?.stats || window.piStats || {};
     const piAdvanced = HEYS.InsightsPI?.advanced || {};
     const piUICards = HEYS.InsightsPI?.uiCards || {};
@@ -1665,7 +1669,7 @@
     const SCORE_EXPLAINER_CATEGORY_CONFIG = [
       { key: 'nutrition', infoKey: 'CATEGORY_NUTRITION', emoji: '🍽️', label: 'Питание', color: '#22c55e' },
       { key: 'timing', infoKey: 'CATEGORY_TIMING', emoji: '⏰', label: 'Тайминг', color: '#3b82f6' },
-      { key: 'activity', infoKey: 'CATEGORY_ACTIVITY', emoji: '🏃', label: 'Активность', color: '#f59e0b' },
+      { key: 'activity', infoKey: 'CATEGORY_ACTIVITY', emoji: '🏃', label: 'Активность', color: V4_WARN_2 },
       { key: 'recovery', infoKey: 'CATEGORY_RECOVERY', emoji: '😴', label: 'Восстановление', color: '#8b5cf6' },
       { key: 'metabolism', infoKey: 'CATEGORY_METABOLISM', emoji: '🔥', label: 'Метаболизм', color: '#f43f5e' }
     ];
@@ -1677,7 +1681,7 @@
       }
       if (safeScore >= 80) return { key: 'excellent', label: 'сильная зона', accent: '#10b981' };
       if (safeScore >= 60) return { key: 'good', label: 'хорошая база', accent: '#0ea5e9' };
-      if (safeScore >= 40) return { key: 'fair', label: 'зона роста', accent: '#f59e0b' };
+      if (safeScore >= 40) return { key: 'fair', label: 'зона роста', accent: V4_WARN_2 };
       return { key: 'poor', label: 'тянет score вниз', accent: '#ef4444' };
     }
 
@@ -2086,7 +2090,7 @@
       },
       categoryScores: {
         nutrition: { score: 78, label: 'Питание', icon: '🍽️', color: '#22c55e' },
-        activity: { score: 62, label: 'Активность', icon: '🏃', color: '#eab308' },
+        activity: { score: 62, label: 'Активность', icon: '🏃', color: V4_WARN_SOFT },
         recovery: { score: 77, label: 'Восстановление', icon: '😴', color: '#22c55e' },
         hydration: { score: 90, label: 'Гидратация', icon: '💧', color: '#22c55e' }
       },
@@ -4772,8 +4776,8 @@
       const getGradientColor = (s) => {
         if (s >= 85) return { start: '#10b981', end: '#22c55e' }; // emerald → green
         if (s >= 70) return { start: '#22c55e', end: '#84cc16' }; // green → lime
-        if (s >= 50) return { start: '#eab308', end: '#f59e0b' }; // yellow → amber
-        if (s >= 30) return { start: '#f59e0b', end: '#ef4444' }; // amber → red
+        if (s >= 50) return { start: V4_WARN_SOFT, end: V4_WARN_2 };
+        if (s >= 30) return { start: V4_WARN_2, end: '#ef4444' };
         return { start: '#ef4444', end: '#dc2626' }; // red shades
       };
 
@@ -4873,7 +4877,7 @@
       const pillarConfig = {
         nutrition: { label: 'Питание', icon: '🍽️', color: '#22c55e' },
         timing: { label: 'Тайминг', icon: '⏰', color: '#3b82f6' },
-        activity: { label: 'Активность', icon: '🏃', color: '#f59e0b' },
+        activity: { label: 'Активность', icon: '🏃', color: V4_WARN_2 },
         recovery: { label: 'Восстановление', icon: '😴', color: '#8b5cf6' }
       };
 
@@ -4908,7 +4912,7 @@
     function ConfidenceBadge({ confidence, completeness }) {
       const config = {
         high: { label: 'Высокая', color: '#22c55e', icon: '✓' },
-        medium: { label: 'Средняя', color: '#eab308', icon: '~' },
+        medium: { label: 'Средняя', color: V4_WARN_SOFT, icon: '~' },
         low: { label: 'Низкая', color: '#ef4444', icon: '?' }
       };
 
@@ -5058,7 +5062,7 @@
       const risk = useMemo(() => {
         const riskData = {
           low: { level: 'low', emoji: '✅', label: 'Низкий', color: '#22c55e' },
-          medium: { level: 'medium', emoji: '⚠️', label: 'Средний', color: '#eab308' },
+          medium: { level: 'medium', emoji: '⚠️', label: 'Средний', color: V4_WARN_SOFT },
           high: { level: 'high', emoji: '🚨', label: 'Высокий', color: '#ef4444' }
         };
 
@@ -5099,7 +5103,7 @@
       const getScoreColor = (score) => {
         if (score >= 80) return '#22c55e';
         if (score >= 60) return '#84cc16';
-        if (score >= 40) return '#eab308';
+        if (score >= 40) return V4_WARN_SOFT;
         return '#ef4444';
       };
 
@@ -5537,7 +5541,7 @@
 
       const riskColors = {
         low: '#22c55e',
-        medium: '#eab308',
+        medium: V4_WARN_SOFT,
         high: '#ef4444'
       };
 
@@ -5863,7 +5867,7 @@
 
       const colors = {
         low: '#22c55e',
-        medium: '#eab308',
+        medium: V4_WARN_SOFT,
         high: '#ef4444'
       };
 
@@ -6013,7 +6017,7 @@
 
       const colors = {
         low: '#22c55e',
-        medium: '#eab308',
+        medium: V4_WARN_SOFT,
         high: '#ef4444'
       };
 
@@ -6357,7 +6361,7 @@
 
       if (stats.total < 5) return null;
 
-      const color = stats.accuracy >= 80 ? '#22c55e' : stats.accuracy >= 60 ? '#eab308' : '#ef4444';
+      const color = stats.accuracy >= 80 ? '#22c55e' : stats.accuracy >= 60 ? V4_WARN_SOFT : '#ef4444';
 
       return h('div', {
         className: 'accuracy-badge',
@@ -6537,7 +6541,7 @@
 
       // Конфиг иконок и цветов для типов приёмов
       const mealConfig = {
-        'Завтрак': { icon: '🌅', gradient: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', lightBg: '#fef3c7' },
+        'Завтрак': { icon: '🌅', gradient: `linear-gradient(135deg, ${V4_WARN_SOFT} 0%, ${V4_WARN_2} 100%)`, lightBg: V4_ACCENT_BG },
         'Обед': { icon: '☀️', gradient: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)', lightBg: '#d1fae5' },
         'Ужин': { icon: '🌙', gradient: 'linear-gradient(135deg, #818cf8 0%, #6366f1 100%)', lightBg: '#e0e7ff' },
         'Перекус': { icon: '🍎', gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)', lightBg: '#fce7f3' }

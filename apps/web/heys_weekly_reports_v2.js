@@ -951,16 +951,19 @@
                     _coreColor = _slot[toneClass] && _slot[toneClass].color;
                 }
             } catch (_) { /* fallback на статичный градиент */ }
-            const _DYNAMIC_GRADIENTS = {
+            const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+            const V4_WARN_2 = 'var(--v4-warn-2, #c67139)';
+            const _macroAmber = HEYS.MacroRings?.MACRO_COLORS?.amber;
+            const _macroGradients = {
                 '#ef4444': ['#fecaca', '#ef4444'],
-                '#f59e0b': ['#fde68a', '#f59e0b'],
                 '#22c55e': ['#bbf7d0', '#22c55e'],
                 '#6b7280': ['#d1d5db', '#6b7280'],
             };
+            if (_macroAmber) _macroGradients[_macroAmber] = [V4_WARN_SOFT, V4_WARN_2];
             const _staticGradient = toneClass === 'protein'
                 ? ['#fecaca', '#ef4444']
-                : (toneClass === 'fat' ? ['#fde68a', '#f59e0b'] : ['#bbf7d0', '#22c55e']);
-            const gradientStops = (_coreColor && _DYNAMIC_GRADIENTS[_coreColor]) || _staticGradient;
+                : (toneClass === 'fat' ? [V4_WARN_SOFT, V4_WARN_2] : ['#bbf7d0', '#22c55e']);
+            const gradientStops = (_coreColor && _macroGradients[_coreColor]) || _staticGradient;
             const gradientId = 'macro-ring-gradient-' + toneClass + '-' + (_coreColor ? _coreColor.replace('#', '') : 'def');
             const _isWarning = _coreColor === '#ef4444';
             const getRingDotPos = (pct) => {
