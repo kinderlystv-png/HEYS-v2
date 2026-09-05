@@ -108,7 +108,7 @@ describe('Г4 · Правка веса в сессии · canvas contract', () =
         onPatch: () => {},
         onClose: () => {},
       }));
-      expect(container.querySelector('.sb-head-title > b').textContent).toBe('Жим гантелей сидя');
+      expect(container.querySelector('.sb-head-title > b').textContent).toBe('Силовая');
       expect(screen.getByText('подход 3 из 4')).toBeTruthy();
       expect(screen.getByText(/Артём поставил 25 кг · 19:12/)).toBeTruthy();
       expect(screen.getByText('Правка пришла')).toBeTruthy();

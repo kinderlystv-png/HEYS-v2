@@ -1544,8 +1544,8 @@
         onCancel: function () { setView('list'); }
       });
     }
-    if (view === 'new') {
-      return h(ExerciseCardScreen, {
+    if (view === 'new' && CatUI.NewExerciseScreen) {
+      return h(CatUI.NewExerciseScreen, {
         initialName: draftName,
         onDone: addExercise,
         onCancel: function () { setView('catalog'); }
@@ -1894,9 +1894,7 @@
           onClick: onClose, 'aria-label': 'Закрыть конструктор'
         }, '✕'),
         h('div', { className: 'sb-head-title' },
-          h('b', null, openEx
-            ? (openEx.name || 'Упражнение')
-            : (wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises))),
+          h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
           h('div', { className: 'sb-head-sub' }, rest && !rest.collapsed
             ? 'отдых между подходами'
             : openEx && openUnit === 'bodyweight'

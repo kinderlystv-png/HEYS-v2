@@ -279,7 +279,8 @@ describe('конструктор: тяжесть подхода без проф�
     fireEvent.click(helpTrigger);
     expect(help?.open).toBe(true);
     expect(screen.getByText(/6 — легко; 7–8 — тяжело/)).toBeTruthy();
-    expect(screen.getByText('⏱ Отдых 2:00 — по тяжести 7')).toBeTruthy();
+    expect(screen.getByText(/Отдых 2:00/)).toBeTruthy();
+    expect(screen.getByText(/из тяжести 7/)).toBeTruthy();
     expect(screen.getByLabelText('Тяжесть подхода 7 из 10')).toBeTruthy();
     expect(screen.queryByText(/RPE/i)).toBeNull();
     expect(screen.queryByLabelText(/RPE/i)).toBeNull();

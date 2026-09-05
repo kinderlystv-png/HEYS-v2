@@ -75,7 +75,8 @@ describe('М1 · Упражнение · карточка · canvas contract', (
     expect(BUILDER).toContain('Единица решает две вещи сразу');
     expect(BUILDER).toContain('Ничего из этого не заполняется за человека молча');
     expect(BUILDER).toContain("view === 'new'");
-    expect(BUILDER).toContain('h(ExerciseCardScreen');
+    expect(BUILDER).toContain('CatUI.NewExerciseScreen');
+    expect(BUILDER).not.toMatch(/view === 'new'[\s\S]{0,160}h\(ExerciseCardScreen/);
   });
 
   it('использует геометрию шапки, поля имени, пилюль и списка .cd', () => {

@@ -3389,7 +3389,7 @@
 }
 
 .sb-builder-screen .sb-ex--collapsed .sb-ex-title b {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 13px/1.2 Figtree, sans-serif;
 }
 
 .sb-builder-screen .sb-ex-sub {
@@ -3669,8 +3669,13 @@
 }
 
 .sb-builder-screen.is-exercise-open .sb-ap.is-done .sb-ap-num {
-  background: var(--sb-soft);
-  color: rgba(var(--ink), 0.62);
+  background: var(--gr-bg);
+  color: var(--gr);
+}
+
+.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-num {
+  background: var(--acs);
+  color: var(--on-acs);
 }
 
 .sb-builder-screen.is-exercise-open .sb-ap-check {
