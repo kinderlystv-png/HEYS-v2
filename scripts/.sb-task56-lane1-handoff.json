@@ -1,0 +1,21 @@
+{
+  "zone": "strength-builder",
+  "scope": "Task 56 lane 1 — fix deploy-gate red strength-builder-menu-sheet-v4-canvas-contract",
+  "generated": "2026-09-05",
+  "rootCause": "test",
+  "summary": "Task 48 moved plan-vs-done navigation from ctx.go('plan-vs-done') to ctx.openPlanVsDone / Parts.openPlanVsDone. Canvas contract test still wired only go: and expected go fallback; click hit Parts.openPlanVsDone without fullscreen mock → seen stayed []. Menu item was present; navigation assertion was stale.",
+  "productDecision": "«Назначено против сделано» stays in sheet until Г2 has its own entry — item not removed.",
+  "verification": {
+    "methodA_entitySearch": "rg openPlanVsDone heys_strength_builder_ui_v1.js:2239 — production sheet ctx wires openPlanVsDone: setView('plan-vs-done'); strength-superset-screen-reachability.test.js covers ctx.openPlanVsDone preference and Parts.openPlanVsDone fallback.",
+    "methodB_behavior": "HEYS_DESIGN_GATES=skip npx vitest run __tests__/strength-builder-menu-sheet-v4-canvas-contract.test.js — 2/2 passed"
+  },
+  "changed": [
+    {
+      "file": "apps/web/__tests__/strength-builder-menu-sheet-v4-canvas-contract.test.js",
+      "lines": "67-68",
+      "what": "Add openPlanVsDone: () => seen.push('plan-vs-done') to sheetRows demo ctx — mirrors builder_ui wiring, canvas И2 still requires item clickable → plan-vs-done reachable"
+    }
+  ],
+  "codeChanges": false,
+  "lane5Watch": []
+}

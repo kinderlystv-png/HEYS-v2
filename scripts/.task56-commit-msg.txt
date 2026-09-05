@@ -1,0 +1,5 @@
+fix(test): strength menu sheet contract — openPlanVsDone wiring
+
+Task 48 routed plan-vs-done via ctx.openPlanVsDone; canvas contract test
+still asserted ctx.go fallback. Mirror builder_ui sheet ctx so И2 click
+assertion matches production navigation.

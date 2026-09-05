@@ -65,6 +65,7 @@ describe('И2 · Шторка ⋯ · canvas contract', () => {
           openIdx: 0,
           close: () => {},
           go: (view) => seen.push(view),
+          openPlanVsDone: () => seen.push('plan-vs-done'),
           setLinkFrom: () => {},
           setHistoryName: () => {},
           setWarmupDropIdx: () => {},
