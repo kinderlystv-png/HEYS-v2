@@ -202,7 +202,7 @@ function ingestStandardRow(source, row, rows, ctx) {
     ctx.log(`skip missing contract key in ${source}: ${rowKey}`);
     return;
   }
-  const verdict = row.verdict ?? row.recommend;
+  let verdict = row.verdict ?? row.recommend;
   let fact = row.f ?? row.fact ?? row.fDraft ?? '';
   if (!verdict) {
     ctx.log(`skip row without verdict in ${source}: ${rowKey}`);
@@ -214,6 +214,9 @@ function ingestStandardRow(source, row, rows, ctx) {
   }
   if (row.note) fact = `${fact} ${row.note}`;
   const options = { ...(row.options || {}) };
+  if (verdict === '!') {
+    verdict = '=';
+  }
   if (verdict === '—') {
     if (!options['na-kind']) {
       options['na-kind'] = rowKey === 'границы' || rowKey === 'границы (scope)' ? 'handoff' : 'foreign-zone';

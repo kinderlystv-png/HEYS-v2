@@ -1,0 +1,31 @@
+{
+  "zone": "strength-builder",
+  "scope": "owner strip needs-code closure",
+  "rows": [
+    {
+      "key": "вид · строка подхода",
+      "verdict": "=",
+      "fact": "Кадры A1б/Е1: .sb-ap-num 26×26 r9, .sb-ap-field/.sb-ap-check 44×44 r999 — 750-strength-builder.css:3614-3680; prose :2349 (r12) устарела, продукт = кадру."
+    },
+    {
+      "key": "Подход · таблица ввода · 33",
+      "verdict": "=",
+      "fact": "Done-номер: .sb-builder-screen.is-exercise-open .sb-ap.is-done .sb-ap-num var(--gr-bg)/var(--gr) — 750:3671-3674; weight-entry дубль :4874-4877; calm ·33 + weight-edit-session computed grBg/gr."
+    },
+    {
+      "key": "вид · служебная шапка сессии",
+      "verdict": "=",
+      "fact": "Контракт :2293 одна служебная шапка: .sb-head-title > b всегда wl.title/sessionTitle(exercises) — builder_ui:1896-1897; подзаголовок держит ключ подхода (exerciseWorkProgressKey) при is-weight-entry."
+    },
+    {
+      "key": "Конструктор · список свёрнут · 15",
+      "verdict": "=",
+      "fact": ".sb-builder-screen .sb-ex--collapsed .sb-ex-title b font 13px/1.2 — 750:3391-3393; calm A2 ·14 computed 13px."
+    },
+    {
+      "key": "вид · создание упражнения",
+      "verdict": "=",
+      "fact": "Каталог onCreate → view new → CatUI.NewExerciseScreen (B3, CATALOG_V4_BRIDGE) — builder_ui:1547-1552; «1·Что меряем», пилюли, «Создать без объёма» — catalog_ui:243+; custom-exercise-v4-canvas-contract.test.js."
+    }
+  ]
+}
