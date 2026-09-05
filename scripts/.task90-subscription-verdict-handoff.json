@@ -1,0 +1,151 @@
+{
+  "zoneId": "subscription",
+  "meta": {
+    "decisionRefDefault": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+  },
+  "rows": [
+    {
+      "contractKey": "фича",
+      "verdict": "=",
+      "fact": "apps/web/heys_subscription_v1.js:16: TRIAL_DAYS=7; STATUS trial/active → canWriteStatus true (52-54)"
+    },
+    {
+      "contractKey": "границы",
+      "verdict": "=",
+      "fact": "apps/web/heys_subscriptions_v1.js:1630-1645: SubscriptionSection, PaymentScreen, ContactCuratorScreen; heys_paywall_v1.js:1314 PaywallModal, 1357 ReadOnlyBanner, 1320 gateWrite"
+    },
+    {
+      "contractKey": "источник",
+      "verdict": "=",
+      "fact": "apps/web/styles/modules/732-ui-v4-nutrition.css:1679: .readonly-banner на «Питании»; кураторский кабинет — отдельная зона"
+    },
+    {
+      "contractKey": "код",
+      "verdict": "=",
+      "fact": "apps/web/heys_paywall_v1.js + heys_subscriptions_v1.js + heys_subscription_v1.js + heys_trial_queue_v1.js"
+    },
+    {
+      "contractKey": "две фазы",
+      "verdict": "=",
+      "fact": "apps/web/heys_subscriptions_v1.js:1295-1296: paymentsEnabled default false → ContactCuratorScreen (1824-1825); true → PaywallModal/PaymentScreen"
+    },
+    {
+      "contractKey": "адресация",
+      "verdict": "=",
+      "fact": "apps/web/scripts/ui-v4-visual-fixture.mjs: subscription frames data-demo=stop для visual harness"
+    },
+    {
+      "contractKey": "палитры",
+      "verdict": "=",
+      "fact": "apps/web/heys_paywall_v1.js:50-87: PAYWALL_STYLES на --v4-bg/--v4-ink/--v4-act/--v4-modal-backdrop-*"
+    },
+    {
+      "contractKey": "слой — центральная модалка",
+      "verdict": "=",
+      "fact": "apps/web/heys_paywall_v1.js:54-56: blur(var(--v4-modal-backdrop-blur, 2.5px)); 72-80: left/right 14px, radius 26px, padding 22/18/18; 90-94: close 34px; 829-830: tap scrim закрывает"
+    },
+    {
+      "contractKey": "три тарифа",
+      "verdict": "=",
+      "fact": "apps/web/heys_subscriptions_v1.js:103-150: base 490, pro 7990 recommended, proplus 19990; paywall 779-780 proPlus → telegram"
+    },
+    {
+      "contractKey": "три сигнала «только чтение»",
+      "verdict": "≠",
+      "fact": "apps/web/heys_day_page_shell.js:390: ReadOnlyBanner только на «Питании»; heys_paywall_v1.js:1172 showBlockedToast; липкого баннера на всех вкладках в shell нет",
+      "reasonCode": "canvas-conflict"
+    },
+    {
+      "contractKey": "контакт поддержки — список",
+      "verdict": "=",
+      "fact": "apps/web/heys_paywall_v1.js:24-27: HEYS.support один telegram @heyslab_support_bot + pay@heyslab.ru, не список кураторов"
+    },
+    {
+      "contractKey": "шаги оплаты — как в коде",
+      "verdict": "=",
+      "fact": "apps/web/heys_subscriptions_v1.js:892-950: logPaymentConsent payment_oferta → YandexAPI.createPayment → redirect; 937-942 heys_pending_payment"
+    },
+    {
+      "contractKey": "очередь на пробный период",
+      "verdict": "=",
+      "fact": "apps/web/heys_paywall_v1.js:940-1076: TrialQueueSection в PaywallModal; heys_trial_queue_v1.js cancel/request/claim"
+    },
+    {
+      "contractKey": "Pro Спорт",
+      "verdict": "=",
+      "fact": "apps/web/heys_paywall_v1.js:779-780: selectedPlan proPlus → HEYS.support.telegramUrl, не PaymentScreen"
+    },
+    {
+      "contractKey": "плашка на вкладке «Питание»",
+      "verdict": "=",
+      "fact": "apps/web/heys_day_page_shell.js:390: HEYS.Paywall.ReadOnlyBanner при read_only; apps/web/styles/modules/732-ui-v4-nutrition.css:1679"
+    },
+    {
+      "contractKey": "точки входа",
+      "verdict": "=",
+      "fact": "apps/web/heys_user_tab_impl_v1.js: settings «Подписка»; heys_subscriptions_v1.js:784 handleSubscriptionScreenSupport; heys_paywall_v1.js:1121 showPaywall; 1567-1597 WelcomeFirstLogin"
+    },
+    {
+      "contractKey": "гейт записи",
+      "verdict": "=",
+      "fact": "apps/web/heys_paywall_v1.js:1253-1258: gateWrite → showBlockedToast, action не выполняется"
+    },
+    {
+      "contractKey": "что решает состояние",
+      "verdict": "=",
+      "fact": "apps/web/heys_subscription_v1.js:52-54 canWriteStatus trial|active; 216 heys:subscription-changed; heys_paywall_v1.js:1224-1226 пустой кэш → block+refresh"
+    },
+    {
+      "contractKey": "очередь · оффер истёк",
+      "verdict": "≠",
+      "fact": "apps/web/heys_trial_queue_v1.js:475-524: isOfferExpired deprecated, OFFER→pending без отдельного экрана; paywall 1048 локально скрывает истёкший offer",
+      "reasonCode": "canvas-conflict"
+    },
+    {
+      "contractKey": "оплата · уход и возврат",
+      "verdict": "≠",
+      "fact": "apps/web/heys_subscriptions_v1.js:111-112,353-375: poll 3s×60 и heys_pending_payment есть; heys_app_shortcuts_v1.js:150-172: ошибка — toast, не модалка тарифов со строкой из контракта",
+      "reasonCode": "canvas-conflict"
+    },
+    {
+      "contractKey": "приветствие · один раз",
+      "verdict": "≠",
+      "fact": "apps/web/heys_subscriptions_v1.js:70-84: markWelcomeSeen пишет HEYS.store heys_first_login (cloud KV); контракт — локальный флаг, повтор на втором устройстве принят",
+      "reasonCode": "canvas-conflict"
+    },
+    {
+      "contractKey": "аппаратная кнопка назад и затемнение",
+      "verdict": "≠",
+      "fact": "apps/web/heys_paywall_v1.js:54-56,829-830: scrim v4 + tap закрывает; PaywallModal не вызывает HEYS.ModalDismiss.pushHistoryLayer (heys_modal_dismiss_v1.js:117)",
+      "reasonCode": "canvas-conflict"
+    },
+    {
+      "contractKey": "уменьшенное движение, крупный шрифт, офлайн",
+      "verdict": "≠",
+      "fact": "apps/web/heys_paywall_v1.js + heys_subscriptions_v1.js: нет «Нет сети — оплата недоступна» и подписи «данные могли устареть» в subscription-слое",
+      "reasonCode": "canvas-conflict"
+    },
+    {
+      "contractKey": "доступность",
+      "verdict": "≠",
+      "fact": "apps/web/heys_paywall_v1.js:831-848: role=dialog, radiogroup; heys_paywall_v1.js:1180-1187 toast без role=status; ReadOnlyBanner без role=region",
+      "reasonCode": "canvas-conflict"
+    },
+    {
+      "contractKey": "контакты куратора — откуда",
+      "verdict": "=",
+      "fact": "apps/web/heys_paywall_v1.js:24-27: HEYS.support один telegram+email; ContactCuratorScreen:1308 — HEYS.support.telegramUrl, не поля curators"
+    },
+    {
+      "contractKey": "срок подписки",
+      "verdict": "≠",
+      "fact": "apps/web/heys_subscriptions_v1.js:733-763 getSettingsRowMeta дата «до …»; 1202-1203 headline датой; 989 PaymentScreen «за 30 дней»",
+      "reasonCode": "canvas-conflict"
+    },
+    {
+      "contractKey": "отмена и возврат",
+      "verdict": "=",
+      "fact": "apps/web/heys_subscriptions_v1.js:766-781: renderSubscriptionScreenFooter «Само ничего не спишется» + «Написать в поддержку», кнопки отмены подписки нет"
+    }
+  ]
+}

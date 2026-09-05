@@ -541,7 +541,7 @@
     },
     "Подписка · тарифы · места есть · 12": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:269: .paywall-trial-status gap 7px; margin-top 6px; font 600 12px/1; color var(--v4-ok) при местах",
+      "f": "apps/web/heys_paywall_v1.js:264: .paywall-trial-status--ok color var(--v4-ok-text, #5c6a45); sand #5c6a45 · blue #1f6e4d",
       "h": "e7a578bc6d35"
     },
     "Подписка · тарифы · места есть · 13": {
@@ -704,7 +704,7 @@
     },
     "Подписка · проверьте заказ · 09": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:874: .paywall-consent-box.is-checked background var(--v4-act-surface); color var(--v4-on-act-surface)",
+      "f": "apps/web/heys_paywall_v1.js:363: .paywall-consent-box.is-checked background var(--v4-act, #c67139); color var(--v4-btn-on-act, #2b1608); sand act #c67139/on #2b1608 · blue act #1d5e96/on #ffffff",
       "h": "9ef64d224296"
     },
     "Подписка · проверьте заказ · 10": {
@@ -740,7 +740,7 @@
     },
     "Подписка · оплата прошла · 03": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:918: .paywall-success-icon 56×56 border-radius 999px; background var(--v4-ok-bg); color var(--v4-ok)",
+      "f": "apps/web/heys_paywall_v1.js:400: .paywall-success-icon 56×56 border-radius 999px; background var(--v4-ok-bg, #eaefe0); color var(--v4-ok-text, #5c6a45); sand bg #eaefe0 text #5c6a45 · blue bg #e4efe7 text #1f6e4d",
       "h": "d48f38529ce3"
     },
     "Подписка · оплата прошла · 04": {
