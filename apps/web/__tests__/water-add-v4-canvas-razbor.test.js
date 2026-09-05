@@ -48,8 +48,9 @@ describe('water-add · разбор кадров канваса', () => {
 
   it('кадр «Кольцо» — минус в ряду объёмов, не в шапке', () => {
     expect(razbor.get('Вода · карточка · Кольцо|2')).toContain('«−200»');
-    expect(waterCss).toMatch(/\.water-review__chip--in-row[\s\S]*height:\s*1\.875rem/);
+    expect(waterCss).toMatch(/\.water-review__chip--in-row[\s\S]*height:\s*2\.75rem/);
     expect(waterCss).toMatch(/\.water-review__chip--quick[\s\S]*flex:\s*1/);
+    expect(waterCss).not.toMatch(/\.water-review__chip::after/);
   });
 
   it('кадр «свой объём · лист» совпадает с water-custom-sheet', () => {
@@ -57,9 +58,10 @@ describe('water-add · разбор кадров канваса', () => {
   });
 
   it('чипы FAB — геометрия из кадра «вид · ряд чипов объёма»', () => {
-    expect(waterCss).toMatch(/\.water-fab-vol \{[\s\S]*?height: 30px/);
+    expect(waterCss).toMatch(/\.water-fab-vol \{[\s\S]*?height: 44px/);
     expect(waterCss).toMatch(/\.water-fab-vol--minus \{[\s\S]*?margin-right: 5px/);
     expect(waterCss).toContain('border: 2px solid var(--water-fab-outline)');
+    expect(waterCss).not.toMatch(/\.water-fab-vol::before/);
   });
 
   it('гейт называет охват разбора', () => {

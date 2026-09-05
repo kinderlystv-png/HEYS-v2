@@ -133,7 +133,8 @@ describe('water custom volume wiring', () => {
     const css = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/400-water-and-hydration.css'), 'utf8');
     expect(css).toContain('.water-custom-sheet__step');
     expect(css).toMatch(/\.water-custom-sheet__step \{[\s\S]*?width: 44px/);
-    expect(css).toContain('.water-custom-sheet__preset.is-active');
+    expect(css).toMatch(/\.water-custom-sheet__preset \{[\s\S]*?min-height: 44px/);
+    expect(css).toMatch(/\.water-custom-sheet__confirm \{[\s\S]*?min-height: 44px/);
     expect(css).toContain('.water-custom-sheet__confirm');
     expect(css).toContain('blur(var(--v4-modal-backdrop-blur, 2.5px))');
   });
