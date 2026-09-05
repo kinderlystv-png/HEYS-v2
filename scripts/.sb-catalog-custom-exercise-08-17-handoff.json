@@ -6,18 +6,20 @@
   "summary": {
     "block": "Своё упражнение ·08–17",
     "contractLines": 10,
-    "recommendEquals": 6,
-    "recommendNotEquals": 4,
+    "recommendEquals": 10,
+    "recommendNotEquals": 0,
     "recommendDash": 0,
     "recommendQuestion": 0,
     "codeChanged": true,
-    "codeChange": "Unit picker: vertical .sb-radio → .sb-ex-cd / .sb-ex-unit-badge row (gap 6px, padding 9px 0, is-on --acs/--on-acs). CSS scoped :has(.sb-ex-name). Muscle chips unchanged — ·14–17 остаются ≠."
+    "codeChange": "Unit picker ·08–12: .sb-ex-unit-badge row. Muscle ·14–17: .sb-ex-muscle-badge chips + .sb-ex-muscle-row summary («Основная»/«Помогают») scoped :has(.sb-ex-name). CSS 750-strength-builder.css."
   },
   "computed": {
     "sand": {
       "selectedBg": "#c67139",
       "selectedColor": "#2b1608",
       "unselectedColor": "rgba(0, 0, 0, 0.62)",
+      "primaryMuscleColor": "#8a4a20",
+      "secondaryMuscleColor": "rgba(0, 0, 0, 0.56)",
       "gap": "6px",
       "rowPadding": "9px 0"
     },
@@ -25,6 +27,8 @@
       "selectedBg": "#2e7cc0",
       "selectedColor": "#ffffff",
       "unselectedColor": "rgba(16, 24, 38, 0.62)",
+      "primaryMuscleColor": "#1d5e96",
+      "secondaryMuscleColor": "rgba(16, 24, 38, 0.56)",
       "gap": "6px",
       "rowPadding": "9px 0"
     },
@@ -63,32 +67,28 @@
     },
     {
       "contractLine": "Своё упражнение · 14",
-      "verdict": "≠",
-      "reasonCode": "canvas-conflict",
-      "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676–1680) — polosa 4 не трогала muscle UI."
+      "verdict": "=",
+      "f": "«Основная» .sb-ex-muscle-key color var(--tx) — catalog_ui; 750 :has(.sb-ex-name); sand #201e1d · blue #101826."
     },
     {
       "contractLine": "Своё упражнение · 15",
-      "verdict": "≠",
-      "reasonCode": "canvas-conflict",
-      "f": "Кадр «спина» 700 11.5 var(--ac); продукт chip primary — см. ·14."
+      "verdict": "=",
+      "f": "«спина» .sb-ex-muscle-val.is-primary 700 11.5px var(--ac) — catalog_ui; 750; sand #8a4a20 · blue #1d5e96."
     },
     {
       "contractLine": "Своё упражнение · 16",
-      "verdict": "≠",
-      "reasonCode": "canvas-conflict",
-      "f": "Кадр .cd divider none для muscle rows; продукт .sb-chips wrap без .cd rows."
+      "verdict": "=",
+      "f": ".sb-ex-muscle-row padding 9px 0 border-bottom none — 750; computed sand+blue."
     },
     {
       "contractLine": "Своё упражнение · 17",
-      "verdict": "≠",
-      "reasonCode": "canvas-conflict",
-      "f": "Кадр «бицепс, плечи» 600 ink 56%; продукт .sb-chip.is-on --sb-mut."
+      "verdict": "=",
+      "f": "«бицепс, плечи» .sb-ex-muscle-val 600 11.5px rgba(var(--ink),.56) — catalog_ui; sand rgba(0,0,0,.56) · blue rgba(16,24,38,.56)."
     }
   ],
   "outOfScope": {
-    "note": "·14–17 muscle table vs chips — следующая polosa. strength-builder.json не трогали.",
-    "cssOwner": "750-strength-builder.css:1258–1286",
+    "note": "·18+ и strength-builder.json не трогали.",
+    "cssOwner": "750-strength-builder.css:1258–1332",
     "tests": [
       "apps/web/__tests__/strength-builder-custom-exercise-b3-badges-v4-canvas-contract.test.js",
       "apps/web/__tests__/strength-builder-custom-exercise-v4-canvas-contract.test.js",

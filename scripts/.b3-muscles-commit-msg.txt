@@ -1,0 +1,5 @@
+feat(strength): B3 своё упражнение ·14–17 muscle chips + summary rows
+
+NewExerciseScreen step 2: badge-row picker (.sb-ex-muscle-badge) and .cd
+summary rows «Основная»/«Помогают» scoped via :has(.sb-ex-name).
+Contract test extends ·08–12 with computed sand/blue for ·14–17.

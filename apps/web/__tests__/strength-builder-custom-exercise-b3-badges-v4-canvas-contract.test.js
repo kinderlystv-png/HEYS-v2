@@ -15,11 +15,13 @@ const PALETTES = Object.freeze({
     bg: '#fffaf1', c1: '#f7efe2', c2: '#efe3cf', tx: '#201e1d',
     ac: '#8a4a20', acs: '#c67139', onAcs: '#2b1608',
     ink62: 'rgba(0, 0, 0, 0.62)',
+    ink56: 'rgba(0, 0, 0, 0.56)',
   },
   blue: {
     bg: '#ffffff', c1: '#eef3f9', c2: '#e2ecf6', tx: '#101826',
     ac: '#1d5e96', acs: '#2e7cc0', onAcs: '#ffffff',
     ink62: 'rgba(16, 24, 38, 0.62)',
+    ink56: 'rgba(16, 24, 38, 0.56)',
   },
 });
 
@@ -103,6 +105,14 @@ function renderNewExercise(paletteName = 'sand') {
   return { style, palette };
 }
 
+function renderNewExerciseWithMuscles(paletteName = 'sand') {
+  const result = renderNewExercise(paletteName);
+  fireEvent.click(screen.getByRole('button', { name: 'спина' }));
+  fireEvent.click(screen.getByRole('button', { name: 'бицепс' }));
+  fireEvent.click(screen.getByRole('button', { name: 'плечи' }));
+  return result;
+}
+
 describe('strength builder · B3 своё упражнение ·08–12 badge-row v4 canvas contract', () => {
   let style;
 
@@ -147,5 +157,66 @@ describe('strength builder · B3 своё упражнение ·08–12 badge-r
     expectStyle(screen.getByRole('button', { name: 'метры' }), {
       color: palette.ink62,
     }, '12 blue');
+  });
+
+  it('uses muscle badge-row and summary .cd rows instead of large sb-chip', () => {
+    expect(CATALOG).toContain('sb-ex-muscle-badges');
+    expect(CATALOG).toContain('sb-ex-muscle-badge');
+    expect(CATALOG).toContain('sb-ex-muscle-key');
+    expect(CATALOG).toContain('sb-ex-muscle-val');
+    expect(CATALOG).toContain("'Основная'");
+    expect(CATALOG).toContain("'Помогают'");
+    const newExBlock = CATALOG.match(/function NewExerciseScreen[\s\S]*?function ExerciseMuscleGroupsScreen/)[0];
+    expect(newExBlock).not.toContain("className: 'sb-chips'");
+    expect(newExBlock).toContain('sb-ex-muscle-cd');
+    expect(CSS).toMatch(/\.sb-root\.sb-screen:has\(\.sb-ex-name\) \.sb-ex-muscle-badges[\s\S]*gap: 6px;/);
+    expect(CSS).toMatch(/\.sb-ex-muscle-key[\s\S]*var\(--tx/);
+    expect(CSS).toMatch(/\.sb-ex-muscle-val\.is-primary[\s\S]*var\(--ac/);
+    expect(CSS).toMatch(/\.sb-ex-muscle-row[\s\S]*border-bottom: none;/);
+    expect(CSS).toMatch(/\.sb-ex-muscle-val:not\(\.is-primary\)[\s\S]*rgba\(var\(--ink\), 0\.56\)/);
+  });
+
+  it('доказывает computed-style muscle rows ·14–17 на песочном наборе', { timeout: 20000 }, () => {
+    ({ style } = renderNewExerciseWithMuscles('sand'));
+    const palette = PALETTES.sand;
+    const primaryRow = screen.getByText('Основная').closest('.sb-ex-muscle-row');
+    const secondaryRow = screen.getByText('Помогают').closest('.sb-ex-muscle-row');
+    const primaryValue = primaryRow.querySelector('.sb-ex-muscle-val');
+    const secondaryValue = secondaryRow.querySelector('.sb-ex-muscle-val');
+
+    expectStyle(screen.getByText('Основная'), { color: palette.tx }, '14 sand');
+    expectStyle(primaryValue, {
+      fontSize: '11.5px',
+      fontWeight: '700',
+      lineHeight: '1',
+      color: palette.ac,
+    }, '15 sand');
+    expectStyle(primaryRow, {
+      paddingTop: '9px',
+      paddingBottom: '9px',
+      borderBottomStyle: 'none',
+    }, '16 sand');
+    expectStyle(secondaryValue, {
+      fontSize: '11.5px',
+      fontWeight: '600',
+      lineHeight: '1',
+      color: palette.ink56,
+    }, '17 sand');
+    expect(secondaryValue.textContent).toBe('бицепс, плечи');
+  });
+
+  it('держит роли muscle rows ·14–17 на синем наборе', { timeout: 20000 }, () => {
+    ({ style } = renderNewExerciseWithMuscles('blue'));
+    const palette = PALETTES.blue;
+    const primaryValue = screen.getByText('Основная')
+      .closest('.sb-ex-muscle-row')
+      .querySelector('.sb-ex-muscle-val');
+    const secondaryValue = screen.getByText('Помогают')
+      .closest('.sb-ex-muscle-row')
+      .querySelector('.sb-ex-muscle-val');
+
+    expectStyle(screen.getByText('Основная'), { color: palette.tx }, '14 blue');
+    expectStyle(primaryValue, { color: palette.ac }, '15 blue');
+    expectStyle(secondaryValue, { color: palette.ink56 }, '17 blue');
   });
 });

@@ -260,21 +260,59 @@
    * только у своего веса и не числом, а вопросом «на что похоже движение».
    */
   function NewExerciseScreen(props) {
-    const { initialName, onDone, onCancel } = props;
+    const { initialName, onDone, onCancel, bodyWeightKg } = props;
     const api = metaApi();
     const [name, setName] = React.useState(initialName || '');
     const [unit, setUnit] = React.useState('');
     const [primary, setPrimary] = React.useState('');
     const [secondary, setSecondary] = React.useState([]);
     const [likeNorm, setLikeNorm] = React.useState('');
+    const [subScreen, setSubScreen] = React.useState(null);
+    const [similarChoice, setSimilarChoice] = React.useState(null);
 
     if (!api) return null;
-    const refs = api.bodyweightReferences();
     const needsFactor = unit === 'bodyweight';
-    const factor = needsFactor && likeNorm
-      ? (refs.filter(function (r) { return r.norm === likeNorm; })[0] || {}).bodyweightFactor
-      : null;
+    const factor = similarChoice && !similarChoice.isUnknown ? similarChoice.bodyweightFactor : null;
     const ready = !!String(name).trim() && !!unit && !!primary;
+    const share = typeof api.synergistShare === 'number' ? api.synergistShare : 0.5;
+    const shareLabel = share === 0.5 ? 'половину' : Math.round(share * 100) + '%';
+    const secondaryText = secondary.map(function (id) {
+      return api.groupLabel(id).toLowerCase();
+    }).join(', ');
+
+    if (subScreen === 'muscle-groups') {
+      return h(ExerciseMuscleGroupsScreen, {
+        exerciseName: name,
+        primaryGroup: primary,
+        secondaryGroups: secondary,
+        previewTonnageKg: 2980,
+        onSave: function (newPrimary, newSecondary) {
+          setPrimary(newPrimary);
+          setSecondary(newSecondary);
+          setSubScreen(null);
+        },
+        onBack: function () { setSubScreen(null); }
+      });
+    }
+
+    if (subScreen === 'similar') {
+      return h(ExerciseSimilarScreen, {
+        exerciseName: name,
+        bodyWeightKg: bodyWeightKg,
+        selectedKey: similarChoice ? similarChoice.key : (likeNorm || ''),
+        bodyweightFactor: factor,
+        onSave: function (selected) {
+          setSimilarChoice(selected || null);
+          if (selected && !selected.isUnknown) {
+            setLikeNorm(selected.key);
+          } else {
+            setLikeNorm('');
+          }
+          setSubScreen(null);
+        },
+        onBack: function () { setSubScreen(null); }
+      });
+    }
 
     function toggleGroup(id) {
       if (id === primary) { setPrimary(''); return; }
@@ -333,7 +371,13 @@
                   type: 'button',
                   className: 'sb-ex-unit-badge' + (unit === u.id ? ' is-on' : ''),
                   'aria-pressed': unit === u.id,
-                  onClick: function () { setUnit(u.id); if (u.id !== 'bodyweight') setLikeNorm(''); }
+                  onClick: function () {
+                    setUnit(u.id);
+                    if (u.id !== 'bodyweight') {
+                      setLikeNorm('');
+                      setSimilarChoice(null);
+                    }
+                  }
                 }, label);
               })
             )
@@ -344,22 +388,37 @@
           h('span', null, '2 · Группы мышц'),
           h('i', null, 'обязательно')
         ),
-        h('div', { className: 'sb-step-hint' },
-          primary
-            ? 'Основная «' + api.groupLabel(primary) + '» берёт полный вес упражнения, синергист — половину'
-            : 'Первая выбранная станет основной, следующие — синергистами'
-        ),
-        h('div', { className: 'sb-chips' },
-          api.groups.map(function (g) {
-            const isPrimary = g.id === primary;
-            const isSecondary = secondary.indexOf(g.id) >= 0;
-            return h('button', {
-              key: g.id,
-              type: 'button',
-              className: 'sb-chip' + (isPrimary ? ' is-primary' : (isSecondary ? ' is-on' : '')),
-              onClick: function () { toggleGroup(g.id); }
-            }, isPrimary ? g.label + ' · основная' : g.label);
-          })
+        h('div', { className: 'sb-ex-cd sb-ex-muscle-cd' },
+          h('div', { className: 'sb-ex-cd-row' },
+            h('div', { className: 'sb-ex-muscle-badges' },
+              api.groups.map(function (g) {
+                const isPrimary = g.id === primary;
+                const isSecondary = secondary.indexOf(g.id) >= 0;
+                const isOn = isPrimary || isSecondary;
+                return h('button', {
+                  key: g.id,
+                  type: 'button',
+                  className: 'sb-ex-muscle-badge' + (isOn ? ' is-on' : ''),
+                  'aria-pressed': isOn,
+                  onClick: function () { toggleGroup(g.id); }
+                }, isPrimary ? g.label.toLowerCase() + ' · основная' : g.label.toLowerCase());
+              })
+            )
+          ),
+          primary && h('div', { className: 'sb-ex-muscle-row' },
+            h('span', { className: 'sb-ex-muscle-key' }, 'Основная'),
+            h('span', { className: 'sb-ex-muscle-val is-primary' },
+              api.groupLabel(primary).toLowerCase())
+          ),
+          secondary.length > 0 && h('div', { className: 'sb-ex-muscle-row is-last' },
+            h('span', { className: 'sb-ex-muscle-key' }, 'Помогают'),
+            h('span', { className: 'sb-ex-muscle-val' }, secondaryText)
+          ),
+          h('button', {
+            type: 'button',
+            className: 'sb-btn sb-ex-muscle-open',
+            onClick: function () { setSubScreen('muscle-groups'); }
+          }, 'Выбрать группы мышц')
         ),
 
         unit && !needsFactor && h('div', { className: 'sb-step' },
@@ -376,20 +435,21 @@
         needsFactor && h('div', { className: 'sb-block' },
           h('div', { className: 'sb-step-hint' },
             'У упражнений на своём весе спрашиваем «на что похоже» — отжимания, подтягивания, приседания — и коэффициент берём оттуда, а не числом.'),
-          refs.map(function (r) {
-            return h('button', {
-              key: r.norm,
-              type: 'button',
-              className: 'sb-radio' + (likeNorm === r.norm ? ' is-on' : ''),
-              onClick: function () { setLikeNorm(r.norm); }
-            },
-              h('span', { className: 'sb-radio-dot' }),
-              h('div', { className: 'sb-cat-title' },
-                h('b', null, 'Как ' + r.name.toLowerCase()),
-                h('span', null, Math.round(r.bodyweightFactor * 100) + '% массы тела')
-              )
-            );
-          })
+          h('div', { className: 'sb-ex-card-cd' },
+            h('div', { className: 'sb-ex-card-row is-last' },
+              h('span', { className: 'sb-ex-card-row-copy' },
+                h('b', null, similarChoice ? similarChoice.label : 'Не выбрано'),
+                h('span', null, similarChoice
+                  ? similarChoice.hint
+                  : 'образец задаёт коэффициент')
+              ),
+              h('button', {
+                type: 'button',
+                className: 'sb-ex-card-action',
+                onClick: function () { setSubScreen('similar'); }
+              }, similarChoice ? 'сменить' : 'выбрать')
+            )
+          )
         )
       ),
 

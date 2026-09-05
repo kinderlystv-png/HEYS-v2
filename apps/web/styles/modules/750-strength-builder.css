@@ -1285,6 +1285,53 @@
   color: var(--on-acs, var(--v4-btn-on-act, #2b1608)); /* v4-intentional */
 }
 
+/* B3 «Своё упражнение» ·14–17: пилюли групп + строки .cd «Основная»/«Помогают». */
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-badge {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--ink), 0.62); /* v4-intentional */
+  font: 700 9px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-badge.is-on {
+  background: var(--acs, var(--v4-act, #c67139)); /* v4-intentional */
+  color: var(--on-acs, var(--v4-btn-on-act, #2b1608)); /* v4-intentional */
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: none;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-key {
+  color: var(--tx, var(--v4-ink, #201e1d)); /* v4-intentional */
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-val.is-primary {
+  font: 700 11.5px/1 Figtree, sans-serif;
+  color: var(--ac, var(--v4-act-text, #8a4a20)); /* v4-intentional */
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-val:not(.is-primary) {
+  font: 600 11.5px/1 Figtree, sans-serif;
+  color: rgba(var(--ink), 0.56); /* v4-intentional */
+}
+
 .sb-suggest {
   min-height: 36px;
   padding: 0 11px;
