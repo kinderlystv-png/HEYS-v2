@@ -1774,7 +1774,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 .heys-consent-sign-backdrop {
   position: absolute;
   inset: 0;
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   pointer-events: auto;
@@ -2096,10 +2096,6 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   box-shadow: inset 0 0 0 2px #dc2626;
 }
 
-[data-theme$="dark"] .heys-consent-sign-backdrop {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
-}
-
 [data-theme$="dark"] .heys-consent-sign-sheet {
   background: var(--v4-bg, #141210);
   color: var(--v4-ink, #f2ede6);
@@ -2159,6 +2155,169 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 [data-theme$="dark"] .heys-consent-sign-sheet__primary {
   background: var(--v4-act, #cf8144);
   color: var(--on-acs, #201509);
+}
+
+/* Registration · возврат к незавершённой — диск 56 px (кадр registration.v4) */
+.registration-v4-endpoint-disc {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+/* Профиль · отзыв согласия на добавки — bottom sheet (registration.v4) */
+.heys-supp-revoke-root {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  pointer-events: none;
+}
+
+.heys-supp-revoke-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  /* v4-intentional */
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.heys-supp-revoke-frame {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.heys-supp-revoke-sheet {
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 26px;
+  padding: 18px 16px 16px;
+  background: var(--v4-sand-surface-soft, #fffaf1);
+  color: var(--v4-ink, #201e1d);
+  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  box-shadow: 0 -2px 20px rgba(80, 50, 20, 0.1);
+  pointer-events: auto;
+}
+
+.heys-supp-revoke-sheet__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-wrap: pretty;
+}
+
+.heys-supp-revoke-sheet__lead {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  text-wrap: pretty;
+}
+
+.heys-supp-revoke-sheet__impact {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 13px;
+  padding: 11px 13px;
+  border-radius: 16px;
+  background: var(--v4-warn-surface, color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent));
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.heys-supp-revoke-sheet__impact-primary {
+  font-weight: 600;
+  color: var(--v4-ink, #201e1d);
+}
+
+.heys-supp-revoke-sheet__impact-secondary {
+  font-weight: 500;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+}
+
+.heys-supp-revoke-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.heys-supp-revoke-sheet__confirm {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 999px;
+  padding: 14px 16px;
+  background: var(--v4-bad-text, #a83c22);
+  color: var(--v4-btn-on-act, #fff5ef);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heys-supp-revoke-sheet__confirm:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.heys-supp-revoke-sheet__cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: transparent;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heys-supp-revoke-sheet__cancel:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+[data-theme$="dark"] .heys-supp-revoke-sheet {
+  background: var(--v4-surface, #23201b);
+  color: var(--v4-ink, #f2ede6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heys-supp-revoke-backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 
 /* === Consent full-text reader (канвас «Документ · чтение») === */

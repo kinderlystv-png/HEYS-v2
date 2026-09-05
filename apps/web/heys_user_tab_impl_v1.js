@@ -2825,6 +2825,78 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     // === МОИ СОГЛАСИЯ И ДАННЫЕ (152-ФЗ ст.14/21, GDPR Art.15-18) ===
     // Compliance overhaul 2026-05-20: страница для просмотра согласий, скачивания
     // proof-of-consent, DSAR-экспорта, restriction обработки, отзыва куратора.
+    function SupplementsRevokeSheet({ open, onConfirm, onCancel, busy }) {
+        const stats = React.useMemo(function () {
+            if (!open) return { hasData: false };
+            return window.HEYS?.Supplements?.getRevokeImpactStats?.() || { hasData: false };
+        }, [open]);
+
+        if (!open) return null;
+
+        return React.createElement('div', {
+            className: 'heys-supp-revoke-root',
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-labelledby': 'heys-supp-revoke-title'
+        },
+            React.createElement('button', {
+                type: 'button',
+                className: 'heys-supp-revoke-backdrop',
+                'aria-label': 'Закрыть',
+                disabled: !!busy,
+                onClick: function () { if (!busy) onCancel(); }
+            }),
+            React.createElement('div', { className: 'heys-supp-revoke-frame' },
+                React.createElement('div', { className: 'heys-supp-revoke-sheet' },
+                    React.createElement('h2', {
+                        id: 'heys-supp-revoke-title',
+                        className: 'heys-supp-revoke-sheet__title'
+                    }, 'Отозвать согласие на добавки?'),
+                    React.createElement('p', { className: 'heys-supp-revoke-sheet__lead' },
+                        'Курс и все отметки приёма будут удалены без возможности вернуть. ' +
+                        'Блок добавок исчезнет с вкладки и из чек-ина.'),
+                    stats.hasData && React.createElement('div', { className: 'heys-supp-revoke-sheet__impact' },
+                        stats.courseLine && React.createElement('span', {
+                            className: 'heys-supp-revoke-sheet__impact-primary'
+                        }, stats.courseLine),
+                        stats.marksLine && React.createElement('span', {
+                            className: 'heys-supp-revoke-sheet__impact-secondary'
+                        }, stats.marksLine)
+                    ),
+                    React.createElement('div', { className: 'heys-supp-revoke-sheet__actions' },
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'heys-supp-revoke-sheet__confirm',
+                            disabled: !!busy,
+                            onClick: onConfirm
+                        }, busy ? 'Удаляю…' : 'Отозвать и удалить'),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'heys-supp-revoke-sheet__cancel',
+                            disabled: !!busy,
+                            onClick: onCancel
+                        }, 'Оставить как есть')
+                    )
+                )
+            )
+        );
+    }
+
+    async function purgeSupplementsDataAfterRevoke() {
+        const hf = window.HEYS?.healthFeatures;
+        if (hf?.purgeLocalDays && hf.FEATURE_TOGGLES?.supplementsTrackingEnabled?.purgeDay) {
+            try {
+                hf.purgeLocalDays(hf.FEATURE_TOGGLES.supplementsTrackingEnabled.purgeDay);
+            } catch (err) {
+                console.warn('[consents] supplements day purge failed', err);
+            }
+        }
+        if (hf?.purgeSupplementsFromProfile) {
+            const profile = lsGet('heys_profile', {}) || {};
+            lsSet('heys_profile', hf.purgeSupplementsFromProfile(profile));
+        }
+    }
+
     function MyConsentsAndDataCard() {
         const Consents = window.HEYS?.Consents;
         const [consentsList, setConsentsList] = React.useState([]);
@@ -2832,6 +2904,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const [busy, setBusy] = React.useState(null);
         const [message, setMessage] = React.useState('');
         const [restrictionActive, setRestrictionActive] = React.useState(false);
+        const [suppRevokeOpen, setSuppRevokeOpen] = React.useState(false);
 
         const refresh = React.useCallback(async function () {
             if (!Consents?.api?.getMyConsents) return;
@@ -2861,7 +2934,31 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         const versionLabels = (window.HEYS?.LegalVersions?.labels) || {};
         const REQUIRED = ['user_agreement', 'personal_data'];
 
+        const executeRevokeSupplements = async function () {
+            setBusy('supplements_tracking');
+            setMessage('');
+            try {
+                await purgeSupplementsDataAfterRevoke();
+                const res = await Consents.api.revokeConsentBySession('supplements_tracking');
+                if (res?.success) {
+                    setMessage('✅ Согласие на добавки отозвано. Обновите страницу.');
+                    setSuppRevokeOpen(false);
+                    await refresh();
+                } else {
+                    setMessage('❌ ' + (res?.error || 'Не удалось отозвать'));
+                }
+            } catch (e) {
+                setMessage('❌ ' + e.message);
+            } finally {
+                setBusy(null);
+            }
+        };
+
         const handleRevoke = async function (consentType, isRequired) {
+            if (consentType === 'supplements_tracking') {
+                setSuppRevokeOpen(true);
+                return;
+            }
             const docName = versionLabels[consentType] || consentType;
             let msg;
             if (consentType === 'health_data') {
@@ -3103,7 +3200,13 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
             message && React.createElement('div', {
                 className: profileMessageClass(message),
                 style: { marginTop: 10, fontSize: 13 }
-            }, message)
+            }, message),
+            React.createElement(SupplementsRevokeSheet, {
+                open: suppRevokeOpen,
+                busy: busy === 'supplements_tracking',
+                onConfirm: executeRevokeSupplements,
+                onCancel: function () { setSuppRevokeOpen(false); }
+            })
         );
     }
 
@@ -3325,6 +3428,8 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     };
     HEYS.UserTabImpl.calcSleepNorm = calcSleepNorm;
     HEYS.UserTabImpl.calcAgeFromBirthDate = calcAgeFromBirthDate;
+    HEYS.UserTabImpl.SupplementsRevokeSheet = SupplementsRevokeSheet;
+    HEYS.UserTabImpl.MyConsentsAndDataCard = MyConsentsAndDataCard;
 
     // Экспорт функций для использования в других модулях
     HEYS.calcSleepNorm = calcSleepNorm;

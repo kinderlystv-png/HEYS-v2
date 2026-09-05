@@ -1736,8 +1736,8 @@
       }, value)
     );
 
-    // «вид финального экрана»: круг 60 px, тон подложки и обводки — свой у
-    // каждого из трёх концов.
+    // «вид финального экрана»: круг 60 px у трёх концов welcome; возврат к
+    // незавершённой — 56 px по кадру registration.v4 (диск --c2, часы --acs).
     const endingDisc = (bg, stroke, size, strokeWidth, paths) => React.createElement('div', {
       style: {
         width: 60,
@@ -1957,6 +1957,27 @@
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   }
 
+  function registrationResumeDisc() {
+    return React.createElement('div', {
+      className: 'registration-v4-endpoint-disc',
+      'aria-hidden': 'true'
+    },
+      React.createElement('svg', {
+        width: 26,
+        height: 26,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'var(--v4-act-text, #8a4a20)',
+        strokeWidth: 2.75,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round'
+      },
+        React.createElement('path', { d: 'M12 7v5l3 2' }),
+        React.createElement('circle', { cx: '12', cy: '12', r: '9' })
+      )
+    );
+  }
+
   function ProfileResumeComponent({ data }) {
     const firstName = data.firstName || '';
     const bodyStale = data.bodyStale === true;
@@ -1969,8 +1990,10 @@
       { done: false, current: data.bodyDone && data.goalsDone, label: 'Сон и волна' },
     ];
     return React.createElement('div', {
-      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 8px', textAlign: 'center' }
+      className: 'welcome-step-content registration-v4-resume',
+      style: { display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '36px 8px 20px', textAlign: 'center' }
     },
+      registrationResumeDisc(),
       React.createElement('div', {
         // Кадр «возврат к незавершённой»: 700 19/1,3 через 18. Кегль здесь на
         // единицу меньше, чем у заголовков шагов, — экран не шаг, а развилка

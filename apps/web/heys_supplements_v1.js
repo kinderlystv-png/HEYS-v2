@@ -1307,6 +1307,123 @@
     }
   }
 
+  function ruCountWord(n, one, few, many) {
+    const abs = Math.abs(Number(n) || 0);
+    const mod10 = abs % 10;
+    const mod100 = abs % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+
+  function listSupplementDayDateKeys() {
+    const cid = String(HEYS.currentClientId || HEYS.utils?.getCurrentClientId?.() || '').toLowerCase();
+    const dates = new Set();
+    try {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+        const scoped = /^heys_([0-9a-f-]{36})_dayv2_(\d{4}-\d{2}-\d{2})$/i.exec(key);
+        const legacy = /^heys_dayv2_(\d{4}-\d{2}-\d{2})$/i.exec(key);
+        if (scoped) {
+          if (cid && scoped[1].toLowerCase() !== cid) continue;
+          dates.add(scoped[2]);
+        } else if (legacy) {
+          if (cid) {
+            try {
+              if (localStorage.getItem(`heys_${cid}_dayv2_${legacy[1]}`)) continue;
+            } catch (_) { /* noop */ }
+          }
+          dates.add(legacy[1]);
+        }
+      }
+    } catch (_) { /* noop */ }
+    return Array.from(dates).sort();
+  }
+
+  function readDayDataForDate(dateKey) {
+    return readStoredValue(`heys_dayv2_${dateKey}`, {}) || {};
+  }
+
+  function computeCourseMonthsBetween(startIso, endIso) {
+    const start = new Date(`${startIso}T12:00:00`);
+    const end = new Date(`${endIso}T12:00:00`);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) return 0;
+    let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    if (end.getDate() < start.getDate()) months -= 1;
+    return Math.max(1, months + 1);
+  }
+
+  /**
+   * Цифры для листа отзыва согласия supplements_tracking — только из реальных данных.
+   * @returns {{ hasData: boolean, courseLine: string|null, marksLine: string|null, marksCount: number, daysWithMarks: number }}
+   */
+  function getRevokeImpactStats() {
+    const daysWithMarks = new Set();
+    let marksCount = 0;
+
+    listSupplementDayDateKeys().forEach((dateKey) => {
+      const taken = Array.isArray(readDayDataForDate(dateKey).supplementsTaken)
+        ? readDayDataForDate(dateKey).supplementsTaken
+        : [];
+      if (taken.length > 0) {
+        marksCount += taken.length;
+        daysWithMarks.add(dateKey);
+      }
+    });
+
+    const history = getSupplementHistory();
+    Object.values(history).forEach((entry) => {
+      if (!entry || typeof entry !== 'object') return;
+      if (Array.isArray(entry.takenDates)) {
+        entry.takenDates.forEach((dateKey) => {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey))) daysWithMarks.add(dateKey);
+        });
+      }
+    });
+
+    if (marksCount === 0) {
+      Object.values(history).forEach((entry) => {
+        const total = Number(entry?.totalTaken);
+        if (Number.isFinite(total) && total > 0) marksCount += total;
+      });
+    }
+
+    let earliestStart = null;
+    Object.values(history).forEach((entry) => {
+      const startDate = entry?.startDate;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(startDate || ''))) return;
+      if (!earliestStart || startDate < earliestStart) earliestStart = startDate;
+    });
+
+    const today = new Date().toISOString().slice(0, 10);
+    const planned = getPlannedSupplements();
+    let courseLine = null;
+    if (earliestStart) {
+      const months = computeCourseMonthsBetween(earliestStart, today);
+      courseLine = `Курс на ${months} ${ruCountWord(months, 'месяц', 'месяца', 'месяцев')}`;
+    } else if (planned.length > 0) {
+      const n = planned.length;
+      courseLine = `Курс · ${n} ${ruCountWord(n, 'добавка', 'добавки', 'добавок')}`;
+    }
+
+    const dayCount = daysWithMarks.size;
+    let marksLine = null;
+    if (marksCount > 0 && dayCount > 0) {
+      marksLine = `${marksCount} ${ruCountWord(marksCount, 'отметка приёма', 'отметки приёма', 'отметок приёма')} за ${dayCount} ${ruCountWord(dayCount, 'день', 'дня', 'дней')}`;
+    } else if (marksCount > 0) {
+      marksLine = `${marksCount} ${ruCountWord(marksCount, 'отметка приёма', 'отметки приёма', 'отметок приёма')}`;
+    }
+
+    return {
+      hasData: !!(courseLine || marksLine),
+      courseLine,
+      marksLine,
+      marksCount,
+      daysWithMarks: dayCount,
+    };
+  }
+
   /**
    * Получить статистику соблюдения курса за N дней
    */
@@ -3711,6 +3828,7 @@
     markTaken: markSupplementTaken,
     markAllTaken: markAllSupplementsTaken,
     getComplianceStats: getComplianceStats,
+    getRevokeImpactStats: getRevokeImpactStats,
     // v2.0 функции
     checkInteractions,
     getInsulinWaveBonus,
