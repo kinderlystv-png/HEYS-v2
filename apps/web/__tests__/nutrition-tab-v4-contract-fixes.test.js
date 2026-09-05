@@ -605,3 +605,39 @@ describe('nutrition-tab · выделение и копирование · пр�
     expect(match[0]).toContain('user-select: text;');
   });
 });
+
+const MEALS_SRC = fs.readFileSync(path.resolve(__dirname, '../day/_meals.js'), 'utf8');
+
+describe('nutrition-tab · состав чипа · 44 px видимым', () => {
+  it('чип добавки держит 44 px видимой высотой без ::after-расширителя', () => {
+    const block = NUTRITION_CSS.match(/\.nutrition-v4-supplements__chip \{[\s\S]*?\}/)?.[0] || '';
+    expect(block).toMatch(/min-height:\s*44px/);
+    const after = NUTRITION_CSS.match(/\.nutrition-v4-supplements__chip::after \{[\s\S]*?\}/)?.[0] || '';
+    expect(after).toMatch(/content:\s*none/);
+  });
+});
+
+describe('nutrition-tab · запись не в сегодня · равный выбор и след', () => {
+  it('старый warning UX снят из meal date guard', () => {
+    expect(MEALS_SRC).not.toContain('Перейти на сегодня');
+    expect(MEALS_SRC).not.toContain('Всё-таки записать');
+    expect(MEALS_SRC).not.toContain('meal-date-warning');
+    expect(MEALS_SRC).not.toContain('Приём запишется на');
+  });
+
+  it('лист равного выбора и след «Записано в …» есть в коде', () => {
+    expect(MEALS_SRC).toContain('На какой день записать?');
+    expect(MEALS_SRC).toContain('открытый день');
+    expect(MEALS_SRC).toContain('Записать на ${formatMealDateLabel(targetKey)}');
+    expect(MEALS_SRC).toContain('notifyRecordedInForeignDay');
+    expect(MEALS_SRC).toContain('Записано в ${formatMealDateLabel(dateKey)}');
+    expect(MEALS_SRC).toContain('duration: 6000');
+  });
+
+  it('mealCountSubtitle считает приёмы с продуктами для подписи сегодняшнего дня', () => {
+    expect(MEALS_SRC).toContain('countMealsWithProducts');
+    expect(MEALS_SRC).toMatch(/return `\$\{n\} приём`/);
+    expect(MEALS_SRC).toMatch(/return `\$\{n\} приёма`/);
+    expect(MEALS_SRC).toMatch(/return `\$\{n\} приёмов`/);
+  });
+});

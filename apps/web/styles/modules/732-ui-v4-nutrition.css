@@ -1218,6 +1218,14 @@
   cursor: default;
 }
 
+.nutrition-v4-sheet__row.is-selected {
+  box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
+}
+
+.nutrition-v4-date-target-sheet .nutrition-v4-sheet__cta {
+  margin-top: 6px;
+}
+
 .nutrition-v4-sheet__caption {
   margin: 18px 18px 2px;
   font-size: 0.59375rem;
@@ -1597,9 +1605,9 @@
 .nutrition-v4-supplements__chip {
   position: relative;
   flex: 0 0 auto;
-  min-height: 30px;
+  min-height: 44px;
   max-width: 100%;
-  padding: 6px 11px;
+  padding: 0 11px;
   border: none;
   border-radius: 999px;
   background: var(--v4-hero, #f8fafc);
@@ -1615,15 +1623,9 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Контракт «состав чипа»: область нажатия расширена до 44 pt невидимым
-   припуском, а не высотой самого чипа — сам чип остаётся 30 px. */
+/* Контракт «состав чипа»: 44 pt держится видимой высотой чипа, без ::after. */
 .nutrition-v4-supplements__chip::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -7px;
-  bottom: -7px;
+  content: none;
 }
 
 /* Сплошная заливка — значит тон --on-gr, а не тон тинта --sageTx

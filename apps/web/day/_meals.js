@@ -5,7 +5,7 @@
 //                 docs/reference/systems/MEAL_PLANNER.md
 //
 //   ~3    IIFE entry — scoped dayv2 key, daytrace helpers
-//  ~44    Meal date guard — formatMealDateLabel, MealDateWarning
+//  ~44    Meal date guard — formatMealDateLabel, equal-choice sheet, undo trace
 // ~128    Meal flow events — dispatchMealFlowFinished
 // ~139    MEAL PLATE GUIDE — variants, preload, showMealPlateGuide
 // ~510    resolveMealIndex helper
@@ -83,73 +83,156 @@
         return label.charAt(0).toUpperCase() + label.slice(1);
     }
 
-    function MealDateWarning({ dateKey }) {
-        const targetLabel = formatMealDateLabel(dateKey);
-
-        return React.createElement('div', {
-            className: 'meal-date-warning',
-            role: 'alert',
-            'aria-live': 'assertive',
-        },
-            React.createElement('div', { className: 'meal-date-warning__badge' }, 'Внимание'),
-            React.createElement('div', { className: 'meal-date-warning__question' },
-                `Приём запишется на ${targetLabel}, а не на сегодня`
-            ),
-            React.createElement('p', { className: 'meal-date-warning__copy' },
-                'В календаре выбран другой день. Еда уйдёт туда и в сегодняшнюю норму не попадёт.'
-            )
-        );
+    function formatTodayMealRowLabel(todayKey) {
+        return `Сегодня, ${formatMealDateLabel(todayKey)}`;
     }
 
-    async function confirmMealCreationDate(dateKey, { onReturnToday } = {}) {
+    function formatOpenDayContextLabel(dateKey) {
+        const label = formatMealDateLabel(dateKey, true);
+        return `вы смотрите ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
+    }
+
+    function countMealsWithProducts(dayData) {
+        return (dayData?.meals || []).filter((meal) => (meal?.items || []).length > 0).length;
+    }
+
+    function mealCountSubtitle(count) {
+        const n = Number(count) || 0;
+        if (n % 10 === 1 && n % 100 !== 11) return `${n} приём`;
+        if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return `${n} приёма`;
+        return `${n} приёмов`;
+    }
+
+    function notifyRecordedInForeignDay(dateKey, onUndo) {
         const todayKey = _getTodayISO();
-        if (!dateKey || dateKey === todayKey) return true;
-        if (!HEYS.ConfirmModal?.show) {
-            HEYS.Toast?.error?.('Не удалось подтвердить дату — приём не создан');
-            return false;
-        }
-
-        const targetShortLabel = formatMealDateLabel(dateKey);
-        const result = await HEYS.ConfirmModal.show({
-            icon: '',
-            title: '',
-            text: React.createElement(MealDateWarning, { dateKey }),
-            actions: [
-                {
-                    key: 'return-today',
-                    label: 'Перейти на сегодня',
-                    value: 'today',
-                    style: 'primary',
-                    variant: 'fill',
-                    row: 0,
-                    isDefault: true,
-                    isCancel: true,
-                    className: 'meal-date-warning__today-action',
-                },
-                {
-                    key: 'confirm-other-date',
-                    label: `Всё-таки записать на ${targetShortLabel}`,
-                    value: 'confirm',
-                    style: 'neutral',
-                    variant: 'text',
-                    row: 1,
-                    className: 'meal-date-warning__confirm-action',
-                },
-            ],
-            defaultActionValue: 'today',
-            cancelActionValue: 'today',
+        if (!dateKey || dateKey === todayKey || typeof onUndo !== 'function') return;
+        if (!HEYS.Undo?.push) return;
+        HEYS.Undo.push({
+            label: `Записано в ${formatMealDateLabel(dateKey)}`,
+            duration: 6000,
+            onUndo,
         });
+    }
 
-        if (result === 'today') {
-            onReturnToday?.(todayKey);
-            return false;
+    function mountMealDateTargetSheet(props) {
+        const host = document.createElement('div');
+        host.id = 'heys-meal-date-target-root';
+        document.body.appendChild(host);
+        const root = typeof ReactDOM.createRoot === 'function'
+            ? ReactDOM.createRoot(host)
+            : null;
+
+        const cleanup = () => {
+            if (root) {
+                root.unmount();
+            } else if (ReactDOM.unmountComponentAtNode) {
+                ReactDOM.unmountComponentAtNode(host);
+            }
+            host.remove();
+        };
+
+        function MealDateTargetSheet() {
+            const [selected, setSelected] = React.useState('open');
+
+            React.useEffect(() => {
+                const onKeyDown = (event) => {
+                    if (event.key === 'Escape') props.onCancel();
+                };
+                document.addEventListener('keydown', onKeyDown);
+                return () => document.removeEventListener('keydown', onKeyDown);
+            }, []);
+
+            const targetKey = selected === 'today' ? props.todayKey : props.openDayKey;
+            const ctaLabel = `Записать на ${formatMealDateLabel(targetKey)}`;
+
+            return React.createElement('div', {
+                className: 'nutrition-v4-sheet-backdrop',
+                role: 'presentation',
+                onClick: (event) => {
+                    if (event.target === event.currentTarget) props.onCancel();
+                },
+            },
+                React.createElement('div', {
+                    className: 'nutrition-v4-sheet nutrition-v4-date-target-sheet',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': 'На какой день записать?',
+                },
+                    React.createElement('div', { className: 'nutrition-v4-sheet__head' },
+                        React.createElement('b', null, 'На какой день записать?'),
+                        React.createElement('span', null, formatOpenDayContextLabel(props.openDayKey))
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'nutrition-v4-sheet__row' + (selected === 'open' ? ' is-selected' : ''),
+                        onClick: () => setSelected('open'),
+                    },
+                        React.createElement('b', null, formatMealDateLabel(props.openDayKey)),
+                        React.createElement('span', null, 'открытый день')
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'nutrition-v4-sheet__row' + (selected === 'today' ? ' is-selected' : ''),
+                        onClick: () => setSelected('today'),
+                    },
+                        React.createElement('b', null, formatTodayMealRowLabel(props.todayKey)),
+                        React.createElement('span', null, mealCountSubtitle(props.todayMealCount))
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'nutrition-v4-cta nutrition-v4-sheet__cta',
+                        onClick: () => props.onConfirm(targetKey),
+                    }, ctaLabel)
+                )
+            );
         }
-        return result === 'confirm';
+
+        if (root) {
+            root.render(React.createElement(MealDateTargetSheet));
+        } else {
+            ReactDOM.render(React.createElement(MealDateTargetSheet), host);
+        }
+
+        return cleanup;
+    }
+
+    async function confirmMealCreationDate(dateKey, { onReturnToday, getTodayDay, getOpenDay } = {}) {
+        const todayKey = _getTodayISO();
+        if (!dateKey || dateKey === todayKey) return dateKey;
+        if (!React || !ReactDOM) {
+            HEYS.Toast?.error?.('Не удалось подтвердить дату — приём не создан');
+            return null;
+        }
+
+        const todayDay = typeof getTodayDay === 'function' ? getTodayDay() : null;
+        const openDay = typeof getOpenDay === 'function' ? getOpenDay() : null;
+
+        return new Promise((resolve) => {
+            let cleanup = null;
+            const finish = (targetDate) => {
+                cleanup?.();
+                resolve(targetDate);
+            };
+
+            cleanup = mountMealDateTargetSheet({
+                openDayKey: dateKey,
+                todayKey,
+                todayMealCount: countMealsWithProducts(todayDay),
+                openMealCount: countMealsWithProducts(openDay),
+                onCancel: () => finish(null),
+                onConfirm: (targetDate) => {
+                    if (targetDate === todayKey) onReturnToday?.(todayKey);
+                    finish(targetDate);
+                },
+            });
+        });
     }
 
     HEYS.mealDateGuard = {
         confirm: confirmMealCreationDate,
         formatDateLabel: formatMealDateLabel,
+        notifyRecordedInForeignDay,
+        countMealsWithProducts,
     };
 
     // ── Защита от задвоенного приёма ──────────────────────────────────────
@@ -5376,10 +5459,11 @@
         }, []);
 
         const runAddMealFlow = React.useCallback(async (transitionOptions = {}) => {
+            const flowDate = transitionOptions.date || date;
             if (isMobile && HEYS.MealStep) {
                 HEYS.MealStep.showAddMeal({
                     initialSlideInDirection: transitionOptions.initialSlideInDirection || null,
-                    dateKey: date,
+                    dateKey: flowDate,
                     meals: day.meals,
                     pIndex,
                     getProductFromItem,
@@ -5398,7 +5482,7 @@
                         // PWA reload must not let an older cloud snapshot erase this meal.
                         HEYS.Day?.setLastLoadedUpdatedAt?.(newUpdatedAt);
                         HEYS.Day?.setBlockCloudUpdates?.(newUpdatedAt + 15000);
-                        HEYS.Day?.markPendingMutation?.(date);
+                        HEYS.Day?.markPendingMutation?.(flowDate);
 
                         const baseDay = protectCheckinFields(dayRef.current || {});
                         const newMeals = sortMealsByTime([...(baseDay.meals || []), newMeal]);
@@ -5414,18 +5498,30 @@
                             if (window.HEYS && window.HEYS.analytics) {
                                 window.HEYS.analytics.trackDataOperation('meal-created');
                             }
+                            notifyRecordedInForeignDay(flowDate, () => {
+                                const snapshot = dayRef.current || newDayData;
+                                const meals = (snapshot.meals || []).filter((meal) => meal.id !== newMealId);
+                                const restored = protectCheckinFields({
+                                    ...snapshot,
+                                    meals,
+                                    updatedAt: Date.now(),
+                                });
+                                dayRef.current = restored;
+                                persistDayData(restored, 'undo_recorded_in_foreign_day');
+                                setDay(() => restored);
+                            });
                             // Fork-модалка с названием приёма — достаточное подтверждение, toast не нужен.
                         } else {
                             HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');
                         }
-                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: flowDate } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                         try {
                             window.HEYS?.eventLog?.write(
                                 'meal-add',
-                                `meal=${newMeal.name || 'unnamed'} для ${date}`,
-                                { dateKey: date, mealName: newMeal.name || '', count: 1 },
+                                `meal=${newMeal.name || 'unnamed'} для ${flowDate}`,
+                                { dateKey: flowDate, mealName: newMeal.name || '', count: 1 },
                                 'addMeal_mobile_flow'
                             );
                         } catch (_) { /* noop */ }
@@ -5933,7 +6029,7 @@
                 const newMeals = [...baseMeals, newMeal];
                 newMealIndex = newMeals.length - 1;
                 const newDayData = protectCheckinFields({ ...baseDay, meals: newMeals, updatedAt: newUpdatedAt });
-                const key = _scopedDayKey(date);
+                const key = _scopedDayKey(flowDate);
                 try {
                     lsSet(key, newDayData);
                 } catch (e) {
@@ -5944,14 +6040,30 @@
                 if (window.HEYS && window.HEYS.analytics) {
                     window.HEYS.analytics.trackDataOperation('meal-created');
                 }
-                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
+                notifyRecordedInForeignDay(flowDate, () => {
+                    const snapshot = dayRef.current || newDayData;
+                    const meals = (snapshot.meals || []).filter((meal) => meal.id !== newMealId);
+                    const restored = protectCheckinFields({
+                        ...snapshot,
+                        meals,
+                        updatedAt: Date.now(),
+                    });
+                    dayRef.current = restored;
+                    try {
+                        lsSet(key, restored);
+                    } catch (e) {
+                        trackError(e, { source: 'day/_meals.js', action: 'undo_recorded_in_foreign_day' });
+                    }
+                    setDay(() => restored);
+                });
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: flowDate } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                 try {
                     window.HEYS?.eventLog?.write(
                         'meal-add',
-                        `meal=${newMeal.name || 'unnamed'} для ${date}`,
-                        { dateKey: date, mealName: newMeal.name || '', count: 1 },
+                        `meal=${newMeal.name || 'unnamed'} для ${flowDate}`,
+                        { dateKey: flowDate, mealName: newMeal.name || '', count: 1 },
                         'addMeal_desktop'
                     );
                 } catch (_) { /* noop */ }
@@ -5968,23 +6080,35 @@
 
             if (mealDateGuardPendingRef.current) return false;
             mealDateGuardPendingRef.current = true;
-            let dateConfirmed = false;
+            let targetDate = null;
             try {
-                dateConfirmed = await confirmMealCreationDate(date, {
+                targetDate = await confirmMealCreationDate(date, {
                     onReturnToday: (todayKey) => {
                         const setSelectedDate = global.__heysSetSelectedDate || HEYS.ui?.setSelectedDate;
                         setSelectedDate?.(todayKey);
                     },
+                    getTodayDay: () => {
+                        const todayKey = _getTodayISO();
+                        try {
+                            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                                return HEYS.utils.lsGet(_scopedDayKey(todayKey), { meals: [] }) || { meals: [] };
+                            }
+                            return lsGet(_scopedDayKey(todayKey), { meals: [] }) || { meals: [] };
+                        } catch (_) {
+                            return { meals: [] };
+                        }
+                    },
+                    getOpenDay: () => dayRef.current || day || { meals: [] },
                 });
             } finally {
                 mealDateGuardPendingRef.current = false;
             }
-            if (!dateConfirmed) return false;
+            if (!targetDate) return false;
 
             // Решение владельца 2026-08-13: гайд с тарелкой убран — показывался
             // при каждом создании приёма без флага «не показывать снова» и
             // раздражал больше, чем помогал.
-            return runAddMealFlow();
+            return runAddMealFlow({ date: targetDate });
         }, [date, runAddMealFlow]);
 
         const replanEmitTimersRef = React.useRef({});
