@@ -11,19 +11,16 @@ import {
 } from './lib/ui-v4-verdicts.mjs';
 import { inspectVerdictSemantics } from './ui-v4-check-verdict-semantics.mjs';
 
-// 05.09: strength-builder typedMismatch 186→113 — cleanup unverified ≠ wording (task 82).
-const TYPED_BASELINE_OVERRIDE = Object.freeze({
-  'strength-builder': Object.freeze({
-    typedMismatch: [113, 'f23017be4b80abd3'],
-  }),
-});
-
+// Здесь стоял TYPED_BASELINE_OVERRIDE — второй порог, заведённый 05.09, чтобы
+// затянуть strength-builder «без правки lib». Он перебивал библиотечный, и
+// источников правды у храповика стало два. Разошлись они в тот же день:
+// lib держала 181, обёртка — 113, и на один и тот же снимок vitest-гейт и
+// CLI-гейт отвечали разное. Порог, который можно переопределить рядом, — это
+// не храповик: ослабление становится незаметным, потому что второй файл никто
+// не читает при правке первого. Порог живёт в одном месте — в
+// LEGACY_SCHEMA_BASELINE, и меняется только там.
 function buildGateBaseline() {
-  const baseline = {};
-  for (const [zoneId, entry] of Object.entries(LEGACY_SCHEMA_BASELINE)) {
-    baseline[zoneId] = { ...entry, ...(TYPED_BASELINE_OVERRIDE[zoneId] || {}) };
-  }
-  return baseline;
+  return LEGACY_SCHEMA_BASELINE;
 }
 
 function countScope(data, zoneIds = null) {

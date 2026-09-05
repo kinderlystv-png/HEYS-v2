@@ -88,11 +88,9 @@
       "h": "f21d63340325"
     },
     "вид · экран подписки · пробный период": {
-      "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1075: SubscriptionSection legacy inline #f9fafb radius 12 padding 16 — не v4 card --c1 radius 20",
-      "h": "0ebc8e8a8d32",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "?",
+      "f": "Не сверено после правки кода: основание описывало #f9fafb в apps/web/heys_subscriptions_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_subscriptions_v1.js:1075: SubscriptionSection legacy inline #f9fafb radius 12 padding 16 — не v4 card --c1 radius 20",
+      "h": "0ebc8e8a8d32"
     },
     "вид · экран подписки · активна": {
       "v": "≠",
@@ -379,11 +377,9 @@
       "naKind": "demo-only"
     },
     "Подписка · приветствие · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1369: PAYWALL_STYLES .paywall-overlay blur(4px)",
-      "h": "3f52b0853401",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "?",
+      "f": "Не сверено после правки кода: основание описывало blur(4px) в apps/web/heys_subscriptions_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_subscriptions_v1.js:1369: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401"
     },
     "Подписка · приветствие · 03": {
       "v": "≠",
@@ -393,11 +389,9 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · баннер сверху · 01": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:444: .readonly-banner background var(--v4-hero) padding 12px 14px — не --tint 10/18 min-height 44",
-      "h": "da71e6d2b10a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "?",
+      "f": "Не сверено после правки кода: основание описывало var(--v4-hero) в apps/web/heys_paywall_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_paywall_v1.js:444: .readonly-banner background var(--v4-hero) padding 12px 14px — не --tint 10/18 min-height 44",
+      "h": "da71e6d2b10a"
     },
     "Подписка · баннер сверху · 02": {
       "v": "≠",
@@ -494,11 +488,9 @@
       "naKind": "demo-only"
     },
     "Подписка · контакт поддержки · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1219: PAYWALL_STYLES .paywall-overlay blur(4px)",
-      "h": "3f52b0853401",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "?",
+      "f": "Не сверено после правки кода: основание описывало blur(4px) в apps/web/heys_subscriptions_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_subscriptions_v1.js:1219: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401"
     },
     "Подписка · контакт поддержки · 03": {
       "v": "≠",
@@ -973,11 +965,9 @@
       "naKind": "demo-only"
     },
     "Подписка · очередь · заявка подана · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-overlay blur(4px)",
-      "h": "3f52b0853401",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "?",
+      "f": "Не сверено после правки кода: основание описывало blur(4px) в apps/web/heys_paywall_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401"
     },
     "Подписка · очередь · заявка подана · 03": {
       "v": "=",
@@ -1043,11 +1033,9 @@
       "naKind": "demo-only"
     },
     "Подписка · очередь · место освободилось · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-overlay blur(4px)",
-      "h": "3f52b0853401",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "?",
+      "f": "Не сверено после правки кода: основание описывало blur(4px) в apps/web/heys_paywall_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401"
     },
     "Подписка · очередь · место освободилось · 03": {
       "v": "=",
