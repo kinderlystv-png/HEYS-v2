@@ -1,0 +1,124 @@
+{
+  "task": "polosa4-task69-touch-target-visible-gate",
+  "polosa": 4,
+  "taskNumber": 69,
+  "phase": "B-gate-not-wired",
+  "captured": "2026-09-05",
+  "inventory": {
+    "path": "scripts/.polosa4-task69-touch-target-inventory.json",
+    "counts": {
+      "violations": 762,
+      "exceptions": 39,
+      "scannedCssFiles": 34
+    },
+    "byZone": {
+      "(unknown)": { "violations": 233, "exceptions": 7 },
+      "cycle": { "violations": 115, "exceptions": 4 },
+      "home-widgets": { "violations": 88, "exceptions": 4 },
+      "checkin-morning": { "violations": 76, "exceptions": 6 },
+      "food-meal": { "violations": 49, "exceptions": 6 },
+      "reports-insights": { "violations": 49, "exceptions": 0 },
+      "pwa-update": { "violations": 48, "exceptions": 8 },
+      "water-add": { "violations": 31, "exceptions": 0 },
+      "strength-builder": { "violations": 19, "exceptions": 1 },
+      "login": { "violations": 13, "exceptions": 0 },
+      "service-curator": { "violations": 13, "exceptions": 0 },
+      "nutrition-tab": { "violations": 12, "exceptions": 1 },
+      "product-card": { "violations": 10, "exceptions": 2 },
+      "tab-activity": { "violations": 6, "exceptions": 0 }
+    }
+  },
+  "ratchet": {
+    "baselinePath": "scripts/.polosa4-task69-touch-target-baseline.json",
+    "totalViolations": 762,
+    "violationKeys": 762
+  },
+  "top20ViolationsSample": [
+    {
+      "zone": "cycle",
+      "file": "000-base-and-gamification.css",
+      "selector": ".hdr-header-icon-btn",
+      "size": "0×0",
+      "tricks": ["invisible-pseudo-hit-area"]
+    },
+    {
+      "zone": "cycle",
+      "file": "000-base-and-gamification.css",
+      "selector": ".hdr-widgets-edit-btn",
+      "size": "0×0",
+      "tricks": ["negative-margin-expander"]
+    },
+    {
+      "zone": "cycle",
+      "file": "000-base-and-gamification.css",
+      "selector": ".ews-badge",
+      "size": "0×0",
+      "tricks": ["negative-margin-expander"]
+    },
+    {
+      "zone": "cycle",
+      "file": "000-base-and-gamification.css",
+      "selector": ".date-picker--v4 .date-picker-trigger",
+      "size": "0×0",
+      "tricks": ["negative-margin-expander"]
+    },
+    {
+      "zone": "cycle",
+      "file": "000-base-and-gamification.css",
+      "selector": ".date-picker--v4 .date-picker-inline-today",
+      "size": "0×0",
+      "tricks": ["invisible-pseudo-hit-area"]
+    },
+    {
+      "zone": "home-widgets",
+      "file": "100-metrics-and-graphs.css",
+      "selector": ".week-heatmap-action",
+      "size": "26×26"
+    },
+    { "zone": "home-widgets", "file": "100-metrics-and-graphs.css", "selector": ".debt-science-btn", "size": "20×20" },
+    { "zone": "home-widgets", "file": "100-metrics-and-graphs.css", "selector": ".goal-bonus-info", "size": "14×14" },
+    { "zone": "home-widgets", "file": "100-metrics-and-graphs.css", "selector": ".macro-toast-close", "size": "24×24" },
+    {
+      "zone": "(unknown)",
+      "file": "1000-messenger.css",
+      "selector": ".messenger-header-button",
+      "size": "36×36",
+      "tricks": ["invisible-pseudo-hit-area"]
+    },
+    { "zone": "(unknown)", "file": "1000-messenger.css", "selector": ".msg-audio-play", "size": "34×34" },
+    { "zone": "(unknown)", "file": "1000-messenger.css", "selector": ".msg-audio-wave", "size": "0×42" },
+    { "zone": "cycle", "file": "000-base-and-gamification.css", "selector": ".btn", "size": "0×0" },
+    { "zone": "cycle", "file": "000-base-and-gamification.css", "selector": ".compact-train-fold-btn", "size": "0×0" },
+    { "zone": "cycle", "file": "000-base-and-gamification.css", "selector": ".compact-train-remove", "size": "0×0" },
+    { "zone": "cycle", "file": "000-base-and-gamification.css", "selector": ".compact-train-add", "size": "0×0" },
+    { "zone": "cycle", "file": "000-base-and-gamification.css", "selector": ".compact-household", "size": "0×0" },
+    {
+      "zone": "home-widgets",
+      "file": "100-metrics-and-graphs.css",
+      "selector": ".dev-clear-weight-btn-mini",
+      "size": "16×16"
+    }
+  ],
+  "summaryMarkdown": "## Touch-target gate (полоса 4 · задача 69)\n\nИнвентарь **762** нарушений + **39** именованных исключений по **34** product CSS (без fingers/drums frozen).\n\nГейт: `scripts/ui-v4-check-touch-target-visible.mjs` — видимый layout box ≥44px; ловит невидимый `::after` и negative margin.\n\n**Ratchet baseline:** 762 (заморожено 2026-09-05).\n\nЗоны task63 (food-meal/product-card/nutrition-tab) — исправленные селекторы **не** в violations; остаток food-meal 49 / product-card 10 / nutrition-tab 12.\n\n**Полоса 5:** подключить в `ui:v4:check` — см. `polosa5Wiring`.",
+  "script": {
+    "path": "scripts/ui-v4-check-touch-target-visible.mjs",
+    "flags": {
+      "inventory": "node scripts/ui-v4-check-touch-target-visible.mjs --inventory",
+      "check": "node scripts/ui-v4-check-touch-target-visible.mjs --check",
+      "updateBaseline": "node scripts/ui-v4-check-touch-target-visible.mjs --update-baseline"
+    },
+    "test": "apps/web/__tests__/ui-v4-touch-target-visible-gate.test.js"
+  },
+  "polosa5Wiring": {
+    "owner": "полоса 5 / deploy gate",
+    "packageJsonInsertAfter": "ui-v4-check-screen-reachability-gate.mjs",
+    "exactLine": "node scripts/ui-v4-check-touch-target-visible.mjs --check",
+    "fullUiV4CheckFragment": "pnpm ui:v4:check:roles && node scripts/ui-v4-check-css-brace-balance.mjs && node scripts/ui-v4-check-css-test-guards.mjs && cd apps/web && pnpm exec vitest run __tests__/verdict-writers-foreign-guard.test.js && cd ../.. && node scripts/ui-v4-check-bare-color-literals.mjs && node scripts/ui-v4-check-literal-lock-tests.mjs && node scripts/ui-v4-check-contract-drift.mjs && node scripts/ui-v4-check-verdict-semantics-gate.mjs && node scripts/ui-v4-check-verdict-addresses-gate.mjs && node scripts/ui-v4-check-verdict-facts-gate.mjs && node scripts/ui-v4-check-decision-refs-gate.mjs && node scripts/ui-v4-check-reverse-coverage-gate.mjs && node scripts/ui-v4-check-code-screen-coverage-gate.mjs && node scripts/ui-v4-check-screen-reachability-gate.mjs && node scripts/ui-v4-check-touch-target-visible.mjs --check",
+    "optionalVitestInCheck": "cd apps/web && pnpm exec vitest run __tests__/ui-v4-touch-target-visible-gate.test.js",
+    "note": "Не подключать в полосе 4 — только после согласования полосы 5."
+  },
+  "checks": {
+    "vitest": "ui-v4-touch-target-visible-gate.test.js — 11/11 pass",
+    "ratchetCheck": "762/762 Δ0 green"
+  }
+}
