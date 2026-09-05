@@ -1,0 +1,31 @@
+{
+  "zone": "strength-builder",
+  "scope": "Task 81 lane 1 — strength-builder-offscreen-timer-geometry deploy gate",
+  "generated": "2026-09-05",
+  "rootCause": "infra",
+  "notTimeout": true,
+  "testFile": "apps/web/__tests__/strength-builder-offscreen-timer-geometry.test.js",
+  "failure": {
+    "symptom": "Failed Suites — afterAll hook at line 43 under full vitest shard",
+    "message": "If this is a long-running hook, pass a timeout value as the last argument or configure it globally with hookTimeout",
+    "notAssertion": "isolated run passes; CSS assertions match contract"
+  },
+  "verification": {
+    "methodA_isolatedVitest": {
+      "command": "cd apps/web && HEYS_DESIGN_GATES=skip npx vitest run __tests__/strength-builder-offscreen-timer-geometry.test.js",
+      "durationMs": 1450,
+      "pass": "2/2"
+    },
+    "methodB_parallelShard": {
+      "command": "cd apps/web && HEYS_DESIGN_GATES=skip npx vitest run --retry=1 --shard=1/2",
+      "before": "Failed Suites on afterAll releasePlaywrightBrowserForSuite under parallel Chromium load",
+      "after": "shared page + direct closePlaywrightBrowser + explicit hook timeouts"
+    }
+  },
+  "fix": {
+    "type": "test-lifecycle",
+    "files": ["apps/web/__tests__/strength-builder-offscreen-timer-geometry.test.js"],
+    "change": "One render in beforeAll; close page then closePlaywrightBrowser in afterAll with per-hook 90s; drop retain/release for single-file fork"
+  },
+  "lane5Reclass": "not a slow test — isolated ~1.5s; 30s failure was leaked Playwright teardown under shard load"
+}

@@ -1,0 +1,7 @@
+test(strength): task 81 lane 1 offscreen timer geometry hook teardown
+
+Shared page in beforeAll and direct closePlaywrightBrowser in afterAll with
+explicit hook timeouts. Fixes Failed Suites on releasePlaywrightBrowserForSuite
+under parallel deploy-gate shard load; isolated geometry still ~1.5s.
+
+Verified: HEYS_DESIGN_GATES=skip vitest strength-builder-offscreen-timer-geometry, 2/2 pass.

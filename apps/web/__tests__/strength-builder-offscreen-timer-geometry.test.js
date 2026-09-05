@@ -4,9 +4,8 @@ import { fileURLToPath } from 'url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
+  closePlaywrightBrowser,
   getPlaywrightBrowser,
-  releasePlaywrightBrowserForSuite,
-  retainPlaywrightBrowserForSuite,
 } from './helpers/playwright-browser.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -35,17 +34,19 @@ async function renderCards() {
 
 // Запуск Chromium и отрисовка макета не укладываются в пятисекундный лимит
 // vitest по умолчанию: набор меряет живую геометрию, а не читает исходник.
-describe('strength builder offscreen timer geometry at 375x812', { timeout: 90_000, hookTimeout: 60_000 }, () => {
-  beforeAll(() => {
-    retainPlaywrightBrowserForSuite();
-  });
+describe('strength builder offscreen timer geometry at 375x812', { timeout: 90_000, hookTimeout: 90_000 }, () => {
+  let page;
+
+  beforeAll(async () => {
+    page = await renderCards();
+  }, 90_000);
 
   afterAll(async () => {
-    await releasePlaywrightBrowserForSuite();
-  });
+    await page?.close().catch(() => {});
+    await closePlaywrightBrowser();
+  }, 90_000);
 
   it('keeps the restart surface compact and its primary action 48px tall', { timeout: 90_000 }, async () => {
-    const page = await renderCards();
     const geometry = await page.evaluate(() => {
       const card = document.querySelector('[data-resume]');
       const copy = card.querySelector('.sb-offscreen-copy');
@@ -67,11 +68,9 @@ describe('strength builder offscreen timer geometry at 375x812', { timeout: 90_0
     expect(geometry.metaSize).toBe('11px');
     expect(geometry.buttonHeight).toBeGreaterThanOrEqual(48);
     expect(geometry.buttonMarginTop).toBe('12px');
-    await page.close();
   });
 
   it('keeps all three stale-session actions equal, reachable and on one row', { timeout: 90_000 }, async () => {
-    const page = await renderCards();
     const geometry = await page.evaluate(() => {
       const card = document.querySelector('[data-stale]');
       const row = card.querySelector('.sb-offscreen-actions');
@@ -94,6 +93,5 @@ describe('strength builder offscreen timer geometry at 375x812', { timeout: 90_0
     expect(Math.max(...geometry.buttons.map((button) => button.width))
       - Math.min(...geometry.buttons.map((button) => button.width))).toBeLessThan(1);
     for (const button of geometry.buttons) expect(button.height).toBeGreaterThanOrEqual(44);
-    await page.close();
   });
 });
