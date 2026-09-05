@@ -1,0 +1,29 @@
+{
+  "zone": "strength-builder",
+  "scope": "Polosa 4 Task 36 Part 2 — M2/M3 reachability from catalog",
+  "generated": "2026-09-05",
+  "rows": [
+    {
+      "screen": "ExerciseMuscleGroupsScreen",
+      "reachable": "yes",
+      "entry": "apps/web/strength/heys_strength_catalog_ui_v1.js:283-295 — NewExerciseScreen subScreen==='muscle-groups' → h(ExerciseMuscleGroupsScreen); trigger: кнопки «Выбрать группы мышц» / «сменить» / «выбрать» в шаге 2 (catalog createDraft → NewExerciseScreen)"
+    },
+    {
+      "screen": "ExerciseSimilarScreen",
+      "reachable": "yes",
+      "entry": "apps/web/strength/heys_strength_catalog_ui_v1.js:298-316 — NewExerciseScreen subScreen==='similar' → h(ExerciseSimilarScreen); trigger: «выбрать»/«сменить» в шаге 3 при unit===bodyweight"
+    },
+    {
+      "screen": "ExerciseMuscleGroupsScreen (builder M1)",
+      "reachable": "no",
+      "entry": "? ExerciseCardScreen (builder_ui:385+) всё ещё использует inline picker, не M2 — нужен отдельный шаг в builder_ui, если М1 должен вести на М2 как в канвасе"
+    },
+    {
+      "screen": "ExerciseSimilarScreen (builder M1 post-save)",
+      "reachable": "no",
+      "entry": "? ExerciseCardScreen footnote «после сохранения» без маршрута на M3 — продуктовый вход из builder не проводили в этом scope"
+    }
+  ],
+  "tests": ["apps/web/__tests__/strength-catalog-screen-reachability.test.js"],
+  "guardNote": "ui-v4-check-screen-reachability.mjs: symOk через h(ExerciseMuscleGroupsScreen|ExerciseSimilarScreen) в catalog_ui"
+}
