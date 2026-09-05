@@ -286,28 +286,28 @@
       "h": "0b6f28b03b87"
     },
     "Актив · день собран · 13": {
-      "v": "≠",
-      "f": "вид блока программы не сведён: .activity-v4-program оборачивает прежнюю карточку compact-train-card. Сведены порядок, взаимоисключение и «не начаты» (блок 3), не геометрия",
+      "v": "=",
+      "f": ".activity-v4-program { display:flex; flex-direction:column; gap:8px; margin-top:12px } — apps/web/styles/modules/731-ui-v4-activity.css:876-880; polosa4-task114 computed: оба пути renderTrainingsBlock(program)|renderActivityProgramBlock",
       "h": "d641122bb122"
     },
     "Актив · день собран · 14": {
-      "v": "≠",
-      "f": "вид блока программы не сведён: .activity-v4-program оборачивает прежнюю карточку compact-train-card. Сведены порядок, взаимоисключение и «не начаты» (блок 3), не геометрия",
+      "v": "=",
+      "f": ".activity-v4-program-line { border:none } — 731-ui-v4-activity.css:885-892; строка списка без разделителя, класс activityProgramLineClass() heys_day_trainings_v1.js:3360-3361",
       "h": "6b286135ed76"
     },
     "Актив · день собран · 15": {
-      "v": "≠",
-      "f": "вид блока программы не сведён: .activity-v4-program оборачивает прежнюю карточку compact-train-card. Сведены порядок, взаимоисключение и «не начаты» (блок 3), не геометрия",
+      "v": "=",
+      "f": ".activity-v4-program .program-next-key { display:flex; flex-direction:column; gap:3px } — 731-ui-v4-activity.css:905-910; computed gap 3px в polosa4-task114",
       "h": "07ffbada0ee7"
     },
     "Актив · день собран · 16": {
-      "v": "≠",
-      "f": "вид блока программы не сведён: .activity-v4-program оборачивает прежнюю карточку compact-train-card. Сведены порядок, взаимоисключение и «не начаты» (блок 3), не геометрия",
+      "v": "=",
+      "f": ".activity-v4-program .program-next-text { font:600 12.5px/1; color:var(--v4-ink) } — 731-ui-v4-activity.css:913-916; sand/blue совпадают между путями в polosa4-task114",
       "h": "dc0e7e4c7d14"
     },
     "Актив · день собран · 17": {
-      "v": "≠",
-      "f": "вид блока программы не сведён: .activity-v4-program оборачивает прежнюю карточку compact-train-card. Сведены порядок, взаимоисключение и «не начаты» (блок 3), не геометрия",
+      "v": "=",
+      "f": ".activity-v4-program .program-next-sub { font:500 11px/1.3; color:var(--v4-ink-3) } — 731-ui-v4-activity.css:924-927; dayLabel+« · по программе» heys_day_trainings_v1.js:3476-3477",
       "h": "417b568330de"
     },
     "Актив · день собран · 18": {
@@ -866,8 +866,8 @@
       "h": "fae210d6a348"
     },
     "Актив · план назначен · 13": {
-      "v": "≠",
-      "f": "вид блока программы не сведён: .activity-v4-program оборачивает прежнюю карточку compact-train-card. Сведены порядок, взаимоисключение и «не начаты» (блок 3), не геометрия",
+      "v": "=",
+      "f": ".activity-v4-program .sb-plan-footnote { margin-top:12px; font:500 11px/1.55; color:rgba(var(--ink),.56) } — 731-ui-v4-activity.css:1319-1324; PLAN_MOVE_FOOTNOTE heys_strength_superset_ui_v1.js:2670,3070",
       "h": "bd52672ef6ab"
     },
     "Актив · план назначен · 14": {
@@ -956,8 +956,8 @@
       "h": "944c80cef499"
     },
     "Актив · правка куратора · 11": {
-      "v": "≠",
-      "f": "вид блока программы не сведён: .activity-v4-program оборачивает прежнюю карточку compact-train-card. Сведены порядок, взаимоисключение и «не начаты» (блок 3), не геометрия",
+      "v": "=",
+      "f": ".activity-v4-program .sb-proposal-review-link { margin-top:10px; font:700 11.5px/1; color:var(--v4-act-text) } — 731-ui-v4-activity.css:1360-1370; второй слой «что изменилось ›» heys_strength_proposal_ui_v1.js:345-347",
       "h": "faa658812cae"
     },
     "Актив · правка куратора · 12": {
