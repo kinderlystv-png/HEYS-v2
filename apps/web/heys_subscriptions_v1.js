@@ -677,6 +677,118 @@
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
   }
 
+  const TRIAL_SCREEN_FEATURES = [
+    'Дневник, приёмы и продукты без ограничений',
+    'Динамика веса, виджеты, отчёты',
+    'Советы по вашим данным',
+    'Куратор в чате — как на Pro',
+  ];
+
+  const ACTIVE_SCREEN_FEATURES = [
+    'Всё из Self: дневник, динамика, виджеты, задачи',
+    'Куратор ведёт дневник',
+    'Чат с куратором',
+    'Созвон раз в неделю',
+  ];
+
+  function formatDateSettingsMeta(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace(/\.$/, '');
+  }
+
+  function formatSubscriptionHeadlineDate(date) {
+    if (!date) return '';
+    return `до ${formatDateShort(date)}`;
+  }
+
+  function subscriptionScreenCheckIcon() {
+    return h('svg', {
+      width: 15,
+      height: 15,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 3.5,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    }, h('path', { d: 'M20 6L9 17l-5-5' }));
+  }
+
+  function subscriptionScreenChevronIcon() {
+    return h('svg', {
+      width: 15,
+      height: 15,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    }, h('path', { d: 'M9 6l6 6-6 6' }));
+  }
+
+  function getSettingsRowMeta(statusData) {
+    let data = statusData || {};
+    if (!data.status) return 'Загрузка...';
+    try {
+      const profile = HEYS.utils?.lsGet?.('heys_profile') || {};
+      data = {
+        ...data,
+        trial_ends_at: data.trial_ends_at || profile.trial_ends_at || null,
+        subscription_ends_at: data.subscription_ends_at
+          || data.subscription_expires_at
+          || profile.subscription_ends_at
+          || profile.subscription_expires_at
+          || null,
+        plan: data.plan || profile.subscription_plan || profile.plan || null,
+      };
+    } catch (_) { /* noop */ }
+
+    const status = data.status;
+    const meta = getStatusInfo(status);
+    if (status === 'trial') {
+      const shortDate = formatDateSettingsMeta(data.trial_ends_at);
+      return shortDate ? `Триал · до ${shortDate}` : (meta?.name || 'Триал');
+    }
+    if (status === 'active') {
+      const plan = data.plan ? getPlan(normalizePlanId(data.plan)) : null;
+      const shortDate = formatDateSettingsMeta(data.subscription_ends_at);
+      if (plan && shortDate) return `${plan.name} · до ${shortDate}`;
+      return meta?.name || 'Активна';
+    }
+    if (status === 'read_only') return 'Только чтение';
+    return meta?.name || 'Подписка';
+  }
+
+  function renderSubscriptionScreenFooter(onSupport) {
+    return h('div', { className: 'sub-screen__footer' },
+      h('div', { className: 'sub-screen__footnote' },
+        h('div', { className: 'sub-screen__footnote-title' }, 'Само ничего не спишется'),
+        h('div', { className: 'sub-screen__footnote-text' },
+          'Оплата и продление идут через поддержку — деньги не уходят без вашего слова. Продлить или сменить тариф: написать в поддержку.')
+      ),
+      h('button', {
+        type: 'button',
+        className: 'sub-screen__support',
+        onClick: onSupport,
+      },
+        h('span', { className: 'sub-screen__support-link' }, 'Написать в поддержку'),
+        h('span', { className: 'sub-screen__support-chevron', 'aria-hidden': 'true' }, subscriptionScreenChevronIcon())
+      )
+    );
+  }
+
+  function handleSubscriptionScreenSupport() {
+    if (HEYS.config?.paymentsEnabled) {
+      HEYS.Paywall?.show?.('subscription_screen');
+      return;
+    }
+    openCuratorContactModal();
+  }
+
   function normalizePlanId(plan) {
     if (plan === 'proPlus') return 'proplus';
     return plan;
@@ -1024,6 +1136,10 @@
     const [showPayment, setShowPayment] = useState(false);
 
     useEffect(() => {
+      HEYS.Paywall?.injectStyles?.();
+    }, []);
+
+    useEffect(() => {
       loadStatus();
     }, [clientId]);
 
@@ -1034,87 +1150,80 @@
       setLoading(false);
     };
 
-    const handleSuccess = (result) => {
+    const handleSuccess = () => {
       setShowPayment(false);
       loadStatus();
     };
 
     if (loading) {
-      return h('div', { style: { padding: '16px', textAlign: 'center' } }, 'Загрузка...');
+      return h('div', { className: 'sub-screen' },
+        h('div', { className: 'sub-screen__body', style: { padding: '16px', textAlign: 'center' } }, 'Загрузка...')
+      );
     }
 
     if (showPayment) {
       return h(PaymentScreen, {
         clientId,
         onSuccess: handleSuccess,
-        onCancel: () => setShowPayment(false)
+        onCancel: () => setShowPayment(false),
       });
     }
 
-    const sectionStyle = {
-      backgroundColor: '#f9fafb',
-      borderRadius: '12px',
-      padding: '16px',
-      margin: '16px 0'
-    };
+    const subscriptionStatus = status?.status || 'none';
+    const isTrial = subscriptionStatus === 'trial' || status?.is_trial;
+    const isActive = subscriptionStatus === 'active';
+    const isReadOnly = subscriptionStatus === 'read_only';
+    const planInfo = status?.plan ? getPlan(normalizePlanId(status.plan)) : null;
+    const trialEnds = status?.trial_ends_at;
+    const activeEnds = status?.subscription_ends_at || status?.subscription_expires_at;
 
-    const headerStyle = {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: '12px'
-    };
+    if (isReadOnly) {
+      return h('div', { className: 'sub-screen' },
+        h('div', { className: 'sub-screen__body' },
+          h('div', { className: 'sub-screen__status-card sub-screen__status-card--readonly' },
+            h('div', { className: 'sub-screen__kick sub-screen__kick--danger' }, 'Только чтение'),
+            h('div', { className: 'sub-screen__readonly-title' }, 'Пробный период закончился'),
+            h('div', { className: 'sub-screen__readonly-copy' },
+              'День и история открыты для чтения. Чтобы записывать снова — оформите подписку.')
+          ),
+          h('button', {
+            type: 'button',
+            className: 'sub-screen__cta paywall-cta',
+            onClick: handleSubscriptionScreenSupport,
+          }, 'Написать в поддержку')
+        ),
+        renderSubscriptionScreenFooter(handleSubscriptionScreenSupport)
+      );
+    }
 
-    const titleStyle = {
-      fontSize: '16px',
-      fontWeight: '600'
-    };
+    const features = isTrial ? TRIAL_SCREEN_FEATURES : ACTIVE_SCREEN_FEATURES;
+    const kickLabel = isTrial ? 'Пробный период' : `${planInfo?.name || 'Pro'} · активна`;
+    const headline = isTrial
+      ? formatSubscriptionHeadlineDate(trialEnds)
+      : formatSubscriptionHeadlineDate(activeEnds);
+    const subline = isActive && planInfo
+      ? `${formatPrice(planInfo.price)} в месяц · оплачено до этой даты`
+      : null;
 
-    const infoStyle = {
-      fontSize: '14px',
-      color: '#6b7280'
-    };
-
-    const buttonStyle = {
-      padding: '8px 16px',
-      fontSize: '14px',
-      fontWeight: '500',
-      color: '#22c55e',
-      backgroundColor: '#f0fdf4',
-      border: '1px solid #22c55e',
-      borderRadius: '8px',
-      cursor: 'pointer',
-      marginTop: '12px'
-    };
-
-    const statusInfo = getStatusInfo(status?.status);
-    const planInfo = status?.plan ? getPlan(status.plan) : null;
-
-    return h('div', { style: sectionStyle },
-      h('div', { style: headerStyle },
-        h('div', { style: titleStyle }, '📋 Подписка'),
-        h(SubscriptionBadge, {
-          status: status?.status,
-          plan: status?.plan,
-          daysLeft: status?.days_left
-        })
+    return h('div', { className: 'sub-screen' },
+      h('div', { className: 'sub-screen__body' },
+        h('div', { className: 'sub-screen__status-card' },
+          h('div', { className: 'sub-screen__kick' }, kickLabel),
+          headline && h('div', { className: 'sub-screen__headline n' }, headline),
+          isTrial && h('div', { className: 'sub-screen__hint' }, 'дату окончания даёт сервер'),
+          subline && h('div', { className: 'sub-screen__subline n' }, subline)
+        ),
+        h('div', { className: 'sub-screen__tier' }, 'Что открыто'),
+        h('div', { className: 'sub-screen__features' },
+          features.map((text) => h('div', { key: text, className: 'sub-screen__feature' },
+            h('span', { className: 'sub-screen__feature-icon', 'aria-hidden': 'true' }, subscriptionScreenCheckIcon()),
+            text
+          ))
+        ),
+        isTrial && h('div', { className: 'sub-screen__note' },
+          'Когда пробный период закончится, день и история останутся открытыми для чтения. Записывать снова можно будет после оформления подписки.')
       ),
-
-      status?.is_trial && h('div', { style: infoStyle },
-        `Триал до ${formatDate(status.trial_ends_at)}`,
-        status.days_left > 0 && ` (осталось ${status.days_left} дн.)`
-      ),
-
-      status?.status === 'active' && h('div', { style: infoStyle },
-        planInfo && `Тариф: ${planInfo.name}`,
-        h('br'),
-        `Активна до ${formatDate(status.subscription_expires_at)}`
-      ),
-
-      status?.status === 'read_only' &&
-      h('button', { style: buttonStyle, onClick: () => setShowPayment(true) },
-        'Продлить подписку'
-      )
+      renderSubscriptionScreenFooter(handleSubscriptionScreenSupport)
     );
   }
 
@@ -1505,6 +1614,7 @@
     formatDate,
     daysUntil,
     getStatusLabel,
+    getSettingsRowMeta,
 
     // API
     getStatus,

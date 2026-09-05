@@ -33,22 +33,26 @@ describe('subscription settings status contract', () => {
   it.each(sources)('$name uses subscription details for the collapsed and expanded views', ({ source }) => {
     expect(source).toContain('subscription?.getCachedDetails?.()');
     expect(source).toContain('window.HEYS.Subscription.getStatusDetails(true)');
-    expect(source).toContain("details.status === 'trial' && daysLabel");
-    expect(source).toContain("`${meta?.shortLabel || 'Триал'} · осталось ${daysLabel}`");
+    expect(source).toContain('window.HEYS?.Subscriptions?.getSettingsRowMeta');
     expect(source).toContain('subtitle: getSubscriptionSettingsSubtitle(window.HEYS?.Subscription)');
   });
 
-  it.each(sources)('$name shows a short trial term without an active-trial CTA', ({ source }) => {
-    const { formatSubscriptionDaysLeft, getSubscriptionSettingsSubtitle } = loadSettingsHelpers(source);
+  it.each(sources)('$name shows trial meta by end date', ({ source }) => {
+    const { getSubscriptionSettingsSubtitle } = loadSettingsHelpers(source);
     const subscription = {
-      getCachedDetails: () => ({ status: 'trial', days_left: 7 }),
+      getCachedDetails: () => ({ status: 'trial', trial_ends_at: '2026-09-10' }),
       getStatusMeta: () => ({ label: 'Пробный период', shortLabel: 'Триал' }),
     };
 
-    expect(formatSubscriptionDaysLeft(1)).toBe('1 день');
-    expect(formatSubscriptionDaysLeft(3)).toBe('3 дня');
-    expect(formatSubscriptionDaysLeft(11)).toBe('11 дней');
-    expect(getSubscriptionSettingsSubtitle(subscription)).toBe('Триал · осталось 7 дней');
+    const getSettingsRowMeta = (details) => {
+      const d = new Date(details.trial_ends_at);
+      const short = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace(/\.$/, '');
+      return `Триал · до ${short}`;
+    };
+    const prev = globalThis.HEYS;
+    globalThis.HEYS = { Subscriptions: { getSettingsRowMeta } };
+    expect(getSubscriptionSettingsSubtitle(subscription)).toBe('Триал · до 10 сент');
+    globalThis.HEYS = prev;
     expect(source).toContain("(status === 'read_only' || status === 'none')");
   });
 });

@@ -218,7 +218,7 @@
       case 'Подписка · экран · пробный период':
         withSubscriptionStatus({
           status: 'trial',
-          trial_ends_at: '2026-09-12',
+          trial_ends_at: '2026-09-10',
           plan: null,
         }, () => renderToHost(subscriptionScreenHost(h(Subs.SubscriptionSection, { clientId }))));
         return;

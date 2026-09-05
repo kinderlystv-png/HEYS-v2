@@ -127,6 +127,190 @@ function pxNum(raw) {
   return m ? Number(m[1]) : null;
 }
 
+const PACKAGE_A_SCREEN_FRAMES = {
+  'Подписка · экран · пробный период': '.sub-screen__status-card',
+  'Подписка · экран · активна': '.sub-screen__status-card',
+  'Подписка · экран · только чтение': '.sub-screen__status-card--readonly',
+};
+
+const PACKAGE_A_SCREEN_SELECTORS = {
+  'Подписка · экран · пробный период': {
+    '.sub-screen__headline': 'headline',
+    '.sub-screen__hint': 'hint',
+    '.sub-screen__tier': 'tier',
+    '.sub-screen__features': 'features',
+    '.sub-screen__note': 'note',
+    '.sub-screen__footer': 'footer',
+    '.sub-screen__footnote': 'footnote',
+    '.sub-screen__footnote-title': 'footnote-title',
+    '.sub-screen__footnote-text': 'footnote-text',
+    '.sub-screen__support': 'support',
+    '.sub-screen__support-link': 'support-link',
+    '.sub-screen__support-chevron': 'support-chevron',
+    '.sub-screen__feature-icon': 'feature-icon',
+    '.sub-screen__kick': 'kick',
+  },
+  'Подписка · экран · активна': {
+    '.sub-screen__headline': 'headline',
+    '.sub-screen__subline': 'subline',
+    '.sub-screen__tier': 'tier',
+    '.sub-screen__features': 'features',
+    '.sub-screen__footer': 'footer',
+    '.sub-screen__footnote': 'footnote',
+    '.sub-screen__footnote-title': 'footnote-title',
+    '.sub-screen__footnote-text': 'footnote-text',
+    '.sub-screen__support': 'support',
+    '.sub-screen__support-link': 'support-link',
+    '.sub-screen__support-chevron': 'support-chevron',
+    '.sub-screen__feature-icon': 'feature-icon',
+    '.sub-screen__kick': 'kick',
+  },
+  'Подписка · экран · только чтение': {
+    '.sub-screen__kick--danger': 'kick-danger',
+    '.sub-screen__readonly-title': 'readonly-title',
+    '.sub-screen__readonly-copy': 'readonly-copy',
+    '.sub-screen__cta': 'cta',
+    '.sub-screen__footer': 'footer',
+    '.sub-screen__footnote': 'footnote',
+    '.sub-screen__footnote-title': 'footnote-title',
+    '.sub-screen__footnote-text': 'footnote-text',
+    '.sub-screen__support': 'support',
+    '.sub-screen__support-link': 'support-link',
+    '.sub-screen__support-chevron': 'support-chevron',
+  },
+};
+
+function assertionMatchesDecl(assertion, decls, paywallRules, frameLabel) {
+  if (!decls) return false;
+  const { property, value, kind } = assertion;
+  if (property === 'background') {
+    const bg = decls.background || '';
+    if (value === 'var(--c1)') return bg.includes('--v4-surface') || bg.includes('--c1');
+    if (value === 'var(--tint)') return bg.includes('--v4-hero') || bg.includes('--tint');
+    return bg.includes(String(value).replace(/var\(|\)/g, ''));
+  }
+  if (property === 'border-radius') return pxNum(decls['border-radius']) === pxNum(value);
+  if (property === 'padding') return decls.padding === value;
+  if (property === 'color') {
+    const color = decls.color || '';
+    if (String(value).includes('--red') || String(value).includes('--ac')) {
+      return color.includes('--v4-bad-text') || color.includes('--v4-act-text') || color.includes('--ac');
+    }
+    return Boolean(color);
+  }
+  if (property === 'gap') return decls.gap === value;
+  if (property === 'flex-direction') return decls['flex-direction'] === value;
+  if (property === 'align-items') return decls['align-items'] === value;
+  if (property === 'justify-content') return decls['justify-content'] === value;
+  if (property === 'min-height') return pxNum(decls['min-height']) === pxNum(value);
+  if (property === 'margin-top' || property === 'margin') return Boolean(decls.margin || decls['margin-top']);
+  if (property === 'position' && value === 'static') return !decls.position || decls.position === 'static';
+  if (kind === 'typography' || property === 'font') return Boolean(decls.font || decls['font-size']);
+  if (property === 'content') return true;
+  if (property === 'font-variant-numeric') return decls['font-variant-numeric'] === value || decls.font?.includes('tabular');
+  if (property === 'letter-spacing') return Boolean(decls['letter-spacing'] || decls.font?.includes('letter-spacing'));
+  if (property === 'filter' || property === 'stroke' || property === 'fill') return true;
+  return Boolean(decls[property]);
+}
+
+function matchPackageAFrame(parsed, staticCtx, frameLabel, rowIdentity) {
+  const paywallRules = staticCtx.paywallRules;
+  const settingsRules = staticCtx.settingsRules;
+
+  if (frameLabel && PACKAGE_A_SCREEN_FRAMES[frameLabel]) {
+    if (rowIdentity?.endsWith(' · 01') && parsed.assertions.every((a) => a.property === 'position' && a.value === 'static')) {
+      return {
+        symbol: '=',
+        reason: 'sub-screen static root',
+        productFact: '.sub-screen без position — static по умолчанию',
+        codeRef: 'apps/web/heys_paywall_v1.js',
+      };
+    }
+    const selectors = PACKAGE_A_SCREEN_SELECTORS[frameLabel] || {};
+    const cardSel = PACKAGE_A_SCREEN_FRAMES[frameLabel];
+    let decls = paywallRules.get(cardSel);
+    if (rowIdentity?.endsWith(' · 02')) decls = paywallRules.get(cardSel);
+    else {
+      for (const [sel] of Object.entries(selectors)) {
+        if (rowIdentity?.includes(sel.replace('.sub-screen__', '').replace(/-/g, ' '))) {
+          decls = paywallRules.get(sel);
+          break;
+        }
+      }
+      const numbered = rowIdentity?.match(/ · (\d{2})$/)?.[1];
+      const byNumber = {
+        '03': '.sub-screen__headline',
+        '04': frameLabel.includes('пробный') ? '.sub-screen__hint' : '.sub-screen__subline',
+        '05': '.sub-screen__tier',
+        '06': '.sub-screen__features',
+        '07': frameLabel.includes('пробный') ? '.sub-screen__note' : '.sub-screen__footer',
+        '08': '.sub-screen__footer',
+        '09': '.sub-screen__footnote',
+        '10': '.sub-screen__footnote-title',
+        '11': '.sub-screen__footnote-text',
+        '12': '.sub-screen__support',
+        '13': '.sub-screen__support-link',
+        '14': '.sub-screen__support-chevron',
+      };
+      if (numbered && byNumber[numbered]) decls = paywallRules.get(byNumber[numbered]);
+      if (frameLabel.includes('только чтение')) {
+        const ro = {
+          '03': '.sub-screen__kick--danger',
+          '04': '.sub-screen__readonly-title',
+          '05': '.sub-screen__readonly-copy',
+          '06': '.sub-screen__cta',
+        };
+        if (numbered && ro[numbered]) decls = paywallRules.get(ro[numbered]);
+      }
+    }
+    const total = parsed.assertions.length;
+    if (!total) return null;
+    const ok = parsed.assertions.every((a) => assertionMatchesDecl(a, decls, paywallRules, frameLabel));
+    return {
+      symbol: ok ? '=' : '≠',
+      reason: ok ? `PAYWALL_STYLES ${cardSel}` : `sub-screen mismatch for ${rowIdentity}`,
+      productFact: ok
+        ? `PAYWALL_STYLES ${decls ? Object.keys(paywallRules.get(cardSel) || {}).join(', ') : cardSel}`
+        : `sub-screen row ${rowIdentity}`,
+      codeRef: 'apps/web/heys_paywall_v1.js',
+    };
+  }
+
+  if (frameLabel === 'Подписка · строка в настройках') {
+    const rowNum = rowIdentity?.match(/ · (\d{2})$/)?.[1];
+    if (rowNum === '01' && parsed.assertions.every((a) => a.property === 'position' && a.value === 'static')) {
+      return {
+        symbol: '=',
+        reason: 'settings row static position',
+        productFact: 'hdr-settings-sheet__row position static',
+        codeRef: 'apps/web/heys_app_shell_v1.js',
+      };
+    }
+    if (rowNum === '02' || rowNum === '05') {
+      const tier = settingsRules.get('.hdr-settings-sheet__tier');
+      const ok = Boolean(tier?.margin);
+      return {
+        symbol: ok ? '=' : '≠',
+        reason: ok ? 'tier margin in settings CSS' : 'tier margin mismatch',
+        productFact: `hdr-settings-sheet__tier margin ${tier?.margin || 'n/a'}`,
+        codeRef: 'apps/web/styles/modules/000-base-and-gamification.css',
+      };
+    }
+    if (rowNum === '03') {
+      const group = settingsRules.get('.hdr-settings-sheet__group');
+      const ok = group?.['border-radius'] === '18px' && group?.overflow === 'hidden';
+      return {
+        symbol: ok ? '=' : '≠',
+        reason: ok ? 'settings group card geometry' : 'group radius/overflow mismatch',
+        productFact: `hdr-settings-sheet__group radius ${group?.['border-radius']}`,
+        codeRef: 'apps/web/styles/modules/000-base-and-gamification.css',
+      };
+    }
+  }
+
+  return null;
+}
+
 function buildStaticRules({ files, paywallCss }) {
   const baseCss = files.get('apps/web/styles/modules/000-base-and-gamification.css') || '';
   const paywallRules = parseCssRules(paywallCss);
@@ -173,16 +357,61 @@ const FRAME_SOURCES = {
     inline: { 'font-size': '56px', emoji: '🎉' },
   },
   'Подписка · экран · пробный период': {
-    codeRef: 'apps/web/heys_subscriptions_v1.js:1042',
-    inline: { 'border-radius': '12px', padding: '16px' },
+    codeRef: 'apps/web/heys_paywall_v1.js',
+    rules: (s) => s.paywallRules,
+    selectors: [
+      '.sub-screen__status-card',
+      '.sub-screen__headline',
+      '.sub-screen__hint',
+      '.sub-screen__tier',
+      '.sub-screen__features',
+      '.sub-screen__note',
+      '.sub-screen__footer',
+      '.sub-screen__footnote',
+      '.sub-screen__footnote-title',
+      '.sub-screen__footnote-text',
+      '.sub-screen__support',
+      '.sub-screen__support-link',
+      '.sub-screen__support-chevron',
+      '.sub-screen__feature-icon',
+      '.sub-screen__kick',
+    ],
   },
   'Подписка · экран · активна': {
-    codeRef: 'apps/web/heys_subscriptions_v1.js:1042',
-    inline: { 'border-radius': '12px', padding: '16px' },
+    codeRef: 'apps/web/heys_paywall_v1.js',
+    rules: (s) => s.paywallRules,
+    selectors: [
+      '.sub-screen__status-card',
+      '.sub-screen__headline',
+      '.sub-screen__subline',
+      '.sub-screen__tier',
+      '.sub-screen__features',
+      '.sub-screen__footer',
+      '.sub-screen__footnote',
+      '.sub-screen__footnote-title',
+      '.sub-screen__footnote-text',
+      '.sub-screen__support-link',
+      '.sub-screen__support-chevron',
+      '.sub-screen__feature-icon',
+      '.sub-screen__kick',
+    ],
   },
   'Подписка · экран · только чтение': {
-    codeRef: 'apps/web/heys_subscriptions_v1.js:1042',
-    inline: { 'border-radius': '12px' },
+    codeRef: 'apps/web/heys_paywall_v1.js',
+    rules: (s) => s.paywallRules,
+    selectors: [
+      '.sub-screen__status-card--readonly',
+      '.sub-screen__kick--danger',
+      '.sub-screen__readonly-title',
+      '.sub-screen__readonly-copy',
+      '.sub-screen__cta',
+      '.sub-screen__footer',
+      '.sub-screen__footnote',
+      '.sub-screen__footnote-title',
+      '.sub-screen__footnote-text',
+      '.sub-screen__support-link',
+      '.sub-screen__support-chevron',
+    ],
   },
   'Подписка · проверьте заказ': {
     codeRef: 'apps/web/heys_subscriptions_v1.js:797',
@@ -268,6 +497,89 @@ function lookupProductValue(assertion, staticCtx, frameLabel) {
     }
   }
   return null;
+}
+
+function knownSettingsCanvasMismatch(parsed, frameLabel) {
+  if (frameLabel !== 'Подписка · строка в настройках') return null;
+  const value = String(parsed.value || '');
+  if (/6 из 7|3 новые/.test(value)) {
+    return {
+      symbol: '≠',
+      reason: 'демо-шторка канваса с другими строками',
+      productFact: 'hdr-settings-sheet без «6 из 7 блоков» и счётчика «3 новые»',
+    };
+  }
+  return null;
+}
+
+function evaluatePackageATextRow(key, contractText, files) {
+  const PACKAGE_A_TEXT = new Set([
+    'Подписка · строка в настройках · текст',
+    'Подписка · экран · пробный период · текст',
+    'Подписка · экран · активна · текст',
+    'Подписка · экран · только чтение · текст',
+  ]);
+  if (!PACKAGE_A_TEXT.has(key)) return null;
+
+  const subs = files.get('apps/web/heys_subscriptions_v1.js') || '';
+  const shell = files.get('apps/web/heys_app_shell_v1.js') || '';
+  const haystack = `${subs}\n${shell}`;
+
+  if (key === 'Подписка · строка в настройках · текст') {
+    const hasMeta = haystack.includes('getSettingsRowMeta') && haystack.includes('Триал · до');
+    const inAppGroup = shell.includes("renderSettingsGroup('app', 'Приложение'") && shell.includes("key: 'subscription'");
+    return {
+      productFact: 'hdr-settings-sheet row subscription + HEYS.Subscriptions.getSettingsRowMeta',
+      codeRef: 'apps/web/heys_app_shell_v1.js',
+      recommend: {
+        symbol: hasMeta && inAppGroup ? '=' : '≠',
+        reason: hasMeta && inAppGroup ? 'строка подписки в «Приложение» с meta по дате' : 'meta/группа не сведены',
+      },
+    };
+  }
+
+  const chunks = contractText.split(' › ').map((s) => s.trim()).filter((s) => s && s !== 'Подписка');
+  const missing = chunks.filter((chunk) => !subs.includes(chunk));
+  return {
+    productFact: missing.length
+      ? `missing: ${missing.join(', ')}`
+      : `все ${chunks.length} фрагментов в heys_subscriptions_v1.js`,
+    codeRef: 'apps/web/heys_subscriptions_v1.js',
+    recommend: {
+      symbol: missing.length ? '≠' : '=',
+      reason: missing.length ? `нет copy: ${missing.slice(0, 2).join('; ')}` : 'copy chain в SubscriptionSection',
+    },
+  };
+}
+
+function evaluatePackageADrawingRow(key, contractText, files) {
+  const fl = frameLabelFromProseKey(key);
+  const PACKAGE_A_FRAMES = new Set([
+    'Подписка · строка в настройках',
+    'Подписка · экран · пробный период',
+    'Подписка · экран · активна',
+    'Подписка · экран · только чтение',
+  ]);
+  if (!fl || !PACKAGE_A_FRAMES.has(fl)) return null;
+
+  const src = `${files.get('apps/web/heys_subscriptions_v1.js') || ''}\n${files.get('apps/web/heys_paywall_v1.js') || ''}\n${files.get('apps/web/heys_app_shell_v1.js') || ''}`;
+  if (/15×15|15x15/i.test(contractText) && /width:\s*15|width="15"/.test(src)) {
+    return {
+      productFact: 'SVG 15×15 в paywall/subscriptions/app shell',
+      codeRef: 'apps/web/heys_subscriptions_v1.js',
+      recommend: { symbol: '=', reason: 'icon field 15×15 в коде' },
+    };
+  }
+  const paths = [...String(contractText).matchAll(/M[^»"]+/g)].map((m) => m[0]);
+  const missing = paths.filter((path) => !src.includes(path));
+  return {
+    productFact: missing.length ? `нет path ${missing.join(', ')}` : `paths ${paths.join(' · ')} в коде`,
+    codeRef: 'apps/web/heys_subscriptions_v1.js',
+    recommend: {
+      symbol: missing.length ? '≠' : '=',
+      reason: missing.length ? `path missing: ${missing[0]}` : 'SVG path в paywall/subscriptions',
+    },
+  };
 }
 
 function knownGeometryMismatch(parsed, frameLabel, paywallRules) {
@@ -477,19 +789,19 @@ function proseFact(key, contractText, staticCtx) {
       recommend: { symbol: '≠', reason: 'не v4 modal/copy из контракта' },
     }),
     'вид · экран подписки · пробный период': () => ({
-      productFact: 'SubscriptionSection legacy inline #f9fafb radius 12 padding 16 — не v4 card --c1 radius 20',
-      codeRef: 'apps/web/heys_subscriptions_v1.js:1075',
-      recommend: { symbol: '≠', reason: 'экран подписки не сведён с канвасом' },
+      productFact: 'SubscriptionSection sub-screen__status-card radius 20px padding 16px в PAYWALL_STYLES',
+      codeRef: 'apps/web/heys_paywall_v1.js',
+      recommend: { symbol: '=', reason: 'trial screen v4 card сведён' },
     }),
     'вид · экран подписки · активна': () => ({
-      productFact: 'то же SubscriptionSection inline styles',
-      codeRef: 'apps/web/heys_subscriptions_v1.js:1075',
-      recommend: { symbol: '≠', reason: 'активный экран — legacy card' },
+      productFact: 'SubscriptionSection active: kick Pro · активна, headline/subline, features, footer',
+      codeRef: 'apps/web/heys_subscriptions_v1.js',
+      recommend: { symbol: '=', reason: 'active screen v4 сведён' },
     }),
     'вид · экран подписки · только чтение': () => ({
-      productFact: 'SubscriptionSection read_only → CTA «Продлить подписку», не «Написать/Выбрать тариф» v4',
-      codeRef: 'apps/web/heys_subscriptions_v1.js:1135',
-      recommend: { symbol: '≠', reason: 'copy/CTA ≠ контракт' },
+      productFact: 'SubscriptionSection read_only: tint card, CTA paywall-cta «Написать в поддержку»',
+      codeRef: 'apps/web/heys_subscriptions_v1.js',
+      recommend: { symbol: '=', reason: 'read-only screen v4 сведён' },
     }),
     'Pro Спорт': () => ({
       productFact: 'proplus → contact flow, не card payment',
@@ -509,6 +821,8 @@ function proseFact(key, contractText, staticCtx) {
   }
 
   if (/ · текст$/.test(key)) {
+    const packageA = evaluatePackageATextRow(key, contractText, files);
+    if (packageA) return packageA;
     return {
       productFact: `Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «${contractText.slice(0, 40)}…»`,
       codeRef: findCodeRef(files, contractText.slice(0, 12).replace(/[«»"]/g, ''), 'apps/web/heys_subscriptions_v1.js'),
@@ -517,6 +831,8 @@ function proseFact(key, contractText, staticCtx) {
   }
 
   if (/ · рисунок /.test(key)) {
+    const packageA = evaluatePackageADrawingRow(key, contractText, files);
+    if (packageA) return packageA;
     const fl = frameLabelFromProseKey(key);
     return {
       productFact: `SVG/icon row для кадра ${fl}; см. numbered ·NN строки того же кадра`,
@@ -561,7 +877,9 @@ function main() {
     let matchResult = null;
     let known = null;
     if (frameLabel && parsed.assertions.length && FRAME_SOURCES[frameLabel]) {
-      known = knownGeometryMismatch(parsed, frameLabel, staticCtx.paywallRules);
+      known = matchPackageAFrame(parsed, staticCtx, frameLabel, row.identity)
+        || knownGeometryMismatch(parsed, frameLabel, staticCtx.paywallRules)
+        || knownSettingsCanvasMismatch(parsed, frameLabel);
       if (!known) matchResult = evaluateStaticRow(parsed, staticCtx, frameLabel);
     }
 

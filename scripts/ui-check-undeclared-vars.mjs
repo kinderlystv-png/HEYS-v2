@@ -151,7 +151,6 @@ const BASELINE = [
   'primary-color',
   'primary-dark',
   'safe-bottom',
-  'success-color',
   'text-color',
   'text-dark',
   'text-dark-primary',

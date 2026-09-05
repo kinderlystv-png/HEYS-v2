@@ -223,11 +223,10 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     function getSubscriptionSettingsSubtitle(subscription) {
         const details = subscription?.getCachedDetails?.();
         if (!details?.status) return 'Загрузка...';
-        const meta = subscription.getStatusMeta(details.status);
-        const daysLabel = formatSubscriptionDaysLeft(details.days_left);
-        if (details.status === 'trial' && daysLabel) {
-            return `${meta?.shortLabel || 'Триал'} · осталось ${daysLabel}`;
+        if (window.HEYS?.Subscriptions?.getSettingsRowMeta) {
+            return window.HEYS.Subscriptions.getSettingsRowMeta(details);
         }
+        const meta = subscription.getStatusMeta(details.status);
         return meta?.label || 'Тариф и оплата';
     }
 

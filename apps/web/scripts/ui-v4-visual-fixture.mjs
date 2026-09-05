@@ -125,14 +125,20 @@ export const SUBSCRIPTION_VISUAL_SCENARIOS = Object.freeze([
     tab: 'widgets',
     rootSelector:
       '.tab-settings-menu--v4-sheet .hdr-settings-sheet__row[data-settings-key="subscription"]',
-    bootstrap: { surface: 'settings-row' },
+    bootstrap: {
+      surface: 'settings-row',
+      fixtureProfile: {
+        subscription_status: 'trial',
+        trial_ends_at: '2026-09-10',
+      },
+    },
   },
   {
     id: 'subscription-trial-screen',
     frameLabel: 'Подписка · экран · пробный период',
     kind: 'demo-subscription',
     rootSelector: '#ui-v4-subscription-screen-host',
-    bootstrap: { subscriptionStatus: 'trial', trial_ends_at: '2026-09-12' },
+    bootstrap: { subscriptionStatus: 'trial', trial_ends_at: '2026-09-10' },
   },
   {
     id: 'subscription-welcome',
@@ -929,7 +935,7 @@ export function buildUiV4VisualSnapshot(item = {}) {
     plannedSupplements: ['vitamin-d', 'omega-3'],
     optionalFeatureConsentsOfferedAt: updatedAt,
     updatedAt,
-    ...(item.fixtureProfile || {}),
+    ...(item.fixtureProfile || item.bootstrap?.fixtureProfile || {}),
   };
 
   const fixtureDay = item.fixtureDay

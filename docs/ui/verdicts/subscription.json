@@ -248,102 +248,118 @@
     },
     "Подписка · строка в настройках · 01": {
       "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "f": "apps/web/heys_paywall_v1.js:1253: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "be26b94c0688"
     },
     "Подписка · строка в настройках · 02": {
-      "v": "?",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: content=Вы; margin=4px 0px 8px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet__tier margin 14px 2px 8px",
       "h": "7d89140238fd"
     },
     "Подписка · строка в настройках · 03": {
-      "v": "?",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: background=var(--c1); border-radius=18px; overflow=hidden. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet__group radius 18px",
       "h": "90c3eca5a44a"
     },
     "Подписка · строка в настройках · 04": {
-      "v": "?",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: content=6 из 7 блоков; font-variant-numeric=tabular-nums. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "aff87444cb0c"
+      "v": "≠",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet без «6 из 7 блоков» и счётчика «3 новые»",
+      "h": "aff87444cb0c",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · строка в настройках · 05": {
-      "v": "?",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: content=Приложение; margin=14px 0px 8px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet__tier margin 14px 2px 8px",
       "h": "c5cfa42e86b2"
     },
     "Подписка · строка в настройках · 06": {
-      "v": "?",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: content=3 новые; font-variant-numeric=tabular-nums; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "3e3760f2c79f"
+      "v": "≠",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet без «6 из 7 блоков» и счётчика «3 новые»",
+      "h": "3e3760f2c79f",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · 01": {
       "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "f": "apps/web/heys_paywall_v1.js:1253: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "be26b94c0688"
     },
     "Подписка · экран · пробный период · 02": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: background=var(--c1); border-radius=20px; padding=16px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "3e39d306ccfe"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 02",
+      "h": "3e39d306ccfe",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · 03": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=до 10 сентября; font-variant-numeric=tabular-nums; font=800 [object Object]px/[object Object] Figtree; color=var(--tx); margin-top=10px; letter-spacing={\"value\":-0.01,\"unit\":\"em\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "7cb50ddf0883"
     },
     "Подписка · экран · пробный период · 04": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=дату окончания даёт сервер; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "1628d556df3e"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 04",
+      "h": "1628d556df3e",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · 05": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Что открыто; margin=18px 0px 10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "0825eb7189ac"
     },
     "Подписка · экран · пробный период · 06": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: flex-direction=column; gap=10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "72feea3e2a4d"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 06",
+      "h": "72feea3e2a4d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · 07": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Когда пробный период закончится, день и история ос; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); margin-top=16px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "650353c134e8"
     },
     "Подписка · экран · пробный период · 08": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: margin-top=auto; padding=0px 18px 18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "813fbe526a44"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 08",
+      "h": "813fbe526a44",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · 09": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: background=var(--c1); border-radius=16px; padding=12px 14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "cb72a3a962e9"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 09",
+      "h": "cb72a3a962e9",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · 10": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Само ничего не спишется; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "f74b2fa32e9f"
     },
     "Подписка · экран · пробный период · 11": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Оплата и продление идут через поддержку — деньги н; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=5px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "9453360f4ae8"
     },
     "Подписка · экран · пробный период · 12": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: align-items=center; justify-content=space-between; min-height=44px; padding=0px 3px; margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "ffa81894dcd2"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 12",
+      "h": "ffa81894dcd2",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · 13": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Написать в поддержку; font=600 [object Object]px/[object Object] Figtree; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "9e987eb80379"
     },
     "Подписка · экран · пробный период · 14": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "23f1b43c08ab"
     },
     "Подписка · приветствие · 01": {
@@ -749,132 +765,160 @@
     },
     "Подписка · экран · активна · 01": {
       "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "f": "apps/web/heys_paywall_v1.js:1253: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "be26b94c0688"
     },
     "Подписка · экран · активна · 02": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: background=var(--c1); border-radius=20px; padding=16px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "3e39d306ccfe"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 02",
+      "h": "3e39d306ccfe",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · 03": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=до 3 октября; font-variant-numeric=tabular-nums; font=800 [object Object]px/[object Object] Figtree; color=var(--tx); margin-top=10px; letter-spacing={\"value\":-0.01,\"unit\":\"em\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "671d161e7758"
     },
     "Подписка · экран · активна · 04": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=7 990 ₽ в месяц · оплачено до этой даты; font-variant-numeric=tabular-nums; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "a982f6d7c993"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 04",
+      "h": "a982f6d7c993",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · 05": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=Что открыто; margin=18px 0px 10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "0825eb7189ac"
     },
     "Подписка · экран · активна · 06": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: flex-direction=column; gap=10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "72feea3e2a4d"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 06",
+      "h": "72feea3e2a4d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · 07": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: margin-top=auto; padding=0px 18px 18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "813fbe526a44"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 07",
+      "h": "813fbe526a44",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · 08": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: background=var(--c1); border-radius=16px; padding=12px 14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "cb72a3a962e9"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 08",
+      "h": "cb72a3a962e9",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · 09": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=Само ничего не спишется; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "f74b2fa32e9f"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 09",
+      "h": "f74b2fa32e9f",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · 10": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=Оплата и продление идут через поддержку — деньги н; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=5px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "9453360f4ae8"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 10",
+      "h": "9453360f4ae8",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · 11": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: align-items=center; justify-content=space-between; min-height=44px; padding=0px 3px; margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · активна · 12": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=Написать в поддержку; font=600 [object Object]px/[object Object] Figtree; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "9e987eb80379"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 12",
+      "h": "9e987eb80379",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · 13": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
       "h": "23f1b43c08ab"
     },
     "Подписка · экран · только чтение · 01": {
       "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "f": "apps/web/heys_paywall_v1.js:1253: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "be26b94c0688"
     },
     "Подписка · экран · только чтение · 02": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: background=var(--tint); border-radius=20px; padding=16px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "cf89b16538b5"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 02",
+      "h": "cf89b16538b5",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · 03": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Только чтение; color=var(--red). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
       "h": "a74317820af6"
     },
     "Подписка · экран · только чтение · 04": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Пробный период закончился; font=700 [object Object]px/[object Object] Figtree; color=var(--tx); margin-top=10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
       "h": "e77ccfe5f1a4"
     },
     "Подписка · экран · только чтение · 05": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=День и история открыты для чтения. Чтобы записыват; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
       "h": "0d66e6af4b1e"
     },
     "Подписка · экран · только чтение · 06": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Написать в поддержку; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
       "h": "7b7545ce8968"
     },
     "Подписка · экран · только чтение · 07": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: margin-top=auto; padding=0px 18px 18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "813fbe526a44"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 07",
+      "h": "813fbe526a44",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · 08": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: background=var(--c1); border-radius=16px; padding=12px 14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "cb72a3a962e9"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 08",
+      "h": "cb72a3a962e9",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · 09": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Само ничего не спишется; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "f74b2fa32e9f"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 09",
+      "h": "f74b2fa32e9f",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · 10": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Оплата и продление идут через поддержку — деньги н; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=5px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "9453360f4ae8"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 10",
+      "h": "9453360f4ae8",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · 11": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: align-items=center; justify-content=space-between; min-height=44px; padding=0px 3px; margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · только чтение · 12": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Написать в поддержку; font=600 [object Object]px/[object Object] Figtree; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "9e987eb80379"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 12",
+      "h": "9e987eb80379",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · 13": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
       "h": "23f1b43c08ab"
     },
     "Подписка · очередь · заявка подана · 01": {
@@ -1042,24 +1086,32 @@
       "h": "163302844c74"
     },
     "Подписка · экран · пробный период · рисунок 01": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "7d9d1119f1bb"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 01",
+      "h": "7d9d1119f1bb",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · рисунок 02": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "49950e24d175"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 02",
+      "h": "49950e24d175",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · рисунок 03": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: svg-path=M20 6L9 17l-5-5. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "2f2b6477120d"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 03",
+      "h": "2f2b6477120d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · рисунок 04": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: svg-path=M9 6l6 6-6 6. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "163302844c74"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 04",
+      "h": "163302844c74",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тост на действии · рисунок 01": {
       "v": "?",
@@ -1182,39 +1234,53 @@
       "h": "2f2b6477120d"
     },
     "Подписка · экран · активна · рисунок 01": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "7d9d1119f1bb"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 01",
+      "h": "7d9d1119f1bb",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · рисунок 02": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "49950e24d175"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 02",
+      "h": "49950e24d175",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · рисунок 03": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: svg-path=M20 6L9 17l-5-5. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "2f2b6477120d"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 03",
+      "h": "2f2b6477120d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · рисунок 04": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: svg-path=M9 6l6 6-6 6. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "163302844c74"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 04",
+      "h": "163302844c74",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · рисунок 01": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "7d9d1119f1bb"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 01",
+      "h": "7d9d1119f1bb",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · рисунок 02": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "49950e24d175"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 02",
+      "h": "49950e24d175",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · рисунок 03": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: svg-path=M9 6l6 6-6 6. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
-      "h": "163302844c74"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 03",
+      "h": "163302844c74",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · очередь · заявка подана · рисунок 01": {
       "v": "?",
@@ -1243,14 +1309,16 @@
       "naKind": "handoff"
     },
     "Подписка · строка в настройках · текст": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Настройки › Вы › Профиль и цели › Дневни…»",
+      "v": "=",
+      "f": "apps/web/heys_app_shell_v1.js: hdr-settings-sheet row subscription + HEYS.Subscriptions.getSettingsRowMeta",
       "h": "06b2654d4135"
     },
     "Подписка · экран · пробный период · текст": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Подписка › Пробный период › до 10 сентяб…»",
-      "h": "4606c40e86a9"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js: missing: до 10 сентября",
+      "h": "4606c40e86a9",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · приветствие · текст": {
       "v": "?",
@@ -1298,13 +1366,15 @@
       "h": "1a8e874919aa"
     },
     "Подписка · экран · активна · текст": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Подписка › Pro · активна › до 3 октября …»",
-      "h": "f907bddf0afc"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js: missing: Pro · активна, до 3 октября, 7 990 ₽ в месяц · оплачено до этой даты",
+      "h": "f907bddf0afc",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · текст": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Подписка › Только чтение › Пробный перио…»",
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js: все 7 фрагментов в heys_subscriptions_v1.js",
       "h": "ed7dc2c35921"
     },
     "Подписка · очередь · заявка подана · текст": {

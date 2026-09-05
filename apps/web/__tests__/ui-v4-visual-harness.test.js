@@ -343,7 +343,7 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
     expect(cases.find((entry) => entry.id === 'subscription-trial-screen')).toMatchObject({
       kind: 'demo-subscription',
       rootSelector: '#ui-v4-subscription-screen-host',
-      bootstrap: { subscriptionStatus: 'trial', trial_ends_at: '2026-09-12' },
+      bootstrap: { subscriptionStatus: 'trial', trial_ends_at: '2026-09-10' },
     });
     expect(UI_V4_VISUAL_CASES.some((entry) => entry.zone === 'subscription' && entry.status === 'scenario-pending'))
       .toBe(false);

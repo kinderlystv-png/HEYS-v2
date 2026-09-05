@@ -4937,6 +4937,7 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 key,
                 type: 'button',
                 disabled: !!disabled,
+                'data-settings-key': key,
                 'aria-label': spokenValue ? `${label}, ${spokenValue}` : undefined,
                 className: 'hdr-settings-sheet__row'
                     + (danger ? ' hdr-settings-sheet__row--exit' : '')
@@ -4968,6 +4969,16 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         // UI-гейт: цель — найти настройку по группе; главное — выбрать строку / закрыть;
         // слой 1 — ярусы + тумблер уведомлений; слой 2 — раскрытия; критическое не скрывать — выход/данные.
+        const subscriptionSettingsMeta = (() => {
+            try {
+                const details = window.HEYS?.Subscription?.getCachedDetails?.()
+                    || { status: window.HEYS?.Subscription?.getLocalStatus?.() };
+                return window.HEYS?.Subscriptions?.getSettingsRowMeta?.(details) || '';
+            } catch (_) {
+                return '';
+            }
+        })();
+
         const renderSettingsGroup = (key, title, children) => {
             const items = (Array.isArray(children) ? children : [children]).filter(Boolean);
             if (!items.length) return null;
@@ -5442,13 +5453,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             label: 'Данные и выгрузка',
                             onClick: () => openUserSection('consents', 'settings-sheet-export'),
                         }),
+                    ]),
+                    renderSettingsGroup('app', 'Приложение', [
                         renderSettingsRow({
                             key: 'subscription',
                             label: 'Подписка',
+                            meta: subscriptionSettingsMeta,
                             onClick: () => openUserSection('subscription', 'settings-sheet-subscription'),
                         }),
-                    ]),
-                    renderSettingsGroup('app', 'Приложение', [
                         // Контракт «вход в лист»: строка стоит под общим
                         // тумблером и открывается только когда он включён;
                         // при выключенном гаснет до 40 % и не нажимается.
