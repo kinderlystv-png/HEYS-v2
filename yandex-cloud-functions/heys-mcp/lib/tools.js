@@ -230,6 +230,10 @@ function createTools({
   loadPeerHits = null,
 }) {
   let catalogPromise = null;
+  // Карточки-близнецы, выбранные за человека в этом вызове: одинаковый состав,
+  // разные названия. Молчать о таком выборе нельзя — куратор должен видеть, из
+  // чего выбрали и что взяли, иначе дубли в общей базе так и не всплывут.
+  const twinPicks = [];
   let overlayPriorTailCount = 0;
 
   async function readOverlayRowsOrThrow() {
@@ -905,6 +909,13 @@ function createTools({
       );
     }
     const pick = products.pickSearchMatch(spec.query, matches);
+    if (pick.ok && Array.isArray(pick.twins) && pick.twins.length > 1) {
+      twinPicks.push({
+        query: spec.query,
+        chosen: pick.product.name,
+        others: pick.twins.filter((x) => x && x.id !== pick.product.id).map((x) => x.name),
+      });
+    }
     if (!pick.ok) {
       throw new ToolError(
         'ambiguous_product',
@@ -1545,7 +1556,12 @@ function createTools({
       const dedupedText = dedupedNames.length
         ? ` new_product не понадобился: ${dedupedNames.map((n) => `«${n}»`).join(', ')} уже в каталоге — записал существующей карточкой.`
         : '';
-      const extras = `${portionText}${snapshotText}${dedupedText}${learnedText}`;
+      const twinsText = twinPicks.length
+        ? ` ${twinPicks.map((tp) => `По запросу «${tp.query}» карточки различаются только названием`
+          + ` (состав совпадает) — взял «${tp.chosen}», рядом были ${tp.others.map((n) => `«${n}»`).join(', ')}.`).join(' ')}`
+          + ' Это дубли общей базы: если мешают, куратор скрывает лишние через heys_moderate_products.'
+        : '';
+      const extras = `${portionText}${snapshotText}${dedupedText}${twinsText}${learnedText}`;
 
       // Склейка меняет ответ по существу: еда легла не новым приёмом, а в уже
       // записанный. Промолчать нельзя — иначе куратор ищет в дневнике карточку,

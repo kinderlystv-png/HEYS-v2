@@ -541,6 +541,28 @@ test('pickSearchMatch: нулевой скор — not_found, не ambiguous_pro
   assert.equal(pick.code, 'not_found');
 });
 
+test('pickSearchMatch: карточки-близнецы выбираются сами и называются вслух', () => {
+  // Дубль общей базы: одно и то же блюдо двумя карточками. Различить их нельзя,
+  // потому что различать нечего — состав совпадает.
+  const twins = [
+    { id: 'a', name: 'Люля куриная на гриле', _source: 'shared', protein100: 18, carbs100: 2, fat100: 9 },
+    { id: 'b', name: 'Люля куриная на шпажках', _source: 'shared', protein100: 18, carbs100: 2, fat100: 9.04 },
+  ];
+  const pick = products.pickSearchMatch('люля куриная', twins);
+  assert.equal(pick.ok, true, 'переспрашивать не о чем');
+  assert.equal(pick.twins.length, 2, 'вызывающий должен назвать, из чего выбрал');
+
+  // Разный состав при похожих именах — по-прежнему переспрос: одинаковая
+  // калорийность не делает продукты одинаковыми.
+  const different = [
+    { id: 'a', name: 'Люля куриная', _source: 'shared', protein100: 18, carbs100: 2, fat100: 9 },
+    { id: 'b', name: 'Люля свиная', _source: 'shared', protein100: 12, carbs100: 2, fat100: 22 },
+  ];
+  const ask = products.pickSearchMatch('люля', different);
+  assert.equal(ask.ok, false);
+  assert.equal(ask.code, 'ambiguous_product');
+});
+
 test('sameAggregateComposition: допуск 0.05 на агрегаты', () => {
   const a = { protein100: 15, carbs100: 8, fat100: 17.5 };
   const b = { protein100: 15, simple100: 1.5, complex100: 6.5, badFat100: 7, goodFat100: 10, trans100: 0.5 };
