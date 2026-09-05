@@ -1,0 +1,5 @@
+fix(strength-builder): task38 builder_ui hole disclosure and curator pills
+
+Plan-vs-done route uses BuilderPlanVsDoneScreen with volume-hole disclosure;
+mid-session curator plan strip shows plan/custom pills. Handoff for remaining
+canvas-conflict-feature rows in foreign/notCode buckets.

@@ -1,0 +1,76 @@
+{
+  "zone": "task38-builder",
+  "implemented": [
+    {
+      "key": "отчёт называет дыру",
+      "fact": "BuilderPlanVsDoneScreen в heys_strength_builder_ui_v1.js: карточка .sb-plan-vs-hole «Пропущенная не считается сделанной» между объёмами и CTA; маршрут plan-vs-done больше не делегирует в superset PlanVsDoneScreen.",
+      "test": "apps/web/__tests__/strength-builder-task38-canvas-conflict.test.js"
+    },
+    {
+      "key": "Куратор и зал · 13",
+      "fact": "CuratorPlanStrip mid-session с showActions:true — пилюля «Начать по плану» рендерится (heys_strength_builder_ui_v1.js sb-list).",
+      "test": "apps/web/__tests__/strength-builder-task38-canvas-conflict.test.js"
+    },
+    {
+      "key": "Куратор и зал · 14",
+      "fact": "CuratorPlanStrip mid-session с showActions:true — пилюля «Своя» рендерится рядом с «Начать по плану».",
+      "test": "apps/web/__tests__/strength-builder-task38-canvas-conflict.test.js"
+    }
+  ],
+  "notCode": [
+    "Программа пройдена · 01",
+    "Программа пройдена · 02",
+    "Программа пройдена · 03",
+    "Программа пройдена · 04",
+    "Программа пройдена · 05",
+    "Программа пройдена · 06",
+    "Программа пройдена · 11",
+    "Программа пройдена · 12",
+    "Программа пройдена · 13",
+    "Программа пройдена · 14",
+    "Программа пройдена · 15",
+    "Программа пройдена · 16",
+    "Программа пройдена · 17",
+    "Программа пройдена · 18",
+    "Программа пройдена · 19",
+    "Программа пройдена · 20",
+    "Программа пройдена · 21",
+    "Программа пройдена · 22",
+    "Программа пройдена · 23",
+    "Программа пройдена · 24",
+    "Программа пройдена · текст"
+  ],
+  "foreign": [
+    {
+      "key": "Смена вида · лист выбора · рисунок 08",
+      "file": "apps/web/heys_widgets_ui_v1.js",
+      "zone": "home-widgets"
+    },
+    {
+      "key": "вес выше плана — прогресс, а не нарушение",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "note": "doneTone positive + is-progress уже в PlanVsDoneScreen; strength-builder-plan-vs-done-v4-canvas-contract.test.js"
+    },
+    {
+      "key": "шторка нужна разработчику первой",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "note": "sheetRows без «отчёт цикла»; builder только вызывает Parts.sheetRows"
+    },
+    {
+      "key": "прочерк — значение, а не пустота",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "note": ".sb-cell.is-blank в SupersetBlock/ExerciseCard"
+    },
+    {
+      "key": "Правка легла не полностью · 17",
+      "file": "apps/web/strength/heys_strength_proposal_ui_v1.js",
+      "note": "ProposalOutcome footnote"
+    },
+    {
+      "key": "Перенос · след в обе стороны · текст",
+      "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "note": "PlanCard/MoveSheet компоновка vs кадр Г3; механика move/skip есть"
+    }
+  ],
+  "skipped": ["шторка — семь входов"]
+}
