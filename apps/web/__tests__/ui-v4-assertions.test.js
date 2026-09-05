@@ -9,7 +9,7 @@ import {
   validateContractAssertions,
 } from '../../../scripts/lib/ui-v4-assertions.mjs';
 
-describe('UI v4 typed assertions v1', () => {
+describe('UI v4 typed assertions v2', () => {
   it('parses a safe multi-kind element row and preserves reversible source spans', () => {
     const row = {
       identity: 'Стык · Главная · 06',
@@ -69,7 +69,7 @@ describe('UI v4 typed assertions v1', () => {
             values: [
               { value: 18, unit: 'px' },
               { value: 18, unit: 'px' },
-              { value: 0, unit: 'number' },
+              { value: 0, unit: 'px' },
             ],
           },
         },
@@ -91,8 +91,95 @@ describe('UI v4 typed assertions v1', () => {
         { kind: 'color', property: 'background', expected: { css: 'var(--acs)' } },
       ]);
 
-    const bareNumber = parseContractAssertions({ identity: 'unsafe', value: 'радиус 999' });
-    expect(bareNumber).toMatchObject({ parseStatus: 'unsupported', assertions: [] });
+    const bareNumber = parseContractAssertions({ identity: 'radius', value: 'радиус 999' });
+    expect(bareNumber).toMatchObject({
+      parseStatus: 'parsed',
+      assertions: [
+        expect.objectContaining({
+          kind: 'dimensions',
+          property: 'border-radius',
+          expected: { values: [{ value: 999, unit: 'px' }] },
+        }),
+      ],
+    });
+  });
+
+  it('parses PICK layout/typography patterns merged from canvas razbor helpers', () => {
+    const parsed = parseContractAssertions({
+      identity: 'frame · 01',
+      value: 'направление column, выключка center, регистр uppercase, трекинг -.02em, интерлиньяж 1.2, обрез hidden, позиция relative',
+    });
+
+    expect(parsed.parseStatus).toBe('parsed');
+    expect(parsed.assertions.map(({ property, expected }) => ({ property, expected }))).toEqual(
+      expect.arrayContaining([
+        { property: 'flex-direction', expected: 'column' },
+        { property: 'text-align', expected: 'center' },
+        { property: 'text-transform', expected: 'uppercase' },
+        { property: 'letter-spacing', expected: { value: -0.02, unit: 'em' } },
+        { property: 'line-height', expected: { value: 1.2, unit: 'number' } },
+        { property: 'overflow', expected: 'hidden' },
+        { property: 'position', expected: 'relative' },
+      ]),
+    );
+  });
+
+  it('parses min sizes, slash padding, ink tone and role-token colors', () => {
+    const parsed = parseContractAssertions({
+      identity: 'frame · 02',
+      value: 'поля 16/18/0 px, высота от 48px, ширина от 0, 12,5 px/600, тоном --ac, тоном чернил 62 %',
+    });
+
+    expect(parsed.parseStatus).toBe('parsed');
+    expect(parsed.assertions).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        kind: 'dimensions',
+        property: 'padding',
+        expected: {
+          values: [
+            { value: 16, unit: 'px' },
+            { value: 18, unit: 'px' },
+            { value: 0, unit: 'px' },
+          ],
+        },
+      }),
+      expect.objectContaining({ property: 'min-height' }),
+      expect.objectContaining({ property: 'min-width' }),
+      expect.objectContaining({ property: 'font-size', expected: { value: 12.5, unit: 'px' } }),
+      expect.objectContaining({ property: 'color', expected: { css: '--ac' } }),
+      expect.objectContaining({ property: 'color', expected: { css: 'rgba(var(--ink),0.62)' } }),
+    ]));
+  });
+
+  it('parses inset ring, margin auto and ui-role label prefixes', () => {
+    const parsed = parseContractAssertions({
+      identity: 'frame · 03',
+      value: 'подвал: направление column, зазор 8px, рамка inset 0 0 0 2px var(--acs), отступ сверху auto, отступы 38px auto 0',
+    });
+
+    expect(parsed.parseStatus).toBe('parsed');
+    expect(parsed.assertions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: 'semantic', property: 'ui-role', expected: 'подвал' }),
+      expect.objectContaining({ property: 'box-shadow', expected: 'inset 0 0 0 2px var(--acs)' }),
+      expect.objectContaining({
+        property: 'margin-top',
+        expected: { values: [{ value: 0, unit: 'auto' }] },
+      }),
+    ]));
+  });
+
+  it('parses SVG graphics rows from frame breakdown', () => {
+    const parsed = parseContractAssertions({
+      identity: 'draw · 01',
+      value: 'поле рисунка 17×17 (viewBox 0 0 24 24), точка r 7 в (11,11), кривая, точки M9 6l6 6-6 6',
+    });
+
+    expect(parsed.parseStatus).toBe('parsed');
+    expect(parsed.assertions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ property: 'svg-viewport' }),
+      expect.objectContaining({ property: 'svg-circle', expected: { r: 7, center: '11,11' } }),
+      expect.objectContaining({ property: 'svg-path', expected: 'M9 6l6 6-6 6' }),
+    ]));
   });
 
   it('parses layout, opacity and an explicit semantic role', () => {

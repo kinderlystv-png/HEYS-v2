@@ -6,7 +6,7 @@ import {
   resolveDecisionRef,
 } from './ui-v4-verdicts.mjs';
 
-export const UI_V4_ASSERTION_PARSER_VERSION = 'typed-assertions-v1';
+export const UI_V4_ASSERTION_PARSER_VERSION = 'typed-assertions-v2';
 export const UI_V4_ASSERTION_KINDS = Object.freeze([
   'text',
   'layout',
@@ -57,16 +57,64 @@ function assertionId(kind, property, start, end) {
   return `a:${kind}:${property}:${start}-${end}`;
 }
 
-function parseMeasureList(raw) {
+function parseMeasureList(raw, defaultUnit = null) {
   const tokens = [];
   const matcher = new RegExp(`(${NUMBER_SOURCE})\\s*(px|%)?`, 'giu');
   for (const match of raw.matchAll(matcher)) {
     const value = normalizeNumber(match[1]);
     const unit = match[2]?.toLowerCase() || null;
-    if (!unit && value !== 0) return null;
-    tokens.push({ value, unit: unit || 'number' });
+    const resolvedUnit = unit || defaultUnit || (value === 0 ? 'number' : null);
+    if (!resolvedUnit) return null;
+    tokens.push({ value, unit: resolvedUnit });
   }
   return tokens.length ? tokens : null;
+}
+
+function parseSlashMeasureList(raw, defaultUnit = 'px') {
+  if (!raw.includes('/')) return null;
+  const tokens = [];
+  for (const part of raw.split('/')) {
+    const match = new RegExp(`^\\s*(${NUMBER_SOURCE})\\s*(px|%)?\\s*$`, 'iu').exec(part);
+    if (!match) return null;
+    const value = normalizeNumber(match[1]);
+    tokens.push({ value, unit: match[2]?.toLowerCase() || defaultUnit });
+  }
+  return tokens.length ? tokens : null;
+}
+
+function normalizeMarginToken(token) {
+  return String(token).replace(/[,;]+$/u, '').trim();
+}
+
+function parseMarginToken(token) {
+  const cleaned = normalizeMarginToken(token);
+  if (cleaned.toLowerCase() === 'auto') return { value: 0, unit: 'auto' };
+  const parsed = parseMeasureList(cleaned.replace(/px$/i, ' px'), 'px');
+  return parsed?.[0] ?? null;
+}
+
+function grabColor(value, word) {
+  const at = value.indexOf(`${word} `);
+  if (at < 0) return null;
+  const index = at + word.length + 1;
+  if (value[index] === '#') {
+    const match = /^#[0-9a-f]{3,8}/i.exec(value.slice(index));
+    return match ? match[0] : null;
+  }
+  if (!/^(var|rgba|rgb)\(/i.test(value.slice(index))) return null;
+  let depth = 0;
+  let end = index;
+  for (; end < value.length; end += 1) {
+    if (value[end] === '(') depth += 1;
+    else if (value[end] === ')') {
+      depth -= 1;
+      if (depth === 0) {
+        end += 1;
+        break;
+      }
+    }
+  }
+  return value.slice(index, end);
 }
 
 function collectMatches(value) {
@@ -89,6 +137,24 @@ function collectMatches(value) {
     });
   }
 
+  function addColorSpan(start, end, keyword, css) {
+    const text = value.slice(start, end);
+    add(
+      { index: start, 0: text },
+      'color',
+      {
+        цвет: 'color',
+        фон: 'background',
+        заливка: 'fill',
+        обводка: 'stroke',
+        линия: 'stroke',
+        тон: 'color',
+        тоном: 'color',
+      }[keyword],
+      { css },
+    );
+  }
+
   // A leading quoted label followed by a dash is the exact visible copy in the
   // generated element rows (for example: «Эксперт» — шрифт ...).
   for (const match of value.matchAll(/[«“"]([^»”"]+)[»”"](?=\s*(?:—|$))/gu)) {
@@ -103,7 +169,142 @@ function collectMatches(value) {
     add(match, 'text', 'content', match[1]);
   }
 
-  const measureValue = String.raw`(?:${NUMBER_SOURCE}\s*(?:px|%)|0)`;
+  for (const match of value.matchAll(
+    /поле рисунка\s+(\d+)\s*[×x]\s*(\d+)\s*\(viewBox\s+([^)]+)\)/giu,
+  )) {
+    add(match, 'dimensions', 'svg-viewport', {
+      width: Number(match[1]),
+      height: Number(match[2]),
+      viewBox: match[3].trim(),
+    });
+  }
+
+  for (const match of value.matchAll(
+    /точка r\s+(\d+(?:[.,]\d+)?)\s+в\s+\(([^)]+)\)/giu,
+  )) {
+    add(match, 'semantic', 'svg-circle', {
+      r: normalizeNumber(match[1]),
+      center: match[2].trim(),
+    });
+  }
+
+  for (const match of value.matchAll(
+    /ломаная,\s*точки\s+(.+?),\s*линия\s+((?:var\(--[a-z0-9-]+\)|rgba?\([^)]+\)|#[0-9a-f]{3,8}|currentColor))/giu,
+  )) {
+    add(match, 'semantic', 'svg-polyline', {
+      points: match[1].trim(),
+      stroke: match[2].trim(),
+    });
+  }
+
+  for (const match of value.matchAll(new RegExp(String.raw`толщина\s+(${NUMBER_SOURCE})`, 'giu'))) {
+    add(match, 'dimensions', 'stroke-width', {
+      values: [{ value: normalizeNumber(match[1]), unit: 'number' }],
+    });
+  }
+
+  for (const match of value.matchAll(new RegExp(String.raw`пунктир\s+(${NUMBER_SOURCE})`, 'giu'))) {
+    add(match, 'layout', 'stroke-dasharray', normalizeNumber(match[1]));
+  }
+
+  for (const match of value.matchAll(/перенос(?:\s+строк)?\s+(wrap|nowrap)/giu)) {
+    add(match, 'layout', 'white-space', match[1].toLowerCase());
+  }
+
+  for (const match of value.matchAll(/выравнивание\s+по\s+baseline/giu)) {
+    add(match, 'layout', 'align-items', 'baseline');
+  }
+
+  for (const match of value.matchAll(/отступы\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/giu)) {
+    const values = [match[1], match[2], match[3], match[4]].map((token) => parseMarginToken(token));
+    if (values.some((item) => !item)) continue;
+    add(match, 'dimensions', 'margin', { values });
+  }
+
+  for (const match of value.matchAll(/отступы\s+(\S+)\s+(\S+)\s+(\S+)/giu)) {
+    const values = [match[1], match[2], match[3]].map((token) => parseMarginToken(token));
+    if (values.some((item) => !item)) continue;
+    add(match, 'dimensions', 'margin', { values });
+  }
+
+  for (const match of value.matchAll(/отступы\s+(-?\d+(?:[.,]\d+)?px)\s+(\S+)/giu)) {
+    const values = [match[1], match[2]].map((token) => parseMarginToken(token));
+    if (values.some((item) => !item)) continue;
+    add(match, 'dimensions', 'margin', { values });
+  }
+
+  for (const match of value.matchAll(/кривая,\s*точки\s+([^,]+(?:\([^)]*\)[^,]*)*)/giu)) {
+    add(match, 'semantic', 'svg-path', match[1].trim());
+  }
+
+  for (const match of value.matchAll(/моноцифр(?:ами|ы)/giu)) {
+    add(match, 'typography', 'font-variant-numeric', 'tabular-nums');
+  }
+
+  const uiRolePrefix = value.match(
+    /^(ключ \+|ключ|имя экрана|главная кнопка|карточка \.grp|плитка|строка списка|ярус|сноска|список \.cd|пилюля \+|пилюля|вторичная кнопка|проза|аватар|подвал|лист снизу|заголовок|имя|состояние|вариант|шапка|сетка плиток)\s*[:—–-]\s*/iu,
+  );
+  if (uiRolePrefix) {
+    add(uiRolePrefix, 'semantic', 'ui-role', uiRolePrefix[1].trim());
+  }
+
+  for (const match of value.matchAll(/прямоугольник\s+(\d+)\s*[×x]\s*(\d+)/giu)) {
+    add(match, 'dimensions', 'svg-rect', {
+      width: Number(match[1]),
+      height: Number(match[2]),
+    });
+  }
+
+  for (const match of value.matchAll(/размытие\s+blur\(([^)]+)\)/giu)) {
+    add(match, 'layout', 'filter', `blur(${match[1].trim()})`);
+  }
+
+  for (const match of value.matchAll(/фон\s+transparent/giu)) {
+    add(match, 'color', 'background', { css: 'transparent' });
+  }
+
+  const fontPattern = new RegExp(
+    String.raw`шрифт\s+(\d{3})\s+(${NUMBER_SOURCE})\s*px\s*\/\s*(${NUMBER_SOURCE})(px|%)?\s+([\p{L}][\p{L}\p{N} -]*?)(?=\s*(?:,|;|$))`,
+    'giu',
+  );
+  for (const match of value.matchAll(fontPattern)) {
+    add(match, 'typography', 'font', {
+      weight: Number(match[1]),
+      size: { value: normalizeNumber(match[2]), unit: 'px' },
+      lineHeight: {
+        value: normalizeNumber(match[3]),
+        unit: match[4]?.toLowerCase() || 'number',
+      },
+      family: match[5].trim(),
+    });
+  }
+
+  for (const match of value.matchAll(new RegExp(String.raw`(${NUMBER_SOURCE})\s*px\/(\d{3})`, 'giu'))) {
+    add(match, 'typography', 'font-size', { value: normalizeNumber(match[1]), unit: 'px' });
+    add(match, 'typography', 'font-weight', Number(match[2]));
+  }
+
+  for (const match of value.matchAll(new RegExp(String.raw`интерлиньяж\s+(${NUMBER_SOURCE})`, 'giu'))) {
+    add(match, 'typography', 'line-height', {
+      value: normalizeNumber(match[1]),
+      unit: 'number',
+    });
+  }
+
+  for (const match of value.matchAll(new RegExp(String.raw`трекинг\s+(-?${NUMBER_SOURCE})\s*em`, 'giu'))) {
+    add(match, 'typography', 'letter-spacing', {
+      value: normalizeNumber(match[1]),
+      unit: 'em',
+    });
+  }
+
+  for (const match of value.matchAll(/поля\s+(\d+(?:\/\d+)+)\s*(?:px)?/giu)) {
+    const values = parseSlashMeasureList(match[1]);
+    if (!values) continue;
+    add(match, 'dimensions', 'padding', { values });
+  }
+
+  const measureValue = String.raw`(?:${NUMBER_SOURCE}\s*(?:px|%)|${NUMBER_SOURCE}|0)`;
   const dimensionsPattern = new RegExp(
     String.raw`(?:ширина|высота|зазор|gap|радиус|border-radius|поля|padding|отступ\s+(?:сверху|снизу|слева|справа))\s*[:=]?\s*(${measureValue}(?:\s+${measureValue}){0,3})`,
     'giu',
@@ -122,31 +323,43 @@ function collectMatches(value) {
     ['отступ слева', 'margin-left'],
     ['отступ справа', 'margin-right'],
   ]);
+  const implicitPxProperties = new Set(['width', 'height', 'border-radius', 'gap', 'padding']);
   for (const match of value.matchAll(dimensionsPattern)) {
     const keyword = match[0].slice(0, match[0].indexOf(match[1])).trim().toLowerCase();
-    const values = parseMeasureList(match[1]);
+    const property = dimensionProperties.get(keyword);
+    const defaultUnit = implicitPxProperties.has(property) ? 'px' : null;
+    const values = parseMeasureList(match[1], defaultUnit);
     if (!values) continue;
-    add(match, 'dimensions', dimensionProperties.get(keyword), { values });
+    add(match, 'dimensions', property, { values });
   }
 
-  const fontPattern = new RegExp(
-    String.raw`шрифт\s+(\d{3})\s+(${NUMBER_SOURCE})\s*px\s*\/\s*(${NUMBER_SOURCE})(px|%)?\s+([a-z][a-z0-9 -]*?)(?=\s*(?:,|;|$))`,
-    'giu',
-  );
-  for (const match of value.matchAll(fontPattern)) {
-    add(match, 'typography', 'font', {
-      weight: Number(match[1]),
-      size: { value: normalizeNumber(match[2]), unit: 'px' },
-      lineHeight: {
-        value: normalizeNumber(match[3]),
-        unit: match[4]?.toLowerCase() || 'number',
-      },
-      family: match[5].trim(),
+  for (const match of value.matchAll(new RegExp(String.raw`высота от\s+(${NUMBER_SOURCE})\s*px`, 'giu'))) {
+    add(match, 'dimensions', 'min-height', {
+      values: [{ value: normalizeNumber(match[1]), unit: 'px' }],
     });
   }
 
+  for (const match of value.matchAll(new RegExp(String.raw`высота не меньше\s+(${NUMBER_SOURCE})(?:\s*px)?`, 'giu'))) {
+    add(match, 'dimensions', 'min-height', {
+      values: [{ value: normalizeNumber(match[1]), unit: 'px' }],
+    });
+  }
+
+  for (const match of value.matchAll(new RegExp(String.raw`ширина от\s+(${NUMBER_SOURCE})(?:\s*px)?`, 'giu'))) {
+    add(match, 'dimensions', 'min-width', {
+      values: [{ value: normalizeNumber(match[1]), unit: 'px' }],
+    });
+  }
+
+  for (const match of value.matchAll(/отступ сверху auto/giu)) {
+    add(match, 'dimensions', 'margin-top', { values: [{ value: 0, unit: 'auto' }] });
+  }
+  for (const match of value.matchAll(/отступ снизу auto/giu)) {
+    add(match, 'dimensions', 'margin-bottom', { values: [{ value: 0, unit: 'auto' }] });
+  }
+
   for (const match of value.matchAll(
-    /(?:выравнивание|распределение)\s+(center|start|end|baseline|stretch|space-between|space-around|space-evenly)/giu,
+    /(?:выравнивание|распределение)\s+(center|start|end|baseline|stretch|space-between|space-around|space-evenly|flex-start|flex-end)/giu,
   )) {
     const keyword = match[0].slice(0, match[0].lastIndexOf(match[1])).trim().toLowerCase();
     add(
@@ -156,7 +369,36 @@ function collectMatches(value) {
       match[1].toLowerCase(),
     );
   }
-  for (const match of value.matchAll(new RegExp(String.raw`флекс\s+(none|${NUMBER_SOURCE})`, 'giu'))) {
+
+  for (const match of value.matchAll(/направление\s+(\S+?)(?:,|$)/giu)) {
+    add(match, 'layout', 'flex-direction', match[1].toLowerCase());
+  }
+
+  for (const match of value.matchAll(/выключка\s+(\S+?)(?:,|$)/giu)) {
+    add(match, 'layout', 'text-align', match[1].toLowerCase());
+  }
+
+  for (const match of value.matchAll(/регистр\s+(\S+?)(?:,|$)/giu)) {
+    add(match, 'typography', 'text-transform', match[1].toLowerCase());
+  }
+
+  for (const match of value.matchAll(/обрез\s+hidden/giu)) {
+    add(match, 'layout', 'overflow', 'hidden');
+  }
+
+  for (const match of value.matchAll(/позиция\s+(absolute|relative|fixed|sticky)/giu)) {
+    add(match, 'layout', 'position', match[1].toLowerCase());
+  }
+
+  for (const match of value.matchAll(/вписан\s+(\S+?)(?:,|$)/giu)) {
+    add(match, 'layout', 'object-fit', match[1].toLowerCase());
+  }
+
+  for (const match of value.matchAll(/разделитель\s+(none|\S+?)(?:,|$)/giu)) {
+    add(match, 'layout', 'border', match[1].toLowerCase());
+  }
+
+  for (const match of value.matchAll(new RegExp(String.raw`флекс\s+(none|${NUMBER_SOURCE})(?:,|$|\s)`, 'giu'))) {
     add(
       match,
       'layout',
@@ -175,6 +417,16 @@ function collectMatches(value) {
       unit: match[2] ? '%' : 'number',
     });
   }
+
+  const inkPercentPattern = new RegExp(
+    String.raw`(?:тоном\s+)?чернил(?:ами)?\s+(${NUMBER_SOURCE})\s*%`,
+    'giu',
+  );
+  for (const match of value.matchAll(inkPercentPattern)) {
+    const opacity = normalizeNumber(match[1]) / 100;
+    add(match, 'color', 'color', { css: `rgba(var(--ink),${opacity})` });
+  }
+
   const inkOpacityPattern = new RegExp(
     String.raw`тоном\s+чернил\s+(${NUMBER_SOURCE})\s*%`,
     'giu',
@@ -184,6 +436,36 @@ function collectMatches(value) {
       value: normalizeNumber(match[1]),
       unit: '%',
     });
+  }
+
+  for (const match of value.matchAll(/тоном\s+(--[a-z0-9-]+)/giu)) {
+    addColorSpan(match.index, match.index + match[0].length, 'тоном', match[1]);
+  }
+
+  for (const word of ['фон', 'цвет']) {
+    let searchFrom = 0;
+    while (searchFrom < value.length) {
+      const css = grabColor(value.slice(searchFrom), word);
+      if (!css) break;
+      const at = value.indexOf(`${word} `, searchFrom);
+      if (at < 0) break;
+      const start = at;
+      const end = at + word.length + 1 + css.length;
+      addColorSpan(start, end, word, css);
+      searchFrom = end;
+    }
+  }
+
+  for (const match of value.matchAll(
+    new RegExp(String.raw`(?:заливка|обводка|линия)\s+(none|currentColor|${CSS_COLOR_SOURCE})`, 'giu'),
+  )) {
+    const keyword = match[0].slice(0, match[0].indexOf(match[1])).trim().toLowerCase();
+    const property = {
+      заливка: 'fill',
+      обводка: 'stroke',
+      линия: 'stroke',
+    }[keyword];
+    add(match, 'color', property, { css: match[1] });
   }
 
   const colorPattern = new RegExp(
@@ -201,6 +483,23 @@ function collectMatches(value) {
       тон: 'color',
     }[keyword];
     add(match, 'color', property, { css: match[1] });
+  }
+
+  const ringPattern = /рамка\s+(inset\s+(?:[^,()]+|\((?:[^()]|\([^()]*\))*\))+)/giu;
+  for (const match of value.matchAll(ringPattern)) {
+    add(match, 'layout', 'box-shadow', match[1].trim());
+  }
+
+  const shadowPattern = new RegExp(
+    String.raw`рамка\s+((?:${NUMBER_SOURCE}|0)\s+(?:${NUMBER_SOURCE}|0)\s*px(?:\s+(?:${NUMBER_SOURCE}|0)\s*px)?\s+${CSS_COLOR_SOURCE}(?:,\s*(?:${NUMBER_SOURCE}|0)\s+(?:${NUMBER_SOURCE}|0)\s*px(?:\s+(?:${NUMBER_SOURCE}|0)\s*px)?\s+${CSS_COLOR_SOURCE})*)`,
+    'giu',
+  );
+  for (const match of value.matchAll(shadowPattern)) {
+    add(match, 'layout', 'box-shadow', match[1].trim());
+  }
+
+  for (const match of value.matchAll(/обводка\s+inset\s+([^,]+)/giu)) {
+    add(match, 'layout', 'box-shadow', `inset ${match[1].trim()}`);
   }
 
   for (const match of value.matchAll(/role\s*=\s*['"]([a-z][a-z0-9-]*)['"]/giu)) {
