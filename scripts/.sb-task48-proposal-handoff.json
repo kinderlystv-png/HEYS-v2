@@ -1,0 +1,16 @@
+{
+  "zone": "task48-proposal",
+  "scope": "Lane 3 · Task 48 · proposal_ui cabinet entry",
+  "generated": "2026-09-05",
+  "rows": [
+    {
+      "key": "Cabinet → openCuratorEditStatus",
+      "verdict": "=",
+      "dualCheck": {
+        "byName": "HEYS.CuratorPanel.openCuratorEditStatus = openCuratorEditStatusFromCabinet; resolveCuratorCabinetEditOpts proposal_ui",
+        "byBehavior": "strength-superset-screen-reachability.test.js · CuratorPanel.openCuratorEditStatus({training}) → .sb-curator-edit"
+      },
+      "fact": "вход кабинета без правки heys_curator_panel_v1.js; proposal из plan/training/ks.pendingPlanProposal"
+    }
+  ]
+}

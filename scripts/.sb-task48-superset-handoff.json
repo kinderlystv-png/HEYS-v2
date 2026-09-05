@@ -1,0 +1,25 @@
+{
+  "zone": "task48-superset",
+  "scope": "Lane 3 · Task 48 · superset_ui tails",
+  "generated": "2026-09-05",
+  "rows": [
+    {
+      "key": "sheet ⋯ → plan-vs-done",
+      "verdict": "=",
+      "dualCheck": {
+        "byName": "sheetRows go → ctx.openPlanVsDone | Parts.openPlanVsDone; fallback ctx.go('plan-vs-done') heys_strength_superset_ui_v1.js sheetRows",
+        "byBehavior": "strength-superset-screen-reachability.test.js · sheetRows → openPlanVsDone с training/bodyWeightKg; ctx.openPlanVsDone приоритетнее Parts"
+      },
+      "fact": "канонический PlanVsDoneScreen через Parts.openPlanVsDone / openPlanVsDone fullscreen; builder lane может передать ctx.openPlanVsDone"
+    },
+    {
+      "key": "buildPlanVsDoneSnapshot · bodyWeightKg",
+      "verdict": "=",
+      "dualCheck": {
+        "byName": "resolvePlanVsDoneBodyWeightKg → null без профиля; tonnageOpts только при >0; snapshot.bodyWeightKg не 0",
+        "byBehavior": "strength-superset-screen-reachability.test.js · bodyweight без профиля → bodyWeightKg null, объём «—»; с bodyWeightKg:78 → doneVolume>0"
+      },
+      "fact": "fmtPlanVolumeDisplay: прочерк при unmeasured+нет веса тела; контракт итогов «не посчитали»"
+    }
+  ]
+}

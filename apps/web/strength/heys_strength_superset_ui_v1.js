@@ -558,6 +558,20 @@
     return v >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, '') + ' т' : v + ' кг';
   }
 
+  function resolvePlanVsDoneBodyWeightKg(training, opts) {
+    const o = opts || {};
+    const raw = o.bodyWeightKg != null ? o.bodyWeightKg
+      : (training && training.bodyWeightKg != null ? training.bodyWeightKg : null);
+    if (raw == null || raw === '') return null;
+    const n = +raw;
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function fmtPlanVolumeDisplay(kg, unmeasured, bodyWeightKg) {
+    if (unmeasured > 0 && bodyWeightKg == null && !(+kg > 0)) return '—';
+    return fmtPlanVolume(kg);
+  }
+
   function planVsDoneHeaderKey(plan, exerciseCount) {
     const planObj = plan || {};
     if (planObj.dayLabel) {
@@ -648,7 +662,7 @@
     };
   }
 
-  function buildPlanVsDoneSnapshot(training) {
+  function buildPlanVsDoneSnapshot(training, opts) {
     const snapshot = (training && training.planSnapshot) || {};
     const planExercises = Array.isArray(snapshot.exercises) ? snapshot.exercises : [];
     const liveExercises = Array.isArray(training && training.workoutLog && training.workoutLog.exercises)
@@ -678,10 +692,22 @@
       ? Math.round((totalDoneApproaches / totalPlannedApproaches) * 100)
       : 0;
     const SK = kernel();
-    const plannedVolume = SK
-      ? SK.trainingTonnage({ workoutLog: { exercises: planExercises } }).plannedVolume
-      : 0;
-    const doneVolume = SK ? SK.trainingTonnage(training).totalVolume : 0;
+    const bodyWeightKg = resolvePlanVsDoneBodyWeightKg(training, opts);
+    const tonnageOpts = bodyWeightKg != null ? { bodyWeightKg: bodyWeightKg } : {};
+    const planTonnage = SK
+      ? SK.trainingTonnage({
+        type: 'strength',
+        strengthEntryMode: 'workout_builder',
+        workoutLog: { exercises: planExercises }
+      }, tonnageOpts)
+      : null;
+    const doneTonnage = SK && training && training.workoutLog
+      ? SK.trainingTonnage(Object.assign({ type: 'strength', strengthEntryMode: 'workout_builder' }, training), tonnageOpts)
+      : null;
+    const plannedVolume = planTonnage ? planTonnage.plannedVolume : 0;
+    const doneVolume = doneTonnage ? doneTonnage.totalVolume : 0;
+    const planUnmeasured = planTonnage ? planTonnage.unmeasuredExercises : 0;
+    const doneUnmeasured = doneTonnage ? doneTonnage.unmeasuredExercises : 0;
     const summarySub = totalPlannedApproaches
       ? (totalDoneApproaches + ' подходов из ' + totalPlannedApproaches
         + (deviations > 0 ? ' · ' + deviations + ' ' + deviationWord(deviations) : ''))
@@ -690,8 +716,11 @@
       rows: rows,
       percent: percent,
       summarySub: summarySub,
+      bodyWeightKg: bodyWeightKg,
       plannedVolume: plannedVolume,
       doneVolume: doneVolume,
+      planUnmeasured: planUnmeasured,
+      doneUnmeasured: doneUnmeasured,
       headerKey: planVsDoneHeaderKey(training && training.plan, planExercises.length)
     };
   }
@@ -2347,8 +2376,8 @@
   Parts.SyncQueuePanel = SyncQueuePanel;
 
   function PlanVsDoneScreen(props) {
-    const { training, onBack, onMessageCurator, onWeekReport } = props;
-    const snapshot = buildPlanVsDoneSnapshot(training || {});
+    const { training, bodyWeightKg, onBack, onMessageCurator, onWeekReport } = props;
+    const snapshot = buildPlanVsDoneSnapshot(training || {}, { bodyWeightKg: bodyWeightKg });
     const rows = snapshot.rows;
     return h('div', { className: 'sb-root sb-plan-vs-done' },
       h('div', { className: 'sb-cycle-top sb-plan-vs-top' },
@@ -2401,11 +2430,13 @@
         rows.length && h('div', { className: 'sb-plan-vs-cd' },
           h('div', { className: 'sb-plan-vs-cd-row' },
             h('span', { className: 'sb-plan-vs-cd-label' }, 'Объём назначенного'),
-            h('span', { className: 'sb-plan-vs-cd-val is-muted' }, fmtPlanVolume(snapshot.plannedVolume))
+            h('span', { className: 'sb-plan-vs-cd-val is-muted' },
+              fmtPlanVolumeDisplay(snapshot.plannedVolume, snapshot.planUnmeasured, snapshot.bodyWeightKg))
           ),
           h('div', { className: 'sb-plan-vs-cd-row is-last' },
             h('span', { className: 'sb-plan-vs-cd-label' }, 'Объём сделанного'),
-            h('span', { className: 'sb-plan-vs-cd-val' }, fmtPlanVolume(snapshot.doneVolume))
+            h('span', { className: 'sb-plan-vs-cd-val' },
+              fmtPlanVolumeDisplay(snapshot.doneVolume, snapshot.doneUnmeasured, snapshot.bodyWeightKg))
           )
         ),
         rows.length && h('div', { className: 'sb-plan-vs-actions' },
@@ -2489,7 +2520,24 @@
         icon: '📋', t: 'Назначено против сделано', d: 'отклонения от плана куратора',
         off: !hasPlanSnapshot,
         chevron: 'dim',
-        go: function () { ctx.close(); ctx.go('plan-vs-done'); }
+        go: function () {
+          ctx.close();
+          if (typeof ctx.openPlanVsDone === 'function') {
+            ctx.openPlanVsDone();
+            return;
+          }
+          if (typeof Parts.openPlanVsDone === 'function') {
+            Parts.openPlanVsDone({
+              training: ctx.training || {},
+              bodyWeightKg: ctx.bodyWeightKg,
+              onMessageCurator: ctx.onMessageCurator,
+              onWeekReport: ctx.onWeekReport,
+              onBack: ctx.onPlanVsDoneBack
+            });
+            return;
+          }
+          if (typeof ctx.go === 'function') ctx.go('plan-vs-done');
+        }
       },
       {
         icon: '📝', t: 'Заметка к тренировке', d: 'самочувствие, зал, партнёр',
@@ -3455,6 +3503,7 @@
       render: function (api) {
         return h(PlanVsDoneScreen, {
           training: o.training || {},
+          bodyWeightKg: o.bodyWeightKg,
           onBack: function () {
             api.close();
             if (typeof o.onBack === 'function') o.onBack();

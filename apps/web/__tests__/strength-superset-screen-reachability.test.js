@@ -257,6 +257,139 @@ describe('superset_ui · screen reachability', () => {
     expect(closeOverlay).toHaveBeenCalledTimes(1);
   });
 
+  it('шторка ⋯ → «Назначено против сделано» → openPlanVsDone (канонический экран)', () => {
+    const close = vi.fn();
+    const go = vi.fn();
+    const openSpy = vi.spyOn(Parts, 'openPlanVsDone').mockReturnValue(true);
+    const training = {
+      planSnapshot: { exercises: [{ name: 'Жим', approaches: [work(70, 8, false)] }] },
+      workoutLog: { exercises: [{ name: 'Жим', approaches: [work(70, 8, true)] }] }
+    };
+    const rows = Parts.sheetRows({
+      exercises: [{ name: 'Жим' }],
+      openIdx: 0,
+      hasPlanSnapshot: true,
+      close,
+      go,
+      training,
+      bodyWeightKg: 78
+    });
+    const row = rows.find(function (r) { return r.t === 'Назначено против сделано'; });
+    expect(row).toBeTruthy();
+    expect(row.off).toBe(false);
+    row.go();
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(openSpy).toHaveBeenCalledWith(expect.objectContaining({
+      training,
+      bodyWeightKg: 78
+    }));
+    expect(go).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
+  it('sheetRows «Назначено против сделано» предпочитает ctx.openPlanVsDone', () => {
+    const close = vi.fn();
+    const ctxOpen = vi.fn();
+    const openSpy = vi.spyOn(Parts, 'openPlanVsDone').mockReturnValue(true);
+    const rows = Parts.sheetRows({
+      exercises: [{ name: 'Жим' }],
+      openIdx: 0,
+      hasPlanSnapshot: true,
+      close,
+      go: vi.fn(),
+      openPlanVsDone: ctxOpen
+    });
+    rows.find(function (r) { return r.t === 'Назначено против сделано'; }).go();
+    expect(ctxOpen).toHaveBeenCalledTimes(1);
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
+  it('buildPlanVsDoneSnapshot без профиля не подставляет bodyWeightKg=0 для своего веса', () => {
+    const training = {
+      type: 'strength',
+      strengthEntryMode: 'workout_builder',
+      planSnapshot: {
+        exercises: [{
+          name: 'Подтягивания', unit: 'bodyweight', bodyweightFactor: 1.0,
+          approaches: [work('', 10, false)]
+        }]
+      },
+      workoutLog: {
+        exercises: [{
+          name: 'Подтягивания', unit: 'bodyweight', bodyweightFactor: 1.0,
+          approaches: [{ weightKg: '', reps: 10, done: true }]
+        }]
+      }
+    };
+    const snap = Parts.buildPlanVsDoneSnapshot(training);
+    expect(snap.bodyWeightKg).toBeNull();
+    expect(snap.planUnmeasured).toBeGreaterThan(0);
+    expect(snap.plannedVolume).toBe(0);
+    const { container } = render(React.createElement(Parts.PlanVsDoneScreen, {
+      training,
+      onBack: () => {}
+    }));
+    expect(container.textContent).toContain('—');
+    expect(container.textContent).not.toMatch(/Объём назначенного[\s\S]*0 кг/);
+    cleanup();
+    const withWeight = Parts.buildPlanVsDoneSnapshot(training, { bodyWeightKg: 78 });
+    expect(withWeight.bodyWeightKg).toBe(78);
+    expect(withWeight.doneVolume).toBeGreaterThan(0);
+  });
+
+  it('кабинет куратора → openCuratorEditStatusFromCabinet → CuratorEditStatusScreen', () => {
+    Parts = loadModules(['strength/heys_strength_proposal_ui_v1.js']);
+    const closeOverlay = vi.fn();
+    mountFullscreen();
+    globalThis.HEYS.TrainingKernel.fullscreen.mount = function ({ render: renderScreen }) {
+      render(renderScreen({ close: closeOverlay }));
+      return true;
+    };
+
+    const now = new Date('2026-09-05T12:00:00').getTime();
+    const sent = new Date(now);
+    sent.setHours(9, 14, 0, 0);
+    const proposal = {
+      status: 'accepted',
+      proposedAt: sent.getTime(),
+      resolvedAt: sent.getTime() + 17 * 60 * 1000,
+      rejected: [],
+      applied: [{ name: 'Жим', reason: 'approaches_changed' }],
+    };
+    const training = {
+      plan: { dayLabel: 'Верх B', programTitle: 'Pro Спорт' },
+      planSnapshot: { exercises: [{ name: 'Жим', approaches: [work(70, 8, false)] }] },
+      workoutLog: { exercises: [{ name: 'Жим', approaches: [work(70, 8, true)] }] },
+      proposal
+    };
+
+    expect(typeof globalThis.HEYS.CuratorPanel.openCuratorEditStatus).toBe('function');
+    const resolved = Parts.resolveCuratorCabinetEditOpts({
+      clientName: 'Марина К.',
+      training
+    });
+    expect(resolved).toMatchObject({
+      clientName: 'Марина К.',
+      programKey: 'Pro Спорт',
+      dayLabel: 'Верх B',
+      trainingStarted: true,
+      proposal
+    });
+
+    globalThis.HEYS.CuratorPanel.openCuratorEditStatus({
+      clientName: 'Марина К.',
+      training
+    });
+
+    expect(document.querySelector('.sb-curator-edit')).toBeTruthy();
+    expect(screen.getByText('Марина К.')).toBeTruthy();
+    expect(screen.getByText('Правка отправлена')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Закрыть'));
+    expect(closeOverlay).toHaveBeenCalledTimes(1);
+  });
+
   it('openCuratorEditStatus → CuratorEditStatusScreen → закрыть', () => {
     Parts = loadModules(['strength/heys_strength_proposal_ui_v1.js']);
     const closeOverlay = vi.fn();

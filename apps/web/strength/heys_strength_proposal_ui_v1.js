@@ -1624,6 +1624,64 @@
   const REVIEW_ID = 'strength-proposal-review';
   const CURATOR_EDIT_STATUS_ID = 'strength-curator-edit-status';
 
+  function trainingHasStartedApproaches(training) {
+    const ks = kernel();
+    const exercises = training && training.workoutLog && training.workoutLog.exercises;
+    if (!Array.isArray(exercises)) return false;
+    for (let i = 0; i < exercises.length; i++) {
+      const ex = exercises[i];
+      if (ks && typeof ks.hasDoneApproach === 'function' && ks.hasDoneApproach(ex)) return true;
+      const aps = approachesOf(ex);
+      for (let j = 0; j < aps.length; j++) {
+        if (aps[j] && aps[j].done) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Собирает opts для openCuratorEditStatus из записи кабинета куратора.
+   * Вход: training дня клиента + метаданные карточки; proposal — из plan/training/ядра.
+   */
+  function resolveCuratorCabinetEditOpts(opts) {
+    const o = opts || {};
+    const training = o.training;
+    const ks = kernel();
+    const plan = (training && training.plan) || o.plan || {};
+    let proposal = o.proposal;
+    if (!proposal && plan && plan.proposal && (+plan.proposal.proposedAt || plan.proposal.status)) {
+      proposal = plan.proposal;
+    }
+    if (!proposal && training && training.proposal && (+training.proposal.proposedAt || training.proposal.status)) {
+      proposal = training.proposal;
+    }
+    if (!proposal && ks && training) proposal = ks.pendingPlanProposal(training);
+    if (!proposal) return null;
+    const sentAt = +proposal.proposedAt || +proposal.sentAt || +proposal.updatedAt || 0;
+    if (!sentAt && !proposal.status) return null;
+    return {
+      clientName: o.clientName || o.clientLabel || o.name || '',
+      programKey: o.programKey || plan.programTitle || plan.programKey || '',
+      dayLabel: o.dayLabel || plan.dayLabel || proposal.dayLabel || '',
+      nowMs: o.nowMs,
+      trainingStarted: o.trainingStarted != null
+        ? !!o.trainingStarted
+        : trainingHasStartedApproaches(training),
+      proposal: proposal,
+      onClose: o.onClose
+    };
+  }
+
+  /**
+   * Вход кабинета куратора → полноэкранный CuratorEditStatusScreen.
+   * Регистрируется на HEYS.CuratorPanel.openCuratorEditStatus для lane кабинета.
+   */
+  function openCuratorEditStatusFromCabinet(opts) {
+    const resolved = resolveCuratorCabinetEditOpts(opts);
+    if (!resolved) return false;
+    return openCuratorEditStatus(resolved);
+  }
+
   /**
    * Кадр Л9 «Правка · сторона куратора»: исход отправленной правки.
    * Вход с кабинета куратора / после отправки — не внутри клиентского разбора.
@@ -1697,6 +1755,8 @@
   Parts.closeProposalReview = closeReview;
   Parts.openCuratorEditStatus = openCuratorEditStatus;
   Parts.closeCuratorEditStatus = closeCuratorEditStatus;
+  Parts.openCuratorEditStatusFromCabinet = openCuratorEditStatusFromCabinet;
+  Parts.resolveCuratorCabinetEditOpts = resolveCuratorCabinetEditOpts;
   Parts.describePlanEdit = describePlanEdit;
   Parts.describeSupersetBoundaries = describeSupersetBoundaries;
   Parts.ProposalCard = ProposalCard;
@@ -1710,4 +1770,7 @@
   Parts.MissedEarlierProposalScreen = MissedEarlierProposalScreen;
   Parts.buildMissedEarlierSnapshot = buildMissedEarlierSnapshot;
   Parts.isMissedEarlierProposal = isMissedEarlierProposal;
+
+  const cabPanel = HEYS.CuratorPanel = HEYS.CuratorPanel || {};
+  cabPanel.openCuratorEditStatus = openCuratorEditStatusFromCabinet;
 })(window);
