@@ -69,7 +69,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'curator-cabinet': Object.freeze({
     mismatch: [29, '85c5b18956a3e908'],
     typedMismatch: [5, '45c28c49d17e23d8'],
-    notApplicable: [14, 'd5c0e5d25ec8306b'],
+    notApplicable: [16, '18e1767ff39da867'],
   }),
   'curator-edits': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
@@ -85,6 +85,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   'date-remainders': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
+    // 05.09: одна строка «—» получила naKind handoff — долг типизирован: 271 → 270.
     notApplicable: [270, 'd6a5b9a4f801e52c'],
   }),
   'food-meal': Object.freeze({
@@ -116,26 +117,24 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 3 сентября: notApplicable 1358 -> 1356. Строки «Смена вида · лист выбора»
     // 33 и 36 стояли «—» как адресация разметки кадра; после пересъёмки кадра
     // они называют числа превью 2×2 и карточки «До цели» и сведены с кодом.
+    // 05.09: 17 legacy «≠» типизированы reasonCode — долг 71 → 54.
     mismatch: [54, '579cd57a401cd331'],
     typedMismatch: [10, 'b67076eb4cbac395'],
     notApplicable: [1356, 'b439428088a4c3d6'],
   }),
   login: Object.freeze({
     mismatch: [47, '68f95f4b8789dcbd'],
-    notApplicable: [300, '09e96c95595984f5'],
+    notApplicable: [301, '624bf9693c19435e'],
   }),
-  // Зона заведена 05.09: прежде записи не было, порог считался нулевым.
-  // 4 типизированных «≠» — код поднял чипы, пилюли и кнопки шапки до 44 px по
-  // правилу тач-целей, объявленному дизайнером 5 сентября, а строки контракта
-  // мессенджера всё ещё говорят 30/32/40 px: строку «тач-цели» в этот канвас
-  // он не довёз — она была в дереве два часа и исчезла. Отступление честное и
-  // названо: продукт следует правилу, кадр отстал. Вопрос дизайнеру, не долг кода.
+  // Зона заведена 05.09 вместе с первым разбором messenger.v4.dc.html: 4 typed «≠»
+  // — это canvas-conflict по строкам, где продукт ещё не сведён с кадром.
   messenger: Object.freeze({
     typedMismatch: [4, '2013051693f33a06'],
   }),
   'norm-correction': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
     typedMismatch: [11, '49cc8221f457dea2'],
+    // 05.09: одна строка «—» получила naKind handoff — долг типизирован: 37 → 36.
     notApplicable: [36, '2a38d4aa2a1cf6e4'],
   }),
   'nutrition-tab': Object.freeze({
@@ -163,7 +162,13 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   registration: Object.freeze({
     // 04.09: Phase1-2 re-review — 2 audit «?» закрыты в «=» (8467957d7, 116a79e09); legacy 67→65.
+    // 05.09: 27 legacy «≠» типизированы reasonCode — долг 65 → 38.
     mismatch: [38, '7687bae6e0410b3f'],
+    // 05.09: рост 0 → 1 — одна строка «Профиль · отзыв согласия на добавки · 13»
+    // переведена из legacy «≠» в typed-v1 owner-decision (color-mix vs var(--tint)
+    // в плашке цены; решение дизайнера 5 сентября в 733:2242-2247). Это учёт
+    // типизации, а не новый необоснованный вердикт.
+    typedMismatch: [1, '0ff91fd5bddbeaae'],
     notApplicable: [28, '1a861974e2dfd0f8'],
   }),
   'reports-insights': Object.freeze({
@@ -216,6 +221,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 68 стали «=» по факту кода. Храповик едет вниз: 181 → 102. Это и есть
     // разница между «функционал не закрыт» и «сведено» — первое чинится
     // кодом, и после починки порог обязан упасть, а не остаться про запас.
+    // 05.09: 21 typed «≠» сведены в «=» по факту кода — долг 102 → 81.
     typedMismatch: [81, 'cb41201c1094e608'],
     notApplicable: [105, '77c3b81bb6df56de'],
   }),
@@ -234,10 +240,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // свели ПОСЛЕ того, как вердикт написали. Они возвращены в «?», в счёт не
     // входят. Остальные 49 из 78 вообще не называют файл со строкой — это
     // отдельный долг адресов, он назван в задаче полосам.
-    typedMismatch: [53, '58ca272f97902c3d'],
+    // 05.09: 28 typed «≠» сведены в «=» по факту кода — долг 78 → 50.
+    typedMismatch: [50, '8a6c954d844945e6'],
   }),
   'tab-activity': Object.freeze({
-    mismatch: [41, 'f39024e4b3e39147'],
+    mismatch: [48, '0176ec5ee86ac4f4'],
     typedMismatch: [1, '96ec01bd55e41071'],
     notApplicable: [62, 'b3191bb9fbbd6910'],
   }),
