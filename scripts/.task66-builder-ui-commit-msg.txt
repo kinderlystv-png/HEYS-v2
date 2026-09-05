@@ -1,0 +1,4 @@
+fix(strength-builder): task66 align rest-origin smoke with canvas contract
+
+Builder rest line uses «по тяжести N» per strength-builder verdict/canvas;
+strength-builder-ui.test.js still expected legacy «из тяжести». Not a timeout.

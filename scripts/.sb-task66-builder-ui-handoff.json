@@ -1,0 +1,31 @@
+{
+  "zone": "strength-builder",
+  "scope": "Task 66 lane 1 — strength-builder-ui failure triage",
+  "generated": "2026-09-05",
+  "rootCause": "test",
+  "notTimeout": true,
+  "testFile": "apps/web/__tests__/strength-builder-ui.test.js",
+  "failure": {
+    "case": "конструктор: тяжесть подхода без профессионального жаргона › показывает тяжесть понятными словами и раскрывает краткую шкалу",
+    "line": 283,
+    "expectedStale": "/из тяжести 7/",
+    "actualDom": "⏱ Отдых 2:00 — по тяжести 7",
+    "codePath": "apps/web/strength/heys_strength_superset_ui_v1.js:1984-1989"
+  },
+  "verification": {
+    "methodA_isolatedVitest": {
+      "command": "cd apps/web && HEYS_DESIGN_GATES=skip npx vitest run __tests__/strength-builder-ui.test.js",
+      "before": "73 tests | 1 failed | 1636ms",
+      "after": "pending post-fix rerun"
+    },
+    "methodB_contract": {
+      "verdict": "docs/ui/verdicts/strength-builder.json «шкала отдыха» f: «Отдых 2:00 — по тяжести 7»",
+      "canvas": "strength-builder.v4.dc.html data-v Конструктор · тренировка идёт · снято · 44"
+    }
+  },
+  "fix": {
+    "files": ["apps/web/__tests__/strength-builder-ui.test.js"],
+    "change": "expect /из тяжести 7/ → /по тяжести 7/ (contract-aligned; code unchanged)"
+  },
+  "lane5Reclass": "infra/timeout was wrong — isolated run 1.6s, assertion failure only"
+}
