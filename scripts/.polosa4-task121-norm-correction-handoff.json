@@ -1,0 +1,39 @@
+{
+  "task": "polosa4-task121-norm-correction-curator-kept",
+  "part": 2,
+  "zone": "norm-correction",
+  "rehash": false,
+  "verdictsWritten": false,
+  "verdictNote": "7 строк Pro · куратор решил не менять · 06–14 остаются ? до полной сверки UI; ≠/— не ставили",
+  "contractLinesTargeted": [
+    "Pro · куратор решил не менять · 06",
+    "Pro · куратор решил не менять · 07",
+    "Pro · куратор решил не менять · 08",
+    "Pro · куратор решил не менять · 09",
+    "Pro · куратор решил не менять · 10",
+    "Pro · куратор решил не менять · 11",
+    "Pro · куратор решил не менять · 12"
+  ],
+  "engine": {
+    "storage": "heys_norm_correction_history weeks[0]: what postponed|frozen, by curator, at timestamp",
+    "detection": "HEYS.NormCorrection.isCuratorKeptDecision + findCuratorKeptDecision (same calendar day via decidedToday)",
+    "cardFrame": "buildWeeklySyncCard frame curator_kept when Pro and curatorKeptDecision set",
+    "gather": "findCuratorKeptDecision from latest history row without weekLabel match to curator panel ISO"
+  },
+  "ui": {
+    "done": ["weekly-wrap-correction--curator_kept via NormCorrectionCard (hero current norm, facts, ask_curator)"],
+    "pending": [
+      "шапка шторки «Норма на неделю» + пилюля «решение принято» — владелец weekly-wrap shell, не карточка (вердикты ·01–02)",
+      "полная geometry/copy гейт-сверка 7 строк — вердикты ? до приёмки"
+    ]
+  },
+  "filesEdited": [
+    "apps/web/heys_norm_correction_v1.js",
+    "apps/web/heys_weekly_reports_v2.js",
+    "apps/web/__tests__/norm-correction-curator-kept.test.js"
+  ],
+  "checks": {
+    "syntax": "node --check apps/web/heys_norm_correction_v1.js",
+    "smoke": "pnpm exec vitest run apps/web/__tests__/norm-correction-curator-kept.test.js"
+  }
+}

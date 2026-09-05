@@ -553,7 +553,8 @@
 
         const copy = card.copy;
         const showsNumber = card.frame !== 'recomposition';
-        const heroValue = card.hero === 'currentNorm' || card.frame === 'matched' || card.frame === 'pending_curator'
+        const heroValue = card.hero === 'currentNorm' || card.frame === 'matched'
+            || card.frame === 'pending_curator' || card.frame === 'curator_kept'
             ? card.norms.current
             : card.norms.next;
 

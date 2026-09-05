@@ -593,7 +593,8 @@
   }
 
   function buildWeeklySyncCard({
-    result, tariff, appliedDecision, refusalStreak, weeksUnchanged, matchedStreak, recomposition,
+    result, tariff, appliedDecision, curatorKeptDecision, refusalStreak, weeksUnchanged,
+    matchedStreak, recomposition,
     justRaised, expenditure, deficitPct, basalMetabolism,
     // Решение этой недели и предыдущей: первое отвечает человеку на его же
     // нажатие, второе не даёт прошлому предложению исчезнуть молча.
@@ -870,8 +871,8 @@
     // читает предложение и ждёт — отменить решение куратора он не может, двух
     // хозяев у одного числа быть не должно.
     if (!isSelf) {
-      return acceptedDecrease
-        ? Object.assign(card, {
+      if (acceptedDecrease) {
+        return Object.assign(card, {
             frame: 'lowered',
             decidedBy: 'curator',
             actions: ['ok', 'ask_curator'],
@@ -913,8 +914,41 @@
               footnote: 'Решение куратора остаётся в силе — отменить его здесь нельзя, можно спросить, почему так. Право отменить поправку есть только там, где куратора нет.',
               actionLabels: { ok: 'Понятно', ask_curator: 'Написать куратору' }
             }
-          })
-        : Object.assign(card, {
+          });
+      }
+      if (curatorKeptDecision) {
+        return Object.assign(card, {
+          frame: 'curator_kept',
+          decidedBy: 'curator',
+          readOnly: true,
+          hero: 'currentNorm',
+          titleAs: 'key',
+          actions: ['ask_curator'],
+          evidenceRows: null,
+          evidenceTitle: null,
+          previousNote: null,
+          safeguardsLayer: null,
+          facts: [
+            { label: 'Предложение было', value: formatKcal(norms.next) },
+            { label: 'Решение', value: 'оставить ' + formatKcal(norms.current) },
+            {
+              label: 'Вернёмся к вопросу',
+              value: 'в следующий понедельник',
+              tone: 'quiet'
+            }
+          ],
+          copy: {
+            title: 'Ваша норма сегодня',
+            body: 'Куратор посмотрел поправку и решил норму не двигать: неделя была'
+              + ' нетипичной, и он хочет увидеть ещё одну.',
+            heroCaption: 'без изменений',
+            footnote: 'Предложение не исчезает молча: чем кончилось — всегда видно,'
+              + ' иначе «увидел заранее» превращается в «увидел и не понял».',
+            actionLabels: { ask_curator: 'Спросить куратора' }
+          }
+        });
+      }
+      return Object.assign(card, {
             frame: 'pending_curator',
             decidedBy: 'curator',
             readOnly: true,
@@ -1106,6 +1140,27 @@
       && Number.isFinite(Number(row.normAfter))
       && Number(row.factor) < Number(row.previousFactor)
       && Number(row.normAfter) < Number(row.normBefore)) || null;
+  }
+
+  /** «Отложить» и «Заморозить» куратором — решение не менять норму. */
+  function isCuratorKeptDecision(row) {
+    return !!(row && row.by === 'curator'
+      && (row.what === 'postponed' || row.what === 'frozen'));
+  }
+
+  /**
+   * Куратор посмотрел и оставил норму — факт для канала «решение в тот же день».
+   *
+   * weekLabel у кабинета — ISO-дата, у сверки — подпись недели; совпадение
+   * меток не гарантировано. Берём последнюю запись истории: она же уходит
+   * клиенту через sync, и по ней видно, что куратор ответил сегодня.
+   */
+  function findCuratorKeptDecision({ weeks, now }) {
+    const row = weeks && weeks[0];
+    if (!isCuratorKeptDecision(row)) return null;
+    const base = now instanceof Date ? now : new Date(now);
+    if (!decidedToday(row.at, base)) return null;
+    return row;
   }
 
   /**
@@ -1517,6 +1572,7 @@
       currentFactor: prof.normCorrectionFactor,
       now: base
     });
+    const curatorKeptDecision = findCuratorKeptDecision({ weeks, now: base });
 
     const card = buildWeeklySyncCard({
       result,
@@ -1529,6 +1585,7 @@
       // Применённое решение привязано к ISO-концу периода и снимку чисел,
       // поэтому новый расчёт не выдаётся за то, что куратор уже применил.
       appliedDecision,
+      curatorKeptDecision,
       refusalStreak,
       weeksUnchanged,
       expenditure: formulaPerDay,
@@ -1853,6 +1910,8 @@
     previousPeriodEnd,
     buildDecisionSnapshot,
     findAppliedDecision,
+    isCuratorKeptDecision,
+    findCuratorKeptDecision,
     FREEZE_LIMIT_DAYS,
     readMeasurementAsk,
     recordMeasurementAsk,
