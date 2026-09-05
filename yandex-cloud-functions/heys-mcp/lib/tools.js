@@ -3003,10 +3003,15 @@ function createTools({
       const hasCycleDay = args.cycle_day !== undefined && args.cycle_day !== null;
       const hasCycleStatus = args.cycle_status !== undefined && args.cycle_status !== null;
       const hasRefeed = args.refeed_day !== undefined && args.refeed_day !== null;
+      const hasWeightNotMeasured = args.weight_not_measured === true;
+      if (hasWeightNotMeasured && dayFields.weight !== undefined && dayFields.weight !== null) {
+        throw new ToolError('invalid_field',
+          'weight и weight_not_measured — разные ответы на один вопрос, передай только один.');
+      }
       if (hasCycleDay && hasCycleStatus) {
         throw new ToolError('invalid_field', 'cycle_day и cycle_status — разные ответы на один вопрос, передай только один.');
       }
-      if (!hasDayFields && !hasCold && !hasStepsGoal && !hasMeasurements && !hasSupplements && !hasCycleDay && !hasCycleStatus && !hasRefeed) {
+      if (!hasDayFields && !hasCold && !hasStepsGoal && !hasMeasurements && !hasSupplements && !hasCycleDay && !hasCycleStatus && !hasRefeed && !hasWeightNotMeasured) {
         throw new ToolError('nothing_to_update', 'Не передано ни одного шага чек-ина.');
       }
       if (hasRefeed && args.refeed_day === true && !args.refeed_reason) {
@@ -3024,7 +3029,7 @@ function createTools({
       // для steps_goal и для итогового статуса, чтобы не читать карточку дважды.
       let currentProfile;
       let profileForStatus;
-      if (hasStepsGoal || hasCycleDay || hasCycleStatus || hasMeasurements || hasSupplements) {
+      if (hasStepsGoal || hasCycleDay || hasCycleStatus || hasMeasurements || hasSupplements || hasWeightNotMeasured) {
         const blobs = await readMany([profile.PROFILE_KEY]);
         currentProfile = blobs[profile.PROFILE_KEY];
         profileForStatus = currentProfile;
@@ -3074,6 +3079,26 @@ function createTools({
       const original = await readDay(date);
       let working = original;
       const applied = [];
+
+      if (hasWeightNotMeasured) {
+        // Окно в 60 дней — как у приложения (collectRecentMeasuredWeights).
+        // Читается только в этой ветке: «не взвешивался» приходит раз в день,
+        // а вешать шестьдесят ключей на каждый чек-ин нельзя.
+        const keys = [];
+        for (let i = 1; i <= 60; i += 1) keys.push(day.dayKey(day.addDays(date, -i)));
+        const blobs = await readMany(keys);
+        const prevDays = keys.map((k) => blobs[k]).filter(Boolean);
+        const estimate = day.estimateMorningWeight(prevDays, currentProfile && currentProfile.weight);
+        if (estimate.weight == null) {
+          throw new ToolError('weight_estimate_unavailable',
+            'Нечем посчитать вес: нет ни трёх измерений за 60 дней, ни веса в профиле. '
+            + 'Спроси у человека вес и передай его как weight.');
+        }
+        working = day.applyEstimatedWeight(working, estimate, { nowMs, clientId });
+        // Именно 'weight': по этому имени dayAfterText печатает строку веса,
+        // а она уже несёт пометку «(расчётный, не взвешивался)».
+        applied.push('weight');
+      }
 
       if (hasDayFields) {
         let updated;
@@ -4407,7 +4432,11 @@ const TOOL_SCHEMAS = [
       properties: {
         action: { type: 'string', enum: ['get', 'submit'], description: '"get" — статус и то, чего не хватает. "submit" — записать продиктованное.' },
         date: { type: 'string', description: 'YYYY-MM-DD. По умолчанию — сегодня по границе приложения (3:00 по Москве, как и сама доска задач). У submit — только сегодняшний день, у get можно смотреть любой.' },
-        weight: { type: 'number', description: 'Утренний вес, кг.' },
+        weight: { type: 'number', description: 'Утренний вес, кг. Записывается как измеренный.' },
+        weight_not_measured: {
+          type: 'boolean',
+          description: 'Человек не взвешивался. Пропустить шаг нельзя — вес обязателен, и приложение в этом случае подставляет расчётный: среднее трёх последних измерений за 60 дней, иначе вес из профиля. Здесь то же самое, и число возвращается с пометкой «расчётный». С weight вместе не передаётся. Не годится задним числом: оценка считается от этого дня назад, и в прошлую дату подставились бы более поздние взвешивания.',
+        },
         sleep_start: { type: 'string', description: 'Время засыпания HH:MM.' },
         sleep_end: { type: 'string', description: 'Время подъёма HH:MM.' },
         sleep_quality: { type: 'integer', description: 'Качество сна, 1–10.' },

@@ -1928,6 +1928,39 @@ const COLD_EXPOSURE_TYPES = new Set(['none', 'coldShower', 'coldBath', 'coldSwim
  * приложения. Двух полей достаточно: weightMorningSource теряется при проходе
  * дня через heys_models_v1.js, а weightMorningEstimated переживает и его.
  */
+/**
+ * Расчётный вес для «не взвешивался»: среднее трёх последних ИЗМЕРЕННЫХ,
+ * иначе вес профиля. Зеркало estimateMorningWeight из heys_steps_v1.js вместе
+ * с его окном в 60 дней — брать окно короче значит молча разойтись с
+ * приложением и подставить профиль там, где оно взяло бы среднее.
+ *
+ * Литерал 70 приложения здесь намеренно не повторён: у него это защита от
+ * пустого профиля в браузере, а коннектор лучше честно откажет, чем запишет
+ * человеку выдуманный вес.
+ */
+function estimateMorningWeight(prevDays, profileWeight) {
+  const measured = [];
+  for (const d of prevDays) {
+    if (measured.length >= 3) break;
+    if (isMeasuredMorningWeight(d)) measured.push(Number(d.weightMorning));
+  }
+  if (measured.length >= 3) {
+    const avg = measured.reduce((sum, x) => sum + x, 0) / measured.length;
+    return { weight: Math.round(avg * 10) / 10, source: 'estimated_avg', samples: measured.length };
+  }
+  const fromProfile = Number(profileWeight);
+  if (Number.isFinite(fromProfile) && fromProfile > 0) {
+    return { weight: Math.round(fromProfile * 10) / 10, source: 'estimated_profile', samples: measured.length };
+  }
+  return { weight: null, source: null, samples: measured.length };
+}
+
+/** Вес измерен: положительное число и не помечен расчётным. */
+function isMeasuredMorningWeight(day) {
+  const weight = Number(day && day.weightMorning);
+  return Number.isFinite(weight) && weight > 0 && !isEstimatedMorningWeight(day);
+}
+
 function isEstimatedMorningWeight(day) {
   const source = String((day && day.weightMorningSource) || '');
   if (source === 'estimated_avg' || source === 'estimated_profile') return true;
@@ -1939,6 +1972,21 @@ function isEstimatedMorningWeight(day) {
  * MCP не импортирует клиентский бандл; расхождение списка ловится отказом инструмента.
  */
 const REFEED_REASONS = new Set(['deficit', 'training', 'holiday', 'rest']);
+
+/**
+ * «Не взвешивался»: пишем расчётный вес и помечаем его — ровно то, что делает
+ * кнопка в приложении (persistMorningWeight, estimated === true). Пропустить
+ * день нельзя: вес обязательный шаг чек-ина, без числа он не закроется.
+ */
+function applyEstimatedWeight(dayObj, estimate, { nowMs, clientId }) {
+  const next = { ...dayObj };
+  next.weightMorning = estimate.weight;
+  next.weightUpdatedAt = Math.max(nowMs, (Number(dayObj.weightUpdatedAt) || 0) + 1);
+  next.weightMorningSource = estimate.source;
+  next.weightMorningEstimated = true;
+  next.weightMorningEstimateSource = estimate.source;
+  return touch(next, nowMs, clientId);
+}
 
 /**
  * Нужен ли шаг refeed в чек-ине — зеркалит shouldIncludeRefeedStep в
@@ -3065,6 +3113,9 @@ module.exports = {
   isRealTraining,
   isNotPerformedTraining,
   isEstimatedMorningWeight,
+  isMeasuredMorningWeight,
+  estimateMorningWeight,
+  applyEstimatedWeight,
   updateDayFields,
   householdMinutes,
   householdTrainings,

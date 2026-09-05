@@ -2504,6 +2504,56 @@ test('heys_checkin submit — цель по шагам уходит в проф�
   assert.equal(res.structured.status.steps.find((s) => s.id === 'steps_goal').value, 9000);
 });
 
+test('heys_checkin submit — «не взвешивался» пишет расчётный вес и называет его расчётным', async () => {
+  // Три измеренных дня подряд → среднее, как estimateMorningWeight в приложении.
+  const api = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    pastDays: {
+      '2026-07-31': { date: '2026-07-31', weightMorning: 91.0 },
+      '2026-07-30': { date: '2026-07-30', weightMorning: 91.4 },
+      // Расчётный день в выборку не идёт — считаются только измеренные.
+      '2026-07-29': { date: '2026-07-29', weightMorning: 95.0, weightMorningEstimated: true },
+      '2026-07-28': { date: '2026-07-28', weightMorning: 91.9 },
+    },
+  });
+  const res = await build(api).heys_checkin({ action: 'submit', weight_not_measured: true });
+  const saved = api.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(saved.value.weightMorning, 91.4, 'среднее 91.0, 91.4 и 91.9, а не 95.0');
+  assert.equal(saved.value.weightMorningEstimated, true);
+  assert.equal(saved.value.weightMorningSource, 'estimated_avg');
+  assert.equal(saved.value.weightMorningEstimateSource, 'estimated_avg');
+  // Пометка обязана быть в ТЕКСТЕ: structured модель часто не видит.
+  assert.match(res.text, /расчётный, не взвешивался/);
+  assert.equal(res.structured.status.steps.find((s) => s.id === 'weight').done, true,
+    'расчётный вес шаг чек-ина закрывает — как hasCheckinWeight в приложении');
+});
+
+test('heys_checkin submit — без трёх измерений берётся вес профиля, без него отказ', async () => {
+  const withProfile = fakeApi({
+    day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 },
+    card: { [PROFILE_KEY]: { weight: 88.2, updatedAt: 5 } },
+  });
+  await build(withProfile).heys_checkin({ action: 'submit', weight_not_measured: true });
+  const saved = withProfile.saves.find((s) => s.key.startsWith('heys_dayv2_'));
+  assert.equal(saved.value.weightMorning, 88.2);
+  assert.equal(saved.value.weightMorningSource, 'estimated_profile');
+
+  // Ни измерений, ни профиля — честный отказ вместо выдуманного числа.
+  const bare = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  await assert.rejects(
+    () => build(bare).heys_checkin({ action: 'submit', weight_not_measured: true }),
+    (e) => e.code === 'weight_estimate_unavailable',
+  );
+});
+
+test('heys_checkin submit — weight и weight_not_measured вместе не принимаются', async () => {
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
+  await assert.rejects(
+    () => build(api).heys_checkin({ action: 'submit', weight: 91.8, weight_not_measured: true }),
+    (e) => e.code === 'invalid_field',
+  );
+});
+
 test('heys_checkin submit — пустой вызов отказывает явно', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', meals: [], waterMl: 0, updatedAt: 111 } });
   await assert.rejects(
