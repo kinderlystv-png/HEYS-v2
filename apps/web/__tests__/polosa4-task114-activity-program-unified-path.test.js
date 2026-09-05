@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import * as RealReact from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -49,6 +49,42 @@ function loadDayTrainings() {
   return globalThis.HEYS.dayTrainings;
 }
 
+const PROGRAM_ANCHOR = new Date(2026, 7, 12);
+const PROGRAM_T0 = '2026-08-12';
+const PROGRAM_T1 = '2026-08-13';
+const PROGRAM_T2 = '2026-08-14';
+
+function fakeProgramApi(programData, dayBlobs = {}) {
+  return {
+    async getKV(_clientId, key) {
+      if (key === 'heys_training_program') return { data: programData, error: null };
+      return { data: null, error: null };
+    },
+    async getKVBatch(_clientId, keys) {
+      return {
+        data: keys.filter((key) => dayBlobs[key]).map((key) => ({ k: key, v: dayBlobs[key] })),
+        error: null,
+      };
+    },
+  };
+}
+
+function twoDayProgram() {
+  return fakeProgramApi({
+    id: 'pr_1',
+    title: 'Верх/низ, 4 недели',
+    weeks: 4,
+    status: 'active',
+    days: [
+      { date: PROGRAM_T1, dayLabel: 'Ноги и спина', weekIndex: 1, trainingId: 'tr_1' },
+      { date: PROGRAM_T2, dayLabel: 'Грудь и руки', weekIndex: 1, trainingId: 'tr_2' },
+    ],
+  }, {
+    ['heys_dayv2_' + PROGRAM_T1]: { trainings: [{ id: 'tr_1', plan: { status: 'assigned' } }] },
+    ['heys_dayv2_' + PROGRAM_T2]: { trainings: [{ id: 'tr_2', plan: { status: 'assigned' } }] },
+  });
+}
+
 function programBlockSnapshot(container) {
   const root = container.querySelector('.activity-v4-program');
   const line = container.querySelector('.activity-v4-program-line');
@@ -56,6 +92,14 @@ function programBlockSnapshot(container) {
   const legacyHost = container.querySelector('.compact-trainings');
   const lineStyle = line ? getComputedStyle(line) : null;
   const rootStyle = root ? getComputedStyle(root) : null;
+  const key = line?.querySelector('.program-next-key');
+  const text = line?.querySelector('.program-next-text');
+  const sub = line?.querySelector('.program-next-sub');
+  const link = line?.querySelector('.program-next-link');
+  const keyStyle = key ? getComputedStyle(key) : null;
+  const textStyle = text ? getComputedStyle(text) : null;
+  const subStyle = sub ? getComputedStyle(sub) : null;
+  const linkStyle = link ? getComputedStyle(link) : null;
   return {
     hasActivityRoot: Boolean(root),
     hasLegacyHost: Boolean(legacyHost),
@@ -67,8 +111,54 @@ function programBlockSnapshot(container) {
     linePadding: lineStyle?.padding || null,
     lineRadius: lineStyle?.borderRadius || null,
     lineBorderWidth: lineStyle?.borderWidth || null,
+    lineBorderStyle: lineStyle?.borderStyle || null,
     lineBackground: lineStyle?.backgroundColor || null,
+    keyFlexDirection: keyStyle?.flexDirection || null,
+    keyGap: keyStyle?.gap || null,
+    textColor: textStyle?.color || null,
+    textFontWeight: textStyle?.fontWeight || null,
+    subColor: subStyle?.color || null,
+    subFontSize: subStyle?.fontSize || null,
+    subLineHeight: subStyle?.lineHeight || null,
+    linkColor: linkStyle?.color || null,
   };
+}
+
+function baseProgramParams(overrides = {}) {
+  return {
+    visibleTrainings: 0,
+    householdActivities: [],
+    trainingTypes: [],
+    TR: [],
+    kcalMin: [0, 0, 0, 0],
+    weight: 80,
+    r0: (v) => Math.round(v || 0),
+    dateKey: PROGRAM_T0,
+    trainingFilterMode: 'program',
+    ...overrides,
+  };
+}
+
+async function renderBothProgramPaths(dt, params) {
+  const hostA = document.createElement('div');
+  const hostB = document.createElement('div');
+  document.body.appendChild(hostA);
+  document.body.appendChild(hostB);
+  const blockParams = { ...params, trainingFilterMode: 'program' };
+  const { trainingFilterMode: _drop, ...canonicalParams } = blockParams;
+  const treeA = dt.renderTrainingsBlock(blockParams);
+  const treeB = dt.renderActivityProgramBlock(canonicalParams);
+  let containerA;
+  let containerB;
+  await act(async () => {
+    ({ container: containerA } = render(treeA, { container: hostA }));
+    await Promise.resolve();
+  });
+  await act(async () => {
+    ({ container: containerB } = render(treeB, { container: hostB }));
+    await Promise.resolve();
+  });
+  return { containerA, containerB, hostA, hostB };
 }
 
 describe('polosa4 task114 · программа на «Активе» · один путь карточки', () => {
@@ -213,5 +303,65 @@ describe('polosa4 task114 · программа на «Активе» · оди�
     expect(body).toContain('border-radius: 12px');
     expect(CSS).toContain('.activity-v4-program-line {');
     expect(CSS).not.toContain('.activity-v4-program .program-next-line {');
+  });
+
+  describe('finding 07 · computed в обоих путях рендера', () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(PROGRAM_ANCHOR);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('ProgramNextLine: renderTrainingsBlock(program) и renderActivityProgramBlock — одинаковый computed', async () => {
+      const dt = loadDayTrainings();
+      globalThis.HEYS.YandexAPI = twoDayProgram();
+      const { containerA, containerB } = await renderBothProgramPaths(dt, baseProgramParams());
+      const snapA = programBlockSnapshot(containerA);
+      const snapB = programBlockSnapshot(containerB);
+      expect(snapA).toEqual(snapB);
+      expect(snapA.hasActivityLine).toBe(true);
+      expect(snapA.hasLegacyHost).toBe(false);
+      expect(snapA.hasLegacyLine).toBe(false);
+      expect(snapA.rootMarginTop).toBe('12px');
+      expect(snapA.lineBorderStyle).toBe('none');
+      expect(snapA.keyFlexDirection).toBe('column');
+      expect(snapA.keyGap).toBe('3px');
+      expect(snapA.subFontSize).toBe('11px');
+      expect(snapA.subLineHeight).toMatch(/^1[.]3/);
+    }, 10000);
+
+    it('finding 07 строки 16–17: sand и blue — цвета текста/подписи совпадают между путями', async () => {
+      const dt = loadDayTrainings();
+      globalThis.HEYS.YandexAPI = twoDayProgram();
+      for (const themeId of ['sand', 'blue']) {
+        mountTheme(themeId);
+        const { containerA, containerB } = await renderBothProgramPaths(dt, baseProgramParams());
+        const snapA = programBlockSnapshot(containerA);
+        const snapB = programBlockSnapshot(containerB);
+        expect(snapA.textColor).toBe(snapB.textColor);
+        expect(snapA.subColor).toBe(snapB.subColor);
+        expect(snapA.linkColor).toBe(snapB.linkColor);
+        expect(snapA.textColor).toBeTruthy();
+        expect(snapA.linkColor).toBeTruthy();
+      }
+    }, 15000);
+
+    it('finding 07 строки 13–17: геометрия строки .activity-v4-program-line по контракту', async () => {
+      const dt = loadDayTrainings();
+      globalThis.HEYS.YandexAPI = twoDayProgram();
+      const { containerA } = await renderBothProgramPaths(dt, baseProgramParams());
+      const snap = programBlockSnapshot(containerA);
+      expect(snap.rootMarginTop).toBe('12px');
+      expect(snap.lineBorderStyle).toBe('none');
+      expect(snap.keyFlexDirection).toBe('column');
+      expect(snap.keyGap).toBe('3px');
+      expect(snap.linePadding).toBe('13px 16px');
+      expect(snap.lineRadius).toBe('20px');
+      expect(snap.textFontWeight).toBe('600');
+      expect(snap.subFontSize).toBe('11px');
+    }, 10000);
   });
 });
