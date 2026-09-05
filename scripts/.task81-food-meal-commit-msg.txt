@@ -1,0 +1,5 @@
+feat(ui-v4): task81 food-meal copy unknown-values frame evidence
+
+Add demo-food-copy-unknown visual case (FM10B) and frames.evidence for
+«Действие · копировать · чего не знаем» so progress-report closes
+food-meal at 33/33. Global missingEntries 2→1 (norm-correction remains).

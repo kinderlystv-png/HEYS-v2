@@ -571,8 +571,8 @@
       "h": "ced025139953"
     },
     "Добавление · время и тип · 19": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .meal-time-wave — карточка на второй бумаге --c2, отступ 16 (стоял отдельный тёплый тинт)",
+      "v": "=",
+      "f": ".meal-time-wave — margin-top 10px, background var(--v4-hero) (--c2), padding 16; apps/web/styles/modules/610-aps-meal-flow.css:295",
       "h": "b6d38ea7adf8"
     },
     "Добавление · время и тип · 20": {
@@ -1179,13 +1179,13 @@
       "h": "d3bfa6a45cdc"
     },
     "Добавление · порция · 12": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .aps-v4-grams-chip — фон --bg, поля 10/11",
+      "v": "=",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px, min-height 44; 610-aps-meal-flow.css:3569",
       "h": "090500da6d68"
     },
     "Добавление · порция · 13": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .aps-v4-grams-chip.is-active — заливка --acs, текст --on-acs",
+      "v": "=",
+      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act) (--on-acs), padding 0 10px; 610-aps-meal-flow.css:3585",
       "h": "e4bd08d98edf"
     },
     "Добавление · порция · 14": {
@@ -1323,8 +1323,8 @@
       "h": "d3bfa6a45cdc"
     },
     "Порция · ввод в калориях · 12": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .aps-v4-grams-chip — фон --bg, поля 10/11 — та же строка кадра, что в «Добавление · порция»",
+      "v": "=",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3569",
       "h": "090500da6d68"
     },
     "Порция · ввод в калориях · 13": {
@@ -1467,13 +1467,13 @@
       "h": "d3bfa6a45cdc"
     },
     "Порция · продукт уже в приёме · 12": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .aps-v4-grams-chip — фон --bg, поля 10/11 — та же строка кадра, что в «Добавление · порция»",
+      "v": "=",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3569",
       "h": "090500da6d68"
     },
     "Порция · продукт уже в приёме · 13": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .aps-v4-grams-chip.is-active — заливка --acs, текст --on-acs — та же строка кадра, что в «Добавление · порция»",
+      "v": "=",
+      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act); 610-aps-meal-flow.css:3585",
       "h": "e4bd08d98edf"
     },
     "Порция · продукт уже в приёме · 14": {
@@ -1621,13 +1621,13 @@
       "h": "d3bfa6a45cdc"
     },
     "Порция · перебор нормы · 12": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .aps-v4-grams-chip — фон --bg, поля 10/11 — та же строка кадра, что в «Добавление · порция»",
+      "v": "=",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3569",
       "h": "090500da6d68"
     },
     "Порция · перебор нормы · 13": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .aps-v4-grams-chip.is-active — заливка --acs, текст --on-acs — та же строка кадра, что в «Добавление · порция»",
+      "v": "=",
+      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act); 610-aps-meal-flow.css:3585",
       "h": "e4bd08d98edf"
     },
     "Порция · перебор нормы · 14": {
@@ -1831,8 +1831,8 @@
       "h": "6194ff3614ad"
     },
     "Приёмы дня · список · 03": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: пилюля «Сегодня» — возврат к сегодняшней дате",
+      "v": "=",
+      "f": ".date-picker-inline-today — min-height 44, padding 0 10px, background var(--v4-hero) (--c2), 700 10.5px, color var(--v4-act-text); 000-base-and-gamification.css:8261, heys_day_pickers.js:356",
       "h": "2c5b4c4db653"
     },
     "Приёмы дня · список · 04": {
@@ -2236,8 +2236,8 @@
       "h": "726f5f22228e"
     },
     "Действие · копировать · 14": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Сверено по apps/web/heys_day_copy_meal_modal_v1.js, apps/web/styles/modules/610-aps-meal-flow.css и apps/web/__tests__/food-meal-transfer-v4.test.js; representative runtime capture 375×812 прошёл.",
+      "v": "=",
+      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4581, heys_day_copy_meal_modal_v1.js:409",
       "h": "6dd9a6fd1579"
     },
     "Действие · копировать · 15": {
@@ -2376,8 +2376,8 @@
       "h": "726f5f22228e"
     },
     "Действие · копировать без целей · 14": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Сверено по apps/web/heys_day_copy_meal_modal_v1.js, apps/web/styles/modules/610-aps-meal-flow.css, apps/web/__tests__/copy-meal-empty-target-v4.test.js и food-meal-transfer-v4.test.js; четыре palette captures 375×812 прошли.",
+      "v": "=",
+      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4581",
       "h": "6dd9a6fd1579"
     },
     "Действие · копировать без целей · 15": {
@@ -2691,8 +2691,8 @@
       "h": "4f95fa757d2e"
     },
     "Добавление · правка набора · 14": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .mpr-preview-item-toggle — кружок 30 радиусом 999 фоном --c2 внутри цели 44. Стоял квадрат 28 с холодной рамкой прежней системы, а наведение красило его #fee2e2/#dc2626 — цветов, которых нет ни в одном наборе",
+      "v": "=",
+      "f": ".mpr-preview-item-toggle — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:2007, heys_add_product_step_v1.js:3088",
       "h": "270c11bea85e"
     },
     "Добавление · правка набора · 15": {
@@ -3311,8 +3311,8 @@
       "h": "4f2464914ca1"
     },
     "Приём собран · фото · 17": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .aps-v4-meal-summary__photo-delete::before — кружок 24 радиусом 999 на подложке чернил 50 %; стояла тень под голым глифом",
+      "v": "=",
+      "f": ".aps-v4-meal-summary__photo-delete — 44×44, border-radius 999, background rgba(32,30,29,.5); 610-aps-meal-flow.css:4124, heys_day_add_product.js:351",
       "h": "90f7033faf9f"
     },
     "Приём собран · фото · 18": {
@@ -3373,8 +3373,8 @@
       "h": "442a7fae73aa"
     },
     "Фото · просмотр · 03": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .photo-viewer-back — кружок 30×30 радиусом 999 на подложке #f2ede6 14 %; стояли эмодзи «🗑» и «✕» кнопками 44 в шапке",
+      "v": "=",
+      "f": ".photo-viewer-back — 44×44, border-radius 999, background rgba(242,237,230,.14); 600-steps-and-aps.css:2904, heys_day_gallery.js:212",
       "h": "652109db2be9"
     },
     "Фото · просмотр · 04": {
@@ -5195,8 +5195,8 @@
       "h": "726f5f22228e"
     },
     "Действие · копировать · чего не знаем · 14": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Карточка посчитанного продукта — прежний вид: фон --c1, радиус 16, поля 12/14, отступ сверху 8; галочка 20×20 радиусом 6 на --acs, имя 600 12px/1,3, справа «137 г · 157 ккал» 500 10,5px/1 чернил 56 %; ниже ряд граммов с шагом 28×28 на --c2 и дорожкой 4 px. Сведено ранее, этой задачей не менялось.",
+      "v": "=",
+      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4581",
       "h": "6dd9a6fd1579"
     },
     "Действие · копировать · чего не знаем · 15": {
@@ -5473,6 +5473,15 @@
         "apps/web/heys_day_meals_bundle_v1.js",
         "apps/web/styles/modules/732-ui-v4-nutrition.css",
         "apps/web/__tests__/nutrition-repeat-today-sheet.test.js"
+      ]
+    },
+    "Действие · копировать · чего не знаем": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_day_copy_meal_modal_v1.js",
+        "apps/web/styles/modules/610-aps-meal-flow.css",
+        "apps/web/__tests__/copy-meal-unknown-values-v4.test.js"
       ]
     },
     "Действие · перенести": {

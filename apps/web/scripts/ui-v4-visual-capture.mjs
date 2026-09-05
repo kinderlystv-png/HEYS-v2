@@ -344,6 +344,7 @@ async function openCase(browser, item, snapshot, options = {}) {
           item.kind === 'demo-cycle-picker' ||
           item.kind === 'demo-food-copy-empty' ||
           item.kind === 'demo-food-copy-existing' ||
+          item.kind === 'demo-food-copy-unknown' ||
           item.kind === 'demo-food-move-existing',
       });
       // «Актив» не входит в список валидных вкладок демо-режима в index.html,
@@ -1463,6 +1464,42 @@ async function openCase(browser, item, snapshot, options = {}) {
               name: 'Перекус',
               items: sourceItems,
             },
+            {
+              id: 'visual-snack',
+              name: 'Перекус',
+              time: '10:40',
+              items: [{ id: 'visual-target-coffee', name: 'Домашний кофе', grams: 100, kcal100: 17 }],
+            },
+          ],
+          onCopyToExisting: () => {},
+          onCopyToNew: () => {},
+        });
+      }, item.themeId || null);
+    }
+    if (item.kind === 'demo-food-copy-unknown') {
+      await page.waitForFunction(
+        () => typeof window.HEYS?.CopyMealModal?.show === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const sourceItems = [
+          { id: 'visual-soba', name: 'Лапша соба варёная', grams: 137, kcal100: 114.6 },
+          { id: 'visual-coffee-zero', name: 'Домашний кофе без сахара', grams: 300, kcal100: 0 },
+          { id: 'visual-syrniki', name: 'Сырники творожные', grams: null },
+          { id: 'visual-sauce-defect', name: "Соус Хеллманн'с Бургер Гриль", grams: 30 },
+        ];
+        window.HEYS.CopyMealModal.show({
+          sourceMeal: {
+            id: 'visual-source',
+            name: 'Перекус',
+            items: sourceItems,
+          },
+          sourceMealIndex: 0,
+          sourceDate: '2026-08-28',
+          targetDate: '2026-08-28',
+          targetMeals: [
             {
               id: 'visual-snack',
               name: 'Перекус',

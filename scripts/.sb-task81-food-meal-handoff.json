@@ -1,0 +1,41 @@
+{
+  "task": "81-lane-1-food-meal-missing-frames",
+  "before": {
+    "missingEntries": {
+      "food-meal": 1,
+      "global": 2
+    },
+    "foodMealFrames": "32/33",
+    "missingFrameLabels": ["Действие · копировать · чего не знаем"],
+    "otherGlobalMissing": ["norm-correction: Сверка · норма снизилась · без обхватов"]
+  },
+  "after": {
+    "missingEntries": {
+      "food-meal": 0,
+      "global": 1
+    },
+    "foodMealFrames": "33/33",
+    "visualCases": {
+      "food-meal": 7,
+      "pending": 0
+    }
+  },
+  "fix": {
+    "frame": "Действие · копировать · чего не знаем",
+    "caseId": "food-copy-unknown-values-sand",
+    "kind": "demo-food-copy-unknown",
+    "oid": "FM10B",
+    "mount": "HEYS.CopyMealModal.show with ok/zero/empty/defect items"
+  },
+  "files": [
+    "apps/web/scripts/ui-v4-visual-fixture.mjs",
+    "apps/web/scripts/ui-v4-visual-capture.mjs",
+    "docs/ui/verdicts/food-meal.json",
+    "apps/web/__tests__/ui-v4-visual-harness.test.js"
+  ],
+  "verification": {
+    "fixtureCount": "node --input-type=module -e \"import {UI_V4_VISUAL_CASES} from './apps/web/scripts/ui-v4-visual-fixture.mjs'; ...\"",
+    "progressReport": "node scripts/ui-v4-progress-report.mjs → food-meal frames 33/33, global missingEntries 1",
+    "tests": "vitest ui-v4-visual-harness.test.js + copy-meal-unknown-values-v4.test.js — 17/17"
+  }
+}

@@ -84,6 +84,7 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
         'food-copy-empty-target-blue',
         'food-copy-empty-target-blue-dark',
         'food-copy-existing-target-sand',
+        'food-copy-unknown-values-sand',
         'food-move-existing-target-sand',
         'reports-whatif-inline-sand',
         'reports-weight-prediction-sand',
@@ -104,10 +105,12 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
     }
     expect(UI_V4_VISUAL_CASES.find((entry) => entry.kind === 'demo-food-copy-existing')?.viewport)
       .toEqual({ width: 399, height: 812 });
+    expect(UI_V4_VISUAL_CASES.find((entry) => entry.kind === 'demo-food-copy-unknown')?.viewport)
+      .toEqual({ width: 399, height: 812 });
     expect(UI_V4_VISUAL_CASES.find((entry) => entry.kind === 'demo-food-move-existing')?.viewport)
       .toEqual({ width: 399, height: 812 });
     for (const item of UI_V4_VISUAL_CASES.filter((entry) =>
-      ['demo-food-copy-existing', 'demo-food-move-existing'].includes(entry.kind))) {
+      ['demo-food-copy-existing', 'demo-food-copy-unknown', 'demo-food-move-existing'].includes(entry.kind))) {
       expect(item.themeId).toBe('sand');
     }
     expect(
