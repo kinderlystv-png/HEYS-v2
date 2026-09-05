@@ -323,8 +323,18 @@ describe('вход в лист — строка под общим тумблер
         expect(rowSrc).toContain("label: 'Настроить подробно'");
         const groupIdx = SHELL_SRC.indexOf("renderSettingsGroup('app', 'Приложение'");
         const rowIdx = SHELL_SRC.indexOf("key: 'notify-detail'");
+        expect(groupIdx).toBeGreaterThan(-1);
         expect(rowIdx).toBeGreaterThan(groupIdx);
-        expect(rowIdx - groupIdx).toBeLessThan(600);
+        // Прежде здесь стояло `rowIdx - groupIdx < 600` — расстояние в символах.
+        // Правило, которое надо сторожить, другое: строка лежит ВНУТРИ яруса
+        // «Приложение», а не в следующем. Счёт символов это правило не
+        // выражает: он падает от любой посторонней правки между двумя точками
+        // (упал на 675 при живом и верном порядке) и молчит, если строку
+        // перенесут в соседний ярус, оставшись в пределах шестисот символов.
+        // Сторожим границу следующего яруса, а не длину куска.
+        const nextGroupIdx = SHELL_SRC.indexOf("renderSettingsGroup('", groupIdx + 1);
+        expect(nextGroupIdx).toBeGreaterThan(groupIdx);
+        expect(rowIdx).toBeLessThan(nextGroupIdx);
     });
 
     it('при выключенном общем тумблере строка не нажимается', () => {
