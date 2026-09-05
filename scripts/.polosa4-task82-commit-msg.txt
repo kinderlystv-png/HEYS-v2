@@ -1,0 +1,4 @@
+docs(ui): polosa4 task82 subscription facts handoff
+
+255 contract rows — static CSS/JS facts for polosa 2 verdicts.
+Generator: scripts/.polosa4-subscription-facts-gen.mjs
