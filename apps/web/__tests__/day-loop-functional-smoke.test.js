@@ -7,10 +7,11 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = path.resolve(__dirname, '..');
+const STEPS_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_steps_v1.js'), 'utf8');
 const require = createRequire(import.meta.url);
 const { mergeDayData } = require(path.resolve(__dirname, '../../../yandex-cloud-functions/heys-api-rpc/lib/heys_sync_merge_v1.cjs'));
 
@@ -262,5 +263,175 @@ describe('day loop · cold-cache slot (GAP day-known-empty-batch)', () => {
     const slot = api.planSlotForDate(DATE, new Set([DATE]));
     expect(slot.unknown).toBe(false);
     expect(slot.busy).toBe(true);
+  });
+});
+
+function dayKeyDaysAgo(daysAgo) {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Шаг «Остальное» с профилем замеров и днём просрочки в LS. */
+function loadMorningRestStep({ dayMap = {}, profile = {} } = {}) {
+  const configs = {};
+  const store = {
+    heys_profile: { measurementsTrackingEnabled: true, gender: 'Мужской', ...profile },
+  };
+  Object.entries(dayMap).forEach(([dateKey, data]) => {
+    store[`heys_dayv2_${dateKey}`] = data;
+  });
+
+  window.React = React;
+  window.HEYS = {
+    StepModal: {
+      WheelPicker: () => null,
+      TimePicker: () => null,
+      registerStep: (id, config) => { configs[id] = config; },
+      utils: {
+        lsGet: (key, fallback) => (
+          Object.prototype.hasOwnProperty.call(store, key) ? store[key] : fallback
+        ),
+        lsSet: (key, value) => { store[key] = value; },
+        getTodayKey: () => DATE,
+      },
+    },
+  };
+
+  // eslint-disable-next-line no-new-func
+  new Function(STEPS_SRC)();
+  return { configs, store, Steps: window.HEYS.Steps };
+}
+
+function mountMorningRest(configs, initialData) {
+  const rest = configs.morningRest;
+  const Step = rest.component;
+  let state = {
+    coldType: 'none',
+    selected: [],
+    ...initialData,
+  };
+  const onChange = vi.fn((next) => {
+    state = next;
+  });
+  const view = render(React.createElement(Step, {
+    data: state,
+    onChange,
+    context: { dateKey: DATE },
+  }));
+  const rerender = () => view.rerender(React.createElement(Step, {
+    data: state,
+    onChange,
+    context: { dateKey: DATE },
+  }));
+  return {
+    rest,
+    getState: () => state,
+    onChange,
+    container: view.container,
+    rerender,
+  };
+}
+
+describe('day loop · check-in overdue measurements (GAP ci-overdue-open-layer)', () => {
+  const OVERDUE_DAYS = 14;
+  let lastMeasuredDate;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(`${DATE}T12:00:00`));
+    lastMeasuredDate = dayKeyDaysAgo(OVERDUE_DAYS);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+    delete window.HEYS;
+    delete window.React;
+  });
+
+  it('openMeasurementsLayer: имя в исходнике и флаг measurementsOpen в onChange', () => {
+    expect(STEPS_SRC).toContain('openMeasurementsLayer');
+    expect(STEPS_SRC).toMatch(/onClick:\s*openMeasurementsLayer/);
+    expect(STEPS_SRC).toContain('measurementsOpen: true');
+  });
+
+  it('openMeasurementsLayer: клик по просроченной строке открывает слой и переносит черновик', () => {
+    const lastMeasurements = {
+      waist: 82.5,
+      hips: 98,
+      thigh: 55,
+      biceps: 32,
+      measuredAt: lastMeasuredDate,
+    };
+    const { configs, Steps } = loadMorningRestStep({
+      dayMap: {
+        [DATE]: { date: DATE },
+        [lastMeasuredDate]: { date: lastMeasuredDate, measurements: lastMeasurements },
+      },
+    });
+
+    expect(Steps.isMeasurementsOverdue(Steps.getLastMeasurements())).toBe(true);
+
+    const initial = configs.morningRest.getInitialData({ dateKey: DATE });
+    expect(initial.showMeasurements).toBe(true);
+
+    const ctx = mountMorningRest(configs, initial);
+    const row = ctx.container.querySelector('.mc-rest-row--overdue');
+    expect(row).toBeTruthy();
+    expect(row.textContent).toContain('14 дней');
+
+    act(() => {
+      fireEvent.click(row);
+    });
+
+    expect(ctx.onChange).toHaveBeenCalledTimes(1);
+    const opened = ctx.onChange.mock.calls[0][0];
+    expect(opened.measurementsOpen).toBe(true);
+    expect(opened.coldOpen).toBe(false);
+    expect(opened.supplementsOpen).toBe(false);
+    expect(opened.waist).toBe('82,5');
+    expect(opened.hips).toBe('98,0');
+    expect(opened.thigh).toBe('55,0');
+    expect(opened.biceps).toBe('32,0');
+    expect(opened.measurementsSide).toBe('right');
+
+    ctx.rerender();
+    expect(ctx.container.querySelector('.mc-rest-step--layer')).toBeTruthy();
+    expect(ctx.container.querySelector('.mc-rest-layer-title')?.textContent).toBe('Замеры');
+    expect(ctx.rest.showHeaderBack(opened)).toBe(true);
+  });
+
+  it('openMeasurementsLayer: уже начатый черновик не затирается последними замерами', () => {
+    const { configs } = loadMorningRestStep({
+      dayMap: {
+        [DATE]: { date: DATE, waist: '70,0' },
+        [lastMeasuredDate]: {
+          date: lastMeasuredDate,
+          measurements: {
+            waist: 82.5,
+            hips: 98,
+            thigh: 55,
+            biceps: 32,
+            measuredAt: lastMeasuredDate,
+          },
+        },
+      },
+    });
+
+    const initial = configs.morningRest.getInitialData({ dateKey: DATE });
+    const ctx = mountMorningRest(configs, { ...initial, waist: '70,0' });
+    const row = ctx.container.querySelector('.mc-rest-row--overdue');
+    expect(row).toBeTruthy();
+
+    act(() => {
+      fireEvent.click(row);
+    });
+
+    const opened = ctx.onChange.mock.calls[0][0];
+    expect(opened.waist).toBe('70,0');
+    expect(opened.hips).toBe('98,0');
   });
 });

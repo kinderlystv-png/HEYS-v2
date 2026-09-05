@@ -42,9 +42,12 @@
     {
       "id": "ci-overdue-open-layer",
       "description": "Просрочка замеров: openMeasurementsLayer переносит черновик",
-      "status": "GAP",
-      "tests": [],
-      "gapReason": "isMeasurementsOverdue covered; openMeasurementsLayer onChange path not simulated",
+      "status": "COVERED",
+      "tests": [
+        "apps/web/__tests__/day-loop-functional-smoke.test.js:openMeasurementsLayer",
+        "apps/web/__tests__/day-loop-functional-smoke.test.js"
+      ],
+      "gapReason": "closed in Task 52 smoke",
       "priority": "behavior"
     },
     {
@@ -262,8 +265,8 @@
     "total": 37,
     "coveredBefore": 30,
     "gapsBefore": 7,
-    "gapsClosed": 6
+    "gapsClosed": 7
   },
-  "gapsRemaining": ["ci-overdue-open-layer"],
-  "gapsToImplement": ["ci-overdue-open-layer — Просрочка замеров: openMeasurementsLayer переносит черновик"]
+  "gapsRemaining": [],
+  "gapsToImplement": []
 }

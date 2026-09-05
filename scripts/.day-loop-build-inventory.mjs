@@ -20,7 +20,7 @@ const leafScenarios = [
   { id: 'ci-yesterday-feelings-pack', description: 'Вчера: pack/estimated_fill/confirm_real_data', status: 'COVERED', tests: ['apps/web/__tests__/yesterday-verify-v4-pack.test.js'] },
   { id: 'ci-yesterday-fill-later', description: 'Вчера: fill_later закрывает сегодня, спрашивает позже', status: 'COVERED', tests: ['apps/web/__tests__/yesterday-verify-fill-later.test.js'] },
   { id: 'ci-overdue-badge', description: 'Просрочка замеров: badge с 7-го дня', status: 'COVERED', tests: ['apps/web/__tests__/morning-checkin-v4-contract-geometry.test.js:122'] },
-  { id: 'ci-overdue-open-layer', description: 'Просрочка замеров: openMeasurementsLayer переносит черновик', status: 'GAP', tests: [], gapReason: 'isMeasurementsOverdue covered; openMeasurementsLayer onChange path not simulated', priority: 'behavior' },
+  { id: 'ci-overdue-open-layer', description: 'Просрочка замеров: openMeasurementsLayer переносит черновик', status: 'GAP', tests: ['apps/web/__tests__/day-loop-functional-smoke.test.js:openMeasurementsLayer'], gapReason: 'closed in Task 52 smoke', priority: 'behavior', closedBy: 'apps/web/__tests__/day-loop-functional-smoke.test.js' },
   { id: 'ci-cloud-pending', description: 'Чек-ин: offline pending → cloud ack после drain', status: 'COVERED', tests: ['apps/web/__tests__/morning-checkin-flow-resume.test.js:1052'] },
   { id: 'ci-curator-blocked', description: 'Чек-ин: куратор не видит self-report flow', status: 'COVERED', tests: ['apps/web/__tests__/morning-checkin-flow-resume.test.js:878'] },
 
