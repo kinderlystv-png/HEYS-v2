@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,6 +56,11 @@ function compileCss(paletteName) {
     .replaceAll('env(safe-area-inset-bottom, 0px)', '0px')}`;
 }
 
+const COMPILED_CSS = Object.freeze({
+  sand: `${BASE_CSS}\n${compileCss('sand')}`,
+  blue: `${BASE_CSS}\n${compileCss('blue')}`,
+});
+
 function loadParts() {
   window.HEYS = {};
   window.React = React;
@@ -67,6 +72,8 @@ function loadParts() {
   ev('strength/heys_strength_superset_ui_v1.js');
   return window.HEYS.StrengthBuilderParts;
 }
+
+let Parts;
 
 function work(weightKg, reps, done) {
   return { weightKg: String(weightKg), reps, done: !!done };
@@ -102,12 +109,8 @@ function expectStyle(node, expected, label) {
 }
 
 function renderFlatBlock(paletteName) {
-  const Parts = loadParts();
   const exercises = canvasExercises();
   const group = canvasGroup(exercises);
-  const style = document.createElement('style');
-  style.textContent = `${BASE_CSS}\n${compileCss(paletteName)}`;
-  document.head.appendChild(style);
   render(React.createElement(Parts.SupersetBlock, {
     group,
     exercises,
@@ -116,23 +119,40 @@ function renderFlatBlock(paletteName) {
     onAddRound: () => {},
     onSwap: () => {},
   }));
-  return { style, palette: PALETTES[paletteName] };
+  return { palette: PALETTES[paletteName] };
 }
 
 describe('strength builder · В2 superset flat v4 canvas contract', () => {
-  let style;
+  let styleEl;
   let palette;
+
+  beforeAll(() => {
+    Parts = loadParts();
+    styleEl = document.createElement('style');
+    styleEl.textContent = COMPILED_CSS.sand;
+    document.head.appendChild(styleEl);
+  });
+
+  function usePalette(paletteName) {
+    styleEl.textContent = COMPILED_CSS[paletteName];
+    return PALETTES[paletteName];
+  }
 
   afterEach(() => {
     cleanup();
-    style?.remove();
+    styleEl.textContent = COMPILED_CSS.sand;
+  });
+
+  afterAll(() => {
+    styleEl?.remove();
     delete window.HEYS;
   });
 
   it('renders flat SupersetBlock copy from superset_ui', () => {
     expect(SUPERSET).toContain('sb-ss--flat');
     expect(SUPERSET).toContain('flatApproachKey');
-    ({ style } = renderFlatBlock('sand'));
+    usePalette('sand');
+    renderFlatBlock('sand');
     expect(screen.getByText('Связка · 12 июля')).toBeTruthy();
     expect(screen.getByText('4 и 3 подхода')).toBeTruthy();
     expect(screen.getByText('история')).toBeTruthy();
@@ -149,7 +169,8 @@ describe('strength builder · В2 superset flat v4 canvas contract', () => {
   });
 
   it('доказывает построчный computed-style контракт «Связка · старая, без раундов» на песочном наборе', () => {
-    ({ style, palette } = renderFlatBlock('sand'));
+    palette = usePalette('sand');
+    renderFlatBlock('sand');
 
     const top = document.querySelector('.sb-ss-top');
     const titleCol = document.querySelector('.sb-ss-title-col');
@@ -196,7 +217,8 @@ describe('strength builder · В2 superset flat v4 canvas contract', () => {
   });
 
   it('держит роли чернил «Связка · старая, без раундов» на синем наборе', () => {
-    ({ style, palette } = renderFlatBlock('blue'));
+    palette = usePalette('blue');
+    renderFlatBlock('blue');
     expectStyle(document.querySelector('.sb-ss-flat-letter'), { color: palette.ink56 }, '09 blue');
     expectStyle(document.querySelector('.sb-ss-flat-name'), { color: palette.tx }, '10 blue');
     expectStyle(document.querySelector('.sb-ss-flat-count'), { color: palette.ink56 }, '11 blue');

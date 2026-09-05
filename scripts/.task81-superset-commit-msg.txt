@@ -1,0 +1,8 @@
+fix(test): task81 lane1 — cache superset contract test setup
+
+Computed-style contract tests for D3 boundaries and B2 flat superset
+re-parsed builder CSS and re-eval'd strength modules every case, pushing
+isolated runtime to 3.5–4.4s against vitest's 5000ms default.
+
+Cache compiled CSS and loadParts in beforeAll; inject one shared style node
+instead of re-appending per test. Isolated slow cases now ~2.4s with headroom.

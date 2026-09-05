@@ -1,0 +1,16 @@
+{
+  "task": "81-lane-1",
+  "tests": ["strength-superset-boundaries-v4-canvas-contract", "strength-superset-flat-v4-canvas-contract"],
+  "rootCause": "real-slowness",
+  "detail": "computed-style contract tests re-parsed 750-strength-builder.css and re-eval'd strength modules on every case; isolated duration was 3.5-4.4s against vitest default 5000ms",
+  "fix": "module-level CSS compile cache, beforeAll loadParts/style injection, single style node reused across cases",
+  "isolatedMsAfter": {
+    "boundariesGeometry": 2436,
+    "flatSandComputed": 2494,
+    "flatBlueRoles": 1931
+  },
+  "passCounts": {
+    "boundaries": "3/3",
+    "flat": "3/3"
+  }
+}

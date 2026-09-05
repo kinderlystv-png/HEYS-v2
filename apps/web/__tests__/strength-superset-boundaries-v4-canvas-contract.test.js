@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -34,6 +34,8 @@ function compileCss() {
     .replaceAll('var(--ink)', '0, 0, 0')
     .replaceAll('env(safe-area-inset-bottom, 0px)', '0px')}`;
 }
+
+const COMPILED_CSS = compileCss();
 
 function loadParts() {
   window.HEYS = {};
@@ -75,15 +77,18 @@ describe('strength builder · D3 superset boundaries v4 canvas contract', () => 
   let Parts;
   let style;
 
-  beforeEach(() => {
+  beforeAll(() => {
     Parts = loadParts();
     style = document.createElement('style');
-    style.textContent = compileCss();
+    style.textContent = COMPILED_CSS;
     document.head.appendChild(style);
   });
 
   afterEach(() => {
     cleanup();
+  });
+
+  afterAll(() => {
     style?.remove();
     delete window.HEYS;
   });
