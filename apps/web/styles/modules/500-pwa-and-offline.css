@@ -636,9 +636,6 @@
   overflow: hidden;
 }
 
-[data-theme$="dark"] .mc-backdrop {
-  background: var(--scrim, rgba(0, 0, 0, 0.62));
-}
 
 /* У чек-ина от прежнего правила осталась только своя врезка: тон подложки и
    размытие теперь общие. */
@@ -5907,9 +5904,6 @@
   pointer-events: auto;
 }
 
-[data-theme$="dark"] .wn-backdrop--visible {
-  background: var(--scrim, rgba(0, 0, 0, 0.62));
-}
 
 .wn-modal {
   width: 100%;
@@ -6867,7 +6861,7 @@
 
 html[data-theme-id="sand-dark"] .ca-modal-backdrop--visible,
 [data-theme="sand-dark"] .ca-modal-backdrop--visible {
-  background: var(--scrim, rgba(0, 0, 0, 0.62));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }

@@ -94,7 +94,7 @@
   const CONSENT_SIGN_BACKDROP_STYLE = {
     position: 'absolute',
     inset: 0,
-    background: 'var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45))',
+    background: 'var(--scrim, rgba(42, 26, 12, 0.5))',
     backdropFilter: 'blur(var(--v4-modal-backdrop-blur, 2.5px))',
     WebkitBackdropFilter: 'blur(var(--v4-modal-backdrop-blur, 2.5px))',
     pointerEvents: 'auto',

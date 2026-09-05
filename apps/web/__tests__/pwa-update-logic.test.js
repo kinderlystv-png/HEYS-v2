@@ -758,8 +758,17 @@ describe('PWA update protection', () => {
       expect(updateCss).toContain('backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));');
       expect(updateCss).not.toContain('blur(8px)');
       // Строка «вид карточки»: подложка модалки — dim набора, а не свой rgba.
-      expect(updateCss).toContain('background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));');
-      expect(updateCss).toContain('background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));');
+      // Сторожим правило, а не литерал: затемнение подложки берётся ролью
+      // набора. Прежде здесь стояли две точные строки с запасными значениями
+      // .45 и .55 — они закрепляли ровно тот разнобой, ради снятия которого
+      // роль и вводилась, и тест упал бы на починке. Имя роли сменилось на
+      // --scrim решением дизайнера 5 сентября; правило прежнее.
+      expect(updateCss).toMatch(/background:\s*var\(--scrim/);
+      // Строкой ниже проверяются намеренные литералы страховочной подложки —
+      // сплошной тон без блюра, — поэтому запрещать литералы у любого фона
+      // здесь нельзя. Сторожим ровно то, что сменилось: старого имени роли
+      // в файле больше нет.
+      expect(updateCss).not.toContain('--v4-modal-backdrop-dim');
       // Страховка — сплошная подложка без блюра, тон scrim'а под 90 %.
       expect(updateCss).toContain('background: rgba(42, 26, 12, 0.9);');
       expect(updateCss).toContain('background: rgba(0, 0, 0, 0.9);');

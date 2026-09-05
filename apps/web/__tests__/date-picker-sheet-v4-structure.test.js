@@ -86,7 +86,7 @@ describe('Date picker sheet v4 · вариант А', () => {
     expect(sheetRule).toContain('left: 0');
     expect(sheetRule).not.toContain('--date-picker-sheet-top');
     expect(sheetRule).not.toContain('datePickerSlide');
-    expect(sheetCss).toMatch(/\.date-picker-backdrop\.date-picker-backdrop--v4-modal[\s\S]*?background:\s*var\(--v4-modal-backdrop-dim/);
+    expect(sheetCss).toMatch(/\.date-picker-backdrop\.date-picker-backdrop--v4-modal[\s\S]*?background:\s*var\(--scrim/);
   });
 
   it('sheet month nav uses v4 sand arrows, not legacy date-picker-nav', () => {

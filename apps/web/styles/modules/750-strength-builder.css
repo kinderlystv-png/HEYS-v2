@@ -7110,7 +7110,7 @@
 /* ── И2 · Шторка ⋯ (меню сессии) ───────────────────────────────────────── */
 
 .sb-builder-screen .sb-sheet-back {
-  background: var(--v4-modal-backdrop-dim, rgba(15, 23, 42, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }
 

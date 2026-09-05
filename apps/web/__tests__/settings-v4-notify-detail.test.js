@@ -426,7 +426,7 @@ describe('вид листа «Настроить подробно» — геом
     // модалках продукта. Ради одного листа инвариант не расщепляем.
     it('затемнение — общий продуктовый scrim, а не свой', () => {
         const backdrop = ruleBlock(BASE_CSS, '.notify-detail-backdrop {');
-        expect(backdrop).toContain('var(--v4-modal-backdrop-dim');
+        expect(backdrop).toContain('var(--scrim');
         expect(backdrop).toContain('blur(var(--v4-modal-backdrop-blur, 2.5px))');
     });
 });

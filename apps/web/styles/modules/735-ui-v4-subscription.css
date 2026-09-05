@@ -12,10 +12,6 @@
   animation: paywallFadeIn 0.2s ease-out;
 }
 
-[data-theme$="dark"] .paywall-overlay {
-  background: var(--scrim, rgba(0, 0, 0, 0.62));
-}
-
 @keyframes paywallFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

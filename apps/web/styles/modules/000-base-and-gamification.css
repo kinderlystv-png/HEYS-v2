@@ -8956,15 +8956,12 @@ svg.date-picker-icon {
    а продуктовый инвариант scrim'а (CLAUDE.md, «подложка product-модалок») —
    единый blur 2.5 px и dim из токенов набора. Держим инвариант. */
 .date-picker-backdrop.date-picker-backdrop--v4-modal {
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: var(--v4-z-sheet-scrim, 1200);
 }
 
-[data-theme$="dark"] .date-picker-backdrop.date-picker-backdrop--v4-modal {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
-}
 
 @keyframes fadeIn {
   from {
@@ -11225,14 +11222,11 @@ body:has(:is(
   align-items: flex-end;
   justify-content: center;
   padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }
 
-[data-theme$="dark"] .notify-detail-backdrop {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
-}
 
 .notify-detail {
   width: min(100%, 420px);
@@ -11623,7 +11617,7 @@ body:has(:is(
 
 /* v4: тот же фон под модалкой, что у чек-ина / куратора — --v4-modal-backdrop-blur */
 .tab-settings-backdrop--v4-popover {
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   z-index: var(--v4-z-sheet-scrim, 1200);
@@ -11634,7 +11628,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .tab-settings-backdrop--v4-popover {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }

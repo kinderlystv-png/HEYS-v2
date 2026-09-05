@@ -4297,15 +4297,12 @@ button.meal-quality-badge:active {
     calc(12px + var(--safe-area-right, 0px))
     calc(12px + var(--safe-area-bottom, 0px))
     calc(12px + var(--safe-area-left, 0px));
-  background: var(--v4-modal-backdrop-dim); /* v4-intentional */
+  background: var(--scrim, rgba(42, 26, 12, 0.5)); /* v4-intentional */
   backdrop-filter: blur(var(--v4-modal-backdrop-blur)); /* v4-intentional */
   animation: copyMealFadeIn 150ms ease-out;
 }
 
 [data-theme-id$="dark"] .meal-transfer-v4__backdrop,
-[data-theme$="dark"] .meal-transfer-v4__backdrop {
-  background: var(--v4-modal-backdrop-dim-dark); /* v4-intentional */
-}
 
 .meal-transfer-v4__sheet {
   display: flex;

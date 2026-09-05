@@ -3810,14 +3810,11 @@ html[data-theme-id="blue-dark"] .water-column__target {
   border: 0;
   padding: 0;
   margin: 0;
-  background: var(--v4-modal-backdrop-dim, rgba(32, 30, 29, 0.28));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }
 
-[data-theme$="dark"] .water-custom-sheet__scrim {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.42));
-}
 
 /* Ступень листа приходит с классом .widget-wd-sheet — своего числа здесь
    больше нет: лист «свой объём» открывается с плитки воды, а не поверх

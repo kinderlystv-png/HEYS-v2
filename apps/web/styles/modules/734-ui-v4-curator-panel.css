@@ -325,7 +325,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--v4-z-curator-sheet, 10001);
-  background: var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   display: flex;
   align-items: flex-end;
@@ -814,7 +814,7 @@
   margin: 14px -18px calc(-16px - env(safe-area-inset-bottom, 0px));
   padding: 10px 18px calc(16px + env(safe-area-inset-bottom, 0px));
   background: var(--v4-bg, #fffaf1);
-  box-shadow: 0 -8px 16px -8px var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  box-shadow: 0 -8px 16px -8px var(--scrim, rgba(42, 26, 12, 0.5));
 }
 
 .cur-sheet__save-error {
@@ -1050,7 +1050,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--v4-z-curator-sheet, 10001);
-  background: var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   display: flex;
   align-items: flex-end;
@@ -1673,7 +1673,7 @@
 .cur-cab__sheet-scrim {
   position: fixed;
   inset: 0;
-  background: var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   display: flex;
   align-items: flex-end;

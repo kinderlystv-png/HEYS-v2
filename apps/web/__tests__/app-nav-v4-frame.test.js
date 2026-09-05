@@ -222,7 +222,7 @@ describe('UI v4 Prompt 3b — шапка', () => {
             /\.mc-backdrop \{[^}]*backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,
         );
         expect(pwaCss).toMatch(
-            /\.mc-backdrop \{[^}]*background:\s*var\(--v4-modal-backdrop-dim/,
+            /\.mc-backdrop \{[^}]*background:\s*var\(--scrim/,
         );
         expect(pwaCss).toMatch(
             /\.ca-modal-backdrop--visible\s*\{[\s\S]*?backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur/,

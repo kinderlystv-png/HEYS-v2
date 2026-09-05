@@ -57,12 +57,17 @@ describe('оболочка шаговых модалок', () => {
 
   it('подложка — инвариант продуктовых модалок: 2,5 px размытия и dim из токена', () => {
     const backdrop = rule(SHELL, '.mc-backdrop');
-    expect(backdrop).toContain('background: var(--v4-modal-backdrop-dim');
+    expect(backdrop).toContain('background: var(--scrim');
     expect(backdrop).toContain('blur(var(--v4-modal-backdrop-blur');
     // Чёрные 60 % — прежнее значение; оно и было нарушением инварианта.
     expect(backdrop).not.toMatch(/background:\s*rgba\(0, 0, 0, 0\.6\)/);
-    expect(rule(SHELL, '[data-theme$="dark"] .mc-backdrop'))
-      .toContain('var(--v4-modal-backdrop-dim-dark');
+    // Отдельного тёмного правила у подложки БОЛЬШЕ НЕТ, и это не потеря.
+    // Прежде тёмная тема переопределялась своим --v4-modal-backdrop-dim-dark;
+    // роль --scrim объявлена в четырёх наборах и различается сама, поэтому
+    // копия правила под [data-theme] только повторяла бы тот же цвет — а
+    // расходились такие пары именно запасными значениями (.42, .55, .62 у
+    // одного затемнения). Сторожим теперь отсутствие копии, а не её наличие.
+    expect(rule(SHELL, '[data-theme$="dark"] .mc-backdrop')).toBeNull();
   });
 
   it('чек-ин не держит своей копии поверхности — она общая', () => {

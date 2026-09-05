@@ -1123,17 +1123,13 @@
   padding: 12px;
   padding-bottom: calc(12px + env(safe-area-inset-bottom));
   /* v4-intentional */
-  background: var(--v4-modal-backdrop-dim);
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   /* v4-intentional */
   backdrop-filter: blur(var(--v4-modal-backdrop-blur));
   /* v4-intentional */
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur));
 }
 
-[data-theme$='dark'] .nutrition-v4-sheet-backdrop {
-  /* v4-intentional */
-  background: var(--v4-modal-backdrop-dim-dark);
-}
 
 /* Строка «уменьшенное движение»: затемнение остаётся, блюр под листом снимается. */
 @media (prefers-reduced-motion: reduce) {

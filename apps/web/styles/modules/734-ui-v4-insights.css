@@ -1734,13 +1734,9 @@
   z-index: var(--v4-z-sheet-scrim, 1200);
   display: flex;
   align-items: flex-end;
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
-}
-
-[data-theme$="dark"] .insights-v4-sheet-scrim {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
 }
 
 .insights-v4-sheet {
