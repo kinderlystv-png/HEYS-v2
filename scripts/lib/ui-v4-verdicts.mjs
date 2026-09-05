@@ -604,12 +604,8 @@ function acquireZoneWriteLock(zoneId, { timeoutMs = 60_000 } = {}) {
   while (Date.now() < deadline) {
     try {
       const fd = fs.openSync(lockPath, 'wx');
-      try {
-        fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, time: Date.now() }), 'utf8');
-      } finally {
-        fs.closeSync(fd);
-      }
-      return lockPath;
+      fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, time: Date.now() }), 'utf8');
+      return { lockPath, fd };
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
       if (isStaleZoneLock(lockPath)) {
@@ -626,10 +622,15 @@ function acquireZoneWriteLock(zoneId, { timeoutMs = 60_000 } = {}) {
   throw new Error(`Не удалось захватить lock зоны «${zoneId}» за ${timeoutMs}ms`);
 }
 
-function releaseZoneWriteLock(lockPath) {
-  if (!lockPath) return;
+function releaseZoneWriteLock(handle) {
+  if (!handle) return;
   try {
-    fs.unlinkSync(lockPath);
+    fs.closeSync(handle.fd);
+  } catch {
+    // ignore close failure
+  }
+  try {
+    fs.unlinkSync(handle.lockPath);
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
   }
@@ -637,11 +638,11 @@ function releaseZoneWriteLock(lockPath) {
 
 /** Cross-process mutex for one zone file's read-modify-write cycle. */
 export function withZoneWriteLock(zoneId, fn, { timeoutMs = 60_000 } = {}) {
-  const lockPath = acquireZoneWriteLock(zoneId, { timeoutMs });
+  const handle = acquireZoneWriteLock(zoneId, { timeoutMs });
   try {
     return fn();
   } finally {
-    releaseZoneWriteLock(lockPath);
+    releaseZoneWriteLock(handle);
   }
 }
 
@@ -649,6 +650,14 @@ function maybeRmwDelay() {
   if (process.env.HEYS_VERDICT_GUARD_TEST === '1' && ZONE_RMW_DELAY_MS > 0) {
     sleepSync(ZONE_RMW_DELAY_MS);
   }
+}
+
+/** Re-read zone on disk, mutate one row, write — merges concurrent key updates. */
+function writeZoneRowMutation(zoneId, key, mutateRow) {
+  const fresh = readZone(zoneId);
+  if (!fresh?.rows?.[key]) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
+  mutateRow(fresh.rows[key], fresh);
+  writeZone(zoneId, fresh);
 }
 
 export function writeZone(zoneId, zone) {
@@ -780,7 +789,9 @@ export function setVerdictKey(zoneId, key, patch, opts = {}) {
     const was = { v: row.v, f: row.f, h: row.h };
     applyVerdictToRow(row, patch, root);
     maybeRmwDelay();
-    if (!dryRun) writeZone(zoneId, zone);
+    if (!dryRun) {
+      writeZoneRowMutation(zoneId, key, (targetRow) => applyVerdictToRow(targetRow, patch, root));
+    }
     return { skipped: false, was, now: { v: row.v, f: row.f, h: row.h } };
   });
 }
@@ -796,7 +807,9 @@ export function patchZoneRow(zoneId, key, mutator, { dryRun = false } = {}) {
     mutator(zone.rows[key], zone);
     const changed = JSON.stringify(zone.rows[key]) !== before;
     maybeRmwDelay();
-    if (changed && !dryRun) writeZone(zoneId, zone);
+    if (changed && !dryRun) {
+      writeZoneRowMutation(zoneId, key, (targetRow, freshZone) => mutator(targetRow, freshZone));
+    }
     return { changed, row: zone.rows[key] };
   });
 }
@@ -808,7 +821,12 @@ export function deleteZoneRow(zoneId, key, { dryRun = false } = {}) {
     if (!zone?.rows?.[key]) return { deleted: false };
     delete zone.rows[key];
     maybeRmwDelay();
-    if (!dryRun) writeZone(zoneId, zone);
+    if (!dryRun) {
+      const fresh = readZone(zoneId);
+      if (!fresh?.rows?.[key]) return { deleted: false };
+      delete fresh.rows[key];
+      writeZone(zoneId, fresh);
+    }
     return { deleted: true };
   });
 }
