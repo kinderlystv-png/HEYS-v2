@@ -171,7 +171,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     householdMin: 30,
     sleepOnsetMins: 1380, // 23:00
     sleepHours: 7.5,
-    steps: 7000,
+    steps: 10000,
     weeklyTrainingLoad: 200
   };
 
@@ -1423,7 +1423,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // ── 5. Steps: tanh ──
     var retSteps = day.steps || 0;
     if (retSteps > 0) {
-      var retStepsGoal = 8000;
+      var retStepsGoal = POPULATION_DEFAULTS.steps;
       var retStepVals = [];
       var rpst = prevDays || [];
       for (var sti = 0; sti < rpst.length; sti++) {
@@ -1697,7 +1697,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // ── 5. Steps: tanh matching full ШАГ 6 ──
     var retSteps = day.steps || 0;
     if (retSteps > 0) {
-      var retStepsGoal = 8000; // population default
+      var retStepsGoal = POPULATION_DEFAULTS.steps;
       // Use prevDays rolling avg if available
       var retStepVals = [];
       var rpst = prevDays || [];

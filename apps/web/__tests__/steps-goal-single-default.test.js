@@ -25,8 +25,12 @@ const DEFAULT = 10000;
 // Запасное значение рядом со `stepsGoal`: `|| 7000`, `?? 8000`, `|| 10000`.
 const FALLBACK = /tepsGoal[^\n;]{0,60}?(?:\|\||\?\?)\s*(\d{3,6})/g;
 
-// Каталоги продукта. `public/` — собранные бандлы, их чинит пересборка.
-const SKIP = new Set(['public', 'node_modules', '__tests__', 'fingers', 'mobility']);
+// Обход гейта через POPULATION_DEFAULTS.steps или `retStepsGoal = 8000` в каскаде.
+const POPULATION_STEPS = /POPULATION_DEFAULTS\s*=\s*\{[\s\S]*?\bsteps:\s*(\d+)/;
+const RETRO_STEPS_GOAL = /retStepsGoal\s*=\s*(\d{3,6})/g;
+
+// Каталоги продукта. `public/` и `dist/` — собранные копии, их чинит пересборка.
+const SKIP = new Set(['public', 'dist', 'node_modules', '__tests__', 'fingers', 'mobility']);
 
 function sources(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -73,6 +77,19 @@ describe('цель шагов по умолчанию', () => {
         if (value === DEFAULT) continue;
         if (KNOWN.get(rel) === value) continue;
         wrong.push(`${rel}: ${value}`);
+      }
+      const pop = src.match(POPULATION_STEPS);
+      if (pop) {
+        const value = Number(pop[1]);
+        if (value !== DEFAULT && KNOWN.get(rel) !== value) {
+          wrong.push(`${rel}: POPULATION_DEFAULTS.steps ${value}`);
+        }
+      }
+      for (const m of src.matchAll(RETRO_STEPS_GOAL)) {
+        const value = Number(m[1]);
+        if (value === DEFAULT) continue;
+        if (KNOWN.get(rel) === value) continue;
+        wrong.push(`${rel}: retStepsGoal ${value}`);
       }
     }
     expect(wrong).toEqual([]);
