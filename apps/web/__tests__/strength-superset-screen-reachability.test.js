@@ -174,7 +174,7 @@ describe('superset_ui · screen reachability', () => {
     expect(closeOverlay).toHaveBeenCalledTimes(1);
   });
 
-  it('renderBuilderSubview отдаёт все три экрана по контрактным view-ключам', () => {
+  it('renderBuilderSubview отдаёт все четыре экрана по контрактным view-ключам', () => {
     const exercises = trisetExercises();
     const group = trisetGroup(exercises);
     const keys = Parts.STRENGTH_SUBVIEW_VIEW_KEYS;
@@ -214,5 +214,83 @@ describe('superset_ui · screen reachability', () => {
     });
     render(triset);
     expect(document.querySelector('.sb-triset-work-screen')).toBeTruthy();
+    cleanup();
+
+    const planVsDone = Parts.renderBuilderSubview({
+      view: keys.PLAN_VS_DONE,
+      props: {
+        training: {
+          planSnapshot: {
+            exercises: [{ name: 'Жим', plannedSets: 3, plannedReps: 8 }]
+          },
+          workoutLog: { exercises: [{ name: 'Жим', approaches: [work(60, 8, true)] }] }
+        },
+        onBack: () => {}
+      }
+    });
+    render(planVsDone);
+    expect(document.querySelector('.sb-plan-vs-done')).toBeTruthy();
+    expect(screen.getByText('Назначено против сделано')).toBeTruthy();
+  });
+
+  it('openPlanVsDone → PlanVsDoneScreen → закрыть', () => {
+    const closeOverlay = vi.fn();
+    mountFullscreen();
+    globalThis.HEYS.TrainingKernel.fullscreen.mount = function ({ render: renderScreen }) {
+      render(renderScreen({ close: closeOverlay }));
+      return true;
+    };
+
+    Parts.openPlanVsDone({
+      training: {
+        planSnapshot: {
+          exercises: [{ name: 'Присед', plannedSets: 4, plannedReps: 6 }]
+        },
+        workoutLog: { exercises: [{ name: 'Присед', approaches: [work(100, 6, true)] }] }
+      }
+    });
+
+    expect(document.querySelector('.sb-plan-vs-done')).toBeTruthy();
+    expect(screen.getByText('Назначено против сделано')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('Отчёт за неделю'));
+    expect(closeOverlay).toHaveBeenCalledTimes(1);
+  });
+
+  it('openCuratorEditStatus → CuratorEditStatusScreen → закрыть', () => {
+    Parts = loadModules(['strength/heys_strength_proposal_ui_v1.js']);
+    const closeOverlay = vi.fn();
+    mountFullscreen();
+    globalThis.HEYS.TrainingKernel.fullscreen.mount = function ({ render: renderScreen }) {
+      render(renderScreen({ close: closeOverlay }));
+      return true;
+    };
+
+    const now = new Date('2026-09-05T12:00:00').getTime();
+    const sent = new Date(now);
+    sent.setHours(9, 14, 0, 0);
+    const resolved = new Date(now);
+    resolved.setHours(9, 31, 0, 0);
+
+    Parts.openCuratorEditStatus({
+      clientName: 'Марина К.',
+      programKey: 'Pro Спорт · программа «Верх-низ»',
+      dayLabel: 'Верх тела B',
+      nowMs: now,
+      proposal: {
+        status: 'accepted',
+        proposedAt: sent.getTime(),
+        resolvedAt: resolved.getTime(),
+        rejected: [{ name: 'тяга блока', reason: 'done_approaches_kept' }],
+        applied: [{ name: 'Жим', reason: 'approaches_changed' }],
+      },
+    });
+
+    expect(document.querySelector('.sb-curator-edit')).toBeTruthy();
+    expect(screen.getByText('Марина К.')).toBeTruthy();
+    expect(screen.getByText('Правка отправлена')).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText('Закрыть'));
+    expect(closeOverlay).toHaveBeenCalledTimes(1);
   });
 });

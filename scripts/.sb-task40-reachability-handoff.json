@@ -1,0 +1,33 @@
+{
+  "zone": "strength-builder",
+  "scope": "Lane 3 · Task 40 piece 1 · unreachable screens guard",
+  "generated": "2026-09-05",
+  "guardBefore": {
+    "unreachableCount": 2,
+    "screens": ["PlanVsDoneScreen", "CuratorEditStatusScreen"]
+  },
+  "guardAfter": {
+    "unreachableCount": 0,
+    "note": "node scripts/ui-v4-check-screen-reachability.mjs --list"
+  },
+  "rows": [
+    {
+      "key": "PlanVsDoneScreen",
+      "verdict": "=",
+      "dualCheck": {
+        "byName": "Parts.PlanVsDoneScreen + Parts.openPlanVsDone + renderBuilderSubview(PLAN_VS_DONE) в superset_ui:2349+",
+        "byBehavior": "шторка ⋯ sheetRows → go('plan-vs-done') → builder BuilderPlanVsDoneScreen (дубликат с disclosure); канонический экран — Parts.openPlanVsDone / renderBuilderSubview"
+      },
+      "fact": "route: renderBuilderSubview keys.PLAN_VS_DONE → PlanVsDoneScreen; openPlanVsDone fullscreen; sheetRows :2488-2492 go plan-vs-done (builder wrapper); test strength-superset-screen-reachability.test.js"
+    },
+    {
+      "key": "CuratorEditStatusScreen",
+      "verdict": "=",
+      "dualCheck": {
+        "byName": "Parts.CuratorEditStatusScreen + Parts.openCuratorEditStatus в proposal_ui:652+",
+        "byBehavior": "openCuratorEditStatus(opts) → fullscreen mount → CuratorEditStatusScreen; вход кураторского кабинета — отдельный lane"
+      },
+      "fact": "route: Parts.openCuratorEditStatus → h(CuratorEditStatusScreen); proposal_ui:1631-1659; test strength-superset-screen-reachability.test.js openCuratorEditStatus"
+    }
+  ]
+}

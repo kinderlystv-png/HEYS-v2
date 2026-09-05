@@ -1622,6 +1622,42 @@
   Parts.buildProgramCycleSnapshot = buildProgramCycleSnapshot;
 
   const REVIEW_ID = 'strength-proposal-review';
+  const CURATOR_EDIT_STATUS_ID = 'strength-curator-edit-status';
+
+  /**
+   * Кадр Л9 «Правка · сторона куратора»: исход отправленной правки.
+   * Вход с кабинета куратора / после отправки — не внутри клиентского разбора.
+   */
+  function openCuratorEditStatus(opts) {
+    const o = opts || {};
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    if (!fs || typeof fs.mount !== 'function') return false;
+    return fs.mount({
+      id: CURATOR_EDIT_STATUS_ID,
+      ariaLabel: 'Правка · сторона куратора',
+      render: function (api) {
+        return h(CuratorEditStatusScreen, {
+          clientName: o.clientName,
+          programKey: o.programKey,
+          dayLabel: o.dayLabel,
+          nowMs: o.nowMs,
+          trainingStarted: o.trainingStarted,
+          proposal: o.proposal,
+          onClose: function () {
+            api.close();
+            if (typeof o.onClose === 'function') o.onClose();
+          }
+        });
+      }
+    });
+  }
+
+  function closeCuratorEditStatus() {
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    return fs ? fs.unmount(CURATOR_EDIT_STATUS_ID) : false;
+  }
 
   /**
    * Открыть разбор поверх дня. Отдельный полноэкранный слой, а не вид внутри
@@ -1659,6 +1695,8 @@
 
   Parts.openProposalReview = openReview;
   Parts.closeProposalReview = closeReview;
+  Parts.openCuratorEditStatus = openCuratorEditStatus;
+  Parts.closeCuratorEditStatus = closeCuratorEditStatus;
   Parts.describePlanEdit = describePlanEdit;
   Parts.describeSupersetBoundaries = describeSupersetBoundaries;
   Parts.ProposalCard = ProposalCard;

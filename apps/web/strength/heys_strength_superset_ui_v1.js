@@ -3397,8 +3397,11 @@
   const STRENGTH_SUBVIEW_VIEW_KEYS = Object.freeze({
     CUSTOM_EXERCISE: 'custom-exercise',
     SUPERSET_BOUNDARIES: 'superset-boundaries',
-    TRISET_WORK: 'triset-work'
+    TRISET_WORK: 'triset-work',
+    PLAN_VS_DONE: 'plan-vs-done'
   });
+
+  const PLAN_VS_DONE_FS_ID = 'strength-plan-vs-done';
 
   const CUSTOM_EXERCISE_FS_ID = 'strength-custom-exercise';
 
@@ -3437,6 +3440,39 @@
   }
 
   /**
+   * Полноэкранный «Назначено против сделано» из шторки ⋯ и day-shell.
+   * Builder lane может оставить view-dispatch на BuilderPlanVsDoneScreen;
+   * канонический экран контракта — PlanVsDoneScreen здесь.
+   */
+  function openPlanVsDone(opts) {
+    const o = opts || {};
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    if (!fs || typeof fs.mount !== 'function') return false;
+    return fs.mount({
+      id: PLAN_VS_DONE_FS_ID,
+      ariaLabel: 'Назначено против сделано',
+      render: function (api) {
+        return h(PlanVsDoneScreen, {
+          training: o.training || {},
+          onBack: function () {
+            api.close();
+            if (typeof o.onBack === 'function') o.onBack();
+          },
+          onMessageCurator: o.onMessageCurator,
+          onWeekReport: o.onWeekReport || function () { api.close(); }
+        });
+      }
+    });
+  }
+
+  function closePlanVsDone() {
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    return fs && typeof fs.unmount === 'function' ? fs.unmount(PLAN_VS_DONE_FS_ID) : false;
+  }
+
+  /**
    * Контракт для lane 1 (builder_ui): view-dispatch до CatUI/FinUI.
    * Ключи — STRENGTH_SUBVIEW_VIEW_KEYS; props — как у соответствующих Screen.
    */
@@ -3452,12 +3488,17 @@
     if (ctx.view === STRENGTH_SUBVIEW_VIEW_KEYS.TRISET_WORK) {
       return h(TriSetWorkScreen, props);
     }
+    if (ctx.view === STRENGTH_SUBVIEW_VIEW_KEYS.PLAN_VS_DONE) {
+      return h(PlanVsDoneScreen, props);
+    }
     return null;
   }
 
   Parts.STRENGTH_SUBVIEW_VIEW_KEYS = STRENGTH_SUBVIEW_VIEW_KEYS;
   Parts.openCustomExercise = openCustomExercise;
   Parts.closeCustomExercise = closeCustomExercise;
+  Parts.openPlanVsDone = openPlanVsDone;
+  Parts.closePlanVsDone = closePlanVsDone;
   Parts.renderBuilderSubview = renderBuilderSubview;
   Parts.supersetGroupLetter = supersetGroupLetter;
   Parts.supersetMemberLines = supersetMemberLines;
