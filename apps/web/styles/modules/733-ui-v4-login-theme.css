@@ -2277,8 +2277,8 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   border: 0;
   border-radius: 999px;
   padding: 14px 16px;
-  background: var(--v4-bad-text, #a83c22);
-  color: var(--v4-btn-on-act, #fff5ef);
+  background: transparent;
+  color: var(--v4-bad-text, #a83c22);
   font-family: inherit;
   font-size: 13px;
   font-weight: 700;
