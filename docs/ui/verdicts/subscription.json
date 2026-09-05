@@ -4,1278 +4,1330 @@
   "recorded": "2026-09-05",
   "rows": {
     "фича": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_subscription_v1.js:16: TRIAL_DAYS=7; статусы none/trial/active/read_only в heys_subscription_v1.js",
       "h": "5095bc11b093"
     },
     "границы": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:1547: PaywallModal, ContactCuratorScreen, SubscriptionSection, ReadOnlyBanner, PaymentScreen реализованы",
       "h": "af4de3a32f77"
     },
     "источник": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/styles/modules/732-ui-v4-nutrition.css:1679: nutrition .readonly-banner — 732-ui-v4-nutrition.css:1679; curator-cabinet отдельно",
       "h": "a7e0446b011a"
     },
     "код": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:1207: heys_paywall_v1.js, heys_subscriptions_v1.js, heys_trial_queue_v1.js, heys_subscription_v1.js, SubscriptionStatusCard",
       "h": "c0e524f0ea44"
     },
     "две фазы": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:1733: paymentsEnabled default false → ContactCuratorScreen; true → PaywallModal/PaymentScreen",
       "h": "a63bf2010698"
     },
     "адресация": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "docs/ui/handoff-v4/canvas/.../subscription.v4.dc.html: 15 product frames data-demo=stop; visual fixture TASK72 (apps/web/scripts/ui-v4-visual-fixture.mjs)",
       "h": "8cbaa6e75185"
     },
     "палитры": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "7583d8ba8bb4"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:72: paywall-modal background var(--bg-primary, #fff); settings row on v4 roles",
+      "h": "7583d8ba8bb4",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "слой — центральная модалка": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "ed6c5c106710"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:51: overlay blur(4px); modal radius 20px padding 24px",
+      "h": "ed6c5c106710",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "три тарифа": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:103: HEYS.config.prices base 490 pro 7990 proPlus 19990; Pro recommended",
       "h": "263103624571"
     },
     "три сигнала «только чтение»": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:777: ReadOnlyBanner + showBlockedToast + nutrition .readonly-banner",
       "h": "13e4ac7f78be"
     },
     "контакт поддержки — список": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:25: ContactCuratorScreen: один Telegram @heyslab_support_bot, не список кураторов",
       "h": "2e1fac5c86fd"
     },
     "шаги оплаты — как в коде": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:358: PaymentScreen → YandexAPI.createPayment → PaymentSuccessScreen + payment_oferta",
       "h": "59ced6c87e00"
     },
     "очередь на пробный период": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_trial_queue_v1.js:269: TrialQueueSection 4 states; offer_window_minutes в trial_queue",
       "h": "6c6ff0ad3dec"
     },
     "слова на экране": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "9e15fcb37035"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1395: Welcome 🎉; «Триал завершён»; «🎉 Начать триал!»; settings «Триал · осталось»",
+      "h": "9e15fcb37035",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "иконки": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "1e3479218d6a"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:784: emoji 🔒🎉⏳ в Paywall/TrialQueue; Lucide не подключён в subscription слое",
+      "h": "1e3479218d6a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "вид · подписка в настройках": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: row min-height 44px; padding 12px 15px; label 600 0.8125rem/1.2 Figtree, system-ui, sans-serif",
       "h": "f21d63340325"
     },
     "вид · экран подписки · пробный период": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "0ebc8e8a8d32"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1075: SubscriptionSection legacy inline #f9fafb radius 12 padding 16 — не v4 card --c1 radius 20",
+      "h": "0ebc8e8a8d32",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "вид · экран подписки · активна": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "f646453efccf"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1075: то же SubscriptionSection inline styles",
+      "h": "f646453efccf",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "вид · экран подписки · только чтение": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "2d65333d657b"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1135: SubscriptionSection read_only → CTA «Продлить подписку», не «Написать/Выбрать тариф» v4",
+      "h": "2d65333d657b",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "вид · приветствие": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "c623ce3f9c79"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1369: WelcomeFirstLogin: emoji 56px, синий gradient CTA, copy «добро пожаловать в HEYS!»",
+      "h": "c623ce3f9c79",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "вид · баннер сверху": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
       "h": "9fde9a0c13f0"
     },
     "вид · тост на действии": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
       "h": "173a163ccde8"
     },
     "плашка на вкладке «Питание»": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "aeb4d318b1f0"
     },
     "вид · контакт поддержки": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
       "h": "314a9d7f62ee"
     },
     "вид · тарифы": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
       "h": "b2c144139def"
     },
     "вид · карточка тарифа": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
       "h": "48d05dbb2183"
     },
     "вид · блок пробного периода": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
       "h": "a0f1d0d33b0f"
     },
     "вид · проверьте заказ": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
       "h": "6ffb8f94cab0"
     },
     "вид · оплата прошла": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
       "h": "8da30899465c"
     },
     "точки входа": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "585bf5c94ce8"
     },
     "гейт записи": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "c2a0e9bbf19c"
     },
     "что решает состояние": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "2dfaf15d1558"
     },
     "Pro Спорт": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:138: proplus → contact flow, не card payment",
       "h": "ab6dcbe1684a"
     },
     "очередь · отмена заявки": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "4be17c90d6ab"
     },
     "очередь · оффер истёк": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "b802b0eb9e1d"
     },
     "оплата · уход и возврат": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "c69198c53e48"
     },
     "приветствие · один раз": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "220fb9cd0d17"
     },
     "аппаратная кнопка назад и затемнение": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "db267d4a9e56"
     },
     "уменьшенное движение, крупный шрифт, офлайн": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "b4562af6dc9a"
     },
     "доступность": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "c0733bb704ea"
     },
     "открытых вопросов нет": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "ce43c610587e"
+      "v": "—",
+      "f": "subscription.v4.dc.html: Мета-инструкция канваса, не продуктовое правило",
+      "h": "ce43c610587e",
+      "naKind": "handoff"
     },
     "контакты куратора — откуда": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "0f320cfd37fd"
     },
     "срок подписки": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "bed89bf75bdf"
     },
     "отмена и возврат": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "c7e68ac10d8a"
     },
     "как читать разбор": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "a7c1cb6b25d9"
+      "v": "—",
+      "f": "subscription.v4.dc.html: Мета-инструкция канваса, не продуктовое правило",
+      "h": "a7c1cb6b25d9",
+      "naKind": "handoff"
     },
     "Подписка · строка в настройках · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "be26b94c0688"
     },
     "Подписка · строка в настройках · 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: content=Вы; margin=4px 0px 8px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d89140238fd"
     },
     "Подписка · строка в настройках · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: background=var(--c1); border-radius=18px; overflow=hidden. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "90c3eca5a44a"
     },
     "Подписка · строка в настройках · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: content=6 из 7 блоков; font-variant-numeric=tabular-nums. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "aff87444cb0c"
     },
     "Подписка · строка в настройках · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: content=Приложение; margin=14px 0px 8px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "c5cfa42e86b2"
     },
     "Подписка · строка в настройках · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: content=3 новые; font-variant-numeric=tabular-nums; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3e3760f2c79f"
     },
     "Подписка · экран · пробный период · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "be26b94c0688"
     },
     "Подписка · экран · пробный период · 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: background=var(--c1); border-radius=20px; padding=16px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3e39d306ccfe"
     },
     "Подписка · экран · пробный период · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=до 10 сентября; font-variant-numeric=tabular-nums; font=800 [object Object]px/[object Object] Figtree; color=var(--tx); margin-top=10px; letter-spacing={\"value\":-0.01,\"unit\":\"em\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7cb50ddf0883"
     },
     "Подписка · экран · пробный период · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=дату окончания даёт сервер; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "1628d556df3e"
     },
     "Подписка · экран · пробный период · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Что открыто; margin=18px 0px 10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "0825eb7189ac"
     },
     "Подписка · экран · пробный период · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: flex-direction=column; gap=10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "72feea3e2a4d"
     },
     "Подписка · экран · пробный период · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Когда пробный период закончится, день и история ос; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); margin-top=16px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "650353c134e8"
     },
     "Подписка · экран · пробный период · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: margin-top=auto; padding=0px 18px 18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "813fbe526a44"
     },
     "Подписка · экран · пробный период · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: background=var(--c1); border-radius=16px; padding=12px 14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "cb72a3a962e9"
     },
     "Подписка · экран · пробный период · 10": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Само ничего не спишется; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "f74b2fa32e9f"
     },
     "Подписка · экран · пробный период · 11": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Оплата и продление идут через поддержку — деньги н; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=5px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9453360f4ae8"
     },
     "Подписка · экран · пробный период · 12": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: align-items=center; justify-content=space-between; min-height=44px; padding=0px 3px; margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · пробный период · 13": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: content=Написать в поддержку; font=600 [object Object]px/[object Object] Figtree; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9e987eb80379"
     },
     "Подписка · экран · пробный период · 14": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "23f1b43c08ab"
     },
     "Подписка · приветствие · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1369: Кадр Подписка · приветствие: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · приветствие · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1369: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · приветствие · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "05682a749e71"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1369: content: expected \"Начать\" got \"🎉\"",
+      "h": "05682a749e71",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · баннер сверху · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:260: Кадр Подписка · баннер сверху: background=var(--tint); padding=10px 18px; min-height=44px; align-items=center; justify-content=space-between; gap=12px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "da71e6d2b10a"
     },
     "Подписка · баннер сверху · 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:260: Кадр Подписка · баннер сверху: content=Доступ только для чтения; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "653ea11b9829"
     },
     "Подписка · баннер сверху · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:260: Кадр Подписка · баннер сверху: content=Чтобы записывать — напишите в поддержку; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=2px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "55686f7baee9"
     },
     "Подписка · баннер сверху · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:260: Кадр Подписка · баннер сверху: content=Подписка; flex=none; min-height=34px; padding=0px 14px; border-radius=999px; background=var(--acs); color=var(--on-acs); font=700 [object Object]px/[object Object] Figtree; align-items=center. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9aff32f6de65"
     },
     "Подписка · баннер сверху · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:260: Кадр Подписка · баннер сверху: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · тост на действии · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: background=var(--tint); padding=10px 18px; min-height=44px; align-items=center; justify-content=space-between; gap=12px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "da71e6d2b10a"
     },
     "Подписка · тост на действии · 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: content=Доступ только для чтения; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "653ea11b9829"
     },
     "Подписка · тост на действии · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: content=Чтобы записывать — напишите в поддержку; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=2px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "55686f7baee9"
     },
     "Подписка · тост на действии · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: content=Подписка; flex=none; min-height=34px; padding=0px 14px; border-radius=999px; background=var(--acs); color=var(--on-acs); font=700 [object Object]px/[object Object] Figtree; align-items=center. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9aff32f6de65"
     },
     "Подписка · тост на действии · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · тост на действии · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: position=absolute; background=var(--c1); border-radius=22px; padding=11px 13px; align-items=center; gap=11px; box-shadow=inset 0 0 0 1px rgba(var(--ink),.07). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "ff0d8a9cf1db"
     },
     "Подписка · тост на действии · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: content=Запись недоступна — только чтение; flex=1; font=600 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "784e5503d910"
     },
     "Подписка · тост на действии · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: content=Подписка; font=700 [object Object]px/[object Object] Figtree; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "57dcfc7fa28f"
     },
     "Подписка · тост на действии · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: position=absolute; height=64px; background=var(--bg). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "f04b293cdef7"
     },
     "Подписка · контакт поддержки · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · контакт поддержки · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: width=44px; height=44px; border-radius=999px; background=var(--tint); align-items=center; justify-content=center; color=var(--red). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "6c44248bfacc"
     },
     "Подписка · контакт поддержки · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: content=Пробный период закончился; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "c67ea7824645"
     },
     "Подписка · контакт поддержки · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: margin-top=18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "ca284860118a"
     },
     "Подписка · контакт поддержки · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: flex=1. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "55bfcd532bba"
     },
     "Подписка · тарифы · места есть · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · тарифы · места есть · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:71: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тарифы · места есть · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: flex-direction=column; gap=10px; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "087ed8e64dce"
     },
     "Подписка · тарифы · места есть · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: content=490 ₽; font-variant-numeric=tabular-nums. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "51d24f911184"
     },
     "Подписка · тарифы · места есть · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: margin-top=4px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3b7e120e3d2c"
     },
     "Подписка · тарифы · места есть · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: content=Оформить Pro · 7 990 ₽; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3f16fdc430e5"
     },
     "Подписка · тарифы · места есть · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: align-items=center; gap=12px; margin=14px 0px 12px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b993eec06584"
     },
     "Подписка · тарифы · места есть · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: flex=1; height=1px; background=rgba(var(--ink),.08). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "8650aa8302a9"
     },
     "Подписка · тарифы · места есть · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: content=или; font=600 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.45). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b2393a91cffd"
     },
     "Подписка · тарифы · места есть · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "4feaced51eda"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:71: PAYWALL_STYLES .paywall-modal padding 24px",
+      "h": "4feaced51eda",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тарифы · места есть · 11": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: content=Пробный период 7 дней — бесплатно; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "436e6a0f6dc2"
     },
     "Подписка · тарифы · места есть · 12": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: align-items=center; justify-content=center; gap=7px; margin-top=6px; font=600 [object Object]px/[object Object] Figtree; color=var(--gr). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "e7a578bc6d35"
     },
     "Подписка · тарифы · места есть · 13": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: width=8px; height=8px; border-radius=999px; background=var(--gr). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "6dbc14367056"
     },
     "Подписка · тарифы · места есть · 14": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: content=Начать пробный период; min-height=44px; margin-top=12px; background=var(--bg). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "a6d8392ff855"
     },
     "Подписка · тарифы · мест нет · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · тарифы · мест нет · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:71: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тарифы · мест нет · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: flex-direction=column; gap=10px; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "087ed8e64dce"
     },
     "Подписка · тарифы · мест нет · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: content=490 ₽; font-variant-numeric=tabular-nums. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "51d24f911184"
     },
     "Подписка · тарифы · мест нет · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: margin-top=4px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3b7e120e3d2c"
     },
     "Подписка · тарифы · мест нет · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: content=Оформить Pro · 7 990 ₽; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3f16fdc430e5"
     },
     "Подписка · тарифы · мест нет · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: align-items=center; gap=12px; margin=14px 0px 12px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b993eec06584"
     },
     "Подписка · тарифы · мест нет · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: flex=1; height=1px; background=rgba(var(--ink),.08). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "8650aa8302a9"
     },
     "Подписка · тарифы · мест нет · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: content=или; font=600 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.45). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b2393a91cffd"
     },
     "Подписка · тарифы · мест нет · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "4feaced51eda"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:71: PAYWALL_STYLES .paywall-modal padding 24px",
+      "h": "4feaced51eda",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тарифы · мест нет · 11": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: content=Пробный период 7 дней — бесплатно; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "436e6a0f6dc2"
     },
     "Подписка · тарифы · мест нет · 12": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: align-items=center; justify-content=center; gap=7px; margin-top=6px; font=600 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "c9839ed24f34"
     },
     "Подписка · тарифы · мест нет · 13": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: width=8px; height=8px; border-radius=999px; background=var(--red). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "28ea52430475"
     },
     "Подписка · тарифы · мест нет · 14": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: content=Встать в очередь; min-height=44px; margin-top=12px; background=var(--bg). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9999721e3ac9"
     },
     "Подписка · тарифы · Pro Спорт · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · Pro Спорт: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · тарифы · Pro Спорт · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:71: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тарифы · Pro Спорт · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · Pro Спорт: flex-direction=column; gap=10px; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "087ed8e64dce"
     },
     "Подписка · тарифы · Pro Спорт · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · Pro Спорт: content=490 ₽; font-variant-numeric=tabular-nums. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "51d24f911184"
     },
     "Подписка · тарифы · Pro Спорт · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · Pro Спорт: margin-top=4px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3b7e120e3d2c"
     },
     "Подписка · тарифы · Pro Спорт · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · Pro Спорт: content=Написать в поддержку; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7b7545ce8968"
     },
     "Подписка · тарифы · Pro Спорт · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · Pro Спорт: content=Pro Спорт подключается после согласования — поддер; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); text-align=center; margin-top=10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "430eeb011f5a"
     },
     "Подписка · проверьте заказ · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · проверьте заказ · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:797: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · проверьте заказ · 03": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "f83b80058208"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:797: PAYWALL_STYLES .paywall-modal padding 24px",
+      "h": "f83b80058208",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · проверьте заказ · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: content=Pro; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "1045720b8968"
     },
     "Подписка · проверьте заказ · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: text-align=right. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "1d5eb3e2f313"
     },
     "Подписка · проверьте заказ · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: content=7 990 ₽; font-variant-numeric=tabular-nums; font=800 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "78fabf7bf8c3"
     },
     "Подписка · проверьте заказ · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: content=за 30 дней; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.5); margin-top=4px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "5a0b7ccb4f81"
     },
     "Подписка · проверьте заказ · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: align-items=flex-start; gap=12px; margin-top=16px; padding=0px 2px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "a31c30ef31b7"
     },
     "Подписка · проверьте заказ · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: background=var(--acs); color=var(--on-acs). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9ef64d224296"
     },
     "Подписка · проверьте заказ · 10": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: content=Принимаю условия; font=500 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "c420a834021d"
     },
     "Подписка · проверьте заказ · 11": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: content=публичной оферты; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "56d9e6d52361"
     },
     "Подписка · проверьте заказ · 12": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: content=Оплатить 7 990 ₽; margin-top=18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "6beee72dee5a"
     },
     "Подписка · проверьте заказ · 13": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: content=Отмена; align-items=center; justify-content=center; min-height=44px; font=600 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b81b231f9fa9"
     },
     "Подписка · оплата прошла · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Кадр Подписка · оплата прошла: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · оплата прошла · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · оплата прошла · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Кадр Подписка · оплата прошла: width=56px; height=56px; border-radius=999px; background=var(--gr-bg); align-items=center; justify-content=center; color=var(--gr). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "d48f38529ce3"
     },
     "Подписка · оплата прошла · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Кадр Подписка · оплата прошла: content=Подписка активна; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "d3db80b7d8de"
     },
     "Подписка · оплата прошла · 05": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "deb774d4356f"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js: PAYWALL_STYLES .paywall-modal padding 24px",
+      "h": "deb774d4356f",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · оплата прошла · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Кадр Подписка · оплата прошла: content=До 5 октября · 7 990 ₽ в месяц; font-variant-numeric=tabular-nums. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "1d391e1255fc"
     },
     "Подписка · оплата прошла · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Кадр Подписка · оплата прошла: content=Продолжить; margin-top=18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b62d5e9c321a"
     },
     "Подписка · экран · активна · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "be26b94c0688"
     },
     "Подписка · экран · активна · 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: background=var(--c1); border-radius=20px; padding=16px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3e39d306ccfe"
     },
     "Подписка · экран · активна · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=до 3 октября; font-variant-numeric=tabular-nums; font=800 [object Object]px/[object Object] Figtree; color=var(--tx); margin-top=10px; letter-spacing={\"value\":-0.01,\"unit\":\"em\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "671d161e7758"
     },
     "Подписка · экран · активна · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=7 990 ₽ в месяц · оплачено до этой даты; font-variant-numeric=tabular-nums; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "a982f6d7c993"
     },
     "Подписка · экран · активна · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=Что открыто; margin=18px 0px 10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "0825eb7189ac"
     },
     "Подписка · экран · активна · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: flex-direction=column; gap=10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "72feea3e2a4d"
     },
     "Подписка · экран · активна · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: margin-top=auto; padding=0px 18px 18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "813fbe526a44"
     },
     "Подписка · экран · активна · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: background=var(--c1); border-radius=16px; padding=12px 14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "cb72a3a962e9"
     },
     "Подписка · экран · активна · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=Само ничего не спишется; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "f74b2fa32e9f"
     },
     "Подписка · экран · активна · 10": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=Оплата и продление идут через поддержку — деньги н; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=5px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9453360f4ae8"
     },
     "Подписка · экран · активна · 11": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: align-items=center; justify-content=space-between; min-height=44px; padding=0px 3px; margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · активна · 12": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: content=Написать в поддержку; font=600 [object Object]px/[object Object] Figtree; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9e987eb80379"
     },
     "Подписка · экран · активна · 13": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "23f1b43c08ab"
     },
     "Подписка · экран · только чтение · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
       "h": "be26b94c0688"
     },
     "Подписка · экран · только чтение · 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: background=var(--tint); border-radius=20px; padding=16px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "cf89b16538b5"
     },
     "Подписка · экран · только чтение · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Только чтение; color=var(--red). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "a74317820af6"
     },
     "Подписка · экран · только чтение · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Пробный период закончился; font=700 [object Object]px/[object Object] Figtree; color=var(--tx); margin-top=10px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "e77ccfe5f1a4"
     },
     "Подписка · экран · только чтение · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=День и история открыты для чтения. Чтобы записыват; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "0d66e6af4b1e"
     },
     "Подписка · экран · только чтение · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Написать в поддержку; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7b7545ce8968"
     },
     "Подписка · экран · только чтение · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: margin-top=auto; padding=0px 18px 18px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "813fbe526a44"
     },
     "Подписка · экран · только чтение · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: background=var(--c1); border-radius=16px; padding=12px 14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "cb72a3a962e9"
     },
     "Подписка · экран · только чтение · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Само ничего не спишется; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "f74b2fa32e9f"
     },
     "Подписка · экран · только чтение · 10": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Оплата и продление идут через поддержку — деньги н; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.62); margin-top=5px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9453360f4ae8"
     },
     "Подписка · экран · только чтение · 11": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: align-items=center; justify-content=space-between; min-height=44px; padding=0px 3px; margin-top=6px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · только чтение · 12": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: content=Написать в поддержку; font=600 [object Object]px/[object Object] Figtree; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "9e987eb80379"
     },
     "Подписка · экран · только чтение · 13": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "23f1b43c08ab"
     },
     "Подписка · очередь · заявка подана · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · очередь · заявка подана · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · очередь · заявка подана · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: flex-direction=column; gap=10px; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "087ed8e64dce"
     },
     "Подписка · очередь · заявка подана · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: content=490 ₽; font-variant-numeric=tabular-nums. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "51d24f911184"
     },
     "Подписка · очередь · заявка подана · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: margin-top=4px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3b7e120e3d2c"
     },
     "Подписка · очередь · заявка подана · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: content=Оформить Pro · 7 990 ₽; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3f16fdc430e5"
     },
     "Подписка · очередь · заявка подана · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: align-items=center; gap=12px; margin=14px 0px 12px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b993eec06584"
     },
     "Подписка · очередь · заявка подана · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: flex=1; height=1px; background=rgba(var(--ink),.08). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "8650aa8302a9"
     },
     "Подписка · очередь · заявка подана · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: content=или; font=600 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.45). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b2393a91cffd"
     },
     "Подписка · очередь · заявка подана · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "4feaced51eda"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-modal padding 24px",
+      "h": "4feaced51eda",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · очередь · заявка подана · 11": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: content=Заявка подана · вы 3-й в очереди; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "337f5986df0e"
     },
     "Подписка · очередь · заявка подана · 12": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: content=Сообщим, когда место освободится; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); margin-top=4px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "519e6bd209f9"
     },
     "Подписка · очередь · заявка подана · 13": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: content=Отменить заявку; align-items=center; justify-content=center; min-height=44px; margin-top=6px; font=600 [object Object]px/[object Object] Figtree; color=var(--ac). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "d812fde74701"
     },
     "Подписка · очередь · место освободилось · 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: margin-top=0; height=120px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "043900ff8336"
     },
     "Подписка · очередь · место освободилось · 02": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · очередь · место освободилось · 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: flex-direction=column; gap=10px; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "087ed8e64dce"
     },
     "Подписка · очередь · место освободилось · 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: content=490 ₽; font-variant-numeric=tabular-nums. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "51d24f911184"
     },
     "Подписка · очередь · место освободилось · 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: margin-top=4px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3b7e120e3d2c"
     },
     "Подписка · очередь · место освободилось · 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: content=Оформить Pro · 7 990 ₽; margin-top=14px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "3f16fdc430e5"
     },
     "Подписка · очередь · место освободилось · 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: align-items=center; gap=12px; margin=14px 0px 12px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b993eec06584"
     },
     "Подписка · очередь · место освободилось · 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: flex=1; height=1px; background=rgba(var(--ink),.08). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "8650aa8302a9"
     },
     "Подписка · очередь · место освободилось · 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: content=или; font=600 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.45). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b2393a91cffd"
     },
     "Подписка · очередь · место освободилось · 10": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "1a386dbaa291"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-modal padding 24px",
+      "h": "1a386dbaa291",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · очередь · место освободилось · 11": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: content=Место освободилось; font=700 [object Object]px/[object Object] Figtree; color=var(--tx). Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b1e0c4a27140"
     },
     "Подписка · очередь · место освободилось · 12": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: content=1:47:12; font-variant-numeric=tabular-nums; font=800 [object Object]px/[object Object] Figtree; color=var(--tx); margin-top=8px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "0a7e825ef51a"
     },
     "Подписка · очередь · место освободилось · 13": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: content=на подтверждение; font=500 [object Object]px/[object Object] Figtree; color=rgba(var(--ink),.56); margin-top=4px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "f98c823028d9"
     },
     "Подписка · очередь · место освободилось · 14": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: content=Начать пробный период; margin-top=12px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "13f6723b964f"
     },
     "как читать графику": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "aff3381fee5e"
+      "v": "—",
+      "f": "subscription.v4.dc.html: Мета-инструкция канваса, не продуктовое правило",
+      "h": "aff3381fee5e",
+      "naKind": "handoff"
     },
     "Подписка · строка в настройках · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · строка в настройках · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · строка в настройках · рисунок 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: svg-path=M9 6l6 6-6 6. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "163302844c74"
     },
     "Подписка · экран · пробный период · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · экран · пробный период · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · экран · пробный период · рисунок 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: svg-path=M20 6L9 17l-5-5. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "2f2b6477120d"
     },
     "Подписка · экран · пробный период · рисунок 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · пробный период: svg-path=M9 6l6 6-6 6. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "163302844c74"
     },
     "Подписка · тост на действии · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · тост на действии · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: svg-rect={\"width\":18,\"height\":11}; border-radius=2px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "4739a51e07b6"
     },
     "Подписка · тост на действии · рисунок 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:302: Кадр Подписка · тост на действии: svg-path=M7 11V7a5 5 0 0 1 10 0v4. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "4c6746959819"
     },
     "Подписка · контакт поддержки · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · контакт поддержки · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · контакт поддержки · рисунок 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-viewport={\"width\":22,\"height\":22,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "1b58bd62b711"
     },
     "Подписка · контакт поддержки · рисунок 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-rect={\"width\":18,\"height\":11}; border-radius=2px. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "4739a51e07b6"
     },
     "Подписка · контакт поддержки · рисунок 05": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-path=M7 11V7a5 5 0 0 1 10 0v4. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "4c6746959819"
     },
     "Подписка · контакт поддержки · рисунок 06": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-viewport={\"width\":16,\"height\":16,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "ddf4bd54ba6a"
     },
     "Подписка · контакт поддержки · рисунок 07": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-path=M22 2L11 13. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "b590d522cda5"
     },
     "Подписка · контакт поддержки · рисунок 08": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-path=M22 2l-7 20-4-9-9-4 20-7z. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "a56779c1fc6f"
     },
     "Подписка · контакт поддержки · рисунок 09": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1219: Кадр Подписка · контакт поддержки: svg-path=M7 17L17 7M7 7h10v10. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "dd84fe7bfa6f"
     },
     "Подписка · тарифы · места есть · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · тарифы · места есть · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · места есть: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · тарифы · мест нет · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · тарифы · мест нет · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · мест нет: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · тарифы · Pro Спорт · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · Pro Спорт: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · тарифы · Pro Спорт · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:71: Кадр Подписка · тарифы · Pro Спорт: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · проверьте заказ · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · проверьте заказ · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · проверьте заказ · рисунок 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: svg-viewport={\"width\":13,\"height\":13,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "c2b4d247a149"
     },
     "Подписка · проверьте заказ · рисунок 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:797: Кадр Подписка · проверьте заказ: svg-path=M20 6L9 17l-5-5. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "2f2b6477120d"
     },
     "Подписка · оплата прошла · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Кадр Подписка · оплата прошла: svg-viewport={\"width\":26,\"height\":26,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "c9e176031528"
     },
     "Подписка · оплата прошла · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Кадр Подписка · оплата прошла: svg-path=M20 6L9 17l-5-5. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "2f2b6477120d"
     },
     "Подписка · экран · активна · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · экран · активна · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · экран · активна · рисунок 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: svg-path=M20 6L9 17l-5-5. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "2f2b6477120d"
     },
     "Подписка · экран · активна · рисунок 04": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · активна: svg-path=M9 6l6 6-6 6. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "163302844c74"
     },
     "Подписка · экран · только чтение · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · экран · только чтение · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · экран · только чтение · рисунок 03": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js:1042: Кадр Подписка · экран · только чтение: svg-path=M9 6l6 6-6 6. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "163302844c74"
     },
     "Подписка · очередь · заявка подана · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · очередь · заявка подана · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · заявка подана: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "Подписка · очередь · место освободилось · рисунок 01": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "7d9d1119f1bb"
     },
     "Подписка · очередь · место освободилось · рисунок 02": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_paywall_v1.js:549: Кадр Подписка · очередь · место освободилось: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
       "h": "49950e24d175"
     },
     "как читать текст": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
-      "h": "68ab4749e19a"
+      "v": "—",
+      "f": "subscription.v4.dc.html: Мета-инструкция канваса, не продуктовое правило",
+      "h": "68ab4749e19a",
+      "naKind": "handoff"
     },
     "Подписка · строка в настройках · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Настройки › Вы › Профиль и цели › Дневни…»",
       "h": "06b2654d4135"
     },
     "Подписка · экран · пробный период · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Подписка › Пробный период › до 10 сентяб…»",
       "h": "4606c40e86a9"
     },
     "Подписка · приветствие · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Главная › Анна, добро пожаловать › Пробн…»",
       "h": "da68e23e6776"
     },
     "Подписка · баннер сверху · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Доступ только для чтения › Чтобы записыв…»",
       "h": "d165fcfee534"
     },
     "Подписка · тост на действии · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Доступ только для чтения › Чтобы записыв…»",
       "h": "6475f88fbcb2"
     },
     "Подписка · контакт поддержки · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Питание › Пробный период закончился › По…»",
       "h": "68f9d36ac2c1"
     },
     "Подписка · тарифы · места есть · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Питание › Пробный период закончился › Вы…»",
       "h": "1bfbaefc5a30"
     },
     "Подписка · тарифы · мест нет · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Питание › Пробный период закончился › Вы…»",
       "h": "3193079b89e4"
     },
     "Подписка · тарифы · Pro Спорт · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Питание › Подписка › Выберите тариф — до…»",
       "h": "e74e583a87e3"
     },
     "Подписка · проверьте заказ · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Питание › Проверьте заказ › Pro › Курато…»",
       "h": "2efb43ef7426"
     },
     "Подписка · оплата прошла · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Питание › Подписка активна › Тариф — › P…»",
       "h": "1a8e874919aa"
     },
     "Подписка · экран · активна · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Подписка › Pro · активна › до 3 октября …»",
       "h": "f907bddf0afc"
     },
     "Подписка · экран · только чтение · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Подписка › Только чтение › Пробный перио…»",
       "h": "ed7dc2c35921"
     },
     "Подписка · очередь · заявка подана · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Питание › Пробный период закончился › Вы…»",
       "h": "0314add19307"
     },
     "Подписка · очередь · место освободилось · текст": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "apps/web/heys_subscriptions_v1.js: Copy row — grep heys_subscriptions_v1.js / heys_paywall_v1.js для «Питание › Пробный период закончился › Вы…»",
       "h": "88d83d9b62d0"
     }
   },
