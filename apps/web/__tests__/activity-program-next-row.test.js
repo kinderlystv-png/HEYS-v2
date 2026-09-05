@@ -6,9 +6,8 @@
 // только «когда»: подписи «Грудь и руки · по программе» не было вовсе, а это
 // ровно то, ради чего строку открывают.
 //
-// Блок программы рисуется единственным вызовом renderTrainingsBlock с
-// trainingFilterMode: 'program' и живёт только на «Активе», поэтому правка
-// разметки других экранов не задевает — это проверяется здесь же.
+// Блок программы рисуется renderActivityProgramBlock и живёт только на «Активе»,
+// поэтому правка разметки других экранов не задевает — это проверяется здесь же.
 
 import fs from 'fs';
 import path from 'path';
@@ -65,13 +64,14 @@ describe('Строка «Следующая тренировка» говори�
 });
 
 describe('Строка приведена к списку .cd только на «Активе»', () => {
-  it('геометрия задана внутри блока программы, а не в общем классе', () => {
-    // Иначе поехали бы и другие экраны, где .program-next-line своя.
-    const scoped = rule('.activity-v4-program .program-next-line');
+  it('геометрия задана классом activity-v4-program-line, а не переопределением program-next-line', () => {
+    const scoped = rule('.activity-v4-program-line');
     expect(scoped).toContain('border-radius: 20px');
     expect(scoped).toContain('padding: 13px 16px');
     expect(scoped).toContain('border: none');
     expect(scoped).toContain('var(--v4-c1');
+    expect(TRAININGS_SRC).toContain('activityProgramLineClass');
+    expect(TRAININGS_SRC).not.toMatch(/className: 'program-next-line'/);
   });
 
   it('общий класс остался прежним — чужие экраны не задеты', () => {
@@ -99,8 +99,9 @@ describe('Строка приведена к списку .cd только на 
     expect(rule('.activity-v4-program')).toContain('margin-top: 12px');
   });
 
-  it('режим «program» вызывается ровно из одного места', () => {
-    const uses = TAB_SRC.match(/trainingFilterMode: 'program'/g) || [];
-    expect(uses).toHaveLength(1);
+  it('режим «program» вызывается ровно из одного места через renderActivityProgramBlock', () => {
+    expect(TAB_SRC).toContain('renderActivityProgramBlock');
+    expect(TAB_SRC).not.toContain("trainingFilterMode: 'program'");
+    expect(TRAININGS_SRC).toContain('function renderActivityProgramBlock');
   });
 });

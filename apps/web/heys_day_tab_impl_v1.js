@@ -1359,7 +1359,7 @@
         // (разбор «Актив», дефект M).
         const programTrainingsBlock = useMemo(() => {
             if (!activityContentEnabled) return null;
-            return HEYS.dayTrainings?.renderTrainingsBlock?.({
+            return HEYS.dayTrainings?.renderActivityProgramBlock?.({
                 haptic,
                 setDay,
                 setVisibleTrainings,
@@ -1375,8 +1375,7 @@
                 kcalPerMin,
                 weight,
                 r0,
-                dateKey: date,
-                trainingFilterMode: 'program'
+                dateKey: date
             }) || null;
         }, [activityContentEnabled, visibleTrainings, householdActivities, trainingTypes, weight, kcalMin, TR, date]);
 

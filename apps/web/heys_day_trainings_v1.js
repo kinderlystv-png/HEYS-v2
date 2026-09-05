@@ -3356,6 +3356,11 @@
 
   const PROGRAM_DONE_ID = 'program-done';
 
+  /** Единственный класс строки программы на «Активе» — .cd кадра, не .program-next-line дневника. */
+  function activityProgramLineClass(extra) {
+    return 'activity-v4-program-line' + (extra ? (' ' + extra) : '');
+  }
+
   /**
    * Цикл пройден (16e). Строка вместо исчезновения: месяц работы обязан
    * чем-то закончиться, иначе программа просто перестаёт существовать.
@@ -3399,7 +3404,7 @@
     }
 
     return React.createElement('button', {
-      type: 'button', className: 'program-next-line is-done', onClick: openDone
+      type: 'button', className: activityProgramLineClass('is-done'), onClick: openDone
     },
       React.createElement('span', { className: 'program-next-text' },
         React.createElement('b', null, 'Программа пройдена'),
@@ -3462,7 +3467,7 @@
     // ровно то, ради чего её открывают (контракт «три элемента программы»).
     const nextLabel = typeof next.dayLabel === 'string' ? next.dayLabel.trim() : '';
     return React.createElement('button', {
-      type: 'button', className: 'program-next-line', onClick: openPath
+      type: 'button', className: activityProgramLineClass(), onClick: openPath
     },
       React.createElement('span', { className: 'program-next-key' },
         React.createElement('span', { className: 'program-next-text' },
@@ -4211,7 +4216,11 @@
       return null;
     }
 
-    return React.createElement('div', { className: 'compact-trainings' },
+    const hostClassName = safeTrainingFilterMode === 'program'
+      ? 'activity-v4-program'
+      : 'compact-trainings';
+
+    return React.createElement('div', { className: hostClassName },
       safeTrainingFilterMode === 'program' && HEYS.currentClientId && React.createElement(ProgramNextLine, {
         clientId: HEYS.currentClientId,
         // Строка и карточка взаимоисключающие: строка прячется, когда план
@@ -5165,8 +5174,13 @@
     );
   }
 
+  function renderActivityProgramBlock(params) {
+    return renderTrainingsBlock(Object.assign({}, params || {}, { trainingFilterMode: 'program' }));
+  }
+
   HEYS.dayTrainings = {
     renderTrainingsBlock,
+    renderActivityProgramBlock,
     // Тестовый шов — прямой рендер обзора программы куратора в изоляции от
     // всего остального compact-trainings дерева (много обязательных пропов).
     ProgramNextLine,

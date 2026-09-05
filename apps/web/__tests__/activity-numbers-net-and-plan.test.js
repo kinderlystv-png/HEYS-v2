@@ -979,7 +979,7 @@ describe('Программа куратора · выше яруса', () => {
       r0: (v) => Math.round(v || 0),
       visibleTrainings: 0,
       regularTrainingsBlock: null,
-      programTrainingsBlock: React.createElement('div', null, 'элементы программы'),
+      programTrainingsBlock: React.createElement('div', { className: 'activity-v4-program' }, 'элементы программы'),
       ndteData: { active: false }, ndteBoostKcal: 0,
       tefData: {}, tefKcal: 0,
       dayTargetDef: -15, displayOptimum: 1940, optimum: 1940, cycleKcalMultiplier: 1,
@@ -1065,6 +1065,11 @@ describe('Режим program в блоке тренировок', () => {
 
   it('пустой день не убивает блок программы', () => {
     expect(build('program', [])).toBeTruthy();
+  });
+
+  it('корень режима program — activity-v4-program, не compact-trainings', () => {
+    const program = build('program', []);
+    expect(program.props.className).toBe('activity-v4-program');
   });
 
   it('без клиента программы нет', () => {

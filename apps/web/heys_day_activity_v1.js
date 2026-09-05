@@ -1079,9 +1079,9 @@
       // Три элемента программы стоят выше яруса: назначенная на сегодня
       // тренировка и правка куратора — самое важное на экране, и они не
       // могут жить за свёрнутым чевроном (контракт строка 7).
-      programTrainingsBlock && React.createElement('div', {
-        className: 'activity-v4-program'
-      }, programTrainingsBlock),
+      // Блок программы — один корень .activity-v4-program из renderActivityProgramBlock;
+      // второй обёртки вокруг compact-trainings не нужен (polosa4 · задача 114).
+      programTrainingsBlock,
 
       React.createElement('div', { className: 'activity-v4-tier' }, 'Сегодня'),
 

@@ -874,15 +874,32 @@ body:has(.activity-v4) .hdr::after {
    «день отдыха»: первая поверхность, радиус 20, поля 2/16, строка 13 px по
    вертикали, без разделителя (она в списке одна). */
 .activity-v4-program {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 12px;
 }
 
-.activity-v4-program .program-next-line {
+/* Строка «Следующая тренировка» — один путь: .activity-v4-program-line, не
+   .program-next-line дневника с переопределением внутри обёртки. */
+.activity-v4-program-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  width: 100%;
   padding: 13px 16px;
   border: none;
   border-radius: 20px;
   background: var(--v4-c1, #f7efe2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-v4-program-line.is-done {
+  background: rgba(22, 163, 74, 0.06);
 }
 
 .activity-v4-program .program-next-key {
