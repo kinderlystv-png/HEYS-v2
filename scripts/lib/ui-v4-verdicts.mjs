@@ -62,7 +62,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   // Это не послабление: 19 и 47 не изменились.
   'checkin-morning': Object.freeze({
     // 04.09: одна legacy «≠» типизирована reasonCode — долг 19 → 18.
-    mismatch: [18, '479d797f9bb9c2e5'],
+    mismatch: [9, '5cbfb835dab52307'],
     typedMismatch: [1, '3959d964b3a77b88'],
     notApplicable: [47, '19522329f4fb6522'],
   }),
@@ -105,7 +105,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 04.09: 683eb9da7 закрыл 60 «?» — часть сведена в «=», часть в «—» без
     // naKind. Долг вырос относительно пониженной базы 03.09: ≠ 25 → 32,
     // «—» 38 → 54.
-    mismatch: [31, 'b27b28754bea5e3d'],
+    mismatch: [27, 'ec6c0f73e273a572'],
     notApplicable: [54, '5864600e16443fce'],
   }),
   'home-widgets': Object.freeze({
@@ -132,7 +132,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'nutrition-tab': Object.freeze({
     // 04.09: 9e3fc6c3d типизировал 26 legacy «≠» (31 → 5). «—» выросло 168 → 211:
     // закрытие ?-долга ea801dfbb и новые нетипизированные «—» без naKind.
-    mismatch: [4, '1502d5bd2b18735f'],
+    mismatch: [3, '0094ced28bb57145'],
     notApplicable: [211, 'c56b7bc960bb40c0'],
   }),
   'product-card': Object.freeze({
@@ -157,7 +157,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 03.09 (вечер): две строки получили naKind handoff — «сведение зоны ·
     // вердикт» и «канон в чужом файле», обе про состояние разбора, а не про
     // продукт. Долг типизирован на две: «—» 136 → 134.
-    mismatch: [126, 'a80bbfef2241182c'],
+    mismatch: [125, '4b85dd5b38dd24a0'],
     typedMismatch: [17, '3aab0453f4ac87a7'],
     notApplicable: [134, '0fcd6b63be04a0c0'],
   }),
@@ -168,8 +168,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'settings-system': Object.freeze({
     // 04.09: ad762ae20 — 4 stale «≠» → «?», 2 «≠» typed reasonCode.
     // Legacy untyped: 13 → 9 (11 total «≠», из них 2 typed-v1).
-    mismatch: [9, '10cb5edc5e12a1df'],
-    typedMismatch: [2, '7924aa83ddb13146'],
+    mismatch: [8, '9233e5246dc376b1'],
+    typedMismatch: [1, '53aeb82771e99b0a'],
     notApplicable: [23, '93658b5f26c8caeb'],
   }),
   spinners: Object.freeze({
@@ -189,7 +189,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
     // 05.09: полосы 1/3/4 свели М1, М2/М3 и бейджи единиц В3 — 27 typed «≠»
     // стали «=» по факту кода, не по правке числа. Храповик едет только вниз.
-    typedMismatch: [174, 'df869c83b408a2c8'],
+    typedMismatch: [171, '007d6b61f8c3c11d'],
     notApplicable: [107, '13d5a59f2d87bb7f'],
   }),
   'tab-activity': Object.freeze({
