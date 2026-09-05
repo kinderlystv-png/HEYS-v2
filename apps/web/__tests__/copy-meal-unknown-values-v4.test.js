@@ -95,7 +95,8 @@ describe('лист копирования · чего не знаем', () => {
     expect(SRC).not.toMatch(/disabled:[^\n]*hasDefect/);
     expect(SRC).toContain('api.showEditProduct(it)');
     const fix = rule('.meal-transfer-v4__product-fix');
-    expect(fix).toContain('min-height: 32px');
+    // 5 сентября тач-цели подняли «Заполнить» 32 → 44 (контракт ·25, тач-цели).
+    expect(fix).toContain('min-height: 44px');
     expect(fix).toContain('padding: 0 12px');
     expect(fix).toContain('inset 0 0 0 1.5px var(--v4-act)');
     expect(fix).toContain('font-size: 10.5px');
