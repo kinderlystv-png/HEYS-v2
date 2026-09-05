@@ -61,8 +61,20 @@ function measureQuietMargins(pixels, width, height, channels) {
     return { top, right, bottom, left };
 }
 
+function qrFactoryParamsFromGatesSource() {
+    const gates = fs.readFileSync(path.join(WEB_DIR, 'heys_app_gates_v1.js'), 'utf8');
+    const match = gates.match(
+        /buildDesktopGateQrSrc[\s\S]*?_qrcodeFactory\s*\(\s*(\d+)\s*,\s*['"]([LMQH])['"]\s*\)/,
+    );
+    if (!match) {
+        throw new Error('buildDesktopGateQrSrc _qrcodeFactory params not found in gates source');
+    }
+    return { typeNumber: Number(match[1]), errorCorrectionLevel: match[2] };
+}
+
 function qrModuleCount(origin) {
-    const qr = window.HEYS.Gates._qrcodeFactory(0, 'M');
+    const { typeNumber, errorCorrectionLevel } = qrFactoryParamsFromGatesSource();
+    const qr = window.HEYS.Gates._qrcodeFactory(typeNumber, errorCorrectionLevel);
     qr.addData(origin);
     qr.make();
     return qr.getModuleCount();
@@ -95,11 +107,15 @@ describe('DesktopGateScreen local QR', () => {
         loadGatesScript();
 
         const moduleCount = qrModuleCount(ORIGIN);
-        expect(moduleCount).toBe(25);
 
         const dataUri = window.HEYS.Gates.buildDesktopGateQrSrc(ORIGIN);
         const expectedPx = moduleCount * QR_CELL_PX + 2 * QR_MARGIN_PX;
         const { width, height, pixels, channels } = await readQrGifPixels(dataUri);
+
+        const moduleCountFromProductGif = (width - 2 * QR_MARGIN_PX) / QR_CELL_PX;
+        // invariant: module grid from gates-source factory params matches product GIF, not a frozen literal.
+        expect(moduleCount).toBe(moduleCountFromProductGif);
+        expect(moduleCount).toBeGreaterThan(0);
 
         expect(width).toBe(expectedPx);
         expect(height).toBe(expectedPx);

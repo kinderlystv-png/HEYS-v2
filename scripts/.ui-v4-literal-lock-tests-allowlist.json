@@ -11,14 +11,6 @@
       "kind": "expect-inventory-count",
       "snippet": "expect(B.registry.size).toBe(25);",
       "reason": "expect().toBe(25) при inventory-контексте — число устареет при закрытии зоны/строки"
-    },
-    {
-      "id": "5f87ef2733c5",
-      "file": "apps/web/__tests__/desktop-gate-qr.test.js",
-      "line": 98,
-      "kind": "expect-inventory-count",
-      "snippet": "expect(moduleCount).toBe(25);",
-      "reason": "expect().toBe(25) при inventory-контексте — число устареет при закрытии зоны/строки"
     }
   ]
 }
