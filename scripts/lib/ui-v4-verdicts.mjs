@@ -540,9 +540,29 @@ export function readAllZones() {
   return { zones };
 }
 
+/** Same-directory temp + rename — readers never see a half-written zone file. */
+function writeFileAtomic(filePath, content) {
+  const dir = path.dirname(filePath);
+  const tmpPath = path.join(
+    dir,
+    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${crypto.randomBytes(4).toString('hex')}.tmp`,
+  );
+  fs.writeFileSync(tmpPath, content, 'utf8');
+  try {
+    fs.renameSync(tmpPath, filePath);
+  } catch (error) {
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      // ignore cleanup failure
+    }
+    throw error;
+  }
+}
+
 export function writeZone(zoneId, zone) {
   fs.mkdirSync(VERDICTS_DIR, { recursive: true });
-  fs.writeFileSync(zonePath(zoneId), `${JSON.stringify(zone, null, 2)}\n`, 'utf8');
+  writeFileAtomic(zonePath(zoneId), `${JSON.stringify(zone, null, 2)}\n`);
 }
 
 const VALID_VERDICTS = new Set(['=', '≠', '?', '—']);
