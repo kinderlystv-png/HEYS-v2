@@ -42,6 +42,21 @@ describe('inspectVerdictFacts', () => {
     expect(report.unparsedRows).toBe(1);
   });
 
+  it('parses short CSS module refs like 730:12552', () => {
+    const report = inspectVerdictFacts({
+      zones: {
+        demo: {
+          rows: {
+            short: { v: '=', f: '730:12552 — .widget-v4-goal-value' },
+          },
+        },
+      },
+    });
+    expect(report.parsedRows).toBe(1);
+    expect(report.unparsedRows).toBe(0);
+    expect(report.factsChecked).toBeGreaterThanOrEqual(1);
+  });
+
   it('does not mark anchor stale when line drifted but name remains in file', () => {
     const { dir, css } = fixtureTree();
     const cwd = process.cwd();

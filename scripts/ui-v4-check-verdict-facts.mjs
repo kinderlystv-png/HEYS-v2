@@ -12,13 +12,18 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { readAllZones } from './lib/ui-v4-verdicts.mjs';
+
+const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const WINDOW = 60;
 const EXT = '(?:js|mjs|ts|tsx|css|html|sql|svg|json)';
 const ADDRESS = new RegExp(`([A-Za-z0-9_][A-Za-z0-9_./-]*\\.${EXT}):(\\d+)(?:-(\\d+))?`, 'g');
+// Сокращение из вердиктов: «730:12552» → apps/web/styles/modules/730-*.css (только однозначный префикс).
+const SHORT_MODULE_REF = /\b(\d{3}):(\d{3,5})(?:-(\d{3,5}))?\b/g;
+const MODULES_DIR = path.join(REPO_ROOT, 'apps/web/styles/modules');
 
 const CLASS_SELECTOR = /\.[a-z][a-z0-9_-]{2,}/gi;
 const CSS_VAR = /--[a-z][a-z0-9-]{2,}/gi;
@@ -72,6 +77,28 @@ const byBasename = new Map();
     byBasename.get(e.name).push(full.split(path.sep).join('/'));
   }
 })('.', 0);
+
+const byModulePrefix = new Map();
+(function indexModulePrefixes() {
+  let entries;
+  try {
+    entries = fs.readdirSync(MODULES_DIR);
+  } catch {
+    return;
+  }
+  for (const name of entries) {
+    const m = /^(\d{3})-/.exec(name);
+    if (!m) continue;
+    if (!byModulePrefix.has(m[1])) byModulePrefix.set(m[1], []);
+    byModulePrefix.get(m[1]).push(name);
+  }
+})();
+
+function resolveModulePrefix(prefix) {
+  const files = byModulePrefix.get(prefix);
+  if (!files || files.length !== 1) return null;
+  return `apps/web/styles/modules/${files[0]}`;
+}
 
 const fileCache = new Map();
 const EXT_TOKEN = new Set(['js', 'mjs', 'ts', 'tsx', 'css', 'html', 'sql', 'svg', 'json']);
@@ -136,7 +163,9 @@ function linesOf(file) {
 }
 
 function stripAddresses(evidence) {
-  return String(evidence || '').replace(ADDRESS, ' ');
+  return String(evidence || '')
+    .replace(ADDRESS, ' ')
+    .replace(SHORT_MODULE_REF, ' ');
 }
 
 function extractAnchors(evidence, mentionedFiles) {
@@ -159,10 +188,30 @@ function extractAnchors(evidence, mentionedFiles) {
 
 function parseAddresses(evidence) {
   const list = [];
+  const seen = new Set();
   for (const m of evidence.matchAll(ADDRESS)) {
+    const rel = m[1];
+    const line = Number(m[2]);
+    const key = `${rel}\u0000${line}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
     list.push({
-      rel: m[1],
-      line: Number(m[2]),
+      rel,
+      line,
+      endLine: m[3] ? Number(m[3]) : null,
+      index: m.index,
+    });
+  }
+  for (const m of evidence.matchAll(SHORT_MODULE_REF)) {
+    const rel = resolveModulePrefix(m[1]);
+    if (!rel) continue;
+    const line = Number(m[2]);
+    const key = `${rel}\u0000${line}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    list.push({
+      rel,
+      line,
       endLine: m[3] ? Number(m[3]) : null,
       index: m.index,
     });

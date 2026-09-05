@@ -6,10 +6,10 @@ import { pathToFileURL } from 'node:url';
 import { readAllZones } from './lib/ui-v4-verdicts.mjs';
 import { inspectVerdictFacts } from './ui-v4-check-verdict-facts.mjs';
 
-// 05.09 recount: первый замер полосы 5.
+// 05.09 recount: полоса 5 + short CSS module refs (NNN:line).
 const BASELINE = Object.freeze({
-  staleCount: 25,
-  staleDigest: '645b2d379d48df92',
+  staleCount: 26,
+  staleDigest: 'ca3c1c601bfc1eac',
 });
 
 function runCli() {
