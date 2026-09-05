@@ -548,11 +548,9 @@
       "h": "c2a09e9d64e8"
     },
     "отчёт называет дыру": {
-      "v": "≠",
-      "f": "Канвас :2321 + «Программа · отчёт за период · текст» :4076 — карточка «Пропущенная не считается сделанной». PlanVsDoneScreen superset_ui:2322–2397 без disclosure; kernel isPlanned уже исключает skipped.",
-      "h": "688b510c5f03",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2321"
+      "v": "=",
+      "f": "BuilderPlanVsDoneScreen .sb-plan-vs-hole «Пропущенная не считается сделанной» + disclosure copy — heys_strength_builder_ui_v1.js; strength-builder-task38-canvas-conflict.test.js.",
+      "h": "688b510c5f03"
     },
     "метка авторства вместо диалога версий": {
       "v": "=",
@@ -4804,17 +4802,13 @@
     },
     "Куратор и зал · 13": {
       "h": "bb59c02daef1",
-      "v": "≠",
-      "f": "«Начать по плану» не рендерится mid-session: superset_ui CuratorPlanStrip:2026-2028.",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3321"
+      "v": "=",
+      "f": "CuratorPlanStrip mid-session showActions:true — pill «Начать по плану» в .sb-cur-plan-actions — heys_strength_builder_ui_v1.js; task38 test."
     },
     "Куратор и зал · 14": {
       "h": "b8d619fad638",
-      "v": "≠",
-      "f": "«Своя» не рендерится mid-session: superset_ui:2027-2028.",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3322"
+      "v": "=",
+      "f": "CuratorPlanStrip mid-session showActions:true — pill «Своя» рядом с «Начать по плану» — heys_strength_builder_ui_v1.js; task38 test."
     },
     "Куратор и зал · 15": {
       "h": "7cada1f8a3b6",

@@ -639,8 +639,8 @@
       "h": "11d59abc0655"
     },
     "Настройки · настроить подробно · 03": {
-      "v": "≠",
-      "f": "000-base:11175-11182 .notify-detail__handle — 38×4 радиусом 999 и отступом 0 auto 14 совпало, но заливка взята ролью --v4-track (дорожка полосы), а кадр просит чернила под .14. Ближайшая ступень набора — именно --v4-track",
+      "v": "=",
+      "f": ".notify-detail__handle rgba(var(--v4-ink-rgb), 0.14), не --v4-track — polosa4-task41-legacy-surface-v4.test.js.",
       "h": "2d9d3d5b7a4c"
     },
     "Настройки · настроить подробно · 04": {
@@ -854,11 +854,9 @@
       "h": "0f132eba0a2d"
     },
     "Настройки · чипы быстрых действий · 27": {
-      "v": "≠",
-      "f": "000-base:10483-10501 .hdr-settings-sheet__card — отступ снизу 56 px под навигацию; отдельного блока .foot как в кадре нет",
-      "h": "1df511bb5a89",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/settings-system.v4.dc.html:484"
+      "v": "=",
+      "f": ".hdr-settings-sheet__scroll padding-bottom calc(56px + safe-area); chip --v4-ink-rgb 14% — polosa4-task41-legacy-surface-v4.test.js.",
+      "h": "1df511bb5a89"
     },
     "Быстрые действия · прогон перестройки стопки · 01": {
       "v": "—",

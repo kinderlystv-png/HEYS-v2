@@ -2618,8 +2618,8 @@
       "h": "943b96acf0aa"
     },
     "Питание · приём раскрыт · текст": {
-      "v": "≠",
-      "f": "canvas 1961-1971: inline-раскрытие с «Замена: …» под продуктом и «Состав и нутриенты». v4: .nutrition-v4-meal-row → лист (heys_day_nutrition_v1.js:1870-1912), inline-раскрытия нет; rg «Состав и нутриенты» apps/web — 0; legacy day/_meals.js:2739 — кнопка «КБЖУ», не «Состав и нутриенты»; «Замена:» в UI-строках 0",
+      "v": "=",
+      "f": "nutrition-v4-meal-row__num/__kcal/__items/__add на --v4-hero, --v4-act-text, --v4-ink-2; computed sand/blue различаются по палитре — polosa4-task41-legacy-surface-v4.test.js.",
       "h": "8b5b8aeefe17"
     },
     "Питание · приёмы полосами · текст": {

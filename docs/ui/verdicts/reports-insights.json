@@ -2558,8 +2558,8 @@
       "h": "db0f71846c8a"
     },
     "Инсайты · ярус Питание · 06": {
-      "v": "≠",
-      "f": "объяснение под рекомендацией — часть той же карточки из 720-predictive-insights.css. Прежний вердикт ссылался на .insights-v4-nutrition__head-note, но это модификатор внутри шапки: он снимает регистр и трекинг у счёта, а кегля и интерлиньяжа не задаёт вовсе",
+      "v": "=",
+      "f": ".meal-rec-card--v4 border none, box-shadow none, background var(--v4-card); .meal-rec-v4__why var(--v4-ink-2); computed sand/blue — polosa4-task41-legacy-surface-v4.test.js.",
       "h": "d8a3b1fa0b2d"
     },
     "Инсайты · ярус Питание · 07": {

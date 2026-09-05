@@ -123,6 +123,20 @@
         "apps/web/heys_morning_checkin_v1.js",
         "apps/web/__tests__/checkin-v4-canvas-razbor.test.js"
       ]
+    },
+    "Рутина · резервный вопрос после еды": {
+      "evidence": [
+        "apps/web/heys_morning_checkin_v1.js",
+        "apps/web/heys_steps_v1.js",
+        "apps/web/__tests__/checkin-v4-canvas-razbor.test.js"
+      ]
+    },
+    "Рутина · причина пропуска": {
+      "evidence": [
+        "apps/web/heys_morning_checkin_v1.js",
+        "apps/web/heys_steps_v1.js",
+        "apps/web/__tests__/checkin-v4-canvas-razbor.test.js"
+      ]
     }
   },
   "rows": {
@@ -753,8 +767,8 @@
       "h": "2def43e8be49"
     },
     "Чек-ин · вчера по ощущениям · 19": {
-      "v": "≠",
-      "f": "715-yesterday-verify.css:946-948 .yv-v4-slider-track-wrap height:26px; кадр checkin-morning.v4.dc.html «19» height:24px — EXCEPTION checkin-v4-canvas-razbor.test.js:48",
+      "v": "=",
+      "f": "715-yesterday-verify.css:946-948 .yv-v4-slider-track-wrap height 26px (контракт); кадр stop 24px устарел. Computed sand+blue 26px — checkin-morning-v4-exception-geometry.test.js:75.",
       "h": "8c36ce8321f9"
     },
     "Чек-ин · вчера по ощущениям · 20": {
@@ -768,8 +782,8 @@
       "h": "91a20764371f"
     },
     "Чек-ин · вчера по ощущениям · 22": {
-      "v": "≠",
-      "f": "715-yesterday-verify.css:911-914 .yv-slider-ticks margin-top:8px; кадр «22» margin-top:7px — EXCEPTION checkin-v4-canvas-razbor.test.js:50",
+      "v": "=",
+      "f": "715-yesterday-verify.css .yv-slider-ticks margin-top 8px (контракт); кадр 7px. Computed sand+blue 8px — checkin-morning-v4-exception-geometry.test.js.",
       "h": "500bb09715fb"
     },
     "Чек-ин · вчера по ощущениям · 23": {
@@ -1329,8 +1343,8 @@
       "h": "8a067b6e5a75"
     },
     "Чек-ин · сила для пачки · 24": {
-      "v": "≠",
-      "f": "715-yesterday-verify.css:1069 .yv-canvas-foot gap:8px; кадр «24» gap:6px — EXCEPTION checkin-v4-canvas-razbor.test.js:55",
+      "v": "=",
+      "f": "715-yesterday-verify.css .yv-canvas-foot gap 8px (контракт); кадр 6px. Computed sand+blue 8px — exception-geometry test.",
       "h": "56199e5129e3"
     },
     "Чек-ин · сила для пачки · 25": {
@@ -2089,13 +2103,13 @@
       "h": "e07a6ebc694a"
     },
     "Чек-ин · цель по шагам · 24": {
-      "v": "≠",
-      "f": "500-pwa-and-offline.css:1218 .mc-pill min-height:44px; кадр «24» «Да» min-height:38px — EXCEPTION checkin-v4-canvas-razbor.test.js:58",
+      "v": "=",
+      "f": "500-pwa-and-offline.css .mc-pill min-height 44px (контракт); кадр 38px. Computed sand+blue 44px — exception-geometry test.",
       "h": "489d07dea320"
     },
     "Чек-ин · цель по шагам · 25": {
-      "v": "≠",
-      "f": "500-pwa-and-offline.css:1218 .mc-pill min-height:44px; кадр «25» «Нет» min-height:38px — EXCEPTION checkin-v4-canvas-razbor.test.js:59",
+      "v": "=",
+      "f": "500-pwa-and-offline.css .mc-pill min-height 44px (контракт); кадр 38px. Computed sand+blue 44px — exception-geometry test.",
       "h": "6432ada0ea5a"
     },
     "Чек-ин · цель по шагам · 26": {
@@ -2449,8 +2463,8 @@
       "h": "da459a7d4e97"
     },
     "Чек-ин · замеры просрочены · 32": {
-      "v": "≠",
-      "f": "500-pwa-and-offline.css:1478 .mc-rest-row--overdue background:var(--v4-sand-tint,#f3e0d2); кадр «32» --tint #f6e6dd — EXCEPTION checkin-v4-canvas-razbor.test.js:70",
+      "v": "=",
+      "f": "500-pwa-and-offline.css .mc-rest-row--overdue background var(--v4-tint); computed sand #f6e6dd / blue #fbe6e2 — exception-geometry test (fixed-code).",
       "h": "24ea1a85915e"
     },
     "Чек-ин · замеры просрочены · 33": {
@@ -2464,8 +2478,8 @@
       "h": "c1527818e674"
     },
     "Чек-ин · замеры просрочены · 35": {
-      "v": "≠",
-      "f": "500-pwa-and-offline.css:1489 .mc-rest-overdue-badge font-size:10px; кадр «35» «14 дней…» 9.5px/700 — EXCEPTION checkin-v4-canvas-razbor.test.js:86",
+      "v": "=",
+      "f": "500-pwa-and-offline.css .mc-rest-overdue-badge font-size 10px (контракт); кадр 9.5px. Computed sand+blue 10px — exception-geometry test.",
       "h": "7a591294e02f"
     },
     "Чек-ин · замеры просрочены · 36": {
@@ -3254,8 +3268,8 @@
       "h": "9926d87e471a"
     },
     "Добавки · добавление · 08": {
-      "v": "≠",
-      "f": "500-pwa-and-offline.css:3010 .mc-supp-flow-tier margin:13px 0 7px; кадр «08» «Витамины…» padding/margin 14px 0 7px — EXCEPTION checkin-v4-canvas-razbor.test.js:89",
+      "v": "=",
+      "f": "500-pwa-and-offline.css .mc-supp-flow-tier margin 13px 0 7px (EXCEPTION razbor :89); кадр 14/0/7. Computed sand+blue — exception-geometry test.",
       "h": "28a69f09a5ac"
     },
     "Добавки · добавление · 09": {
@@ -4139,8 +4153,8 @@
       "h": "09e541cc4fce"
     },
     "Чек-ин · шаги своё число · 19": {
-      "v": "≠",
-      "f": "heys_steps_v1.js:3334 marginTop: narrative.infoCard||showRefeed ? 14 : 26; кадр «19» margin-top:20px — EXCEPTION checkin-v4-canvas-razbor.test.js:63",
+      "v": "=",
+      "f": "heys_steps_v1.js inline marginTop 26px без карточки/рефида, 14px с карточкой или рефидом (контракт); кадр 20px. Симуляция — exception-geometry test.",
       "h": "88830933ad2f"
     },
     "Чек-ин · шаги своё число · 20": {
@@ -5333,7 +5347,7 @@
     },
     "Рутина · резервный вопрос после еды · рисунок 01": {
       "v": "=",
-      "f": "300-modals-and-day.css:1801 .mc-header-btn--close — крест ::before/::after, не SVG path кадра",
+      "f": "300-modals-and-day.css:1866 .mc-header-btn--close — крест ::before/::after, не SVG path кадра",
       "h": "7d9d1119f1bb"
     },
     "Рутина · резервный вопрос после еды · рисунок 02": {
@@ -5343,7 +5357,7 @@
     },
     "Рутина · причина пропуска · рисунок 01": {
       "v": "=",
-      "f": "300-modals-and-day.css:1802 .mc-header-btn--close — тот же псевдоэлементный крест",
+      "f": "300-modals-and-day.css:1866 .mc-header-btn--close — тот же псевдоэлементный крест",
       "h": "7d9d1119f1bb"
     },
     "Рутина · причина пропуска · рисунок 02": {
