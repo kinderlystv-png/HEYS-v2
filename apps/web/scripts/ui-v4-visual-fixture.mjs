@@ -1,3 +1,5 @@
+import { readCanvasPackage } from '../../../scripts/lib/ui-v4-canvas-index.mjs';
+
 const FIXED_NOW = '2026-08-28T09:30:00+03:00';
 const FIXED_DAY = '2026-08-28';
 
@@ -7,38 +9,12 @@ export const UI_V4_VISUAL_CLOCK = Object.freeze({
   epochMs: Date.parse(FIXED_NOW),
 });
 
-export const UI_V4_CANVAS_ZONES = Object.freeze([
-  'home-widgets',
-  'water-add',
-  'checkin-morning',
-  'nutrition-tab',
-  'date-remainders',
-  'undo-bar',
-  'app-splash',
-  'curator-edits',
-  'gamification',
-  'login',
-  'pwa-update',
-  'questionnaire',
-  'registration',
-  'settings-system',
-  'spinners',
-  'tips',
-  'cycle',
-  'reports-insights',
-  'norm-correction',
-  'curator-cabinet',
-  'tab-activity',
-  // Заведены в снимок 31 августа коммитом 72b13b793: два канваса с
-  // контрактом жили вне снимка, и 1382 строки не считались долгом.
-  'food-meal',
-  'product-card',
-  // Приехали с пакетом 1 сентября. `strength-builder` — новый продукт целиком
-  // (1812 строк); `service-curator` — служебный раздел за входом куратора,
-  // который до этого жил в чужом канвасе Даты и не сверялся никем.
-  'strength-builder',
-  'service-curator',
-]);
+// Реестр зон берём из root-канвасов пакета, а не из ручного списка: пакет 36
+// добавил first-run, messenger и subscription, и захардкоженные «25 зон»
+// ломали visual-harness и progress-report на каждой поставке.
+export const UI_V4_CANVAS_ZONES = Object.freeze(
+  readCanvasPackage().map((canvas) => canvas.zoneId).sort((left, right) => left.localeCompare(right, 'en')),
+);
 
 // Pixel-gate держим только на сведённых зонах: попиксельное сравнение с кадром
 // не сойдётся там, где продукт намеренно отступает или где строки контракта ещё

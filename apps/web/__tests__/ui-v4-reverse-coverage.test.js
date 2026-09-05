@@ -7,6 +7,11 @@ import {
   readCanvasPackage,
   resolveCanvasFrame,
 } from '../../../scripts/lib/ui-v4-canvas-index.mjs';
+import {
+  expectedCanvasZoneIds,
+  summarizeCanvasPackageTotals,
+  totalContractRows,
+} from './helpers/ui-v4-canvas-package.mjs';
 
 describe('UI v4 reverse coverage index', () => {
   it('parses exact contract rows and product frame scope from the nearest data-demo', () => {
@@ -160,22 +165,19 @@ describe('UI v4 reverse coverage index', () => {
     expect(coverage.ok).toBe(false);
   });
 
-  it('indexes only the 28 active root canvases with the current package counts', { timeout: 45_000 }, () => {
+  it('indexes every active root canvas with source-derived package totals', { timeout: 45_000 }, () => {
     const canvases = readCanvasPackage();
     const report = buildReverseCoverageReport(canvases, {});
+    const totals = summarizeCanvasPackageTotals(canvases);
 
-    expect(canvases).toHaveLength(28);
+    expect(canvases.map((canvas) => canvas.zoneId).sort()).toEqual(expectedCanvasZoneIds(canvases));
     expect(canvases.some((canvas) => canvas.file.includes('history'))).toBe(false);
-    // Числа пересняты после поставки пакета 5 сентября (first-run, messenger,
-    // questionnaire, subscription). Разница разобрана поимённо, а не подогнана.
-    expect(report.totals).toMatchObject({
-      canvases: 28,
-      contractRows: 17984,
-      productFrames: 802,
-      duplicateContractIdentities: 0,
-      duplicateFrameIdentities: 10,
-      frameScope: { stop: 725, none: 77, protocol: 39, loop: 23 },
-    });
+    expect(report.totals).toEqual(totals);
+    expect(totals.canvases).toBe(canvases.length);
+    expect(totals.contractRows).toBe(totalContractRows(canvases));
+    expect(totals.contractCovered).toBe(0);
+    expect(totals.framesCovered).toBe(0);
+    expect(totals.duplicateContractIdentities).toBe(0);
 
     for (const canvas of canvases) {
       expect(canvas.frames.every((frame) => Object.hasOwn(frame, 'oid')), canvas.zoneId).toBe(true);

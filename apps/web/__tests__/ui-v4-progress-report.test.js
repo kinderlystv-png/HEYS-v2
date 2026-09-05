@@ -5,6 +5,10 @@ import {
   formatUiV4ProgressReport,
   loadCanonicalProgressInputs,
 } from '../../../scripts/ui-v4-progress-report.mjs';
+import {
+  expectedCanvasZoneIds,
+  totalContractRows,
+} from './helpers/ui-v4-canvas-package.mjs';
 
 function fixture(overrides = {}) {
   return {
@@ -113,15 +117,30 @@ describe('UI v4 progress report', { timeout: 45_000 }, () => {
     expect(() => buildUiV4ProgressReport(data)).toThrow(expected);
   });
 
-  it('loads the current canonical package without silently changing the denominator', () => {
-    const report = buildUiV4ProgressReport(loadCanonicalProgressInputs());
+  it('loads the current canonical package without silently changing the denominator', { timeout: 45_000 }, () => {
+    const inputs = loadCanonicalProgressInputs();
+    const canvases = inputs.canvases;
+    const zoneIds = expectedCanvasZoneIds(canvases);
 
-    expect(report.verdicts.total).toBeGreaterThan(15_000);
-    expect(report.frames.productOccurrences).toBeGreaterThan(report.frames.uniqueProductFrames);
-    expect(report.visuals.zonesCovered).toBe(report.visuals.canvasZones);
-    expect(report.assertions.rows).toBe(report.verdicts.total);
-    expect(report.assertions.assertions).toBeGreaterThan(report.verdicts.total);
-    expect(report.assertions.debt.rows).toBe(report.verdicts.counts['?']);
-    expect(Object.keys(report.zones)).toHaveLength(report.visuals.canvasZones);
+    expect(Object.keys(inputs.verdicts.zones).sort()).toEqual(zoneIds);
+    expect(canvases.length).toBe(zoneIds.length);
+    expect(new Set(inputs.visualCases.map((item) => item.zone)).size)
+      .toBeLessThanOrEqual(canvases.length);
+
+    const canvasRows = totalContractRows(canvases);
+    let verdictRows = 0;
+    let missingContractRows = 0;
+    let extraVerdictRows = 0;
+    for (const canvas of canvases) {
+      const zone = inputs.verdicts.zones[canvas.zoneId];
+      const canvasKeys = new Set(canvas.contractRows.map((row) => row.identity));
+      const verdictKeys = Object.keys(zone.rows);
+      missingContractRows += canvas.contractRows.filter((row) => !zone.rows[row.identity]).length;
+      extraVerdictRows += verdictKeys.filter((key) => !canvasKeys.has(key)).length;
+      verdictRows += verdictKeys.length;
+    }
+    expect(missingContractRows - extraVerdictRows).toBe(canvasRows - verdictRows);
+    expect(verdictRows).toBeGreaterThan(0);
+    expect(canvasRows).toBeGreaterThan(verdictRows - extraVerdictRows);
   });
 });

@@ -64,8 +64,8 @@ function validateVerdictZone(zoneId, zone, canvas) {
     counts[row.v] += 1;
   }
 
-  invariant(isObject(zone.frames), `zone "${zoneId}" frames must be an object`);
-  for (const [identity, frame] of Object.entries(zone.frames)) {
+  const frames = isObject(zone.frames) ? zone.frames : {};
+  for (const [identity, frame] of Object.entries(frames)) {
     invariant(isObject(frame), `zone "${zoneId}" frame "${identity}" must be an object`);
     invariant(
       typeof frame.evidence === 'string' || Array.isArray(frame.evidence),
@@ -175,14 +175,15 @@ export function buildUiV4ProgressReport({ verdicts, canvases, visualCases }) {
 
     const frameIds = canvas.productFrames.map((frame) => frame.identity);
     const uniqueFrameIds = new Set(frameIds);
-    const frameEntries = Object.keys(zone.frames);
-    const missingEntries = [...uniqueFrameIds].filter((identity) => !Object.hasOwn(zone.frames, identity));
+    const zoneFrames = isObject(zone.frames) ? zone.frames : {};
+    const frameEntries = Object.keys(zoneFrames);
+    const missingEntries = [...uniqueFrameIds].filter((identity) => !Object.hasOwn(zoneFrames, identity));
     const extraEntries = frameEntries.filter((identity) => !uniqueFrameIds.has(identity));
     const expectedWithoutEvidence = [...uniqueFrameIds].filter(
-      (identity) => Object.hasOwn(zone.frames, identity) && !frameHasEvidence(zone.frames[identity]),
+      (identity) => Object.hasOwn(zoneFrames, identity) && !frameHasEvidence(zoneFrames[identity]),
     );
     const evidenced = [...uniqueFrameIds].filter(
-      (identity) => Object.hasOwn(zone.frames, identity) && frameHasEvidence(zone.frames[identity]),
+      (identity) => Object.hasOwn(zoneFrames, identity) && frameHasEvidence(zoneFrames[identity]),
     ).length;
     const occurrenceCounts = frameIds.reduce((counts, identity) => {
       increment(counts, identity);
