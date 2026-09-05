@@ -388,7 +388,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 className: 'page page-day'
             },
                 isReadOnly && HEYS.Paywall?.ReadOnlyBanner && React.createElement(HEYS.Paywall.ReadOnlyBanner, {
-                    compact: false,
+                    inTab: true,
+                    sticky: false,
                     onClick: () => HEYS.Paywall?.show?.('trial_expired')
                 }),
 

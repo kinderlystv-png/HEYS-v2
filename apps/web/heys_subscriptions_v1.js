@@ -835,6 +835,54 @@
     }, h('path', { d: 'M18 6L6 18M6 6l12 12' }));
   }
 
+  function paywallLockIconMarkup(size = 22) {
+    return h('svg', {
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    },
+      h('rect', { x: 3, y: 11, width: 18, height: 11, rx: 2 }),
+      h('path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' })
+    );
+  }
+
+  function paywallExternalLinkIcon() {
+    return h('svg', {
+      width: 15,
+      height: 15,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    }, h('path', { d: 'M7 17L17 7M7 7h10v10' }));
+  }
+
+  function paywallSendIcon() {
+    return h('svg', {
+      width: 16,
+      height: 16,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    },
+      h('path', { d: 'M22 2L11 13' }),
+      h('path', { d: 'M22 2l-7 20-4-9-9-4 20-7z' })
+    );
+  }
+
   /**
    * Экран «Проверьте заказ»
    */
@@ -1291,58 +1339,58 @@
    * вёл pay-wall с ЮKassa. После Phase 2 заменится на реальный PaymentScreen
    * через HEYS.config.paymentsEnabled = true.
    */
-  function ContactCuratorScreen({ onClose, isReadOnly }) {
+  function ContactCuratorScreen({ onClose, isReadOnly, embedded = false }) {
     const contactUrl = HEYS.config.curatorContactUrl || (HEYS.support && HEYS.support.telegramUrl);
+    const contactHandle = HEYS.support?.telegramHandle || '@heys_support';
+
+    const body = h('div', { className: 'sub-contact-modal' },
+      h('div', { className: 'sub-contact-lock' }, paywallLockIconMarkup(22)),
+      h('h2', { className: 'paywall-title', style: { marginTop: 14 } },
+        isReadOnly ? 'Пробный период закончился' : 'Оформление подписки'
+      ),
+      h('p', { className: 'paywall-subtitle' },
+        'Поддержка подберёт тариф и оформит оплату. День и история остаются открытыми для чтения.'
+      ),
+      h('div', { className: 'sub-contact-rows' },
+        h('a', {
+          className: 'sub-contact-row',
+          href: contactUrl,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+          h('span', { className: 'sub-contact-row__icon' }, paywallSendIcon()),
+          h('span', { className: 'sub-contact-row__text' },
+            h('b', null, 'Поддержка HEYS'),
+            h('small', null, `${contactHandle} · отвечаем в рабочее время`)
+          ),
+          h('span', { className: 'sub-contact-row__ext' }, paywallExternalLinkIcon())
+        )
+      )
+    );
+
+    if (embedded) return body;
 
     return h('div', {
-      style: { padding: '24px 20px', textAlign: 'center', maxWidth: 380, margin: '0 auto' }
+      className: 'paywall-overlay',
+      onClick: (event) => {
+        if (event.target === event.currentTarget) onClose?.();
+      },
+      role: 'dialog',
+      'aria-modal': 'true',
     },
-      h('div', { style: { fontSize: 56, marginBottom: 12 } }, '👨‍⚕️'),
-      h('h3', {
-        style: {
-          fontSize: 20, fontWeight: 700, color: '#0f172a', marginBottom: 12, margin: '0 0 12px 0'
-        }
+      h('div', {
+        className: 'paywall-modal',
+        style: { position: 'relative' },
+        onClick: (event) => event.stopPropagation(),
       },
-        isReadOnly
-          ? 'Триал завершён'
-          : 'Оформление подписки'
-      ),
-      h('p', {
-        style: { fontSize: 14, color: '#64748b', lineHeight: 1.55, marginBottom: 24 }
-      },
-        isReadOnly
-          ? 'Чтобы продолжить пользоваться HEYS — свяжитесь с вашим куратором. Он оформит подписку и продлит доступ.'
-          : 'Чтобы оформить подписку — напишите вашему куратору. Он подберёт подходящий тариф и оформит оплату индивидуально.'
-      ),
-      h('a', {
-        href: contactUrl,
-        target: '_blank',
-        rel: 'noopener noreferrer',
-        style: {
-          display: 'block',
-          padding: '14px 24px',
-          background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-          color: '#fff',
-          fontSize: 15,
-          fontWeight: 700,
-          borderRadius: 12,
-          textDecoration: 'none',
-          marginBottom: 12,
-        }
-      }, '✈️ Написать куратору в Telegram'),
-      onClose && h('button', {
-        onClick: onClose,
-        style: {
-          width: '100%',
-          padding: '12px',
-          background: 'transparent',
-          border: '1px solid #e5e7eb',
-          color: '#64748b',
-          fontSize: 14,
-          borderRadius: 12,
-          cursor: 'pointer',
-        }
-      }, 'Закрыть')
+        onClose && h('button', {
+          type: 'button',
+          className: 'paywall-close',
+          onClick: onClose,
+          'aria-label': 'Закрыть',
+        }, paywallCloseIconMarkup()),
+        body
+      )
     );
   }
 
@@ -1373,7 +1421,7 @@
    * срок доступен в настройках подписки. Баннер остаётся только для явно
    * завершившегося доступа (read_only либо истёкший trial до refresh статуса).
    */
-  function TrialCountdownBanner({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, onUpgrade, onClose }) {
+  function TrialCountdownBanner({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, onUpgrade }) {
     const status = subscriptionStatus || 'none';
     const endDate = subscriptionEndsAt || trialEndsAt;
     const daysLeft = endDate ? daysUntil(endDate) : null;
@@ -1383,57 +1431,33 @@
       return null;
     }
 
-    const bg = '#fee2e2';
-    const color = '#991b1b';
-    const border = '#fca5a5';
-    const text = '🔒 Доступ ограничен. Чтобы продолжить, оформите подписку.';
-    const ctaText = 'Оформить подписку';
+    if (HEYS.Paywall?.ReadOnlyBanner) {
+      return h(HEYS.Paywall.ReadOnlyBanner, {
+        sticky: true,
+        onClick: onUpgrade,
+      });
+    }
 
     return h('div', {
-      style: {
-        position: 'sticky',
-        top: 0,
-        zIndex: 9000,
-        background: bg,
-        color,
-        borderBottom: `1px solid ${border}`,
-        padding: '8px 14px',
-        fontSize: 13,
-        fontWeight: 600,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 12,
-      }
+      className: 'readonly-banner readonly-banner--sticky',
+      onClick: onUpgrade,
+      role: 'button',
+      tabIndex: 0,
     },
-      h('span', { style: { flex: 1 } }, text),
-      ctaText && h('button', {
-        onClick: onUpgrade,
-        style: {
-          padding: '6px 12px',
-          borderRadius: 8,
-          border: 'none',
-          background: color,
-          color: '#fff',
-          fontSize: 12,
-          fontWeight: 700,
-          cursor: 'pointer',
-          whiteSpace: 'nowrap',
-        }
-      }, ctaText),
-      onClose && h('button', {
-        onClick: onClose,
-        title: 'Закрыть',
-        style: {
-          background: 'transparent',
-          border: 'none',
-          color,
-          fontSize: 18,
-          cursor: 'pointer',
-          padding: '0 4px',
-          lineHeight: 1,
-        }
-      }, '×')
+      h('div', { className: 'readonly-banner-content' },
+        h('div', { className: 'readonly-banner-title' }, 'Доступ только для чтения'),
+        h('div', { className: 'readonly-banner-text' },
+          'Чтобы записывать — напишите в поддержку'
+        )
+      ),
+      h('button', {
+        type: 'button',
+        className: 'readonly-banner-pill',
+        onClick: (event) => {
+          event.stopPropagation();
+          onUpgrade?.();
+        },
+      }, 'Подписка')
     );
   }
 
@@ -1812,6 +1836,7 @@
           return h(ContactCuratorScreen, {
             onClose: context?.onClose,
             isReadOnly: true,
+            embedded: true,
           });
         }
 

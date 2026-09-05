@@ -64,6 +64,23 @@
     }, React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' }));
   }
 
+  function paywallLockIcon(size = 15) {
+    return React.createElement('svg', {
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    },
+      React.createElement('rect', { x: 3, y: 11, width: 18, height: 11, rx: 2 }),
+      React.createElement('path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' })
+    );
+  }
+
   function formatPlanPrice(price) {
     return `${price.toLocaleString('ru-RU')} ₽`;
   }
@@ -463,32 +480,36 @@
   }
 
   /**
-   * Read-only Banner — компактный баннер для показа в UI
+   * Read-only Banner — липкая полоса сверху или плашка на вкладке «Питание».
    */
-  function ReadOnlyBanner({ onClick, compact = false }) {
-    if (compact) {
-      return React.createElement('div', {
-        className: 'readonly-banner',
-        onClick,
-        style: { margin: '8px', padding: '10px 12px' }
-      },
-        React.createElement('span', { className: 'readonly-banner-icon' }, '🔒'),
-        React.createElement('div', { className: 'readonly-banner-content' },
-          React.createElement('div', { className: 'readonly-banner-title' }, 'Режим просмотра'),
-          React.createElement('div', { className: 'readonly-banner-text' }, 'Нажми чтобы активировать')
-        ),
-        React.createElement('span', { className: 'readonly-banner-arrow' }, '→')
-      );
-    }
+  function ReadOnlyBanner({ onClick, sticky = true, inTab = false }) {
+    const className = [
+      'readonly-banner',
+      sticky && !inTab ? 'readonly-banner--sticky' : '',
+      inTab ? 'readonly-banner--in-tab' : '',
+    ].filter(Boolean).join(' ');
 
-    // Плашка называет причину и что делать; эмодзи и стрелки на вкладке нет.
-    return React.createElement('div', { className: 'readonly-banner', onClick },
+    const openPaywall = (event) => {
+      event?.stopPropagation?.();
+      if (typeof onClick === 'function') {
+        onClick(event);
+        return;
+      }
+      showPaywall('trial_ended');
+    };
+
+    return React.createElement('div', { className, onClick: openPaywall, role: 'button', tabIndex: 0 },
       React.createElement('div', { className: 'readonly-banner-content' },
-        React.createElement('div', { className: 'readonly-banner-title' }, 'Пробный период закончился'),
+        React.createElement('div', { className: 'readonly-banner-title' }, 'Доступ только для чтения'),
         React.createElement('div', { className: 'readonly-banner-text' },
-          'День и история открыты для чтения. Чтобы записывать снова — напишите куратору.'
+          'Чтобы записывать — напишите в поддержку'
         )
-      )
+      ),
+      React.createElement('button', {
+        type: 'button',
+        className: 'readonly-banner-pill',
+        onClick: openPaywall,
+      }, 'Подписка')
     );
   }
 
@@ -548,23 +569,48 @@
 
   let _toastTimeout = null;
 
+  function applyReadonlyToastBottomOffset(toast) {
+    const tabsEl = document.querySelector('.tabs');
+    const tabsHeight = tabsEl?.getBoundingClientRect?.().height || 0;
+    if (tabsHeight) {
+      toast.style.bottom = `${Math.round(tabsHeight + 12)}px`;
+    }
+  }
+
   /**
    * Показать toast о заблокированном действии
    */
-  function showBlockedToast(message = 'Действие недоступно в режиме просмотра') {
-    // Удаляем предыдущий toast
+  function showBlockedToast(message = 'Запись недоступна — только чтение') {
     const existing = document.querySelector('.readonly-toast');
     if (existing) existing.remove();
     if (_toastTimeout) clearTimeout(_toastTimeout);
 
     const toast = document.createElement('div');
     toast.className = 'readonly-toast';
-    toast.innerHTML = `
-      <span>🔒</span>
-      <span>${message}</span>
-      <button class="readonly-toast-action" onclick="HEYS.Paywall.show('trial_ended')">Подписка</button>
-    `;
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+
+    const icon = document.createElement('span');
+    icon.className = 'readonly-toast-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+
+    const label = document.createElement('span');
+    label.className = 'readonly-toast-label';
+    label.textContent = message;
+
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'readonly-toast-action';
+    action.textContent = 'Подписка';
+    action.addEventListener('click', (event) => {
+      event.stopPropagation();
+      showPaywall('trial_ended');
+    });
+
+    toast.append(icon, label, action);
     document.body.appendChild(toast);
+    applyReadonlyToastBottomOffset(toast);
 
     _toastTimeout = setTimeout(() => {
       toast.remove();
@@ -634,7 +680,7 @@
     return async function (...args) {
       if (!canWriteSync()) {
         devLog(`[Paywall] Blocked ${actionName}: read-only mode`);
-        showBlockedToast(`Добавление данных недоступно`);
+        showBlockedToast('Запись недоступна — только чтение');
         return null;
       }
       return action.apply(this, args);

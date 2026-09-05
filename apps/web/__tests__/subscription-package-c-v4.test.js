@@ -12,6 +12,10 @@ const VERDICTS = JSON.parse(
 ).rows;
 const PAYWALL = fs.readFileSync(path.join(WEB_DIR, 'heys_paywall_v1.js'), 'utf8');
 const SUBS = fs.readFileSync(path.join(WEB_DIR, 'heys_subscriptions_v1.js'), 'utf8');
+const CONTACT_CURATOR_SOURCE = SUBS.slice(
+  SUBS.indexOf('function ContactCuratorScreen('),
+  SUBS.indexOf('function openCuratorContactModal('),
+);
 
 const PACKAGE_C_FRAMES = [
   'Подписка · приветствие',
@@ -49,10 +53,12 @@ describe('subscription package C · code anchors', () => {
     expect(PAYWALL).toContain('на подтверждение');
   });
 
-  it('banner/toast surfaces still legacy vs canvas', () => {
-    expect(PAYWALL).toContain('.readonly-toast');
-    expect(PAYWALL).toContain('Пробный период закончился');
-    expect(SUBS).toContain('WelcomeFirstLogin');
-    expect(SUBS).toContain('ContactCuratorScreen');
+  it('banner/toast/contact surfaces converged to v4 canvas', () => {
+    expect(PAYWALL).toContain('readonly-banner--sticky');
+    expect(PAYWALL).toContain('Доступ только для чтения');
+    expect(PAYWALL).toContain('Запись недоступна — только чтение');
+    expect(PAYWALL).not.toContain('#1f2937');
+    expect(SUBS).toContain('sub-contact-row');
+    expect(CONTACT_CURATOR_SOURCE).not.toContain('linear-gradient(135deg, #2563eb');
   });
 });

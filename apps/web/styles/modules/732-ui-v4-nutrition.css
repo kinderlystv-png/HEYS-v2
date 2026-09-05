@@ -1671,14 +1671,16 @@
   margin-top: 0;
 }
 
-/* Строка «вид «только чтение»»: плашка режима чтения. У .readonly-banner не
-   было ни одного правила во всём проекте — блок рендерился голым, без
-   заливки и полей, и причина висела текстом на фоне вкладки. */
-.readonly-banner {
+/* Строка «вид «только чтение»»: плашка режима чтения на вкладке «Питание».
+   Липкий баннер сверху — .readonly-banner--sticky в 735-ui-v4-subscription.css. */
+.readonly-banner--in-tab,
+.page-day .readonly-banner {
   margin-top: 12px;
   padding: 12px 14px;
   border-radius: 16px;
   background: var(--v4-chip, #efe3cf);
+  position: static;
+  min-height: 0;
 }
 
 .readonly-banner-title {

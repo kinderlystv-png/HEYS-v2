@@ -1,0 +1,5 @@
+fix(subscription): converge readonly banner, toast and contact to v4 canvas
+
+Task 124 closes three subscription ≠ rows: sticky banner on --v4-tint with
+Подписка pill, undo-bar toast with lock svg, and contact modal rows with
+var(--scrim) scrim. Adds subscription-readonly-surfaces-v4 computed test.
