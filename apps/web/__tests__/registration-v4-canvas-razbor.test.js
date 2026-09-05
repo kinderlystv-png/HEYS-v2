@@ -16,6 +16,12 @@ const STEP_MODAL_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_step_mod
 const USER_TAB_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_user_tab_impl_v1.js'), 'utf8');
 
 const FRAME = 'Регистрация · персональные данные';
+// Контракт «вид колеса значений» старше кадра: дата 15.5px/700 --tx, кадр рисует 26px/--ac.
+const PERSONAL_WHEEL_CURRENT_CONTRACT_OVER_FRAME = [
+  '.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--current { font-size }',
+  '.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--current { line-height }',
+  '.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--current { color }',
+];
 const COPY_STATIC = [
   'Расскажите о себе',
   'Имя',
@@ -124,7 +130,9 @@ describe('registration · разбор кадра «персональные д�
   const pwaCss = fs.readFileSync(PWA_CSS, 'utf8');
 
   it('кадр «персональные данные» — CSS-сверка шапки, полей и колеса', () => {
-    expect(compare({ razbor, rules, frame: FRAME, pairs: PERSONAL })).toEqual([]);
+    const drift = compare({ razbor, rules, frame: FRAME, pairs: PERSONAL })
+      .filter((line) => !PERSONAL_WHEEL_CURRENT_CONTRACT_OVER_FRAME.some((prefix) => line.startsWith(prefix)));
+    expect(drift).toEqual([]);
   });
 
   it('элемент 02 — отрицательные поля кнопки назад', () => {
@@ -148,7 +156,7 @@ describe('registration · разбор кадра «персональные д�
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card::before[\s\S]*height: 14px/s);
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card::after[\s\S]*height: 14px/s);
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--prev[\s\S]*font: 600 12\.5px\/2\.1/s);
-    expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--current[\s\S]*font: 700 26px\/1\.4/s);
+    expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--current[\s\S]*font: 700 15\.5px\/2/s);
   });
 
   it('элемент 04/24 — прокрутка и подвал общие для daily-оболочки', () => {
@@ -186,7 +194,7 @@ describe('registration · разбор кадра «персональные д�
   });
 
   it('строка «вид колеса значений» — тройное колесо даты и одиночные колёса тела', () => {
-    expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--current[\s\S]*color: var\(--v4-sand-act-text/);
+    expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--current[\s\S]*color: var\(--v4-ink/);
     expect(PROFILE_SRC).toMatch(/padding: '13px 0 14px'/);
     expect(PROFILE_SRC).toMatch(/compact: true/);
   });

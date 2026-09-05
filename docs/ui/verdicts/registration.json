@@ -1074,18 +1074,18 @@
       "h": "593313792fd2"
     },
     "Регистрация · рост и вес · 12": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён: текущее 32/700 тоном --color-emerald-500 вместо 22/700 тоном --ac, соседние 24/600 чернилами вместо 13/600 тоном 22 %, подсветки строки нет вовсе. Делят его четыре экрана — правка задела бы три чужие зоны, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "рост · предыдущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
       "h": "93898ff3168e"
     },
     "Регистрация · рост и вес · 13": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён: текущее 32/700 тоном --color-emerald-500 вместо 22/700 тоном --ac, соседние 24/600 чернилами вместо 13/600 тоном 22 %, подсветки строки нет вовсе. Делят его четыре экрана — правка задела бы три чужие зоны, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "рост · текущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347; profile-body max-width 140 — 500-pwa-and-offline.css:5508-5512",
       "h": "ff20b8c8069f"
     },
     "Регистрация · рост и вес · 14": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён: текущее 32/700 тоном --color-emerald-500 вместо 22/700 тоном --ac, соседние 24/600 чернилами вместо 13/600 тоном 22 %, подсветки строки нет вовсе. Делят его четыре экрана — правка задела бы три чужие зоны, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "рост · следующее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
       "h": "01a0f33ff9f8"
     },
     "Регистрация · рост и вес · 15": {
@@ -1704,58 +1704,58 @@
       "h": "e5e49da81f22"
     },
     "Регистрация · возраст меньше 18 · 09": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "день · предыдущее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "3836defc615f"
     },
     "Регистрация · возраст меньше 18 · 10": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "день · текущее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "46ea98e82bc4"
     },
     "Регистрация · возраст меньше 18 · 11": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "день · следующее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "28ea9f9c6ffb"
     },
     "Регистрация · возраст меньше 18 · 12": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "месяц · предыдущее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "2becf8941949"
     },
     "Регистрация · возраст меньше 18 · 13": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "месяц · текущее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "55bfcd532bba"
     },
     "Регистрация · возраст меньше 18 · 14": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "месяц · следующее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "78dec7219a0a"
     },
     "Регистрация · возраст меньше 18 · 15": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "год · предыдущее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "53abd974c78c"
     },
     "Регистрация · возраст меньше 18 · 16": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "год · текущее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "b5d211d952a4"
     },
     "Регистрация · возраст меньше 18 · 17": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "год · следующее: .profile-personal-wheel-card .mc-wheel-value--current 700 15.5px/2 var(--v4-ink); prev/next 600 12.5px/2.1 ink 40% — 500-pwa-and-offline.css:5492-5505",
       "h": "2c24cf4b3ebd"
     },
     "Регистрация · возраст меньше 18 · 18": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "капсула строки даты: .mc-wheel-values::before — 500-pwa-and-offline.css:5275-5287",
       "h": "a5cfef977942"
     },
     "Регистрация · возраст меньше 18 · 19": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "тройное колесо gap 6 — profile-personal-wheel-card gap 6 — 500-pwa-and-offline.css:5443-5445",
       "h": "7d375a020f61"
     },
     "Регистрация · возраст меньше 18 · 20": {
@@ -1834,18 +1834,18 @@
       "h": "593313792fd2"
     },
     "Регистрация · ниже нормы имт · 11": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, правка задела бы три чужие зоны — вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "рост · предыдущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
       "h": "93898ff3168e"
     },
     "Регистрация · ниже нормы имт · 12": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, правка задела бы три чужие зоны — вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "рост · текущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
       "h": "ff20b8c8069f"
     },
     "Регистрация · ниже нормы имт · 13": {
-      "v": "≠",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; делят его четыре экрана, правка задела бы три чужие зоны — вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "рост · следующее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
       "h": "01a0f33ff9f8"
     },
     "Регистрация · ниже нормы имт · 14": {
@@ -2813,7 +2813,7 @@
     },
     "вид колеса значений": {
       "v": "=",
-      "f": "тройное compact-колесо даты scoped в profile-personal-wheel-card; одиночные колёса тела — padding 13/0/14 и WheelPicker height 100 (500-pwa-and-offline.css:5402-5463; heys_profile_step_v1.js:682-714,897-907)",
+      "f": "общий слой сведён по docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/registration.v4.dc.html:57; тело 22/700 --v4-act-text, дата 15.5/700 --v4-ink; registration-wheel-v4-palette.test.js sand+blue",
       "h": "df575f079c1e"
     }
   },

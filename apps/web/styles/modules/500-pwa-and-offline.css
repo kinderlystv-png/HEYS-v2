@@ -216,7 +216,7 @@
   align-items: flex-end;
   justify-content: center;
   padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
@@ -626,7 +626,7 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   display: flex;
@@ -637,7 +637,7 @@
 }
 
 [data-theme$="dark"] .mc-backdrop {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+  background: var(--scrim, rgba(0, 0, 0, 0.62));
 }
 
 /* У чек-ина от прежнего правила осталась только своя врезка: тон подложки и
@@ -2327,7 +2327,7 @@
   align-items: center;
   justify-content: center;
   padding: 16px;
-  background: var(--v4-modal-backdrop-dim, rgba(0, 0, 0, 0.35));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }
 
@@ -5263,6 +5263,7 @@
 }
 
 .mc-wheel-values {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5271,11 +5272,28 @@
   gap: 0;
 }
 
-.mc-wheel-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--v4-ink, #0f172a);
+/* Капсула под выбранной строкой — registration.v4 «вид колеса значений». */
+.mc-wheel-values::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
   height: 32px;
+  background: var(--v4-hero, #efe3cf);
+  border-radius: 999px;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.mc-wheel-value {
+  position: relative;
+  z-index: 1;
+  font: 600 13px/1.75 Figtree, system-ui, sans-serif;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 22%, transparent);
+  height: auto;
+  min-height: 23px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5298,9 +5316,9 @@
 
 .mc-wheel-value--prev,
 .mc-wheel-value--next {
-  font-size: 18px;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
-  opacity: 0.6;
+  font: 600 13px/1.75 Figtree, system-ui, sans-serif;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 22%, transparent);
+  opacity: 1;
 }
 
 @media (hover: hover) {
@@ -5318,9 +5336,15 @@
    Зоны с локальным переопределением (чек-ин, холодовая, приём) цвет уже
    называли сами; без базы зелёными оставались лист времени и колесо зон. */
 .mc-wheel-value--current {
-  font-size: 32px;
-  font-weight: 700;
+  font: 700 22px/1.35 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
+  min-height: 30px;
+}
+
+/* Внешняя капсула уже обрамляет колесо — внутренняя строка не нужна. */
+.mc-weight-kilo-card .mc-wheel-values::before,
+.mc-rest-cold-time .mc-wheel-values::before {
+  display: none;
 }
 
 /* Единицы измерения рядом с текущим значением */
@@ -5342,7 +5366,7 @@
    зелёным. Строка «вид · колесо времени»: «значения 40 px/600 тоном --ac».
    Зоны со своим переопределением (чек-ин, холодовая) остаются при своём — их
    правило стоит ниже и выигрывает порядком. */
-[data-theme$="dark"] .mc-wheel-value:not(.mc-wheel-value--current) {
+[data-theme$="dark"] .mc-wheel-value:not(.mc-wheel-value--current):not(.mc-wheel-value--prev):not(.mc-wheel-value--next) {
   color: var(--v4-ink, #f2ede6);
 }
 
@@ -5352,7 +5376,7 @@
 
 [data-theme$="dark"] .mc-wheel-value--prev,
 [data-theme$="dark"] .mc-wheel-value--next {
-  color: var(--v4-ink, #f2ede6);
+  color: color-mix(in srgb, var(--v4-ink, #f2ede6) 22%, transparent);
 }
 
 /* Compact mode — 3 значения вместо 5, меньше высота */
@@ -5361,13 +5385,15 @@
 }
 
 .mc-wheel-picker--compact .mc-wheel-value--current {
-  font-size: 26px;
+  font: 700 22px/1.35 Figtree, system-ui, sans-serif;
+  min-height: 30px;
 }
 
 .mc-wheel-picker--compact .mc-wheel-value--prev,
 .mc-wheel-picker--compact .mc-wheel-value--next {
-  font-size: 14px;
-  height: 24px;
+  font: 600 13px/1.75 Figtree, system-ui, sans-serif;
+  height: auto;
+  min-height: 23px;
 }
 
 .mc-wheel-picker--compact .mc-wheel-suffix {
@@ -5465,16 +5491,25 @@
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--prev,
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--next {
-  height: 26px;
+  height: auto;
+  min-height: 0;
   font: 600 12.5px/2.1 Figtree, system-ui, sans-serif;
-  color: rgba(0, 0, 0, 0.4);
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
   opacity: 1;
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--current {
-  height: 37px;
-  font: 700 26px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-sand-act-text, #8a4a20);
+  height: auto;
+  min-height: 0;
+  font: 700 15.5px/2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.mc-modal[data-heys-step-id="profile-body"] .mc-wheel-values {
+  max-width: 140px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .mc-daily-footer {
@@ -5866,14 +5901,14 @@
 }
 
 .wn-backdrop--visible {
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   pointer-events: auto;
 }
 
 [data-theme$="dark"] .wn-backdrop--visible {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+  background: var(--scrim, rgba(0, 0, 0, 0.62));
 }
 
 .wn-modal {
@@ -6268,7 +6303,7 @@
 }
 
 .ca-modal-backdrop--visible {
-  background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.5));
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   pointer-events: auto;
@@ -6832,7 +6867,7 @@
 
 html[data-theme-id="sand-dark"] .ca-modal-backdrop--visible,
 [data-theme="sand-dark"] .ca-modal-backdrop--visible {
-  background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.62));
+  background: var(--scrim, rgba(0, 0, 0, 0.62));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }

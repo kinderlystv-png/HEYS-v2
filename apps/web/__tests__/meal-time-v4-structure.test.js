@@ -87,7 +87,7 @@ describe('meal time step v4 structure', () => {
     expect(stepModalSource).not.toContain('mc-wheel-value--far');
     expect(stepModalSource).toContain('mc-wheel-picker--row');
     expect(stepModalSource).toContain('mc-wheel-picker--large');
-    expect(pwaCssSource).toMatch(/\.mc-wheel-value--current \{[^}]*font-size: 32px/s);
+    expect(pwaCssSource).toMatch(/\.mc-wheel-value--current \{[^}]*font: 700 22px\/1\.35/s);
     expect(cssSource).toMatch(/\.meal-time-hero \.mc-wheel-value--current \{[^}]*36px/s);
   });
 
