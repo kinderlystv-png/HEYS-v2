@@ -107,15 +107,13 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(gamificationSrc).toContain('hdr-advice-badge');
     });
 
-    // Цель 44 pt осталась, изменилась форма: строка контракта «иконки» просит
-    // бокс 34 × 44, а горизонтальные 44 добираются невидимым припуском
-    // (34 + 5 + 5). Прежние проверки закрепляли рисунок, а не цель.
-    it('кнопки шапки — рисунок 34×44, цель касания 44 pt', () => {
+    // Пакет 36 «иконки»: бокс 44 × 44 видимым размером, без ::after-расширителя.
+    it('кнопки шапки — рисунок 17 px, бокс 44×44', () => {
         const btnRule = baseCss.match(/\.hdr-header-icon-btn \{[^}]+\}/)?.[0] || '';
-        expect(btnRule).toMatch(/width:\s*34px/);
+        expect(btnRule).toMatch(/width:\s*44px/);
         expect(btnRule).toMatch(/height:\s*44px/);
-        expect(btnRule).toMatch(/min-width:\s*34px/);
-        expect(baseCss).toMatch(/\.hdr-header-icon-btn::after \{[^}]*inset:\s*0 -5px/);
+        expect(btnRule).toMatch(/min-width:\s*44px/);
+        expect(baseCss).not.toMatch(/\.hdr-header-icon-btn::after/);
         expect(baseCss).toMatch(/\.hdr-gamification \.hdr-header-actions[\s\S]*?gap:\s*0/);
     });
 

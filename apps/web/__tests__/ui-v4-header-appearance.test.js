@@ -102,7 +102,7 @@ describe('UI v4 · значки шапки не режутся строкой у
         // двузначном счётчике. Отсчёт от угла кнопки сажал бейдж на макушку.
         const badge = rule('.hdr-advice-badge,\n.hdr-header-icon-btn--advice #nav-advice-badge');
         expect(badge).toMatch(/top:\s*13\.5px/);
-        expect(badge).toMatch(/right:\s*8\.5px/);
+        expect(badge).toMatch(/right:\s*13\.5px/);
         expect(badge).toMatch(/transform:\s*translate\(50%,\s*-50%\)/);
     });
 

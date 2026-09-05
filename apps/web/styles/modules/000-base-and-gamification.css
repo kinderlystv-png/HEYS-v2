@@ -4432,11 +4432,11 @@ html[data-theme-id="blue-dark"] {
 
 .hdr-header-icon-btn {
   position: relative;
-  /* Строка «иконки»: бокс 34 × 44. Цель 44 pt держится по вертикали высотой,
-     по горизонтали — невидимыми полями припуска ниже: 34 + 5 + 5 = 44. */
-  width: 34px;
+  /* Строка «иконки» (tips, пакет 36): рисунок 17 px, бокс 44 × 44 видимым
+     размером, без горизонтального расширителя — иконки стоят рядом. */
+  width: 44px;
   height: 44px;
-  min-width: 34px;
+  min-width: 44px;
   padding: 0;
   border: 0;
   border-radius: 10px;
@@ -4447,12 +4447,6 @@ html[data-theme-id="blue-dark"] {
   justify-content: center;
   cursor: pointer;
   touch-action: manipulation;
-}
-
-.hdr-header-icon-btn::after {
-  content: '';
-  position: absolute;
-  inset: 0 -5px;
 }
 
 .hdr-header-icon-btn--advice {
@@ -4475,14 +4469,13 @@ html[data-theme-id="blue-dark"] {
 
 /* Строка «вид бейджа счётчика»: кружок в правом верхнем углу иконки лампочки.
    Угол считается от значка, а не от бокса кнопки: значок 17 стоит по центру
-   бокса 34 × 44, то есть его правый верхний угол — 13,5 сверху и 8,5 справа.
+   бокса 44 × 44, то есть его правый верхний угол — 13,5 сверху и 13,5 справа.
    Кружок встаёт туда серединой, поэтому сдвиг на половину — так он держит угол
-   и при двузначном счётчике, когда становится шире. Отступ 6/6 отсчитывал угол
-   бокса: бейдж съезжал внутрь и садился лампочке на макушку, закрывая её. */
+   и при двузначном счётчике, когда становится шире. */
 .hdr-advice-badge,
 .hdr-header-icon-btn--advice #nav-advice-badge {
   top: 13.5px;
-  right: 8.5px;
+  right: 13.5px;
   transform: translate(50%, -50%);
 }
 
@@ -8195,8 +8188,8 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger--not-today {
-  height: 38px;
-  min-height: 38px;
+  height: 44px;
+  min-height: 44px;
   align-items: center;
   /* v4-intentional */
   background: var(--v4-tint);
@@ -9430,8 +9423,8 @@ svg.date-picker-icon {
   }
 
   .date-picker--v4 .date-picker-trigger--not-today {
-    height: 38px;
-    min-height: 38px;
+    height: 44px;
+    min-height: 44px;
     gap: 5px;
     padding: 0 4px 0 11px;
   }
@@ -10914,19 +10907,18 @@ body:has(:is(
 
 .hdr-settings-sheet__chips--fab {
   margin-top: 11px;
-  /* Контракт settings-system «Настройки · чипы · 19»: зазор 7 */
-  gap: 7px;
+  /* Контракт settings-system «области нажатия · чипы»: зазор 6 */
+  gap: 6px;
 }
 
-/* Контракт «области нажатия · чипы»: видимая высота 30, цель касания 44 pt —
-   прозрачным припуском ::after, как у .nutrition-v4-chip. Кадр канваса рисует
-   min-height 44 у самого чипа — верен контракт. */
+/* Контракт «области нажатия · чипы» (пакет 36): видимая высота 44 px, без
+   прозрачного расширителя — соседние чипы при зазоре 6 не перекрываются. */
 .hdr-settings-sheet__fab-chip {
   position: relative;
   border: 0;
   border-radius: 999px;
   padding: 0 16px;
-  min-height: 30px;
+  min-height: 44px;
   /* Контракт settings-system «вид яруса» (3 сентября): невыбранный чип на
      карточке --c2 уходит на грунт --bg с обводкой inset 1,5 px чернил 14 %,
      иначе на той же поверхности пропадает. Выбранный (.is-on) — без изменений. */
@@ -10938,12 +10930,6 @@ body:has(:is(
   align-items: center;
   gap: 7px;
   font: 600 12px/1 Figtree, system-ui, sans-serif;
-}
-
-.hdr-settings-sheet__fab-chip::after {
-  content: '';
-  position: absolute;
-  inset: -7px 0;
 }
 
 .hdr-settings-sheet__fab-chip-label {

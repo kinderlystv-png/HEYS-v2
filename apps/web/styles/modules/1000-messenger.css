@@ -7,12 +7,12 @@
  * ═══════════════════════════════════════════════════════════════════ */
 
 /* 💬 FAB-кнопка рядом с meal-fab + water-fab.
- * v4-intentional: вторичный FAB — приподнятая поверхность (--v4-float), 40px,
- * как остальные вторичные кнопки группы (решение владельца 2026-08-10). */
+ * v4-intentional: вторичный FAB — приподнятая поверхность (--v4-float), 44px
+ * как остальные вторичные кнопки группы (пакет 36, tips «тач-цели»). */
 .fab-group .message-fab {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: var(--v4-float, #fffaf1);
