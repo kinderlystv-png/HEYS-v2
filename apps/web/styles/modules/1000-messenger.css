@@ -409,10 +409,10 @@ button.messenger-day-checklist__chip:active {
 .messenger-thread {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 18px 18px;
+  padding: 6px 14px 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   /* Тёплая бумага вместо холодного градиента с диагональной штриховкой:
      фон не должен спорить с фотографиями еды. */
   background: var(--v4-hero, #fcfbf8);
