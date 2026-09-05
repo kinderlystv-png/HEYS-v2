@@ -540,501 +540,6 @@
     "reasonCode": "canvas-conflict"
   },
   {
-    "key": "Исход · правка принята · 01",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 02",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 03",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 04",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 05",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 06",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 07",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 08",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 09",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 10",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 11",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 12",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 13",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 14",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 15",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 16",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 17",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 18",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 19",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 20",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 21",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · правка принята · 22",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 01",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 02",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 03",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 04",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 05",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 06",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 07",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 08",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 09",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 10",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 11",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 12",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 13",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 14",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 15",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 16",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · 17",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 01",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 02",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 03",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 04",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 05",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 06",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 07",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 08",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 09",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 10",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 11",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 12",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 13",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 14",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 15",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · 16",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
     "key": "Сессия · брошена вчера · 01",
     "phrase": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
     "classId": "canvas-conflict-geometry",
@@ -1224,33 +729,6 @@
     "reasonCode": "canvas-conflict"
   },
   {
-    "key": "Исход · правка принята · текст",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · отказ · текст",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Исход · без ответа · текст",
-    "phrase": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-    "classId": "canvas-conflict-geometry",
-    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
     "key": "Сессия · брошена вчера · текст",
     "phrase": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении.",
     "classId": "canvas-conflict-geometry",
@@ -1266,6 +744,744 @@
     "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
     "proposal": "спорно — разобрать поштучно",
     "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 04",
+    "phrase": "А1б ·04: builder_ui is-exercise-open рендерит имя упражнения (Г4 ·01) — rg exerciseWorkProgressKey heys_strength_builder_ui_v1.js; канвас «Силовая · грудь, спина, плечи». calm-canvas-contract CANVAS_…",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 05",
+    "phrase": "А1б ·05: .sb-head-sub «подход N из M» (builder_ui exerciseWorkProgressKey) vs «пн, 8 авг · начата в 18:40». calm-canvas-contract CANVAS_CONFLICTS А1б:05.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 14",
+    "phrase": "А1б ·14: .sb-ex--collapsed .sb-ex-title b 12.5px (750-strength-builder.css:3391) vs 13px канваса. calm-canvas-contract CANVAS_CONFLICTS А1б:14.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 28",
+    "phrase": "А1б ·28: .is-weight-entry.is-exercise-open .sb-aps-head padding 0 (builder_ui:1886, 750) vs 10px. calm-canvas-contract CANVAS_CONFLICTS А1б:28.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 30",
+    "phrase": "А1б ·30: .sb-aps-head > span:last-child computed --gr (#5c6a45 sand) vs ink .56. calm-canvas-contract sand+blue CANVAS_CONFLICTS А1б:30.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 31",
+    "phrase": "А1б ·31: .is-weight-entry.is-exercise-open .sb-aps gap 0 vs 6px. calm-canvas-contract CANVAS_CONFLICTS А1б:31.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 33",
+    "phrase": "А1б ·33: .sb-ap.is-done .sb-ap-num --gr vs ink .62. calm-canvas-contract sand+blue CANVAS_CONFLICTS А1б:33.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 35",
+    "phrase": "А1б ·35: .sb-ap.is-current .sb-ap-num --acs (#c67139 sand) vs bg #fffaf1. calm-canvas-contract sand+blue CANVAS_CONFLICTS А1б:35.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 36",
+    "phrase": "А1б ·36: кольцо активного поля inset 1.5px (Г4) vs 2px канваса А1б. calm-canvas-contract CANVAS_CONFLICTS А1б:36.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Конструктор · тренировка идёт · спокойнее · 44",
+    "phrase": "А1б ·44: .sb-ex--collapsed .sb-ex-title b 12.5px pending card (750:3391) vs 13px. calm-canvas-contract CANVAS_CONFLICTS А1б:44.",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "слова на экране",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1395: Welcome 🎉; «Триал завершён»; «🎉 Начать триал!»; settings «Триал · осталось»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "иконки",
+    "phrase": "apps/web/heys_paywall_v1.js:784: emoji 🔒🎉⏳ в Paywall/TrialQueue; Lucide не подключён в subscription слое",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "вид · экран подписки · активна",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1075: то же SubscriptionSection inline styles",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "вид · экран подписки · только чтение",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1135: SubscriptionSection read_only → CTA «Продлить подписку», не «Написать/Выбрать тариф» v4",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "вид · приветствие",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1369: WelcomeFirstLogin: emoji 56px, синий gradient CTA, copy «добро пожаловать в HEYS!»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "очередь · оффер истёк",
+    "phrase": "apps/web/heys_trial_queue_v1.js:475-524: isOfferExpired deprecated, OFFER→pending без отдельного экрана; paywall 1048 локально скрывает истёкший offer",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "приветствие · один раз",
+    "phrase": "apps/web/heys_subscriptions_v1.js:70-84: markWelcomeSeen пишет HEYS.store heys_first_login (cloud KV); контракт — локальный флаг, повтор на втором устройстве принят",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "аппаратная кнопка назад и затемнение",
+    "phrase": "apps/web/heys_paywall_v1.js:54-56,829-830: scrim v4 + tap закрывает; PaywallModal не вызывает HEYS.ModalDismiss.pushHistoryLayer (heys_modal_dismiss_v1.js:117)",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "уменьшенное движение, крупный шрифт, офлайн",
+    "phrase": "apps/web/heys_paywall_v1.js + heys_subscriptions_v1.js: нет «Нет сети — оплата недоступна» и подписи «данные могли устареть» в subscription-слое",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "доступность",
+    "phrase": "apps/web/heys_paywall_v1.js:831-848: role=dialog, radiogroup; heys_paywall_v1.js:1180-1187 toast без role=status; ReadOnlyBanner без role=region",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "срок подписки",
+    "phrase": "apps/web/heys_subscriptions_v1.js:733-763 getSettingsRowMeta дата «до …»; 1202-1203 headline датой; 989 PaymentScreen «за 30 дней»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · строка в настройках · 04",
+    "phrase": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet без «6 из 7 блоков» и счётчика «3 новые»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · строка в настройках · 06",
+    "phrase": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet без «6 из 7 блоков» и счётчика «3 новые»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · 02",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 02",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · 04",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 04",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · 06",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 06",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · 08",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 08",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · 09",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 09",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · 12",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 12",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · приветствие · 02",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1460-1469: WelcomeFirstLogin scrim rgba(0,0,0,.55) inline — нет backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px))",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · приветствие · 03",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1369: content: expected \"Начать\" got \"🎉\"",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · баннер сверху · 01",
+    "phrase": "apps/web/heys_paywall_v1.js:486-489: .readonly-banner background var(--v4-hero) padding 12px 14px — не --tint 10/18 min-height 44",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · баннер сверху · 02",
+    "phrase": "apps/web/heys_paywall_v1.js:1103: .readonly-banner-title «Пробный период закончился» — не «Доступ только для чтения»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · баннер сверху · 03",
+    "phrase": "apps/web/heys_paywall_v1.js:1104: .readonly-banner-text про куратора — не «напишите в поддержку»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · баннер сверху · 04",
+    "phrase": "apps/web/heys_paywall_v1.js: ReadOnlyBanner без пилюли «Подписка»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · 01",
+    "phrase": "apps/web/heys_paywall_v1.js:486: .readonly-toast — не баннер --tint (кадр-контекст)",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · 02",
+    "phrase": "apps/web/heys_paywall_v1.js:486: toast без строки «Доступ только для чтения»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · 03",
+    "phrase": "apps/web/heys_paywall_v1.js:486: toast без подстроки поддержки",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · 04",
+    "phrase": "apps/web/heys_paywall_v1.js:1185: .readonly-toast-action «Подписка» — не пилюля --acs",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · 06",
+    "phrase": "apps/web/heys_paywall_v1.js:486: .readonly-toast bg #1f2937 radius 12px; канвас/undo-bar: heys-undo-bar 11/13 radius 22",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · 07",
+    "phrase": "apps/web/heys_paywall_v1.js:1257: gateWrite message «Добавление данных недоступно» — не «Запись недоступна — только чтение»",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · 08",
+    "phrase": "apps/web/heys_paywall_v1.js:510: .readonly-toast-action #3b82f6 — не --ac 12px/700",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · 02",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1307-1311: ContactCuratorScreen inline padding — нет paywall-overlay scrim blur(var(--v4-modal-backdrop-blur, 2.5px))",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · 02",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 02",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · 04",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 04",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · 06",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 06",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · 07",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 07",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · 08",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 08",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · 09",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 09",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · 10",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 10",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · 12",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 12",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · 02",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 02",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · 07",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 07",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · 08",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 08",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · 09",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 09",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · 10",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 10",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · 12",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 12",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · очередь · заявка подана · 10",
+    "phrase": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-modal padding 24px",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · очередь · место освободилось · 10",
+    "phrase": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-modal padding 24px",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · рисунок 01",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 01",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · рисунок 02",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 02",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · рисунок 03",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 03",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · рисунок 04",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 04",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · рисунок 02",
+    "phrase": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · тост на действии · рисунок 02",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · рисунок 03",
+    "phrase": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 03",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · рисунок 04",
+    "phrase": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 04",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · рисунок 06",
+    "phrase": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 06",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · рисунок 07",
+    "phrase": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 07",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · рисунок 08",
+    "phrase": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 08",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · рисунок 09",
+    "phrase": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 09",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · рисунок 01",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 01",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · рисунок 02",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 02",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · рисунок 03",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 03",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · активна · рисунок 04",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 04",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · рисунок 01",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 01",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · рисунок 02",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 02",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · только чтение · рисунок 03",
+    "phrase": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 03",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · экран · пробный период · текст",
+    "phrase": "apps/web/heys_subscriptions_v1.js: missing: до 10 сентября",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · приветствие · текст",
+    "phrase": "apps/web/heys_paywall_v1.js: missing copy: Анна, добро пожаловать, Пробный период на 7 дней",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · баннер сверху · текст",
+    "phrase": "apps/web/heys_paywall_v1.js: missing copy: Доступ только для чтения, Чтобы записывать — напишите в поддержку",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · текст",
+    "phrase": "apps/web/heys_paywall_v1.js: missing copy: Запись недоступна — только чтение",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · текст",
+    "phrase": "apps/web/heys_paywall_v1.js: missing copy: Поддержка HEYS, @heys_support",
+    "classId": "canvas-conflict-geometry",
+    "classLabel": "canvas-conflict: геометрия/компонент vs кадр",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
     "reasonCode": "canvas-conflict"
   },
   {
@@ -5562,15 +5778,6 @@
     "reasonCode": "owner-decision"
   },
   {
-    "key": "равный выбор, а не склонение",
-    "phrase": "Решение владельца 5 сентября в контракте; продукт — ConfirmModal со склонением, лист равного выбора не собран.",
-    "classId": "owner-decision",
-    "classLabel": "продуктовое решение, кадр устарел",
-    "proposal": "одобрить как правило",
-    "zoneId": "nutrition-tab",
-    "reasonCode": "owner-decision"
-  },
-  {
     "key": "Продукт · вставка строки · 23",
     "phrase": "галка 20 × 20 заливкой акцента — .aps-create-publish__box через accent-color; прежде 18 × 18 зелёным #22c55e мимо набора. Радиус 6 из кадра не воспроизведён намеренно: контрол оставлен системным, сво…",
     "classId": "owner-decision",
@@ -6894,258 +7101,6 @@
     "reasonCode": null
   },
   {
-    "key": "Смена вида · лист выбора · рисунок 08",
-    "phrase": "Кадр-превью рисует последнюю точку r 3.5 в (112,40). Продукт — та же плитка 2×2: WeightDynamicsChartSvg (heys_widgets_ui_v1.js:7122-7156) рисует только площадь и линию, круга нет. Кадр самой плитки «…",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "home-widgets",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "шторка — семь входов",
-    "phrase": "Контракт :2241 — 7 строк (шаблоны, повторить прошлую, каталог…); product sheetRows superset_ui:2420–2466 — 7 рабочих входов: Порядок, Каталог, История, Круговой, Назначено против сделано, Заметка, По…",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "вес выше плана — прогресс, а не нарушение",
-    "phrase": "Цвет «сделано больше — зелёный» не рендерится; PlanVsDoneScreen :2143 is-match/is-diff без over-plan green.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "шторка нужна разработчику первой",
-    "phrase": "sheetRows (superset_ui:2160-2199) без «отчёт цикла»; контракт dev-first шторку с cycle report не закрыт.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "прочерк — значение, а не пустота",
-    "phrase": "Прочерки «—» в .sb-cell.is-blank (superset_ui:242,718), не .dash 56 % из контракта.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 01",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 02",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 03",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 04",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 05",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 06",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 11",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 12",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 13",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 14",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 15",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 16",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 17",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 18",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 19",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 20",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 21",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 22",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 23",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · 24",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Правка легла не полностью · 17",
-    "phrase": "Канвас .sm-сноска; ProposalOutcome не рендерит footnote — heys_strength_proposal_ui_v1.js:451-494 (CSS .sb-proposal-outcome-footnote заготовлен).",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Перенос · след в обе стороны · текст",
-    "phrase": "Агрегат кадра Г3 (план+inline-список+след+сноска) vs разнесённый runtime: PlanCard assigned/moved + MoveSheet modal + trace на is-moved/is-future. Механика есть (move/skip/movedTo/movedFrom — superse…",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
-    "key": "Программа пройдена · текст",
-    "phrase": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-    "classId": "canvas-conflict-feature",
-    "classLabel": "canvas-conflict: функционал не закрыт",
-    "proposal": "мы починим кодом",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
-  },
-  {
     "key": "запись задним числом — норма",
     "phrase": "apps/web/heys_meal_step_v1.js использует общий HEYS.StepModal.TimePicker и оставляет время первым обязательным шагом, что подтверждает apps/web/__tests__/meal-time-v4-structure.test.js. Но запрет зон…",
     "classId": "reuse-zone",
@@ -7371,6 +7326,231 @@
     "reasonCode": null
   },
   {
+    "key": "переход по строке",
+    "phrase": "heys_curator_actions_banner_v1.js:2236-2237 — тап строки зовёт hideActionLocally и maybeAckFullyHiddenEntries; при нуле видимых действий (:1902-1915) enqueueAckForEntries + flushPendingAcks подтвержд…",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "curator-edits",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "одно приветствие, а не два",
+    "phrase": "showWelcomeModal (heys_ui_onboarding_v1.js:223-276) всё ещё рисует вторую welcome-модалку с 👋 и «Да, показать! 🚀»; контракт: одна модалка subscription «Начать» → обзор",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "один обзор вместо трёх",
+    "phrase": "в коде три тура: TOUR_STEPS×8, INSIGHTS_TOUR_STEPS×7, WIDGETS_TOUR_STEPS×11 (heys_ui_onboarding_v1.js:43-118, 894-951, 1287-1410); ONBOARDING_TOUR_ENABLED=false, но v4-обзор из 4 шагов не собран",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "четыре шага и их порядок",
+    "phrase": "TOUR_STEPS — 8 шагов v3 (hero, sparkline, insulin, fab, widgets, stats, diary, insights); заголовки «Динамика», «Инсулиновая волна», «🎛️ Виджеты» вместо 4 шагов контракта",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "своих чисел, а не демонстрационных",
+    "phrase": "TOUR_DEMO_DATA + demoData {eaten:1450} в step_hero; при активном туре hero/sparkline читают getDemoData (heys_day_hero_display_v1.js:20-21, heys_day_sparkline_state.js:74-75)",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "подсветка — окно, а не рамка поверх",
+    "phrase": "heys-components.css:662-677 .tour-highlight — radius 12px, белая inset-рамка и зелёное свечение; JS добавляет tourPulse (heys_ui_onboarding_v1.js:391). Контракт: radius 20, обводка 2px --acs, без пул…",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "карточка шага",
+    "phrase": "createTooltip (heys_ui_onboarding_v1.js:407-450): нет кикера «Шаг N из 4», .tour-tooltip-content radius 16 padding 20 (heys-components.css:695-701), носика 14px",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "две кнопки, и обе понятны",
+    "phrase": "кнопки «Далее →» / «Готово! 🎉» и точки .tour-dot вместо словесного счёта (heys_ui_onboarding_v1.js:431-441); на последнем шаге «Пропустить» скрывается, но основная с эмодзи",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "пропуск без переспроса",
+    "phrase": "skip() закрывает без диалога (heys_ui_onboarding_v1.js:729-738), но ряд «Обзор приложения» в настройках в продукте не найден (rg «Обзор приложения» apps/web — 0)",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "прерывание",
+    "phrase": "INTERRUPTED_STEP_KEY + MIN_HIDDEN_DURATION 500ms есть (161-163, 636-639), но флаг heys_tour_completed только localStorage/HEYS.store (29, 774-778); автопоказ на следующий день и серверный флаг не реа…",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "обзор пройден",
+    "phrase": "finish() (heys_ui_onboarding_v1.js:741-779) снимает overlay и пишет флаг, но не показывает undo-bar «Обзор пройден…» 4с; только visual-fixture pushUndoToast (heys_ui_v4_visual_fixture_v1.js:192-197)",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "вход с компьютера — не заглушка, а короткий путь",
+    "phrase": "DesktopGateScreen (heys_app_gates_v1.js:69-178): градиент #667eea, emoji 📱, заголовок «Откройте на телефоне», QR 180px, URL текстом без «Скопировать»; порог 768px в heys_app_desktop_gate_v1.js:6 без…",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "QR рисует приложение, а не чужой сервис",
+    "phrase": "локальный data: GIF через buildDesktopGateQrSrc(origin) без qrserver (desktop-gate-qr.test.js) — ок; но UI не v4: нет блока 198×198, адрес app.heyslab.ru + «Скопировать», кодируется window.location.o…",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "слова на экране",
+    "phrase": "TOUR_STEPS: «Уникальная фишка HEYS», эмодзи в заголовках 🎛️📊🍴🔮, восклицания; welcome «Да, показать! 🚀» (heys_ui_onboarding_v1.js:67-113, 243)",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "иконки",
+    "phrase": "тур и desktop gate на emoji (👋🍽️📱💡), Lucide layout-grid/plus/compass/bar-chart-2/copy/smartphone/log-out в продуктовом onboarding/desktop gate не рендерятся",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "вид · окно подсветки",
+    "phrase": "см. «подсветка — окно…»: radius 12, белая рамка, зелёное свечение, transition 0.4s — не --acs/--scrim 20px",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "вид · карточка шага",
+    "phrase": "см. «карточка шага»: .tour-tooltip-content без v4-геометрии кадра (radius 16, padding 20, без носика 14px)",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "вид · плашка «обзор пройден»",
+    "phrase": "продуктовый finish() не монтирует .heys-undo-bar с текстом контракта; только fixture pushUndoToast",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "вид · вход с компьютера",
+    "phrase": "DesktopGateScreen inline-styles: gradient, emoji 80px, нет колонки 480px / QR 198 / v4-типографики кадра",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "когда показывается",
+    "phrase": "ONBOARDING_TOUR_ENABLED=false → start() сразу выходит (553-555); heys_tour_completed в localStorage/HEYS.store, не поле профиля на сервере; связка с subscription Welcome «Начать» не проводится",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "что доступно во время обзора",
+    "phrase": ".tour-overlay pointer-events auto блокирует фон (heys-components.css:652-659), но нет role=dialog/aria; аппаратная «назад»=Пропустить и блокировка scroll не найдены в heys_ui_onboarding_v1.js",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "цель не найдена",
+    "phrase": "при !targetEl вызывается next() (673-676), но кикер не пересчитывает «Шаг 2 из 3» — счётчик точек остаётся от TOUR_STEPS.length=8",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "возврат к обзору",
+    "phrase": "ряд «Обзор приложения» в settings отсутствует в apps/web (rg 0); OnboardingTour.start({force:true}) только dev/fixture",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "когда показывается экран с компьютера",
+    "phrase": "heys_app_desktop_gate_v1.js:6 innerWidth>768 без matchMedia(pointer:fine); buildDesktopGate в heys_app_gate_flow_v1.js:2624 пропускает куратора и desktopAllowed, но не 1024px",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
+    "key": "доступность",
+    "phrase": "createTooltip не ставит role=dialog, aria-labelledby, aria-live; highlight без aria-hidden (rg aria в heys_ui_onboarding_v1.js — 0)",
+    "classId": "logic-invariant",
+    "classLabel": "логический инвариант продукта",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
+  },
+  {
     "key": "Разбор · Вес · 92",
     "phrase": "кадр рисует в листе ввод веса пилюлями цифр; продукт по «Записать вес» уводит в день и открывает редактор. Это функция, а не геометрия — записано дизайнеру",
     "classId": "functional-flow",
@@ -7463,6 +7643,15 @@
   {
     "key": "Штрихкод · наведение · 06",
     "phrase": "камера держит соотношение 4:3 с рамкой наведения внутри, а не растянута флексом на остаток с отступом 20. Проверить это в браузере нельзя — нужна живая камера, а стенд её не даёт; менять вслепую то,…",
+    "classId": "functional-flow",
+    "classLabel": "функциональный поток отличается от кадра",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "product-card",
+    "reasonCode": null
+  },
+  {
+    "key": "Штрихкод · не найден · 03",
+    "phrase": "кадр рисует крест 44×44 на --c1 в шапке «Штрихкод · не найден»; в продукте при ненайденном коде модалка сканера закрывается (heys_add_product_step_v1.js:5350) и показывается inline .aps-barcode-not-f…",
     "classId": "functional-flow",
     "classLabel": "функциональный поток отличается от кадра",
     "proposal": "спорно — разобрать поштучно",
@@ -7713,49 +7902,130 @@
     "reasonCode": null
   },
   {
-    "key": "переход по строке",
-    "phrase": "heys_curator_actions_banner_v1.js:2236-2237 — тап строки зовёт hideActionLocally и maybeAckFullyHiddenEntries; при нуле видимых действий (:1902-1915) enqueueAckForEntries + flushPendingAcks подтвержд…",
-    "classId": "logic-invariant",
-    "classLabel": "логический инвариант продукта",
-    "proposal": "одобрить как правило",
-    "zoneId": "curator-edits",
-    "reasonCode": "logic-invariant"
+    "key": "Смена вида · лист выбора · рисунок 08",
+    "phrase": "Кадр-превью рисует последнюю точку r 3.5 в (112,40). Продукт — та же плитка 2×2: WeightDynamicsChartSvg (heys_widgets_ui_v1.js:7122-7156) рисует только площадь и линию, круга нет. Кадр самой плитки «…",
+    "classId": "canvas-conflict-feature",
+    "classLabel": "canvas-conflict: функционал не закрыт",
+    "proposal": "мы починим кодом",
+    "zoneId": "home-widgets",
+    "reasonCode": "canvas-conflict"
   },
   {
-    "key": "Питание · вопрос о дате · текст",
-    "phrase": "Контракт пакета 36: «На какой день записать?», два равных ряда, CTA «Записать на 19 августа». Продукт — ConfirmModal «Перейти на сегодня» / «Всё-таки записать».",
-    "classId": "logic-invariant",
-    "classLabel": "логический инвариант продукта",
-    "proposal": "одобрить как правило",
-    "zoneId": "nutrition-tab",
-    "reasonCode": "logic-invariant"
+    "key": "шторка — семь входов",
+    "phrase": "Контракт :2241 — 7 строк (шаблоны, повторить прошлую, каталог…); product sheetRows superset_ui:2420–2466 — 7 рабочих входов: Порядок, Каталог, История, Круговой, Назначено против сделано, Заметка, По…",
+    "classId": "canvas-conflict-feature",
+    "classLabel": "canvas-conflict: функционал не закрыт",
+    "proposal": "мы починим кодом",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
   },
   {
-    "key": "след записи в чужой день",
-    "phrase": "Контракт пакета 36: undo-bar «Записано в {дата}» 6 с; продукт не реализован в nutrition/day flow.",
-    "classId": "logic-invariant",
-    "classLabel": "логический инвариант продукта",
-    "proposal": "одобрить как правило",
-    "zoneId": "nutrition-tab",
-    "reasonCode": "logic-invariant"
+    "key": "вес выше плана — прогресс, а не нарушение",
+    "phrase": "Цвет «сделано больше — зелёный» не рендерится; PlanVsDoneScreen :2143 is-match/is-diff без over-plan green.",
+    "classId": "canvas-conflict-feature",
+    "classLabel": "canvas-conflict: функционал не закрыт",
+    "proposal": "мы починим кодом",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
   },
   {
-    "key": "уменьшенное движение",
-    "phrase": "Дуга стоит и вращается с первого кадра; при prefers-reduced-motion вращение заменяется дыханием 1,6 с. Это следует общему owner-контракту spinners «без анимации» и не совпадает с требованием app-spla…",
-    "classId": "accessibility-platform",
-    "classLabel": "доступность / платформа",
-    "proposal": "одобрить как правило",
-    "zoneId": "app-splash",
-    "reasonCode": null
+    "key": "шторка нужна разработчику первой",
+    "phrase": "sheetRows (superset_ui:2160-2199) без «отчёт цикла»; контракт dev-first шторку с cycle report не закрыт.",
+    "classId": "canvas-conflict-feature",
+    "classLabel": "canvas-conflict: функционал не закрыт",
+    "proposal": "мы починим кодом",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
   },
   {
-    "key": "состав чипа",
-    "phrase": "Пакет 36: чип 44 px видимым, ::after none. Продукт 732-ui-v4-nutrition.css:1068 min-height 30px — ждёт strip touch (как food-meal 5f7097c20).",
-    "classId": "accessibility-platform",
-    "classLabel": "доступность / платформа",
-    "proposal": "одобрить как правило",
-    "zoneId": "nutrition-tab",
-    "reasonCode": "accessibility"
+    "key": "прочерк — значение, а не пустота",
+    "phrase": "Прочерки «—» в .sb-cell.is-blank (superset_ui:242,718), не .dash 56 % из контракта.",
+    "classId": "canvas-conflict-feature",
+    "classLabel": "canvas-conflict: функционал не закрыт",
+    "proposal": "мы починим кодом",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Правка легла не полностью · 17",
+    "phrase": "Канвас .sm-сноска; ProposalOutcome не рендерит footnote — heys_strength_proposal_ui_v1.js:451-494 (CSS .sb-proposal-outcome-footnote заготовлен).",
+    "classId": "canvas-conflict-feature",
+    "classLabel": "canvas-conflict: функционал не закрыт",
+    "proposal": "мы починим кодом",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Перенос · след в обе стороны · текст",
+    "phrase": "Агрегат кадра Г3 (план+inline-список+след+сноска) vs разнесённый runtime: PlanCard assigned/moved + MoveSheet modal + trace на is-moved/is-future. Механика есть (move/skip/movedTo/movedFrom — superse…",
+    "classId": "canvas-conflict-feature",
+    "classLabel": "canvas-conflict: функционал не закрыт",
+    "proposal": "мы починим кодом",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Перенос · след в обе стороны · 17",
+    "phrase": "Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопред…",
+    "classId": "legacy-v4",
+    "classLabel": "legacy-поверхность вне v4",
+    "proposal": "мы починим кодом",
+    "zoneId": "strength-builder",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · 03",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
+    "classId": "legacy-v4",
+    "classLabel": "legacy-поверхность вне v4",
+    "proposal": "мы починим кодом",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · 04",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
+    "classId": "legacy-v4",
+    "classLabel": "legacy-поверхность вне v4",
+    "proposal": "мы починим кодом",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · 05",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
+    "classId": "legacy-v4",
+    "classLabel": "legacy-поверхность вне v4",
+    "proposal": "мы починим кодом",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · 06",
+    "phrase": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
+    "classId": "legacy-v4",
+    "classLabel": "legacy-поверхность вне v4",
+    "proposal": "мы починим кодом",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · тост на действии · рисунок 03",
+    "phrase": "apps/web/heys_paywall_v1.js: нет svg-path M7 11V7a5 5 0 0 1 10 0v4. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+    "classId": "legacy-v4",
+    "classLabel": "legacy-поверхность вне v4",
+    "proposal": "мы починим кодом",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "Подписка · контакт поддержки · рисунок 05",
+    "phrase": "apps/web/heys_paywall_v1.js: нет svg-path M7 11V7a5 5 0 0 1 10 0v4. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+    "classId": "legacy-v4",
+    "classLabel": "legacy-поверхность вне v4",
+    "proposal": "мы починим кодом",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
   },
   {
     "key": "Шторка · Вода · текст",
@@ -7774,6 +8044,33 @@
     "proposal": "спорно — разобрать поштучно",
     "zoneId": "questionnaire",
     "reasonCode": null
+  },
+  {
+    "key": "оплата · уход и возврат",
+    "phrase": "apps/web/heys_subscriptions_v1.js:111-112,353-375: poll 3s×60 и heys_pending_payment есть; heys_app_shortcuts_v1.js:150-172: ошибка — toast, не модалка тарифов со строкой из контракта",
+    "classId": "gap-375",
+    "classLabel": "зазор при 375 не влезает",
+    "proposal": "спорно — разобрать поштучно",
+    "zoneId": "subscription",
+    "reasonCode": "canvas-conflict"
+  },
+  {
+    "key": "уменьшенное движение",
+    "phrase": "Дуга стоит и вращается с первого кадра; при prefers-reduced-motion вращение заменяется дыханием 1,6 с. Это следует общему owner-контракту spinners «без анимации» и не совпадает с требованием app-spla…",
+    "classId": "accessibility-platform",
+    "classLabel": "доступность / платформа",
+    "proposal": "одобрить как правило",
+    "zoneId": "app-splash",
+    "reasonCode": null
+  },
+  {
+    "key": "уменьшенное движение, крупный шрифт, офлайн",
+    "phrase": "highlight transition 0.3-0.4s всегда (heys_ui_onboarding_v1.js:389, heys-components.css:676); prefers-reduced-motion и офлайн-синк флага обзора не обработаны в onboarding-модуле",
+    "classId": "accessibility-platform",
+    "classLabel": "доступность / платформа",
+    "proposal": "одобрить как правило",
+    "zoneId": "first-run",
+    "reasonCode": "logic-invariant"
   },
   {
     "key": "Приём · правка · 28",
@@ -7810,14 +8107,5 @@
     "proposal": "спорно — разобрать поштучно",
     "zoneId": "service-curator",
     "reasonCode": null
-  },
-  {
-    "key": "Перенос · след в обе стороны · 17",
-    "phrase": "Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопред…",
-    "classId": "singleton",
-    "classLabel": "вне классов · legacy-поверхность вне v4",
-    "proposal": "спорно — разобрать поштучно",
-    "zoneId": "strength-builder",
-    "reasonCode": "canvas-conflict"
   }
 ]
