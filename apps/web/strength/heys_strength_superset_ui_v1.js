@@ -2094,7 +2094,7 @@
     return 'подход ' + progress.current + ' из ' + progress.total;
   }
 
-  /** Г4/M5/M6: ключ под названием в открытой карточке — единица или «подход N из M». */
+  /** Г4/M5/M6: ключ под названием в открытой карточке — единица; weight_reps в .sb-head-sub. */
   function exerciseOpenHeadKey(ex, unit) {
     const PartsLocal = HEYS.StrengthBuilderParts || {};
     const u = unit || (ex && ex.unit) || 'weight_reps';
@@ -2104,7 +2104,6 @@
     if ((u === 'time' || u === 'distance') && typeof PartsLocal.unitEntryLabel === 'function') {
       return PartsLocal.unitEntryLabel(u);
     }
-    if (u === 'weight_reps') return exerciseWorkProgressKey(ex);
     return '';
   }
 

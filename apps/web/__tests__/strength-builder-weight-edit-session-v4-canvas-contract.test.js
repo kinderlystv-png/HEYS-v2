@@ -109,7 +109,9 @@ describe('Г4 · Правка веса в сессии · canvas contract', () =
         onClose: () => {},
       }));
       expect(container.querySelector('.sb-head-title > b').textContent).toBe('Силовая');
-      expect(screen.getByText('подход 3 из 4')).toBeTruthy();
+      // Г4/task60: ключ «подход N из M» только в шапке (.sb-head-sub), не в .sb-ex-sub.
+      expect(container.querySelector('.sb-head-sub').textContent).toBe('подход 3 из 4');
+      expect(container.querySelector('.sb-ex.is-open .sb-ex-sub').textContent).not.toMatch(/подход \d+ из \d+/);
       expect(screen.getByText(/Артём поставил 25 кг · 19:12/)).toBeTruthy();
       expect(screen.getByText('Правка пришла')).toBeTruthy();
       expect(screen.getByText('после начала сессии')).toBeTruthy();

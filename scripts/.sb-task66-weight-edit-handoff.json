@@ -1,0 +1,34 @@
+{
+  "zone": "strength-builder",
+  "scope": "Task 66 lane 1 — strength-builder-weight-edit-session-v4-canvas-contract",
+  "generated": "2026-09-05",
+  "rootCause": "code",
+  "notTimeout": true,
+  "testFile": "apps/web/__tests__/strength-builder-weight-edit-session-v4-canvas-contract.test.js",
+  "failure": {
+    "case": "показывает имя, ключ «подход N из M», метку авторства и карточку при живой правке",
+    "line": 112,
+    "error": "TestingLibraryElementError: Found multiple elements with the text: подход 3 из 4",
+    "duplicates": [".sb-head-sub", ".sb-ex-sub"],
+    "codePath": "superset_ui exerciseOpenHeadKey still returned exerciseWorkProgressKey for weight_reps after task60 sessionServiceSubtitle"
+  },
+  "verification": {
+    "methodA_isolatedVitest": {
+      "command": "cd apps/web && HEYS_DESIGN_GATES=skip npx vitest run __tests__/strength-builder-weight-edit-session-v4-canvas-contract.test.js",
+      "result": "3 passed (3)"
+    },
+    "methodB_relatedContract": {
+      "command": "cd apps/web && HEYS_DESIGN_GATES=skip npx vitest run __tests__/strength-builder-weight-entry-v4-canvas-contract.test.js",
+      "result": "3 passed (3) — bodyweight/distance card keys unchanged"
+    },
+    "contract": "docs/ui/verdicts/strength-builder.json: exerciseWorkProgressKey → .sb-head-sub при weight_reps"
+  },
+  "fix": {
+    "files": [
+      "apps/web/strength/heys_strength_superset_ui_v1.js",
+      "apps/web/__tests__/strength-builder-weight-edit-session-v4-canvas-contract.test.js"
+    ],
+    "change": "Remove weight_reps branch from exerciseOpenHeadKey; test asserts .sb-head-sub only and no progress in .sb-ex-sub"
+  },
+  "lane5Reclass": "infra/timeout incorrect — failure was duplicate DOM text assertion, run ~2.4s"
+}
