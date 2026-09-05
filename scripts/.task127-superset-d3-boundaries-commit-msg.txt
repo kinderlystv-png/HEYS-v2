@@ -1,0 +1,6 @@
+fix(strength): task127 D3 superset boundaries contract CSS + logic home
+
+Harden sb-ss-bound styles to match canvas contract (flex 1 1 0%, longhand
+typography, background-color, contain: layout style). Move
+describeSupersetBoundaries into superset_ui next to SupersetBoundariesScreen;
+proposal_ui delegates to Parts — smaller eval for contract tests.
