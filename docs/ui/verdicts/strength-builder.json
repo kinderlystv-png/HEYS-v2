@@ -240,13 +240,13 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2241"
     },
     "план в ленте — назначение, а не факт": {
-      "v": "?",
-      "f": "isPlannedWorkout/heys_day_trainings_v1.js:936–943 зеркалит kernel isPlanned; dayTonnage не считает план фактом. Early-start и mesocycle label — открытый product gap в f прежнего вердикта.",
+      "v": "=",
+      "f": "isPlanned(status assigned|skipped|moved) исключает из dayTonnage/training count — heys_kernel_strength_v1.js:36-38,1276-1288; heys_day_trainings isNotPerformedTraining; карточка future не в счётчиках до старта.",
       "h": "031a43f74339"
     },
     "пропущенный день — выбор, а не упрёк": {
-      "v": "?",
-      "f": "Kernel/dayTonnage: isPlanned пропускает assigned/skipped/moved (heys_kernel_strength_v1.js:36–38, 1186–1194). UX «перенести/отпустить», причина, пилюли — day_trainings ProgramPathScreen/UI; полный контракт не закрыт без UI-кадров.",
+      "v": "=",
+      "f": "Канвас :2243. PlanCard перенести/отпустить + MISSED_DAY_REASONS пилюли superset_ui:2461-2483; onSkip/onMove day_trainings:4447-4436; тоннаж не считает isPlanned kernel :36-38.",
       "h": "a5bcabdd63c8"
     },
     "инвариант · подход — единица учёта": {
@@ -380,14 +380,16 @@
       "h": "9bd66f1be697"
     },
     "вид · карточка упражнения": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Кадр М1: aggregate data-v strength-builder.v4.dc.html:2277. Продукт ExerciseCardScreen heys_strength_builder_ui_v1.js:387-542 + 750 .sb-ex-card-*; построчно ·01-19 = (strength-builder-exercise-card-v4-canvas-contract.test.js).",
       "h": "1cb687c91f16"
     },
     "вид · выбор групп мышц": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
-      "h": "0fc799bb198f"
+      "v": "≠",
+      "f": "Канвас :2278 (пилюли 44, превью объёма). Поведение ExerciseMuscleGroupsScreen catalog_ui:446-493 =; геометрия пилюль ·08-10 ≠ (scripts/.sb-catalog-exercise-muscles-handoff.json). Агрегат ≠ из-за носителя, не копии.",
+      "h": "0fc799bb198f",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
     },
     "вид · коэффициент своего веса": {
       "v": "?",
@@ -430,18 +432,18 @@
       "h": "efe9e4bb1c16"
     },
     "вчерашняя ждёт решения, а не закрывается сама": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Канвас :2291. SummaryCard pastOpen без completedAt superset_ui:2105-2181; нет автозавершения; mergeWorkoutLifecyclePatch day_trainings:724-753; новая сессия не блокируется (offscreen-renumber + builder-ui stale tests).",
       "h": "acd475d1b176"
     },
     "у брошенной сессии три исхода": {
-      "v": "?",
-      "f": "Lifecycle completedAt/activeRest mergeWorkoutLifecyclePatch day_trainings :724–753; три исхода UI — вне kernel.",
+      "v": "=",
+      "f": "Канвас :2292 (завершить/дописать/удалить, без таймаута). SummaryCard stale: onDelete/onOpen/onCloseAtLastMark superset_ui:2174-2177 wired day_trainings:4491-4500.",
       "h": "fe46a75c4acf"
     },
     "вид · служебная шапка сессии": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Контракт :2293 одна служебная шапка: .sb-head-title > b всегда wl.title/sessionTitle(exercises) — builder_ui:1896-1897; подзаголовок держит ключ подхода (exerciseWorkProgressKey) при is-weight-entry.",
       "h": "05aedac73849"
     },
     "вид · прерванная сессия": {
@@ -455,8 +457,8 @@
       "h": "e0497f478818"
     },
     "вид · клетка раунда": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Капсула .sb-cell 44 r999 bg --bg inset 1px ink 10%; текущая inset 2px --acs; пустая dashed 1.5px — 750:619-651; superset_ui roundCellDisplay; strength-superset-rounds-v4-canvas-contract.test.js.",
       "h": "a044086f6b54"
     },
     "прочерк — пустой подход": {
@@ -532,23 +534,23 @@
       "naKind": "foreign-zone"
     },
     "целевой день с выбранным лимитом не предлагается": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Канвас :2319 (пилюля «занят», 40% ink, нет действия). moveOptionsFor busy при real.length>=3 day_trainings:3078-3113; MoveSheet disabled+«занят» superset_ui:2554-2562.",
       "h": "701bb9a5de20"
     },
     "клиент переносит сам": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "MoveSheet: мгновенный pick дня без approval куратора; PLAN_MOVE_FOOTNOTE + «Совсем пропустить» — superset_ui:2538,2579; onMove без confirm gate.",
       "h": "c2a09e9d64e8"
     },
     "отчёт называет дыру": {
       "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "f": "Канвас :2321 + «Программа · отчёт за период · текст» :4076 — карточка «Пропущенная не считается сделанной». PlanVsDoneScreen superset_ui:2322-2397 без этой карточки; kernel isPlanned уже исключает skipped из факта. Нужно решение: убрать сноску из канваса как ! или вернуть disclosure в UI.",
       "h": "688b510c5f03"
     },
     "метка авторства вместо диалога версий": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Нет диалога версий: правка = AuthorshipPill + .sb-weight-edit-cd footnote «отложен до переписывания слияния» — builder_ui:1840-1843; weight-edit test:114-115; kernel stamp без merge UI.",
       "h": "02e2bde89138"
     },
     "объём назначенного и сделанного": {
@@ -607,8 +609,8 @@
       "h": "cc3c64c9100a"
     },
     "вид · раскрытое упражнение": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Канвас :2342 (.ex.is-open, ⠿, счётчик 2/4, ✕ 36 data-svc). Продукт ExerciseCard superset_ui:1697-1802 + 750 .sb-builder-screen.is-exercise-open .sb-ex.is-open (:3480-3547); без overlay/scrim. Отличие рамки 1.5px vs 2px — в исключениях calm/geometry, поведение =.",
       "h": "23f4a3fd065c"
     },
     "вид · чипы контекста": {
@@ -617,18 +619,18 @@
       "h": "b8b55c625a74"
     },
     "вид · таблица подходов в карточке": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Канвас :2344 (A1б .vl/.ok/.off круг 44). Продукт ApproachRow + 750 в раскрытой карточке; strength-builder-approach-table-v4-canvas-contract.test.js + calm A1б.",
       "h": "3529d939d057"
     },
     "вид · строка отдыха": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Ряд flex gap 8: .sb-rest-copy 44 r12 на --bg 11.5px/1.3 ink 55% + .sb-rest-manual 44 r12 на --c1 11.5px/700 --tx — 750:3727-3747; superset_ui ExerciseCard .sb-rest-line; calm rows 40-42.",
       "h": "3074c3ef26cc"
     },
     "вид · нижняя панель сессии": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "is-exercise-open: .sb-panel row gap 8 border-top 1px ink 7% padding 10/18; + 48×48 r14 --c2; .sb-finish flex 1 min-height 48 — 750:3769-3803; calm rows 45-47; strength-builder-ui.test.js «спокойная нижняя панель».",
       "h": "766d20d90af6"
     },
     "контекст подхода — числа": {
@@ -637,8 +639,8 @@
       "h": "d0c0b3aa6a88"
     },
     "вид · строка подхода": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Кадры A1б/Е1: .sb-ap-num 26×26 r9, .sb-ap-field/.sb-ap-check 44×44 r999 — 750-strength-builder.css:3614-3680; prose :2349 (r12) устарела, продукт = кадру.",
       "h": "27d50ec315ae"
     },
     "вид · разминка и дроп-сет": {
@@ -672,8 +674,8 @@
       "h": "5e226a125cf5"
     },
     "вид · создание упражнения": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Каталог onCreate → view new → CatUI.NewExerciseScreen (B3, CATALOG_V4_BRIDGE) — builder_ui:1547-1552; «1·Что меряем», пилюли — catalog_ui:243+; custom-exercise-v4-canvas-contract.test.js.",
       "h": "36f0e1cdbdd4"
     },
     "вид · экран цикла": {
@@ -693,12 +695,12 @@
     },
     "вид · след переноса": {
       "v": "?",
-      "f": "PlanCard/MoveSheet, не finish_ui",
+      "f": "Механика movedFrom/movedTo + trace в PlanCard/MoveSheet есть (superset_ui:2398-2621); копия/компоновка кадра Г3 ≠ runtime — scripts/.sb-transfer-follow-verdict-handoff.json 13×≠. Owner: свести или принять modal-flow.",
       "h": "f381a18a4925"
     },
     "вид · метка авторства": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Плашка .sb-authorship-pill на --c2 r10 pad 7/10: avatar 20 --ac, text 10.5px/600 --ac — 750:4905-4930; AuthorshipPill superset_ui:674-681; weight-edit test:113.",
       "h": "447726f6ab10"
     },
     "вид · история упражнения": {
@@ -777,13 +779,13 @@
       "h": "f36f0bbb85d4"
     },
     "вид · план в ленте": {
-      "v": "?",
-      "f": "Поведение = (PlanCard via ProgramPlanCard, future feed :2506+). Геометрия «План в ленте дня · 06–35» уже = в verdicts (731/750 + day-feed contract test). Остаток ? — построчная visual-сверка composite ·01–05 (day shell).",
+      "v": "=",
+      "f": "PlanCard future feed: .sb-plan-card--future, letter 34, badge «план», exercises, week tiles — superset_ui:2770+; strength-builder-day-feed-v4-canvas-contract.test.js sand+blue.",
       "h": "cc32b2cf1924"
     },
     "вид · день не состоялся": {
       "v": "?",
-      "f": "Поведение = (missed flow). Геометрия ·06–17 = в verdicts. ? только на composite ·01–05 и полноту copy vs канвас — 750 owner.",
+      "f": "Поведение PlanCard missed superset_ui:2412-2483 + day_trainings handlers =. Геометрия ·06-16 = (missed contract test). Composite ·01-05 day shell — —; aggregate ? до закрытия shell/copy.",
       "h": "7b476fac97af"
     },
     "вид · кадры спорных состояний": {
@@ -860,7 +862,7 @@
     },
     "пропущен сегодня и пропущен раньше — два разных случая": {
       "v": "?",
-      "f": "Канвас Л5 vs Л6: замена на месте vs отдельная тренировка. proposalBlocksDay не смотрит plan.status skipped — только hasDoneApproach; отдельного UI «пропущен раньше» нет (22 frame уже ≠). Нужно решение: разрешить proposal на skipped (серверный guard в канвасе) + отдельный кадр Л6.",
+      "f": "Канвас :2399 + кадры Л5/Л6. day_trainings: onResumeSkipped только !isPastDay; прошлый skipped — missed-card без воскрешения. Кураторская замена «сегодня vs раньше» — proposal_ui, серверный guard в канвасе; отдельного Л6 UI нет.",
       "h": "591a8a28f14b"
     },
     "где живёт предложение куратора — решено": {
@@ -926,13 +928,13 @@
       "h": "1b7390ec46ba"
     },
     "1 · тип подхода": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Kernel: approachType/isWarmupApproach, type warmup|work, пусто=work — heys_kernel_strength_v1.js:114-120; toggle в builder_ui:1107; kernel-strength-approach-schema.test.js:67-70.",
       "h": "bc9af43080c0"
     },
     "2 · автор и время на подходе": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Kernel: author+editedAt пара в normalizeApproach, formatAuthorshipStamp — heys_kernel_strength_v1.js:86-106,201-202; kernel-strength-approach-schema.test.js:116-214.",
       "h": "7b5e6f141443"
     },
     "3 · программа, фазы недель и снимок плана": {
@@ -946,8 +948,8 @@
       "h": "48c844770a0e"
     },
     "5 · карточка упражнения несёт три вещи": {
-      "v": "?",
-      "f": "Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.",
+      "v": "=",
+      "f": "Канвас :2428 (единица, группы+основная, коэффициент в данных). ExerciseCardScreen save → exerciseMeta.save unit/primaryGroup/secondaryGroups/bodyweightFactor heys_exercise_catalog_v1.js:527-624; коэффициенты BODYWEIGHT_SIMILAR_OPTIONS :702+ как данные.",
       "h": "b3521d848d5c"
     },
     "6 · довес на подходе, индекс раунда не заводим": {
@@ -1175,8 +1177,8 @@
       ]
     },
     "Конструктор · список свёрнут · 15": {
-      "v": "?",
-      "f": "Рендер: .sb-ex.is-complete:first-child .sb-ex-title b 12.5px (К · 14, 750:3391 .sb-ex--collapsed на всех свёрнутых) против 13px — спор канвасов, см. UI_V4_FINDINGS.md «А1б/А2 против Г4 и К»; строка держится в CANVAS_CONFLICTS гейта calm",
+      "v": "=",
+      "f": ".sb-builder-screen .sb-ex--collapsed .sb-ex-title b font 13px/1.2 — 750:3391-3393; calm A2 ·14 computed 13px.",
       "h": "a45ee30c055e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -3538,7 +3540,7 @@
     },
     "Подход · таблица ввода · 33": {
       "v": "=",
-      "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 33 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js.",
+      "f": "Done-номер: .sb-builder-screen.is-exercise-open .sb-ap.is-done .sb-ap-num var(--gr-bg)/var(--gr) — 750:3671-3674; weight-entry :4874-4877; calm ·33 + weight-edit-session computed grBg/gr.",
       "h": "91db564053be"
     },
     "Таблица · галочка не ставится · 01": {
@@ -5358,8 +5360,8 @@
       "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 17": {
-      "v": "?",
-      "f": "Kernel исключает assigned/skipped/moved из тоннажа; canvas помечает как «долг кода». Расхождение контракт↔ядро — не UI-дефект. Код соответствует kernel; ≠ по canvas-footnote — пересмотреть контракт или снять.",
+      "v": "=",
+      "f": "Канвас сноска «признак плана ловит только назначено» (:3420) — долг закрыт: isPlanned включает skipped/moved heys_kernel_strength_v1.js:36-38; dayTonnage пропускает план :1276+. В UI dev-сноски нет (намеренно). Рекомендация: снять ? → ! и обновить контракт/канвас.",
       "h": "cff1ba69217d"
     },
     "Спорное · тап по закрытому во время отдыха · 01": {
@@ -8610,8 +8612,8 @@
       "h": "1f848b4ef97a"
     },
     "Своё упражнение · текст": {
-      "v": "?",
-      "f": "Полный текст кадра: copy экрана в catalog_ui совпадает по шагам 1–2 и CTA; табличные строки «Основная/Помогают» и footnote — см. ·08–·23.",
+      "v": "=",
+      "f": "Канвас data-v (strength-builder.v4.dc.html:4070): «Новое упражнение › три поля… › 1·Что меряем › вес×повторы|свой вес|время|метры › 2·Какие мышцы › Основная|Помогают › 3·Только для своего веса › … › Создать упражнение › Создать без объёма › сноска». Продукт CustomExerciseScreen — heys_strength_superset_ui_v1.js:3134-3260: те же заголовки/ярусы/бейджи (CUSTOM_EX_UNIT_LABELS :3023-3028), строки «Основная»/«Помогают» (:3204-3213), подсказки и CTA дословно; смоук strength-superset-b3-custom-exercise-v4-canvas-contract.test.js.",
       "h": "940c1650a380"
     },
     "Программа · цикл · текст": {
