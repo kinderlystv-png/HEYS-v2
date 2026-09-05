@@ -1099,18 +1099,14 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · рисунок 03": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 03",
-      "h": "2f2b6477120d",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:716: subscriptionScreenCheckIcon path d M20 6L9 17l-5-5",
+      "h": "2f2b6477120d"
     },
     "Подписка · экран · пробный период · рисунок 04": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 04",
-      "h": "163302844c74",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:730: subscriptionScreenChevronIcon path d M9 6l6 6-6 6",
+      "h": "163302844c74"
     },
     "Подписка · тост на действии · рисунок 01": {
       "v": "=",
@@ -1119,14 +1115,14 @@
     },
     "Подписка · тост на действии · рисунок 02": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · тост на действии · рисунок 02",
+      "f": "apps/web/heys_paywall_v1.js:1233-1246: showBlockedToast innerHTML без lock rect 18×11 radius 2px; toast — text + button only",
       "h": "4739a51e07b6",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тост на действии · рисунок 03": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: нет svg-path M7 11V7a5 5 0 0 1 10 0v4. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "f": "apps/web/heys_paywall_v1.js:1233-1246: showBlockedToast без svg path M7 11V7a5 5 0 0 1 10 0v4; замок в канвасе — Lucide, в продукте нет",
       "h": "4c6746959819",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
@@ -1143,49 +1139,49 @@
     },
     "Подписка · контакт поддержки · рисунок 03": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 03",
+      "f": "apps/web/heys_subscriptions_v1.js:1313: ContactCuratorScreen emoji 👨‍⚕️ fontSize 56 — не lock 22px в круге 44px svg",
       "h": "1b58bd62b711",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · рисунок 04": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 04",
+      "f": "apps/web/heys_subscriptions_v1.js:1310-1345: ContactCuratorScreen без lock rect 18×11 svg; legacy inline gradient CTA",
       "h": "4739a51e07b6",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · рисунок 05": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: нет svg-path M7 11V7a5 5 0 0 1 10 0v4. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "f": "apps/web/heys_subscriptions_v1.js:1310-1345: ContactCuratorScreen без svg path M7 11V7a5 5 0 0 1 10 0v4",
       "h": "4c6746959819",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · рисунок 06": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 06",
+      "f": "apps/web/heys_subscriptions_v1.js:1330-1345: ContactCuratorScreen <a> gradient button — нет contact-row icon 16×16 svg",
       "h": "ddf4bd54ba6a",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · рисунок 07": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 07",
+      "f": "apps/web/heys_subscriptions_v1.js:1330-1345: ContactCuratorScreen без svg path M22 2L11 13 (send icon)",
       "h": "b590d522cda5",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · рисунок 08": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 08",
+      "f": "apps/web/heys_subscriptions_v1.js:1330-1345: ContactCuratorScreen без svg path M22 2l-7 20-4-9-9-4 20-7z",
       "h": "a56779c1fc6f",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · рисунок 09": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: ContactCuratorScreen/TrialQueue — emoji вместо Lucide для Подписка · контакт поддержки · рисунок 09",
+      "f": "apps/web/heys_subscriptions_v1.js:1330-1345: ContactCuratorScreen без external-link path M7 17L17 7M7 7h10v10",
       "h": "dd84fe7bfa6f",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
@@ -1251,53 +1247,45 @@
       "h": "2f2b6477120d"
     },
     "Подписка · экран · активна · рисунок 01": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 01",
-      "h": "7d9d1119f1bb",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:651-656: .sub-screen__feature-icon 15×15; heys_subscriptions_v1.js:706-716 check svg viewBox 0 0 24 24",
+      "h": "7d9d1119f1bb"
     },
     "Подписка · экран · активна · рисунок 02": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 02",
+      "f": "apps/web/heys_subscriptions_v1.js:1208-1227: SubscriptionSection без header close; paywallCloseIconMarkup:835 не на экране подписки",
       "h": "49950e24d175",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · активна · рисунок 03": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 03",
-      "h": "2f2b6477120d",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:716: subscriptionScreenCheckIcon path M20 6L9 17l-5-5",
+      "h": "2f2b6477120d"
     },
     "Подписка · экран · активна · рисунок 04": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · рисунок 04",
-      "h": "163302844c74",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:730: subscriptionScreenChevronIcon path M9 6l6 6-6 6",
+      "h": "163302844c74"
     },
     "Подписка · экран · только чтение · рисунок 01": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 01",
+      "f": "apps/web/heys_subscriptions_v1.js:1180-1196: read_only SubscriptionSection без .sub-screen__feature-icon 15×15",
       "h": "7d9d1119f1bb",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · рисунок 02": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 02",
+      "f": "apps/web/heys_subscriptions_v1.js:1180-1196: read_only screen без header close path M18 6L6 18",
       "h": "49950e24d175",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · только чтение · рисунок 03": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · рисунок 03",
-      "h": "163302844c74",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:730: subscriptionScreenChevronIcon path M9 6l6 6-6 6 в footer support",
+      "h": "163302844c74"
     },
     "Подписка · очередь · заявка подана · рисунок 01": {
       "v": "=",
@@ -1331,36 +1319,34 @@
       "h": "06b2654d4135"
     },
     "Подписка · экран · пробный период · текст": {
-      "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: missing: до 10 сентября",
-      "h": "4606c40e86a9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:680-685 TRIAL_SCREEN_FEATURES + 1200-1224 SubscriptionSection: kick/headline/hint/features/note/footer copy chain совпадает с canvas data-v",
+      "h": "4606c40e86a9"
     },
     "Подписка · приветствие · текст": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: missing copy: Анна, добро пожаловать, Пробный период на 7 дней",
+      "f": "apps/web/heys_subscriptions_v1.js:1483-1507: WelcomeFirstLogin emoji 🎉 + «добро пожаловать в HEYS!» + «Триал на N дней» — не «Анна, добро пожаловать» / «Пробный период на 7 дней»",
       "h": "da68e23e6776",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · баннер сверху · текст": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: missing copy: Доступ только для чтения, Чтобы записывать — напишите в поддержку",
+      "f": "apps/web/heys_paywall_v1.js:1164-1167: ReadOnlyBanner «Пробный период закончился» + «напишите куратору» — не «Доступ только для чтения» / «напишите в поддержку»",
       "h": "d165fcfee534",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тост на действии · текст": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: missing copy: Запись недоступна — только чтение",
+      "f": "apps/web/heys_paywall_v1.js:1257: gateWrite/showBlockedToast default «Добавление данных недоступно» — не «Запись недоступна — только чтение»",
       "h": "6475f88fbcb2",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · текст": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: missing copy: Поддержка HEYS, @heys_support",
+      "f": "apps/web/heys_subscriptions_v1.js:1318-1345: ContactCuratorScreen «Триал завершён»/«Написать куратору в Telegram» — нет «Поддержка HEYS · @heys_support · отвечаем в рабочее время»",
       "h": "68f9d36ac2c1",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
@@ -1391,8 +1377,8 @@
       "h": "1a8e874919aa"
     },
     "Подписка · экран · активна · текст": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js: missing: Pro · активна, до 3 октября, 7 990 ₽ в месяц · оплачено до этой даты",
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:691: ACTIVE_SCREEN_FEATURES «Созвон раз в неделю» — canvas «Недельный чек-ин с куратором»; остальной copy chain 1200-1206/766-779 совпадает",
       "h": "5fdf75246faf",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
@@ -1403,11 +1389,9 @@
       "h": "ed7dc2c35921"
     },
     "Подписка · очередь · заявка подана · текст": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js: missing copy: Оформить Pro",
-      "h": "f684d63fa6af",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:778: getPaywallCtaLabel «Оформить Pro · 7 990 ₽» + 1101 «Заявка подана · вы N-й в очереди» — copy chain canvas присутствует",
+      "h": "f684d63fa6af"
     },
     "Подписка · очередь · место освободилось · текст": {
       "v": "?",
