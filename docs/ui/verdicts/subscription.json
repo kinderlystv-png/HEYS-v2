@@ -185,8 +185,8 @@
       "h": "ab6dcbe1684a"
     },
     "очередь · отмена заявки": {
-      "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:946: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:1030: cancelConfirmOpen + .btn/.btnq in TrialQueueSection, confirm() removed",
       "h": "4be17c90d6ab"
     },
     "очередь · оффер истёк": {

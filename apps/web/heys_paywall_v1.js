@@ -51,7 +51,7 @@
     .paywall-overlay {
       position: fixed;
       inset: 0;
-      background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+      background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.5));
       backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
       -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
       z-index: 9999;
@@ -61,7 +61,7 @@
     }
 
     [data-theme$="dark"] .paywall-overlay {
-      background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+      background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.62));
     }
 
     @keyframes paywallFadeIn {
@@ -75,7 +75,7 @@
       right: 14px;
       top: 50%;
       transform: translateY(-50%);
-      background: var(--v4-bg, var(--bg, #fffaf3));
+      background: var(--v4-bg, #fffaf1);
       border-radius: 26px;
       padding: 22px 18px 18px;
       box-shadow: 0 24px 60px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.28);
@@ -84,7 +84,7 @@
       overscroll-behavior-y: contain;
       -webkit-overflow-scrolling: touch;
       font-family: Figtree, system-ui, -apple-system, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
     }
 
     .paywall-close {
@@ -94,19 +94,19 @@
       width: 34px;
       height: 34px;
       border: none;
-      background: var(--v4-surface, var(--c1, #f7efe2));
+      background: var(--v4-surface, #f7efe2);
       border-radius: 999px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.5);
+      color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.5);
       padding: 0;
     }
 
     .paywall-title {
       font: 700 19px/1.2 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
       margin: 0;
       padding-right: 40px;
       text-wrap: pretty;
@@ -128,14 +128,14 @@
 
     .paywall-plan {
       border-radius: 18px;
-      background: var(--v4-surface, var(--c1, #f7efe2));
+      background: var(--v4-surface, #f7efe2);
       padding: 12px 14px;
       min-height: 56px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      box-shadow: inset 0 0 0 1px rgba(var(--v4-ink-rgb, 32, 30, 29), 0.06);
+      box-shadow: inset 0 0 0 1px rgba(var(--v4-ink-rgb, 0, 0, 0), 0.06);
       position: relative;
       cursor: pointer;
     }
@@ -149,7 +149,7 @@
     }
 
     .paywall-plan.selected {
-      box-shadow: inset 0 0 0 2px var(--v4-act, var(--acs, #c67139));
+      box-shadow: inset 0 0 0 2px var(--v4-act, #c67139);
     }
 
     .paywall-plan-main {
@@ -159,7 +159,7 @@
 
     .paywall-plan-name {
       font: 700 13.5px/1 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
     }
 
     .paywall-plan-desc {
@@ -171,7 +171,7 @@
 
     .paywall-plan-price {
       font: 700 13px/1 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
       text-align: right;
@@ -192,8 +192,8 @@
       text-transform: uppercase;
       padding: 5px 8px;
       border-radius: 999px;
-      background: var(--v4-act, var(--acs, #c67139));
-      color: var(--v4-on-fab, var(--on-acs, #fffaf3));
+      background: var(--v4-act, #c67139);
+      color: var(--v4-btn-on-act, #2b1608);
     }
 
     .paywall-cta {
@@ -202,8 +202,8 @@
       margin-top: 14px;
       border: none;
       border-radius: 999px;
-      background: var(--v4-act, var(--acs, #c67139));
-      color: var(--v4-on-fab, var(--on-acs, #fffaf3));
+      background: var(--v4-act, #c67139);
+      color: var(--v4-btn-on-act, #2b1608);
       font: 700 13px/1 Figtree, system-ui, sans-serif;
       cursor: pointer;
       display: flex;
@@ -228,28 +228,28 @@
     .paywall-divider-line {
       flex: 1;
       height: 1px;
-      background: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.08);
+      background: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.08);
     }
 
     .paywall-divider-label {
       font: 600 11px/1 Figtree, system-ui, sans-serif;
-      color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.45);
+      color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45);
     }
 
     .paywall-trial {
-      background: var(--v4-hero, var(--c2, #efe3cf));
+      background: var(--v4-hero, #efe3cf);
       border-radius: 18px;
       padding: 14px;
       text-align: center;
     }
 
     .paywall-trial--offer {
-      background: var(--v4-tint, var(--tint, #f6e6dd));
+      background: var(--v4-tint, #f6e6dd);
     }
 
     .paywall-trial-title {
       font: 700 13px/1.3 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
     }
 
     .paywall-trial-status {
@@ -262,7 +262,7 @@
     }
 
     .paywall-trial-status--ok {
-      color: var(--v4-ok-fill, var(--gr, #2f9d62));
+      color: var(--v4-ok-text, #5c6a45);
     }
 
     .paywall-trial-status--busy {
@@ -277,7 +277,7 @@
     }
 
     .paywall-trial-dot--ok {
-      background: var(--v4-ok-fill, var(--gr, #2f9d62));
+      background: var(--v4-ok-fill, #7a8a5e);
     }
 
     .paywall-trial-dot--busy {
@@ -290,8 +290,8 @@
       margin-top: 12px;
       border: none;
       border-radius: 999px;
-      background: var(--v4-bg, var(--bg, #fffaf3));
-      color: var(--v4-ink, var(--tx, #201e1d));
+      background: var(--v4-bg, #fffaf1);
+      color: var(--v4-ink, #201e1d);
       font: 700 13px/1 Figtree, system-ui, sans-serif;
       cursor: pointer;
       display: flex;
@@ -309,7 +309,7 @@
     }
 
     .paywall-order-card {
-      background: var(--v4-surface, var(--c1, #f7efe2));
+      background: var(--v4-surface, #f7efe2);
       border-radius: 18px;
       padding: 14px;
       display: flex;
@@ -321,12 +321,12 @@
 
     .paywall-order-name {
       font: 700 15px/1.2 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
     }
 
     .paywall-order-price {
       font: 800 17px/1 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
       font-variant-numeric: tabular-nums;
       text-align: right;
     }
@@ -355,24 +355,24 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: inset 0 0 0 2px rgba(var(--v4-ink-rgb, 32, 30, 29), 0.25);
+      box-shadow: inset 0 0 0 2px rgba(var(--v4-ink-rgb, 0, 0, 0), 0.25);
       background: transparent;
-      color: var(--v4-on-fab, var(--on-acs, #fffaf3));
+      color: var(--v4-btn-on-act, #2b1608);
     }
 
     .paywall-consent-box.is-checked {
-      background: var(--v4-act, var(--acs, #c67139));
+      background: var(--v4-act, #c67139);
       box-shadow: none;
     }
 
     .paywall-consent-text {
       font: 500 12px/1.45 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
       text-wrap: pretty;
     }
 
     .paywall-consent-link {
-      color: var(--v4-act, var(--ac, #c67139));
+      color: var(--v4-act, #c67139);
       text-decoration: underline;
     }
 
@@ -401,15 +401,15 @@
       width: 56px;
       height: 56px;
       border-radius: 999px;
-      background: var(--v4-ok-bg, var(--gr-bg, #e8f6ee));
-      color: var(--v4-ok-fill, var(--gr, #2f9d62));
+      background: var(--v4-ok-bg, #eaefe0);
+      color: var(--v4-ok-text, #5c6a45);
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     .paywall-success-card {
-      background: var(--v4-surface, var(--c1, #f7efe2));
+      background: var(--v4-surface, #f7efe2);
       border-radius: 18px;
       padding: 14px;
       margin-top: 14px;
@@ -417,7 +417,7 @@
       flex-direction: column;
       gap: 6px;
       font: 500 12.5px/1.4 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
     }
 
     .paywall-success-card .n {
@@ -431,12 +431,54 @@
       min-height: 44px;
       margin-top: 6px;
       font: 600 12px/1 Figtree, system-ui, sans-serif;
-      color: var(--v4-act, var(--ac, #c67139));
+      color: var(--v4-act, #c67139);
       background: transparent;
       border: none;
       width: 100%;
       cursor: pointer;
       padding: 0;
+    }
+
+    .paywall-trial .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 44px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--v4-bad-text, #a83c22);
+      font: 700 13px/1 Figtree, system-ui, sans-serif;
+      cursor: pointer;
+      padding: 0 18px;
+    }
+
+    .paywall-trial .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .paywall-trial .btnq {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 6px;
+      border: none;
+      border-radius: 999px;
+      background: var(--v4-bg, #fffaf1);
+      color: var(--v4-ink, #201e1d);
+      font: 700 13px/1 Figtree, system-ui, sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+    }
+
+    .paywall-trial .btnq:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     /* Read-only banner — кадр «Питание · только чтение»: плашка над
@@ -525,7 +567,7 @@
       flex-direction: column;
       min-height: 100%;
       font-family: Figtree, system-ui, -apple-system, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
     }
 
     .sub-screen__body {
@@ -533,20 +575,20 @@
     }
 
     .sub-screen__status-card {
-      background: var(--v4-surface, var(--c1, #f7efe2));
+      background: var(--v4-surface, #f7efe2);
       border-radius: 20px;
       padding: 16px;
     }
 
     .sub-screen__status-card--readonly {
-      background: var(--v4-hero, var(--tint, #efe3cf));
+      background: var(--v4-hero, #efe3cf);
     }
 
     .sub-screen__kick {
       font: 600 11px/1 Figtree, system-ui, sans-serif;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.56));
+      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
     }
 
     .sub-screen__kick--danger {
@@ -557,7 +599,7 @@
       margin-top: 10px;
       font: 800 26px/1.1 Figtree, system-ui, sans-serif;
       letter-spacing: -0.01em;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
       font-variant-numeric: tabular-nums;
     }
 
@@ -565,21 +607,21 @@
     .sub-screen__hint {
       margin-top: 6px;
       font: 500 12px/1.4 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.56));
+      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
       font-variant-numeric: tabular-nums;
     }
 
     .sub-screen__readonly-title {
       margin-top: 10px;
       font: 700 17px/1.25 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
       text-wrap: pretty;
     }
 
     .sub-screen__readonly-copy {
       margin-top: 6px;
       font: 500 12.5px/1.5 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.62));
+      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
       text-wrap: pretty;
     }
 
@@ -588,7 +630,7 @@
       font: 600 11px/1 Figtree, system-ui, sans-serif;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.56));
+      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
     }
 
     .sub-screen__features {
@@ -602,7 +644,7 @@
       align-items: flex-start;
       gap: 10px;
       font: 500 12.5px/1.45 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
       text-wrap: pretty;
     }
 
@@ -611,13 +653,13 @@
       width: 15px;
       height: 15px;
       margin-top: 2px;
-      color: var(--v4-ok-fill, var(--gr, #2f9d62));
+      color: var(--v4-ok-text, #5c6a45);
     }
 
     .sub-screen__note {
       margin-top: 16px;
       font: 500 12px/1.5 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.56));
+      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
       text-wrap: pretty;
     }
 
@@ -631,20 +673,20 @@
     }
 
     .sub-screen__footnote {
-      background: var(--v4-surface, var(--c1, #f7efe2));
+      background: var(--v4-surface, #f7efe2);
       border-radius: 16px;
       padding: 12px 14px;
     }
 
     .sub-screen__footnote-title {
       font: 700 12px/1.3 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink, var(--tx, #201e1d));
+      color: var(--v4-ink, #201e1d);
     }
 
     .sub-screen__footnote-text {
       margin-top: 5px;
       font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
-      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.62));
+      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
       text-wrap: pretty;
     }
 
@@ -664,11 +706,11 @@
 
     .sub-screen__support-link {
       font: 600 12px/1 Figtree, system-ui, sans-serif;
-      color: var(--v4-act-text, var(--ac, #8a4a20));
+      color: var(--v4-act-text, #8a4a20);
     }
 
     .sub-screen__support-chevron {
-      color: var(--v4-act-text, var(--ac, #8a4a20));
+      color: var(--v4-act-text, #8a4a20);
       display: inline-flex;
     }
   `;
@@ -900,6 +942,7 @@
     const [queueStatus, setQueueStatus] = React.useState(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [isActioning, setIsActioning] = React.useState(false);
+    const [cancelConfirmOpen, setCancelConfirmOpen] = React.useState(false);
     const [timeRemaining, setTimeRemaining] = React.useState('');
 
     const refresh = React.useCallback(async () => {
@@ -983,11 +1026,11 @@
       }
     };
 
-    const handleCancelQueue = async () => {
-      if (!confirm('Отменить запрос на триал?')) return;
+    const handleCancelQueueConfirm = async () => {
       setIsActioning(true);
       try {
         await HEYS.TrialQueue.cancelQueue();
+        setCancelConfirmOpen(false);
         await refresh();
       } finally {
         setIsActioning(false);
@@ -1013,7 +1056,7 @@
             className: 'n',
             style: {
               font: '800 26px/1 Figtree, system-ui, sans-serif',
-              color: 'var(--v4-ink, var(--tx, #201e1d))',
+              color: 'var(--v4-ink, #201e1d)',
               marginTop: '8px',
               fontVariantNumeric: 'tabular-nums',
             },
@@ -1034,6 +1077,24 @@
         );
       }
 
+      if (cancelConfirmOpen) {
+        return React.createElement('div', { className: 'paywall-trial paywall-trial--cancel-confirm' },
+          React.createElement('div', { className: 'paywall-trial-title' }, 'Отменить заявку на пробный период?'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'btn',
+            onClick: handleCancelQueueConfirm,
+            disabled: isActioning,
+          }, isActioning ? 'Отменяем…' : 'Отменить заявку'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'btnq',
+            onClick: () => setCancelConfirmOpen(false),
+            disabled: isActioning,
+          }, 'Оставить')
+        );
+      }
+
       const position = queueStatus?.position;
       return React.createElement('div', { className: 'paywall-trial' },
         React.createElement('div', { className: 'paywall-trial-title' },
@@ -1049,7 +1110,7 @@
         React.createElement('button', {
           type: 'button',
           className: 'paywall-text-btn',
-          onClick: handleCancelQueue,
+          onClick: () => setCancelConfirmOpen(true),
           disabled: isActioning,
         }, 'Отменить заявку')
       );
