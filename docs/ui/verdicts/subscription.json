@@ -35,7 +35,7 @@
     },
     "палитры": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:50-87: PAYWALL_STYLES на --v4-bg/--v4-ink/--v4-act/--v4-modal-backdrop-*",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css:3-16: .paywall-overlay --v4-modal-backdrop-dim + blur(var(--v4-modal-backdrop-blur, 2.5px)); .paywall-modal --v4-bg/--v4-ink",
       "h": "7583d8ba8bb4"
     },
     "слой — центральная модалка": {
@@ -89,7 +89,7 @@
     },
     "вид · экран подписки · пробный период": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:577-715 PAYWALL_STYLES sub-screen: status-card --v4-surface r20 p16; kick/tier --v4-act-text 700 10px/.16em; headline 800 26px; body 0 18px; footnote/support. heys_subscriptions_v1.js:1208-1226 trial SubscriptionSection. sand card #f7efe2 blue #eef3f9; act-text sand #8a4a20 blue #1d5e96 (subscription-package-a-v4.test.js)",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css:530-668: sub-screen status-card --v4-surface r20 p16; kick/tier --v4-act-text 700 10px/.16em; headline 800 26px; body 0 18px; footnote/support. heys_subscriptions_v1.js trial SubscriptionSection. sand card #f7efe2 blue #eef3f9; act-text sand #8a4a20 blue #1d5e96 (subscription-package-a-v4.test.js)",
       "h": "0ebc8e8a8d32"
     },
     "вид · экран подписки · активна": {
@@ -300,7 +300,7 @@
     },
     "Подписка · экран · пробный период · 03": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "7cb50ddf0883"
     },
     "Подписка · экран · пробный период · 04": {
@@ -310,7 +310,7 @@
     },
     "Подписка · экран · пробный период · 05": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "0825eb7189ac"
     },
     "Подписка · экран · пробный период · 06": {
@@ -320,7 +320,7 @@
     },
     "Подписка · экран · пробный период · 07": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "650353c134e8"
     },
     "Подписка · экран · пробный период · 08": {
@@ -335,12 +335,12 @@
     },
     "Подписка · экран · пробный период · 10": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "f74b2fa32e9f"
     },
     "Подписка · экран · пробный период · 11": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "9453360f4ae8"
     },
     "Подписка · экран · пробный период · 12": {
@@ -350,12 +350,12 @@
     },
     "Подписка · экран · пробный период · 13": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "9e987eb80379"
     },
     "Подписка · экран · пробный период · 14": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "23f1b43c08ab"
     },
     "Подписка · приветствие · 01": {
@@ -806,7 +806,7 @@
     },
     "Подписка · экран · активна · 03": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "671d161e7758"
     },
     "Подписка · экран · активна · 04": {
@@ -816,7 +816,7 @@
     },
     "Подписка · экран · активна · 05": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "0825eb7189ac"
     },
     "Подписка · экран · активна · 06": {
@@ -846,7 +846,7 @@
     },
     "Подписка · экран · активна · 11": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · активна · 12": {
@@ -856,7 +856,7 @@
     },
     "Подписка · экран · активна · 13": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background, border-radius, padding",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
       "h": "23f1b43c08ab"
     },
     "Подписка · экран · только чтение · 01": {
@@ -871,22 +871,22 @@
     },
     "Подписка · экран · только чтение · 03": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background roles",
       "h": "a74317820af6"
     },
     "Подписка · экран · только чтение · 04": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background roles",
       "h": "e77ccfe5f1a4"
     },
     "Подписка · экран · только чтение · 05": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background roles",
       "h": "0d66e6af4b1e"
     },
     "Подписка · экран · только чтение · 06": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background roles",
       "h": "7b7545ce8968"
     },
     "Подписка · экран · только чтение · 07": {
@@ -911,7 +911,7 @@
     },
     "Подписка · экран · только чтение · 11": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background roles",
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · только чтение · 12": {
@@ -921,7 +921,7 @@
     },
     "Подписка · экран · только чтение · 13": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js: PAYWALL_STYLES background",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background roles",
       "h": "23f1b43c08ab"
     },
     "Подписка · очередь · заявка подана · 01": {
@@ -971,11 +971,9 @@
       "h": "b2393a91cffd"
     },
     "Подписка · очередь · заявка подана · 10": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-modal padding 24px",
-      "h": "4feaced51eda",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css:24-32: .paywall-modal padding 22px 18px 18px (канвас subscription.v4.dc.html:27); sand/blue computed subscription-paywall-computed-v4.test.js",
+      "h": "4feaced51eda"
     },
     "Подписка · очередь · заявка подана · 11": {
       "v": "=",
@@ -1039,11 +1037,9 @@
       "h": "b2393a91cffd"
     },
     "Подписка · очередь · место освободилось · 10": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-modal padding 24px",
-      "h": "1a386dbaa291",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css:24-32: .paywall-modal padding 22px 18px 18px (канвас subscription.v4.dc.html:27); sand/blue computed subscription-paywall-computed-v4.test.js",
+      "h": "1a386dbaa291"
     },
     "Подписка · очередь · место освободилось · 11": {
       "v": "=",
