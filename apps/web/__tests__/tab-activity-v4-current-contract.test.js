@@ -37,7 +37,18 @@ describe('Активность v4: идущая силовая', () => {
     expect(STRENGTH).toContain("className: 'sb-card-current'");
     expect(STRENGTH).toContain("' · подход ' + (currentApproachIdx + 1) + ' из '");
     expect(ACTIVITY).toContain("sub: 'силовая идёт · '");
-    expect(ACTIVITY).toContain('chevron: trainingsRow.running');
+    // Прежняя редакция сторожила литерал `chevron: trainingsRow.running` и
+    // падала на починке: шеврон журнала завязан на regularTrainingsBlock,
+    // а running — отдельное поле подписи (вердикт «журнал подходов · 13»).
+    const trainingsRowBlock = ACTIVITY.match(
+      /todayRow\('trainings'[\s\S]*?\}\),/,
+    )?.[0];
+    expect(trainingsRowBlock, 'todayRow trainings').toBeTruthy();
+    expect(trainingsRowBlock).toContain('running: trainingsRow.running');
+    expect(trainingsRowBlock).toContain('chevron: !!regularTrainingsBlock');
+    expect(trainingsRowBlock).not.toContain('chevron: trainingsRow.running');
+    expect(CSS).toContain('.activity-v4-today__value--chevron');
+    expect(ACTIVITY.match(/activity-v4-today__value--chevron/g)?.length ?? 0).toBeGreaterThan(0);
   });
 
   it('акцент не скрывает основное действие и отделяет подпись подхода', () => {
