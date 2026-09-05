@@ -257,8 +257,8 @@
       "naKind": "handoff"
     },
     "Подписка · строка в настройках · 01": {
-      "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:1253: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "v": "=",
+      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: .hdr-settings-sheet__row без position — static по умолчанию",
       "h": "be26b94c0688"
     },
     "Подписка · строка в настройках · 02": {
@@ -291,8 +291,8 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · экран · пробный период · 01": {
-      "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:1253: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:565: .sub-screen без position — static по умолчанию",
       "h": "be26b94c0688"
     },
     "Подписка · экран · пробный период · 02": {
@@ -809,8 +809,8 @@
       "h": "b62d5e9c321a"
     },
     "Подписка · экран · активна · 01": {
-      "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:1253: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:565: .sub-screen без position — static по умолчанию",
       "h": "be26b94c0688"
     },
     "Подписка · экран · активна · 02": {
@@ -890,8 +890,8 @@
       "h": "23f1b43c08ab"
     },
     "Подписка · экран · только чтение · 01": {
-      "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:1253: Policy/runtime row — gateWrite, paymentsEnabled, trial_queue",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:565: .sub-screen без position — static по умолчанию",
       "h": "be26b94c0688"
     },
     "Подписка · экран · только чтение · 02": {
@@ -1118,18 +1118,18 @@
       "naKind": "handoff"
     },
     "Подписка · строка в настройках · рисунок 01": {
-      "v": "?",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: svg-viewport={\"width\":15,\"height\":15,\"viewBox\":\"0 0 24 24\"}. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_app_shell_v1.js:4876: renderSettingsChevron svg 15×15 viewBox 0 0 24 24",
       "h": "7d9d1119f1bb"
     },
     "Подписка · строка в настройках · рисунок 02": {
-      "v": "?",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: svg-path=M18 6L6 18M6 6l12 12. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_app_shell_v1.js:5405: settings sheet close path M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Подписка · строка в настройках · рисунок 03": {
-      "v": "?",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: Кадр Подписка · строка в настройках: svg-path=M9 6l6 6-6 6. Продукт — legacy inline/PAYWALL_STYLES, element-level v4 sweep не сделан",
+      "v": "=",
+      "f": "apps/web/heys_app_shell_v1.js:4892: row chevron path M9 6l6 6-6 6",
       "h": "163302844c74"
     },
     "Подписка · экран · пробный период · рисунок 01": {
