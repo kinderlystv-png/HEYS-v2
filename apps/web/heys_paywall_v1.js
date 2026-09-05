@@ -51,208 +51,392 @@
     .paywall-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(4px);
+      background: var(--v4-modal-backdrop-dim, rgba(42, 26, 12, 0.45));
+      backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
+      -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
       z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
       overscroll-behavior: contain;
-      padding: 16px;
       animation: paywallFadeIn 0.2s ease-out;
     }
-    
+
+    [data-theme$="dark"] .paywall-overlay {
+      background: var(--v4-modal-backdrop-dim-dark, rgba(0, 0, 0, 0.55));
+    }
+
     @keyframes paywallFadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    
+
     .paywall-modal {
-      background: var(--bg-primary, #fff);
-      border-radius: 20px;
-      max-width: 400px;
-      width: 100%;
-      padding: 24px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      animation: paywallSlideUp 0.3s ease-out;
-      max-height: calc(100vh - 32px);
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: var(--v4-bg, var(--bg, #fffaf3));
+      border-radius: 26px;
+      padding: 22px 18px 18px;
+      box-shadow: 0 24px 60px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.28);
+      max-height: calc(100vh - 28px);
       overflow-y: auto;
       overscroll-behavior-y: contain;
       -webkit-overflow-scrolling: touch;
+      font-family: Figtree, system-ui, -apple-system, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
     }
-    
-    @keyframes paywallSlideUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    
-    .paywall-header {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    
-    .paywall-icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-    }
-    
-    .paywall-title {
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--text-primary, #1f2937);
-      margin: 0 0 8px 0;
-    }
-    
-    .paywall-subtitle {
-      font-size: 14px;
-      color: var(--text-secondary, #6b7280);
-      margin: 0;
-      line-height: 1.5;
-    }
-    
-    .paywall-features {
-      background: var(--bg-secondary, #f3f4f6);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 20px;
-    }
-    
-    .paywall-feature {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 8px 0;
-      font-size: 14px;
-      color: var(--text-primary, #1f2937);
-    }
-    
-    .paywall-feature-icon {
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-    
-    .paywall-plans {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    
-    .paywall-plan {
-      border: 2px solid var(--border-color, #e5e7eb);
-      border-radius: 12px;
-      padding: 16px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      position: relative;
-    }
-    
-    .paywall-plan:hover {
-      border-color: var(--accent-color, #3b82f6);
-      background: var(--bg-hover, #f9fafb);
-    }
-    
-    .paywall-plan.selected {
-      border-color: var(--accent-color, #3b82f6);
-      background: rgba(59, 130, 246, 0.05);
-    }
-    
-    .paywall-plan.popular {
-      border-color: var(--success-color, #10b981);
-    }
-    
-    .paywall-plan-badge {
-      position: absolute;
-      top: -10px;
-      right: 12px;
-      background: var(--success-color, #10b981);
-      color: white;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: 10px;
-    }
-    
-    .paywall-plan-name {
-      font-weight: 600;
-      font-size: 16px;
-      color: var(--text-primary, #1f2937);
-      margin-bottom: 4px;
-    }
-    
-    .paywall-plan-price {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--accent-color, #3b82f6);
-    }
-    
-    .paywall-plan-period {
-      font-size: 13px;
-      color: var(--text-secondary, #6b7280);
-      font-weight: 400;
-    }
-    
-    .paywall-plan-desc {
-      font-size: 13px;
-      color: var(--text-secondary, #6b7280);
-      margin-top: 6px;
-    }
-    
-    .paywall-cta {
-      width: 100%;
-      padding: 16px;
-      border: none;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .paywall-cta:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-    }
-    
-    .paywall-cta:active {
-      transform: translateY(0);
-    }
-    
-    .paywall-footer {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 12px;
-      color: var(--text-tertiary, #9ca3af);
-    }
-    
-    .paywall-footer a {
-      color: var(--accent-color, #3b82f6);
-      text-decoration: none;
-    }
-    
+
     .paywall-close {
       position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 32px;
-      height: 32px;
+      top: 14px;
+      right: 14px;
+      width: 34px;
+      height: 34px;
       border: none;
-      background: var(--bg-secondary, #f3f4f6);
-      border-radius: 50%;
+      background: var(--v4-surface, var(--c1, #f7efe2));
+      border-radius: 999px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      color: var(--text-secondary, #6b7280);
-      transition: background 0.2s;
+      color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.5);
+      padding: 0;
     }
-    
-    .paywall-close:hover {
-      background: var(--bg-tertiary, #e5e7eb);
+
+    .paywall-title {
+      font: 700 19px/1.2 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
+      margin: 0;
+      padding-right: 40px;
+      text-wrap: pretty;
+    }
+
+    .paywall-subtitle {
+      font: 500 12.5px/1.5 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink-2, rgba(32, 30, 29, 0.62));
+      margin: 8px 0 0;
+      text-wrap: pretty;
+    }
+
+    .paywall-plans {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .paywall-plan {
+      border-radius: 18px;
+      background: var(--v4-surface, var(--c1, #f7efe2));
+      padding: 12px 14px;
+      min-height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: inset 0 0 0 1px rgba(var(--v4-ink-rgb, 32, 30, 29), 0.06);
+      position: relative;
+      cursor: pointer;
+    }
+
+    .paywall-plan + .paywall-plan {
+      margin-top: 0;
+    }
+
+    .paywall-plan.popular-offset {
+      margin-top: 4px;
+    }
+
+    .paywall-plan.selected {
+      box-shadow: inset 0 0 0 2px var(--v4-act-surface, var(--acs, #c67139));
+    }
+
+    .paywall-plan-main {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .paywall-plan-name {
+      font: 700 13.5px/1 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
+    }
+
+    .paywall-plan-desc {
+      font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
+      margin-top: 4px;
+      text-wrap: pretty;
+    }
+
+    .paywall-plan-price {
+      font: 700 13px/1 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .paywall-plan-period {
+      font: 500 11px/1 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink-2, rgba(32, 30, 29, 0.5));
+      font-weight: 500;
+    }
+
+    .paywall-plan-badge {
+      position: absolute;
+      top: -9px;
+      left: 14px;
+      font: 700 9px/1 Figtree, system-ui, sans-serif;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: var(--v4-act-surface, var(--acs, #c67139));
+      color: var(--v4-on-act-surface, var(--on-acs, #fffaf3));
+    }
+
+    .paywall-cta {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 14px;
+      border: none;
+      border-radius: 999px;
+      background: var(--v4-act-surface, var(--acs, #c67139));
+      color: var(--v4-on-act-surface, var(--on-acs, #fffaf3));
+      font: 700 13px/1 Figtree, system-ui, sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 18px;
+    }
+
+    .paywall-cta:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .paywall-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0 12px;
+    }
+
+    .paywall-divider-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.08);
+    }
+
+    .paywall-divider-label {
+      font: 600 11px/1 Figtree, system-ui, sans-serif;
+      color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.45);
+    }
+
+    .paywall-trial {
+      background: var(--v4-hero, var(--c2, #efe3cf));
+      border-radius: 18px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    .paywall-trial--offer {
+      background: var(--v4-tint, var(--tint, #f6e6dd));
+    }
+
+    .paywall-trial-title {
+      font: 700 13px/1.3 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
+    }
+
+    .paywall-trial-status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      margin-top: 6px;
+      font: 600 12px/1 Figtree, system-ui, sans-serif;
+    }
+
+    .paywall-trial-status--ok {
+      color: var(--v4-ok, var(--gr, #2f9d62));
+    }
+
+    .paywall-trial-status--busy {
+      color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
+    }
+
+    .paywall-trial-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      flex: none;
+    }
+
+    .paywall-trial-dot--ok {
+      background: var(--v4-ok, var(--gr, #2f9d62));
+    }
+
+    .paywall-trial-dot--busy {
+      background: var(--v4-danger, var(--red, #c4442a));
+    }
+
+    .paywall-btnq {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 12px;
+      border: none;
+      border-radius: 999px;
+      background: var(--v4-bg, var(--bg, #fffaf3));
+      color: var(--v4-ink, var(--tx, #201e1d));
+      font: 700 13px/1 Figtree, system-ui, sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 18px;
+    }
+
+    .paywall-footnote {
+      font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
+      text-align: center;
+      margin-top: 10px;
+      text-wrap: pretty;
+    }
+
+    .paywall-order-card {
+      background: var(--v4-surface, var(--c1, #f7efe2));
+      border-radius: 18px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .paywall-order-name {
+      font: 700 15px/1.2 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
+    }
+
+    .paywall-order-price {
+      font: 800 17px/1 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .paywall-order-period {
+      font: 500 11px/1 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink-2, rgba(32, 30, 29, 0.5));
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .paywall-consent {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 0 2px;
+      cursor: pointer;
+    }
+
+    .paywall-consent-box {
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      flex: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 0 2px rgba(var(--v4-ink-rgb, 32, 30, 29), 0.25);
+      background: transparent;
+      color: var(--v4-on-act-surface, var(--on-acs, #fffaf3));
+    }
+
+    .paywall-consent-box.is-checked {
+      background: var(--v4-act-surface, var(--acs, #c67139));
+      box-shadow: none;
+    }
+
+    .paywall-consent-text {
+      font: 500 12px/1.45 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
+      text-wrap: pretty;
+    }
+
+    .paywall-consent-link {
+      color: var(--v4-act, var(--ac, #c67139));
+      text-decoration: underline;
+    }
+
+    .paywall-cancel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      font: 600 12px/1 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
+      background: transparent;
+      border: none;
+      width: 100%;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .paywall-error {
+      font: 600 12px/1.4 Figtree, system-ui, sans-serif;
+      color: var(--v4-danger, var(--red, #c4442a));
+      margin-top: 12px;
+      text-align: center;
+    }
+
+    .paywall-success-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      background: var(--v4-ok-bg, var(--gr-bg, #e8f6ee));
+      color: var(--v4-ok, var(--gr, #2f9d62));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .paywall-success-card {
+      background: var(--v4-surface, var(--c1, #f7efe2));
+      border-radius: 18px;
+      padding: 14px;
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font: 500 12.5px/1.4 Figtree, system-ui, sans-serif;
+      color: var(--v4-ink, var(--tx, #201e1d));
+    }
+
+    .paywall-success-card .n {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .paywall-text-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      margin-top: 6px;
+      font: 600 12px/1 Figtree, system-ui, sans-serif;
+      color: var(--v4-act, var(--ac, #c67139));
+      background: transparent;
+      border: none;
+      width: 100%;
+      cursor: pointer;
+      padding: 0;
     }
 
     /* Read-only banner — кадр «Питание · только чтение»: плашка над
@@ -350,13 +534,64 @@
   // REACT КОМПОНЕНТЫ
   // ========================================
 
+  function paywallCloseIcon() {
+    return React.createElement('svg', {
+      width: 15,
+      height: 15,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      'aria-hidden': 'true',
+    }, React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' }));
+  }
+
+  function formatPlanPrice(price) {
+    return `${price.toLocaleString('ru-RU')} ₽`;
+  }
+
+  function getPaywallPlans() {
+    return [
+      {
+        id: 'base',
+        name: 'Self',
+        price: PAYWALL_CONFIG.prices.base,
+        desc: 'Самостоятельный дневник: КБЖУ, динамика, виджеты',
+        popular: false,
+      },
+      {
+        id: 'pro',
+        name: 'Pro',
+        price: PAYWALL_CONFIG.prices.pro,
+        desc: 'Куратор ведёт дневник, чат, созвон раз в неделю',
+        popular: true,
+      },
+      {
+        id: 'proPlus',
+        name: 'Pro Спорт',
+        price: PAYWALL_CONFIG.prices.proPlus,
+        desc: 'Питание и тренировки с одним специалистом · после согласования',
+        popular: false,
+      },
+    ];
+  }
+
+  function getPaywallCtaLabel(selectedPlan, plans) {
+    const plan = plans.find((item) => item.id === selectedPlan);
+    if (!plan) return 'Оформить подписку';
+    if (selectedPlan === 'proPlus') return 'Написать в поддержку';
+    return `Оформить ${plan.name} · ${formatPlanPrice(plan.price)}`;
+  }
+
   /**
-   * Paywall Modal — полноэкранная модалка с тарифами
+   * Paywall Modal — центральная модалка тарифов (фаза 2)
    */
   function PaywallModal({ onClose, onSelectPlan, reason }) {
     const [selectedPlan, setSelectedPlan] = React.useState('pro');
     const [showPaymentScreen, setShowPaymentScreen] = React.useState(false);
     const paymentsEnabled = HEYS.config?.paymentsEnabled === true;
+    const plans = getPaywallPlans();
 
     React.useEffect(() => {
       if (typeof document === 'undefined') return undefined;
@@ -374,42 +609,14 @@
       documentElement.style.overflow = 'hidden';
       documentElement.style.overscrollBehavior = 'none';
 
-      console.info('[HEYS.paywall] scroll-lock enabled');
-
       return () => {
         body.style.overflow = previousBodyOverflow;
         body.style.overscrollBehavior = previousBodyOverscrollBehavior;
         documentElement.style.overflow = previousDocumentOverflow;
         documentElement.style.overscrollBehavior = previousDocumentOverscrollBehavior;
-        console.info('[HEYS.paywall] scroll-lock released');
       };
     }, []);
 
-    const plans = [
-      {
-        id: 'base',
-        name: 'Self',
-        price: PAYWALL_CONFIG.prices.base,
-        desc: 'Самостоятельный дневник: КБЖУ, динамика, виджеты',
-        popular: false
-      },
-      {
-        id: 'pro',
-        name: 'Pro',
-        price: PAYWALL_CONFIG.prices.pro,
-        desc: 'Куратор ведёт дневник + чат + созвон/неделю',
-        popular: true
-      },
-      {
-        id: 'proPlus',
-        name: 'Pro Спорт',
-        price: PAYWALL_CONFIG.prices.proPlus,
-        desc: 'Питание и тренировки с одним специалистом; подключение после личного согласования',
-        popular: false
-      }
-    ];
-
-    // Получаем clientId по стандартному паттерну HEYS
     const getClientId = () => {
       const U = window.HEYS?.utils || window.U;
       return (U && U.getCurrentClientId && U.getCurrentClientId()) || window.HEYS?.currentClientId || '';
@@ -422,129 +629,119 @@
         return;
       }
       if (paymentsEnabled && clientId && window.HEYS?.YandexAPI?.createPayment) {
-        // ЮKassa доступна — показываем PaymentScreen с чекбоксом оферты
         setShowPaymentScreen(true);
-      } else {
-        // Fallback — Telegram для связи
-        const message = encodeURIComponent(`Привет! Хочу оформить подписку ${selectedPlan.toUpperCase()} на HEYS`);
-        window.open(`${HEYS.support.telegramUrl}?text=${message}`, '_blank');
-        if (onSelectPlan) onSelectPlan(selectedPlan);
+        return;
       }
+      const message = encodeURIComponent(`Привет! Хочу оформить подписку ${selectedPlan.toUpperCase()} на HEYS`);
+      window.open(`${HEYS.support.telegramUrl}?text=${message}`, '_blank');
+      if (onSelectPlan) onSelectPlan(selectedPlan);
     };
 
-    // Если показываем PaymentScreen — рендерим его вместо плана
     if (paymentsEnabled && showPaymentScreen) {
       const clientId = getClientId();
       const SubscriptionsModule = window.HEYS?.Subscriptions;
 
       if (SubscriptionsModule?.PaymentScreen) {
-        return React.createElement('div', { className: 'paywall-overlay', onClick: (e) => e.target === e.currentTarget && setShowPaymentScreen(false) },
-          React.createElement('div', { className: 'paywall-modal', style: { position: 'relative', maxHeight: '90vh', overflowY: 'auto' } },
-            React.createElement('button', { className: 'paywall-close', onClick: () => setShowPaymentScreen(false) }, '✕'),
+        return React.createElement('div', {
+          className: 'paywall-overlay',
+          onClick: (e) => e.target === e.currentTarget && setShowPaymentScreen(false),
+          role: 'dialog',
+          'aria-modal': 'true',
+        },
+          React.createElement('div', { className: 'paywall-modal', style: { position: 'relative' } },
+            React.createElement('button', {
+              type: 'button',
+              className: 'paywall-close',
+              onClick: () => setShowPaymentScreen(false),
+              'aria-label': 'Закрыть',
+            }, paywallCloseIcon()),
             React.createElement(SubscriptionsModule.PaymentScreen, {
               clientId,
+              plan: selectedPlan,
+              embedded: true,
               onSuccess: (result) => {
                 console.info('[HEYS.paywall] ✅ Оплата успешна:', result);
                 onClose?.();
               },
-              onCancel: () => setShowPaymentScreen(false)
+              onCancel: () => setShowPaymentScreen(false),
             })
           )
         );
       }
-      // Fallback если PaymentScreen не загружен
       setShowPaymentScreen(false);
     }
 
-    return React.createElement('div', { className: 'paywall-overlay', onClick: (e) => e.target === e.currentTarget && onClose?.() },
+    const title = reason === 'trial_ended' ? 'Пробный период закончился' : 'Подписка';
+
+    return React.createElement('div', {
+      className: 'paywall-overlay',
+      onClick: (e) => e.target === e.currentTarget && onClose?.(),
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'paywall-modal-title',
+    },
       React.createElement('div', { className: 'paywall-modal', style: { position: 'relative' } },
-        // Close button
-        React.createElement('button', { className: 'paywall-close', onClick: onClose }, '✕'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'paywall-close',
+          onClick: onClose,
+          'aria-label': 'Закрыть',
+        }, paywallCloseIcon()),
 
-        // Header
-        React.createElement('div', { className: 'paywall-header' },
-          React.createElement('div', { className: 'paywall-icon' }, '🔒'),
-          React.createElement('h2', { className: 'paywall-title' },
-            reason === 'trial_ended' ? 'Триал закончился' : 'Нужна подписка'
-          ),
-          React.createElement('p', { className: 'paywall-subtitle' },
-            reason === 'trial_ended'
-              ? 'Твои 7 дней Pro-доступа истекли. Оформи подписку, чтобы продолжить вести дневник.'
-              : 'Для добавления данных нужна активная подписка.'
-          )
+        React.createElement('h2', { id: 'paywall-modal-title', className: 'paywall-title' }, title),
+        React.createElement('p', { className: 'paywall-subtitle' },
+          'Выберите тариф — доступ откроется сразу после оплаты.'
         ),
 
-        // Features
-        React.createElement('div', { className: 'paywall-features' },
-          React.createElement('div', { className: 'paywall-feature' },
-            React.createElement('span', { className: 'paywall-feature-icon' }, '📊'),
-            'Дневник питания без ограничений'
-          ),
-          React.createElement('div', { className: 'paywall-feature' },
-            React.createElement('span', { className: 'paywall-feature-icon' }, '🧠'),
-            '182 умных совета на основе твоих данных'
-          ),
-          React.createElement('div', { className: 'paywall-feature' },
-            React.createElement('span', { className: 'paywall-feature-icon' }, '👨‍⚕️'),
-            'Живой куратор для Pro тарифов'
-          )
-        ),
-
-        // Plans
-        React.createElement('div', { className: 'paywall-plans' },
-          plans.map(plan =>
+        React.createElement('div', { className: 'paywall-plans', role: 'radiogroup', 'aria-label': 'Тарифы' },
+          plans.map((plan, index) =>
             React.createElement('div', {
               key: plan.id,
-              className: `paywall-plan ${selectedPlan === plan.id ? 'selected' : ''} ${plan.popular ? 'popular' : ''}`,
-              onClick: () => setSelectedPlan(plan.id)
+              className: [
+                'paywall-plan',
+                selectedPlan === plan.id ? 'selected' : '',
+                plan.popular && index > 0 ? 'popular-offset' : '',
+              ].filter(Boolean).join(' '),
+              onClick: () => setSelectedPlan(plan.id),
+              role: 'radio',
+              'aria-checked': selectedPlan === plan.id,
             },
               plan.popular && React.createElement('div', { className: 'paywall-plan-badge' }, 'Популярный'),
-              React.createElement('div', { className: 'paywall-plan-name' }, plan.name),
-              React.createElement('div', { className: 'paywall-plan-price' },
-                plan.price.toLocaleString('ru-RU'), ' ₽',
-                React.createElement('span', { className: 'paywall-plan-period' }, ' / мес')
+              React.createElement('div', { className: 'paywall-plan-main' },
+                React.createElement('div', { className: 'paywall-plan-name' }, plan.name),
+                React.createElement('div', { className: 'paywall-plan-desc' }, plan.desc)
               ),
-              React.createElement('div', { className: 'paywall-plan-desc' }, plan.desc)
+              React.createElement('div', { className: 'paywall-plan-price' },
+                formatPlanPrice(plan.price),
+                ' ',
+                React.createElement('span', { className: 'paywall-plan-period' }, '/ мес')
+              )
             )
           )
         ),
 
-        // CTA
-        React.createElement('button', { className: 'paywall-cta', onClick: handleCTA },
-          'Оформить подписку'
+        React.createElement('button', { type: 'button', className: 'paywall-cta', onClick: handleCTA },
+          getPaywallCtaLabel(selectedPlan, plans)
         ),
 
-        // === TRIAL QUEUE SECTION ===
-        // Разделитель
-        React.createElement('div', {
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            margin: '20px 0 16px',
-            color: 'var(--text-tertiary, #9ca3af)',
-            fontSize: '13px'
-          }
-        },
-          React.createElement('div', { style: { flex: 1, height: '1px', background: 'var(--border-color, #e5e7eb)' } }),
-          'или',
-          React.createElement('div', { style: { flex: 1, height: '1px', background: 'var(--border-color, #e5e7eb)' } })
+        selectedPlan === 'proPlus' && React.createElement('p', { className: 'paywall-footnote' },
+          'Pro Спорт подключается после согласования — поддержка ответит и оформит.'
         ),
 
-        // Trial Queue виджет (если модуль загружен)
-        HEYS.TrialQueue && React.createElement(TrialQueueSection, { onTrialStarted: onClose }),
-
-        // Footer
-        React.createElement('div', { className: 'paywall-footer' },
-          'Возникли вопросы? ',
-          React.createElement('a', { href: HEYS.support.telegramUrl, target: '_blank' }, 'Напиши нам')
+        selectedPlan !== 'proPlus' && React.createElement(React.Fragment, null,
+          React.createElement('div', { className: 'paywall-divider' },
+            React.createElement('span', { className: 'paywall-divider-line' }),
+            React.createElement('span', { className: 'paywall-divider-label' }, 'или'),
+            React.createElement('span', { className: 'paywall-divider-line' })
+          ),
+          HEYS.TrialQueue && React.createElement(TrialQueueSection, { onTrialStarted: onClose })
         )
       )
     );
   }
 
   /**
-   * TrialQueueSection — секция очереди внутри Paywall
+   * TrialQueueSection — блок пробного периода внутри Paywall
    */
   function TrialQueueSection({ onTrialStarted }) {
     const [capacity, setCapacity] = React.useState(null);
@@ -646,128 +843,86 @@
     };
 
     if (isLoading && !capacity) {
-      return React.createElement('div', {
-        style: { textAlign: 'center', padding: '16px', color: 'var(--text-secondary)' }
-      }, '⏳ Проверяем места...');
+      return React.createElement('div', { className: 'paywall-trial' },
+        React.createElement('div', { className: 'paywall-trial-title' }, 'Пробный период 7 дней — бесплатно'),
+        React.createElement('div', { className: 'paywall-trial-status paywall-trial-status--busy' }, 'Проверяем места…')
+      );
     }
 
     const status = queueStatus?.status || 'not_in_queue';
     const isOffer = status === 'offer' && !HEYS.TrialQueue.isOfferExpired(queueStatus?.offer_expires_at);
-    const isQueued = status === 'queued';
+    const isQueued = status === 'queued' || status === 'pending';
 
-    // В очереди или есть offer
     if (isQueued || isOffer) {
-      const meta = HEYS.TrialQueue.getQueueStatusMeta(status, queueStatus?.position, queueStatus?.offer_expires_at);
-
-      return React.createElement('div', {
-        style: {
-          background: isOffer ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'var(--bg-secondary, #f3f4f6)',
-          borderRadius: '12px',
-          padding: '16px',
-          textAlign: 'center',
-          border: isOffer ? '2px solid #f59e0b' : 'none'
-        }
-      },
-        React.createElement('div', { style: { fontSize: '24px', marginBottom: '8px' } }, meta.emoji),
-        React.createElement('div', { style: { fontWeight: 600, fontSize: '15px', marginBottom: '4px' } }, meta.label),
-
-        // Таймер
-        isOffer && timeRemaining && React.createElement('div', {
-          style: {
-            fontSize: '20px',
-            fontWeight: 700,
-            color: '#f59e0b',
-            margin: '12px 0',
-            background: 'rgba(255,255,255,0.5)',
-            borderRadius: '8px',
-            padding: '8px'
-          }
-        }, '⏰ ', timeRemaining),
-
-        // Кнопки
-        React.createElement('div', { style: { display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' } },
-          isOffer && React.createElement('button', {
+      if (isOffer) {
+        return React.createElement('div', { className: 'paywall-trial paywall-trial--offer' },
+          React.createElement('div', { className: 'paywall-trial-title' }, 'Место освободилось'),
+          timeRemaining && React.createElement('div', {
+            className: 'n',
+            style: {
+              font: '800 26px/1 Figtree, system-ui, sans-serif',
+              color: 'var(--v4-ink, var(--tx, #201e1d))',
+              marginTop: '8px',
+              fontVariantNumeric: 'tabular-nums',
+            },
+          }, timeRemaining),
+          React.createElement('div', {
+            style: {
+              font: '500 11px/1.4 Figtree, system-ui, sans-serif',
+              color: 'var(--v4-ink-2, rgba(32, 30, 29, 0.56))',
+              marginTop: '4px',
+            },
+          }, 'на подтверждение'),
+          React.createElement('button', {
+            type: 'button',
+            className: 'paywall-cta',
             onClick: handleClaimOffer,
             disabled: isActioning,
-            style: {
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-              color: 'white',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: '14px'
-            }
-          }, isActioning ? '⏳...' : '🎉 Начать триал!'),
+          }, isActioning ? 'Подтверждаем…' : 'Начать пробный период')
+        );
+      }
 
-          isQueued && React.createElement('button', {
-            onClick: handleCancelQueue,
-            disabled: isActioning,
-            style: {
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: '1px solid var(--border-color, #e5e7eb)',
-              background: 'transparent',
-              color: 'var(--text-secondary)',
-              cursor: 'pointer',
-              fontSize: '13px'
-            }
-          }, 'Отменить')
-        )
+      const position = queueStatus?.position;
+      return React.createElement('div', { className: 'paywall-trial' },
+        React.createElement('div', { className: 'paywall-trial-title' },
+          position ? `Заявка подана · вы ${position}-й в очереди` : 'Заявка подана'
+        ),
+        React.createElement('div', {
+          style: {
+            font: '500 11px/1.4 Figtree, system-ui, sans-serif',
+            color: 'var(--v4-ink-2, rgba(32, 30, 29, 0.56))',
+            marginTop: '4px',
+          },
+        }, 'Сообщим, когда место освободится'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'paywall-text-btn',
+          onClick: handleCancelQueue,
+          disabled: isActioning,
+        }, 'Отменить заявку')
       );
     }
 
-    // Показываем виджет мест
-    const capMeta = capacity ? HEYS.TrialQueue.getCapacityMeta(capacity) : null;
+    const available = capacity?.available_slots > 0
+      || (capacity?.is_accepting && (capacity?.available_slots === undefined || capacity?.available_slots > 0));
+    const queueSize = capacity?.queue_length ?? capacity?.queue_size ?? 0;
 
-    return React.createElement('div', {
-      style: {
-        background: 'var(--bg-secondary, #f3f4f6)',
-        borderRadius: '12px',
-        padding: '16px',
-        textAlign: 'center'
-      }
-    },
-      React.createElement('div', { style: { fontSize: '15px', fontWeight: 600, marginBottom: '8px' } },
-        '🎁 Бесплатный триал 7 дней'
-      ),
-
-      capMeta && React.createElement('div', {
-        style: {
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          fontSize: '13px',
-          color: capMeta.color,
-          marginBottom: '12px'
-        }
+    return React.createElement('div', { className: 'paywall-trial' },
+      React.createElement('div', { className: 'paywall-trial-title' }, 'Пробный период 7 дней — бесплатно'),
+      React.createElement('div', {
+        className: `paywall-trial-status ${available ? 'paywall-trial-status--ok' : 'paywall-trial-status--busy'}`,
       },
-        React.createElement('span', null, capMeta.emoji),
-        React.createElement('span', null, capMeta.label)
+        React.createElement('span', {
+          className: `paywall-trial-dot ${available ? 'paywall-trial-dot--ok' : 'paywall-trial-dot--busy'}`,
+        }),
+        available ? 'Место свободно' : `Мест нет · в очереди ${queueSize}`
       ),
-
-      capMeta?.showQueue && React.createElement('div', {
-        style: { fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }
-      }, capMeta.sublabel),
-
       React.createElement('button', {
+        type: 'button',
+        className: 'paywall-btnq',
         onClick: handleRequestTrial,
         disabled: isActioning || !capacity?.is_accepting,
-        style: {
-          padding: '10px 24px',
-          borderRadius: '8px',
-          border: 'none',
-          background: capacity?.available_slots > 0
-            ? 'linear-gradient(135deg, #22c55e, #16a34a)'
-            : 'linear-gradient(135deg, #6b7280, #4b5563)',
-          color: 'white',
-          fontWeight: 600,
-          cursor: 'pointer',
-          fontSize: '14px'
-        }
-      }, isActioning ? '⏳...' : (capMeta?.actionLabel || 'Запросить триал'))
+      }, isActioning ? 'Отправляем…' : (available ? 'Начать пробный период' : 'Встать в очередь'))
     );
   }
 

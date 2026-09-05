@@ -671,14 +671,71 @@
     );
   }
 
+  function formatDateShort(date) {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  }
+
+  function normalizePlanId(plan) {
+    if (plan === 'proPlus') return 'proplus';
+    return plan;
+  }
+
+  function paywallCheckIcon() {
+    return h('svg', {
+      width: 13,
+      height: 13,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 3.5,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    }, h('path', { d: 'M20 6L9 17l-5-5' }));
+  }
+
+  function paywallSuccessCheckIcon() {
+    return h('svg', {
+      width: 26,
+      height: 26,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    }, h('path', { d: 'M20 6L9 17l-5-5' }));
+  }
+
+  function paywallCloseIconMarkup() {
+    return h('svg', {
+      width: 15,
+      height: 15,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      'aria-hidden': 'true',
+    }, h('path', { d: 'M18 6L6 18M6 6l12 12' }));
+  }
+
   /**
-   * Экран выбора тарифа
+   * Экран «Проверьте заказ»
    */
-  function PaymentScreen({ clientId, onSuccess, onCancel }) {
-    const [selectedPlan, setSelectedPlan] = useState('pro');
+  function PaymentScreen({ clientId, plan = 'pro', embedded = false, onSuccess, onCancel }) {
+    const selectedPlan = normalizePlanId(plan);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [ofertaAccepted, setOfertaAccepted] = useState(false);
+
+    React.useEffect(() => {
+      if (embedded || typeof document === 'undefined') return;
+      window.HEYS?.Paywall?.injectStyles?.();
+    }, [embedded]);
 
     /**
      * Логирование согласия payment_oferta перед оплатой (ст. 438 ГК РФ)
@@ -793,201 +850,123 @@
       }
     };
 
-    const containerStyle = {
-      padding: '20px',
-      maxWidth: '500px',
-      margin: '0 auto'
-    };
-
-    const titleStyle = {
-      fontSize: '24px',
-      fontWeight: '700',
-      textAlign: 'center',
-      marginBottom: '24px'
-    };
-
-    const buttonStyle = {
-      width: '100%',
-      padding: '14px',
-      fontSize: '16px',
-      fontWeight: '600',
-      color: '#fff',
-      backgroundColor: (loading || !ofertaAccepted) ? '#9ca3af' : '#22c55e',
-      border: 'none',
-      borderRadius: '12px',
-      cursor: (loading || !ofertaAccepted) ? 'not-allowed' : 'pointer',
-      marginTop: '16px',
-      opacity: !ofertaAccepted ? 0.7 : 1
-    };
-
-    const cancelStyle = {
-      width: '100%',
-      padding: '12px',
-      fontSize: '14px',
-      color: '#6b7280',
-      backgroundColor: 'transparent',
-      border: 'none',
-      cursor: 'pointer',
-      marginTop: '8px'
-    };
-
-    const plans = getPlans();
     const selectedInfo = getPlan(selectedPlan);
+    const planName = selectedInfo?.name || 'Pro';
+    const planDesc = selectedPlan === 'pro'
+      ? 'Куратор ведёт дневник, чат, созвон раз в неделю'
+      : (selectedInfo?.features?.[0] || '');
+    const payLabel = `Оплатить ${formatPrice(selectedInfo?.price || 0)}`;
 
-    return h('div', { style: containerStyle },
-      h('h1', { style: titleStyle }, '💳 Выберите тариф'),
+    const body = h('div', null,
+      !embedded && h('button', {
+        type: 'button',
+        className: 'paywall-close',
+        onClick: onCancel,
+        'aria-label': 'Закрыть',
+      }, paywallCloseIconMarkup()),
 
-      plans.map(p =>
-        h(PlanCard, {
-          key: p.id,
-          plan: p.id,
-          isSelected: selectedPlan === p.id,
-          onSelect: setSelectedPlan
-        })
+      h('h1', { className: 'paywall-title', style: embedded ? { paddingRight: 40 } : undefined }, 'Проверьте заказ'),
+
+      h('div', { className: 'paywall-order-card' },
+        h('div', null,
+          h('div', { className: 'paywall-order-name' }, planName),
+          h('div', { className: 'paywall-plan-desc' }, planDesc)
+        ),
+        h('div', null,
+          h('div', { className: 'paywall-order-price n' }, formatPrice(selectedInfo?.price || 0)),
+          h('div', { className: 'paywall-order-period' }, 'за 30 дней')
+        )
       ),
 
-      error && h('div', {
-        style: {
-          color: '#ef4444',
-          textAlign: 'center',
-          marginTop: '12px',
-          padding: '8px',
-          backgroundColor: '#fef2f2',
-          borderRadius: '8px'
-        }
-      }, error),
+      error && h('div', { className: 'paywall-error' }, error),
 
-      // Чекбокс согласия с офертой (ст. 438 ГК РФ — акцепт при оплате)
       h('div', {
-        style: {
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: '10px',
-          marginTop: '16px',
-          padding: '12px',
-          backgroundColor: ofertaAccepted ? '#f0fdf4' : '#f9fafb',
-          border: '1px solid ' + (ofertaAccepted ? '#86efac' : '#e5e7eb'),
-          borderRadius: '10px',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease'
-        },
-        onClick: () => setOfertaAccepted(!ofertaAccepted)
+        className: 'paywall-consent',
+        onClick: () => setOfertaAccepted(!ofertaAccepted),
       },
-        h('input', {
-          type: 'checkbox',
-          checked: ofertaAccepted,
-          onChange: (e) => { e.stopPropagation(); setOfertaAccepted(e.target.checked); },
-          style: {
-            marginTop: '2px',
-            width: '18px',
-            height: '18px',
-            flexShrink: 0,
-            accentColor: '#22c55e',
-            cursor: 'pointer'
-          }
-        }),
-        h('span', {
-          style: {
-            fontSize: '13px',
-            lineHeight: '1.4',
-            color: '#374151'
-          }
-        },
-          'Нажимая «Оплатить», я принимаю условия ',
+        h('span', { className: `paywall-consent-box ${ofertaAccepted ? 'is-checked' : ''}` },
+          ofertaAccepted && paywallCheckIcon()
+        ),
+        h('span', { className: 'paywall-consent-text' },
+          'Принимаю условия ',
           h('a', {
             href: 'https://heyslab.ru/legal/user-agreement',
             target: '_blank',
             rel: 'noopener noreferrer',
+            className: 'paywall-consent-link',
             onClick: (e) => e.stopPropagation(),
-            style: { color: '#2563eb', textDecoration: 'underline' }
-          }, 'Публичной оферты'),
+          }, 'публичной оферты'),
           ' и ',
           h('a', {
             href: 'https://heyslab.ru/legal/privacy-policy',
             target: '_blank',
             rel: 'noopener noreferrer',
+            className: 'paywall-consent-link',
             onClick: (e) => e.stopPropagation(),
-            style: { color: '#2563eb', textDecoration: 'underline' }
-          }, 'Политики конфиденциальности')
+          }, 'политики конфиденциальности')
         )
       ),
 
       h('button', {
-        style: buttonStyle,
+        type: 'button',
+        className: 'paywall-cta',
+        style: { marginTop: '18px', opacity: (loading || !ofertaAccepted) ? 0.45 : 1 },
         onClick: handlePayment,
-        disabled: loading || !ofertaAccepted
-      },
-        loading ? 'Обработка...' : `Оплатить ${formatPrice(selectedInfo?.price || 0)}`
-      ),
+        disabled: loading || !ofertaAccepted,
+      }, loading ? 'Обработка…' : payLabel),
 
-      onCancel && h('button', { style: cancelStyle, onClick: onCancel }, 'Отмена')
+      onCancel && h('button', { type: 'button', className: 'paywall-cancel', onClick: onCancel }, 'Отмена')
+    );
+
+    if (embedded) return body;
+
+    window.HEYS?.Paywall?.injectStyles?.();
+
+    return h('div', {
+      className: 'paywall-overlay',
+      onClick: (e) => e.target === e.currentTarget && onCancel?.(),
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'payment-screen-title',
+    },
+      h('div', { className: 'paywall-modal', style: { position: 'relative' } }, body)
     );
   }
 
   /**
    * Экран успешной оплаты
    */
-  function PaymentSuccessScreen({ plan, expiresAt, onContinue }) {
-    const planInfo = getPlan(plan);
+  function PaymentSuccessScreen({ plan, expiresAt, onContinue, embedded = false }) {
+    const planInfo = getPlan(normalizePlanId(plan));
+    const planName = planInfo?.name || plan || 'Pro';
+    const untilLabel = formatDateShort(expiresAt);
+    const priceLabel = formatPrice(planInfo?.price || 0);
 
-    const containerStyle = {
-      padding: '40px 20px',
-      textAlign: 'center',
-      maxWidth: '400px',
-      margin: '0 auto'
-    };
-
-    const iconStyle = {
-      fontSize: '64px',
-      marginBottom: '16px'
-    };
-
-    const titleStyle = {
-      fontSize: '24px',
-      fontWeight: '700',
-      marginBottom: '8px'
-    };
-
-    const subtitleStyle = {
-      fontSize: '16px',
-      color: '#6b7280',
-      marginBottom: '24px'
-    };
-
-    const infoStyle = {
-      backgroundColor: '#f0fdf4',
-      borderRadius: '12px',
-      padding: '16px',
-      marginBottom: '24px'
-    };
-
-    const buttonStyle = {
-      width: '100%',
-      padding: '14px',
-      fontSize: '16px',
-      fontWeight: '600',
-      color: '#fff',
-      backgroundColor: '#22c55e',
-      border: 'none',
-      borderRadius: '12px',
-      cursor: 'pointer'
-    };
-
-    return h('div', { style: containerStyle },
-      h('div', { style: iconStyle }, '✅'),
-      h('h1', { style: titleStyle }, 'Подписка активирована!'),
-      h('p', { style: subtitleStyle }, `Тариф ${planInfo?.name || plan}`),
-
-      h('div', { style: infoStyle },
-        h('div', { style: { marginBottom: '8px' } },
-          '📅 Активна до: ', h('strong', null, formatDate(expiresAt))
-        ),
-        h('div', null,
-          '💰 Стоимость: ', h('strong', null, formatPrice(planInfo?.price || 0) + '/мес')
-        )
+    const body = h('div', null,
+      h('div', { className: 'paywall-success-icon' }, paywallSuccessCheckIcon()),
+      h('h1', {
+        id: 'payment-screen-title',
+        className: 'paywall-title',
+        style: { marginTop: '14px', paddingRight: 0 },
+      }, 'Подписка активна'),
+      h('div', { className: 'paywall-success-card' },
+        h('div', null, 'Тариф — ', h('b', { style: { fontWeight: 700 } }, planName)),
+        h('div', { className: 'n' }, `До ${untilLabel} · ${priceLabel} в месяц`)
       ),
+      h('button', { type: 'button', className: 'paywall-cta', style: { marginTop: '18px' }, onClick: onContinue }, 'Продолжить')
+    );
 
-      h('button', { style: buttonStyle, onClick: onContinue }, 'Продолжить')
+    if (embedded) return body;
+
+    window.HEYS?.Paywall?.injectStyles?.();
+
+    return h('div', {
+      className: 'paywall-overlay',
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'payment-screen-title',
+    },
+      h('div', { className: 'paywall-modal', style: { position: 'relative' } }, body)
     );
   }
 
