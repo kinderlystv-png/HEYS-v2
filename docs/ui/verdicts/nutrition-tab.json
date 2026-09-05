@@ -549,11 +549,9 @@
       "h": "92107f759063"
     },
     "состав чипа": {
-      "v": "≠",
-      "f": "Пакет 36: чип 44 px видимым, ::after none. Продукт 732-ui-v4-nutrition.css:1068 min-height 30px — ждёт strip touch (как food-meal 5f7097c20).",
-      "h": "76e4d79bd4b9",
-      "reasonCode": "accessibility",
-      "decisionRef": "apps/web/styles/modules/732-ui-v4-nutrition.css:1068"
+      "v": "=",
+      "f": "Сведено. 732-ui-v4-nutrition.css:1063 .nutrition-v4-chip — min-height 44px (:1068), .nutrition-v4-chip::after content:none (:1081-1083). Прежний вердикт «≠ accessibility» описывал min-height 30px и ожидание strip touch — этого в коде нет с момента, когда чип свели; строку после правки не перечитали.",
+      "h": "76e4d79bd4b9"
     },
     "доз и условий в блоке нет": {
       "v": "=",
@@ -2560,11 +2558,9 @@
       "h": "5bc818d6d658"
     },
     "Питание · вопрос о дате · текст": {
-      "v": "≠",
-      "f": "Контракт пакета 36: «На какой день записать?», два равных ряда, CTA «Записать на 19 августа». Продукт — ConfirmModal «Перейти на сегодня» / «Всё-таки записать».",
-      "h": "0d72cfdb4cbd",
-      "reasonCode": "logic-invariant",
-      "decisionRef": "apps/web/heys_day_nutrition_v1.js:86"
+      "v": "=",
+      "f": "Сведено. day/_meals.js:156-185 — лист «На какой день записать?» (:159, :162), два равных ряда .nutrition-v4-sheet__row: открытый день (:167) и сегодня (:175), ниже CTA .nutrition-v4-sheet__cta (:183). ConfirmModal «Перейти на сегодня» / «Всё-таки записать» удалён и его возврат сторожит __tests__/nutrition-tab-v4-contract-fixes.test.js:630-637.",
+      "h": "0d72cfdb4cbd"
     },
     "Питание · куда перенести приём · текст": {
       "v": "=",
