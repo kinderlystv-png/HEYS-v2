@@ -106,7 +106,11 @@ describe('UI v4 transient states — deterministic DOM/geometry gates', () => {
     const fail = document.querySelector('.heys-boot-mark__warn');
     expect(fail.getAttribute('stroke-width')).toBe('3.4');
     expect(fail.querySelector('path').getAttribute('d')).toBe('M7 7l10 10M17 7L7 17');
-    expect(fail.querySelector('circle')).toBeNull();
+    const circle = fail.querySelector('circle');
+    expect(circle).toBeTruthy();
+    expect(circle.getAttribute('r')).toBe('9');
+    expect(circle.getAttribute('cx')).toBe('12');
+    expect(circle.getAttribute('cy')).toBe('12');
   });
 
   it('pwa offline banner keeps its system layer geometry and fixed contrast pair', () => {
