@@ -10,7 +10,7 @@
         "byName": "view === 'plan-vs-done' → h(BuilderPlanVsDoneScreen) heys_strength_builder_ui_v1.js:1774-1778; grep builder — нет Parts.PlanVsDoneScreen",
         "byBehavior": "BuilderScreen ⋯ → sheetRows go('plan-vs-done') → .sb-plan-vs-hole disclosure (только builder wrapper, не superset PlanVsDoneScreen)"
       },
-      "fact": "sheetRows :2488-2492 superset_ui; builder dispatch :1774-1778; test apps/web/__tests__/strength-builder-task48-builder-tails.test.js"
+      "fact": "sheetRows :2523-2539 superset_ui; builder передаёт ctx.openPlanVsDone → setView('plan-vs-done'); dispatch :1774-1778 BuilderPlanVsDoneScreen; test strength-builder-task48-builder-tails.test.js"
     },
     {
       "key": "CuratorEditStatusScreen · кабинет куратора",

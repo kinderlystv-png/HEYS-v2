@@ -2232,6 +2232,11 @@
               openIdx: openIdx,
               close: function () { setSheetOpen(false); },
               go: setView,
+              training: liveTraining,
+              bodyWeightKg: Number.isFinite(+(profile && profile.weight))
+                ? +(profile.weight)
+                : null,
+              openPlanVsDone: function () { setView('plan-vs-done'); },
               setLinkFrom: setLinkFrom,
               setHistoryName: setHistoryName,
               setWarmupDropIdx: setWarmupDropIdx,
