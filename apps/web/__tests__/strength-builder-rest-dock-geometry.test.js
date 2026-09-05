@@ -73,7 +73,7 @@ describe('strength builder rest dock geometry at 375x812', { timeout: 90_000, ho
 
   afterAll(async () => {
     await releasePlaywrightBrowserForSuite();
-  });
+  }, 90_000);
 
   it('activates the in-flow dock layout only while rest is present', () => {
     expect(BUILDER).toContain("rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded'");
