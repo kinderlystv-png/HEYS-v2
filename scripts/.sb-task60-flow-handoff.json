@@ -1,0 +1,36 @@
+{
+  "task": "60",
+  "lane": 1,
+  "clusters": ["interrupted", "proposal-started", "functional-smoke GAP 6b"],
+  "status": "done",
+  "commits": ["8a880e0aa (partial: PartsReg export)", "pending"],
+  "clusters_detail": [
+    {
+      "cluster": "interrupted",
+      "root_cause": "Test used first const CatUI (ExerciseCardScreen) and literal aria-label string; code already gates showInterrupted before BuilderScreen CatUI via closeIconButton helper",
+      "decision": "test fix",
+      "files": ["apps/web/__tests__/strength-builder-interrupted-v4-canvas-contract.test.js"]
+    },
+    {
+      "cluster": "proposal-started M4",
+      "root_cause": "sessionServiceSubtitle/sessionHeadTitle did not surface unitEntryLabel(time) in .sb-head-sub when time exercise open (canvas contract M4)",
+      "decision": "code fix",
+      "files": [
+        "apps/web/strength/heys_strength_builder_ui_v1.js",
+        "apps/web/__tests__/strength-builder-proposal-started-v4-canvas-contract.test.js"
+      ]
+    },
+    {
+      "cluster": "functional-smoke GAP 6b",
+      "root_cause": "Test compared plannedVolume without type/strengthEntryMode; kernel isStrengthBuilder returns 0 without those fields while buildPlanVsDoneSnapshot passes them correctly",
+      "decision": "test fix",
+      "files": ["apps/web/__tests__/strength-builder-functional-smoke.test.js"]
+    }
+  ],
+  "verification": {
+    "command": "cd apps/web && HEYS_DESIGN_GATES=skip pnpm exec vitest run __tests__/strength-builder-interrupted-v4-canvas-contract.test.js __tests__/strength-builder-proposal-started-v4-canvas-contract.test.js __tests__/strength-builder-functional-smoke.test.js",
+    "result": "3 files, 18/18 pass"
+  },
+  "non_strength_files_needed": false,
+  "push": false
+}

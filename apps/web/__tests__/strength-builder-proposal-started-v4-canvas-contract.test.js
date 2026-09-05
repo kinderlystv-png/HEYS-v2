@@ -131,7 +131,8 @@ describe('М4 · Ввод · время под нагрузкой · canvas cont
       // Г4 (425403748): в шапке только имя; счёт подходов ушёл из шапки в ключ
       // «подход N из M» по контракту Г4 — прежняя строка была снимком старой шапки.
       expect(screen.getAllByText('Планка').length).toBeGreaterThan(0);
-      expect(screen.getByText('единица — время')).toBeTruthy();
+      const headSub = document.querySelector('.sb-head-sub');
+      expect(headSub && headSub.textContent).toBe('единица — время');
       expect(screen.getByText('Итого под нагрузкой')).toBeTruthy();
       expect(screen.getByText(/есть ли что взвешивать/)).toBeTruthy();
     } finally {

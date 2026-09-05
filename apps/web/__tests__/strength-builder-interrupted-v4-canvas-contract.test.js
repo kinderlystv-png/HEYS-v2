@@ -19,11 +19,13 @@ function cssRule(selector) {
 
 describe('strength builder · M7 interrupted-session v4 canvas contract', () => {
   it('renders the interruption as an exclusive decision state before mutable child views', () => {
-    expect(source.indexOf('if (showInterrupted)')).toBeGreaterThan(-1);
-    expect(source.indexOf('if (showInterrupted)')).toBeLessThan(source.indexOf('const CatUI'));
+    const interruptedIdx = source.indexOf('if (showInterrupted)');
+    expect(interruptedIdx).toBeGreaterThan(-1);
+    // ExerciseCardScreen объявляет CatUI раньше; сравниваем с CatUI в BuilderScreen.
+    expect(interruptedIdx).toBeLessThan(source.indexOf('const CatUI', interruptedIdx));
     expect(source).not.toContain("showInterrupted && h('section'");
     expect(source).toContain("className: 'sb-root sb-root--interrupted'");
-    expect(source).toContain("'aria-label': 'Закрыть конструктор'");
+    expect(source).toContain("closeIconButton(onClose, 'Закрыть конструктор')");
     expect(source).not.toMatch(/sb-interrupted-head[\s\S]{0,1000}'aria-label': 'Ещё'/);
   });
 

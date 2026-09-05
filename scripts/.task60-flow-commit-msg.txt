@@ -1,0 +1,8 @@
+fix(strength): task 60 lane 1 test+head fixes for m4/gap6b
+
+- builder_ui: session head title/subtitle for open time/distance exercise
+- interrupted test: CatUI anchor after showInterrupted, closeIconButton
+- proposal-started test: assert unit key in .sb-head-sub only
+- GAP 6b test: plannedVolume with strength builder type fields
+
+Verified: HEYS_DESIGN_GATES=skip vitest 3 files, 18/18 pass.

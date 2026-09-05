@@ -1122,6 +1122,14 @@
 
     function sessionHeadTitle() {
       const PartsLocal = HEYS.StrengthBuilderParts || {};
+      const openExLocal = openIdx >= 0 ? exercises[openIdx] : null;
+      const openUnitLocal = openExLocal ? (openExLocal.unit || 'weight_reps') : '';
+      if (openIdx >= 0 && openExLocal && (openUnitLocal === 'time' || openUnitLocal === 'distance')) {
+        const progress = exerciseWorkProgress(openExLocal);
+        const count = progress.total
+          || (Array.isArray(openExLocal.approaches) ? openExLocal.approaches.length : 0);
+        return (openExLocal.name || 'Без названия') + ' · ' + approachCountLabel(count);
+      }
       return wl.title || (typeof PartsLocal.sessionTitle === 'function'
         ? PartsLocal.sessionTitle(exercises)
         : 'Силовая');
@@ -1134,6 +1142,10 @@
       if (openIdx >= 0 && openExLocal && openUnitLocal === 'weight_reps') {
         const progressKey = exerciseWorkProgressKey(openExLocal);
         if (progressKey) return progressKey;
+      }
+      if (openIdx >= 0 && openExLocal) {
+        const unitLabel = unitEntryLabel(openUnitLocal);
+        if (unitLabel) return unitLabel;
       }
       if (proposalWho && startedAt > 0 && !completedAt) {
         return 'по плану ' + proposalWho + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : '');

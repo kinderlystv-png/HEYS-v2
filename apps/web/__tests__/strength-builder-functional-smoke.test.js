@@ -232,7 +232,11 @@ describe('superset_ui · finish day log snapshot (GAP 6b)', () => {
     expect(snap.rows[1].status).toBe('skipped');
     expect(snap.doneVolume).toBe(ks.trainingTonnage(t).totalVolume);
     expect(snap.plannedVolume).toBe(
-      ks.trainingTonnage({ workoutLog: { exercises: t.planSnapshot.exercises } }).plannedVolume,
+      ks.trainingTonnage({
+        type: 'strength',
+        strengthEntryMode: 'workout_builder',
+        workoutLog: { exercises: t.planSnapshot.exercises },
+      }).plannedVolume,
     );
   });
 
