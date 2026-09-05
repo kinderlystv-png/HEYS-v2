@@ -1,0 +1,66 @@
+{
+  "task": 86,
+  "zone": "strength-builder",
+  "completedAt": "2026-09-05",
+  "groups": {
+    "Исход · правка принята": {
+      "scopedRows": 23,
+      "counts": { "=": 0, "≠": 23, "?": 0 },
+      "neq": [
+        {
+          "reasonCode": "canvas-conflict",
+          "decisionRef": "strength-builder.v4.dc.html:2381",
+          "count": 23,
+          "note": "merged with existing zone disputes «вид · исходы предложения» and «у предложения три исхода»"
+        }
+      ]
+    },
+    "Исход · отказ": {
+      "scopedRows": 18,
+      "counts": { "=": 0, "≠": 18, "?": 0 },
+      "neq": [
+        {
+          "reasonCode": "canvas-conflict",
+          "decisionRef": "strength-builder.v4.dc.html:2381",
+          "count": 18,
+          "note": "merged with existing #809 «вид · исходы предложения»"
+        }
+      ]
+    },
+    "Исход · без ответа": {
+      "scopedRows": 17,
+      "counts": { "=": 0, "≠": 17, "?": 0 },
+      "neq": [
+        {
+          "reasonCode": "canvas-conflict",
+          "decisionRef": "strength-builder.v4.dc.html:2381",
+          "count": 17,
+          "note": "merged with existing #809 «вид · исходы предложения»"
+        }
+      ]
+    },
+    "Конструктор · тренировка идёт · спокойнее": {
+      "scopedRows": 10,
+      "countsInGroupAllRows": { "=": 39, "≠": 11, "?": 0 },
+      "countsScopedOnly": { "=": 0, "≠": 10, "?": 0 },
+      "neq": [
+        {
+          "rows": ["04", "05", "14", "28", "30", "31", "33", "35", "36", "44"],
+          "reasonCode": "canvas-conflict",
+          "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62",
+          "note": "merged with existing CANVAS_CONFLICTS А1б in strength-builder-calm-canvas-contract.test.js; no new canvas-conflict dispute opened"
+        }
+      ]
+    }
+  },
+  "canvasConflictNew": "none — all 68 merged with existing disputes (#809 вид · исходы предложения, #852 у предложения три исхода, UI_V4_FINDINGS А1б/Г4/К)",
+  "remainingQuestion": [],
+  "zoneQuestionTotal": 0,
+  "verification": {
+    "methods": [
+      "canvas data-v per row identity",
+      "product source grep + contract tests (strength-proposal-ui, calm-canvas-contract)"
+    ],
+    "colorRows": "calm 30/33/35 measured via calm-canvas-contract sand+blue paletteCss pattern"
+  }
+}
