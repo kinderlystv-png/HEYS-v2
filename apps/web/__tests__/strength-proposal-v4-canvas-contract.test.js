@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(WEB_DIR, 'strength/heys_strength_proposal_ui_v1.js'), 'utf8');
@@ -414,5 +414,117 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
       'Сделано по прежнему плану', 'не принято',
       'Предложение не блокирует завершение',
     ].forEach((chunk) => expect(actual).toContain(chunk));
+  });
+
+  const work = (weight, reps, done) => ({
+    weightKg: String(weight), reps, done: !!done,
+  });
+
+  function cycleReportTraining() {
+    return {
+      planSnapshot: {
+        exercises: [
+          { name: 'Жим лёжа', approaches: [work(70, 8, false), work(70, 8, false), work(70, 8, false), work(70, 8, false)] },
+          { name: 'Тяга штанги в наклоне', approaches: [work(60, 10, false), work(60, 10, false), work(60, 10, false), work(60, 10, false)] },
+          { name: 'Разведение гантелей', approaches: [work(10, 15, false), work(10, 15, false), work(10, 15, false)] },
+          { name: 'Планка', unit: 'time', approaches: [{ durationSec: 60, done: false }, { durationSec: 60, done: false }, { durationSec: 60, done: false }] },
+        ],
+      },
+      workoutLog: {
+        exercises: [
+          { name: 'Жим лёжа', approaches: [work(75, 8, true), work(75, 8, true), work(75, 8, true), work(75, 8, true)] },
+          { name: 'Тяга штанги в наклоне', approaches: [work(60, 10, true), work(60, 10, true), work(60, 10, true), work(60, 10, true)] },
+          { name: 'Планка', unit: 'time', approaches: [{ durationSec: 60, done: true }, { durationSec: 60, done: true }, { durationSec: 60, done: true }] },
+        ],
+      },
+    };
+  }
+
+  function completedCycleFixture() {
+    const program = { weekRange: 'недели 1–2', startDate: '2026-08-01' };
+    const days = [
+      { date: '2026-08-04', status: 'done', dayLabel: 'Верх тела A', weekIndex: 1 },
+      { date: '2026-08-06', status: 'done', dayLabel: 'Низ тела A', weekIndex: 1 },
+      { date: '2026-08-08', status: 'done', dayLabel: 'Верх тела B', weekIndex: 1 },
+      { date: '2026-08-11', status: 'moved', dayLabel: 'Низ B', weekIndex: 2, movedTo: '2026-08-16' },
+      { date: '2026-08-13', status: 'skipped', dayLabel: 'Верх C', weekIndex: 2 },
+      { date: '2026-08-16', status: 'done', dayLabel: 'Низ B', weekIndex: 2 },
+    ];
+    const training = cycleReportTraining();
+    const readDay = (dateKey) => (
+      dateKey === '2026-08-08'
+        ? { trainings: [training] }
+        : { trainings: [] }
+    );
+    return { program, days, readDay, training };
+  }
+
+  it('CycleReportScreen: completed cycle shows plan-vs-done report shell', () => {
+    const fx = completedCycleFixture();
+    const snapshot = Parts.buildCycleReportSnapshot(
+      fx.program, fx.days, fx.readDay, { training: fx.training },
+    );
+    const style = document.createElement('style');
+    style.textContent = paletteCss('sand');
+    document.head.appendChild(style);
+    try {
+      const { container } = render(React.createElement(Parts.CycleReportScreen, {
+        snapshot,
+        onClose: () => {},
+      }));
+      expect(screen.getByLabelText('Закрыть')).toBeTruthy();
+      expect(screen.getByText('Отчёт по циклу')).toBeTruthy();
+      expect(screen.getByText(/недели 1–2 · \d+ назначено/)).toBeTruthy();
+      expect(screen.getByText(/План выполнен на \d+ %/)).toBeTruthy();
+      expect(screen.getByText('Жим лёжа')).toBeTruthy();
+      expect(screen.getByText('Написать куратору')).toBeTruthy();
+      expect(screen.getByText('Отчёт за неделю')).toBeTruthy();
+      expect(container.querySelector('.sb-cycle-report.sb-plan-vs-done')).toBeTruthy();
+      expect(container.querySelector('.sb-finish-head')).toBeTruthy();
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('PeriodReportScreen: incomplete period shows outcomes and debt card', () => {
+    const fx = completedCycleFixture();
+    const snapshot = Parts.buildPeriodReportSnapshot(
+      fx.program, fx.days, fx.readDay, { incomplete: true },
+    );
+    const style = document.createElement('style');
+    style.textContent = paletteCss('sand');
+    document.head.appendChild(style);
+    try {
+      render(React.createElement(Parts.PeriodReportScreen, {
+        snapshot,
+        onClose: () => {},
+      }));
+      expect(screen.getByText('Отчёт за период')).toBeTruthy();
+      expect(screen.getByText('Сделано как назначено')).toBeTruthy();
+      expect(screen.getByText('Перенесено')).toBeTruthy();
+      expect(screen.getByText('Пропущено')).toBeTruthy();
+      expect(screen.getByText('Своих, вне плана')).toBeTruthy();
+      expect(screen.getByText('Пропущенная не считается сделанной')).toBeTruthy();
+      expect(screen.getByText(/Отчёт дня и отчёт периода/)).toBeTruthy();
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('CycleScreen: «Отчёт по циклу ›» wires navigation callback', () => {
+    const fx = completedCycleFixture();
+    const onOpenCycleReport = vi.fn();
+    const snapshot = Parts.buildProgramCycleSnapshot
+      ? Parts.buildProgramCycleSnapshot(fx.program, fx.days, fx.readDay, { today: '2026-08-09' })
+      : null;
+    render(React.createElement(Parts.CycleScreen, {
+      program: fx.program,
+      days: fx.days,
+      snapshot,
+      onClose: () => {},
+      onOpenCycleReport,
+    }));
+    fireEvent.click(screen.getByText('Отчёт по циклу'));
+    expect(onOpenCycleReport).toHaveBeenCalledTimes(1);
   });
 });

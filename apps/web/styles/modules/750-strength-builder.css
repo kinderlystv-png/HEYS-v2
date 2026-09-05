@@ -7624,3 +7624,124 @@
   color: var(--sb-mut);
   text-wrap: pretty;
 }
+
+.sb-cycle-report-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 13px;
+  border: none;
+  border-radius: 14px;
+  background: var(--c1, var(--sb-card));
+  font: 600 12.5px/1.3 Figtree, sans-serif;
+  color: var(--ac, var(--sb-acc));
+  cursor: pointer;
+  text-align: left;
+}
+
+.sb-cycle-report-chevron {
+  flex: none;
+  font: 600 14px/1 Figtree, sans-serif;
+  color: var(--ac, var(--sb-acc));
+}
+
+/* ── Г6 · Отчёт за период ───────────────────────────────────────────────── */
+
+.sb-period-report .sb-period-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px 24px;
+}
+
+.sb-period-outcomes {
+  margin-top: 12px;
+  padding: 0 13px;
+  border-radius: 14px;
+  background: var(--sb-card, var(--c1));
+  border: 1px solid var(--sb-br, rgba(var(--ink, 0, 0, 0), 0.1));
+}
+
+.sb-period-outcome-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(var(--ink, 0, 0, 0), 0.08);
+}
+
+.sb-period-outcome-row.is-last,
+.sb-period-outcome-row:last-child {
+  border-bottom: none;
+}
+
+.sb-period-outcome-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font: 500 12.5px/1.35 Figtree, sans-serif;
+  color: var(--tx, var(--sb-ink));
+}
+
+.sb-period-outcome-detail {
+  font: 500 11px/1.3 Figtree, sans-serif;
+  color: rgba(var(--ink, 0, 0, 0), 0.56);
+}
+
+.sb-period-outcome-val {
+  flex: none;
+  font: 700 12.5px/1 Figtree, sans-serif;
+  color: var(--tx, var(--sb-ink));
+}
+
+.sb-period-outcome-val.is-ok {
+  color: var(--gr, var(--sb-ok));
+}
+
+.sb-period-outcome-val.is-bad {
+  color: var(--val-bad, #a83c22);
+}
+
+.sb-period-outcome-val.is-muted {
+  font-weight: 600;
+  color: rgba(var(--ink, 0, 0, 0), 0.55);
+}
+
+.sb-period-debt-card {
+  margin-top: 10px;
+  padding: 12px 13px;
+  border-radius: 14px;
+  background: var(--tint, var(--sb-tint));
+}
+
+.sb-period-debt-title {
+  font: 700 12.5px/1.35 Figtree, sans-serif;
+  color: var(--ac2, var(--sb-acc2));
+}
+
+.sb-period-debt-prose {
+  margin: 6px 0 0;
+  font: 500 12px/1.45 Figtree, sans-serif;
+  color: rgba(var(--ink, 0, 0, 0), 0.6);
+}
+
+.sb-period-cta {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 48px;
+}
+
+.sb-period-footnote {
+  margin: 12px 0 0;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: var(--sb-mut);
+  text-wrap: pretty;
+}
+
+.sb-cycle-report.sb-plan-vs-done .sb-finish-head .sb-icon-btn {
+  flex: none;
+}

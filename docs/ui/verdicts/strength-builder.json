@@ -689,7 +689,7 @@
     },
     "вид · отчёт цикла": {
       "v": "=",
-      "f": "PlanVsDoneScreen Г2: .sb-plan-vs-done .sb-plan-vs-cell.is-assigned — background var(--bg), inset 1px rgba(var(--ink),.1) — 731-ui-v4-activity.css:1808-1810; смоук strength-builder-plan-vs-done-v4-canvas-contract.test.js",
+      "f": "CycleReportScreen Г2: heys_strength_proposal_ui_v1.js:1850+ sb-finish-head+✕ «Отчёт по циклу»+cycleReportHeaderKey; planVsDoneBodyEl reuse .sb-plan-vs-*; вход CycleScreen .sb-cycle-report-link→openCycleReport; strength-proposal-v4-canvas-contract.test.js",
       "h": "78857355eb48"
     },
     "вид · итог программы": {
@@ -2325,7 +2325,7 @@
     },
     "Программа · назначено против сделано · 03": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2329 — заголовок «Назначено против сделано» (.sb-cycle-title), сравнение дня не отчёт цикла",
+      "f": "heys_strength_proposal_ui_v1.js:1862 — заголовок «Отчёт по циклу» на CycleReportScreen (Г2), не in-session PlanVsDoneScreen",
       "h": "73bfa3bf46c4"
     },
     "Программа · назначено против сделано · 04": {
@@ -8676,11 +8676,9 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2345"
     },
     "вид · отчёт за период": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "c74307af927a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2386"
+      "v": "=",
+      "f": "PeriodReportScreen Г6: heys_strength_proposal_ui_v1.js:1959+ sb-finish-head «Отчёт за период»; .sb-period-outcomes четыре исхода; debt card+CTA+footnote; 750-strength-builder.css:7628+; strength-proposal-v4-canvas-contract.test.js",
+      "h": "c74307af927a"
     },
     "снято · проверка «класс красится инлайном не везде»": {
       "v": "—",
@@ -9393,137 +9391,99 @@
       ]
     },
     "Программа · отчёт за период · 01": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "175bdcc2e73a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2929"
+      "v": "=",
+      "f": "heys_strength_proposal_ui_v1.js:1965+ — .sb-finish-head шапка PeriodReportScreen; strength-proposal-v4-canvas-contract.test.js",
+      "h": "175bdcc2e73a"
     },
     "Программа · отчёт за период · 02": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "07ffbada0ee7",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2930"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-report .sb-head-title flex column gap 3px",
+      "h": "07ffbada0ee7"
     },
     "Программа · отчёт за период · 03": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "b921384afa53",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2931"
+      "v": "=",
+      "f": "heys_strength_proposal_ui_v1.js:1970 — «Отчёт за период» заголовок экрана",
+      "h": "b921384afa53"
     },
     "Программа · отчёт за период · 04": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "dcf98555d97b",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2932"
+      "v": "=",
+      "f": "heys_strength_proposal_ui_v1.js:1722 cycleReportHeaderKey → «недели 1–2 · N назначено» в .sb-head-sub",
+      "h": "dcf98555d97b"
     },
     "Программа · отчёт за период · 05": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "c629f84f9712",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2933"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-scroll overflow-y auto padding 12px 16px 24px",
+      "h": "c629f84f9712"
     },
     "Программа · отчёт за период · 06": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "f06d6e12de2e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2934"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcomes margin-top 12px",
+      "h": "f06d6e12de2e"
     },
     "Программа · отчёт за период · 07": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2935"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcome-row flex space-between",
+      "h": "af81bb6e54c6"
     },
     "Программа · отчёт за период · 08": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "e642fe24d68f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2936"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcome-label color var(--tx)",
+      "h": "e642fe24d68f"
     },
     "Программа · отчёт за период · 09": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "308ab4b3f76f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2937"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcome-val.is-ok color var(--gr) 700 12.5px",
+      "h": "308ab4b3f76f"
     },
     "Программа · отчёт за период · 10": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "647d851e5bdf",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2938"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcome-detail 11px/1.3 ink 56%",
+      "h": "647d851e5bdf"
     },
     "Программа · отчёт за период · 11": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "2c0ad8beb0b0",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2939"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcome-val tone tx для перенесено",
+      "h": "2c0ad8beb0b0"
     },
     "Программа · отчёт за период · 12": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "fb2835f43636",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2940"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcome-val.is-bad color var(--val-bad)",
+      "h": "fb2835f43636"
     },
     "Программа · отчёт за период · 13": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "6b286135ed76",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2941"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcome-row.is-last border-bottom none",
+      "h": "6b286135ed76"
     },
     "Программа · отчёт за период · 14": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "75938a2f8dc2",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2942"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-outcome-val.is-muted 600 ink 55%",
+      "h": "75938a2f8dc2"
     },
     "Программа · отчёт за период · 15": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "19d657373049",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2943"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-debt-card margin-top 10px background var(--tint)",
+      "h": "19d657373049"
     },
     "Программа · отчёт за период · 16": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "caa48b8f23b8",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2944"
+      "v": "=",
+      "f": "heys_strength_proposal_ui_v1.js:1979 PERIOD_REPORT_DEBT_TITLE ac2 12.5px/700",
+      "h": "caa48b8f23b8"
     },
     "Программа · отчёт за период · 17": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "d82aff77f2cc",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2945"
+      "v": "=",
+      "f": "heys_strength_proposal_ui_v1.js:1980 PERIOD_REPORT_DEBT_PROSE 12px ink 60%",
+      "h": "d82aff77f2cc"
     },
     "Программа · отчёт за период · 18": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "1b6563122788",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2946"
+      "v": "=",
+      "f": "750-strength-builder.css .sb-period-cta margin-top 12px min-height 48px",
+      "h": "1b6563122788"
     },
     "Программа · отчёт за период · 19": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "c17297c7846f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2947"
+      "v": "=",
+      "f": "heys_strength_proposal_ui_v1.js:1987 PERIOD_REPORT_FOOTNOTE сноска",
+      "h": "c17297c7846f"
     },
     "Спорное · тап по закрытому во время отдыха · 19": {
       "v": "=",
@@ -9583,11 +9543,9 @@
       "h": "ff1ae87aa25f"
     },
     "Программа · отчёт за период · текст": {
-      "v": "≠",
-      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр.",
-      "h": "2b252a3710bf",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4076"
+      "v": "=",
+      "f": "strength-proposal-v4-canvas-contract.test.js PeriodReportScreen smoke: исходы, debt card, footnote copy chain",
+      "h": "2b252a3710bf"
     },
     "долг канваса · отношение к канону": {
       "v": "—",

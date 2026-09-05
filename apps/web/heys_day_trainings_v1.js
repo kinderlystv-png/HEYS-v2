@@ -3457,7 +3457,21 @@
             mondayOfWeek: mondayOfWeek,
             addDaysToKey: addDaysToKey
           },
-          onClose: api.close
+          onClose: api.close,
+          onOpenCycleReport: Parts.openCycleReport
+            ? function () {
+              Parts.openCycleReport({
+                program: state.program,
+                days: state.days,
+                readDay: readDayFromStore,
+                snapshotOpts: {
+                  today: today,
+                  mondayOfWeek: mondayOfWeek,
+                  addDaysToKey: addDaysToKey
+                },
+              });
+            }
+            : undefined
         })
       });
     }
