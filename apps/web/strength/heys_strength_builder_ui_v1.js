@@ -1143,10 +1143,6 @@
         const progressKey = exerciseWorkProgressKey(openExLocal);
         if (progressKey) return progressKey;
       }
-      if (openIdx >= 0 && openExLocal) {
-        const unitLabel = unitEntryLabel(openUnitLocal);
-        if (unitLabel) return unitLabel;
-      }
       if (proposalWho && startedAt > 0 && !completedAt) {
         return 'по плану ' + proposalWho + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : '');
       }
