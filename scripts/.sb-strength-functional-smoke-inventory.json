@@ -1,0 +1,249 @@
+{
+  "generatedAt": "2026-09-05",
+  "scope": "Lane 3 Task 40 PIECE 2 — functional smoke (vitest/jsdom), superset_ui + proposal_ui",
+  "summary": {
+    "scenariosTotal": 8,
+    "subScenariosTotal": 22,
+    "coveredBefore": 16,
+    "partialBefore": 6,
+    "gapsBefore": 6,
+    "gapsClosed": 0,
+    "note": "coveredBefore counts leaf sub-scenarios with existing functional simulation (not canvas-contract-only). partialBefore = kernel/builder elsewhere but missing superset_ui/proposal_ui functional path."
+  },
+  "scenarios": [
+    {
+      "id": 1,
+      "name": "Start workout: empty, from plan, repeat last",
+      "status": "COVERED",
+      "subScenarios": [
+        {
+          "id": "1a",
+          "name": "empty — «Собрать свою»",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"]
+        },
+        {
+          "id": "1b",
+          "name": "from plan — owner acknowledgement",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"]
+        },
+        {
+          "id": "1c",
+          "name": "repeat last session",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Add exercise: catalog + custom",
+      "status": "COVERED",
+      "subScenarios": [
+        {
+          "id": "2a",
+          "name": "catalog pick → exercise card",
+          "status": "COVERED",
+          "tests": [
+            "apps/web/__tests__/strength-builder-exercise-card-reachability.test.js",
+            "apps/web/__tests__/strength-builder-ui.test.js"
+          ]
+        },
+        {
+          "id": "2b",
+          "name": "custom exercise create flow",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-catalog-screen-reachability.test.js"]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Log sets: weight+reps, time, distance, bodyweight+added",
+      "status": "PARTIAL",
+      "subScenarios": [
+        {
+          "id": "3a",
+          "name": "weight+reps",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"]
+        },
+        {
+          "id": "3b",
+          "name": "time (durationSec)",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"]
+        },
+        {
+          "id": "3c",
+          "name": "distance (distanceM)",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"]
+        },
+        {
+          "id": "3d",
+          "name": "bodyweight + added weight → tonnage",
+          "status": "GAP",
+          "tests": ["apps/web/__tests__/kernel-strength-approach-schema.test.js"],
+          "gapReason": "kernel only; superset_ui exerciseVolumeKg/approachVolumeKg + ApproachRow path not functionally simulated",
+          "priority": "data-corruption"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Warmup, drop set, superset rounds, triset",
+      "status": "COVERED",
+      "subScenarios": [
+        {
+          "id": "4a",
+          "name": "warmup label / out of tonnage",
+          "status": "COVERED",
+          "tests": [
+            "apps/web/__tests__/strength-builder-ui.test.js",
+            "apps/web/__tests__/kernel-strength-approach-schema.test.js"
+          ]
+        },
+        {
+          "id": "4b",
+          "name": "drop set stages",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"]
+        },
+        {
+          "id": "4c",
+          "name": "superset rounds + rest",
+          "status": "COVERED",
+          "tests": [
+            "apps/web/__tests__/strength-builder-ui.test.js",
+            "apps/web/__tests__/kernel-strength-supersets.test.js"
+          ]
+        },
+        {
+          "id": "4d",
+          "name": "triset work screen",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-superset-screen-reachability.test.js"]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Rest ring + timer event; leave page and return",
+      "status": "PARTIAL",
+      "subScenarios": [
+        {
+          "id": "5a",
+          "name": "rest ring display",
+          "status": "COVERED",
+          "tests": [
+            "apps/web/__tests__/strength-builder-ui.test.js",
+            "apps/web/__tests__/strength-builder-validation-v4-canvas-contract.test.js"
+          ]
+        },
+        {
+          "id": "5b",
+          "name": "timer events (+10, skip, collapse)",
+          "status": "GAP",
+          "tests": [],
+          "gapReason": "RestRing callbacks not wired in functional smoke; builder-ui covers dock but not Parts.RestRing event contract",
+          "priority": "behavior"
+        },
+        {
+          "id": "5c",
+          "name": "leave/return — remount preserves elapsed rest/session",
+          "status": "GAP",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"],
+          "gapReason": "lifecycle via BuilderScreen only; SummaryCard/RestRing remount through superset_ui Parts not isolated",
+          "priority": "data-corruption"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Finish session: summary, day log, tonnage recalc",
+      "status": "PARTIAL",
+      "subScenarios": [
+        {
+          "id": "6a",
+          "name": "finish screen / completedAt patch",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-builder-ui.test.js"]
+        },
+        {
+          "id": "6b",
+          "name": "plan vs done day log snapshot",
+          "status": "GAP",
+          "tests": ["apps/web/__tests__/strength-builder-plan-vs-done-v4-canvas-contract.test.js"],
+          "gapReason": "canvas geometry only; buildPlanVsDoneSnapshot edge cases (extra live exercise, volume fields) not in functional smoke",
+          "priority": "data-corruption"
+        },
+        {
+          "id": "6c",
+          "name": "tonnage recalc matches kernel",
+          "status": "GAP",
+          "tests": [
+            "apps/web/__tests__/kernel-strength.test.js",
+            "apps/web/__tests__/kernel-strength-approach-schema.test.js"
+          ],
+          "gapReason": "kernel tested; superset_ui exerciseVolumeKg not cross-checked with trainingTonnage/dayTonnage",
+          "priority": "data-corruption"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Curator proposal: accept, reject, weight edit in session",
+      "status": "COVERED",
+      "subScenarios": [
+        {
+          "id": "7a",
+          "name": "accept proposal",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-proposal-ui.test.js"]
+        },
+        {
+          "id": "7b",
+          "name": "reject / expire proposal",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-proposal-ui.test.js"]
+        },
+        {
+          "id": "7c",
+          "name": "weight edit visible in session",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/strength-proposal-ui.test.js"]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Early start #53: both dates trace, cold-cache refuse",
+      "status": "COVERED",
+      "subScenarios": [
+        {
+          "id": "8a",
+          "name": "transfer trace on source and target dates",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/day-plan-early-start-v53.test.js"]
+        },
+        {
+          "id": "8b",
+          "name": "cold-cache refuse + PlanCard disabled",
+          "status": "COVERED",
+          "tests": ["apps/web/__tests__/day-plan-early-start-v53.test.js"]
+        }
+      ]
+    }
+  ],
+  "gapsToImplement": [
+    "3d — exerciseVolumeKg/approachVolumeKg bodyweight+added vs kernel",
+    "5b — RestRing +10/skip/collapse event callbacks",
+    "5c — SummaryCard remount continues session timer",
+    "6b — buildPlanVsDoneSnapshot integrity (extra exercise, volumes)",
+    "6c — exerciseVolumeKg matches trainingTonnage (drop, warmup skip)",
+    "3d/6c — ApproachRow empty-field edges via Parts (time blocks, bw allows empty weight)"
+  ],
+  "forbiddenTouch": ["heys_strength_builder_ui_v1.js", "heys_strength_catalog_ui_v1.js"]
+}
