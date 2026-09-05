@@ -12,8 +12,10 @@ const BASE_CSS = fs.readFileSync(
   'utf8',
 );
 const SHELL_SOURCE = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_v1.js'), 'utf8');
-const PAYWALL_SOURCE = fs.readFileSync(path.join(WEB_DIR, 'heys_paywall_v1.js'), 'utf8');
-const PAYWALL_CSS = PAYWALL_SOURCE.match(/const PAYWALL_STYLES = `([\s\S]*?)`;/)?.[1] || '';
+const PAYWALL_CSS = fs.readFileSync(
+  path.join(WEB_DIR, 'styles/modules/735-ui-v4-subscription.css'),
+  'utf8',
+);
 
 function mountPalette(themeId) {
   document.documentElement.setAttribute('data-theme-id', themeId);

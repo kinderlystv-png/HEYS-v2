@@ -844,11 +844,6 @@
     const [error, setError] = useState(null);
     const [ofertaAccepted, setOfertaAccepted] = useState(false);
 
-    React.useEffect(() => {
-      if (embedded || typeof document === 'undefined') return;
-      window.HEYS?.Paywall?.injectStyles?.();
-    }, [embedded]);
-
     /**
      * Логирование согласия payment_oferta перед оплатой (ст. 438 ГК РФ)
      */
@@ -1032,8 +1027,6 @@
 
     if (embedded) return body;
 
-    window.HEYS?.Paywall?.injectStyles?.();
-
     return h('div', {
       className: 'paywall-overlay',
       onClick: (e) => e.target === e.currentTarget && onCancel?.(),
@@ -1069,8 +1062,6 @@
     );
 
     if (embedded) return body;
-
-    window.HEYS?.Paywall?.injectStyles?.();
 
     return h('div', {
       className: 'paywall-overlay',
@@ -1134,10 +1125,6 @@
     const [status, setStatus] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showPayment, setShowPayment] = useState(false);
-
-    useEffect(() => {
-      HEYS.Paywall?.injectStyles?.();
-    }, []);
 
     useEffect(() => {
       loadStatus();

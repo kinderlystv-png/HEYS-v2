@@ -12,6 +12,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PAYWALL_SOURCE = fs.readFileSync(path.join(WEB_DIR, 'heys_paywall_v1.js'), 'utf8');
+const PAYWALL_CSS = fs.readFileSync(
+  path.join(WEB_DIR, 'styles/modules/735-ui-v4-subscription.css'),
+  'utf8',
+);
 
 const originalHEYS = window.HEYS;
 const originalReact = window.React;
@@ -93,7 +97,7 @@ describe('subscription cancel queue confirm', () => {
     expect(PAYWALL_SOURCE).toContain('Отменить заявку на пробный период?');
     expect(PAYWALL_SOURCE).toMatch(/className: 'btn'/);
     expect(PAYWALL_SOURCE).toMatch(/className: 'btnq'/);
-    expect(PAYWALL_SOURCE).toContain('var(--v4-bad-text');
+    expect(PAYWALL_CSS).toContain('var(--v4-bad-text');
   });
 
   it('path B: «Оставить» closes confirm and keeps queue unchanged', async () => {

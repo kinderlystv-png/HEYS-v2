@@ -12,10 +12,11 @@ const PALETTE_CSS = fs.readFileSync(
   path.join(WEB_DIR, 'styles/modules/002-ui-v4-palette-roles.css'),
   'utf8',
 );
-const PAYWALL_SOURCE = fs.readFileSync(path.join(WEB_DIR, 'heys_paywall_v1.js'), 'utf8');
+const PAYWALL_CSS = fs.readFileSync(
+  path.join(WEB_DIR, 'styles/modules/735-ui-v4-subscription.css'),
+  'utf8',
+);
 const SUBS_SOURCE = fs.readFileSync(path.join(WEB_DIR, 'heys_subscriptions_v1.js'), 'utf8');
-
-const PAYWALL_CSS = PAYWALL_SOURCE.match(/const PAYWALL_STYLES = `([\s\S]*?)`;/)?.[1] || '';
 
 const EXPECT = Object.freeze({
   sand: { card: '#f7efe2', hero: '#efe3cf', actText: '#8a4a20' },
@@ -97,7 +98,7 @@ describe('subscription package A · sub-screen colors sand/blue', () => {
   }
 });
 
-describe('subscription package A · PAYWALL_STYLES contract', () => {
+describe('subscription package A · subscription CSS contract', () => {
   it('declares v4 sub-screen geometry', () => {
     expect(PAYWALL_CSS).toContain('.sub-screen__status-card');
     expect(PAYWALL_CSS).toMatch(/border-radius:\s*20px/);
