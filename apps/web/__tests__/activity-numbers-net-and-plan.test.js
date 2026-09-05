@@ -206,8 +206,11 @@ describe('C · третья тренировка не теряется', () => {
   it('строка «Тренировки» яруса суммирует все три слота', () => {
     renderActivity();
     const row = document.querySelector('.activity-v4-today__row');
+    const valueWrap = row.querySelector('.activity-v4-today__value');
     expect(row.querySelector('.activity-v4-today__name').textContent).toBe('Тренировки');
-    expect(row.querySelector('.activity-v4-today__value').textContent).toBe('190 ккал');
+    // Ккал и шеврон — соседние узлы (контракт «журнал подходов · 12/13»).
+    expect(valueWrap.querySelector('span').textContent).toBe('190 ккал');
+    expect(valueWrap.querySelector('i').textContent).toBe('›');
   });
 
   it('строка «Тренировки» в разборе показывает ту же сумму', () => {
@@ -221,7 +224,9 @@ describe('C · третья тренировка не теряется', () => {
 
   it('без третьей тренировки поведение прежнее', () => {
     renderActivity({ train3k: 0 });
-    expect(document.querySelector('.activity-v4-today__value').textContent).toBe('150 ккал');
+    const valueWrap = document.querySelector('.activity-v4-today__value');
+    expect(valueWrap.querySelector('span').textContent).toBe('150 ккал');
+    expect(valueWrap.querySelector('i').textContent).toBe('›');
   });
 });
 
