@@ -572,6 +572,7 @@
 
     .sub-screen__body {
       flex: 1 1 auto;
+      padding: 0 18px;
     }
 
     .sub-screen__status-card {
@@ -585,10 +586,10 @@
     }
 
     .sub-screen__kick {
-      font: 600 11px/1 Figtree, system-ui, sans-serif;
-      letter-spacing: 0.08em;
+      font: 700 10px/1 Figtree, system-ui, sans-serif;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+      color: var(--v4-act-text, #8a4a20);
     }
 
     .sub-screen__kick--danger {
@@ -627,10 +628,10 @@
 
     .sub-screen__tier {
       margin: 18px 0 10px;
-      font: 600 11px/1 Figtree, system-ui, sans-serif;
-      letter-spacing: 0.08em;
+      font: 700 10px/1 Figtree, system-ui, sans-serif;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+      color: var(--v4-act-text, #8a4a20);
     }
 
     .sub-screen__features {

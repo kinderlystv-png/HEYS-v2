@@ -88,8 +88,8 @@
       "h": "f21d63340325"
     },
     "вид · экран подписки · пробный период": {
-      "v": "?",
-      "f": "Не сверено после правки кода: основание описывало #f9fafb в apps/web/heys_subscriptions_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_subscriptions_v1.js:1075: SubscriptionSection legacy inline #f9fafb radius 12 padding 16 — не v4 card --c1 radius 20",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:577-715 PAYWALL_STYLES sub-screen: status-card --v4-surface r20 p16; kick/tier --v4-act-text 700 10px/.16em; headline 800 26px; body 0 18px; footnote/support. heys_subscriptions_v1.js:1208-1226 trial SubscriptionSection. sand card #f7efe2 blue #eef3f9; act-text sand #8a4a20 blue #1d5e96 (subscription-package-a-v4.test.js)",
       "h": "0ebc8e8a8d32"
     },
     "вид · экран подписки · активна": {
@@ -141,7 +141,7 @@
     "вид · карточка тарифа": {
       "v": "?",
       "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
-      "h": "48d05dbb2183"
+      "h": "5ec06fc7903f"
     },
     "вид · блок пробного периода": {
       "v": "?",
@@ -151,7 +151,7 @@
     "вид · проверьте заказ": {
       "v": "?",
       "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
-      "h": "6ffb8f94cab0"
+      "h": "dd6e7f9b3636"
     },
     "вид · оплата прошла": {
       "v": "?",
@@ -377,9 +377,11 @@
       "naKind": "demo-only"
     },
     "Подписка · приветствие · 02": {
-      "v": "?",
-      "f": "Не сверено после правки кода: основание описывало blur(4px) в apps/web/heys_subscriptions_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_subscriptions_v1.js:1369: PAYWALL_STYLES .paywall-overlay blur(4px)",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1460-1469: WelcomeFirstLogin scrim rgba(0,0,0,.55) inline — нет backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px))",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · приветствие · 03": {
       "v": "≠",
@@ -389,9 +391,11 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · баннер сверху · 01": {
-      "v": "?",
-      "f": "Не сверено после правки кода: основание описывало var(--v4-hero) в apps/web/heys_paywall_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_paywall_v1.js:444: .readonly-banner background var(--v4-hero) padding 12px 14px — не --tint 10/18 min-height 44",
-      "h": "da71e6d2b10a"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:486-489: .readonly-banner background var(--v4-hero) padding 12px 14px — не --tint 10/18 min-height 44",
+      "h": "da71e6d2b10a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · баннер сверху · 02": {
       "v": "≠",
@@ -488,9 +492,11 @@
       "naKind": "demo-only"
     },
     "Подписка · контакт поддержки · 02": {
-      "v": "?",
-      "f": "Не сверено после правки кода: основание описывало blur(4px) в apps/web/heys_subscriptions_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_subscriptions_v1.js:1219: PAYWALL_STYLES .paywall-overlay blur(4px)",
-      "h": "3f52b0853401"
+      "v": "≠",
+      "f": "apps/web/heys_subscriptions_v1.js:1307-1311: ContactCuratorScreen inline padding — нет paywall-overlay scrim blur(var(--v4-modal-backdrop-blur, 2.5px))",
+      "h": "3f52b0853401",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · контакт поддержки · 03": {
       "v": "≠",
@@ -730,9 +736,9 @@
       "h": "78fabf7bf8c3"
     },
     "Подписка · проверьте заказ · 07": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:866: .paywall-order-period font 500 11px/1; margin-top 4px «за 30 дней»",
-      "h": "5a0b7ccb4f81"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:866: .paywall-order-period font 500 11px/1; margin-top 4px «за 30 дней»",
+      "h": "88205a677667"
     },
     "Подписка · проверьте заказ · 08": {
       "v": "=",
@@ -965,8 +971,8 @@
       "naKind": "demo-only"
     },
     "Подписка · очередь · заявка подана · 02": {
-      "v": "?",
-      "f": "Не сверено после правки кода: основание описывало blur(4px) в apps/web/heys_paywall_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:51-56: .paywall-overlay background var(--v4-modal-backdrop-dim); blur var(--v4-modal-backdrop-blur, 2.5px)",
       "h": "3f52b0853401"
     },
     "Подписка · очередь · заявка подана · 03": {
@@ -1033,8 +1039,8 @@
       "naKind": "demo-only"
     },
     "Подписка · очередь · место освободилось · 02": {
-      "v": "?",
-      "f": "Не сверено после правки кода: основание описывало blur(4px) в apps/web/heys_paywall_v1.js, чего в файле больше нет — экран свели уже после того, как вердикт написали. Возвращено в вопрос до замера. Прежде: apps/web/heys_paywall_v1.js:549: PAYWALL_STYLES .paywall-overlay blur(4px)",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:51-56: .paywall-overlay background var(--v4-modal-backdrop-dim); blur var(--v4-modal-backdrop-blur, 2.5px)",
       "h": "3f52b0853401"
     },
     "Подписка · очередь · место освободилось · 03": {
@@ -1402,24 +1408,24 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · тарифы · места есть · текст": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
-      "h": "1bfbaefc5a30"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
+      "h": "efecadabfb06"
     },
     "Подписка · тарифы · мест нет · текст": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
-      "h": "3193079b89e4"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
+      "h": "3ccbba9330f9"
     },
     "Подписка · тарифы · Pro Спорт · текст": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
-      "h": "e74e583a87e3"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
+      "h": "cc0cc0e423ab"
     },
     "Подписка · проверьте заказ · текст": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
-      "h": "2efb43ef7426"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
+      "h": "f9542029d1b3"
     },
     "Подписка · оплата прошла · текст": {
       "v": "=",
@@ -1427,9 +1433,9 @@
       "h": "1a8e874919aa"
     },
     "Подписка · экран · активна · текст": {
-      "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js: missing: Pro · активна, до 3 октября, 7 990 ₽ в месяц · оплачено до этой даты",
-      "h": "f907bddf0afc",
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js: missing: Pro · активна, до 3 октября, 7 990 ₽ в месяц · оплачено до этой даты",
+      "h": "5fdf75246faf",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
@@ -1439,16 +1445,16 @@
       "h": "ed7dc2c35921"
     },
     "Подписка · очередь · заявка подана · текст": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: missing copy: Оформить Pro",
-      "h": "0314add19307",
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js: missing copy: Оформить Pro",
+      "h": "f684d63fa6af",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · очередь · место освободилось · текст": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:549: copy chain «Место освободилось · Начать пробный период · на подтверждение» в paywall/subscriptions",
-      "h": "88d83d9b62d0"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:549: copy chain «Место освободилось · Начать пробный период · на подтверждение» в paywall/subscriptions",
+      "h": "d3c1d40fb2ea"
     }
   },
   "frames": {
