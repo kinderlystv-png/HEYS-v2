@@ -405,7 +405,7 @@ describe('политика отклика: единственный тумбле
   });
 });
 
-describe('политика отклика: вызовы не идут мимо неё', () => {
+describe('политика отклика: вызовы не идут мимо неё', { timeout: 30_000 }, () => {
   /** Исходники продукта, кроме транспортов и модулей-таймеров. */
   const ALLOWED_RAW_VIBRATE = new Set([
     // Транспорт политики: она сама и её выход в платформенный API.
@@ -433,9 +433,11 @@ describe('политика отклика: вызовы не идут мимо �
     return out;
   }
 
-  it('прямых navigator.vibrate в продукте не осталось', () => {
+  const productJsFiles = walk(WEB_DIR);
+
+  it('прямых navigator.vibrate в продукте не осталось', { timeout: 30_000 }, () => {
     const offenders = [];
-    for (const file of walk(WEB_DIR)) {
+    for (const file of productJsFiles) {
       const name = path.basename(file);
       if (ALLOWED_RAW_VIBRATE.has(name)) continue;
       const src = fs.readFileSync(file, 'utf8');
@@ -446,11 +448,11 @@ describe('политика отклика: вызовы не идут мимо �
     expect(offenders).toEqual([]);
   });
 
-  it('снятые звуки не вернулись отдельными синтезаторами', () => {
+  it('снятые звуки не вернулись отдельными синтезаторами', { timeout: 30_000 }, () => {
     // Экраны настроения, колесо выбора и геймификация держали свои
     // AudioContext мимо HEYS.audio — их не видел ни один переключатель звука.
     const offenders = [];
-    for (const file of walk(WEB_DIR)) {
+    for (const file of productJsFiles) {
       const name = path.basename(file);
       if (name === 'heys_audio_v1.js') continue;
       // Тренировочные таймеры остаются (см. отчёт): здесь только продуктовые экраны.

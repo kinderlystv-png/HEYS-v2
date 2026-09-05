@@ -1,30 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { chromium } from '@playwright/test';
 import { afterAll, describe, expect, it } from 'vitest';
+
+import { closePlaywrightBrowser, getPlaywrightBrowser } from './helpers/playwright-browser.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/750-strength-builder.css'), 'utf8');
 const BUILDER = fs.readFileSync(path.resolve(__dirname, '../strength/heys_strength_builder_ui_v1.js'), 'utf8');
 
-let browser;
-let browserPromise;
-
-async function getBrowser() {
-  if (browser) return browser;
-  browserPromise ||= chromium.launch({ headless: true });
-  browser = await browserPromise;
-  return browser;
-}
-
-afterAll(async () => {
-  await browser?.close();
-});
-
 async function measureAtMaxScroll(collapsed) {
-  const page = await (await getBrowser()).newPage({ viewport: { width: 375, height: 812 } });
+  const page = await (await getPlaywrightBrowser()).newPage({ viewport: { width: 375, height: 812 } });
   const rows = Array.from({ length: 12 }, (_, index) => (
     `<div class="sb-ex" data-row="${index}" style="min-height:88px">Exercise ${index + 1}</div>`
   )).join('');
@@ -75,7 +62,11 @@ async function measureAtMaxScroll(collapsed) {
 
 // Запуск Chromium и отрисовка макета не укладываются в пятисекундный лимит
 // vitest по умолчанию: набор меряет живую геометрию, а не читает исходник.
-describe('strength builder rest dock geometry at 375x812', { timeout: 45_000 }, () => {
+describe('strength builder rest dock geometry at 375x812', { timeout: 90_000, hookTimeout: 30_000 }, () => {
+  afterAll(async () => {
+    await closePlaywrightBrowser();
+  });
+
   it('activates the in-flow dock layout only while rest is present', () => {
     expect(BUILDER).toContain("rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded'");
     expect(BUILDER.indexOf("className: 'sb-list'")).toBeLessThan(BUILDER.indexOf('RestRing'));
@@ -83,7 +74,7 @@ describe('strength builder rest dock geometry at 375x812', { timeout: 45_000 }, 
   });
 
   for (const collapsed of [false, true]) {
-    it(`${collapsed ? 'collapsed' : 'expanded'} dock leaves the last exercise reachable and unobscured`, async () => {
+    it(`${collapsed ? 'collapsed' : 'expanded'} dock leaves the last exercise reachable and unobscured`, { timeout: 90_000 }, async () => {
       const geometry = await measureAtMaxScroll(collapsed);
       expect(geometry.maxScrollReached).toBe(true);
       expect(geometry.list.height).toBeGreaterThanOrEqual(80);

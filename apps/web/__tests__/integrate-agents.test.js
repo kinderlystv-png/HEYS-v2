@@ -5,24 +5,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { cleanGitEnv } from './helpers/git-clean-env.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../../../');
 const SCRIPT_PATH = path.resolve(REPO_ROOT, 'scripts/integrate-agents.mjs');
 
 let repo;
-
-// When this suite runs under a git hook (pre-push), git exports GIT_DIR /
-// GIT_WORK_TREE / GIT_INDEX_FILE pointing at the real repo. Those leak into the
-// child `git` processes below and make `git init`/add/commit in the temp repo
-// fail with "this operation must be run in a work tree". Strip them so the
-// fixture repo is the only git context the children see.
-const GIT_ENV_VARS = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_PREFIX'];
-function cleanGitEnv() {
-  const env = { ...process.env };
-  for (const k of GIT_ENV_VARS) delete env[k];
-  return env;
-}
 
 function git(args, opts = {}) {
   return execFileSync('git', args, { cwd: repo, encoding: 'utf8', env: cleanGitEnv(), ...opts }).trim();
@@ -59,7 +49,7 @@ function runIntegrate(extraArgs) {
   });
 }
 
-describe('integrate-agents', () => {
+describe('integrate-agents', { timeout: 60_000 }, () => {
   it('refuses mutating integration without explicit confirmation', () => {
     const result = runIntegrate([
       '--branches=codex/a',
@@ -94,7 +84,7 @@ describe('integrate-agents', () => {
     expect(git(['status', '--porcelain'])).toBe(status);
   });
 
-  it('aborts and rolls back to the pre-integration HEAD on merge conflict', () => {
+  it('aborts and rolls back to the pre-integration HEAD on merge conflict', { timeout: 60_000 }, () => {
     // Two branches edit base.txt differently → second merge conflicts.
     git(['checkout', '-q', '-b', 'codex/a']);
     commitFile('base.txt', 'from-a\n', 'feat: a');

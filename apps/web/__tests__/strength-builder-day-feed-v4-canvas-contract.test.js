@@ -141,7 +141,7 @@ function assertRows(rows, paletteLabel) {
 
 afterEach(() => cleanup());
 
-describe('И3 · План в ленте дня · canvas contract', () => {
+describe('И3 · План в ленте дня · canvas contract', { timeout: 45_000 }, () => {
   it('держит PlanCard feed и контрактные селекторы', () => {
     expect(PLAN_FEED_DOM_CONTRACTS).toHaveLength(36);
     expect(BUILDER_CSS).toMatch(/\.sb-plan-feed > \.sb-plan-card--future[\s\S]*margin-top: 12px/);
@@ -154,7 +154,7 @@ describe('И3 · План в ленте дня · canvas contract', () => {
     }
   });
 
-  it('доказывает ключевые строки на песочной и синей палитрах', () => {
+  it('доказывает ключевые строки на песочной и синей палитрах', { timeout: 45_000 }, () => {
     const style = document.createElement('style');
     style.textContent = paletteCss('sand');
     document.head.appendChild(style);

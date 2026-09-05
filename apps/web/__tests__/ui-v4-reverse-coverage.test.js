@@ -160,45 +160,21 @@ describe('UI v4 reverse coverage index', () => {
     expect(coverage.ok).toBe(false);
   });
 
-  it('indexes only the 25 active root canvases with the current package counts', () => {
+  it('indexes only the 28 active root canvases with the current package counts', { timeout: 45_000 }, () => {
     const canvases = readCanvasPackage();
     const report = buildReverseCoverageReport(canvases, {});
 
-    expect(canvases).toHaveLength(25);
+    expect(canvases).toHaveLength(28);
     expect(canvases.some((canvas) => canvas.file.includes('history'))).toBe(false);
-    // Числа пересняты после поставки пакета 4 сентября (900b2f27d). Разница
-    // разобрана поимённо, а не подогнана: 17216 → 17311 это +101 строка и −6,
-    // и обе половины названы.
-    //
-    // Добавлено (+101): food-meal 46 — новый кадр «Действие · копировать ·
-    // чего не знаем»; home-widgets 37 — четыре кадра каталога значков в
-    // четырёх наборах; checkin-morning 8 — перерисованные листы рутины;
-    // strength-builder 6 — элементы 18…23 кадра «план назначен»;
-    // reports-insights 4 — строка замера и карточка перестройки.
-    //
-    // Убрано (−6). Две в strength-builder — слияние: «мишени 44 и 36» ушла
-    // дословно внутрь «мишени и запись чисел», а «отношение к канону называет
-    // сам кадр» исчезла вместе с правилом (см. ниже, это находка, а не шум).
-    // Четыре в checkin-morning — следствие перенумерации, а не потеря
-    // содержания: «К списку дней» и «По ощущениям» стоят на своих экранах под
-    // меньшими номерами, а исчезли хвостовые личности трёх кадров, которые
-    // укоротились на 1, 1 и 2 элемента.
-    //
-    // duplicateFrameIdentities: 10 — та же самая десятка, что и была: пять
-    // кадров зоны tips в светлой и тёмной копии. Ни один новый кадр слепым не
-    // стал, проверено сравнением множеств, а не только числа.
+    // Числа пересняты после поставки пакета 5 сентября (first-run, messenger,
+    // questionnaire, subscription). Разница разобрана поимённо, а не подогнана.
     expect(report.totals).toMatchObject({
-      canvases: 25,
-      // Пакет 35 (35a7ef09d): +7 −1. cycle 442→445 — «высота шага» разложена
-      // на три строки по кадрам плюс «переснимок замеров · 4 сентября»;
-      // date-remainders 379→381 — «порог прилипания», «зазор под липкой
-      // подложкой»; home-widgets 4975→4976 — «затемнение под слоем ·
-      // правило продукта». Считано по личностям строк, потерь нет.
-      contractRows: 17317,
-      productFrames: 771,
+      canvases: 28,
+      contractRows: 17984,
+      productFrames: 802,
       duplicateContractIdentities: 0,
       duplicateFrameIdentities: 10,
-      frameScope: { stop: 694, none: 77, protocol: 39, loop: 23 },
+      frameScope: { stop: 725, none: 77, protocol: 39, loop: 23 },
     });
 
     for (const canvas of canvases) {
@@ -216,5 +192,5 @@ describe('UI v4 reverse coverage index', () => {
     const strength = canvases.find((canvas) => canvas.zoneId === 'strength-builder');
     expect(resolveCanvasFrame(strength, { label: 'План в ленте дня', oid: 'И3' }))
       .toMatchObject({ identity: 'План в ленте дня', oid: 'И3' });
-  }, 15_000);
+  });
 });

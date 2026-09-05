@@ -1,29 +1,16 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { chromium } from '@playwright/test';
 import { afterAll, describe, expect, it } from 'vitest';
+
+import { closePlaywrightBrowser, getPlaywrightBrowser } from './helpers/playwright-browser.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/750-strength-builder.css'), 'utf8');
 
-let browser;
-let browserPromise;
-
-async function getBrowser() {
-  if (browser) return browser;
-  browserPromise ||= chromium.launch({ headless: true });
-  browser = await browserPromise;
-  return browser;
-}
-
-afterAll(async () => {
-  await browser?.close();
-});
-
 async function renderCards() {
-  const page = await (await getBrowser()).newPage({ viewport: { width: 375, height: 812 } });
+  const page = await (await getPlaywrightBrowser()).newPage({ viewport: { width: 375, height: 812 } });
   await page.setContent(`
     <style>${CSS}</style>
     <main style="padding:12px">
@@ -44,8 +31,12 @@ async function renderCards() {
 
 // Запуск Chromium и отрисовка макета не укладываются в пятисекундный лимит
 // vitest по умолчанию: набор меряет живую геометрию, а не читает исходник.
-describe('strength builder offscreen timer geometry at 375x812', { timeout: 45_000 }, () => {
-  it('keeps the restart surface compact and its primary action 48px tall', async () => {
+describe('strength builder offscreen timer geometry at 375x812', { timeout: 90_000, hookTimeout: 30_000 }, () => {
+  afterAll(async () => {
+    await closePlaywrightBrowser();
+  });
+
+  it('keeps the restart surface compact and its primary action 48px tall', { timeout: 90_000 }, async () => {
     const page = await renderCards();
     const geometry = await page.evaluate(() => {
       const card = document.querySelector('[data-resume]');
@@ -71,7 +62,7 @@ describe('strength builder offscreen timer geometry at 375x812', { timeout: 45_0
     await page.close();
   });
 
-  it('keeps all three stale-session actions equal, reachable and on one row', async () => {
+  it('keeps all three stale-session actions equal, reachable and on one row', { timeout: 90_000 }, async () => {
     const page = await renderCards();
     const geometry = await page.evaluate(() => {
       const card = document.querySelector('[data-stale]');

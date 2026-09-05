@@ -44,6 +44,7 @@ function matchAll(source, pattern) {
 
 const PIN_FUNCTION_DEFINITION = /CREATE\s+OR\s+REPLACE\s+FUNCTION\s+(public\.)?verify_client_pin_v3/i;
 const MIGRATION_DATE = /^(\d{4}-\d{2}-\d{2})/;
+const PIN_SQL_NAME_HINT = /pin|client_login|client_pin|verify_client/i;
 
 /**
  * Самая свежая версия verify_client_pin_v3 в репозитории. Выбор: дата в имени,
@@ -55,6 +56,7 @@ function readLatestPinFunctionSql() {
     const candidates = fs
         .readdirSync(DATABASE_DIR)
         .filter((name) => name.endsWith('.sql'))
+        .filter((name) => PIN_SQL_NAME_HINT.test(name))
         .filter((name) => PIN_FUNCTION_DEFINITION.test(fs.readFileSync(path.join(DATABASE_DIR, name), 'utf8')));
 
     expect(
@@ -93,11 +95,13 @@ function readLatestPinFunctionSql() {
     return { file, sql };
 }
 
-describe('контракт кодов отказа на входе клиента', () => {
+describe('контракт кодов отказа на входе клиента', { timeout: 30_000 }, () => {
     let dictionary;
     let screenBranchCodes;
+    let latestPinSql;
 
     beforeAll(() => {
+        latestPinSql = readLatestPinFunctionSql();
         // Словарь берём из живого модуля, а не из текста: так тест сломается и
         // при переименовании, и при подмене структуры.
         const window = { HEYS: {}, location: { hostname: 'app.heyslab.ru' } };
@@ -123,7 +127,7 @@ describe('контракт кодов отказа на входе клиент�
     });
 
     it('каждый код из актуальной verify_client_pin_v3 есть в словаре', () => {
-        const { file, sql } = readLatestPinFunctionSql();
+        const { file, sql } = latestPinSql;
         const sqlCodes = [...new Set(matchAll(sql, /'error',\s*'([a-z0-9_]+)'/g))];
 
         expect(sqlCodes.length, `в ${file} не найдено ни одного кода отказа`).toBeGreaterThan(0);

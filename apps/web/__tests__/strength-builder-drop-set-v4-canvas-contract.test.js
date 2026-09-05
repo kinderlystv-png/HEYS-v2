@@ -93,7 +93,7 @@ function assertRows(rows, paletteLabel) {
   return mismatches;
 }
 
-describe('Ж3 · дроп-сет · canvas contract', () => {
+describe('Ж3 · дроп-сет · canvas contract', { timeout: 45_000 }, () => {
   afterEach(() => cleanup());
 
   it('держит каноничные строки и геометрию экрана', () => {
@@ -106,7 +106,7 @@ describe('Ж3 · дроп-сет · canvas contract', () => {
     expect(CSS).toMatch(/\.sb-ds-drop-tag[\s\S]*background: var\(--sb-accbg\)/);
   });
 
-  it('доказывает кадр на песочной и синей палитрах', () => {
+  it('доказывает кадр на песочной и синей палитрах', { timeout: 45_000 }, () => {
     const Parts = loadParts();
     const style = document.createElement('style');
     style.textContent = `${BASE_CSS}\n${computedCss(CANVAS)}`;

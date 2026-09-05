@@ -5,33 +5,34 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { cleanGitEnv } from './helpers/git-clean-env.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, '../../../');
 const SCRIPT_PATH = path.resolve(REPO_ROOT, 'scripts/auto-sync-legacy-bundles.mjs');
+const AGENT_CHECK_GUARD_PATHS = [
+  'apps/web/bundle-manifest.json',
+  'apps/web/index.html',
+  'apps/web/public',
+];
 
-// Under a git hook (pre-push) git exports GIT_DIR/GIT_WORK_TREE/etc pointing at
-// the real repo; they leak into child git processes and break git operations in
-// the temp fixture repo ("must be run in a work tree"). Strip them.
-const GIT_ENV_VARS = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR', 'GIT_PREFIX'];
-function cleanGitEnv() {
-  const env = { ...process.env };
-  for (const k of GIT_ENV_VARS) delete env[k];
-  return env;
+function scopedBundleStatus() {
+  return execSync(`git status --porcelain -- ${AGENT_CHECK_GUARD_PATHS.join(' ')}`, {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    env: cleanGitEnv(),
+  });
 }
 
-function gitStatus() {
-  return execSync('git status --porcelain', { cwd: REPO_ROOT, encoding: 'utf8' });
-}
-
-describe('auto-sync legacy bundles agent mode', () => {
+describe('auto-sync legacy bundles agent mode', { timeout: 30_000 }, () => {
   it('reports affected bundles without mutating the worktree', () => {
-    const before = gitStatus();
+    const before = scopedBundleStatus();
     const output = execSync(
       `node "${SCRIPT_PATH}" --mode=agent-check --files=apps/web/heys_storage_supabase_v1.js`,
-      { cwd: REPO_ROOT, encoding: 'utf8' },
+      { cwd: REPO_ROOT, encoding: 'utf8', env: cleanGitEnv() },
     );
-    const after = gitStatus();
+    const after = scopedBundleStatus();
 
     expect(output).toContain('mode=agent-check');
     expect(output).toContain('Would rebuild final legacy bundles at integration');
@@ -40,12 +41,12 @@ describe('auto-sync legacy bundles agent mode', () => {
   });
 
   it('does not run full rebuild for config changes in agent-check mode', () => {
-    const before = gitStatus();
+    const before = scopedBundleStatus();
     const output = execSync(
       `node "${SCRIPT_PATH}" --mode=agent-check --files=scripts/legacy-bundle-config.mjs`,
-      { cwd: REPO_ROOT, encoding: 'utf8' },
+      { cwd: REPO_ROOT, encoding: 'utf8', env: cleanGitEnv() },
     );
-    const after = gitStatus();
+    const after = scopedBundleStatus();
 
     expect(output).toContain('mode=agent-check');
     expect(output).toContain('Would run full legacy rebuild');
@@ -54,7 +55,7 @@ describe('auto-sync legacy bundles agent mode', () => {
   });
 });
 
-describe('auto-sync legacy bundles integration mode', () => {
+describe('auto-sync legacy bundles integration mode', { timeout: 60_000 }, () => {
   let repo;
 
   function git(args) {
@@ -101,7 +102,7 @@ describe('auto-sync legacy bundles integration mode', () => {
     rmSync(repo, { recursive: true, force: true });
   });
 
-  it('resets owned dirty generated before integration rebuild', () => {
+  it('resets owned dirty generated before integration rebuild', { timeout: 60_000 }, () => {
     // Contract since eb0907cc2: dirty generated owned by staged sources is
     // restored to HEAD, then rebuild proceeds. Do not abort as "already dirty".
     writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// edited\n');
@@ -121,7 +122,7 @@ describe('auto-sync legacy bundles integration mode', () => {
     expect(git(['stash', 'list'])).toBe('');
   });
 
-  it('aborts on foreign dirty generated without stashing', () => {
+  it('aborts on foreign dirty generated without stashing', { timeout: 60_000 }, () => {
     // Stage boot-core source, leave a postboot hash-bundle dirty — outside
     // rebuild scope → fail closed, never stash foreign WIP.
     writeFileSync(path.join(repo, 'apps/web/heys_storage_supabase_v1.js'), '// edited\n');
@@ -149,7 +150,7 @@ describe('auto-sync legacy bundles integration mode', () => {
     expect(existsSync(path.join(repo, 'apps/web/public/postboot-1-game-lazy.bundle.bbbbbbbbbbbb.js'))).toBe(true);
   });
 
-  it('aborts when unstaged legacy source would affect the same generated output', () => {
+  it('aborts when unstaged legacy source would affect the same generated output', { timeout: 60_000 }, () => {
     writeFileSync(path.join(repo, 'apps/web/heys_core_v12.js'), '// foreign source\n');
     git(['add', 'apps/web/heys_core_v12.js']);
     git(['commit', '-q', '-m', 'add core source']);

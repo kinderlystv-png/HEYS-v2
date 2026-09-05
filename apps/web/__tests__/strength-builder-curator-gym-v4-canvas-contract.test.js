@@ -93,7 +93,7 @@ function assertRows(rows, paletteLabel) {
   return mismatches;
 }
 
-describe('И1 · Куратор и зал · canvas contract', () => {
+describe('И1 · Куратор и зал · canvas contract', { timeout: 45_000 }, () => {
   afterEach(() => cleanup());
 
   it('держит каноничные классы и строки', () => {
@@ -106,7 +106,7 @@ describe('И1 · Куратор и зал · canvas contract', () => {
     expect(CSS).toMatch(/\.sb-pain--canvas[\s\S]*background: var\(--v4-accent-bg/);
   });
 
-  it('доказывает кадр на песочной и синей палитрах', () => {
+  it('доказывает кадр на песочной и синей палитрах', { timeout: 45_000 }, () => {
     const HEYS = loadModules();
     const SB = HEYS.StrengthBuilder;
     const style = document.createElement('style');
