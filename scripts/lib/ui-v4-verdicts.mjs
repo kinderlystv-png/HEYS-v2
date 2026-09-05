@@ -137,8 +137,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   'product-card': Object.freeze({
     // 04.09: e96ffbe90 закрыл 16 «?» rehash-долга — 12→=, 2→—, 2→≠; legacy 58→60, «—» 74→76.
-    mismatch: [58, '2c46a580941faae4'],
-    notApplicable: [72, '839c1d5ca0cd777d'],
+    // 05.09: 35af29731 закрыл ещё 7 «?» того же rehash-долга — mismatch 58→59, «—» 72→76.
+    // Рост записан, а не заморожен обратно: это перевод «не смотрели» в судимое,
+    // а не появление нового необоснованного вердикта. Отдельный долг зоны при этом
+    // назван вслух: у всех 76 «—» нет naKind, а разных фактов на «—» — 26 из 76.
+    mismatch: [59, 'cc40ca548502a272'],
+    notApplicable: [76, 'ea3054255c5fd126'],
   }),
   'pwa-update': Object.freeze({
     mismatch: [10, '5e473419ff0364c9'],
