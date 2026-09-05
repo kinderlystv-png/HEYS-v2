@@ -54,6 +54,49 @@ describe('UI v4 verdict semantics', () => {
   });
 
   it.each([
+    [
+      'Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра.',
+      'needs-line-by-line-review',
+      null,
+    ],
+    [
+      'Не проверено построчно: прежнее основание описывало совпадение кадра, а не отличие этой строки.',
+      'not-checked',
+      'not-checked',
+    ],
+    [
+      'Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.',
+      'not-confirmed',
+      'not-confirmed',
+    ],
+  ])('pending-паттерн «%s»', (reason, kindWithPending, kindWithoutPending) => {
+    expect(classifyUnknownMismatchReason(reason, { includePending: true })).toBe(kindWithPending);
+    expect(classifyUnknownMismatchReason(reason)).toBe(kindWithoutPending);
+  });
+
+  it('не путает подтверждённую сверку с долгом проверки', () => {
+    expect(
+      classifyUnknownMismatchReason('Сверено гейтом: совпадает с кадром на 375 px.', {
+        includePending: true,
+      }),
+    ).toBeNull();
+    expect(
+      classifyUnknownMismatchReason('Проверено замером на стенде, совпадает с контрактом.', {
+        includePending: true,
+      }),
+    ).toBeNull();
+  });
+
+  it('не ловит «построчно не сводится» как долг сверки', () => {
+    expect(
+      classifyUnknownMismatchReason(
+        'Знак HEYS: логотип бренда вставляется готовым файлом, построчно не сводится.',
+        { includePending: true },
+      ),
+    ).toBeNull();
+  });
+
+  it.each([
     'Тап скрывает действие локально, но maybeAckFullyHiddenEntries подтверждает запись на сервере; контракт требует никогда не подтверждать сервер с перехода.',
     'Отдельного сравнения назначенного плана с выполненным объёмом в runtime нет.',
     '.sb-round даёт зазор 7 px против 6 px кадра.',

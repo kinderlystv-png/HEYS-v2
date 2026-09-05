@@ -33,6 +33,80 @@ const UNKNOWN_MARKERS = [
   },
 ];
 
+/** Task 78: намерение сверить, а не результат. Включаются в gate после ревью владельца. */
+export const PENDING_UNKNOWN_MARKERS = [
+  {
+    id: 'needs-line-by-line-review',
+    re: /нужн[аоы]\s+построчн/,
+    corpus: 'strength-builder 141× «Нужна построчная visual/runtime-сверка…»',
+  },
+  {
+    id: 'not-checked-line-by-line',
+    re: /не\s+проверено\s+построчн/,
+    corpus: 'strength-builder 58× «Не проверено построчно: прежнее основание…»',
+  },
+  {
+    id: 'prior-basis-unverified-match',
+    re: /прежн\w+\s+основан\w+\s+описывал\w*\s+непроверенн/,
+    corpus: 'strength-builder 80× непроверенное совпадение кадра',
+  },
+  {
+    id: 'basis-described-match',
+    re: /основан\w+\s+описывал\w*\s+совпаден/,
+    corpus: 'strength-builder 58× «описывало совпадение кадра»',
+  },
+  {
+    id: 'needs-source-review',
+    re: /нужн[аоы]\s+построчн\w*\s+сверк[аи]\s+по\s+source/,
+    corpus: 'strength-builder 3× source/tests сверка',
+  },
+  {
+    id: 'returned-pending-measurement',
+    re: /возвращен\w*\s+в\s+вопрос\s+до\s+замер/,
+    corpus: 'strength-builder 58× метка возврата в ?',
+  },
+  {
+    id: 'pending-verification',
+    re: /предстоит\s+провер/,
+    corpus: 'task-78 intent list',
+  },
+  {
+    id: 'awaiting-line-review',
+    re: /ожидает\s+(?:построчн\w*\s+)?сверк/,
+    corpus: 'task-78 intent list',
+  },
+  {
+    id: 'without-line-review',
+    re: /без\s+(?:построчн\w*\s+)?(?:visual\/runtime-)?сверк/,
+    corpus: 'task-78 intent list',
+  },
+  {
+    id: 'not-yet-reviewed',
+    re: /(?:еще|ещё)\s+не\s+сверен/,
+    corpus: 'task-78 intent list',
+  },
+  {
+    id: 'not-yet-measured',
+    re: /(?:еще|ещё)\s+не\s+замерен/,
+    corpus: 'task-78 intent list',
+  },
+  {
+    id: 'review-not-done',
+    re: /сверк[аи]\s+(?:еще|ещё)\s+не/,
+    corpus: 'task-78 intent list',
+  },
+];
+
+/** Подтверждённый результат сверки — не путать с долгом проверки. */
+const VERIFICATION_RESULT_EXCLUSIONS = [
+  /сверено\s+гейтом/,
+  /проверено\s+замером/,
+  /совпадает\s+с/,
+  /подтвержден\w*\s+замером/,
+  /гейтом\s+сверен/,
+  /сверено\s+(?:с\s+)?кадр/,
+];
+
 const VISUAL_MISMATCH =
   /точн(?:ая|ое|ый|ые)[^.]{0,100}(?:композици|типографи|геометри)[^.]{0,100}не совпада/;
 const CONCRETE_VISUAL_EVIDENCE =
@@ -52,9 +126,20 @@ function normalizeReason(reason) {
   );
 }
 
-export function classifyUnknownMismatchReason(reason) {
+function activeUnknownMarkers(options = {}) {
+  const markers = [...UNKNOWN_MARKERS];
+  if (options.includePending) markers.push(...PENDING_UNKNOWN_MARKERS);
+  return markers;
+}
+
+function isVerificationResultClaim(text) {
+  return VERIFICATION_RESULT_EXCLUSIONS.some((re) => re.test(text));
+}
+
+export function classifyUnknownMismatchReason(reason, options = {}) {
   const text = normalizeReason(reason);
-  for (const marker of UNKNOWN_MARKERS) {
+  if (isVerificationResultClaim(text)) return null;
+  for (const marker of activeUnknownMarkers(options)) {
     if (marker.re.test(text)) return marker.id;
   }
   if (VISUAL_MISMATCH.test(text) && !CONCRETE_VISUAL_EVIDENCE.test(text)) {
@@ -63,14 +148,24 @@ export function classifyUnknownMismatchReason(reason) {
   return null;
 }
 
-export function findUnknownEvidenceMismatches(data, zoneIds = null) {
+export function findUnknownEvidenceMismatches(data, zoneIds = null, options = {}) {
   const problems = [];
+  const verdicts = options.allVerdicts ? null : new Set(['≠']);
   for (const [zoneId, zone] of Object.entries(data?.zones || {})) {
     if (zoneIds && !zoneIds.has(zoneId)) continue;
     for (const [key, row] of Object.entries(zone?.rows || {})) {
-      if (row?.v !== '≠') continue;
-      const kind = classifyUnknownMismatchReason(row?.f);
-      if (kind) problems.push({ zoneId, key, kind, reason: row?.f || '' });
+      if (verdicts && !verdicts.has(row?.v)) continue;
+      const kind = classifyUnknownMismatchReason(row?.f, options);
+      if (kind) {
+        problems.push({
+          zoneId,
+          key,
+          verdict: row?.v,
+          kind,
+          reason: row?.f || '',
+          pending: PENDING_UNKNOWN_MARKERS.some((marker) => marker.id === kind),
+        });
+      }
     }
   }
   return problems;
@@ -114,10 +209,57 @@ function formatZoneDeviationSummary(zoneId, counts) {
   return `${zoneId}: «≠» ${totalMismatch} (legacy ${counts.mismatch} · typed-v1 ${counts.typedMismatch}) · «—» ${counts.notApplicable}`;
 }
 
+function runReportPending(selected) {
+  const allVerdicts = process.argv.includes('--all-verdicts');
+  const rows = findUnknownEvidenceMismatches(readAllZones(), selected, {
+    includePending: true,
+    allVerdicts,
+  });
+  const pendingOnly = rows.filter((row) => row.pending);
+  const enforced = rows.filter((row) => !row.pending);
+
+  console.log(
+    `Отчёт pending-unknown-intent: ${pendingOnly.length} строк по новым паттернам` +
+      (allVerdicts ? ' (все вердикты)' : ' (только «≠», что сломает gate после включения)') +
+      `.`,
+  );
+  if (enforced.length) {
+    console.log(`Уже действующие паттерны: ${enforced.length} (не pending).`);
+  }
+
+  const byKind = new Map();
+  for (const row of pendingOnly) {
+    byKind.set(row.kind, (byKind.get(row.kind) || 0) + 1);
+  }
+  if (byKind.size) {
+    console.log('По паттернам:');
+    for (const [kind, count] of [...byKind.entries()].sort((a, b) => b[1] - a[1])) {
+      const marker = PENDING_UNKNOWN_MARKERS.find((item) => item.id === kind);
+      console.log(`  ${kind}: ${count}${marker?.corpus ? ` — ${marker.corpus}` : ''}`);
+    }
+  }
+
+  console.log('\nzone | key | verdict | kind | fact');
+  for (const row of pendingOnly) {
+    const snippet = String(row.reason || '').replace(/\s+/g, ' ').slice(0, 160);
+    console.log(`${row.zoneId} | ${row.key} | ${row.verdict} | ${row.kind} | ${snippet}`);
+  }
+
+  if (!pendingOnly.length) {
+    console.log('(пусто — ни одна строка не попала под pending-паттерны в выбранном scope)');
+  }
+}
+
 function runCli() {
   const selected = process.argv.includes('--zone')
     ? new Set([process.argv[process.argv.indexOf('--zone') + 1]])
     : null;
+
+  if (process.argv.includes('--report-pending')) {
+    runReportPending(selected);
+    return;
+  }
+
   const state = inspectVerdictSemantics(readAllZones(), selected);
   const problems = [
     ...state.schemaProblems,
