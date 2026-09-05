@@ -1,0 +1,116 @@
+{
+  "zone": "food-meal",
+  "task": "polosa4-task63",
+  "contractLinesClosed": 37,
+  "contractHeight44LinesInCanvas": 49,
+  "note": "Вердикты и --rehash не трогали; handoff по ключевым селекторам.",
+  "removedInvisibleExpanders": [
+    {
+      "selector": ".aps-v4-grams-chip",
+      "was": "margin: -7px 0 при min-height 44 (layout ~30px)",
+      "now": "margin снят, padding 0 10px, gap ряда 7px"
+    },
+    {
+      "selector": ".mpr-grams-btn",
+      "was": "margin: -9px 0 при 44×44",
+      "now": "margin снят, font-size 16px внутри 44×44"
+    },
+    {
+      "selector": ".mpr-preview-item-toggle",
+      "was": "margin: -7px 0 при 44×44",
+      "now": "margin снят"
+    }
+  ],
+  "rows": [
+    {
+      "contractKey": "тач-цели",
+      "selector": ".aps-v4-grams-chip",
+      "was": { "sand": { "minHeight": 30 }, "blue": { "minHeight": 30 } },
+      "now": { "sand": { "minHeight": 44 }, "blue": { "minHeight": 44 } }
+    },
+    {
+      "contractKey": "Добавление · время и тип · 16",
+      "selector": ".meal-time-shift",
+      "was": { "sand": { "minHeight": 38 }, "blue": { "minHeight": 38 } },
+      "now": { "sand": { "minHeight": 44 }, "blue": { "minHeight": 44 } }
+    },
+    {
+      "contractKey": "Добавление · поиск · 10",
+      "selector": ".aps-v4-shared-filter",
+      "was": { "sand": { "minHeight": 26 }, "blue": { "minHeight": 26 } },
+      "now": { "sand": { "minHeight": 44 }, "blue": { "minHeight": 44 } }
+    },
+    {
+      "contractKey": "Добавление · порция · 17",
+      "selector": ".aps-v4-grams-unit",
+      "was": { "sand": { "minHeight": 36 }, "blue": { "minHeight": 36 } },
+      "now": { "sand": { "minHeight": 44 }, "blue": { "minHeight": 44 } }
+    },
+    {
+      "contractKey": "Добавление · порция · 18",
+      "selector": ".aps-v4-grams-hero__step",
+      "was": { "sand": { "height": 44, "fontSize": 24 }, "blue": { "height": 44, "fontSize": 24 } },
+      "now": { "sand": { "height": 44, "fontSize": 16 }, "blue": { "height": 44, "fontSize": 16 } }
+    },
+    {
+      "contractKey": "Приём · время и тип · 17",
+      "selector": ".meal-type-section--sheet .meal-type-chip",
+      "was": { "sand": { "minHeight": 38 }, "blue": { "minHeight": 38 } },
+      "now": { "sand": { "minHeight": 44 }, "blue": { "minHeight": 44 } }
+    },
+    {
+      "contractKey": "Действие · копировать · чего не знаем · 25",
+      "selector": ".meal-transfer-v4__product-fix",
+      "was": { "sand": { "minHeight": 32 }, "blue": { "minHeight": 32 } },
+      "now": { "sand": { "minHeight": 44 }, "blue": { "minHeight": 44 } }
+    },
+    {
+      "contractKey": "Поиск · только свои · 10",
+      "selector": ".aps-v4-search-tab",
+      "was": { "sand": { "minHeight": 0 }, "blue": { "minHeight": 0 } },
+      "now": { "sand": { "minHeight": 44 }, "blue": { "minHeight": 44 } }
+    },
+    {
+      "contractKey": "Добавление · наборы · 18",
+      "selector": ".mpr-btn",
+      "was": { "sand": { "height": 34 }, "blue": { "height": 34 } },
+      "now": { "sand": { "height": 44 }, "blue": { "height": 44 } }
+    },
+    {
+      "contractKey": "Набор · правка · крест поиска",
+      "selector": ".mpr-search-clear",
+      "was": { "sand": { "height": 20 }, "blue": { "height": 20 } },
+      "now": { "sand": { "height": 44 }, "blue": { "height": 44 } }
+    },
+    {
+      "contractKey": "Добавление · поиск · clear",
+      "selector": ".aps-search-clear",
+      "was": { "sand": { "height": 24 }, "blue": { "height": 24 } },
+      "now": { "sand": { "height": 44 }, "blue": { "height": 44 } }
+    },
+    {
+      "contractKey": "Добавление · поиск · barcode v4",
+      "selector": ".aps-v4-flow .aps-search-barcode-btn",
+      "was": { "sand": { "height": 28 }, "blue": { "height": 28 } },
+      "now": { "sand": { "height": 44 }, "blue": { "height": 44 } }
+    },
+    {
+      "contractKey": "шапка приёма · назад",
+      "selector": ".mc-modal--meal-create .mc-header-btn--back",
+      "was": { "sand": { "height": 17 }, "blue": { "height": 17 } },
+      "now": { "sand": { "height": 44 }, "blue": { "height": 44 } }
+    },
+    {
+      "contractKey": "шапка приёма · закрыть",
+      "selector": ".mc-modal--meal-create .mc-header-btn--close",
+      "was": { "sand": { "height": 17 }, "blue": { "height": 17 } },
+      "now": { "sand": { "height": 44 }, "blue": { "height": 44 } }
+    },
+    {
+      "contractKey": "категории поиска",
+      "selector": ".aps-category-chip",
+      "was": { "sand": { "minHeight": 22 }, "blue": { "minHeight": 22 } },
+      "now": { "sand": { "minHeight": 44 }, "blue": { "minHeight": 44 } }
+    }
+  ]
+}
