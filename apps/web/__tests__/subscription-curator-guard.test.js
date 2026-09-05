@@ -328,7 +328,7 @@ describe('HEYS.Subscription curator guard', () => {
       subscriptionsModuleSource.indexOf('function SubscriptionSection('),
       subscriptionsModuleSource.indexOf('function showPaymentRequired('),
     );
-    expect(subscriptionSectionSource).toContain("status?.status === 'read_only'");
+    expect(subscriptionSectionSource).toContain("subscriptionStatus === 'read_only'");
     expect(subscriptionSectionSource).not.toContain("status?.status === 'trial' || status?.status === 'read_only'");
   });
 

@@ -106,6 +106,13 @@ describe('subscription paywall · computed sand/blue', () => {
       expect(modalCs.padding).toBe('22px 18px 18px');
       expect(modalCs.borderRadius).toBe('26px');
       expect(overlayCs.backdropFilter).toMatch(/blur\(2\.5px\)/);
+      expect(PAYWALL_CSS).toMatch(/background:\s*var\(--scrim/);
+      const scrim = getComputedStyle(document.documentElement).getPropertyValue('--scrim').trim();
+      if (themeId === 'sand') {
+        expect(scrim).toBe('rgba(42, 26, 12, 0.5)');
+      } else {
+        expect(scrim).toBe('rgba(16, 24, 38, 0.45)');
+      }
       expect(trialCs.borderRadius).toBe('18px');
       expect(trialCs.padding).toBe('14px');
       expect(ctaCs.minHeight).toBe('48px');

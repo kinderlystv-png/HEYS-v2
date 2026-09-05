@@ -1,0 +1,5 @@
+task 118: close last 14 «?» in subscription verdicts
+
+Re-verdict parent «вид ·» rows, queue cancel confirm, order period
+geometry, and tariff/payment copy chains against live 735-ui-v4-subscription.css
+and paywall JS. Extend sand/blue computed test for --scrim overlay.
