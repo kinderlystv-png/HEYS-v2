@@ -972,6 +972,236 @@
     );
   }
 
+  const MISSED_EARLIER_FOOTNOTE = 'Отчёт цикла считает такой день пропущенным, а замену — своей тренировкой: два исхода, две строки. Смешать их значит соврать в обе стороны.';
+  const MISSED_EARLIER_PROSE = 'Вторник остаётся пропущенным — задним числом его никто не переписывает. Это отдельная тренировка на сегодня.';
+
+  const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const WEEKDAY_GENITIVE = ['воскресенья', 'понедельника', 'вторника', 'среды', 'четверга', 'пятницы', 'субботы'];
+
+  const MISSED_EARLIER_STYLE = {
+    headCol: { display: 'flex', flexDirection: 'column', gap: '3px' },
+    title: { font: '700 15px/1 Figtree, sans-serif', color: 'var(--tx)' },
+    key: { font: '600 10.5px/1 Figtree, sans-serif', color: 'var(--ink56)' },
+    card: {
+      marginTop: '12px',
+      background: 'var(--c1)',
+      borderRadius: '20px',
+      padding: '14px 16px',
+    },
+    timeline: { display: 'flex', alignItems: 'center', gap: '9px' },
+    skippedBadge: {
+      font: '600 11px/1 Figtree, sans-serif',
+      color: 'var(--v4-mark-1)',
+    },
+    replacementLine: { font: '700 12.5px/1 Figtree, sans-serif', color: 'var(--tx)' },
+    prose: {
+      marginTop: '10px',
+      font: '500 12px/1.5 Figtree, sans-serif',
+      color: 'var(--tx)',
+    },
+    reviewBtn: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      minHeight: '44px',
+      marginTop: '12px',
+      borderRadius: '14px',
+      border: 'none',
+      background: 'var(--c2)',
+      color: 'var(--tx)',
+      font: '600 13px/1 Figtree, sans-serif',
+      cursor: 'pointer',
+    },
+    tier: {
+      marginTop: '14px',
+      font: '700 11px/1 Figtree, sans-serif',
+      letterSpacing: '0.04em',
+      textTransform: 'uppercase',
+      color: 'rgba(var(--ink), .45)',
+    },
+    rulesList: {
+      marginTop: '8px',
+      background: 'var(--c1)',
+      borderRadius: '20px',
+      padding: '2px 16px',
+    },
+    ruleRow: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '13px 0',
+      borderBottom: '1px solid rgba(var(--ink), .07)',
+      font: '600 12.5px/1 Figtree, sans-serif',
+    },
+    ruleMain: { color: 'var(--tx)' },
+    ruleAccent: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--ac2)' },
+    ruleMuted: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--ink56)' },
+    ruleCol: { display: 'flex', flexDirection: 'column', gap: '3px' },
+    ruleSub: { font: '500 11px/1.3 Figtree, sans-serif', color: 'var(--ink56)' },
+    ruleWarn: { font: '700 11.5px/1 Figtree, sans-serif', color: 'var(--ac2)' },
+    footnote: {
+      marginTop: '12px',
+      font: '500 11px/1.55 Figtree, sans-serif',
+      color: 'var(--ink56)',
+    },
+  };
+
+  function parseDateKey(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!m) return null;
+    return { y: +m[1], mo: +m[2], d: +m[3] };
+  }
+
+  function fmtMissedEarlierShortDate(dateKey) {
+    const p = parseDateKey(dateKey);
+    if (!p) return String(dateKey || '');
+    return p.d + ' ' + MONTHS_SHORT[p.mo - 1];
+  }
+
+  function weekdayGenitiveFromDateKey(dateKey) {
+    const p = parseDateKey(dateKey);
+    if (!p) return '';
+    const dt = new Date(p.y, p.mo - 1, p.d, 12, 0, 0);
+    return WEEKDAY_GENITIVE[dt.getDay()] || '';
+  }
+
+  /**
+   * Кадр Л6: замена за прошлый пропуск — отдельная тренировка на свободный день.
+   * Не путать с Л5 (plan.status===skipped на сегодня).
+   */
+  function isMissedEarlierProposal(training, dateKey, todayDateKey) {
+    const ks = kernel();
+    const proposal = ks && training ? ks.pendingPlanProposal(training) : null;
+    if (!proposal) return false;
+    if (training.plan && training.plan.status === 'skipped') return false;
+    const skippedKey = proposal.replacesSkippedDateKey || proposal.replacesSkippedDate;
+    if (!skippedKey) return false;
+    const today = todayDateKey || dateKey || '';
+    return String(skippedKey) < String(today);
+  }
+
+  function buildMissedEarlierSnapshot(props) {
+    const training = props && props.training;
+    const ks = kernel();
+    const proposal = ks && training ? ks.pendingPlanProposal(training) : null;
+    if (!proposal) return null;
+    const plan = training.plan || {};
+    const dateKey = props && props.dateKey ? String(props.dateKey) : '';
+    const todayKey = props && props.todayDateKey ? String(props.todayDateKey) : dateKey;
+    const skippedKey = proposal.replacesSkippedDateKey || proposal.replacesSkippedDate || '';
+    const weekday = proposal.replacesSkippedWeekday
+      || weekdayGenitiveFromDateKey(skippedKey);
+    const titleLine = proposal.title
+      || (weekday ? ('Замена вместо ' + weekday) : 'Замена вместо пропущенного дня');
+    const keyLine = proposal.subtitle || plan.dayLabel || proposal.note || '';
+    const skippedBadge = 'пропущено ' + fmtMissedEarlierShortDate(skippedKey);
+    const replacementLine = String(dateKey) === String(todayKey)
+      ? ('замена сегодня, ' + fmtMissedEarlierShortDate(dateKey))
+      : ('замена ' + fmtMissedEarlierShortDate(dateKey));
+    const proseLine = proposal.prose || MISSED_EARLIER_PROSE;
+    return {
+      titleLine: titleLine,
+      keyLine: keyLine,
+      skippedBadge: skippedBadge,
+      replacementLine: replacementLine,
+      proseLine: proseLine,
+      reviewLabel: 'Посмотреть, что предлагает',
+      rulesTier: 'Правила этого случая',
+      rulePastTitle: 'Прошедший день',
+      rulePastTail: 'остаётся пропуском',
+      ruleReplacementTitle: 'Замена',
+      ruleReplacementTail: 'новая тренировка на свободный день',
+      ruleGuardTitle: 'Серверный guard',
+      ruleGuardSub: 'сейчас отбивает «пропущено» наравне с «начато»',
+      ruleGuardTail: 'нужна правка',
+      footnote: MISSED_EARLIER_FOOTNOTE,
+    };
+  }
+
+  function missedEarlierRuleRow(main, tail, opts) {
+    const o = opts || {};
+    const rowStyle = Object.assign({}, MISSED_EARLIER_STYLE.ruleRow);
+    if (o.noBorder) rowStyle.borderBottom = 'none';
+    const tailStyle = o.tailWarn
+      ? MISSED_EARLIER_STYLE.ruleWarn
+      : (o.tailMuted ? MISSED_EARLIER_STYLE.ruleMuted : MISSED_EARLIER_STYLE.ruleAccent);
+    return h('div', {
+      className: 'sb-missed-earlier-rule-row',
+      style: rowStyle,
+    },
+      o.colMain
+        ? h('span', { className: 'sb-missed-earlier-rule-col', style: MISSED_EARLIER_STYLE.ruleCol },
+          h('span', { className: 'sb-missed-earlier-rule-main', style: MISSED_EARLIER_STYLE.ruleMain }, main),
+          o.sub && h('span', { className: 'sb-missed-earlier-rule-sub', style: MISSED_EARLIER_STYLE.ruleSub }, o.sub)
+        )
+        : h('span', { className: 'sb-missed-earlier-rule-main', style: MISSED_EARLIER_STYLE.ruleMain }, main),
+      tail && h('span', {
+        className: 'sb-missed-earlier-rule-tail',
+        style: tailStyle,
+      }, tail)
+    );
+  }
+
+  /**
+   * Правка · пропущен раньше (кадр Л6): прошедший день не воскрешают.
+   */
+  function MissedEarlierProposalScreen(props) {
+    const snapshot = buildMissedEarlierSnapshot(props);
+    if (!snapshot) return null;
+    const onReview = props && props.onReview;
+
+    return h('div', {
+      className: 'sb-root sb-missed-earlier',
+      style: {
+        '--ink56': 'rgba(var(--ink), .56)',
+      },
+    },
+      h('div', { className: 'sb-cycle-top sb-missed-earlier-head' },
+        h('span', { className: 'sb-missed-earlier-head-main', style: MISSED_EARLIER_STYLE.headCol },
+          h('span', { className: 'sb-missed-earlier-title', style: MISSED_EARLIER_STYLE.title },
+            snapshot.titleLine),
+          snapshot.keyLine
+            && h('span', { className: 'sb-missed-earlier-key', style: MISSED_EARLIER_STYLE.key },
+              snapshot.keyLine)
+        )
+      ),
+      h('div', { className: 'sb-list sb-missed-earlier-scroll' },
+        h('div', { className: 'sb-missed-earlier-card', style: MISSED_EARLIER_STYLE.card },
+          h('div', { className: 'sb-missed-earlier-timeline', style: MISSED_EARLIER_STYLE.timeline },
+            h('span', { className: 'sb-missed-earlier-skipped-pill', style: MISSED_EARLIER_STYLE.skippedBadge },
+              snapshot.skippedBadge),
+            h('span', { className: 'sb-missed-earlier-replacement-line', style: MISSED_EARLIER_STYLE.replacementLine },
+              snapshot.replacementLine)
+          ),
+          h('p', { className: 'sb-missed-earlier-prose', style: MISSED_EARLIER_STYLE.prose },
+            snapshot.proseLine),
+          h('button', {
+            type: 'button',
+            className: 'sb-missed-earlier-review',
+            style: MISSED_EARLIER_STYLE.reviewBtn,
+            onClick: onReview,
+          }, snapshot.reviewLabel)
+        ),
+        h('div', { className: 'sb-missed-earlier-tier', style: MISSED_EARLIER_STYLE.tier },
+          snapshot.rulesTier),
+        h('div', { className: 'sb-missed-earlier-rules', style: MISSED_EARLIER_STYLE.rulesList },
+          missedEarlierRuleRow(snapshot.rulePastTitle, snapshot.rulePastTail),
+          missedEarlierRuleRow(snapshot.ruleReplacementTitle, snapshot.ruleReplacementTail, { tailMuted: true }),
+          missedEarlierRuleRow(snapshot.ruleGuardTitle, snapshot.ruleGuardTail, {
+            colMain: true,
+            sub: snapshot.ruleGuardSub,
+            tailWarn: true,
+            noBorder: true,
+          })
+        ),
+        h('p', { className: 'sb-missed-earlier-footnote', style: MISSED_EARLIER_STYLE.footnote },
+          snapshot.footnote)
+      )
+    );
+  }
+
   /**
    * Программа пройдена (экран 16e). Про сделанное, а не про пропуски.
    *
@@ -1439,4 +1669,7 @@
   Parts.buildCuratorEditSnapshot = buildCuratorEditSnapshot;
   Parts.MissedTodayProposalScreen = MissedTodayProposalScreen;
   Parts.buildMissedTodaySnapshot = buildMissedTodaySnapshot;
+  Parts.MissedEarlierProposalScreen = MissedEarlierProposalScreen;
+  Parts.buildMissedEarlierSnapshot = buildMissedEarlierSnapshot;
+  Parts.isMissedEarlierProposal = isMissedEarlierProposal;
 })(window);

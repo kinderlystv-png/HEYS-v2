@@ -4358,6 +4358,18 @@
                   onDecline: declineProposal
                 });
               };
+              const todayPlanKey = todayDateKeyForPlan();
+              if (Parts.isMissedEarlierProposal
+                && Parts.isMissedEarlierProposal(trainingWithProposal, dateKey, todayPlanKey)
+                && Parts.MissedEarlierProposalScreen) {
+                return React.createElement(Parts.MissedEarlierProposalScreen, {
+                  key: 'wb-missed-earlier-proposal-' + ti,
+                  training: trainingWithProposal,
+                  dateKey: dateKey,
+                  todayDateKey: todayPlanKey,
+                  onReview: openProposalReview
+                });
+              }
               if (planSkipped && Parts.MissedTodayProposalScreen) {
                 return React.createElement(Parts.MissedTodayProposalScreen, {
                   key: 'wb-missed-proposal-' + ti,

@@ -6829,151 +6829,109 @@
       "h": "a633acd39bd6"
     },
     "Правка · пропущен раньше · 01": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "175bdcc2e73a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-cycle-top.sb-missed-earlier-head — шапка кадра Л6; proposal_ui MissedEarlierProposalScreen; contract test row 01 display:flex.",
+      "h": "175bdcc2e73a"
     },
     "Правка · пропущен раньше · 02": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "07ffbada0ee7",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-missed-earlier-head-main MISSED_EARLIER_STYLE.headCol flex-direction:column gap:3px; contract test row 02.",
+      "h": "07ffbada0ee7"
     },
     "Правка · пропущен раньше · 03": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "67581d5b0d68",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "buildMissedEarlierSnapshot.titleLine → .sb-missed-earlier-title «Замена вместо вторника» color var(--tx); contract test row 03.",
+      "h": "67581d5b0d68"
     },
     "Правка · пропущен раньше · 04": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "359d24841d2c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "proposal.subtitle → .sb-missed-earlier-key «та же группа, но полегче»; contract test row 04.",
+      "h": "359d24841d2c"
     },
     "Правка · пропущен раньше · 05": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "c629f84f9712",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-list.sb-missed-earlier-scroll overflow-y:auto (750 .sb-list); contract test row 05.",
+      "h": "c629f84f9712"
     },
     "Правка · пропущен раньше · 06": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "81d6d8e40a85",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-missed-earlier-card MISSED_EARLIER_STYLE.card margin-top 12px; contract test row 06.",
+      "h": "81d6d8e40a85"
     },
     "Правка · пропущен раньше · 07": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "4f95fa757d2e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-missed-earlier-timeline display:flex align-items:center gap 9px; contract test row 07.",
+      "h": "4f95fa757d2e"
     },
     "Правка · пропущен раньше · 08": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "be2910b42441",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "fmtMissedEarlierShortDate → .sb-missed-earlier-skipped-pill «пропущено 4 авг» color var(--v4-mark-1); contract test row 08.",
+      "h": "be2910b42441"
     },
     "Правка · пропущен раньше · 09": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "9353f7fd035e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "replacementLine «замена сегодня, 10 авг» .sb-missed-earlier-replacement-line 700 12.5px/1 var(--tx); contract test row 09.",
+      "h": "9353f7fd035e"
     },
     "Правка · пропущен раньше · 10": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "5b3c51bb3a0c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "MISSED_EARLIER_PROSE → .sb-missed-earlier-prose 500 12px/1.5 var(--tx); contract test row 10.",
+      "h": "5b3c51bb3a0c"
     },
     "Правка · пропущен раньше · 11": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "4c9bbcafa2cf",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "«Посмотреть, что предлагает» .sb-missed-earlier-review MISSED_EARLIER_STYLE.reviewBtn margin-top 12px; contract test row 11.",
+      "h": "4c9bbcafa2cf"
     },
     "Правка · пропущен раньше · 12": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "48260797df71",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "rulesTier → .sb-missed-earlier-tier «Правила этого случая»; contract test row 12.",
+      "h": "48260797df71"
     },
     "Правка · пропущен раньше · 13": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "d9a337aab838",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": ".sb-missed-earlier-rules MISSED_EARLIER_STYLE.rulesList — список .cd; contract test row 13.",
+      "h": "d9a337aab838"
     },
     "Правка · пропущен раньше · 14": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "missedEarlierRuleRow → .sb-missed-earlier-rule-row display:flex; contract test row 14.",
+      "h": "af81bb6e54c6"
     },
     "Правка · пропущен раньше · 15": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "18c9cd74b384",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "rulePastTitle «Прошедший день» .sb-missed-earlier-rule-main color var(--tx); contract test row 15.",
+      "h": "18c9cd74b384"
     },
     "Правка · пропущен раньше · 16": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "691c341d4d2f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "rulePastTail «остаётся пропуском» 600 11px/1 var(--ac2); contract test row 16.",
+      "h": "691c341d4d2f"
     },
     "Правка · пропущен раньше · 17": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "097c78c1f15a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "ruleReplacementTail «новая тренировка на свободный день» 600 11px/1 var(--ink56); contract test row 17.",
+      "h": "097c78c1f15a"
     },
     "Правка · пропущен раньше · 18": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "6b286135ed76",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "последняя .sb-missed-earlier-rule-row noBorder borderBottom none; contract test row 18.",
+      "h": "6b286135ed76"
     },
     "Правка · пропущен раньше · 19": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "e13f02c308e3",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "ruleGuardSub «сейчас отбивает…» .sb-missed-earlier-rule-sub 500 11px/1.3 var(--ink56); contract test row 19.",
+      "h": "e13f02c308e3"
     },
     "Правка · пропущен раньше · 20": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "20579290f513",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "ruleGuardTail «нужна правка» 700 11.5px/1 var(--ac2); contract test row 20 sand+blue.",
+      "h": "20579290f513"
     },
     "Правка · пропущен раньше · 21": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "ce184db0b1df",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "MISSED_EARLIER_FOOTNOTE → .sb-missed-earlier-footnote 500 11px/1.55 var(--ink56); contract test row 21.",
+      "h": "ce184db0b1df"
     },
     "Исход · правка принята · 01": {
       "v": "≠",
@@ -8821,11 +8779,9 @@
       "h": "600d05c9f6b0"
     },
     "Правка · пропущен раньше · текст": {
-      "v": "≠",
-      "f": "SkipSheet (superset_ui:2245+) — пропуск текущего дня; кадры «Правка · пропущен раньше · 01-22» — curator proposal flow для прошлого дня, клиентский исход не построен. f слабый — усилить file:line при применении.",
-      "h": "ec58e22c1a87",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754"
+      "v": "=",
+      "f": "buildMissedEarlierSnapshot агрегирует все строки кадра Л6 (заголовок, даты, проза, CTA, правила, сноска); contract test «текст».",
+      "h": "ec58e22c1a87"
     },
     "Исход · правка принята · текст": {
       "v": "≠",

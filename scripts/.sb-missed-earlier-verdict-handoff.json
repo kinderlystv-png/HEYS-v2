@@ -1,0 +1,170 @@
+{
+  "zone": "strength-builder",
+  "block": "Правка · пропущен раньше",
+  "canvasOid": "Л6",
+  "canvasPath": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html",
+  "frameCount": 1,
+  "frameNote": "stop-кадр data-oid=Л6 data-demo=stop data-screen-label=Правка · пропущен раньше — замена за прошлый пропуск на свободный день",
+  "buildSpec": {
+    "component": "MissedEarlierProposalScreen",
+    "snapshot": "buildMissedEarlierSnapshot",
+    "guard": "isMissedEarlierProposal(training, dateKey, todayKey) — pending proposal + proposal.replacesSkippedDateKey < today; plan.status!==skipped (Л5)",
+    "file": "apps/web/strength/heys_strength_proposal_ui_v1.js",
+    "mount": "apps/web/heys_day_trainings_v1.js — proposalBlocksDay + isMissedEarlierProposal → MissedEarlierProposalScreen до ветки Л5",
+    "props": {
+      "training": "{ workoutLog, plan { status assigned, proposal { replacesSkippedDateKey, title, subtitle } }, planSnapshot }",
+      "dateKey": "дата карточки замены (сегодня)",
+      "todayDateKey": "todayDateKeyForPlan()",
+      "onReview": "Parts.openProposalReview — кнопка «Посмотреть, что предлагает»"
+    },
+    "cssStrategy": "inline MISSED_EARLIER_STYLE в proposal_ui; пилюля пропуска — var(--v4-mark-1); 750 не трогали",
+    "test": "apps/web/__tests__/strength-builder-missed-earlier-v4-canvas-contract.test.js"
+  },
+  "finishMetaReadOnly": {
+    "вид · экран истории": "v=? — HistoryScreen в finish_ui; кадр Д1; read-only, не scope Л6",
+    "вид · итог программы": "v=? — ProgramDoneScreen в proposal_ui (16e); соседний flow",
+    "Л5 пропущен сегодня": "plan.status===skipped на сегодня — MissedTodayProposalScreen; взаимоисключающий guard"
+  },
+  "scope": "apps/web/strength/heys_strength_proposal_ui_v1.js, apps/web/heys_day_trainings_v1.js",
+  "generated": "2026-09-05",
+  "summary": {
+    "rows": 22,
+    "recommendEquals": 22,
+    "codeChanged": true,
+    "cssTouched": false
+  },
+  "rows": [
+    {
+      "key": "Правка · пропущен раньше · 01",
+      "v": "=",
+      "f": ".sb-cycle-top.sb-missed-earlier-head — шапка кадра Л6; proposal_ui MissedEarlierProposalScreen; contract test row 01 display:flex.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 02",
+      "v": "=",
+      "f": ".sb-missed-earlier-head-main MISSED_EARLIER_STYLE.headCol flex-direction:column gap:3px; contract test row 02.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 03",
+      "v": "=",
+      "f": "buildMissedEarlierSnapshot.titleLine → .sb-missed-earlier-title «Замена вместо вторника» color var(--tx); contract test row 03.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 04",
+      "v": "=",
+      "f": "proposal.subtitle → .sb-missed-earlier-key «та же группа, но полегче»; contract test row 04.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 05",
+      "v": "=",
+      "f": ".sb-list.sb-missed-earlier-scroll overflow-y:auto (750 .sb-list); contract test row 05.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 06",
+      "v": "=",
+      "f": ".sb-missed-earlier-card MISSED_EARLIER_STYLE.card margin-top 12px; contract test row 06.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 07",
+      "v": "=",
+      "f": ".sb-missed-earlier-timeline display:flex align-items:center gap 9px; contract test row 07.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 08",
+      "v": "=",
+      "f": "fmtMissedEarlierShortDate → .sb-missed-earlier-skipped-pill «пропущено 4 авг» color var(--v4-mark-1); contract test row 08.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 09",
+      "v": "=",
+      "f": "replacementLine «замена сегодня, 10 авг» .sb-missed-earlier-replacement-line 700 12.5px/1 var(--tx); contract test row 09.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 10",
+      "v": "=",
+      "f": "MISSED_EARLIER_PROSE → .sb-missed-earlier-prose 500 12px/1.5 var(--tx); contract test row 10.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 11",
+      "v": "=",
+      "f": "«Посмотреть, что предлагает» .sb-missed-earlier-review MISSED_EARLIER_STYLE.reviewBtn margin-top 12px; contract test row 11.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 12",
+      "v": "=",
+      "f": "rulesTier → .sb-missed-earlier-tier «Правила этого случая»; contract test row 12.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 13",
+      "v": "=",
+      "f": ".sb-missed-earlier-rules MISSED_EARLIER_STYLE.rulesList — список .cd; contract test row 13.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 14",
+      "v": "=",
+      "f": "missedEarlierRuleRow → .sb-missed-earlier-rule-row display:flex; contract test row 14.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 15",
+      "v": "=",
+      "f": "rulePastTitle «Прошедший день» .sb-missed-earlier-rule-main color var(--tx); contract test row 15.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 16",
+      "v": "=",
+      "f": "rulePastTail «остаётся пропуском» 600 11px/1 var(--ac2); contract test row 16.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 17",
+      "v": "=",
+      "f": "ruleReplacementTail «новая тренировка на свободный день» 600 11px/1 var(--ink56); contract test row 17.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 18",
+      "v": "=",
+      "f": "последняя .sb-missed-earlier-rule-row noBorder borderBottom none; contract test row 18.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 19",
+      "v": "=",
+      "f": "ruleGuardSub «сейчас отбивает…» .sb-missed-earlier-rule-sub 500 11px/1.3 var(--ink56); contract test row 19.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 20",
+      "v": "=",
+      "f": "ruleGuardTail «нужна правка» 700 11.5px/1 var(--ac2); contract test row 20 sand+blue.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · 21",
+      "v": "=",
+      "f": "MISSED_EARLIER_FOOTNOTE → .sb-missed-earlier-footnote 500 11px/1.55 var(--ink56); contract test row 21.",
+      "notes": ""
+    },
+    {
+      "key": "Правка · пропущен раньше · текст",
+      "v": "=",
+      "f": "buildMissedEarlierSnapshot агрегирует все строки кадра Л6 (заголовок, даты, проза, CTA, правила, сноска); contract test «текст».",
+      "notes": ""
+    }
+  ]
+}
