@@ -1,0 +1,6 @@
+fix(ui): home-widgets bucket-2 amber literals → v4 warn roles
+
+Phase 2 polosa4 task53: translate remaining home-widgets amber-ladder
+warm literals (heys_user_v12, diary, registry, completeness dark) to
+semantic --v4-warn-* / color-mix. 730-widgets + widget_data were in
+HEAD from sibling water-add pass. No push.

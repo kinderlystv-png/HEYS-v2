@@ -46,7 +46,7 @@
       id: 'nutrition',
       label: 'Питание',
       icon: 'apple',
-      color: '#f97316'
+      color: 'var(--v4-warn-2, #c67139)'
     },
     health: {
       id: 'health',

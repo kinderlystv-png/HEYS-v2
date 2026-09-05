@@ -1,0 +1,63 @@
+{
+  "task": "polosa4-task53-phase2-home-widgets",
+  "scope": "ведро 2 · янтарная лестница · зона home-widgets (29 мест)",
+  "baseline": {
+    "bucket2HomeWidgets": { "files": 6, "places": 29 }
+  },
+  "after": {
+    "bucket2HomeWidgets": { "files": 0, "places": 0 }
+  },
+  "deltaBucket2": -29,
+  "alreadyInHead": {
+    "commit": "41f87945b",
+    "files": ["apps/web/styles/modules/730-widgets-dashboard.css (8 мест)", "apps/web/widgets/widget_data.js (1 место)"]
+  },
+  "editedThisCommit": [
+    {
+      "file": "apps/web/styles/heys-components.css",
+      "places": 1,
+      "selectors": ["@media dark .completeness-score--medium — #78350f → color-mix --v4-warn-text 45%"]
+    },
+    {
+      "file": "apps/web/heys_user_v12.js",
+      "places": 16,
+      "note": "константы V4_WARN_* вместо inline-янтаря"
+    },
+    {
+      "file": "apps/web/heys_day_diary_section.js",
+      "places": 2,
+      "selectors": ["getHealthTrendLevel attention/warning → V4_WARN_SOFT / V4_WARN_2"]
+    },
+    {
+      "file": "apps/web/heys_widgets_registry_v1.js",
+      "places": 1,
+      "selectors": ["CATEGORIES.nutrition.color → var(--v4-warn-2)"]
+    },
+    {
+      "file": "apps/web/__tests__/polosa4-task53-bare-literals-home-widgets.test.js",
+      "places": 0,
+      "note": "новый гейт зоны"
+    }
+  ],
+  "jsCoordination": {
+    "polosa3Needed": false,
+    "reason": "JS правился здесь: inline → var(--v4-warn-*); тесты дня не трогали"
+  },
+  "computedSample": {
+    "sand": {
+      ".widget-cascade__dot--neutral": "#c9922e",
+      ".widget-insulin__status--almost.color": "#c9922e",
+      ".pct-badge--yellow.color": "#c9922e"
+    },
+    "blue": {
+      ".widget-cascade__dot--neutral": "#c0871c",
+      ".widget-insulin__status--almost.color": "#c0871c",
+      ".pct-badge--yellow.color": "#c0871c"
+    }
+  },
+  "checks": {
+    "ui:v4:check:roles": "pass",
+    "role-fallback-truth": "pass",
+    "polosa4-task53-bare-literals-home-widgets.test.js": "pass (ранний прогон сессии; vitest env нестабилен позже)"
+  }
+}

@@ -20,6 +20,15 @@
     getEmojiStyle: () => 'android', setEmojiStyle: () => { }
   };
 
+  const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+  const V4_WARN_1 = 'var(--v4-warn-1, #d99a63)';
+  const V4_WARN_2 = 'var(--v4-warn-2, #c67139)';
+  const V4_WARN_3 = 'var(--v4-warn-3, #a1471c)';
+  const V4_WARN_TEXT = 'var(--v4-warn-text, #a1471c)';
+  const V4_WARN_SURFACE = 'color-mix(in srgb, var(--v4-warn-soft, #c9922e) 10%, transparent)';
+  const V4_WARN_SURFACE_STRONG = 'color-mix(in srgb, var(--v4-warn-soft, #c9922e) 15%, transparent)';
+  const V4_WARN_PILL_SURFACE = 'color-mix(in srgb, var(--v4-warn-soft, #c9922e) 12%, transparent)';
+
   // Дефолтный профиль (единый источник)
   const DEFAULT_PROFILE = {
     firstName: '', lastName: '', gender: 'Мужской',
@@ -810,8 +819,8 @@
     // Пресеты дефицита/профицита калорий
     const DEFICIT_PRESETS = [
       { value: -20, label: 'Агрессивное похудение', emoji: '🔥🔥', color: '#ef4444' },
-      { value: -15, label: 'Активное похудение', emoji: '🔥', color: '#f97316' },
-      { value: -10, label: 'Умеренное похудение', emoji: '🎯', color: '#eab308' },
+      { value: -15, label: 'Активное похудение', emoji: '🔥', color: V4_WARN_2 },
+      { value: -10, label: 'Умеренное похудение', emoji: '🎯', color: V4_WARN_SOFT },
       { value: 0, label: 'Поддержание веса', emoji: '⚖️', color: '#22c55e' },
       { value: 10, label: 'Умеренный набор', emoji: '💪', color: '#3b82f6' },
       { value: 15, label: 'Активный набор', emoji: '💪💪', color: '#3b82f6' }
@@ -822,7 +831,7 @@
       if (preset) return preset;
       // Для кастомных значений
       if (val < -10) return { emoji: '🔥🔥', color: '#ef4444', label: 'Агрессивный дефицит' };
-      if (val < 0) return { emoji: '🔥', color: '#f97316', label: 'Дефицит' };
+      if (val < 0) return { emoji: '🔥', color: V4_WARN_2, label: 'Дефицит' };
       if (val === 0) return { emoji: '⚖️', color: '#22c55e', label: 'Поддержание' };
       if (val <= 10) return { emoji: '💪', color: '#3b82f6', label: 'Профицит' };
       return { emoji: '💪💪', color: '#3b82f6', label: 'Агрессивный набор' };
@@ -920,7 +929,7 @@
                   currentWeight
                     ? React.createElement('span', { style: { fontWeight: 600 } },
                       `${currentWeight} кг`,
-                      diff !== null && diff !== 0 && React.createElement('span', { style: { marginLeft: '8px', fontSize: '13px', color: diff < 0 ? '#22c55e' : diff > 0 ? '#f97316' : 'var(--gray-500)' } },
+                      diff !== null && diff !== 0 && React.createElement('span', { style: { marginLeft: '8px', fontSize: '13px', color: diff < 0 ? '#22c55e' : diff > 0 ? V4_WARN_2 : 'var(--gray-500)' } },
                         diff > 0 ? `+${diff}` : diff, ' от базы'
                       )
                     )
@@ -1113,10 +1122,10 @@
                 if (isVeryAggressive) {
                   warnings.push({ icon: '⚠️', text: 'Дефицит >30% — высокий риск потери мышц и метаболической адаптации', color: '#dc2626' });
                 } else if (isAggressive) {
-                  warnings.push({ icon: '⚡', text: 'Дефицит >20% — добавьте силовые тренировки для сохранения мышц', color: '#f97316' });
+                  warnings.push({ icon: '⚡', text: 'Дефицит >20% — добавьте силовые тренировки для сохранения мышц', color: V4_WARN_2 });
                 }
                 if (kgPerWeek > 1) {
-                  warnings.push({ icon: '🏃', text: `${kgPerWeek} кг/нед — рекомендация ACSM: 0.5-0.9 кг/нед`, color: '#eab308' });
+                  warnings.push({ icon: '🏃', text: `${kgPerWeek} кг/нед — рекомендация ACSM: 0.5-0.9 кг/нед`, color: V4_WARN_SOFT });
                 }
                 if (kgPerWeek > 1.5) {
                   warnings.push({ icon: '🚨', text: 'Потеря >1.5 кг/нед увеличивает потерю мышц на 20-30%', color: '#dc2626' });
@@ -1158,8 +1167,8 @@
                     style: {
                       display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px',
                       padding: '6px 10px', borderRadius: '8px',
-                      background: tdeeSource === 'real' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(234, 179, 8, 0.1)',
-                      border: `1px solid ${tdeeSource === 'real' ? '#10b981' : '#eab308'}`
+                      background: tdeeSource === 'real' ? 'rgba(16, 185, 129, 0.1)' : V4_WARN_SURFACE,
+                      border: `1px solid ${tdeeSource === 'real' ? '#10b981' : V4_WARN_SOFT}`
                     }
                   },
                     React.createElement('span', { style: { fontSize: '12px' } },
@@ -1168,7 +1177,7 @@
                     React.createElement('span', {
                       style: {
                         fontSize: '12px',
-                        color: tdeeSource === 'real' ? '#059669' : '#b45309'
+                        color: tdeeSource === 'real' ? '#059669' : V4_WARN_3
                       }
                     },
                       tdeeSource === 'real'
@@ -1179,9 +1188,9 @@
 
                   // Разбивка потери веса (научная модель: жир + гликоген/вода + мышцы)
                   React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '10px' } },
-                    React.createElement('div', { style: { textAlign: 'center', padding: '8px', background: 'rgba(251, 191, 36, 0.15)', borderRadius: '8px' } },
-                      React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#b45309' } }, `${fatToLose} кг`),
-                      React.createElement('div', { style: { fontSize: '11px', color: '#92400e' } }, `🔥 Жир (${Math.round(fatPercent * 100)}%)`)
+                    React.createElement('div', { style: { textAlign: 'center', padding: '8px', background: V4_WARN_SURFACE_STRONG, borderRadius: '8px' } },
+                      React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: V4_WARN_3 } }, `${fatToLose} кг`),
+                      React.createElement('div', { style: { fontSize: '11px', color: V4_WARN_TEXT } }, `🔥 Жир (${Math.round(fatPercent * 100)}%)`)
                     ),
                     React.createElement('div', { style: { textAlign: 'center', padding: '8px', background: 'rgba(59, 130, 246, 0.15)', borderRadius: '8px' } },
                       React.createElement('div', { style: { fontSize: '18px', fontWeight: 700, color: '#1d4ed8' } }, `${glycogenWaterToLose} кг`),
@@ -1201,7 +1210,7 @@
                     dailyDeficit > 0 && React.createElement('span', { className: 'pill', style: { fontSize: '12px' } },
                       `📉 Дефицит: ${dailyDeficit} ккал/день`
                     ),
-                    kgPerWeek > 0 && React.createElement('span', { className: 'pill', style: { fontSize: '12px', background: kgPerWeek > 1 ? '#fef3c7' : '#dcfce7' } },
+                    kgPerWeek > 0 && React.createElement('span', { className: 'pill', style: { fontSize: '12px', background: kgPerWeek > 1 ? V4_WARN_PILL_SURFACE : '#dcfce7' } },
                       `⚖️ ~${kgPerWeek} кг/нед`
                     ),
                     targetDate && React.createElement('span', { className: 'pill', style: { fontSize: '12px' } },
@@ -1343,9 +1352,9 @@
                 : round1(10 * w + 6.25 * (h * 100) - 5 * a + (profile.gender === 'Женский' ? -161 : 5));
               // BMI категория
               let bmiCat = '', bmiColor = '#6b7280';
-              if (bmi < 18.5) { bmiCat = 'недовес'; bmiColor = '#eab308'; }
+              if (bmi < 18.5) { bmiCat = 'недовес'; bmiColor = V4_WARN_SOFT; }
               else if (bmi < 25) { bmiCat = 'норма'; bmiColor = '#22c55e'; }
-              else if (bmi < 30) { bmiCat = 'избыток'; bmiColor = '#f97316'; }
+              else if (bmi < 30) { bmiCat = 'избыток'; bmiColor = V4_WARN_2; }
               else { bmiCat = 'ожирение'; bmiColor = '#ef4444'; }
 
               // Норма воды: 30 мл на кг веса
@@ -1484,7 +1493,7 @@
             ),
             React.createElement('div', { className: 'muted', style: { marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' } },
               'Макс пульс = 220 − возраст. Кал/мин = MET × (вес × 0.0175) − 1.',
-              zonesPending && React.createElement('span', { style: { color: '#f59e0b', fontSize: '13px', fontWeight: 500 } }, '⏳ Сохраняется...'),
+              zonesPending && React.createElement('span', { style: { color: V4_WARN_1, fontSize: '13px', fontWeight: 500 } }, '⏳ Сохраняется...'),
               zonesSaved && React.createElement('span', { style: { color: '#22c55e', fontSize: '13px', fontWeight: 500 } }, '✓ Сохранено')
             )
           ) // end profile-section__fields

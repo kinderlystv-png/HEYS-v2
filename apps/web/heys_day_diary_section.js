@@ -14,6 +14,8 @@
     let _DiaryPanelGate = null;
 
     const HEALTH_TREND_PERIOD_STORAGE_KEY = 'heys_diary_health_trend_period_v1';
+    const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+    const V4_WARN_2 = 'var(--v4-warn-2, #c67139)';
     const FIBER_PANEL_PROFILE_FIELD = 'showDiaryFiberPanel';
     const SCORE_RISK_TREND_PANEL_PROFILE_FIELD = 'showDiaryScoreRiskTrendPanel';
     const PLANNER_PANEL_PROFILE_FIELD = 'showDiaryPlannerPanel';
@@ -286,8 +288,8 @@
         const numericScore = Number(score) || 0;
         if (numericScore >= 85) return { id: 'excellent', color: '#10b981' };
         if (numericScore >= 70) return { id: 'good', color: '#22c55e' };
-        if (numericScore >= 50) return { id: 'attention', color: '#eab308' };
-        if (numericScore >= 30) return { id: 'warning', color: '#f97316' };
+        if (numericScore >= 50) return { id: 'attention', color: V4_WARN_SOFT };
+        if (numericScore >= 30) return { id: 'warning', color: V4_WARN_2 };
         return { id: 'critical', color: '#ef4444' };
     }
 
