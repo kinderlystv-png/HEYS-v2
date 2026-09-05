@@ -121,9 +121,6 @@ const EXCEPTIONS = new Set([
   '.water-review__chip--quick|line-height',
   '.water-review__chip--quick|background',
   '.water-review__chip--quick|color',
-  // Пакет 36 / тач-цели: видимая высота 44px — кадры stop ещё 30px.
-  '.water-review__chip--quick|height',
-  '.water-fab-vol|height',
   '.water-fab-vol--minus|color',
 ]);
 

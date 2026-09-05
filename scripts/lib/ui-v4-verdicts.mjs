@@ -247,7 +247,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // «вид · плитка воды 1×1» переведены в typed-v1 с reasonCode
     // owner-decision — решение владельца вернуло раскладку кадра.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    notApplicable: [44, 'fb9e183ce9fbbf1a'],
+    notApplicable: [43, 'b5fdbc4c25b420fc'],
   }),
 });
 
