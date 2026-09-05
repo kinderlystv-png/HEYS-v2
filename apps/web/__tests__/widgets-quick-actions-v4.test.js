@@ -12,9 +12,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import * as RealReact from 'react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const WEB_DIR = path.resolve(__dirname, '..');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
@@ -191,6 +191,9 @@ describe('быстрые действия: состав и порядок', () =
 describe('быстрые действия: правка списка', () => {
   beforeEach(() => {
     globalThis.React = RealReact;
+    // Инвариант продукта: hideAction ждёт QUICK_ROW_HIDE_MS (160) реальным таймером.
+    // vacuity: чужой vi.useFakeTimers() без снятия ломает setTimeout(220) в тесте.
+    vi.useRealTimers();
   });
 
   afterEach(() => {
@@ -254,9 +257,10 @@ describe('быстрые действия: правка списка', () => {
     expect(minus).toBeTruthy();
     fireEvent.click(minus);
     // Строка сначала сжимается 160 мс и только потом уходит из набора.
-    await new Promise((resolve) => setTimeout(resolve, 220));
-    expect(state.activity).toBe(false);
-    expect(rowLabels(container)).toEqual(['Мессенджер', 'Голод и энергия', 'Еда']);
+    await waitFor(() => {
+      expect(state.activity).toBe(false);
+      expect(rowLabels(container)).toEqual(['Мессенджер', 'Голод и энергия', 'Еда']);
+    });
     const chip = container.querySelector('.widgets-quick-chip');
     expect(chip.getAttribute('aria-label')).toBe('Вернуть в список: Активность');
     fireEvent.click(chip);
@@ -270,8 +274,9 @@ describe('быстрые действия: правка списка', () => {
     fireEvent.click(pencil(container));
     fireEvent.click([...container.querySelectorAll('.widgets-quick-minus')]
       .find((el) => el.getAttribute('aria-label') === 'Убрать Мессенджер'));
-    await new Promise((resolve) => setTimeout(resolve, 220));
-    expect(container.querySelectorAll('.widgets-quick-chip').length).toBe(1);
+    await waitFor(() => {
+      expect(container.querySelectorAll('.widgets-quick-chip').length).toBe(1);
+    });
     fireEvent.click(pencil(container));
     expect(container.querySelectorAll('.widgets-quick-chip').length).toBe(0);
     // Карандаш остаётся: скрытый пункт вернуть больше неоткуда.
