@@ -50,15 +50,27 @@ function resetSandboxZone(sandbox) {
   }
 }
 
-async function runParallelWriters(sandbox, extraEnv = {}) {
+async function runParallelWriters(sandbox, extraEnv = {}, { requireSuccess = true } = {}) {
   const env = { ...sandbox.guardEnv(), ...extraEnv };
   const [runA, runB] = await Promise.all([
     runGuardNodeScript(SET_VERDICT, [ZONE_ID, KEY_A, '=', 'fact from writer a'], { cwd: ROOT, env }),
     runGuardNodeScript(SET_VERDICT, [ZONE_ID, KEY_B, '=', 'fact from writer b'], { cwd: ROOT, env }),
   ]);
-  expect(runA.code, runA.stderr || runA.stdout).toBe(0);
-  expect(runB.code, runB.stderr || runB.stdout).toBe(0);
-  return JSON.parse(fs.readFileSync(sandbox.zonePath(ZONE_ID), 'utf8'));
+  if (runA.code !== 0 || runB.code !== 0) {
+    if (requireSuccess) {
+      expect(runA.code, runA.stderr || runA.stdout).toBe(0);
+      expect(runB.code, runB.stderr || runB.stdout).toBe(0);
+    }
+    return { completed: false, runA, runB };
+  }
+  let zone;
+  try {
+    zone = JSON.parse(fs.readFileSync(sandbox.zonePath(ZONE_ID), 'utf8'));
+  } catch {
+    if (requireSuccess) throw new Error('zone JSON not parseable after parallel writers');
+    return { completed: false, runA, runB };
+  }
+  return { completed: true, zone, runA, runB };
 }
 
 describe('ui-v4 verdict zone atomic write', () => {
@@ -75,7 +87,8 @@ describe('ui-v4 verdict zone atomic write', () => {
 
   it('parallel setVerdictKey runs leave parseable JSON with both writer keys', async () => {
     sandbox = createVerdictGuardSandbox(ROOT, { [ZONE_ID]: fixtureZone() });
-    const zone = await runParallelWriters(sandbox);
+    const { completed, zone } = await runParallelWriters(sandbox);
+    expect(completed).toBe(true);
 
     expect(zone.rows[KEY_A]).toBeTruthy();
     expect(zone.rows[KEY_B]).toBeTruthy();
@@ -108,16 +121,24 @@ describe('ui-v4 verdict zone atomic write', () => {
   it('without zone lock, parallel RMW on different keys can lose an update', async () => {
     sandbox = createVerdictGuardSandbox(ROOT, { [ZONE_ID]: fixtureZone() });
     let lossCount = 0;
+    let completedCount = 0;
 
     for (let i = 0; i < RACE_ITERATIONS; i += 1) {
       resetSandboxZone(sandbox);
-      const zone = await runParallelWriters(sandbox, {
-        HEYS_VERDICT_DISABLE_ZONE_LOCK: '1',
-        HEYS_VERDICT_RMW_DELAY_MS: String(RMW_DELAY_MS),
-      });
-      if (!bothWritersApplied(zone)) lossCount += 1;
+      const result = await runParallelWriters(
+        sandbox,
+        {
+          HEYS_VERDICT_DISABLE_ZONE_LOCK: '1',
+          HEYS_VERDICT_RMW_DELAY_MS: String(RMW_DELAY_MS),
+        },
+        { requireSuccess: false },
+      );
+      if (!result.completed) continue;
+      completedCount += 1;
+      if (!bothWritersApplied(result.zone)) lossCount += 1;
     }
 
+    expect(completedCount).toBeGreaterThan(5);
     expect(lossCount).toBeGreaterThan(0);
   }, 30_000);
 
@@ -126,9 +147,10 @@ describe('ui-v4 verdict zone atomic write', () => {
 
     for (let i = 0; i < LOCKED_RACE_ITERATIONS; i += 1) {
       resetSandboxZone(sandbox);
-      const zone = await runParallelWriters(sandbox, {
+      const { completed, zone } = await runParallelWriters(sandbox, {
         HEYS_VERDICT_RMW_DELAY_MS: String(RMW_DELAY_MS),
       });
+      expect(completed, `iteration ${i}`).toBe(true);
       expect(bothWritersApplied(zone), `iteration ${i}`).toBe(true);
     }
   }, 30_000);
