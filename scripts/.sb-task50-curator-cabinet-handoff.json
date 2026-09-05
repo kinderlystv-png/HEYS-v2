@@ -1,0 +1,16 @@
+{
+  "zone": "task50-curator-cabinet",
+  "scope": "Lane 3 · Task 50 · полоса 1 · вход в статус правок из панели куратора",
+  "generated": "2026-09-05",
+  "rows": [
+    {
+      "key": "Panel row tap → openCuratorEditStatus",
+      "verdict": "=",
+      "dualCheck": {
+        "byName": "heys_curator_panel_v1.js: handlePanelRowClick → openPanelClientEditStatus → HEYS.CuratorPanel.openCuratorEditStatus",
+        "byBehavior": "curator-panel-edit-status-reachability.test.js · openPanelClientEditStatus + row tap → .sb-curator-edit"
+      },
+      "fact": "route: renderRow onClick → openPanelClientEditStatus({ clientId, clientName, training }); training из loadClientDayTraining (scoped LS / getKVBatchByCurator); fallback setSheet(row) без proposal"
+    }
+  ]
+}

@@ -76,6 +76,71 @@
     return { success: true };
   }
 
+  /** Силовая тренировка конструктора из дня — единственный источник proposal. */
+  function pickBuilderStrengthTraining(day) {
+    const list = day && day.trainings;
+    if (!Array.isArray(list)) return null;
+    for (let i = 0; i < list.length; i += 1) {
+      const tr = list[i];
+      if (!tr || String(tr.type) !== 'strength') continue;
+      if (tr.strengthEntryMode !== 'workout_builder') continue;
+      return tr;
+    }
+    return null;
+  }
+
+  /**
+   * День клиента для статуса правки: scoped-кеш, затем curator getKV.
+   * Панель не переключает currentClientId — ключ и client_id явные.
+   */
+  async function loadClientDayTraining(clientId, dateStr) {
+    if (!clientId || !dateStr) return null;
+    const key = 'heys_dayv2_' + dateStr;
+    const scopedKey = 'heys_' + clientId + '_dayv2_' + dateStr;
+    const utils = HEYS.utils || {};
+    const lsGet = typeof utils.lsGet === 'function'
+      ? utils.lsGet
+      : (HEYS.store && typeof HEYS.store.get === 'function' ? HEYS.store.get.bind(HEYS.store) : null);
+    if (lsGet) {
+      const cached = lsGet(scopedKey, null) || lsGet(key, null);
+      const fromCache = pickBuilderStrengthTraining(cached);
+      if (fromCache) return fromCache;
+    }
+    const api = HEYS.YandexAPI;
+    if (!api) return null;
+    let day = null;
+    try {
+      if (typeof api.getKVBatchByCurator === 'function') {
+        const batch = await api.getKVBatchByCurator(clientId, [key]);
+        if (batch && Array.isArray(batch.data) && batch.data[0]) day = batch.data[0].v;
+      } else if (typeof api.getKV === 'function') {
+        const res = await api.getKV(clientId, key);
+        if (res && res.data) day = res.data;
+      }
+    } catch (e) {
+      console.warn('[HEYS.curatorPanel] day load failed', e && e.message ? e.message : e);
+      return null;
+    }
+    return pickBuilderStrengthTraining(day);
+  }
+
+  /**
+   * Вход панели → CuratorEditStatusScreen (lane proposal_ui на CuratorPanel).
+   * Возвращает true, если полноэкранный слой открыт.
+   */
+  async function openPanelClientEditStatus(opts) {
+    const o = opts || {};
+    const openEdit = HEYS.CuratorPanel && HEYS.CuratorPanel.openCuratorEditStatus;
+    if (typeof openEdit !== 'function') return false;
+    const training = o.training || await loadClientDayTraining(o.clientId, o.dateStr || fmtDate(new Date()));
+    if (!training) return false;
+    return !!openEdit({
+      clientName: o.clientName || o.name || '',
+      training: training,
+      onClose: o.onClose
+    });
+  }
+
   /**
    * Отрезок окна одной функцией — и для запроса, и для подписи в листе.
    *
@@ -274,6 +339,16 @@
       const found = (clients || []).find((c) => c && c.id === clientId);
       return (found && found.name) || 'Клиент';
     }, [clients]);
+
+    const handlePanelRowClick = React.useCallback(async (row) => {
+      setDecisionError(null);
+      const opened = await openPanelClientEditStatus({
+        clientId: row.clientId,
+        clientName: nameOf(row.clientId)
+      });
+      if (opened) return;
+      setSheet(row);
+    }, [nameOf]);
 
     /**
      * Решение куратора уходит в данные клиента, а не в его собственные: норма
@@ -489,7 +564,7 @@
       key: row.clientId,
       type: 'button',
       className: 'cur-row',
-      onClick: () => { setDecisionError(null); setSheet(row); }
+      onClick: () => { handlePanelRowClick(row); }
     },
       h('span', { className: 'cur-row__avatar' }, initials(nameOf(row.clientId))),
       h('span', { className: 'cur-row__copy' },
@@ -929,7 +1004,7 @@
     );
   }
 
-  HEYS.CuratorPanel = {
+  HEYS.CuratorPanel = Object.assign(HEYS.CuratorPanel || {}, {
     windowDays,
     windowRange,
     shortRange,
@@ -942,8 +1017,11 @@
     agePill,
     initials,
     localIsoDate: fmtDate,
-    persistDecision
-  };
+    persistDecision,
+    pickBuilderStrengthTraining,
+    loadClientDayTraining,
+    openPanelClientEditStatus
+  });
 
   console.info('[HEYS.curatorPanel] ✅ loaded');
 })(typeof window !== 'undefined' ? window : globalThis);

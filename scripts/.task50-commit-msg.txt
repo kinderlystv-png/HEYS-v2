@@ -1,0 +1,4 @@
+fix(curator-panel): wire client row tap to edit status screen
+
+Panel tries CuratorPanel.openCuratorEditStatus with today's builder training
+before opening the norm-correction sheet; reachability test and handoff added.
