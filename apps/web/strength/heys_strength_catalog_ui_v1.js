@@ -76,9 +76,10 @@
 
   /** Каталог с фильтром по группе и поиском (экран 03). */
   function CatalogScreen(props) {
-    const { onPick, onCreate, onBack, historyFor } = props;
+    const { onPick, onBack, historyFor } = props;
     const [query, setQuery] = React.useState('');
     const [group, setGroup] = React.useState('all');
+    const [createDraft, setCreateDraft] = React.useState(null);
     const api = metaApi();
     const groups = api ? api.groups : [];
     const lowerBodyGroups = ['quads', 'hamstrings', 'glutes', 'adductors', 'calves'];
@@ -138,6 +139,16 @@
         || String(row.norm || '').trim().toLowerCase() === trimmedQuery.toLowerCase();
     });
     const showCreateRow = !!trimmedQuery && !catalogHasExact;
+
+    if (createDraft !== null) {
+      return h(NewExerciseScreen, {
+        initialName: createDraft,
+        onDone: function (name) {
+          if (typeof onPick === 'function') onPick(name);
+        },
+        onCancel: function () { setCreateDraft(null); }
+      });
+    }
 
     return h('div', {
       className: 'sb-root sb-screen sb-catalog-screen',
@@ -220,7 +231,7 @@
           showCreateRow && h('button', {
             type: 'button',
             className: 'sb-cat-create',
-            onClick: function () { onCreate(trimmedQuery); }
+            onClick: function () { setCreateDraft(trimmedQuery); }
           },
             h('span', { className: 'sb-cat-add', 'aria-hidden': 'true' }, '+'),
             h('div', { className: 'sb-cat-title' },

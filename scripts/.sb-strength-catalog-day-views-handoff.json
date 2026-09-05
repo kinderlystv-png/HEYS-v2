@@ -3,7 +3,7 @@
   "scope": "catalog views + day missed/outcomes (read-only)",
   "generated": "2026-09-05",
   "notes": {
-    "productionCreatePath": "Catalog onCreate → builder_ui:1458 setView(new) → ExerciseCardScreen М1; канвас В3/NewExerciseScreen/CustomExerciseScreen — не боевой маршрут.",
+    "productionCreatePath": "CatalogScreen create row → setCreateDraft → NewExerciseScreen (catalog_ui:140-151, :243+); onDone → onPick/addExercise. builder_ui view new/ExerciseCardScreen М1 остаётся мёртвым хвостом (onCreate больше не вызывается из каталога).",
     "priorHandoffs": [
       "scripts/.sb-catalog-exercise-muscles-handoff.json",
       "scripts/.sb-catalog-custom-exercise-handoff.json",
@@ -14,8 +14,8 @@
   },
   "summary": {
     "rows": 115,
-    "equals": 65,
-    "notEquals": 40,
+    "equals": 67,
+    "notEquals": 38,
     "question": 3,
     "dash": 6,
     "resolved": 1
@@ -32,8 +32,8 @@
         "5 · карточка упражнения несёт три вещи"
       ],
       "rowCount": 68,
-      "equals": 50,
-      "notEquals": 18,
+      "equals": 52,
+      "notEquals": 16,
       "question": 0,
       "dash": 0,
       "resolved": 0
@@ -85,8 +85,8 @@
     },
     {
       "key": "вид · создание упражнения",
-      "verdict": "≠",
-      "fact": "Канвас В3 data-v :2356 («1·Что меряем», пилюли, «Создать без объёма»). Runtime: каталог onCreate → view new → ExerciseCardScreen М1 (builder_ui:1458, :387) — «Чем меряется», одна CTA «Сохранить упражнение», без «Создать без объёма». NewExerciseScreen/CustomExerciseScreen есть, но не подключены (rg по apps/web — только export+тесты)."
+      "verdict": "=",
+      "fact": "Канвас В3 data-v :2356 («1·Что меряем», пилюли, «Создать без объёма»). Runtime: CatalogScreen create row → NewExerciseScreen catalog_ui:140-151, :243-392 (CATALOG_V4_BRIDGE); копия/CTA = strength-builder-custom-exercise-v4-canvas-contract.test.js. builder_ui view new/ExerciseCardScreen М1 (:1458, :1547) — мёртвый хвост, не вызывается из каталога."
     },
     {
       "key": "вид · таблица подходов в карточке",
@@ -206,37 +206,37 @@
     {
       "key": "Своё упражнение · 01",
       "verdict": "=",
-      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+      "fact": "Shell В3 = NewExerciseScreen catalog_ui:243+; create row → setCreateDraft → B3 (catalog_ui:140-151). strength-builder-custom-exercise-v4-canvas-contract.test.js."
     },
     {
       "key": "Своё упражнение · 02",
       "verdict": "=",
-      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+      "fact": "Shell В3 = NewExerciseScreen catalog_ui:243+; create row → setCreateDraft → B3 (catalog_ui:140-151). strength-builder-custom-exercise-v4-canvas-contract.test.js."
     },
     {
       "key": "Своё упражнение · 03",
       "verdict": "=",
-      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+      "fact": "Shell В3 = NewExerciseScreen catalog_ui:243+; create row → setCreateDraft → B3 (catalog_ui:140-151). strength-builder-custom-exercise-v4-canvas-contract.test.js."
     },
     {
       "key": "Своё упражнение · 04",
       "verdict": "=",
-      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+      "fact": "Shell В3 = NewExerciseScreen catalog_ui:243+; create row → setCreateDraft → B3 (catalog_ui:140-151). strength-builder-custom-exercise-v4-canvas-contract.test.js."
     },
     {
       "key": "Своё упражнение · 05",
       "verdict": "=",
-      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+      "fact": "Shell В3 = NewExerciseScreen catalog_ui:243+; create row → setCreateDraft → B3 (catalog_ui:140-151). strength-builder-custom-exercise-v4-canvas-contract.test.js."
     },
     {
       "key": "Своё упражнение · 06",
       "verdict": "=",
-      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+      "fact": "Shell В3 = NewExerciseScreen catalog_ui:243+; create row → setCreateDraft → B3 (catalog_ui:140-151). strength-builder-custom-exercise-v4-canvas-contract.test.js."
     },
     {
       "key": "Своё упражнение · 07",
       "verdict": "=",
-      "fact": "Shell В3 совпадает с NewExerciseScreen в тестах, но runtime create идёт в ExerciseCardScreen М1 (builder_ui:1458). Внимание: ·01-07 shell; ·08-23 сверены с unwired NewExerciseScreen (catalog_ui), production create = ExerciseCardScreen М1."
+      "fact": "Shell В3 = NewExerciseScreen catalog_ui:243+; create row → setCreateDraft → B3 (catalog_ui:140-151). strength-builder-custom-exercise-v4-canvas-contract.test.js."
     },
     {
       "key": "Своё упражнение · 08",
@@ -320,8 +320,8 @@
     },
     {
       "key": "Своё упражнение · текст",
-      "verdict": "≠",
-      "fact": "Канвас :4070 — копия В3 («1·Что меряем», «Создать без объёма»). Production create = ExerciseCardScreen М1 (builder_ui:1458): «Чем меряется», «Сохранить упражнение», нет вторичной CTA. Copy-handoff (=) сверял unwired CustomExerciseScreen superset_ui:3134 — не боевой путь."
+      "verdict": "=",
+      "fact": "Канвас :4070 — копия В3 («1·Что меряем», «Создать · без тоннажа»). Production create = CatalogScreen → NewExerciseScreen catalog_ui:243-392; смоук strength-builder-custom-exercise-v4-canvas-contract.test.js + strength-builder-ui.test.js (create row → B3). builder_ui ExerciseCardScreen М1 не на пути создания."
     },
     {
       "key": "Сессия · брошена вчера · 01",

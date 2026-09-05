@@ -25,7 +25,7 @@
     {
       "key": "Своё упражнение · текст",
       "verdict": "=",
-      "fact": "Канвас data-v (strength-builder.v4.dc.html:4070): «Новое упражнение › три поля… › 1·Что меряем › вес×повторы|свой вес|время|метры › 2·Какие мышцы › Основная|Помогают › 3·Только для своего веса › … › Создать упражнение › Создать без объёма › сноска». Продукт CustomExerciseScreen — heys_strength_superset_ui_v1.js:3134-3260: те же заголовки/ярусы/бейджи (CUSTOM_EX_UNIT_LABELS :3023-3028), строки «Основная»/«Помогают» (:3204-3213), подсказки и CTA дословно; смоук strength-superset-b3-custom-exercise-v4-canvas-contract.test.js."
+      "fact": "Канвас data-v (strength-builder.v4.dc.html:4070): «Новое упражнение › три поля… › 1·Что меряем › вес×повторы|свой вес|время|метры › 2·Какие мышцы › Основная|Помогают › 3·Только для своего веса › … › Создать упражнение › Создать · без тоннажа › сноска». Production NewExerciseScreen — catalog_ui:243-392; боевой путь CatalogScreen create row → setCreateDraft → B3; смоук strength-builder-custom-exercise-v4-canvas-contract.test.js + strength-builder-ui.test.js."
     },
     {
       "key": "Упражнение · группы мышц · текст",

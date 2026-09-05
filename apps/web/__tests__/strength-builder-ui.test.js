@@ -511,6 +511,29 @@ describe('каталог конструктора по Canvas Б2', () => {
     expect(screen.getByRole('button', { name: 'Квадрицепс' })).toBeTruthy();
     expect(screen.getByText(/Строка создания появляется/)).toBeTruthy();
   });
+
+  it('строка создания открывает NewExerciseScreen внутри каталога, не builder M1', () => {
+    globalThis.HEYS.getExerciseSuggestions = () => [];
+    const onCreate = vi.fn();
+    const Catalog = globalThis.HEYS.StrengthCatalogUI.CatalogScreen;
+    render(React.createElement(Catalog, {
+      onPick: () => {},
+      onCreate,
+      onBack: () => {},
+      historyFor: () => ({ last: null, record: null }),
+    }));
+
+    fireEvent.change(screen.getByLabelText('Поиск по названию'), {
+      target: { value: 'моё уникальное' },
+    });
+    fireEvent.click(screen.getByText(/Создать «моё уникальное»/));
+
+    expect(onCreate).not.toHaveBeenCalled();
+    expect(screen.getByText('1 · Что меряем')).toBeTruthy();
+    expect(screen.getByText('три поля, третье — только иногда')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Создать упражнение' })).toBeTruthy();
+    expect(document.querySelector('.sb-ex-name')).toBeTruthy();
+  });
 });
 
 describe('создание связки по Canvas З1', () => {
