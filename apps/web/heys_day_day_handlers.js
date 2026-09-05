@@ -551,7 +551,7 @@
 
             // 🎊 Confetti on goal hit — DOM-based (no React state)
             if (hitGoal) {
-                const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#3b82f6'];
+                const colors = ['#10b981', '#3b82f6', 'var(--v4-warn-1, #d99a63)', '#ec4899', '#3b82f6'];
                 const confettiEl = document.createElement('div');
                 confettiEl.className = 'confetti-container mood-confetti';
                 confettiEl.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';

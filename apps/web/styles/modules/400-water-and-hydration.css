@@ -49,7 +49,7 @@
   --wr-dim: rgba(242, 237, 230, 0.62);
   --wr-track: rgba(242, 237, 230, 0.14);
   --wr-divider: rgba(255, 255, 255, 0.12);
-  --wr-alarm: #e0704f;
+  --wr-alarm: var(--v4-bad-text, #e0704f);
   --wr-ok: #8a9a6a;
 }
 
@@ -75,7 +75,7 @@ html[data-theme-id="blue-dark"] .water-review {
   --wr-dim: rgba(238, 243, 248, 0.62);
   --wr-track: rgba(238, 243, 248, 0.14);
   --wr-divider: rgba(255, 255, 255, 0.12);
-  --wr-alarm: #f08a6a;
+  --wr-alarm: var(--v4-bad-text, #f08a6a);
   --wr-ok: #6fbf9a;
 }
 

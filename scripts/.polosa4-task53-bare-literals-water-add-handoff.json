@@ -1,0 +1,78 @@
+{
+  "task": "polosa4-task53-water-add-phase2",
+  "scope": "water-add · warm bare literals buckets 1–2 (bucket 3 — контрактные --water-dim-text / --wr-dim оставлены)",
+  "baseline": {
+    "waterAddBucket2": 10,
+    "waterAddBucket1": 34
+  },
+  "after": {
+    "waterAddBucket2": 0,
+    "waterAddBucket1": 32
+  },
+  "deltaBucket2": -10,
+  "deltaBucket1": -2,
+  "edited": [
+    {
+      "file": "apps/web/styles/modules/730-widgets-dashboard.css",
+      "bucket2Before": 8,
+      "bucket2After": 0,
+      "selectors": [
+        ".widget--streak .widget__flame + @keyframes flamePulse — tint-warm color-mix",
+        ".widget-streak__fire — tint-warm color-mix",
+        ".widget-cascade__dot--neutral — var(--v4-warn-soft)",
+        ".widget-insulin__status--almost — warn-soft color-mix 12%",
+        ".pct-badge--yellow — warn-soft color-mix 12%",
+        "[data-theme$=dark] .reports-fullscreen-modal — warn-3 color-mix градиент"
+      ]
+    },
+    {
+      "file": "apps/web/styles/modules/400-water-and-hydration.css",
+      "bucket1Before": 2,
+      "bucket1After": 0,
+      "selectors": [
+        "[data-theme$=dark] .water-review --wr-alarm → var(--v4-bad-text, #e0704f)",
+        "html[data-theme-id=blue-dark] .water-review --wr-alarm → var(--v4-bad-text, #f08a6a)"
+      ]
+    },
+    {
+      "file": "apps/web/heys_day_day_handlers.js",
+      "bucket2Before": 1,
+      "bucket2After": 0,
+      "selectors": ["goal confetti colors — var(--v4-warn-1)"]
+    },
+    {
+      "file": "apps/web/widgets/widget_data.js",
+      "bucket2Before": 1,
+      "bucket2After": 0,
+      "selectors": ["_getBMICategory overweight — var(--v4-warn-soft)"]
+    }
+  ],
+  "bucket3Left": [
+    {
+      "file": "apps/web/styles/modules/730-widgets-dashboard.css",
+      "var": "--water-dim-text",
+      "reason": "контракт water-add --dimTxt; четыре палитры в .widget-water--v4"
+    },
+    {
+      "file": "apps/web/styles/modules/400-water-and-hydration.css",
+      "var": "--wr-dim",
+      "reason": "контракт вторичного тона карточки воды"
+    }
+  ],
+  "computedSample": {
+    "sand": {
+      "waterNorm": "#6b5f4f",
+      "cascadeNeutral": "#c9922e",
+      "wrAlarmSandDark": "#e0704f"
+    },
+    "blue": {
+      "waterNorm": "#5a6474",
+      "cascadeNeutral": "#c0871c"
+    }
+  },
+  "checks": {
+    "ui:v4:check:roles": "pass",
+    "role-fallback-truth": "pass",
+    "polosa4-task53-bare-literals-water-add.test.js": "pass"
+  }
+}

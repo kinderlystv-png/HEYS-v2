@@ -1539,7 +1539,7 @@ body:has(.page-reports) .hdr::after {
 .widget--streak .widget__flame {
   font-size: 56px;
   animation: flamePulse 2s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px rgba(249, 115, 22, 0.4));
+  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--v4-tint-warm, #c67139) 40%, transparent));
 }
 
 .widget--streak .widget__streak-number {
@@ -1556,12 +1556,12 @@ body:has(.page-reports) .hdr::after {
   0%,
   100% {
     transform: scale(1) translateY(0);
-    filter: drop-shadow(0 4px 8px rgba(249, 115, 22, 0.4));
+    filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--v4-tint-warm, #c67139) 40%, transparent));
   }
 
   50% {
     transform: scale(1.08) translateY(-4px);
-    filter: drop-shadow(0 8px 16px rgba(249, 115, 22, 0.6));
+    filter: drop-shadow(0 8px 16px color-mix(in srgb, var(--v4-tint-warm, #c67139) 60%, transparent));
   }
 }
 
@@ -1668,7 +1668,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-cascade__dot--neutral {
-  background: #facc15;
+  background: var(--v4-warn-soft, #c9922e);
 }
 
 .widget-cascade__dot--good {
@@ -4176,7 +4176,7 @@ body:has(.page-reports) .hdr::after {
 .widget-streak__fire {
   font-size: 40px;
   animation: flamePulse 2s ease-in-out infinite;
-  filter: drop-shadow(0 4px 8px rgba(249, 115, 22, 0.4));
+  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--v4-tint-warm, #c67139) 40%, transparent));
 }
 
 .widget-streak__days {
@@ -5089,8 +5089,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget-insulin__status--almost {
-  background: rgba(234, 179, 8, 0.12);
-  color: var(--v4-warn-soft, #eab308);
+  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 12%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 .widget-insulin__status--soon {
@@ -6703,8 +6703,8 @@ body:has(.page-reports) .hdr::after {
 }
 
 .pct-badge--yellow {
-  background: rgba(234, 179, 8, 0.12);
-  color: var(--v4-warn-soft, #eab308);
+  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 12%, transparent);
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 .pct-badge--red {
@@ -8995,7 +8995,12 @@ body.reports-fullscreen-open {
 [data-theme$="dark"] .reports-fullscreen-modal,
 .theme-dark .reports-fullscreen-modal {
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.98) 0%, rgba(17, 24, 39, 0.98) 48%, rgba(67, 20, 7, 0.98) 100%);
+    linear-gradient(
+      180deg,
+      rgba(15, 23, 42, 0.98) 0%,
+      rgba(17, 24, 39, 0.98) 48%,
+      color-mix(in srgb, var(--v4-warn-3, #a1471c) 98%, transparent) 100%
+    );
   color: #e5e7eb;
 }
 
