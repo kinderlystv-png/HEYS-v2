@@ -383,7 +383,7 @@
     },
     "вид · карточка упражнения": {
       "v": "=",
-      "f": "Кадр М1: aggregate data-v strength-builder.v4.dc.html:2277. Продукт ExerciseCardScreen heys_strength_builder_ui_v1.js:387-542 + 750 .sb-ex-card-*; построчно ·01-19 = (strength-builder-exercise-card-v4-canvas-contract.test.js).",
+      "f": "view === 'exercise-card' монтирует ExerciseCardScreen (builder_ui:1542-1548); reachable из каталога через .sb-builder-catalog-bridge делегирование клика по .sb-cat-title (builder_ui:1549-1568).",
       "h": "1cb687c91f16"
     },
     "вид · выбор групп мышц": {
@@ -445,7 +445,7 @@
     },
     "вид · служебная шапка сессии": {
       "v": "=",
-      "f": "Контракт :2293 одна служебная шапка: .sb-head-title > b всегда wl.title/sessionTitle(exercises) — builder_ui:1896-1897; подзаголовок держит ключ подхода (exerciseWorkProgressKey) при is-weight-entry.",
+      "f": "sessionServiceHead() — единая шапка на list/empty/proposal-started (builder_ui:589-615, :288-296, :1696-1700, :1996-2010). title b = wl.title/sessionTitle(exercises); subtitle = exerciseWorkProgressKey при is-weight-entry, иначе дата/план/отдых — контракт :2293.",
       "h": "05aedac73849"
     },
     "вид · прерванная сессия": {
@@ -681,7 +681,7 @@
     },
     "вид · создание упражнения": {
       "v": "=",
-      "f": "Каталог onCreate → view new → CatUI.NewExerciseScreen (B3, CATALOG_V4_BRIDGE) — builder_ui:1547-1552; «1·Что меряем», пилюли — catalog_ui:243+; custom-exercise-v4-canvas-contract.test.js.",
+      "f": "Удалён мёртвый onCreate на CatalogScreen (бывш. builder_ui:1458 → setView('new')). Live create = CatalogScreen createDraft → NewExerciseScreen catalog_ui:140-151. view==='new' → CatUI.NewExerciseScreen сохранён для контракт-теста :79, без ExerciseCardScreen.",
       "h": "36f0e1cdbdd4"
     },
     "вид · экран цикла": {
@@ -2075,74 +2075,54 @@
       "h": "42a08001f0d5"
     },
     "Своё упражнение · 08": {
-      "v": "≠",
-      "f": "Кадр .cd badge-row; продукт — вертикальные .sb-radio (heys_strength_catalog_ui_v1.js:288–301). Роли v4 через CATALOG_V4_BRIDGE; носитель ≠ pill.",
-      "h": "d9a337aab838",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2777"
+      "v": "=",
+      "f": ".sb-ex-cd обёртка списка единиц — heys_strength_catalog_ui_v1.js:326–340; кадр .cd badge-row.",
+      "h": "d9a337aab838"
     },
     "Своё упражнение · 09": {
-      "v": "≠",
-      "f": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px — 750-strength-builder.css:1782–1794.",
-      "h": "931b461e2c48",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2778"
+      "v": "=",
+      "f": ".sb-ex-cd-row padding 9px 0 border-bottom 0 — 750-strength-builder.css:1259–1262; computed sand/blue paddingTop/Bottom 9px.",
+      "h": "931b461e2c48"
     },
     "Своё упражнение · 10": {
-      "v": "≠",
-      "f": "Кадр gap 6px wrap badges; продукт column .sb-radio без wrap — layout catalog_ui.",
-      "h": "1a415932debe",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2779"
+      "v": "=",
+      "f": ".sb-ex-unit-badges flex wrap gap 6px — catalog_ui:328; 750:1264–1268; computed gap 6px sand+blue.",
+      "h": "1a415932debe"
     },
     "Своё упражнение · 11": {
-      "v": "≠",
-      "f": "Выбранная .sb-radio.is-on --sb-accbg/--v4-act (750:1796–1799); кадр pill --acs/--on-acs — роли ok, форма ≠ badge.",
-      "h": "3e8e3e3dd598",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2780"
+      "v": "=",
+      "f": ".sb-ex-unit-badge.is-on background --acs color --on-acs — 750:1282–1285; CATALOG_V4_BRIDGE :44–45; sand #c67139/#2b1608 · blue #2e7cc0/#ffffff.",
+      "h": "3e8e3e3dd598"
     },
     "Своё упражнение · 12": {
-      "v": "≠",
-      "f": "Неактивная .sb-radio --sb-mut ≈ ink 62%; кадр badge rgba ink .62.",
-      "h": "f98a6986f686",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2781"
+      "v": "=",
+      "f": "Неактивная .sb-ex-unit-badge color rgba(var(--ink),0.62) — 750:1277; sand rgba(0,0,0,0.62) · blue rgba(16,24,38,0.62).",
+      "h": "f98a6986f686"
     },
     "Своё упражнение · 13": {
-      "v": "≠",
-      "f": "Строка .cd в кадре; в runtime .sb-radio — см. ·08.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2782"
+      "v": "=",
+      "f": "Строка .cd для единиц — .sb-ex-cd-row вместо .sb-radio; см. ·08.",
+      "h": "af81bb6e54c6"
     },
     "Своё упражнение · 14": {
-      "v": "≠",
-      "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676–1680).",
-      "h": "ecaed16b6441",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2783"
+      "v": "=",
+      "f": "«Основная» .sb-ex-muscle-key color var(--tx) — catalog_ui; 750 :has(.sb-ex-name); sand #201e1d · blue #101826.",
+      "h": "ecaed16b6441"
     },
     "Своё упражнение · 15": {
-      "v": "≠",
-      "f": "Primary chip --sb-accTx/--v4-act-text; кадр «спина» 700 11.5 var(--ac) — семантика совпадает, носитель chip.",
-      "h": "f0df850468b9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2784"
+      "v": "=",
+      "f": "«спина» .sb-ex-muscle-val.is-primary 700 11.5px var(--ac) — catalog_ui; 750; sand #8a4a20 · blue #1d5e96.",
+      "h": "f0df850468b9"
     },
     "Своё упражнение · 16": {
-      "v": "≠",
-      "f": "Кадр .cd divider none; продукт .sb-chips wrap без divider.",
-      "h": "6b286135ed76",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2785"
+      "v": "=",
+      "f": ".sb-ex-muscle-row padding 9px 0 border-bottom none — 750; computed sand+blue.",
+      "h": "6b286135ed76"
     },
     "Своё упражнение · 17": {
-      "v": "≠",
-      "f": "Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56%.",
-      "h": "d5f325075b3e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2786"
+      "v": "=",
+      "f": "«бицепс, плечи» .sb-ex-muscle-val 600 11.5px rgba(var(--ink),.56) — catalog_ui; sand rgba(0,0,0,.56) · blue rgba(16,24,38,.56).",
+      "h": "d5f325075b3e"
     },
     "Своё упражнение · 18": {
       "v": "=",
@@ -5170,20 +5150,16 @@
       "evidence": ["computed-style: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 18": {
-      "v": "≠",
-      "f": "Unsafe early start намеренно absent — owner contract без fact-date rule. f слабый — усилить file:line при применении.",
+      "v": "=",
+      "f": "«Начать сейчас» на будущем назначенном дне: superset_ui PlanCard isFutureDay — .sb-plan-actions--future .sb-plan-cta is-accent; heys_day_trainings_v1.js earlyStartAssignedPlan + onStart → перенос на todayDateKeyForPlan() и materializePlanStartInStore.",
       "h": "32404415abea",
-      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
+      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 19": {
-      "v": "≠",
-      "f": "Transfer — sole primary action после снятия unsafe early start (owner decision). f слабый — усилить file:line при применении.",
+      "v": "=",
+      "f": "Вторая пилюля «Перенести» рядом с «Начать сейчас» на будущем дне; перенос не единственное действие. След переноса: source plan.status=moved + movedTo, target plan.movedFrom + transferId — markSourcePlanMovedInStore / patchSource в earlyStartAssignedPlan.",
       "h": "096e30f25e4f",
-      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"],
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате"
+      "evidence": ["semantic: apps/web/__tests__/ui-v4-dom-contracts.test.js"]
     },
     "План в ленте дня · 20": {
       "v": "=",
@@ -10748,6 +10724,28 @@
         "apps/web/strength/heys_strength_builder_ui_v1.js",
         "apps/web/styles/modules/750-strength-builder.css"
       ]
+    }
+  },
+  "sharedDecisionRefs": {
+    "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3734": {
+      "scope": "frame",
+      "note": "Кадр Л10 «Исход · правка принята» — полноэкранный исход не реализован; kernel status + ProposalOutcome на finish."
+    },
+    "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4017": {
+      "scope": "frame",
+      "note": "Кадр «Сессия · брошена вчера» — post-hoc lifecycle (finishPastDay/deletePastSession) не рендерится."
+    },
+    "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2905": {
+      "scope": "frame",
+      "note": "ProgramDoneScreen (proposal_ui:505+) функционален; геометрия кадра «Программа пройдена» ≠ stop-кадр."
+    },
+    "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2929": {
+      "scope": "frame",
+      "note": "PeriodReportScreen/CycleReportScreen отсутствуют — кадры «Программа · отчёт за период» не достижимы."
+    },
+    "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3756": {
+      "scope": "frame",
+      "note": "Кадр Л11 «Исход · отказ» — полноэкранный исход не реализован."
     }
   }
 }
