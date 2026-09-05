@@ -1,0 +1,56 @@
+{
+  "zone": "strength-builder",
+  "scope": "Task 43 audit slice — M1 orphans, renderBuilderSubview, ProgramDone notCode",
+  "generated": "2026-09-05",
+  "sources": {
+    "m1Handoff": "scripts/.sb-m1-exercise-card-wiring-handoff.json",
+    "task38Handoff": "scripts/.sb-task38-builder-ui-handoff.json",
+    "canvas": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html",
+    "verdicts": "docs/ui/verdicts/strength-builder.json"
+  },
+  "orphanM1Keys": [
+    "Конструктор · каталог · tap row",
+    "Конструктор · каталог · back scroll",
+    "Упражнение · карточка · data",
+    "Упражнение · карточка · 01-19",
+    "sheet · Повторить прошлую"
+  ],
+  "orphanM1Verification": {
+    "methodA_canvasGrep": "rg по strength-builder.v4.dc.html [data-contract] <b>key</b> — 0 совпадений для всех пяти; у трёх других ключей handoff (вид · карточка упражнения, вид · создание упражнения, вид · служебная шапка сессии) строки контракта есть (:2277, :2356, :2293).",
+    "methodB_verdictsVsContract": "rg ключей handoff в strength-builder.json — только три contract-view ключа в вердиктах; пять orphan-ключей отсутствуют и в verdicts, и в блоке [data-contract] канваса.",
+    "m1HandoffWithContract": ["вид · карточка упражнения", "вид · создание упражнения", "вид · служебная шапка сессии"],
+    "ownerNote": "Пять ключей — wiring/QA-факты Task 28 без строки data-v; для приёмки нужны новые строки контракта или явный ≠/foreign в verdicts."
+  },
+  "renderBuilderSubviewVerdict": {
+    "needed": false,
+    "reason": "После M1 (view==='exercise-card' → ExerciseCardScreen, builder_ui:1636-1641) renderBuilderSubview в dispatch builder_ui не нужен: grep apps/web — вызов только в superset_ui export и strength-superset-screen-reachability.test.js; builder_ui view-switch (grep view ===) обходит CatUI/FinUI/Parts напрямую, exercise-card не входит в STRENGTH_SUBVIEW_VIEW_KEYS (custom-exercise, superset-boundaries, triset-work, plan-vs-done). Три экрана subview достигаются из superset_ui (fullscreen openCustomExercise, SupersetBlock→TriSetWork, SupersetBoundariesBody→fullscreen); plan-vs-done в builder — BuilderPlanVsDoneScreen (:1733), не Parts.renderBuilderSubview."
+  },
+  "programDoneNotCode": [
+    "Программа пройдена · 01",
+    "Программа пройдена · 02",
+    "Программа пройдена · 03",
+    "Программа пройдена · 04",
+    "Программа пройдена · 05",
+    "Программа пройдена · 06",
+    "Программа пройдена · 11",
+    "Программа пройдена · 12",
+    "Программа пройдена · 13",
+    "Программа пройдена · 14",
+    "Программа пройдена · 15",
+    "Программа пройдена · 16",
+    "Программа пройдена · 17",
+    "Программа пройдена · 18",
+    "Программа пройдена · 19",
+    "Программа пройдена · 20",
+    "Программа пройдена · 21",
+    "Программа пройдена · 22",
+    "Программа пройдена · 23",
+    "Программа пройдена · 24",
+    "Программа пройдена · текст"
+  ],
+  "programDoneNotCodeVerification": {
+    "source": "strength-builder.json — v=≠ + reasonCode=canvas-conflict для кадров Программа пройдена (01-06, 11-24, текст); 07-10 имеют v= и в notCode не входят.",
+    "count": 21,
+    "matchesTask38NotCode": true
+  }
+}
