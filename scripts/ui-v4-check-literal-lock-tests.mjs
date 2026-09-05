@@ -2,18 +2,17 @@
 // ui-v4-check-literal-lock-tests.mjs — инвентарь тестов, которые сторожат
 // текущее состояние (литералы), а не инвариант.
 //
-// Фаза 1 (полоса 6): только инвентарь и храповик-allowlist. В ui:v4:check
-// не входит — подключение запланировано на полосу 5 после ревью владельца.
+// Tier A (обязательный, ui:v4:check): expect-inventory-count, verdict-count-object.
+// Tier hex / collection-size / прочее — только отчёт, сбор не ломают.
 //
 // Использование:
+//   node scripts/ui-v4-check-literal-lock-tests.mjs              # gate Tier A
 //   node scripts/ui-v4-check-literal-lock-tests.mjs --list
+//   node scripts/ui-v4-check-literal-lock-tests.mjs --list --tier-hex
 //   node scripts/ui-v4-check-literal-lock-tests.mjs --json
+//   node scripts/ui-v4-check-literal-lock-tests.mjs --tier-hex   # инвентарь hex
 //   node scripts/ui-v4-check-literal-lock-tests.mjs --update-allowlist
-//   node scripts/ui-v4-check-literal-lock-tests.mjs            # сравнение с allowlist
-//
-// Полоса 5 (позже): добавить в pnpm ui:v4:check как
-//   node scripts/ui-v4-check-literal-lock-tests.mjs
-// с exit 1 при находках вне allowlist.
+//   node scripts/ui-v4-check-literal-lock-tests.mjs --update-allowlist --tier-hex
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -21,12 +20,29 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ALLOWLIST_PATH = path.join(ROOT, 'scripts/.ui-v4-literal-lock-tests-allowlist.json');
+const ALLOWLIST_TIER_A_PATH = path.join(ROOT, 'scripts/.ui-v4-literal-lock-tests-allowlist.json');
+const ALLOWLIST_HEX_PATH = path.join(ROOT, 'scripts/.ui-v4-literal-lock-tests-allowlist-hex.json');
 const TEST_ROOTS = [
   path.join(ROOT, 'apps/web/__tests__'),
   path.join(ROOT, 'scripts/__tests__'),
 ];
 const TEST_FILE_RE = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
+
+/** Tier A — обязательный храповик в ui:v4:check. */
+const TIER_A_KINDS = new Set([
+  'expect-inventory-count',
+  'verdict-count-object',
+]);
+
+/** Tier hex — инвентарь, не ломает сборку. */
+const TIER_HEX_KIND = 'literal-hex-in-expect';
+
+/** Только отчёт до будущего split. */
+const REPORT_ONLY_KINDS = new Set([
+  'collection-size-literal',
+  'large-to-equal-array',
+  'greater-than-inventory-floor',
+]);
 
 /** Имена файлов, где литералы — намеренный контракт канваса. */
 const EXCLUDED_FILE_PATTERNS = [
@@ -102,6 +118,10 @@ function isSafeLine(line) {
 
 function findingId(file, line, kind) {
   return crypto.createHash('sha1').update(`${file}:${line}:${kind}`).digest('hex').slice(0, 12);
+}
+
+function findingKey(f) {
+  return `${f.file}:${f.line}:${f.kind}`;
 }
 
 function pushFinding(findings, seen, file, line, kind, snippet, reason) {
@@ -291,17 +311,24 @@ export function scanLiteralLockTests(testRoots = TEST_ROOTS) {
   return { findings, scannedFiles: files.filter((f) => !isExcludedFile(f)).length, excludedFiles: files.filter(isExcludedFile).length };
 }
 
-function loadAllowlist() {
-  if (!fs.existsSync(ALLOWLIST_PATH)) return { version: 1, updatedAt: null, findings: [] };
-  return JSON.parse(fs.readFileSync(ALLOWLIST_PATH, 'utf8'));
+function filterByTier(findings, tier) {
+  if (tier === 'tier-a') return findings.filter((f) => TIER_A_KINDS.has(f.kind));
+  if (tier === 'tier-hex') return findings.filter((f) => f.kind === TIER_HEX_KIND);
+  if (tier === 'report-only') return findings.filter((f) => REPORT_ONLY_KINDS.has(f.kind));
+  return findings;
 }
 
-function saveAllowlist(findings) {
+function loadAllowlist(filePath) {
+  if (!fs.existsSync(filePath)) return { version: 2, tier: null, updatedAt: null, findings: [] };
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function saveAllowlist(filePath, tier, findings, note) {
   const payload = {
-    version: 1,
+    version: 2,
+    tier,
     updatedAt: new Date().toISOString().slice(0, 10),
-    note:
-      'Замороженный инвентарь literal-lock тестов. Список может только уменьшаться; рост — новый долг.',
+    note,
     findings: findings.map(({ id, file, line, kind, snippet, reason }) => ({
       id,
       file,
@@ -311,15 +338,15 @@ function saveAllowlist(findings) {
       reason,
     })),
   };
-  fs.writeFileSync(ALLOWLIST_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   return payload;
 }
 
 function compareAllowlist(findings, allowlist) {
-  const allowed = new Map(allowlist.findings.map((f) => [`${f.file}:${f.line}:${f.kind}`, f]));
-  const current = new Map(findings.map((f) => [`${f.file}:${f.line}:${f.kind}`, f]));
-  const newFindings = findings.filter((f) => !allowed.has(`${f.file}:${f.line}:${f.kind}`));
-  const resolved = allowlist.findings.filter((f) => !current.has(`${f.file}:${f.line}:${f.kind}`));
+  const allowed = new Map(allowlist.findings.map((f) => [findingKey(f), f]));
+  const current = new Map(findings.map((f) => [findingKey(f), f]));
+  const newFindings = findings.filter((f) => !allowed.has(findingKey(f)));
+  const resolved = allowlist.findings.filter((f) => !current.has(findingKey(f)));
   return { newFindings, resolved };
 }
 
@@ -331,11 +358,13 @@ function summarizeByKind(findings) {
   return byKind;
 }
 
-function printList(report) {
-  const { findings, scannedFiles, excludedFiles } = report;
+function printList(report, { tier = 'all', title } = {}) {
+  const findings = filterByTier(report.findings, tier === 'all' ? null : tier);
+  const { scannedFiles, excludedFiles } = report;
   const byKind = summarizeByKind(findings);
+  const label = title || (tier === 'tier-a' ? 'Tier A (обязательный)' : tier === 'tier-hex' ? 'Tier hex (инвентарь)' : 'Literal-lock tests');
   console.log(
-    `Literal-lock tests: ${findings.length} находок в ${scannedFiles} файлах ` +
+    `${label}: ${findings.length} находок в ${scannedFiles} файлах ` +
       `(исключено canvas-контрактов: ${excludedFiles}).`,
   );
   console.log('По категориям:');
@@ -351,54 +380,125 @@ function printList(report) {
   if (findings.length > 30) {
     console.log(`\n  … ещё ${findings.length - 30} (полный список: --json)`);
   }
-  console.log(
-    '\nПолоса 5: после ревью добавить в pnpm ui:v4:check → node scripts/ui-v4-check-literal-lock-tests.mjs',
-  );
+}
+
+function runTierGate({ report, allowlistPath, tierLabel, tierFindings, mandatory }) {
+  const allowlist = loadAllowlist(allowlistPath);
+  if (!allowlist.findings?.length) {
+    console.log(`Allowlist пуст (${tierLabel}). Сначала: --update-allowlist${tierLabel === 'hex' ? ' --tier-hex' : ''}`);
+    printList({ ...report, findings: tierFindings }, { tier: tierLabel === 'hex' ? 'tier-hex' : 'tier-a', title: tierLabel });
+    if (mandatory && tierFindings.length) process.exitCode = 1;
+    return;
+  }
+
+  const { newFindings, resolved } = compareAllowlist(tierFindings, allowlist);
+  printList({ ...report, findings: tierFindings }, {
+    tier: tierLabel === 'hex' ? 'tier-hex' : 'tier-a',
+    title: `${tierLabel} — сравнение с allowlist`,
+  });
+
+  if (newFindings.length) {
+    const msg = mandatory
+      ? `❌ Новые ${tierLabel} находки вне allowlist: ${newFindings.length}`
+      : `ℹ️  Новые ${tierLabel} находки вне allowlist (инвентарь, сбор не ломаем): ${newFindings.length}`;
+    console[mandatory ? 'error' : 'log'](`\n${msg}`);
+    for (const f of newFindings.slice(0, 10)) {
+      console[mandatory ? 'error' : 'log'](`  ${f.file}:${f.line} [${f.kind}] ${f.snippet}`);
+    }
+    if (newFindings.length > 10) {
+      console[mandatory ? 'error' : 'log'](`  … ещё ${newFindings.length - 10}`);
+    }
+    if (mandatory) process.exitCode = 1;
+  } else {
+    console.log(`\n${tierLabel}: в пределах allowlist (${allowlist.findings.length} заморожено).`);
+  }
+
+  if (resolved.length) {
+    console.log(
+      `${tierLabel}: долг уменьшился — ${resolved.length} записей allowlist больше не находятся; ` +
+        'обновите --update-allowlist после фикса.',
+    );
+  }
 }
 
 function runCli() {
-  const args = new Set(process.argv.slice(2));
+  const argv = process.argv.slice(2);
+  const args = new Set(argv);
+  const tierHex = args.has('--tier-hex');
   const report = scanLiteralLockTests();
+  const tierAFindings = filterByTier(report.findings, 'tier-a');
+  const tierHexFindings = filterByTier(report.findings, 'tier-hex');
+  const reportOnlyFindings = filterByTier(report.findings, 'report-only');
 
   if (args.has('--update-allowlist')) {
-    const saved = saveAllowlist(report.findings);
-    console.log(`Allowlist обновлён: ${saved.findings.length} записей → ${path.relative(ROOT, ALLOWLIST_PATH)}`);
+    if (tierHex) {
+      const saved = saveAllowlist(
+        ALLOWLIST_HEX_PATH,
+        'hex',
+        tierHexFindings,
+        'Инвентарь literal-hex-in-expect. Только отчёт; список может уменьшаться.',
+      );
+      console.log(`Hex allowlist обновлён: ${saved.findings.length} записей → ${path.relative(ROOT, ALLOWLIST_HEX_PATH)}`);
+      return;
+    }
+    const saved = saveAllowlist(
+      ALLOWLIST_TIER_A_PATH,
+      'a',
+      tierAFindings,
+      'Обязательный Tier A: expect-inventory-count и verdict-count-object. Список может только уменьшаться.',
+    );
+    console.log(`Tier A allowlist обновлён: ${saved.findings.length} записей → ${path.relative(ROOT, ALLOWLIST_TIER_A_PATH)}`);
     return;
   }
 
   if (args.has('--json')) {
-    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
+    const payload = tierHex
+      ? { ...report, findings: tierHexFindings, tier: 'hex' }
+      : args.has('--tier-a')
+        ? { ...report, findings: tierAFindings, tier: 'a' }
+        : report;
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
     return;
   }
 
   if (args.has('--list')) {
-    printList(report);
-    return;
-  }
-
-  const allowlist = loadAllowlist();
-  if (!allowlist.findings?.length) {
-    console.log('Allowlist пуст. Сначала: node scripts/ui-v4-check-literal-lock-tests.mjs --update-allowlist');
-    printList(report);
-    return;
-  }
-
-  const { newFindings, resolved } = compareAllowlist(report.findings, allowlist);
-  printList(report);
-  if (newFindings.length) {
-    console.error(`\n❌ Новые literal-lock находки вне allowlist: ${newFindings.length}`);
-    for (const f of newFindings.slice(0, 10)) {
-      console.error(`  ${f.file}:${f.line} [${f.kind}] ${f.snippet}`);
+    if (tierHex) {
+      printList({ ...report, findings: tierHexFindings }, { tier: 'tier-hex' });
+      return;
     }
-    if (newFindings.length > 10) console.error(`  … ещё ${newFindings.length - 10}`);
-    process.exitCode = 1;
-  } else {
-    console.log(`\nВ пределах allowlist (${allowlist.findings.length} заморожено).`);
+    if (args.has('--tier-a')) {
+      printList({ ...report, findings: tierAFindings }, { tier: 'tier-a' });
+      return;
+    }
+    printList(report);
+    if (reportOnlyFindings.length) {
+      console.log(`\nОтчёт-only (не в gate): collection-size-literal и др. — ${reportOnlyFindings.length} находок.`);
+    }
+    return;
   }
-  if (resolved.length) {
-    console.log(
-      `Долг уменьшился: ${resolved.length} записей allowlist больше не находятся — обновите --update-allowlist.`,
-    );
+
+  if (tierHex) {
+    runTierGate({
+      report,
+      allowlistPath: ALLOWLIST_HEX_PATH,
+      tierLabel: 'hex',
+      tierFindings: tierHexFindings,
+      mandatory: false,
+    });
+    return;
+  }
+
+  // Default: mandatory Tier A gate (ui:v4:check).
+  runTierGate({
+    report,
+    allowlistPath: ALLOWLIST_TIER_A_PATH,
+    tierLabel: 'Tier A',
+    tierFindings: tierAFindings,
+    mandatory: true,
+  });
+
+  if (reportOnlyFindings.length) {
+    console.log(`\nИнвентарь (не gate): ${reportOnlyFindings.length} report-only находок; hex: ${tierHexFindings.length} (--tier-hex).`);
   }
 }
 
