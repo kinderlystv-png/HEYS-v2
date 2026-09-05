@@ -69,7 +69,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'curator-cabinet': Object.freeze({
     mismatch: [29, '85c5b18956a3e908'],
     typedMismatch: [5, '45c28c49d17e23d8'],
-    notApplicable: [17, '227a240a10a24074'],
+    notApplicable: [16, '18e1767ff39da867'],
   }),
   'curator-edits': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
@@ -94,9 +94,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 03.09 (вечер): строка «что отложено» получила naKind handoff — это учёт
     // пакета, а не продуктовое правило. Долг типизирован на единицу: «—» 89 → 88.
     // 04.09: typed-v1 gate — 22 typed «≠»; legacy 31 → 27.
-    mismatch: [27, '7d10bf59c493a48d'],
+    mismatch: [23, '5cfffd8af7a5f1f7'],
     typedMismatch: [22, 'bb3172c7428f6ff2'],
-    notApplicable: [88, '8dc4e24923666a96'],
+    notApplicable: [87, '21bc4201a8c68471'],
   }),
   gamification: Object.freeze({
     // 03.09: пакет перерисовал четыре кадра церемонии и лист уровней — 60 строк
@@ -132,13 +132,13 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'nutrition-tab': Object.freeze({
     // 04.09: 9e3fc6c3d типизировал 26 legacy «≠» (31 → 5). «—» выросло 168 → 211:
     // закрытие ?-долга ea801dfbb и новые нетипизированные «—» без naKind.
-    mismatch: [3, '0094ced28bb57145'],
+    mismatch: [1, '8ff1b4c337a585ff'],
     notApplicable: [211, 'c56b7bc960bb40c0'],
   }),
   'product-card': Object.freeze({
     // 04.09: e96ffbe90 закрыл 16 «?» rehash-долга — 12→=, 2→—, 2→≠; legacy 58→60, «—» 74→76.
-    mismatch: [60, '7fe9821f7ed05778'],
-    notApplicable: [76, 'ea3054255c5fd126'],
+    mismatch: [58, '2c46a580941faae4'],
+    notApplicable: [72, '839c1d5ca0cd777d'],
   }),
   'pwa-update': Object.freeze({
     mismatch: [10, '5e473419ff0364c9'],
@@ -190,7 +190,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 05.09: полосы 1/3/4 свели М1, М2/М3 и бейджи единиц В3 — 27 typed «≠»
     // стали «=» по факту кода, не по правке числа. Храповик едет только вниз.
     typedMismatch: [171, '007d6b61f8c3c11d'],
-    notApplicable: [107, '13d5a59f2d87bb7f'],
+    notApplicable: [105, '77c3b81bb6df56de'],
   }),
   'tab-activity': Object.freeze({
     mismatch: [48, '0176ec5ee86ac4f4'],
