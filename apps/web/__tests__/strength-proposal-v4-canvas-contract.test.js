@@ -54,6 +54,7 @@ const ex = (id, name, approaches, ssGroup) => ({ id, name, approaches, ssGroup: 
 function startedTraining(proposalExercises) {
   return {
     workoutLog: { exercises: [ex('ex1', 'Жим', [ap('a1', 75, 8, true), ap('a2', 75, 8, false)])] },
+    planSnapshot: { exercises: [ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 75, 8, false)])] },
     plan: {
       status: 'started',
       dayLabel: 'Верх тела B',
@@ -220,5 +221,46 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
     expect(SRC).toContain('var(--v4-tint');
     expect(SRC).not.toMatch(/color:\s*['"]#15803d/);
     expect(SRC).not.toMatch(/color:\s*['"]#b91c1c/);
+  });
+});
+
+describe('Л10–Л12 · исходы предложения · canvas contract', () => {
+  let Parts;
+
+  beforeEach(() => { Parts = loadParts(); });
+  afterEach(() => { cleanup(); delete window.HEYS; });
+
+  it('держит ProposalOutcomeScreen и CSS кадров Л10–Л12', () => {
+    expect(SRC).toContain('function ProposalOutcomeScreen');
+    expect(SRC).toContain('План обновлён');
+    expect(SRC).toContain('План остался прежним');
+    expect(SRC).toContain('Тренировка закрыта');
+    expect(SRC).toContain('sb-proposal-resolution');
+    expect(CSS).toMatch(/\.sb-proposal-resolution-hero\.is-ok[\s\S]*background:\s*var\(--gr-bg\)/);
+    expect(CSS).toMatch(/\.sb-proposal-resolution-weight \.is-new[\s\S]*color:\s*var\(--ac\)/);
+    expect(CSS).toMatch(/\.sb-proposal-resolution-btn[\s\S]*min-height:\s*48px/);
+  });
+
+  it('рисует Л10 с бейджем «принято» и ярусами frozen/changed', () => {
+    const { ks } = { ks: window.HEYS.TrainingKernel.strength };
+    const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 60, 8, false)])]);
+    const res = ks.acceptPlanProposal(training, 9 * 3600 + 21 * 60 * 1000);
+    const style = document.createElement('style');
+    style.textContent = paletteCss('sand');
+    document.head.appendChild(style);
+    try {
+      const { container } = render(React.createElement(Parts.ProposalOutcomeScreen, {
+        training: res.training,
+        variant: 'accepted',
+        onClose: () => {},
+        onContinue: () => {},
+      }));
+      expect(screen.getByText(/План обновлён/)).toBeTruthy();
+      expect(container.querySelector('.sb-proposal-resolution-badge')).toBeTruthy();
+      expect(container.querySelector('.sb-proposal-resolution-hero.is-ok')).toBeTruthy();
+      expect(screen.getByText(/Что (осталось как было|поменялось)/)).toBeTruthy();
+    } finally {
+      style.remove();
+    }
   });
 });

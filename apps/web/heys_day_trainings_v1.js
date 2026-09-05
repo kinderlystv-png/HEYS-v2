@@ -4373,37 +4373,83 @@
             function matchesOpenedPlanRevision(t0, expectedPlan, expectedStatus, expectedTrainingUpdatedAt) {
               return matchesPlanRevision(t0, expectedPlan, expectedStatus, expectedTrainingUpdatedAt);
             }
+            function showProposalOutcome(training, variant, opts) {
+              if (!Parts.openProposalOutcome) return;
+              Parts.openProposalOutcome(Object.assign({
+                training: training,
+                variant: variant,
+              }, opts || {}));
+            }
+            function openDeclinedProposalReview(training) {
+              if (!Parts.openProposalReview) return;
+              Parts.openProposalReview({
+                training: training,
+                readOnly: true,
+                onClose: function () {},
+              });
+            }
             function openBuilder() {
               const U = HEYS.utils;
+              const TKs2 = (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
               builder.open({
                 training: trainingForBuilder,
                 dateKey: dateKey,
                 profile: (U && U.lsGet) ? (U.lsGet('heys_profile', {}) || {}) : {},
                 // Клиент закрыл тренировку, так и не ответив: предложение
                 // гаснет само и остаётся строкой в истории дня.
-                onFinishProposal: function () {
+                onFinishProposal: function (summary) {
                   const TKs3 = (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
                   if (!TKs3 || !TKs3.pendingPlanProposal) return;
                   patchTraining(ti, function (t0) {
-                    return TKs3.pendingPlanProposal(t0) ? TKs3.expirePlanProposal(t0, Date.now()) : t0;
+                    if (!TKs3.pendingPlanProposal(t0)) return t0;
+                    const next = TKs3.expirePlanProposal(t0, Date.now());
+                    showProposalOutcome(next, 'expired', {
+                      elapsedSec: summary && summary.elapsedSec,
+                    });
+                    return next;
+                  });
+                },
+                onProposalAccept: function () {
+                  if (!TKs2) return;
+                  patchTraining(ti, function (t0) {
+                    const r = TKs2.acceptPlanProposal(t0, Date.now());
+                    if (r.ok) showProposalOutcome(r.training, 'accepted');
+                    return r.ok ? r.training : t0;
+                  });
+                },
+                onProposalDecline: function () {
+                  if (!TKs2) return;
+                  patchTraining(ti, function (t0) {
+                    const r = TKs2.declinePlanProposal(t0, Date.now());
+                    if (r.ok) {
+                      showProposalOutcome(r.training, 'declined', {
+                        onReview: function () { openDeclinedProposalReview(r.training); },
+                      });
+                    }
+                    return r.ok ? r.training : t0;
                   });
                 },
                 // Разбор правки открывается поверх конструктора тем же слоем,
                 // что и с карточки дня: экран один, входов в него два.
                 onReviewProposal: function () {
-                  const TKs2 = (HEYS.TrainingKernel && HEYS.TrainingKernel.strength) || null;
                   if (!TKs2 || !Parts.openProposalReview) return;
                   Parts.openProposalReview({
                     training: trainingForBuilder,
                     onAccept: function () {
                       patchTraining(ti, function (t0) {
                         const r = TKs2.acceptPlanProposal(t0, Date.now());
+                        if (r.ok) showProposalOutcome(r.training, 'accepted');
                         return r.ok ? r.training : t0;
                       });
                     },
                     onDecline: function () {
                       patchTraining(ti, function (t0) {
                         const r = TKs2.declinePlanProposal(t0, Date.now());
+                        if (r.ok) {
+                          showProposalOutcome(r.training, 'declined', {
+                            onReview: function () { openDeclinedProposalReview(r.training); },
+                          });
+                        }
                         return r.ok ? r.training : t0;
                       });
                     }
@@ -4582,12 +4628,18 @@
               const acceptProposal = function () {
                 patchTraining(ti, function (t0) {
                   const res = TKs.acceptPlanProposal(t0, Date.now());
+                  if (res.ok) showProposalOutcome(res.training, 'accepted');
                   return res.ok ? res.training : t0;
                 });
               };
               const declineProposal = function () {
                 patchTraining(ti, function (t0) {
                   const res = TKs.declinePlanProposal(t0, Date.now());
+                  if (res.ok) {
+                    showProposalOutcome(res.training, 'declined', {
+                      onReview: function () { openDeclinedProposalReview(res.training); },
+                    });
+                  }
                   return res.ok ? res.training : t0;
                 });
               };

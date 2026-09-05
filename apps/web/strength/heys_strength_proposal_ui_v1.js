@@ -354,10 +354,18 @@
    * стоять раньше вопроса «берёшь ли правку».
    */
   function ProposalReview(props) {
-    const { training, onClose, onAccept, onDecline } = props;
+    const { training, onClose, onAccept, onDecline, readOnly } = props;
     const ks = kernel();
-    const proposal = ks && ks.pendingPlanProposal(training);
+    const proposal = props.proposal
+      || (ks && ks.pendingPlanProposal(training))
+      || (function () {
+        const p = training && training.plan && training.plan.proposal;
+        if (p && Array.isArray(p.exercises) && p.exercises.length
+          && (p.status === 'declined' || p.status === 'expired')) return p;
+        return null;
+      }());
     if (!proposal) return null;
+    const isReadOnly = !!readOnly || proposal.status !== 'pending';
     const wl = (training && training.workoutLog) || {};
     const diff = describePlanEdit(wl.exercises, proposal.exercises);
     const boundaries = describeSupersetBoundaries(wl.exercises, proposal.exercises);
@@ -417,7 +425,7 @@
           )
         )
       ),
-      h('div', { className: 'sb-panel sb-proposal-foot' },
+      !isReadOnly && h('div', { className: 'sb-panel sb-proposal-foot' },
         h('button', { type: 'button', className: 'sb-btn', onClick: onDecline }, 'Дальше по-своему'),
         h('button', { type: 'button', className: 'sb-btn is-accent', onClick: onAccept }, 'Взять правку')
       )
@@ -1621,6 +1629,336 @@
   Parts.CycleScreen = CycleScreen;
   Parts.buildProgramCycleSnapshot = buildProgramCycleSnapshot;
 
+  const ACCEPTED_OUTCOME_FOOTNOTE = 'Исход виден составом, а не словом «применено»: человек должен увидеть, что именно у него теперь в плане, и что отмеченное осталось на месте.';
+  const DECLINED_OUTCOME_FOOTNOTE = 'Одна кнопка, и та тихая: отказ — это не ошибка, которую надо исправлять формой с причиной. Предложение сохраняется, чтобы к нему можно было вернуться.';
+  const EXPIRED_OUTCOME_FOOTNOTE = 'Предложение не блокирует завершение и не превращается в долг: непринятое просто не случилось, и куратор видит именно это, а не «проигнорировал».';
+
+  function exercisesBeforeAccept(training) {
+    const snap = training && training.planSnapshot;
+    const prev = snap && Array.isArray(snap.previous) ? snap.previous : [];
+    if (prev.length) {
+      const last = prev[prev.length - 1];
+      if (last && Array.isArray(last.exercises) && last.exercises.length) return last.exercises;
+    }
+    const wl = training && training.workoutLog;
+    return wl && Array.isArray(wl.exercises) ? wl.exercises : [];
+  }
+
+  function countDoneApproaches(exercises) {
+    const ks = kernel();
+    let n = 0;
+    (Array.isArray(exercises) ? exercises : []).forEach(function (ex) {
+      approachesOf(ex).forEach(function (a) {
+        if (ks && ks.isApproachDone(a)) n += 1;
+      });
+    });
+    return n;
+  }
+
+  function pluralApproaches(n) {
+    const t = Math.abs(n) % 100;
+    const d = t % 10;
+    if (t > 10 && t < 20) return 'подходов';
+    if (d === 1) return 'подход';
+    if (d >= 2 && d <= 4) return 'подхода';
+    return 'подходов';
+  }
+
+  function fmtElapsedMinSec(sec) {
+    const s = Math.max(0, +sec || 0);
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return String(m) + ':' + String(r).padStart(2, '0');
+  }
+
+  function frozenOutcomeName(ex, ks) {
+    if (!ex) return '';
+    const aps = approachesOf(ex);
+    const done = aps.filter(function (a) { return ks && ks.isApproachDone(a); }).length;
+    if (done > 0 && done < aps.length) return ex.name + ' · подходы 1–' + done;
+    if (aps.length) return ex.name + ' · ' + aps.length + ' ' + pluralApproaches(aps.length);
+    return ex.name;
+  }
+
+  function extractKg(text) {
+    const m = String(text || '').match(/(\d+(?:[.,]\d+)?)\s*кг/);
+    if (!m) return '';
+    return m[1].replace(',', '.');
+  }
+
+  function formatPlanWeightKg(w) {
+    const s = w === '' || w == null ? '' : String(w);
+    if (!s || s === '0') return '';
+    return s + ' кг';
+  }
+
+  function declinedPlanRowName(ex, ks) {
+    const aps = approachesOf(ex);
+    if (!aps.length) return ex.name;
+    let openIdx = -1;
+    for (let i = 0; i < aps.length; i++) {
+      if (!ks || !ks.isApproachDone(aps[i])) { openIdx = i; break; }
+    }
+    if (openIdx >= 0 && aps.length > 1) return ex.name + ' · подход ' + (openIdx + 1);
+    return ex.name;
+  }
+
+  function buildAcceptedOutcomeSnapshot(training) {
+    const proposal = training && training.plan && training.plan.proposal;
+    if (!proposal || proposal.status !== 'accepted') return null;
+    const ks = kernel();
+    const baseline = exercisesBeforeAccept(training);
+    const proposed = Array.isArray(proposal.exercises) ? proposal.exercises : [];
+    const diff = describePlanEdit(baseline, proposed);
+    const changes = diff.ahead.filter(function (row) { return row.kind !== 'same'; });
+    const resolvedAt = +proposal.resolvedAt || 0;
+    return {
+      variant: 'accepted',
+      dayLabel: (training.plan && training.plan.dayLabel) || 'План',
+      subtitle: resolvedAt ? ('правка принята в ' + fmtCuratorEditClock(resolvedAt)) : 'правка принята',
+      badge: 'принято',
+      heroTitle: 'План обновлён · ' + changes.length + ' ' + pluralChanges(changes.length),
+      heroProse: 'Сделанное осталось нетронутым, изменилось только то, что впереди.',
+      heroTone: 'ok',
+      frozen: diff.frozen.map(function (row) {
+        const ex = exerciseById(baseline, row.id) || { id: row.id, name: row.name, approaches: [] };
+        return { name: frozenOutcomeName(ex, ks), mark: 'заморожено', tone: 'ok' };
+      }),
+      changed: changes.map(function (row) {
+        if (row.kind === 'changed') {
+          return {
+            name: row.name,
+            kind: 'changed',
+            oldWeight: extractKg(row.before),
+            newWeight: formatPlanWeightKg(extractKg(row.after)) || row.after,
+          };
+        }
+        if (row.kind === 'removed') return { name: row.name, kind: 'removed', mark: 'убран из плана', tone: 'warn' };
+        if (row.kind === 'added') return { name: row.name, kind: 'added', mark: 'добавлено', tone: 'ok' };
+        return { name: row.name, kind: row.kind, mark: aheadOutcomeLabel(row), tone: 'muted' };
+      }),
+      footnote: ACCEPTED_OUTCOME_FOOTNOTE,
+      cta: 'Продолжить тренировку',
+    };
+  }
+
+  function buildDeclinedOutcomeSnapshot(training) {
+    const proposal = training && training.plan && training.plan.proposal;
+    if (!proposal || proposal.status !== 'declined') return null;
+    const ks = kernel();
+    const live = (training.workoutLog && training.workoutLog.exercises) || [];
+    const proposed = Array.isArray(proposal.exercises) ? proposal.exercises : [];
+    const diff = describePlanEdit(live, proposed);
+    const who = proposal.proposedBy || 'Куратор';
+    let rows = diff.ahead.filter(function (row) { return row.kind !== 'same'; }).map(function (row) {
+      const ex = exerciseById(live, row.id) || { name: row.name, approaches: [] };
+      if (row.kind === 'changed') {
+        const aps = approachesOf(ex);
+        let w = '';
+        for (let i = aps.length - 1; i >= 0; i--) {
+          if (aps[i] && aps[i].weightKg) { w = aps[i].weightKg; break; }
+        }
+        return {
+          name: declinedPlanRowName(ex, ks),
+          value: formatPlanWeightKg(w) || extractKg(row.before) + ' кг',
+          status: '',
+        };
+      }
+      return { name: ex.name || row.name, value: '', status: 'остаётся в плане' };
+    });
+    if (!rows.length) {
+      const fallback = live.slice(0, 2);
+      rows = fallback.map(function (ex, i) {
+        const aps = approachesOf(ex);
+        const w = aps.length ? aps[aps.length - 1].weightKg : '';
+        return {
+          name: declinedPlanRowName(ex, ks),
+          value: formatPlanWeightKg(w),
+          status: i === fallback.length - 1 ? 'остаётся в плане' : '',
+        };
+      });
+    }
+    return {
+      variant: 'declined',
+      dayLabel: (training.plan && training.plan.dayLabel) || 'План',
+      subtitle: 'предложение отклонено',
+      heroTitle: 'План остался прежним',
+      heroProse: 'Ничего объяснять не нужно — ' + who + ' увидит исход и решит, повторять ли предложение.',
+      heroTone: 'neutral',
+      rows: rows,
+      footnote: DECLINED_OUTCOME_FOOTNOTE,
+      cta: 'Посмотреть, что он предлагал',
+    };
+  }
+
+  function buildExpiredOutcomeSnapshot(training, opts) {
+    const proposal = training && training.plan && training.plan.proposal;
+    if (!proposal || proposal.status !== 'expired') return null;
+    const exercises = (training.workoutLog && training.workoutLog.exercises) || [];
+    const doneCount = countDoneApproaches(exercises);
+    const elapsedSec = opts && opts.elapsedSec != null ? +opts.elapsedSec : 0;
+    const who = proposal.proposedBy || 'Куратор';
+    return {
+      variant: 'expired',
+      dayLabel: 'Тренировка завершена',
+      subtitle: fmtElapsedMinSec(elapsedSec) + ' · ' + doneCount + ' ' + pluralApproaches(doneCount),
+      heroTitle: 'Тренировка закрыта',
+      heroProse: 'Предложение куратора так и осталось непринятым — оно погасло вместе с сессией и закрыть её не помешало.',
+      heroTone: 'ok',
+      rows: [
+        { name: 'Сделано по прежнему плану', value: doneCount + ' ' + pluralApproaches(doneCount), muted: false },
+        { name: 'Предложение ' + who, value: 'не принято', muted: true },
+      ],
+      footnote: EXPIRED_OUTCOME_FOOTNOTE,
+    };
+  }
+
+  function buildProposalOutcomeSnapshot(training, variant, opts) {
+    if (variant === 'accepted') return buildAcceptedOutcomeSnapshot(training);
+    if (variant === 'declined') return buildDeclinedOutcomeSnapshot(training);
+    if (variant === 'expired') return buildExpiredOutcomeSnapshot(training, opts);
+    return null;
+  }
+
+  function resolutionListRow(row, opts) {
+    const o = opts || {};
+    const rowClass = 'sb-proposal-resolution-row' + (o.noBorder ? ' is-last' : '');
+    if (row.kind === 'changed') {
+      return h('div', { key: o.key, className: rowClass },
+        h('span', { className: 'sb-proposal-resolution-main' }, row.name),
+        h('span', { className: 'sb-proposal-resolution-weight' },
+          row.oldWeight && h('span', { className: 'is-old' }, row.oldWeight),
+          row.newWeight && h('span', { className: 'is-new' }, row.newWeight))
+      );
+    }
+    return h('div', { key: o.key, className: rowClass },
+      h('span', { className: 'sb-proposal-resolution-main' }, row.name),
+      h('span', {
+        className: 'sb-proposal-resolution-mark'
+          + (row.tone === 'ok' ? ' is-ok' : '')
+          + (row.tone === 'warn' ? ' is-warn' : '')
+          + (row.muted || row.status ? ' is-muted' : ''),
+      }, row.mark || row.value || row.status || '')
+    );
+  }
+
+  /**
+   * Кадры Л10–Л12: полноэкранный исход после ответа на правку.
+   * Слой 1 — состав плана после исхода; слой 2 — «что осталось как было»;
+   * закрытие и назад остаются на первом слое.
+   */
+  function ProposalOutcomeScreen(props) {
+    const snapshot = props.snapshot
+      || buildProposalOutcomeSnapshot(props.training, props.variant, props);
+    if (!snapshot) return null;
+    const onClose = props.onClose;
+    const onContinue = props.onContinue;
+    const onReview = props.onReview;
+
+    return h('div', { className: 'sb-root sb-screen sb-proposal-resolution' },
+      h('div', { className: 'sb-head sb-finish-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть',
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, snapshot.dayLabel),
+          h('div', { className: 'sb-head-sub' }, snapshot.subtitle)),
+        snapshot.badge && h('span', { className: 'sb-proposal-resolution-badge' }, snapshot.badge)
+      ),
+      h('div', { className: 'sb-list sb-finish-list' },
+        h('section', {
+          className: 'sb-proposal-resolution-hero'
+            + (snapshot.heroTone === 'ok' ? ' is-ok' : ' is-neutral'),
+        },
+          h('div', { className: 'sb-proposal-resolution-hero-title' }, snapshot.heroTitle),
+          snapshot.heroProse && h('p', { className: 'sb-proposal-resolution-hero-prose' }, snapshot.heroProse)
+        ),
+        snapshot.variant === 'accepted' && snapshot.frozen && snapshot.frozen.length > 0 && h(React.Fragment, null,
+          h('div', { className: 'sb-proposal-resolution-tier' }, 'Что осталось как было'),
+          h('div', { className: 'sb-proposal-resolution-list' },
+            snapshot.frozen.map(function (row, i) {
+              return resolutionListRow(row, {
+                key: 'f' + i,
+                noBorder: i === snapshot.frozen.length - 1,
+              });
+            })
+          )
+        ),
+        snapshot.variant === 'accepted' && snapshot.changed && snapshot.changed.length > 0 && h(React.Fragment, null,
+          h('div', { className: 'sb-proposal-resolution-tier' }, 'Что поменялось'),
+          h('div', { className: 'sb-proposal-resolution-list' },
+            snapshot.changed.map(function (row, i) {
+              return resolutionListRow(row, {
+                key: 'c' + i,
+                noBorder: i === snapshot.changed.length - 1,
+              });
+            })
+          )
+        ),
+        snapshot.variant !== 'accepted' && snapshot.rows && snapshot.rows.length > 0
+          && h('div', { className: 'sb-proposal-resolution-list is-spaced' },
+            snapshot.rows.map(function (row, i) {
+              return resolutionListRow(row, {
+                key: 'r' + i,
+                noBorder: i === snapshot.rows.length - 1,
+              });
+            })
+          ),
+        snapshot.cta && h('button', {
+          type: 'button',
+          className: snapshot.variant === 'declined'
+            ? 'sb-proposal-resolution-btn-secondary'
+            : 'sb-proposal-resolution-btn',
+          onClick: snapshot.variant === 'declined' ? onReview : onContinue,
+        }, snapshot.cta),
+        snapshot.footnote && h('p', { className: 'sb-proposal-resolution-footnote' }, snapshot.footnote)
+      )
+    );
+  }
+
+  const OUTCOME_ID = 'strength-proposal-outcome';
+
+  function openProposalOutcome(opts) {
+    const o = opts || {};
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    if (!fs) return false;
+    const variant = o.variant;
+    const snapshot = buildProposalOutcomeSnapshot(o.training, variant, o);
+    if (!snapshot) return false;
+    return fs.mount({
+      id: OUTCOME_ID,
+      ariaLabel: variant === 'accepted' ? 'Правка принята'
+        : variant === 'declined' ? 'Предложение отклонено'
+          : 'Тренировка закрыта',
+      render: function (api) {
+        return h(ProposalOutcomeScreen, {
+          training: o.training,
+          snapshot: snapshot,
+          onClose: function () {
+            api.close();
+            if (typeof o.onClose === 'function') o.onClose();
+          },
+          onContinue: function () {
+            api.close();
+            if (typeof o.onContinue === 'function') o.onContinue();
+          },
+          onReview: function () {
+            api.close();
+            if (typeof o.onReview === 'function') o.onReview();
+            else if (typeof o.openReview === 'function') o.openReview();
+          },
+        });
+      },
+    });
+  }
+
+  function closeProposalOutcome() {
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    return fs ? fs.unmount(OUTCOME_ID) : false;
+  }
+
   const REVIEW_ID = 'strength-proposal-review';
   const CURATOR_EDIT_STATUS_ID = 'strength-curator-edit-status';
 
@@ -1763,6 +2101,13 @@
   Parts.ProposalReview = ProposalReview;
   Parts.ProposalStrip = ProposalStrip;
   Parts.ProposalOutcome = ProposalOutcome;
+  Parts.ProposalOutcomeScreen = ProposalOutcomeScreen;
+  Parts.buildProposalOutcomeSnapshot = buildProposalOutcomeSnapshot;
+  Parts.buildAcceptedOutcomeSnapshot = buildAcceptedOutcomeSnapshot;
+  Parts.buildDeclinedOutcomeSnapshot = buildDeclinedOutcomeSnapshot;
+  Parts.buildExpiredOutcomeSnapshot = buildExpiredOutcomeSnapshot;
+  Parts.openProposalOutcome = openProposalOutcome;
+  Parts.closeProposalOutcome = closeProposalOutcome;
   Parts.CuratorEditStatusScreen = CuratorEditStatusScreen;
   Parts.buildCuratorEditSnapshot = buildCuratorEditSnapshot;
   Parts.MissedTodayProposalScreen = MissedTodayProposalScreen;

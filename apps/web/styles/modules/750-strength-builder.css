@@ -4559,6 +4559,156 @@
   color: rgba(var(--ink), .56);
 }
 
+/* Кадры Л10–Л12: исходы предложения — общая оболочка как finish. */
+.sb-proposal-resolution .sb-finish-head {
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px 0;
+  border: 0;
+  background: var(--bg);
+}
+
+.sb-proposal-resolution-badge {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--gr-bg);
+  color: var(--gr);
+  font: 700 11px/1 Figtree, sans-serif;
+}
+
+.sb-proposal-resolution-hero {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--c1);
+}
+
+.sb-proposal-resolution-hero.is-ok {
+  background: var(--gr-bg);
+}
+
+.sb-proposal-resolution-hero-title {
+  font: 700 12.5px/1.35 Figtree, sans-serif;
+  color: var(--tx);
+}
+
+.sb-proposal-resolution-hero.is-ok .sb-proposal-resolution-hero-title {
+  color: var(--gr);
+}
+
+.sb-proposal-resolution-hero-prose {
+  margin: 6px 0 0;
+  font: 500 12px/1.5 Figtree, sans-serif;
+  color: var(--tx);
+}
+
+.sb-proposal-resolution-tier {
+  margin-top: 14px;
+  font: 700 11px/1 Figtree, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(var(--ink), .45);
+}
+
+.sb-proposal-resolution-list {
+  margin-top: 8px;
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--c1);
+}
+
+.sb-proposal-resolution-list.is-spaced {
+  margin-top: 10px;
+}
+
+.sb-proposal-resolution-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(var(--ink), .07);
+  font: 600 12.5px/1 Figtree, sans-serif;
+}
+
+.sb-proposal-resolution-row.is-last {
+  border-bottom: none;
+}
+
+.sb-proposal-resolution-main {
+  color: var(--tx);
+}
+
+.sb-proposal-resolution-mark {
+  flex: none;
+  font: 700 11.5px/1 Figtree, sans-serif;
+  color: var(--tx);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-proposal-resolution-mark.is-ok {
+  color: var(--gr);
+}
+
+.sb-proposal-resolution-mark.is-warn {
+  color: var(--ac2);
+}
+
+.sb-proposal-resolution-mark.is-muted {
+  color: rgba(var(--ink), .56);
+}
+
+.sb-proposal-resolution-weight {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.sb-proposal-resolution-weight .is-old {
+  font: 700 11px/1 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+  text-decoration: line-through;
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-proposal-resolution-weight .is-new {
+  font: 700 11.5px/1 Figtree, sans-serif;
+  color: var(--ac);
+  font-variant-numeric: tabular-nums;
+}
+
+.sb-proposal-resolution-btn,
+.sb-proposal-resolution-btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: 0;
+  border-radius: 14px;
+  font: 600 13px/1 Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.sb-proposal-resolution-btn {
+  background: var(--acs);
+  color: var(--on-acs);
+}
+
+.sb-proposal-resolution-btn-secondary {
+  background: var(--c2);
+  color: var(--tx);
+}
+
+.sb-proposal-resolution-footnote {
+  margin: 12px 0 0;
+  font: 500 11px/1.55 Figtree, sans-serif;
+  color: rgba(var(--ink), .56);
+}
+
 .sb-proposal-boundaries {
   margin-bottom: 14px;
 }

@@ -6889,389 +6889,279 @@
       "h": "ce184db0b1df"
     },
     "Исход · правка принята · 01": {
-      "v": "≠",
-      "f": "Л10 ·01 «шапка»: отдельного ProposalAcceptedScreen нет — Parts экспортирует ProposalCard/Review/Outcome (heys_strength_proposal_ui_v1.js:1762-1765); accept → kernel без полноэкранной шапки Л10.",
-      "h": "175bdcc2e73a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·01 шапка: ProposalOutcomeScreen .sb-head.sb-finish-head — heys_strength_proposal_ui_v1.js ProposalOutcomeScreen",
+      "h": "175bdcc2e73a"
     },
     "Исход · правка принята · 02": {
-      "v": "≠",
-      "f": "Л10 ·02 «✕» 36×36 --c1 ink56%: общий .sb-icon-btn на finish (heys_strength_finish_ui_v1.js:303-305, 750-strength-builder.css:2052-2060), не на экране «правка принята».",
-      "h": "dbd19d6c8f05",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·02 ✕ 36×36: .sb-icon-btn в ProposalOutcomeScreen head — finish shell reuse 750-strength-builder.css:2052-2060",
+      "h": "dbd19d6c8f05"
     },
     "Исход · правка принята · 03": {
-      "v": "≠",
-      "f": "Л10 ·03 центр шапки flex:1 column gap 3px: .sb-head-title gap 3px есть на finish-head (750:2062-2069), экран Л10 не монтируется.",
-      "h": "b4a4fa9ae422",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·03 .sb-head-title flex:1 column gap 3px — 750-strength-builder.css:2062-2069 на .sb-proposal-resolution",
+      "h": "b4a4fa9ae422"
     },
     "Исход · правка принята · 04": {
-      "v": "≠",
-      "f": "Л10 ·04 «Верх тела B»: dayLabel в ProposalCard (proposal_ui_v1.js:308-313), не в title полноэкранного исхода Л10.",
-      "h": "fe3aae769f4b",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·04 dayLabel title: buildAcceptedOutcomeSnapshot dayLabel → ProposalOutcomeScreen b — proposal_ui_v1.js",
+      "h": "fe3aae769f4b"
     },
     "Исход · правка принята · 05": {
-      "v": "≠",
-      "f": "Л10 ·05 «правка принята в 09:21»: fmtCuratorEditClock только для CuratorEditScreen (proposal_ui_v1.js:540-544); клиентский subtitle resolvedAt не рендерится.",
-      "h": "025fce2cd3cc",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·05 subtitle resolvedAt: fmtCuratorEditClock в buildAcceptedOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "025fce2cd3cc"
     },
     "Исход · правка принята · 06": {
-      "v": "≠",
-      "f": "Л10 ·06 пилюля «принято» --gr-bg/--gr: badgeYes в CURATOR_EDIT_STYLE (proposal_ui_v1.js:512-518) — кураторский кадр Л9, не шапка Л10.",
-      "h": "71540995a96c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·06 пилюля «принято»: .sb-proposal-resolution-badge --gr-bg/--gr — 750-strength-builder.css",
+      "h": "71540995a96c"
     },
     "Исход · правка принята · 07": {
-      "v": "≠",
-      "f": "Л10 ·07 область прокрутки: после acceptPlanProposal UI остаётся в BuilderScreen — нет .sb-list исхода accept (strength-proposal-ui.test.js:63-76).",
-      "h": "c629f84f9712",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·07 scroll: .sb-list.sb-finish-list на ProposalOutcomeScreen — 750-strength-builder.css:2082+",
+      "h": "c629f84f9712"
     },
     "Исход · правка принята · 08": {
-      "v": "≠",
-      "f": "Л10 ·08 .grp mt12 --gr-bg: ProposalOutcome section (750:4487+) — copy «легла не полностью», не карточка «План обновлён» Л10.",
-      "h": "fc7be4d18780",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·08 hero .grp mt12 --gr-bg: .sb-proposal-resolution-hero.is-ok — 750-strength-builder.css",
+      "h": "fc7be4d18780"
     },
     "Исход · правка принята · 09": {
-      "v": "≠",
-      "f": "Л10 ·09 «План обновлён · 2 изменения» 700 12.5px --gr: rg «План обновлён» apps/web/strength — 0 совпадений.",
-      "h": "90a723b984ea",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·09 «План обновлён · N изменений» 700 12.5px --gr: heroTitle buildAcceptedOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "90a723b984ea"
     },
     "Исход · правка принята · 10": {
-      "v": "≠",
-      "f": "Л10 ·10 проза «Сделанное осталось…»: похожая фраза в ProposalCard (proposal_ui_v1.js:304) на карточке дня, не на экране Л10.",
-      "h": "53dbde9089ff",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·10 проза frozen copy: heroProse buildAcceptedOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "53dbde9089ff"
     },
     "Исход · правка принята · 11": {
-      "v": "≠",
-      "f": "Л10 ·11 ярус «Что осталось как было»: ProposalReview frozen-block (proposal_ui_v1.js:385-397) — другой UI, полноэкранный ярус Л10 отсутствует.",
-      "h": "25877a010a04",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·11 tier «Что осталось как было»: .sb-proposal-resolution-tier — ProposalOutcomeScreen",
+      "h": "25877a010a04"
     },
     "Исход · правка принята · 12": {
-      "v": "≠",
-      "f": "Л10 ·12 список .cd: клиентский partial-outcome — .sb-proposal-outcome-list (750:4506), не .cd блоки кадра Л10.",
-      "h": "d9a337aab838",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·12 список frozen: .sb-proposal-resolution-list — ProposalOutcomeScreen",
+      "h": "d9a337aab838"
     },
     "Исход · правка принята · 13": {
-      "v": "≠",
-      "f": "Л10 ·13 строка списка: .sb-proposal-outcome-row flex (750:4512-4520), не .cd .row геометрия Л10.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·13 строка: .sb-proposal-resolution-row flex — 750-strength-builder.css",
+      "h": "af81bb6e54c6"
     },
     "Исход · правка принята · 14": {
-      "v": "≠",
-      "f": "Л10 ·14 «Тяга штанги · 3 подхода» color --tx: frozen rows в ProposalReview (.sb-proposal-frozen-list), не полноэкранный список Л10.",
-      "h": "680b7f535aae",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·14 имя упражнения --tx: .sb-proposal-resolution-main — 750-strength-builder.css",
+      "h": "680b7f535aae"
     },
     "Исход · правка принята · 15": {
-      "v": "≠",
-      "f": "Л10 ·15 «заморожено» mono --gr 11.5px: метка «заморожено» на строках исхода Л10 не рендерится в клиентском runtime.",
-      "h": "c426276268ff",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·15 «заморожено» --gr 11.5px: .sb-proposal-resolution-mark.is-ok — 750-strength-builder.css",
+      "h": "c426276268ff"
     },
     "Исход · правка принята · 16": {
-      "v": "≠",
-      "f": "Л10 ·16 строка без разделителя: .sb-proposal-outcome-row:first-child border-top (750:4521) — иной паттерн, не border none Л10.",
-      "h": "6b286135ed76",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·16 border none last row: .sb-proposal-resolution-row.is-last — 750-strength-builder.css",
+      "h": "6b286135ed76"
     },
     "Исход · правка принята · 17": {
-      "v": "≠",
-      "f": "Л10 ·17 baseline gap 6px для old→new веса: зачёркнутое старое + новое --ac в исходе Л10 не реализовано.",
-      "h": "977226e7fe26",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·17 baseline gap 6px: .sb-proposal-resolution-weight gap 6px — 750-strength-builder.css",
+      "h": "977226e7fe26"
     },
     "Исход · правка принята · 18": {
-      "v": "≠",
-      "f": "Л10 ·18 «75» mono ink56%: зачёркнутое старое значение веса на экране исхода accept отсутствует.",
-      "h": "1fcfc110a4ae",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·18 old weight ink56% strike: .sb-proposal-resolution-weight .is-old — 750-strength-builder.css",
+      "h": "1fcfc110a4ae"
     },
     "Исход · правка принята · 19": {
-      "v": "≠",
-      "f": "Л10 ·19 «70 кг» mono --ac: aheadOutcomeLabel (proposal_ui_v1.js:253-254) только в списке ProposalCard/Review, не формат Л10.",
-      "h": "484ee9f98912",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·19 new weight --ac: .sb-proposal-resolution-weight .is-new — 750-strength-builder.css",
+      "h": "484ee9f98912"
     },
     "Исход · правка принята · 20": {
-      "v": "≠",
-      "f": "Л10 ·20 «убран из плана» --ac2: kind=removed в describePlanEdit, полноэкранный список снятых упражнений Л10 не рендерится.",
-      "h": "5678ec9c2d67",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·20 «убран из плана» --ac2: mark is-warn в changed removed — proposal_ui_v1.js",
+      "h": "5678ec9c2d67"
     },
     "Исход · правка принята · 21": {
-      "v": "≠",
-      "f": "Л10 ·21 CTA «Продолжить тренировку» mt12: текст в TrainingDoneCard (superset_ui_v1.js:2284) на карточке дня, не на экране Л10.",
-      "h": "5fc647c1d8cb",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·21 CTA «Продолжить тренировку» mt12: .sb-proposal-resolution-btn — ProposalOutcomeScreen",
+      "h": "5fc647c1d8cb"
     },
     "Исход · правка принята · 22": {
-      "v": "≠",
-      "f": "Л10 ·22 сноска про «исход виден составом»: footnote Л10 не рендерится — accept возвращает в builder без поясняющего блока.",
-      "h": "f6c7bd683636",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 ·22 footnote составом: ACCEPTED_OUTCOME_FOOTNOTE .sb-proposal-resolution-footnote — proposal_ui_v1.js",
+      "h": "f6c7bd683636"
     },
     "Исход · отказ · 01": {
-      "v": "≠",
-      "f": "Л11 ·01 «шапка»: экран «Исход · отказ» не монтируется — declinePlanProposal меняет status (strength-proposal-ui.test.js), без полноэкранного Л11.",
-      "h": "175bdcc2e73a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·01 шапка: ProposalOutcomeScreen variant declined — proposal_ui_v1.js",
+      "h": "175bdcc2e73a"
     },
     "Исход · отказ · 02": {
-      "v": "≠",
-      "f": "Л11 ·02 «✕» 36×36: .sb-icon-btn в ProposalReview head (proposal_ui_v1.js:369) — экран разбора до отказа, не исход Л11 после decline.",
-      "h": "dbd19d6c8f05",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·02 ✕: .sb-icon-btn на declined outcome head — ProposalOutcomeScreen",
+      "h": "dbd19d6c8f05"
     },
     "Исход · отказ · 03": {
-      "v": "≠",
-      "f": "Л11 ·03 центр шапки column gap 3px: .sb-head-title в ProposalReview (proposal_ui_v1.js:370-374), не post-decline шапка Л11.",
-      "h": "b4a4fa9ae422",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·03 head column gap 3px: .sb-head-title — 750-strength-builder.css:2062-2069",
+      "h": "b4a4fa9ae422"
     },
     "Исход · отказ · 04": {
-      "v": "≠",
-      "f": "Л11 ·04 «Верх тела B»: dayLabel в ProposalReview subtitle (proposal_ui_v1.js:372-373), не title экрана исхода отказа.",
-      "h": "fe3aae769f4b",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·04 dayLabel title: buildDeclinedOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "fe3aae769f4b"
     },
     "Исход · отказ · 05": {
-      "v": "≠",
-      "f": "Л11 ·05 «предложение отклонено»: subtitle post-decline не рендерится — rg apps/web/strength «предложение отклонено» — 0.",
-      "h": "8f758a51a07f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·05 «предложение отклонено»: subtitle buildDeclinedOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "8f758a51a07f"
     },
     "Исход · отказ · 06": {
-      "v": "≠",
-      "f": "Л11 ·06 область прокрутки: после decline UI без полноэкранного scroll-контейнера исхода — proposal.status=declined в kernel.",
-      "h": "c629f84f9712",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·06 scroll: .sb-finish-list на declined outcome — ProposalOutcomeScreen",
+      "h": "c629f84f9712"
     },
     "Исход · отказ · 07": {
-      "v": "≠",
-      "f": "Л11 ·07 .grp mt12: карточка «План остался прежним» на --c1 (канвас Л11 ·08) не реализована как отдельный экран.",
-      "h": "81d6d8e40a85",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·07 hero .grp mt12 --c1: .sb-proposal-resolution-hero.is-neutral — 750-strength-builder.css",
+      "h": "81d6d8e40a85"
     },
     "Исход · отказ · 08": {
-      "v": "≠",
-      "f": "Л11 ·08 «План остался прежним» 700 12.5px --tx: rg apps/web/strength «План остался прежним» — 0.",
-      "h": "62cdd08ed1d4",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·08 «План остался прежним» --tx: heroTitle buildDeclinedOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "62cdd08ed1d4"
     },
     "Исход · отказ · 09": {
-      "v": "≠",
-      "f": "Л11 ·09 проза про Артёма: explanatory copy исхода отказа не рендерится после declinePlanProposal.",
-      "h": "d5608f7d0f5c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·09 проза про куратора: heroProse buildDeclinedOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "d5608f7d0f5c"
     },
     "Исход · отказ · 10": {
-      "v": "≠",
-      "f": "Л11 ·10 список .cd mt10: post-decline list .cd не монтируется — остаётся прежний план без итогового экрана.",
-      "h": "d641122bb122",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·10 список mt10: .sb-proposal-resolution-list.is-spaced — 750-strength-builder.css",
+      "h": "d641122bb122"
     },
     "Исход · отказ · 11": {
-      "v": "≠",
-      "f": "Л11 ·11 строка списка: нет DOM строки исхода отказа с прежними значениями плана.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·11 строка списка: .sb-proposal-resolution-row — ProposalOutcomeScreen",
+      "h": "af81bb6e54c6"
     },
     "Исход · отказ · 12": {
-      "v": "≠",
-      "f": "Л11 ·12 «Жим лёжа · подход 4» --tx: строка плана после отказа не показывается на отдельном экране Л11.",
-      "h": "92910588f4d5",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·12 имя строки --tx: .sb-proposal-resolution-main — buildDeclinedOutcomeSnapshot rows",
+      "h": "92910588f4d5"
     },
     "Исход · отказ · 13": {
-      "v": "≠",
-      "f": "Л11 ·13 «75 кг» mono --tx: mono-значение веса в списке исхода отказа не рендерится.",
-      "h": "2fba62664fde",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·13 «75 кг» mono --tx: row.value .sb-proposal-resolution-mark — proposal_ui_v1.js",
+      "h": "2fba62664fde"
     },
     "Исход · отказ · 14": {
-      "v": "≠",
-      "f": "Л11 ·14 строка без разделителя: border-none паттерн .cd Л11 отсутствует в runtime.",
-      "h": "6b286135ed76",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·14 border none: .sb-proposal-resolution-row.is-last — 750-strength-builder.css",
+      "h": "6b286135ed76"
     },
     "Исход · отказ · 15": {
-      "v": "≠",
-      "f": "Л11 ·15 «остаётся в плане» ink56%: статусная подпись строки исхода отказа не реализована.",
-      "h": "a639134bec21",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·15 «остаётся в плане» ink56%: row.status .is-muted — buildDeclinedOutcomeSnapshot",
+      "h": "a639134bec21"
     },
     "Исход · отказ · 16": {
-      "v": "≠",
-      "f": "Л11 ·16 вторичная «Посмотреть, что он предлагал» mt12: ближайший «Посмотреть» — ProposalStrip (proposal_ui_v1.js:442), не кнопка исхода Л11.",
-      "h": "f4f73996d2da",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·16 «Посмотреть, что он предлагал»: .sb-proposal-resolution-btn-secondary — ProposalOutcomeScreen",
+      "h": "f4f73996d2da"
     },
     "Исход · отказ · 17": {
-      "v": "≠",
-      "f": "Л11 ·17 сноска про тихий отказ: footnote Л11 не рендерится в клиентском UI после decline.",
-      "h": "33db3f07982e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 ·17 footnote тихий отказ: DECLINED_OUTCOME_FOOTNOTE — proposal_ui_v1.js",
+      "h": "33db3f07982e"
     },
     "Исход · без ответа · 01": {
-      "v": "≠",
-      "f": "Л12 ·01 «шапка»: finish .sb-finish-head (finish_ui_v1.js:302-311) — экран итогов тренировки, не dedicated «Исход · без ответа».",
-      "h": "175bdcc2e73a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·01 шапка: ProposalOutcomeScreen variant expired — proposal_ui_v1.js",
+      "h": "175bdcc2e73a"
     },
     "Исход · без ответа · 02": {
-      "v": "≠",
-      "f": "Л12 ·02 «✕» 36×36: .sb-icon-btn на finish-head (finish_ui_v1.js:303-305), не шапка полноэкранного исхода «без ответа».",
-      "h": "dbd19d6c8f05",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·02 ✕: .sb-icon-btn expired outcome — ProposalOutcomeScreen",
+      "h": "dbd19d6c8f05"
     },
     "Исход · без ответа · 03": {
-      "v": "≠",
-      "f": "Л12 ·03 центр шапки column gap 3px: .sb-finish-head .sb-head-title (750:2062-2069) — finish, не Л12 outcome.",
-      "h": "b4a4fa9ae422",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·03 head column gap 3px: .sb-head-title expired — 750-strength-builder.css",
+      "h": "b4a4fa9ae422"
     },
     "Исход · без ответа · 04": {
-      "v": "≠",
-      "f": "Л12 ·04 «Тренировка завершена»: title finish-screen (finish_ui_v1.js:307) совпадает по тексту, но это FinishScreen, не кадр Л12 исхода proposal.",
-      "h": "5869247ca78e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·04 «Тренировка завершена»: dayLabel buildExpiredOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "5869247ca78e"
     },
     "Исход · без ответа · 05": {
-      "v": "≠",
-      "f": "Л12 ·05 «54:30 · 23 подхода»: finish metrics через MetricTile (finish_ui_v1.js:316-320), не subtitle формата Л12 про expired proposal.",
-      "h": "af3c1f6ea5d8",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·05 elapsed·подходы subtitle: fmtElapsedMinSec + countDoneApproaches — proposal_ui_v1.js",
+      "h": "af3c1f6ea5d8"
     },
     "Исход · без ответа · 06": {
-      "v": "≠",
-      "f": "Л12 ·06 область прокрутки: .sb-finish-list scroll на finish, не scroll-контейнер исхода «без ответа» Л12.",
-      "h": "c629f84f9712",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·06 scroll: .sb-finish-list expired outcome — ProposalOutcomeScreen",
+      "h": "c629f84f9712"
     },
     "Исход · без ответа · 07": {
-      "v": "≠",
-      "f": "Л12 ·07 .grp mt12 --gr-bg: ProposalOutcome (finish_ui_v1.js:349) — partial reject block, не карточка «Тренировка закрыта» Л12.",
-      "h": "fc7be4d18780",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·07 hero --gr-bg: .sb-proposal-resolution-hero.is-ok expired — 750-strength-builder.css",
+      "h": "fc7be4d18780"
     },
     "Исход · без ответа · 08": {
-      "v": "≠",
-      "f": "Л12 ·08 «Тренировка закрыта» 700 12.5px --gr: rg apps/web/strength «Тренировка закрыта» — 0.",
-      "h": "605d4650f44c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·08 «Тренировка закрыта» --gr: heroTitle buildExpiredOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "605d4650f44c"
     },
     "Исход · без ответа · 09": {
-      "v": "≠",
-      "f": "Л12 ·09 проза про непринятое предложение: copy исхода expired proposal не рендерится на finish.",
-      "h": "e08b4c93929c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·09 проза непринятое: heroProse buildExpiredOutcomeSnapshot — proposal_ui_v1.js",
+      "h": "e08b4c93929c"
     },
     "Исход · без ответа · 10": {
-      "v": "≠",
-      "f": "Л12 ·10 список .cd mt10: нет .cd списка исхода «без ответа» — только finish detail rows.",
-      "h": "d641122bb122",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·10 список mt10: .sb-proposal-resolution-list.is-spaced expired — 750-strength-builder.css",
+      "h": "d641122bb122"
     },
     "Исход · без ответа · 11": {
-      "v": "≠",
-      "f": "Л12 ·11 строка списка: DOM строки исхода expired proposal отсутствует.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·11 строка: .sb-proposal-resolution-row expired rows — ProposalOutcomeScreen",
+      "h": "af81bb6e54c6"
     },
     "Исход · без ответа · 12": {
-      "v": "≠",
-      "f": "Л12 ·12 «Сделано по прежнему плану» --tx: строка summary исхода Л12 не реализована.",
-      "h": "a74d5ff7dfac",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·12 «Сделано по прежнему плану» --tx: rows[0].name buildExpiredOutcomeSnapshot",
+      "h": "a74d5ff7dfac"
     },
     "Исход · без ответа · 13": {
-      "v": "≠",
-      "f": "Л12 ·13 «23 подхода» mono --tx: счётчик подходов на finish в другом формате (setCounts), не mono-строка Л12.",
-      "h": "d0e5214a8c98",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·13 «N подходов» mono --tx: rows[0].value .sb-proposal-resolution-mark — proposal_ui_v1.js",
+      "h": "d0e5214a8c98"
     },
     "Исход · без ответа · 14": {
-      "v": "≠",
-      "f": "Л12 ·14 строка без разделителя: border-none .cd паттерн Л12 отсутствует.",
-      "h": "6b286135ed76",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·14 border none: .sb-proposal-resolution-row.is-last — 750-strength-builder.css",
+      "h": "6b286135ed76"
     },
     "Исход · без ответа · 15": {
-      "v": "≠",
-      "f": "Л12 ·15 «не принято» ink56%: статусная подпись expired proposal на клиентском экране не рендерится.",
-      "h": "07505ef7accc",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·15 «не принято» ink56%: rows[1] muted mark — buildExpiredOutcomeSnapshot",
+      "h": "07505ef7accc"
     },
     "Исход · без ответа · 16": {
-      "v": "≠",
-      "f": "Л12 ·16 сноска про неблокирующее предложение: footnote Л12 не реализован — expire через kernel без UI исхода.",
-      "h": "f4aa29902d31",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 ·16 footnote: EXPIRED_OUTCOME_FOOTNOTE — proposal_ui_v1.js",
+      "h": "f4aa29902d31"
     },
     "Принятие · ветка чата · 01": {
       "v": "—",

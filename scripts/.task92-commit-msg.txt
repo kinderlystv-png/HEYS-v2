@@ -1,0 +1,5 @@
+feat(strength): full-screen proposal outcome screens L10–L12
+
+Three post-resolution fullscreen outcomes (accept / decline / expire) with
+shared finish shell, day-trainings integration, vitest smoke, and verdict = on
+55 canvas rows.

@@ -1759,7 +1759,9 @@
           // Неотвеченная правка гаснет сама и завершение не держит: иначе
           // человек с гантелей в руке обязан разобрать чужое предложение,
           // чтобы просто закончить тренировку (экран 14d).
-          if (typeof onFinishProposal === 'function') onFinishProposal();
+          if (typeof onFinishProposal === 'function') {
+            onFinishProposal({ elapsedSec: workElapsedSec });
+          }
           onClose();
         }
       });
@@ -2381,6 +2383,8 @@
         onStartCustom: state.onStartCustom,
         syncStatusFor: state.syncStatusFor,
         onReviewProposal: state.onReviewProposal,
+        onProposalAccept: state.onProposalAccept,
+        onProposalDecline: state.onProposalDecline,
         onFinishProposal: state.onFinishProposal,
         onPatch: function (nextExercises) {
           if (typeof state.onPatch === 'function') state.onPatch(nextExercises);

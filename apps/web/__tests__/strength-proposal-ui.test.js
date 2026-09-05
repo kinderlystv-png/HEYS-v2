@@ -41,6 +41,7 @@ function startedTraining(proposalExercises, extra) {
     strengthEntryMode: 'workout_builder',
     workoutLog: { version: 1, exercises: [ex('ex1', 'Жим', [ap('a1', 75, 8, true), ap('a2', 75, 8, false)])] },
     planSnapshot: { exercises: [ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 75, 8, false)])] },
+    planSnapshot: { exercises: [ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 75, 8, false)])] },
     plan: Object.assign({
       id: 'pl_1',
       status: 'started',
@@ -304,6 +305,68 @@ describe('правка куратора: как она названа челов
       training: { plan: { proposal: { status: 'accepted', applied: [{ name: 'Присед' }], rejected: [] } } },
     }));
     expect(container.innerHTML).toBe('');
+  });
+});
+
+describe('исходы предложения Л10–Л12', () => {
+  beforeEach(() => { loadAll(); });
+  afterEach(() => { cleanup(); window.HEYS = originalHEYS; });
+
+  function acceptedTraining() {
+    const { ks } = loadAll();
+    const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 60, 8, false)])]);
+    const res = ks.acceptPlanProposal(training, 9 * 3600 + 21 * 60 * 1000);
+    expect(res.ok).toBe(true);
+    return res.training;
+  }
+
+  it('Л10 accept: полноэкранный исход «План обновлён»', () => {
+    const { Parts } = loadAll();
+    const training = acceptedTraining();
+    render(React.createElement(Parts.ProposalOutcomeScreen, {
+      training,
+      variant: 'accepted',
+      onClose: () => {},
+      onContinue: () => {},
+    }));
+    expect(screen.getByText('Верх тела B')).toBeTruthy();
+    expect(screen.getByText(/правка принята в \d{2}:\d{2}/)).toBeTruthy();
+    expect(screen.getByText('принято')).toBeTruthy();
+    expect(screen.getByText(/План обновлён/)).toBeTruthy();
+    expect(screen.getByText(/Что (осталось как было|поменялось)/)).toBeTruthy();
+    expect(screen.getByText('Продолжить тренировку')).toBeTruthy();
+  });
+
+  it('Л11 decline: полноэкранный исход «План остался прежним»', () => {
+    const { ks, Parts } = loadAll();
+    const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 60, 8, false)])]);
+    const res = ks.declinePlanProposal(training, Date.now());
+    expect(res.ok).toBe(true);
+    render(React.createElement(Parts.ProposalOutcomeScreen, {
+      training: res.training,
+      variant: 'declined',
+      onClose: () => {},
+      onReview: () => {},
+    }));
+    expect(screen.getByText('предложение отклонено')).toBeTruthy();
+    expect(screen.getByText('План остался прежним')).toBeTruthy();
+    expect(screen.getByText('Посмотреть, что он предлагал')).toBeTruthy();
+  });
+
+  it('Л12 expire: полноэкранный исход «Тренировка закрыта»', () => {
+    const { ks, Parts } = loadAll();
+    const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, true), ap('a2', 75, 8, false)])]);
+    const next = ks.expirePlanProposal(training, Date.now());
+    render(React.createElement(Parts.ProposalOutcomeScreen, {
+      training: next,
+      variant: 'expired',
+      elapsedSec: 54 * 60 + 30,
+      onClose: () => {},
+    }));
+    expect(screen.getByText('Тренировка завершена')).toBeTruthy();
+    expect(screen.getByText(/54:30 · 1 подход/)).toBeTruthy();
+    expect(screen.getByText('Тренировка закрыта')).toBeTruthy();
+    expect(screen.getByText('не принято')).toBeTruthy();
   });
 });
 

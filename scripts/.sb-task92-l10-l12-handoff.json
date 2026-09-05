@@ -1,0 +1,36 @@
+{
+  "task": 92,
+  "screens": {
+    "L10": "ProposalOutcomeScreen variant=accepted — «План обновлён»",
+    "L11": "ProposalOutcomeScreen variant=declined — «План остался прежним»",
+    "L12": "ProposalOutcomeScreen variant=expired — «Тренировка закрыта»"
+  },
+  "sourceFiles": [
+    "apps/web/strength/heys_strength_proposal_ui_v1.js",
+    "apps/web/styles/modules/750-strength-builder.css",
+    "apps/web/heys_day_trainings_v1.js",
+    "apps/web/strength/heys_strength_builder_ui_v1.js"
+  ],
+  "tests": {
+    "smoke": "HEYS_DESIGN_GATES=skip npx vitest run apps/web/__tests__/strength-proposal-ui.test.js apps/web/__tests__/strength-proposal-v4-canvas-contract.test.js",
+    "scenarios": [
+      "accept → ProposalOutcomeScreen «План обновлён»",
+      "decline → ProposalOutcomeScreen «План остался прежним»",
+      "expire → ProposalOutcomeScreen «Тренировка закрыта»"
+    ],
+    "passCount": "30/30"
+  },
+  "canvasContractTest": "apps/web/__tests__/strength-proposal-v4-canvas-contract.test.js",
+  "verdicts": {
+    "zone": "strength-builder",
+    "rows": 55,
+    "beforeEquals": 0,
+    "afterEquals": 55,
+    "script": "node scripts/.task92-apply-verdicts.mjs"
+  },
+  "progressiveDisclosure": {
+    "layer1": "plan composition after outcome (hero + changed/frozen or plan rows)",
+    "layer2": "«Что осталось как было» tier on accept; decline review via secondary CTA",
+    "notHidden": "close ✕ and continue CTA stay on layer 1"
+  }
+}
