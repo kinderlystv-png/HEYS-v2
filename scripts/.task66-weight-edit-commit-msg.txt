@@ -1,0 +1,5 @@
+fix(strength-builder): task66 weight-edit progress key only in head
+
+Task 60 moved weight_reps «подход N из M» to sessionServiceSubtitle (.sb-head-sub);
+exerciseOpenHeadKey still duplicated it in .sb-ex-sub. Lane 5 infra/timeout was wrong —
+isolated vitest failed on getMultipleElementsFoundError in 2.4s, not timeout.

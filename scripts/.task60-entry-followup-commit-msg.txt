@@ -1,0 +1,5 @@
+fix(strength-builder): drop duplicate unit key from session subtitle
+
+M5/M6 canvas keys live in open card sb-ex-sub via exerciseOpenHeadKey;
+sessionServiceSubtitle must not repeat unitEntryLabel (duplicate broke
+distance-entry getByText). Weight_reps keeps progress key in header only.
