@@ -1,0 +1,37 @@
+{
+  "zone": "strength-builder",
+  "scope": "Task 43 — M2/M3 wiring from ExerciseCardScreen (builder_ui only)",
+  "generated": "2026-09-05",
+  "rows": [
+    {
+      "behavior": "ExerciseCardScreen → M2 muscle groups",
+      "reachable": "yes",
+      "entry": "heys_strength_builder_ui_v1.js ExerciseCardScreen subScreen==='muscle-groups' → h(CatUI.ExerciseMuscleGroupsScreen); trigger: «сменить» / «выбрать» в tier «Какие мышцы» (каталог → тап .sb-cat-title → exercise-card)"
+    },
+    {
+      "behavior": "ExerciseCardScreen → M3 similar (bodyweight)",
+      "reachable": "yes",
+      "entry": "heys_strength_builder_ui_v1.js ExerciseCardScreen subScreen==='similar' → h(CatUI.ExerciseSimilarScreen); trigger: «выбрать»/«сменить» в tier «Коэффициент своего веса» при unit===bodyweight; bodyWeightKg из profile.weight"
+    },
+    {
+      "behavior": "ExerciseCardScreen save → exerciseMeta",
+      "reachable": "yes",
+      "entry": "api.save(name, { primaryGroup, secondaryGroups, unit, bodyweightFactor }) — bodyweightFactor из M3 similarChoice; onDone → returnToCatalogFromCard (view catalog)"
+    },
+    {
+      "behavior": "Path A — catalog card edit persists meta",
+      "reachable": "yes",
+      "entry": "strength-builder-catalog-card-flow.test.js · Path A: каталог → карточка → единица/группы/коэффициент → сохранить → exerciseMeta.get + каталог .sb-cat-title span"
+    },
+    {
+      "behavior": "Path B — create → constructor list",
+      "reachable": "yes",
+      "entry": "CatalogScreen createDraft → NewExerciseScreen → onPick/addExercise → view list; strength-builder-catalog-card-flow.test.js · Path B"
+    }
+  ],
+  "tests": [
+    "apps/web/__tests__/strength-builder-catalog-card-flow.test.js",
+    "apps/web/__tests__/strength-builder-exercise-card-reachability.test.js"
+  ],
+  "guardNote": "Inline sb-ex-card-picker removed; M2/M3 reuse CatUI screens like NewExerciseScreen strip-4 pattern"
+}

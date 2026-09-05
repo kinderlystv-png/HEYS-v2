@@ -383,13 +383,16 @@
    * коэффициент только у своего веса. Одна кнопка «Сохранить упражнение».
    */
   function ExerciseCardScreen(props) {
-    const { initialName, onDone, onCancel } = props;
+    const { initialName, onDone, onCancel, bodyWeightKg } = props;
     const api = HEYS.exerciseMeta;
+    const CatUI = HEYS.StrengthCatalogUI || {};
     const [name, setName] = React.useState(initialName || '');
     const [unit, setUnit] = React.useState('');
     const [primary, setPrimary] = React.useState('');
     const [secondary, setSecondary] = React.useState([]);
-    const [picker, setPicker] = React.useState('');
+    const [subScreen, setSubScreen] = React.useState(null);
+    const [similarChoice, setSimilarChoice] = React.useState(null);
+    const [likeNorm, setLikeNorm] = React.useState('');
 
     if (!api) return null;
 
@@ -402,28 +405,65 @@
       setUnit(meta.unit || '');
       setPrimary(meta.primaryGroup || '');
       setSecondary(Array.isArray(meta.secondaryGroups) ? meta.secondaryGroups.slice() : []);
+      if (meta.unit === 'bodyweight' && meta.bodyweightFactor != null
+        && typeof api.bodyweightSimilarOptions === 'function') {
+        const match = api.bodyweightSimilarOptions().filter(function (row) {
+          return row.bodyweightFactor === meta.bodyweightFactor;
+        })[0] || null;
+        setSimilarChoice(match);
+        setLikeNorm(match ? match.key : '');
+      } else {
+        setSimilarChoice(null);
+        setLikeNorm('');
+      }
     }, [initialName, api]);
 
+    const needsFactor = unit === 'bodyweight';
+    const factor = similarChoice && !similarChoice.isUnknown ? similarChoice.bodyweightFactor : null;
     const ready = !!String(name).trim() && !!unit && !!primary;
     const share = typeof api.synergistShare === 'number' ? api.synergistShare : 0.5;
     const shareLabel = share === 0.5 ? 'половину' : Math.round(share * 100) + '%';
 
-    function toggleGroup(id) {
-      if (picker === 'primary') {
-        setPrimary(id);
-        setSecondary(secondary.filter(function (x) { return x !== id; }));
-        setPicker('');
-        return;
-      }
-      if (picker === 'secondary') {
-        if (id === primary) return;
-        if (secondary.indexOf(id) >= 0) {
-          setSecondary(secondary.filter(function (x) { return x !== id; }));
-        } else {
-          setSecondary(secondary.concat([id]));
-        }
-        return;
-      }
+    if (subScreen === 'muscle-groups' && CatUI.ExerciseMuscleGroupsScreen) {
+      return h(CatUI.ExerciseMuscleGroupsScreen, {
+        exerciseName: name,
+        primaryGroup: primary,
+        secondaryGroups: secondary,
+        previewTonnageKg: 2980,
+        onSave: function (newPrimary, newSecondary) {
+          setPrimary(newPrimary);
+          setSecondary(newSecondary);
+          setSubScreen(null);
+        },
+        onBack: function () { setSubScreen(null); }
+      });
+    }
+
+    if (subScreen === 'similar' && CatUI.ExerciseSimilarScreen) {
+      return h(CatUI.ExerciseSimilarScreen, {
+        exerciseName: name,
+        bodyWeightKg: bodyWeightKg,
+        selectedKey: similarChoice ? similarChoice.key : (likeNorm || ''),
+        bodyweightFactor: factor,
+        onSave: function (selected) {
+          setSimilarChoice(selected || null);
+          if (selected && !selected.isUnknown) {
+            setLikeNorm(selected.key);
+          } else {
+            setLikeNorm('');
+          }
+          setSubScreen(null);
+        },
+        onBack: function () { setSubScreen(null); }
+      });
+    }
+
+    function openMuscleGroups() {
+      if (CatUI.ExerciseMuscleGroupsScreen) setSubScreen('muscle-groups');
+    }
+
+    function openSimilar() {
+      if (CatUI.ExerciseSimilarScreen) setSubScreen('similar');
     }
 
     function save() {
@@ -431,7 +471,7 @@
         primaryGroup: primary,
         secondaryGroups: secondary,
         unit: unit,
-        bodyweightFactor: unit === 'bodyweight' ? null : null
+        bodyweightFactor: needsFactor ? factor : null
       });
       if (res.ok) onDone(String(name).trim());
     }
@@ -470,7 +510,13 @@
               key: u.id,
               type: 'button',
               className: 'sb-ex-card-pill' + (unit === u.id ? ' is-on' : ''),
-              onClick: function () { setUnit(u.id); setPicker(''); }
+              onClick: function () {
+                setUnit(u.id);
+                if (u.id !== 'bodyweight') {
+                  setLikeNorm('');
+                  setSimilarChoice(null);
+                }
+              }
             }, label);
           })
         ),
@@ -479,25 +525,7 @@
           + 'Метры и время не попадают — у них своя строка в итогах.'),
 
         h('div', { className: 'sb-ex-card-tier' }, 'Какие мышцы'),
-        picker && h('div', { className: 'sb-ex-card-picker' },
-          api.groups.map(function (g) {
-            const isPrimary = g.id === primary;
-            const isSecondary = secondary.indexOf(g.id) >= 0;
-            const isOn = picker === 'primary' ? isPrimary : isSecondary;
-            return h('button', {
-              key: g.id,
-              type: 'button',
-              className: 'sb-ex-card-pill sb-ex-card-pill--pick' + (isOn ? ' is-on' : ''),
-              onClick: function () { toggleGroup(g.id); }
-            }, g.label.toLowerCase());
-          }),
-          h('button', {
-            type: 'button',
-            className: 'sb-ex-card-picker-done',
-            onClick: function () { setPicker(''); }
-          }, 'Готово')
-        ),
-        !picker && h('div', { className: 'sb-ex-card-cd' },
+        h('div', { className: 'sb-ex-card-cd' },
           primary && h('div', { className: 'sb-ex-card-row' },
             h('span', { className: 'sb-ex-card-row-copy' },
               h('b', null, 'Основная · ' + api.groupLabel(primary).toLowerCase()),
@@ -506,7 +534,7 @@
             h('button', {
               type: 'button',
               className: 'sb-ex-card-action',
-              onClick: function () { setPicker('primary'); }
+              onClick: openMuscleGroups
             }, 'сменить')
           ),
           h('div', {
@@ -521,21 +549,33 @@
             h('button', {
               type: 'button',
               className: 'sb-ex-card-action',
-              onClick: function () { setPicker('secondary'); }
+              onClick: openMuscleGroups
             }, 'выбрать')
           )
         ),
 
         h('div', { className: 'sb-ex-card-tier' }, 'Коэффициент своего веса'),
         h('div', { className: 'sb-ex-card-cd' },
-          h('div', { className: 'sb-ex-card-row is-last' },
-            h('span', { className: 'sb-ex-card-row-copy' },
-              h('b', { className: 'sb-ex-card-muted' }, 'Не спрашиваем'),
-              h('span', null, unit === 'bodyweight'
-                ? 'выберите «на что похоже» после сохранения'
-                : 'единица не «свой вес» — поля нет')
+          needsFactor
+            ? h('div', { className: 'sb-ex-card-row is-last' },
+              h('span', { className: 'sb-ex-card-row-copy' },
+                h('b', null, similarChoice ? similarChoice.label : 'Не выбрано'),
+                h('span', null, similarChoice
+                  ? similarChoice.hint
+                  : 'образец задаёт коэффициент')
+              ),
+              h('button', {
+                type: 'button',
+                className: 'sb-ex-card-action',
+                onClick: openSimilar
+              }, similarChoice ? 'сменить' : 'выбрать')
             )
-          )
+            : h('div', { className: 'sb-ex-card-row is-last' },
+              h('span', { className: 'sb-ex-card-row-copy' },
+                h('b', { className: 'sb-ex-card-muted' }, 'Не спрашиваем'),
+                h('span', null, 'единица не «свой вес» — поля нет')
+              )
+            )
         ),
 
         h('button', {
@@ -1636,6 +1676,7 @@
     if (view === 'exercise-card') {
       return h(ExerciseCardScreen, {
         initialName: cardExerciseName,
+        bodyWeightKg: profile && profile.weight,
         onDone: function () { returnToCatalogFromCard(); },
         onCancel: returnToCatalogFromCard
       });

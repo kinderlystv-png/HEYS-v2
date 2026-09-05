@@ -16,9 +16,19 @@ const PICK_SUGGESTION = Object.freeze({
   rank: 1,
 });
 
+const metaScopedStore = new Map();
+
+function installExerciseMetaUtils() {
+  globalThis.HEYS.utils = {
+    lsGet: (k, d) => (metaScopedStore.has(k) ? metaScopedStore.get(k) : d),
+    lsSet: (k, v) => { metaScopedStore.set(k, v); return true; },
+  };
+}
+
 function loadBuilder() {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = globalThis.HEYS = {};
+  installExerciseMetaUtils();
   globalThis.React = globalThis.window.React = React;
   const ev = (rel) => {
     // eslint-disable-next-line no-eval
@@ -71,12 +81,14 @@ function pickExerciseFromCatalog(name) {
 let SB;
 
 beforeEach(() => {
+  metaScopedStore.clear();
   SB = loadBuilder();
 });
 
 afterEach(() => {
   cleanup();
   delete globalThis.HEYS;
+  metaScopedStore.clear();
 });
 
 describe('M1 · Упражнение · карточка · reachability', () => {
@@ -107,5 +119,18 @@ describe('M1 · Упражнение · карточка · reachability', () =>
 
     expect(document.querySelector('.sb-exercise-card-screen')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /Тяга саней/ })).toBeNull();
+  });
+
+  it('карточка → «выбрать» открывает M2 ExerciseMuscleGroupsScreen', () => {
+    renderBuilderWithCatalog(SB);
+    openCatalogFromBuilder();
+    pickExerciseFromCatalog(PICK_NAME);
+
+    const pickBtn = Array.from(document.querySelectorAll('.sb-ex-card-action'))
+      .find((el) => String(el.textContent || '').trim() === 'выбрать');
+    fireEvent.click(pickBtn);
+
+    expect(document.querySelector('.sb-ex-muscle-screen')).toBeTruthy();
+    expect(screen.getByText('одна основная, синергисты по желанию')).toBeTruthy();
   });
 });
