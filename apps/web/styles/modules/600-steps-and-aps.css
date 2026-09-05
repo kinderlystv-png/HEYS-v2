@@ -2906,8 +2906,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 999px;
   background: rgba(242, 237, 230, 0.14);

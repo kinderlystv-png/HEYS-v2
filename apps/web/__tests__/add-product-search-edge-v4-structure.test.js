@@ -90,7 +90,7 @@ describe('add product search edge v4 canvas structure', () => {
     // галереи поверх любой темы, он не следует набору намеренно.
     expect(cssSource).toMatch(/\.photo-viewer-action \{[^}]*rgba\(242, 237, 230, 0\.12\)/s);
     expect(cssSource).toMatch(/\.photo-viewer-action--delete \{[^}]*#e2a468/s);
-    expect(cssSource).toMatch(/\.photo-viewer-back \{[^}]*width: 30px;/s);
+    expect(cssSource).toMatch(/\.photo-viewer-back \{[^}]*width: 44px;/s);
   });
 
   it('uses fullscreen barcode layer and dedicated not-found screen', () => {
