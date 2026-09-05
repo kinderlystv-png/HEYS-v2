@@ -43,10 +43,17 @@ function applyTheme(palette) {
   document.documentElement.setAttribute('data-theme-id', palette);
 }
 
+function mountNormCorrectionStyles() {
+  if (document.getElementById('norm-correction-test-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'norm-correction-test-styles';
+  style.textContent = `${PALETTE_CSS}\n${COMPONENTS_CSS}`;
+  document.head.appendChild(style);
+}
+
 function mountHeader(badgeText) {
+  mountNormCorrectionStyles();
   document.body.innerHTML = `
-    <style>${PALETTE_CSS}</style>
-    <style>${COMPONENTS_CSS}</style>
     <section class="norm-correction-screen">
       <header class="norm-correction-screen__header">
         <span class="norm-correction-screen__title">Норма на неделю</span>
@@ -273,7 +280,13 @@ describe('norm-correction · куратор оставил норму', () => {
 });
 
 describe('norm-correction · шапка Pro-кадров', () => {
+  beforeEach(() => {
+    mountNormCorrectionStyles();
+    mountHeader('решение принято');
+  });
+
   afterEach(() => {
+    document.getElementById('norm-correction-test-styles')?.remove();
     document.body.innerHTML = '';
     document.documentElement.removeAttribute('data-palette');
     document.documentElement.removeAttribute('data-theme');
@@ -291,7 +304,6 @@ describe('norm-correction · шапка Pro-кадров', () => {
     const sample = {};
     for (const palette of ['sand', 'blue']) {
       applyTheme(palette);
-      mountHeader('решение принято');
 
       const rootStyle = getComputedStyle(document.documentElement);
       const badge = getComputedStyle(document.querySelector('.norm-correction-screen__badge'));

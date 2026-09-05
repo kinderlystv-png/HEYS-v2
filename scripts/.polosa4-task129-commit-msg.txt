@@ -1,0 +1,6 @@
+fix(web): task129 norm-correction computed smoke timeout
+
+Смоук curator_kept парсил heys-components.css дважды за итерацию
+sand/blue и упирался в vitest 5s. Стили монтируются один раз,
+в цикле меняется только data-palette. weekly-card: ожидания под
+NORM_CORRECTION_FULL_FRAMES из task126.
