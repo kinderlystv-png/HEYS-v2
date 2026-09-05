@@ -168,12 +168,15 @@ const CANVAS_CONFLICTS = Object.freeze({
     '33': 'Г4: .is-weight-entry .sb-ap.is-done .sb-ap-num цвет --gr против ink .62',
     '35': 'Г4: .is-weight-entry .sb-ap.is-current .sb-ap-num --acs против bg',
     '36': 'Г4: кольцо активного поля 1.5px против 2px',
+    '14': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — свёрнутая завершённая карточка',
+    '44': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — ожидающая карточка',
     '40': 'Е1: rest в раскрытой карточке — .sb-rest-cd вместо .sb-rest-line (superset_ui:1938)',
-    '41': 'Е1: .sb-rest-copy отсутствует при open — copy в .sb-rest-cd-copy (superset_ui:1940)',
     '42': 'Е1: .sb-rest-manual lowercase «вручную» и цвет --ac в .sb-rest-manual--e1 (superset_ui:1946-1950)',
     'текст 1/2': 'составная строка несёт шапку из строк 04/05',
   }),
   'А2': Object.freeze({
+    '15': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — свёрнутая завершённая карточка',
+    '23': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — ожидающая карточка',
   }),
 });
 
