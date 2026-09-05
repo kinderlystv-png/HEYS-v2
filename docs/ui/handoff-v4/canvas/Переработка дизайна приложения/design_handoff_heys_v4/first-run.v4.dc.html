@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
+<style>
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
+  .frow{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+  .ctxh{padding:18px 18px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .ctxt{font:700 20px/1.2 Figtree,sans-serif;color:var(--tx)}
+  .sc2{padding:0 16px}
+  .wg{border-radius:20px;background:var(--c1);padding:12px 13px;display:flex;flex-direction:column;justify-content:space-between}
+  .wgk{font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(var(--ink),.56)}
+  .wgn{font:800 21px/1 Figtree,sans-serif;color:var(--tx);margin-top:7px}
+  .wgn small{font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-left:4px}
+  .nav{position:absolute;left:0;right:0;bottom:0;height:64px;background:var(--bg);border-top:1px solid rgba(var(--ink),.06);display:flex;align-items:center;padding:0 6px}
+  .nvi{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;font:600 9.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56)}
+  .nvi.on{color:var(--ac)}
+  .fab2{position:absolute;right:16px;bottom:80px;width:52px;height:52px;border-radius:999px;background:var(--fab);color:var(--on-fab);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px rgba(var(--shadow),.26)}
+  .tip{position:absolute;left:14px;right:14px;background:var(--md);border-radius:22px;padding:16px 16px 14px;box-shadow:0 18px 46px rgba(var(--shadow),.3)}
+  .tipk{font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac)}
+  .tipt{font:700 16px/1.25 Figtree,sans-serif;color:var(--tx);margin-top:9px;text-wrap:pretty}
+  .tipp{font:500 12.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.62);margin-top:7px;text-wrap:pretty}
+  .tipr{display:flex;align-items:center;gap:8px;margin-top:15px}
+  .tsk{min-height:44px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62)}
+  .tnx{flex:1;min-height:44px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif}
+  .arw{position:absolute;width:14px;height:14px;background:var(--md);transform:rotate(45deg)}
+  .spot{position:absolute;border-radius:20px;box-shadow:0 0 0 2px var(--acs),0 0 0 9999px var(--scrim)}
+  .mdl{position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);background:var(--md);border-radius:26px;padding:22px 18px 18px;box-shadow:0 24px 60px rgba(var(--shadow),.28)}
+  .mdt{font:700 19px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .mdp{font:500 12.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.62);margin-top:8px;text-wrap:pretty}
+  .btnq{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c1);font:700 13px/1 Figtree,sans-serif;color:var(--tx)}
+  .dsk{width:900px;height:720px;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:16px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12);display:flex;flex-direction:column}
+  .dskb{height:38px;background:var(--c1);border-bottom:1px solid rgba(var(--ink),.06);display:flex;align-items:center;gap:7px;padding:0 14px}
+  .dskb i{width:10px;height:10px;border-radius:999px;background:rgba(var(--ink),.14);display:block}
+  .dskb span{margin-left:8px;flex:1;height:22px;border-radius:11px;background:var(--bg);display:flex;align-items:center;padding:0 11px;font:500 10.5px/1 ui-monospace,Menlo,monospace;color:rgba(var(--ink),.56)}
+  .lnk{min-height:48px;border-radius:14px;background:var(--c1);display:flex;align-items:center;gap:12px;padding:0 8px 0 16px;font:600 15px/1 ui-monospace,Menlo,monospace;color:var(--tx)}
+  .lnkb{min-height:36px;padding:0 14px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11.5px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
+</style>
+</helmet>
+<template id="__bundler_thumbnail" data-bg-color="#e9dfcd"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="22" y="20" width="56" height="34" rx="7" fill="#f7efe2"/><rect x="30" y="28" width="18" height="18" rx="4" fill="#c67139"/><rect x="52" y="28" width="18" height="18" rx="4" fill="#efe3cf"/><rect x="22" y="60" width="56" height="20" rx="7" fill="#fffaf1" stroke="#c67139" stroke-width="2"/><rect x="30" y="67" width="24" height="5" rx="2.5" fill="#8a4a20"/></svg></template>
+<div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:800 25px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em;">Первый вход</span>
+    <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);">обзор приложения · четыре шага · вход с компьютера · v4</span>
+  </div>
+  <p style="margin:0 0 6px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Что человек видит сразу после регистрации и до первой записи. Один обзор из четырёх шагов по настоящему экрану, без выдуманных чисел и без второго приветствия; отдельный экран для тех, кто открыл HEYS с компьютера. В коде на это место приходятся три разных тура (общий на восемь шагов, мини-тур Инсайтов и тур виджетов из демо-части и части правки) — здесь остаётся один, остальные названы снятыми.</p>
+  <p style="margin:0 0 26px;font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">файл в пакете: first-run.v4.dc.html · код heys_ui_onboarding_v1.js (TOUR_STEPS, WIDGETS_DEMO_STEPS, INSIGHTS_TOUR_STEPS), heys_app_gates_v1.js (DesktopGateScreen) · экраны искать по data-screen-label</p>
+
+  <div style="display:inline-flex;align-items:center;gap:10px;background:#b4442a;color:#fff;border-radius:999px;padding:9px 16px 9px 12px;margin:0 0 26px;font:700 11px/1.4 Figtree,sans-serif;max-width:980px;"><span style="font:800 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;background:rgba(255,255,255,.18);padding:5px 8px;border-radius:999px;">В ПРОД</span><span style="text-wrap:pretty;">Все кадры. Три тура кода сводятся в один обзор из четырёх шагов; мини-тур Инсайтов, тур виджетов и подстановка демо-чисел — сняты и названы строками.</span></div>
+
+  <div class="ctr" data-contract="first-run">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="первый вход клиента: обзор приложения из четырёх шагов поверх настоящей Главной, возврат к обзору из настроек, экран для входа с компьютера"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует затемнение с окном подсветки, карточку шага с её кнопками, четыре положения окна и карточки, лист «обзор пройден» и экран входа с компьютера. Не рисует: сами виджеты и навигацию под затемнением (home-widgets.v4.dc.html), приветствие с началом пробного периода (subscription.v4.dc.html), ряд «Обзор приложения» в настройках (settings-system.v4.dc.html)"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для обзора приложения и для экрана входа с компьютера. Экран под затемнением на кадрах — упрощённая копия Главной для показа геометрии окна подсветки; при расхождении верен home-widgets.v4.dc.html"></span></div>
+    <div class="spec"><b>код</b><span data-v="heys_ui_onboarding_v1.js: TOUR_STEPS (8 шагов), showWelcomeModal, renderTooltip, WIDGETS_DEMO_STEPS + WIDGETS_EDIT_STEPS, INSIGHTS_TOUR_STEPS, TOUR_DEMO_DATA, INTERRUPTED_STEP_KEY, triggerHaptic (пустая по правилу вибрации) · heys_app_gates_v1.js: DesktopGateScreen"></span></div>
+    <div class="spec"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop'); каждый называет свою строку вида атрибутом data-vid"></span></div>
+    <div class="spec" style="border-bottom:none"><b>палитры</b><span data-v="все роли из v4-canvas.css; тёмная, синяя и сине-тёмная собираются зеркалом каждого ряда. Цвета не из палитры: нет — рамка окна браузера на кадре входа с компьютера собрана из ролей набора"></span></div>
+
+    <div class="ctrH">Решения</div>
+    <div class="spec"><b>одно приветствие, а не два</b><span data-v="приветственная модалка на первом входе ОДНА — та, что объявляет пробный период (subscription.v4.dc.html, строка «вид · приветствие»). Её кнопка «Начать» и запускает обзор. Своей welcome-модалки у обзора нет: showWelcomeModal из heys_ui_onboarding_v1.js снимается"></span><i>две модалки подряд с одинаковым «добро пожаловать» человек читает как сбой, а не как заботу</i></div>
+    <div class="spec"><b>один обзор вместо трёх</b><span data-v="обзор один и состоит из четырёх шагов. СНЯТО: мини-тур Инсайтов (INSIGHTS_TOUR_STEPS) и тур виджетов (WIDGETS_DEMO_STEPS + WIDGETS_EDIT_STEPS, 11 шагов с прогресс-полосой и переходом в режим правки). Причина не в объёме, а в месте: тур виджетов объясняет режим расстановки, до которого человек доходит на второй неделе, — объяснение приходит там и тогда, где действие начинается (home-widgets, строка «первый вход в режим расстановки»), а не на старте"></span></div>
+    <div class="spec"><b>четыре шага и их порядок</b><span data-v="1 · «Ваши цифры на сегодня» — окно на верхнем ряду виджетов; 2 · «Записать еду и воду» — окно на плавающей кнопке; 3 · «Где что лежит» — окно на нижней навигации; 4 · «Куда смотреть через неделю» — окно на вкладке «Отчёты» в навигации. Порядок от того, что человек видит, к тому, за чем вернётся. Восьми шагов кода нет: четыре из них (Динамика, Инсулиновая волна, вкладки Виджеты и Итоги дня) указывали на устройство экрана v3, которого в v4 нет"></span></div>
+    <div class="spec"><b>своих чисел, а не демонстрационных</b><span data-v="обзор идёт по настоящему экрану человека; если данных ещё нет, виджеты показывают своё пустое состояние («—» и подпись) — так же, как без обзора. TOUR_DEMO_DATA (съедено 1450 из 2000, недельная строка Пн–Вс) в разметку не подставляется"></span><i>выдуманные 1450 ккал на первом экране учат читать чужой день; пустое состояние учит записать свой</i></div>
+    <div class="spec"><b>подсветка — окно, а не рамка поверх</b><span data-v="затемнение --scrim на весь экран, в нём вырезано окно по границам цели: радиус 20 (как у плитки), обводка 2 px --acs, вокруг — тень 0 0 0 9999px тоном --scrim. Цель под окном видна в своём настоящем виде и не перекрашивается. Окно не анимируется между шагами при уменьшенном движении, в остальных случаях переезжает 220 мс"></span></div>
+    <div class="spec"><b>карточка шага</b><span data-v="карточка на --md шириной экрана минус 14 px с каждого края, радиус 22, поля 16/16/14, тень 0 18px 46px тени 30 %, с треугольным носиком 14 px в сторону цели. Стоит ниже окна, если окно в верхней половине экрана, и выше — если в нижней; носик всегда указывает на окно. Внутри: кикер «Шаг 2 из 4» 9,5 px/700 прописными разрядка .14em тоном --ac, заголовок 16 px/700, текст 12,5 px/500 чернил 62 %, ряд действий"></span></div>
+    <div class="spec"><b>две кнопки, и обе понятны</b><span data-v="в ряду действий слева тихая «Пропустить» (44 px, текст 12,5 px/600 чернил 62 %, без фона), справа основная «Далее» на всю оставшуюся ширину (44 px, --acs/--on-acs). На последнем шаге основная называется «Всё понятно», тихой нет. Полосы прогресса нет — счёт шагов стоит словами в кикере"></span><i>в коде «Далее →» и «Готово! 🎉» со стрелкой и эмодзи, а прогресс нарисован полосой поверх счёта — два способа сказать одно</i></div>
+    <div class="spec"><b>пропуск без переспроса</b><span data-v="«Пропустить» закрывает обзор сразу, без диалога подтверждения. Взамен обзор всегда можно открыть снова — ряд «Обзор приложения» в ярусе «Приложение» корневого списка настроек"></span><i>переспрос на выходе из необязательной подсказки — вторая подсказка</i></div>
+    <div class="spec"><b>прерывание</b><span data-v="ушёл из приложения посреди обзора — при возврате обзор продолжается с того шага, на котором остановился (INTERRUPTED_STEP_KEY). Скрытие короче 500 мс за уход не считается. Ушёл и вернулся на следующий день — обзор не показывается сам: остаётся ряд в настройках"></span></div>
+    <div class="spec"><b>обзор пройден</b><span data-v="после последнего шага затемнение снимается и внизу показывается плашка по правилам undo-bar.v4.dc.html без кольца: «Обзор пройден. Вернуться к нему — в настройках» 4 с. Отдельного экрана поздравления нет"></span></div>
+    <div class="spec"><b>вход с компьютера — не заглушка, а короткий путь</b><span data-v="человек, открывший HEYS на компьютере, видит один экран: почему только телефон, ДВА пути попасть на телефон — QR-код и короткий адрес с кнопкой «Скопировать», — как поставить на домашний экран, и тихий выход. Порог — ширина окна больше 768 px; куратора экран не трогает (кабинет — рабочее место за компьютером), вкладка «Задачи» его пропускает, обходной флаг desktopAllowed остаётся. Порядок сверху вниз: что происходит и почему → способ попасть на телефон → «на домашний экран» → «Выйти из аккаунта». QR и адрес стоят ВМЕСТЕ, а не вместо друг друга: камера и руки — два пути к одному адресу"></span><i>решение владельца 5 сентября: сканировать удобнее, чем скопировать ссылку и потом придумывать, как переслать её себе на телефон. Прежняя редакция этой строки снимала QR — снято было само снятие</i></div>
+    <div class="spec"><b>QR рисует приложение, а не чужой сервис</b><span data-v="код собирается на клиенте, локально, без сети. Поэтому у него НЕТ состояния «загружается» и НЕТ состояния «не удалось загрузить» — рисовать эти состояния не нужно, их больше не существует; в кадре обычный квадрат заданного размера. ЧТО КОДИРУЕТСЯ: https://app.heyslab.ru — СО СХЕМОЙ, а не голый домен: голый домен камера распознаёт как ссылку не всегда, а экран существует ради гарантированного попадания на сайт. Отсюда размер: со схемой это 25 модулей при любом уровне коррекции, клетка 6 px даёт код 150 px, тихая зона по стандарту 4 модуля с каждой стороны — квадрат 198 px. Прежняя картинка приходила запросом на api.qrserver.com — и это снято. Причина точная (первая редакция строки называла неверную — будто уходил адрес страницы с параметрами сессии): в запросе передавался window.location.origin (heys_app_gates_v1.js:121), только домен, без пути, запроса и хвоста, никакие данные сессии не утекали. Утекало другое и на каждом заходе с компьютера: чужому сервису доставались IP посетителя и сам факт пользования HEYS. Плюс дырка в CSP ради одной картинки — img-src … https://api.qrserver.com в index.html:22 держится только ради неё и уходит вместе с ней"></span><i>проза канваса живёт дольше решения: ложный факт в ней потом всплывёт как аргумент — поэтому неверная причина не стёрта, а названа неверной. Правка 5 сентября по замеру владельца: в кадре стояли 21 модуль и код 126 px — самосогласованно, но для адреса БЕЗ схемы, которого код не кодирует. Верен код, поправлен кадр</i></div>
+    <div class="spec"><b>тихая зона · дефект кода</b><span data-v="ДЕФЕКТ В КОДЕ, полоса 5 (найден владельцем 5 сентября). Требование — СВОЙСТВО КАРТИНКИ, а не имя вызова: вокруг кода обязана быть тихая зона НЕ МЕНЬШЕ ЧЕТЫРЁХ МОДУЛЕЙ; минимум приёмки — два модуля; ноль не проходит. При клетке 6 px это 24 px с каждой стороны и квадрат 198 px (четыре модуля) либо 12 px и 174 px (два, минимум). Чем это нарисовано — dataURL, inline-SVG или canvas — контракта не касается: сейчас в коде createDataURL(4, 0) и второй аргумент, поле вокруг кода, стоит нулём, но покраснеть строка должна на нулевой зоне, а не на смене способа отрисовки"></span><i>«чаще всего просканируется» — не то свойство, за которым возвращают сканер вместо кнопки «Скопировать». Правка формулировки 5 сентября по замечанию владельца: строка называла ожидание как createDataURL(4, 4) — то есть охраняла имя нашей функции, и при переходе на inline-SVG покраснела бы при верной тихой зоне. Тот же класс дефекта, что тест, охраняющий литерал вместо правила</i></div>
+    <div class="spec"><b>слова на экране</b><span data-v="без «ты», без восклицаний, без эмодзи. Заголовки шагов называют, что человек здесь делает («Записать еду и воду»), а не хвалят функцию («Уникальная фишка HEYS»). В тексте шага одно предложение, максимум два"></span></div>
+    <div class="spec" style="border-bottom:none"><b>иконки</b><span data-v="Lucide, обводка 2,75: layout-grid, plus, compass, bar-chart-2 в кадрах навигации; copy на кнопке адреса; smartphone на экране входа с компьютера (QR иконкой не считается — это код, а не знак); log-out у тихого выхода. Эмодзи кода (📊 🎛️ 🍴 🔮 🔥 💡 🎉 🍽️ 🥛 ⚖️ 💧 📅 ⚠️ 🤖 ✨ 🎯) сняты все"></span></div>
+
+    <div class="ctrH">Вид</div>
+    <div class="spec"><b>вид · окно подсветки</b><span data-v="радиус 20, обводка 2 px --acs, снаружи --scrim через тень 0 0 0 9999px; поля окна равны границам цели плюс 4 px со всех сторон, чтобы обводка не наезжала на содержимое. Размытия под затемнением у обзора нет — под ним живой экран, который человек должен разглядеть"></span><i>размытие 2,5 px из общего правила слоёв здесь не применяется: правило про листы и модалки, а обзор показывает именно то, что размыло бы</i></div>
+    <div class="spec"><b>вид · карточка шага</b><span data-v="фон --md, радиус 22, поля 16/16/14, тень 0 18px 46px тени 30 %; носик — квадрат 14 px тоном --md, повёрнутый на 45°, по центру той стороны, что смотрит на окно. Кикер 9,5 px/700 прописными разрядка .14em --ac; заголовок 16 px/700 чернилами; текст 12,5 px/500/1,5 чернил 62 %; ряд действий с отступом 15 сверху и зазором 8"></span></div>
+    <div class="spec"><b>вид · плашка «обзор пройден»</b><span data-v="вид — undo-bar.v4.dc.html; здесь только содержимое: текст «Обзор пройден. Вернуться к нему — в настройках», действия нет, кольца нет, живёт 4 с"></span></div>
+    <div class="spec"><b>вид · вход с компьютера</b><span data-v="экран на --bg, содержимое по центру, поля 34/40, колонка шириной 480 (кадр канваса 900×720 — размер рамки браузера на канвасе, не спецификация окна: в продукте это обычная страница по высоте окна, и содержимое стоит по центру с полями 34/40): круг 64 px на --c2 с иконкой телефона 28 px тоном --ac; заголовок «HEYS работает на телефоне» 26 px/800 чернилами; текст «Дневник, чек-ин и советы рассчитаны на экран в руке. Откройте этот адрес на телефоне — данные уже там» 14 px/500/1,55 чернил 62 %; блок способа попасть на телефон — ряд с зазором 14: слева квадрат QR 198×198 на --bg, радиус 14, обводка inset 1 px чернил 10 %; внутри код 150×150 — 25 модулей по 6 px чернилами --tx — и вокруг него тихая зона 4 модуля (24 px с каждой стороны), то есть 150 + 48 = 198. Тихая зона — это и есть белое поле квадрата, отдельного паддинга у контейнера нет; справа колонка с зазором 8 — «Наведите камеру телефона» 13 px/700, ряд адреса 48 px на --c1 радиус 14 с адресом «app.heyslab.ru» 15 px/600 моно и пилюлей «Скопировать» 36 px на --acs, строка «Или наберите руками — адрес короткий» 12 px/500/1,45 чернил 62 %; карточка «Поставить на домашний экран» на --c1 радиус 16, поля 14/16: заголовок 13 px/700 и текст 12,5 px/500 чернил 62 %; тихий ряд «Выйти из аккаунта» 44 px, 12,5 px/600 чернил 62 % с иконкой 16 px"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · кадры экрана под затемнением</b><span data-v="вид — home-widgets.v4.dc.html. На кадрах этого канваса Главная нарисована упрощённо (четыре плитки, плавающая кнопка, навигация из четырёх пунктов) и служит только для показа геометрии окна и карточки"></span></div>
+
+    <div class="ctrH">Поведение</div>
+    <div class="spec"><b>когда показывается</b><span data-v="один раз после первого успешного входа клиента, сразу за кнопкой «Начать» приветствия. Флаг пройденного — на сервере в профиле, не только в localStorage: со второго устройства обзор не повторяется"></span><i>в коде флаг локальный, и человек с телефоном и планшетом проходит обзор дважды</i></div>
+    <div class="spec"><b>что доступно во время обзора</b><span data-v="экран под затемнением не реагирует на тапы: единственные живые элементы — «Пропустить» и «Далее». Прокрутка экрана заблокирована. Аппаратная кнопка назад = «Пропустить»"></span></div>
+    <div class="spec"><b>цель не найдена</b><span data-v="если элемент шага на экране отсутствует (виджет убран с Главной), шаг пропускается молча и счёт в кикере пересчитывается: «Шаг 2 из 3». Обзор из нуля доступных шагов не запускается вовсе"></span></div>
+    <div class="spec"><b>возврат к обзору</b><span data-v="ряд «Обзор приложения» в ярусе «Приложение» настроек запускает обзор с первого шага в любой момент; после прохождения из настроек плашка «обзор пройден» не показывается"></span></div>
+    <div class="spec"><b>вибрация</b><span data-v="на переходах между шагами отклика нет — правило продукта (registration.v4.dc.html, строка «вибрация · правило продукта»); triggerHaptic в коде уже пустая"></span></div>
+    <div class="spec"><b>когда показывается экран с компьютера</b><span data-v="при ширине окна от 1024 px и указателе точнее пальца. Планшет с сенсорным вводом обзор и приложение получает как телефон. Экран с компьютера не показывается куратору: кабинет куратора — рабочее место за компьютером и живёт по своим правилам (curator-cabinet.v4.dc.html)"></span></div>
+    <div class="spec"><b>уменьшенное движение, крупный шрифт, офлайн</b><span data-v="общие правила — home-widgets.v4.dc.html. Местное: при уменьшенном движении окно подсветки не переезжает, а появляется на новом месте; в офлайне обзор работает целиком, флаг пройденного уходит на сервер при появлении сети"></span></div>
+    <div class="spec" style="border-bottom:none"><b>доступность</b><span data-v="карточка шага — role='dialog' с aria-labelledby на заголовке, фокус на «Далее»; при смене шага заголовок и текст озвучиваются один раз (aria-live='polite'); окно подсветки для чтения с экрана невидимо (aria-hidden) — его смысл несёт текст шага"></span></div>
+
+    <div class="ctrH">Открыто до передачи</div>
+    <div class="spec"><b>адрес приложения</b><span data-v="ЗАКРЫТО 5 сентября проверкой владельца: app.heyslab.ru отдаёт приложение напрямую — 200 и текущий build-meta, промежуточной страницы с кнопками магазинов там нет. QR кодирует https://app.heyslab.ru со схемой. Если промежуточная страница когда-нибудь появится, это изменит одну строку в коде, а не кадр: QR берёт origin, а не литерал. Было до этого: на кадре стоял heyslab.ru/app, который отдаёт 404 — экран, существующий ради адреса, давал нерабочий"></span><i>адрес больше не открытый вопрос, поэтому строка стоит здесь как закрытая, а не удалена: следующий, кто усомнится в схеме, найдёт причину и дату проверки</i></div>
+    <div class="spec"><b>ряд в настройках нарисован</b><span data-v="ряд «Обзор приложения» стоит в ярусе «Приложение» корневого списка настроек — settings-system.v4.dc.html, кадр «Настройки · список», строка «ярус «Приложение» · пять рядов». Долг закрыт 5 сентября"></span></div>
+    <div class="spec" style="border-bottom:none"><b>долг канваса · второй</b><span data-v="кадр «цель не найдена» (шаг пропущен, счёт пересчитан) описан строкой поведения, отдельного кадра нет"></span></div>
+                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · 01</b><span data-v="колонки 1fr 1fr, зазор 8px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · 02</b><span data-v="высота 96px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · 03</b><span data-v="высота 78px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · 04</b><span data-v="высота 104px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · 01</b><span data-v="колонки 1fr 1fr, зазор 8px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · 02</b><span data-v="высота 96px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · 03</b><span data-v="высота 78px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · 04</b><span data-v="ширина 60px, высота 60px, радиус 999px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · 01</b><span data-v="колонки 1fr 1fr, зазор 8px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · 02</b><span data-v="высота 96px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · 03</b><span data-v="высота 78px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · 04</b><span data-v="высота 72px, радиус 20px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · 01</b><span data-v="колонки 1fr 1fr, зазор 8px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · 02</b><span data-v="высота 96px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · 03</b><span data-v="высота 78px"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · 04</b><span data-v="ширина 84px, высота 60px, радиус 18px"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · 01</b><span data-v="колонки 1fr 1fr, зазор 8px"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · 02</b><span data-v="высота 96px"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · 03</b><span data-v="высота 78px"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · 04</b><span data-v="«Обзор пройден. Вернуться к нему — в настройках» — позиция absolute, фон var(--c1), радиус 22px, поля 12px 14px, рамка inset 0 0 0 1px rgba(var(--ink),.07), шрифт 600 12px/1.4 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 01</b><span data-v="флекс 1, выравнивание center, распределение center, поля 34px 40px"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 02</b><span data-v="ширина 480px, направление column, выравнивание flex-start"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 03</b><span data-v="ширина 64px, высота 64px, радиус 999px, фон var(--c2), выравнивание center, распределение center, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 04</b><span data-v="«HEYS работает на телефоне» — шрифт 800 26px/1.15 Figtree, цвет var(--tx), отступ сверху 20px, трекинг -.01em"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 05</b><span data-v="«Дневник, чек-ин и советы рассчитаны на экран в рук» — шрифт 500 14px/1.55 Figtree, цвет rgba(var(--ink),.62), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 06</b><span data-v="зазор 14px, выравнивание flex-start, отступ сверху 20px"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 07</b><span data-v="флекс none, ширина 198px, высота 198px, радиус 14px, фон var(--bg), рамка inset 0 0 0 1px rgba(var(--ink),.1), выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 08</b><span data-v="флекс 1, ширина от 0, направление column, зазор 8px"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 09</b><span data-v="«Наведите камеру телефона» — шрифт 700 13px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 10</b><span data-v="«app.heyslab.ru» — флекс 1"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 11</b><span data-v="«Или наберите руками — адрес короткий.» — шрифт 500 12px/1.45 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 12</b><span data-v="фон var(--c1), радиус 16px, поля 14px 16px, отступ сверху 12px"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 13</b><span data-v="«В браузере телефона откройте меню и выберите «На э» — шрифт 500 12.5px/1.45 Figtree, цвет rgba(var(--ink),.62), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · 14</b><span data-v="выравнивание center, зазор 8px, высота от 44px, отступ сверху 8px, шрифт 600 12.5px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · рисунок 01</b><span data-v="поле рисунка 22×22 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · рисунок 02</b><span data-v="кривая, точки M12 5v14M5 12h14"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · рисунок 03</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · рисунок 04</b><span data-v="прямоугольник 7×7, радиус 1.5"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · рисунок 05</b><span data-v="кривая, точки M4 3v8a3 3 0 0 0 6 0V3M7 11v10"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · рисунок 06</b><span data-v="кривая, точки M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · рисунок 07</b><span data-v="кривая, точки M4 12h4l3-7 4 14 3-7h2"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · рисунок 08</b><span data-v="кривая, точки M18 20V10M12 20V4M6 20v-6"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · рисунок 01</b><span data-v="поле рисунка 22×22 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · рисунок 02</b><span data-v="кривая, точки M12 5v14M5 12h14"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · рисунок 03</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · рисунок 04</b><span data-v="прямоугольник 7×7, радиус 1.5"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · рисунок 05</b><span data-v="кривая, точки M4 3v8a3 3 0 0 0 6 0V3M7 11v10"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · рисунок 06</b><span data-v="кривая, точки M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · рисунок 07</b><span data-v="кривая, точки M4 12h4l3-7 4 14 3-7h2"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · рисунок 08</b><span data-v="кривая, точки M18 20V10M12 20V4M6 20v-6"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · рисунок 02</b><span data-v="прямоугольник 7×7, радиус 1.5"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · рисунок 03</b><span data-v="кривая, точки M4 3v8a3 3 0 0 0 6 0V3M7 11v10"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · рисунок 04</b><span data-v="кривая, точки M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · рисунок 05</b><span data-v="кривая, точки M4 12h4l3-7 4 14 3-7h2"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · рисунок 06</b><span data-v="кривая, точки M18 20V10M12 20V4M6 20v-6"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · рисунок 02</b><span data-v="прямоугольник 7×7, радиус 1.5"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · рисунок 03</b><span data-v="кривая, точки M4 3v8a3 3 0 0 0 6 0V3M7 11v10"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · рисунок 04</b><span data-v="кривая, точки M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · рисунок 05</b><span data-v="кривая, точки M4 12h4l3-7 4 14 3-7h2"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · рисунок 06</b><span data-v="кривая, точки M18 20V10M12 20V4M6 20v-6"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · рисунок 01</b><span data-v="поле рисунка 22×22 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · рисунок 02</b><span data-v="кривая, точки M12 5v14M5 12h14"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · рисунок 03</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · рисунок 04</b><span data-v="прямоугольник 7×7, радиус 1.5"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · рисунок 05</b><span data-v="кривая, точки M4 3v8a3 3 0 0 0 6 0V3M7 11v10"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · рисунок 06</b><span data-v="кривая, точки M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · рисунок 07</b><span data-v="кривая, точки M4 12h4l3-7 4 14 3-7h2"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · рисунок 08</b><span data-v="кривая, точки M18 20V10M12 20V4M6 20v-6"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 01</b><span data-v="поле рисунка 28×28 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 02</b><span data-v="прямоугольник 12×20, радиус 3"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 03</b><span data-v="кривая, точки M11 19h2"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 04</b><span data-v="поле рисунка 198×198 (viewBox 0 0 198 198)"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 05</b><span data-v="кривая, точки M72 24h6v6h-6zM84 24h6v6h-6zM96 24h6v6h-6zM108 24h6v6h-6zM114 24h6v6h-6zM120 24h6v6h-6zM72 30h6v6h-6zM78 30h6v6h-6zM96 30h6v6h-6zM72 36h6v6h-6zM96 36h6v6h-6zM102 36h6v6h-6zM108 36h6v6h-6zM114 42h6v6h-6zM120 42h6v6h-6zM72 48h6v6h-6zM96 48h6v6h-6zM102 48h6v6h-6zM108 48h6v6h-6zM114 48h6v6h-6zM72 54h6v6h-6zM78 54h6v6h-6zM90 54h6v6h-6zM96 54h6v6h-6zM102 54h6v6h-6zM114 54h6v6h-6zM120 54h6v6h-6zM78 60h6v6h-6zM90 60h6v6h-6zM96 60h6v6h-6zM72 66h6v6h-6zM90 66h6v6h-6zM96 66h6v6h-6zM102 66h6v6h-6zM114 66h6v6h-6zM30 72h6v6h-6zM36 72h6v6h-6zM60 72h6v6h-6zM84 72h6v6h-6zM102 72h6v6h-6zM114 72h6v6h-6zM120 72h6v6h-6zM132 72h6v6h-6zM150 72h6v6h-6zM162 72h6v6h-6zM168 72h6v6h-6zM36 78h6v6h-6zM42 78h6v6h-6zM60 78h6v6h-6zM72 78h6v6h-6zM114 78h6v6h-6zM120 78h6v6h-6zM138 78h6v6h-6zM150 78h6v6h-6zM36 84h6v6h-6zM48 84h6v6h-6zM54 84h6v6h-6zM66 84h6v6h-6zM72 84h6v6h-6zM78 84h6v6h-6zM90 84h6v6h-6zM96 84h6v6h-6zM108 84h6v6h-6zM114 84h6v6h-6zM120 84h6v6h-6zM132 84h6v6h-6zM138 84h6v6h-6zM144 84h6v6h-6zM150 84h6v6h-6zM168 84h6v6h-6zM24 90h6v6h-6zM30 90h6v6h-6zM48 90h6v6h-6zM66 90h6v6h-6zM84 90h6v6h-6zM90 90h6v6h-6zM102 90h6v6h-6zM108 90h6v6h-6zM126 90h6v6h-6zM132 90h6v6h-6zM144 90h6v6h-6zM156 90h6v6h-6zM162 90h6v6h-6zM168 90h6v6h-6zM48 96h6v6h-6zM54 96h6v6h-6zM60 96h6v6h-6zM66 96h6v6h-6zM72 96h6v6h-6zM108 96h6v6h-6zM114 96h6v6h-6zM120 96h6v6h-6zM144 96h6v6h-6zM150 96h6v6h-6zM162 96h6v6h-6zM168 96h6v6h-6zM24 102h6v6h-6zM36 102h6v6h-6zM42 102h6v6h-6zM48 102h6v6h-6zM60 102h6v6h-6zM72 102h6v6h-6zM108 102h6v6h-6zM132 102h6v6h-6zM150 102h6v6h-6zM24 108h6v6h-6zM30 108h6v6h-6zM48 108h6v6h-6zM60 108h6v6h-6zM66 108h6v6h-6zM72 108h6v6h-6zM102 108h6v6h-6zM120 108h6v6h-6zM126 108h6v6h-6zM138 108h6v6h-6zM150 108h6v6h-6zM24 114h6v6h-6zM48 114h6v6h-6zM78 114h6v6h-6zM90 114h6v6h-6zM108 114h6v6h-6zM126 114h6v6h-6zM132 114h6v6h-6zM138 114h6v6h-6zM150 114h6v6h-6zM162 114h6v6h-6zM24 120h6v6h-6zM30 120h6v6h-6zM42 120h6v6h-6zM66 120h6v6h-6zM72 120h6v6h-6zM84 120h6v6h-6zM90 120h6v6h-6zM96 120h6v6h-6zM156 120h6v6h-6zM96 126h6v6h-6zM108 126h6v6h-6zM150 126h6v6h-6zM156 126h6v6h-6zM168 126h6v6h-6zM90 132h6v6h-6zM96 132h6v6h-6zM102 132h6v6h-6zM162 132h6v6h-6zM168 132h6v6h-6zM72 138h6v6h-6zM84 138h6v6h-6zM102 138h6v6h-6zM150 138h6v6h-6zM156 138h6v6h-6zM162 138h6v6h-6zM168 138h6v6h-6zM90 144h6v6h-6zM156 144h6v6h-6zM162 144h6v6h-6zM168 144h6v6h-6zM72 150h6v6h-6zM90 150h6v6h-6zM96 150h6v6h-6zM102 150h6v6h-6zM114 150h6v6h-6zM132 150h6v6h-6zM90 156h6v6h-6zM102 156h6v6h-6zM114 156h6v6h-6zM120 156h6v6h-6zM126 156h6v6h-6zM150 156h6v6h-6zM162 156h6v6h-6zM90 162h6v6h-6zM102 162h6v6h-6zM120 162h6v6h-6zM126 162h6v6h-6zM132 162h6v6h-6zM138 162h6v6h-6zM150 162h6v6h-6zM162 162h6v6h-6zM90 168h6v6h-6zM96 168h6v6h-6zM102 168h6v6h-6zM132 168h6v6h-6zM144 168h6v6h-6zM150 168h6v6h-6zM168 168h6v6h-6z, заливка #201e1d"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 06</b><span data-v="прямоугольник 42×42, заливка none"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 07</b><span data-v="прямоугольник 18×18, заливка #201e1d"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 08</b><span data-v="прямоугольник 30×30, заливка none"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 09</b><span data-v="прямоугольник 6×6, заливка #201e1d"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 10</b><span data-v="поле рисунка 13×13 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 11</b><span data-v="прямоугольник 12×12, радиус 2"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 12</b><span data-v="кривая, точки M5 15V5a2 2 0 0 1 2-2h8"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 13</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 14</b><span data-v="кривая, точки M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · рисунок 15</b><span data-v="кривая, точки M16 17l5-5-5-5M21 12H9"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Первый вход · шаг 1 · текст</b><span data-v="Главная › Съедено › ккал › Осталось › ккал › Вода › мл › Вес › кг › Шаг 1 из 4 › Ваши цифры на сегодня › Съедено и осталось — два числа, по которым видно, как идёт день. Пока пусто: заполнится с первой записью. › Пропустить › Далее › Главная › Питание › Актив › Отчёты"></span></div>
+    <div class="spec"><b>Первый вход · шаг 2 · текст</b><span data-v="Главная › Съедено › ккал › Осталось › ккал › Вода › мл › Вес › кг › Шаг 2 из 4 › Записать еду и воду › Одна кнопка на все записи дня. Долгий тап по ней — сразу вода, без выбора. › Пропустить › Далее › Главная › Питание › Актив › Отчёты"></span></div>
+    <div class="spec"><b>Первый вход · шаг 3 · текст</b><span data-v="Главная › Съедено › ккал › Осталось › ккал › Вода › мл › Вес › кг › Главная › Питание › Актив › Отчёты › Шаг 3 из 4 › Где что лежит › Питание — приёмы и продукты, Актив — шаги и тренировки, Отчёты — что вышло за неделю. › Пропустить › Далее"></span></div>
+    <div class="spec"><b>Первый вход · шаг 4 · текст</b><span data-v="Главная › Съедено › ккал › Осталось › ккал › Вода › мл › Вес › кг › Главная › Питание › Актив › Отчёты › Шаг 4 из 4 › Куда смотреть через неделю › В «Отчётах» неделя собирается сама: средние, динамика веса и что стоит поправить. › Всё понятно"></span></div>
+    <div class="spec"><b>Первый вход · обзор пройден · текст</b><span data-v="Главная › Съедено › ккал › Осталось › ккал › Вода › мл › Вес › кг › Обзор пройден. Вернуться к нему — в настройках › Главная › Питание › Актив › Отчёты"></span></div>
+    <div class="spec"><b>Первый вход · с компьютера · текст</b><span data-v="app.heyslab.ru › HEYS работает на телефоне › Дневник, чек-ин и советы рассчитаны на экран в руке. Откройте этот адрес на телефоне — данные уже там. › Наведите камеру телефона › app.heyslab.ru › Скопировать › Или наберите руками — адрес короткий. › Поставить на домашний экран › В браузере телефона откройте меню и выберите «На экран „Домой“» — HEYS запустится как приложение. › Выйти из аккаунта"></span></div>
+</div>
+
+  <div class="secH">Обзор приложения · четыре шага</div>
+  <div class="frow" data-mir="f1">
+    <div><div class="lab"><b>Шаг 1 · ваши цифры</b><span>окно на верхнем ряду · карточка ниже</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Первый вход · шаг 1" data-vid="вид · окно подсветки">
+      <div class="ctxh"><span class="ctxt">Главная</span></div>
+      <div class="sc2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="wg" style="height:96px;"><span class="wgk">Съедено</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:96px;"><span class="wgk">Осталось</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вода</span><span class="wgn">—<small>мл</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вес</span><span class="wgn">—<small>кг</small></span></div>
+      </div>
+      <span class="spot" style="left:12px;right:12px;top:56px;height:104px;"></span>
+      <div class="tip" style="top:180px;">
+        <span class="arw" style="top:-7px;left:50%;margin-left:-7px;"></span>
+        <div class="tipk">Шаг 1 из 4</div>
+        <div class="tipt">Ваши цифры на сегодня</div>
+        <div class="tipp">Съедено и осталось — два числа, по которым видно, как идёт день. Пока пусто: заполнится с первой записью.</div>
+        <div class="tipr"><span class="tsk">Пропустить</span><span class="tnx">Далее</span></div>
+      </div>
+      <span class="fab2"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <div class="nav">
+        <span class="nvi on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Главная</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v8a3 3 0 0 0 6 0V3M7 11v10"/><path d="M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"/></svg>Питание</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h4l3-7 4 14 3-7h2"/></svg>Актив</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Отчёты</span>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Шаг 2 · записать</b><span>окно на плавающей кнопке · карточка выше</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Первый вход · шаг 2" data-vid="вид · карточка шага">
+      <div class="ctxh"><span class="ctxt">Главная</span></div>
+      <div class="sc2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="wg" style="height:96px;"><span class="wgk">Съедено</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:96px;"><span class="wgk">Осталось</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вода</span><span class="wgn">—<small>мл</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вес</span><span class="wgn">—<small>кг</small></span></div>
+      </div>
+      <span class="fab2" style="z-index:3;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="spot" style="right:12px;bottom:76px;width:60px;height:60px;border-radius:999px;"></span>
+      <div class="tip" style="bottom:152px;">
+        <span class="arw" style="bottom:-7px;right:38px;"></span>
+        <div class="tipk">Шаг 2 из 4</div>
+        <div class="tipt">Записать еду и воду</div>
+        <div class="tipp">Одна кнопка на все записи дня. Долгий тап по ней — сразу вода, без выбора.</div>
+        <div class="tipr"><span class="tsk">Пропустить</span><span class="tnx">Далее</span></div>
+      </div>
+      <div class="nav">
+        <span class="nvi on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Главная</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v8a3 3 0 0 0 6 0V3M7 11v10"/><path d="M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"/></svg>Питание</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h4l3-7 4 14 3-7h2"/></svg>Актив</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Отчёты</span>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Шаг 3 · где что лежит</b><span>окно на всей навигации</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Первый вход · шаг 3" data-vid="четыре шага и их порядок">
+      <div class="ctxh"><span class="ctxt">Главная</span></div>
+      <div class="sc2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="wg" style="height:96px;"><span class="wgk">Съедено</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:96px;"><span class="wgk">Осталось</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вода</span><span class="wgn">—<small>мл</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вес</span><span class="wgn">—<small>кг</small></span></div>
+      </div>
+      <div class="nav" style="z-index:3;">
+        <span class="nvi on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Главная</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v8a3 3 0 0 0 6 0V3M7 11v10"/><path d="M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"/></svg>Питание</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h4l3-7 4 14 3-7h2"/></svg>Актив</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Отчёты</span>
+      </div>
+      <span class="spot" style="left:4px;right:4px;bottom:-4px;height:72px;border-radius:20px;"></span>
+      <div class="tip" style="bottom:88px;">
+        <span class="arw" style="bottom:-7px;left:50%;margin-left:-7px;"></span>
+        <div class="tipk">Шаг 3 из 4</div>
+        <div class="tipt">Где что лежит</div>
+        <div class="tipp">Питание — приёмы и продукты, Актив — шаги и тренировки, Отчёты — что вышло за неделю.</div>
+        <div class="tipr"><span class="tsk">Пропустить</span><span class="tnx">Далее</span></div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Шаг 4 · последний</b><span>окно на «Отчётах» · тихой кнопки нет</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Первый вход · шаг 4" data-vid="две кнопки, и обе понятны">
+      <div class="ctxh"><span class="ctxt">Главная</span></div>
+      <div class="sc2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="wg" style="height:96px;"><span class="wgk">Съедено</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:96px;"><span class="wgk">Осталось</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вода</span><span class="wgn">—<small>мл</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вес</span><span class="wgn">—<small>кг</small></span></div>
+      </div>
+      <div class="nav" style="z-index:3;">
+        <span class="nvi on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Главная</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v8a3 3 0 0 0 6 0V3M7 11v10"/><path d="M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"/></svg>Питание</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h4l3-7 4 14 3-7h2"/></svg>Актив</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Отчёты</span>
+      </div>
+      <span class="spot" style="right:6px;bottom:2px;width:84px;height:60px;border-radius:18px;"></span>
+      <div class="tip" style="bottom:88px;">
+        <span class="arw" style="bottom:-7px;right:40px;"></span>
+        <div class="tipk">Шаг 4 из 4</div>
+        <div class="tipt">Куда смотреть через неделю</div>
+        <div class="tipp">В «Отчётах» неделя собирается сама: средние, динамика веса и что стоит поправить.</div>
+        <div class="tipr"><span class="tnx">Всё понятно</span></div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Обзор пройден</b><span>плашка внизу, без экрана поздравления</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Первый вход · обзор пройден" data-vid="вид · плашка «обзор пройден»">
+      <div class="ctxh"><span class="ctxt">Главная</span></div>
+      <div class="sc2" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div class="wg" style="height:96px;"><span class="wgk">Съедено</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:96px;"><span class="wgk">Осталось</span><span class="wgn">—<small>ккал</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вода</span><span class="wgn">—<small>мл</small></span></div>
+        <div class="wg" style="height:78px;"><span class="wgk">Вес</span><span class="wgn">—<small>кг</small></span></div>
+      </div>
+      <span class="fab2"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <div style="position:absolute;left:12px;right:12px;bottom:76px;background:var(--c1);border-radius:22px;padding:12px 14px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.07);font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Обзор пройден. Вернуться к нему — в настройках</div>
+      <div class="nav">
+        <span class="nvi on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Главная</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3v8a3 3 0 0 0 6 0V3M7 11v10"/><path d="M17 3c-1.5 2-2 4-2 6s.5 3 2 3 2-1 2-3-.5-4-2-6zM17 12v9"/></svg>Питание</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h4l3-7 4 14 3-7h2"/></svg>Актив</span>
+        <span class="nvi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Отчёты</span>
+      </div>
+    </div></div>
+  </div>
+  <div data-mirdst="f1"></div>
+
+  <div class="secH">Вход с компьютера</div>
+  <div class="frow" data-mir="f2">
+    <div><div class="lab"><b>HEYS работает на телефоне</b><span>QR и адрес, установка, тихий выход</span></div>
+    <div class="dsk" data-demo="stop" data-screen-label="Первый вход · с компьютера" data-vid="вид · вход с компьютера">
+      <div class="dskb"><i></i><i></i><i></i><span>app.heyslab.ru</span></div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:34px 40px;">
+        <div style="width:480px;display:flex;flex-direction:column;align-items:flex-start;">
+          <span style="width:64px;height:64px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;color:var(--ac);"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 19h2"/></svg></span>
+          <div style="font:800 26px/1.15 Figtree,sans-serif;color:var(--tx);margin-top:20px;letter-spacing:-.01em;text-wrap:pretty;">HEYS работает на телефоне</div>
+          <div style="font:500 14px/1.55 Figtree,sans-serif;color:rgba(var(--ink),.62);margin-top:12px;text-wrap:pretty;">Дневник, чек-ин и советы рассчитаны на экран в руке. Откройте этот адрес на телефоне — данные уже там.</div>
+          <div style="align-self:stretch;display:flex;gap:14px;align-items:flex-start;margin-top:20px;"><span style="flex:none;width:198px;height:198px;border-radius:14px;background:var(--bg);box-shadow:inset 0 0 0 1px rgba(var(--ink),.1);display:flex;align-items:center;justify-content:center;"><svg width="198" height="198" viewBox="0 0 198 198" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR-код с адресом https://app.heyslab.ru"><path d="M72 24h6v6h-6zM84 24h6v6h-6zM96 24h6v6h-6zM108 24h6v6h-6zM114 24h6v6h-6zM120 24h6v6h-6zM72 30h6v6h-6zM78 30h6v6h-6zM96 30h6v6h-6zM72 36h6v6h-6zM96 36h6v6h-6zM102 36h6v6h-6zM108 36h6v6h-6zM114 42h6v6h-6zM120 42h6v6h-6zM72 48h6v6h-6zM96 48h6v6h-6zM102 48h6v6h-6zM108 48h6v6h-6zM114 48h6v6h-6zM72 54h6v6h-6zM78 54h6v6h-6zM90 54h6v6h-6zM96 54h6v6h-6zM102 54h6v6h-6zM114 54h6v6h-6zM120 54h6v6h-6zM78 60h6v6h-6zM90 60h6v6h-6zM96 60h6v6h-6zM72 66h6v6h-6zM90 66h6v6h-6zM96 66h6v6h-6zM102 66h6v6h-6zM114 66h6v6h-6zM30 72h6v6h-6zM36 72h6v6h-6zM60 72h6v6h-6zM84 72h6v6h-6zM102 72h6v6h-6zM114 72h6v6h-6zM120 72h6v6h-6zM132 72h6v6h-6zM150 72h6v6h-6zM162 72h6v6h-6zM168 72h6v6h-6zM36 78h6v6h-6zM42 78h6v6h-6zM60 78h6v6h-6zM72 78h6v6h-6zM114 78h6v6h-6zM120 78h6v6h-6zM138 78h6v6h-6zM150 78h6v6h-6zM36 84h6v6h-6zM48 84h6v6h-6zM54 84h6v6h-6zM66 84h6v6h-6zM72 84h6v6h-6zM78 84h6v6h-6zM90 84h6v6h-6zM96 84h6v6h-6zM108 84h6v6h-6zM114 84h6v6h-6zM120 84h6v6h-6zM132 84h6v6h-6zM138 84h6v6h-6zM144 84h6v6h-6zM150 84h6v6h-6zM168 84h6v6h-6zM24 90h6v6h-6zM30 90h6v6h-6zM48 90h6v6h-6zM66 90h6v6h-6zM84 90h6v6h-6zM90 90h6v6h-6zM102 90h6v6h-6zM108 90h6v6h-6zM126 90h6v6h-6zM132 90h6v6h-6zM144 90h6v6h-6zM156 90h6v6h-6zM162 90h6v6h-6zM168 90h6v6h-6zM48 96h6v6h-6zM54 96h6v6h-6zM60 96h6v6h-6zM66 96h6v6h-6zM72 96h6v6h-6zM108 96h6v6h-6zM114 96h6v6h-6zM120 96h6v6h-6zM144 96h6v6h-6zM150 96h6v6h-6zM162 96h6v6h-6zM168 96h6v6h-6zM24 102h6v6h-6zM36 102h6v6h-6zM42 102h6v6h-6zM48 102h6v6h-6zM60 102h6v6h-6zM72 102h6v6h-6zM108 102h6v6h-6zM132 102h6v6h-6zM150 102h6v6h-6zM24 108h6v6h-6zM30 108h6v6h-6zM48 108h6v6h-6zM60 108h6v6h-6zM66 108h6v6h-6zM72 108h6v6h-6zM102 108h6v6h-6zM120 108h6v6h-6zM126 108h6v6h-6zM138 108h6v6h-6zM150 108h6v6h-6zM24 114h6v6h-6zM48 114h6v6h-6zM78 114h6v6h-6zM90 114h6v6h-6zM108 114h6v6h-6zM126 114h6v6h-6zM132 114h6v6h-6zM138 114h6v6h-6zM150 114h6v6h-6zM162 114h6v6h-6zM24 120h6v6h-6zM30 120h6v6h-6zM42 120h6v6h-6zM66 120h6v6h-6zM72 120h6v6h-6zM84 120h6v6h-6zM90 120h6v6h-6zM96 120h6v6h-6zM156 120h6v6h-6zM96 126h6v6h-6zM108 126h6v6h-6zM150 126h6v6h-6zM156 126h6v6h-6zM168 126h6v6h-6zM90 132h6v6h-6zM96 132h6v6h-6zM102 132h6v6h-6zM162 132h6v6h-6zM168 132h6v6h-6zM72 138h6v6h-6zM84 138h6v6h-6zM102 138h6v6h-6zM150 138h6v6h-6zM156 138h6v6h-6zM162 138h6v6h-6zM168 138h6v6h-6zM90 144h6v6h-6zM156 144h6v6h-6zM162 144h6v6h-6zM168 144h6v6h-6zM72 150h6v6h-6zM90 150h6v6h-6zM96 150h6v6h-6zM102 150h6v6h-6zM114 150h6v6h-6zM132 150h6v6h-6zM90 156h6v6h-6zM102 156h6v6h-6zM114 156h6v6h-6zM120 156h6v6h-6zM126 156h6v6h-6zM150 156h6v6h-6zM162 156h6v6h-6zM90 162h6v6h-6zM102 162h6v6h-6zM120 162h6v6h-6zM126 162h6v6h-6zM132 162h6v6h-6zM138 162h6v6h-6zM150 162h6v6h-6zM162 162h6v6h-6zM90 168h6v6h-6zM96 168h6v6h-6zM102 168h6v6h-6zM132 168h6v6h-6zM144 168h6v6h-6zM150 168h6v6h-6zM168 168h6v6h-6z" fill="#201e1d"/><rect x="24" y="24" width="42" height="42" fill="none" stroke="#201e1d" stroke-width="6"/><rect x="36" y="36" width="18" height="18" fill="#201e1d"/><rect x="132" y="24" width="42" height="42" fill="none" stroke="#201e1d" stroke-width="6"/><rect x="144" y="36" width="18" height="18" fill="#201e1d"/><rect x="24" y="132" width="42" height="42" fill="none" stroke="#201e1d" stroke-width="6"/><rect x="36" y="144" width="18" height="18" fill="#201e1d"/><rect x="120" y="120" width="30" height="30" fill="none" stroke="#201e1d" stroke-width="6"/><rect x="132" y="132" width="6" height="6" fill="#201e1d"/></svg></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;"><span style="font:700 13px/1.3 Figtree,sans-serif;color:var(--tx);">Наведите камеру телефона</span><span class="lnk" style="align-self:stretch;"><span style="flex:1;">app.heyslab.ru</span><span class="lnkb"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="margin-right:5px;"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Скопировать</span></span><span style="font:500 12px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.62);text-wrap:pretty;">Или наберите руками — адрес короткий.</span></span></div><div style="align-self:stretch;background:var(--c1);border-radius:16px;padding:14px 16px;margin-top:12px;">
+            <div style="font:700 13px/1.3 Figtree,sans-serif;color:var(--tx);">Поставить на домашний экран</div>
+            <div style="font:500 12.5px/1.45 Figtree,sans-serif;color:rgba(var(--ink),.62);margin-top:6px;text-wrap:pretty;">В браузере телефона откройте меню и выберите «На экран „Домой“» — HEYS запустится как приложение.</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;min-height:44px;margin-top:8px;font:600 12.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>Выйти из аккаунта</div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div data-mirdst="f2"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;showProtocol&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+class Component extends DCLogic {
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Сине-тёмная']];
+  componentDidMount() { this.apply(); }
+  componentDidUpdate() { this.apply(); }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(() => say('скопировано · ' + count + ' строк')).catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'first-run · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec')];
+    if (!specs.length) return ['НЕТ КОНТРАКТА'];
+    const out = [];
+    const frames = [...document.querySelectorAll('[data-screen-label]')].filter(f => !f.closest('.pal'));
+    const noAddr = frames.filter(f => !f.getAttribute('data-vid')).map(f => f.getAttribute('data-screen-label'));
+    if (noAddr.length) out.push('кадр без data-vid: ' + noAddr.join(' · '));
+    const emoji = frames.filter(f => /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(f.textContent)).map(f => f.getAttribute('data-screen-label'));
+    if (emoji.length) out.push('эмодзи на кадре: ' + emoji.join(' · '));
+    // Своё: у шага обзора обязателен носик карточки — без него неясно, на что смотреть
+    const steps = frames.filter(f => /шаг \d/.test(f.getAttribute('data-screen-label')));
+    const noArw = steps.filter(f => !f.querySelector('.arw')).map(f => f.getAttribute('data-screen-label'));
+    if (noArw.length) out.push('шаг без носика карточки: ' + noArw.join(' · '));
+    const noSpot = steps.filter(f => !f.querySelector('.spot')).map(f => f.getAttribute('data-screen-label'));
+    if (noSpot.length) out.push('шаг без окна подсветки: ' + noSpot.join(' · '));
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]') || document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    if (!none && !found.length) { bar.textContent = ''; bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    bar.textContent = none ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено' : '⚠ сверка: ' + found.join(' | ');
+    bar.style.color = none ? '#8a4a20' : '#a8382b';
+  }
+  contracts() {
+    const on = this.props.showContracts ?? false;
+    const list = [...document.querySelectorAll('[data-contract]')];
+    if (!list.length) return;
+    list.forEach(el => { el.style.display = on ? '' : 'none'; });
+    let bar = document.querySelector('[data-ctrbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-ctrbar', '');
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:0 0 22px;white-space:nowrap;';
+      const anchor = document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const n = list.length, m = n % 10, h = n % 100, one = m === 1 && h !== 11;
+    const word = one ? 'контракт' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'контракта' : 'контрактов');
+    const rows = document.querySelectorAll('[data-contract] .spec').length;
+    const rm = rows % 10, rh = rows % 100;
+    const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
+    bar.textContent = n + ' ' + word + ' на канвасе' + (rows ? ', ' + rows + ' ' + rw : '') + ' · ' + (on ? (one ? 'показан' : 'показаны') + ' ниже' : (one ? 'скрыт' : 'скрыты') + ' твиком «Контракты»');
+  }
+  protocols() {
+    const on = this.props.showProtocol ?? false;
+    const list = [...document.querySelectorAll('[data-demo="protocol"]')];
+    list.forEach(el => { const w = el.closest('.lab') ? el : el.parentElement; (w || el).style.display = on ? '' : 'none'; });
+    let bar = document.querySelector('[data-protobar]');
+    if (!list.length) { if (bar) bar.remove(); return; }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-protobar', '');
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:-14px 0 22px;';
+      const anchor = document.querySelector('[data-ctrbar]');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    bar.textContent = list.length + ' отвергнутых кадров ' + (on ? 'показаны' : 'скрыты твиком «Протокол»');
+  }
+  apply() {
+    this.contracts();
+    this.protocols();
+    this.auditBar();
+    const all = this.props.allPalettes ?? false;
+    document.querySelectorAll('[data-mirdst]').forEach(dst => {
+      dst.innerHTML = '';
+      if (!all) return;
+      const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
+      if (!src) return;
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls + ' ' + row.className;
+        row.querySelectorAll('*').forEach(n => {
+          n.removeAttribute('data-screen-label'); n.removeAttribute('data-cc-id');
+          n.removeAttribute('data-dm-ref'); n.removeAttribute('data-comment-anchor'); n.removeAttribute('data-vid');
+        });
+        dst.append(cap, row);
+      });
+    });
+  }
+}
+</script>
+</body>
+</html>

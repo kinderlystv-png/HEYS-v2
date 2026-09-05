@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="v4-canvas.css" rel="stylesheet">
+<script src="./contract-audit.js"></script>
+<style>
+  .spec{display:grid;grid-template-columns:158px minmax(0,1fr);gap:4px 12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07)}
+  .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
+  .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
+  .spec>span[data-v]::before{content:attr(data-v)}
+  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
+  .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
+  .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
+  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
+  .frow{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
+  .cvi{color:rgba(var(--ink),.4);display:flex}
+  .mh{padding:14px 12px 10px 18px;display:flex;align-items:center;gap:11px;border-bottom:1px solid rgba(var(--ink),.06)}
+  .av{width:38px;height:38px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);flex:none}
+  .mhn{font:700 14.5px/1.2 Figtree,sans-serif;color:var(--tx)}
+  .mhs{display:flex;align-items:center;gap:6px;font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:3px}
+  .dot{width:7px;height:7px;border-radius:999px;background:var(--gr);flex:none}
+  .ib{width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:rgba(var(--ink),.55);flex:none}
+  .wt{padding:8px 18px 10px;display:flex;align-items:center;gap:7px;overflow:hidden;white-space:nowrap}
+  .wtl{font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(var(--ink),.56);margin-right:2px;flex:none}
+  .wc{min-height:30px;padding:0 11px;border-radius:999px;display:inline-flex;align-items:center;gap:5px;font:600 11.5px/1 Figtree,sans-serif;background:var(--c1);color:var(--tx);flex:none}
+  .wc.dn{background:transparent;color:rgba(var(--ink),.56);box-shadow:inset 0 0 0 1px rgba(var(--ink),.1)}
+  .th{flex:1;padding:6px 14px 0;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+  .ds{text-align:center;font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);margin:8px 0 2px}
+  .bb{max-width:79%;border-radius:18px;padding:10px 13px;font:500 13px/1.45 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .bb.t{align-self:flex-start;background:var(--c1);border-bottom-left-radius:6px}
+  .bb.m{align-self:flex-end;background:var(--c2);border-bottom-right-radius:6px}
+  .bt{font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:5px;text-align:right}
+  .sta{align-self:flex-end;display:flex;align-items:center;gap:5px;font:600 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);padding-right:4px}
+  .sta.ok{color:var(--gr)}
+  .imgp{border-radius:12px;background:rgba(var(--ink),.08);display:flex;align-items:center;justify-content:center;color:rgba(var(--ink),.3);font:600 10px/1 Figtree,sans-serif}
+  .sys{width:100%;border-radius:18px;background:var(--c1);padding:11px 14px 12px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.06)}
+  .kick{font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac)}
+  .comp{padding:8px 12px 14px;background:var(--bg);display:flex;align-items:flex-end;gap:6px;border-top:1px solid rgba(var(--ink),.06)}
+  .inp{flex:1;min-height:44px;border-radius:22px;background:var(--c1);padding:13px 15px;font:500 13px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56)}
+  .snd{width:44px;height:44px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:center;flex:none}
+  .snd.off{background:var(--c2);color:rgba(var(--ink),.35)}
+  .hint{margin:0 12px 8px;border-radius:18px;background:var(--tint);padding:11px 13px 12px}
+  .hp{min-height:32px;padding:0 12px;border-radius:999px;background:var(--bg);font:600 11.5px/1 Figtree,sans-serif;color:var(--tx);display:inline-flex;align-items:center;flex:none}
+  .pr{min-height:44px;padding:0 16px;border-radius:999px;background:var(--c1);font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);display:inline-flex;align-items:center}
+  .men{position:absolute;top:58px;right:12px;width:232px;background:var(--md);border-radius:18px;padding:6px;box-shadow:0 14px 40px rgba(var(--shadow),.24)}
+  .mi{padding:11px 12px;min-height:44px;border-radius:12px}
+  .mi b{display:block;font:600 13px/1.2 Figtree,sans-serif;color:var(--tx)}
+  .mi span{display:block;font:500 11px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:3px}
+  .act{position:absolute;left:14px;right:14px;bottom:0;background:var(--md);border-radius:26px 26px 0 0;padding:14px 10px 18px;box-shadow:0 -12px 40px rgba(var(--shadow),.2)}
+  .ai{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 10px;border-radius:14px;font:600 13.5px/1 Figtree,sans-serif;color:var(--tx)}
+  .srch{margin:10px 14px 0;min-height:44px;border-radius:22px;background:var(--c1);display:flex;align-items:center;gap:9px;padding:0 14px;font:500 13px/1 Figtree,sans-serif;color:var(--tx)}
+  .sr{padding:11px 14px;display:flex;flex-direction:column;gap:4px;border-bottom:1px solid rgba(var(--ink),.06)}
+  .sr b{font:600 12.5px/1.4 Figtree,sans-serif;color:var(--tx)}
+  .sr b mark{background:transparent;color:var(--ac);font-weight:700}
+  .sr span{font:500 10.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56)}
+  .offl{margin:8px 12px 0;min-height:40px;border-radius:14px;background:var(--tint);display:flex;align-items:center;gap:9px;padding:8px 13px;font:600 11.5px/1.3 Figtree,sans-serif;color:var(--tx)}
+  .mdl{position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);background:var(--md);border-radius:26px;padding:22px 18px 18px;box-shadow:0 24px 60px rgba(var(--shadow),.28)}
+  .mdt{font:700 18px/1.25 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .mdp{font:500 12.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.62);margin-top:8px;text-wrap:pretty}
+  .btnq{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c1);font:700 13px/1 Figtree,sans-serif;color:var(--tx)}
+</style>
+</helmet>
+<template id="__bundler_thumbnail" data-bg-color="#e9dfcd"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="18" y="28" width="40" height="16" rx="7" fill="#f7efe2"/><rect x="42" y="50" width="40" height="16" rx="7" fill="#efe3cf"/><circle cx="26" cy="72" r="3" fill="#c67139"/><circle cx="36" cy="72" r="3" fill="#d8c9b4"/><circle cx="46" cy="72" r="3" fill="#d8c9b4"/></svg></template>
+<div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
+  <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
+    <span style="font:800 25px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em;">Мессенджер · сторона клиента</span>
+    <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);">переписка с куратором · фото и голосовые · «внесено в день» · v4</span>
+  </div>
+  <p style="margin:0 0 6px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Один тред с одним человеком. Клиент присылает еду, вес и самочувствие; куратор отвечает и собирает из этого день — результат возвращается в тред системной карточкой. Канвас рисует то, что видит клиент: пустой тред и подсказки первого сообщения, строку «Ждём», состояния своего сообщения, композер с фото и голосовым, поиск, офлайн-очередь, меню и диалоги. Сторона куратора — инбокс и панель «Собрать в день» — живёт в кабинете куратора и здесь названа границей.</p>
+  <p style="margin:0 0 26px;font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">файл в пакете: messenger.v4.dc.html · код heys_messenger_v1.js · экраны искать по data-screen-label</p>
+
+  <div style="display:inline-flex;align-items:center;gap:10px;background:#b4442a;color:#fff;border-radius:999px;padding:9px 16px 9px 12px;margin:0 0 26px;font:700 11px/1.4 Figtree,sans-serif;max-width:980px;"><span style="font:800 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;background:rgba(255,255,255,.18);padding:5px 8px;border-radius:999px;">В ПРОД</span><span style="text-wrap:pretty;">Все кадры. Поведение из кода сохранено целиком — меняется вид и слова; вкладки намерений (фаза 2 кода) в v4 не входят и названы строкой «снято».</span></div>
+
+  <div class="ctr" data-contract="messenger">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <span class="ctrTag">КОНТРАКТ</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
+    </div>
+
+    <div class="ctrH">Что это и чьё</div>
+    <div class="spec"><b>фича</b><span data-v="переписка клиента с куратором внутри приложения: текст, фото (до 10 за сообщение), голосовые с расшифровкой по согласию, ответ цитатой, правка и удаление своих, отметка «принято», поиск, работа без сети"></span></div>
+    <div class="spec"><b>границы</b><span data-v="канвас рисует экран мессенджера у клиента целиком: шапку, строку «Ждём», тред, композер, подсказку «время и граммы», поиск, офлайн-полосу, меню «Ещё», лист действий над сообщением, диалоги удаления и согласия на расшифровку. Не рисует: инбокс куратора, панель «Собрать в день», просмотр фото на весь экран (системный лайтбокс), клавиатуру"></span></div>
+    <div class="spec"><b>источник</b><span data-v="главный для экрана мессенджера у клиента. Пункт «Мессенджер» в быстрых действиях и счётчик непрочитанных — home-widgets.v4.dc.html. Инбокс и панель разбора куратора — curator-cabinet.v4.dc.html; карточка «Внесено в дневник» рисуется в обоих, главный — этот файл"></span></div>
+    <div class="spec"><b>код</b><span data-v="heys_messenger_v1.js: MessengerModal · MessengerHeader (menuItems: search, transcription) · DayChecklistRow (/messages/day-checklist) · MessageBubble (ownStatus: sent → seen → acked → applied) · FoodHintCard (shouldShowFoodHint, FOOD_HINT_LEARNED_STREAK=10) · EmptyThread (EMPTY_THREAD_PROMPTS) · SearchPanel (min 2 символа, debounce 300) · OfflineQueueBar · AppliedDayCard · IntentCard · transcriptionPromptOpen"></span></div>
+    <div class="spec"><b>слой</b><span data-v="полный экран поверх вкладки, не шторка и не модалка: у переписки нет операции над экраном, которую можно смахнуть, а клавиатура занимает половину высоты. Открывается из быстрых действий и из тоста о новом сообщении; закрывается крестиком в шапке и аппаратной кнопкой назад. Вход и выход — сдвиг снизу 220 мс, как у полноэкранных листов продукта"></span><i>в коде это модалка на весь экран со своей блокировкой прокрутки — то же самое, названное экраном</i></div>
+    <div class="spec"><b>адресация</b><span data-v="кадр = data-screen-label; все кадры статичные (data-demo='stop'); кадры-состояния называют свою строку вида атрибутом data-vid"></span></div>
+    <div class="spec" style="border-bottom:none"><b>палитры</b><span data-v="все роли из v4-canvas.css; тёмная, синяя и сине-тёмная собираются зеркалом каждого ряда. Цвета не из палитры: заглушка фото на кадрах (чернила 8 %) — место снимка, в продукт не идёт"></span></div>
+
+    <div class="ctrH">Решения</div>
+    <div class="spec"><b>две стороны — два тона палитры</b><span data-v="куратор слева на --c1, клиент справа на --c2, оба с чернильным текстом; состояние сообщения — строкой под пузырём, а не заливкой. Радиус 18, хвостовой угол 6, ширина до 79 % экрана"></span><i>код уже снял «зелёный пузырь»; канвас закрепляет</i></div>
+    <div class="spec"><b>состояние своего сообщения — одна строка</b><span data-v="под последним своим сообщением одна строка 10,5 px/600 чернил 56 %: «Отправлено · 9:12» → «Куратор смотрит · 9:15» (точка --gr 7 px) → «Обработано · 9:40» (галочка 11 px, строка тоном --gr) → «Внесено в день · 9:41». Строка одна, у самого позднего своего сообщения; у предыдущих — только время в пузыре"></span><i>в коде строка стоит под каждым своим сообщением: столбик одинаковых «Обработано» читается как список ошибок</i></div>
+    <div class="spec"><b>«Ждём» — вторая строка шапки</b><span data-v="чипы 30 px под шапкой: недостающие — фон --c1 и чернила, сделанные — прозрачные с обводкой чернил 10 %, галочкой 11 px и текстом чернил 56 %; недостающие идут первыми. Тап по недостающему начинает сообщение шаблоном (приём → «Приём пищи в 13:05, », вес → «Вес утром: », вода → «Вода за день: », активность → «Активность сегодня: »). Недостающих нет — строки нет вовсе. Список приходит с сервера, клиент не досчитывает"></span></div>
+    <div class="spec"><b>подсказка «время и граммы» — рабочая</b><span data-v="карточка над композером на --tint: часы 16 px тоном --ac, текст «Время и вес в граммах — тогда куратор соберёт день сразу» 12 px/500, ряд пилюль 32 px на --bg: «Сейчас · 13:05», «Час назад», «Своё время», «Вес 000 г»; «Скрыть» 11,5 px/600 чернил 56 % справа сверху. Пилюля вставляет текст в композер, «Своё время» раскрывает степпер ±5 минут. Показ по shouldShowFoodHint: исчезает после 10 сообщений подряд со временем и граммами, возвращается, если куратор переспросил"></span></div>
+    <div class="spec"><b>карточка «Внесено в дневник» — системная</b><span data-v="не пузырь и не привязана к стороне: фон --c1, обводка inset 1 px чернил 6 %, радиус 18, поля 11/14/12. Шапка: точка 7 px --gr, «Внесено в дневник» 12,5 px/700, справа «Обед · 13:05» 11 px/500 чернил 56 %. Строки продуктов 12 px/500: название слева, «180 г» и «210 ккал» справа табличными цифрами чернил 56 %. Низ: «Итого 540 ккал» 11,5 px/700 и ссылка «Открыть день» 11,5 px/700 тоном --ac — ведёт на вкладку «Питание» этого дня"></span></div>
+    <div class="spec"><b>карточка намерения — есть, вкладок нет</b><span data-v="структурированное сообщение (вес, тренировка, приём) рисуется карточкой внутри пузыря: кикер типа 9,5 px прописными --ac, значение 20 px/800 табличными («71,4 кг»), детали 11,5 px/500 чернил 56 %; такие сообщения не правятся. Вкладки намерений над композером (фаза 2 кода: meal/training/weight) — СНЯТО: клиент пишет свободным текстом, структуру даёт куратор при разборе, а шаблоны «Ждём» закрывают ту же потребность без переключателя"></span></div>
+    <div class="spec"><b>первое сообщение</b><span data-v="пустой тред: круг 56 px на --c2 с иконкой чата 26 px тоном --ac, заголовок «Здесь начнётся переписка с куратором» 15,5 px/700, текст «Отправьте фото еды, вопрос или как себя чувствуете — куратор ответит и соберёт день» 12,5 px/500 чернил 56 %, три пилюли 44 px на --c1: «Фото завтрака», «Вес утром», «Как самочувствие» — подставляют шаблон в композер и ставят курсор"></span></div>
+    <div class="spec"><b>действия над сообщением — лист снизу</b><span data-v="долгое нажатие 350 мс открывает лист снизу с пунктами 48 px: на чужом — «Ответить», «Принять» (или «Снять отметку»), «Скопировать текст»; на своём — «Изменить» (не у намерений), «Скопировать текст», «Удалить» тоном --red. На фото добавляется «Сохранить фото». Hover-действий десктопной версии на телефоне нет"></span></div>
+    <div class="spec"><b>поиск — режим, а не оверлей</b><span data-v="поиск занимает место треда: поле 44 px на --c1 с лупой и крестиком, чипы фильтра 34 px «Всё · С фото · Голосовые · Внесённые», результаты рядами: дата 10,5 px чернил 56 %, фрагмент 12,5 px/600 с совпадением тоном --ac. Ищет и по расшифровкам. Не короче 2 символов, задержка 300 мс. Тап по результату закрывает поиск и подсвечивает сообщение фоном --tint на 1,2 с"></span></div>
+    <div class="spec"><b>без сети</b><span data-v="полоса над композером на --tint 40 px: точка --red 7 px, «Нет сети. 2 сообщения и черновик сохранены на устройстве» 11,5 px/600, справа «Повторить» 11,5 px/700 тоном --ac. Своё неотправленное — пузырь прозрачностью 60 % и строка «Ожидает сети» вместо времени. Подзаголовок шапки — «нет сети — синхронизируем позже», точка --red. Появилась сеть — отправка сама, полоса исчезает"></span></div>
+    <div class="spec"><b>согласие на расшифровку — один раз</b><span data-v="перед первой расшифровкой центральная модалка: «Расшифровывать голосовые?», текст «Передадим выбранное аудио в Yandex SpeechKit и сохраним полученный текст в чате. В записи могут быть сведения о здоровье. Голосовое отправится и без расшифровки», ссылка «Подробнее о данных» тоном --ac, кнопки «Расшифровывать» (.btn) и «Не сейчас» (.btnq). Решение хранится на сервере и меняется в меню «Ещё»"></span><i>постоянной полосы согласия в композере нет — код уже перенёс это в меню</i></div>
+    <div class="spec"><b>слова на экране</b><span data-v="в шапке «Куратор Ольга», в тексте «куратор» строчными. Подзаголовок — состояние ответа: «отвечает обычно за час», «прочитала · 9:15», «нет сети — синхронизируем позже». Без «ты», без восклицаний, без эмодзи; галочки — иконки Lucide, не символы"></span></div>
+    <div class="spec" style="border-bottom:none"><b>иконки</b><span data-v="Lucide, обводка 2,75 (в композере 2,25 при 20 px): camera, mic, arrow-up, more-horizontal, x, search, corner-up-left, pencil, trash-2, copy, check, clock, message-circle, download"></span></div>
+
+    <div class="ctrH">Вид</div>
+    <div class="spec"><b>вид · шапка</b><span data-v="поля 14/12/10/18, низ — линия 1 px чернил 6 %. Аватар 38 px на --c2 с инициалами 12,5 px/700 тоном --ac; имя 14,5 px/700; подзаголовок 11 px/500 чернил 56 % с точкой 7 px (--gr в сети, --red без сети). Справа две круглые кнопки 40 px — «Ещё» и крестик, тон чернил 55 %"></span></div>
+    <div class="spec"><b>вид · строка «Ждём»</b><span data-v="поля 8/18/10, прокрутка по горизонтали без полосы. Метка «ЖДЁМ» 9,5 px/700 прописными разрядка .14em чернил 56 %; чипы 30 px, поля 0/11, радиус 999, зазор 7, текст 11,5 px/600"></span></div>
+    <div class="spec"><b>вид · тред</b><span data-v="поля 6/14/0, зазор 8, разделитель даты 10,5 px/600 чернил 56 % по центру («Сегодня», «Вчера», «3 сентября»). Пузырь: радиус 18 (хвостовой 6), поля 10/13, текст 13 px/500/1,45; время 10,5 px/500 чернил 56 % справа внизу с отступом 5. Фото: одно — высота 118 при ширине 170, четыре и больше — сетка 2×2 и «+N» на последнем, радиус 12. Цитата — полоса 2 px --ac слева, текст 12 px/500 чернил 56 %. «Показать ранее · 14» — пилюля 36 px на --c1, 11,5 px/600 чернил 56 %, по центру. Все тихие тона текста в этом канвасе — чернила 56 %: на трёх грунтах набора (--bg, --c1, --c2) это минимум, который проходит порог 4,5, а прежние 40–50 % давали 3,2–3,3"></span><i>сверка поймала 45 % на времени сообщения: 3,22 при пороге 4,5. Тихий тон в переписке нужен — время не должно спорить с текстом, — но нижняя граница у него не «на глаз», а замер на самом тёмном грунте</i></div>
+    <div class="spec"><b>вид · композер</b><span data-v="поля 8/12/14, верх — линия 1 px чернил 6 %, фон --bg. Камера и микрофон — круги 40 px чернил 55 %; поле от 44 px (до пяти строк) на --c1 радиус 22, поля 13/15, текст 13 px/500, плейсхолдер «Сообщение куратору» чернил 56 %; кнопка отправки 44 px на --acs с иконкой 20 px --on-acs, при пустом поле — --c2 и иконка чернил 35 %. Превью фото — ряд 56 px радиус 10 с крестиком 18 px; запись голосового — полоса на --tint с точкой --red, таймером «0:14» 13 px/700 табличными и кнопкой «Стоп» 40 px"></span></div>
+    <div class="spec"><b>вид · меню «Ещё»</b><span data-v="карточка 232 px под кнопкой, справа 12, фон --md, радиус 18, поля 6, тень 0 14px 40px тени 24 %. Пункты 44 px радиус 12: заголовок 13 px/600, подсказка 11 px/500 чернил 56 %"></span></div>
+    <div class="spec"><b>вид · лист действий</b><span data-v="снизу, поля 14/10/18, фон --md, радиус 26 сверху, тень 0 -12px 40px тени 20 %, под ним затемнение --scrim. Сверху строка-цитата 12 px/500 чернил 56 % в одну строку с многоточием, поля 4/10/10. Пункты 48 px радиус 14: иконка 18 px, текст 13,5 px/600; «Удалить» тоном --red"></span></div>
+    <div class="spec"><b>вид · удаление</b><span data-v="центральная модалка: «Удалить сообщение?» 18 px/700, текст «У куратора оно тоже исчезнет. Если оно уже внесено в день — запись в дневнике останется» 12,5 px/500 чернил 62 %, две кнопки .btnq 48 px в столбик с зазором 8: «Удалить» текстом --red на --c1 и «Оставить» чернилами. Красной ЗАЛИВКИ у кнопки нет — --red в наборе роль текста, парной роли надписи на ней не существует (v4-canvas.css, блок «пары заливка → её текст»), и заводить --on-red ради одной кнопки значит расширять палитру под кадр. Разрушительное действие в этом канвасе называется словом и красным текстом, как и пункт «Удалить» в листе действий"></span><i>кадр регистрации красит такую кнопку заливкой --red с литералом #fffaf1 — это его долг, не образец</i></div>
+    <div class="spec"><b>вид · поиск</b><span data-v="поле 44 px на --c1 радиус 22, поля 0/14, лупа 16 px чернил 55 %; чипы фильтра 34 px по правилу .chip; результат — ряд с полями 11/14 и линией 1 px чернил 6 %, дата 10,5 px/500 чернил 56 %, фрагмент 12,5 px/600 в две строки. Пусто: «Ничего не нашлось» 12,5 px/500 чернил 56 % по центру"></span></div>
+    <div class="spec" style="border-bottom:none"><b>вид · согласие</b><span data-v="центральная модалка радиус 26, поля 22/18/18: заголовок 18 px/700, текст 12,5 px/500 чернил 62 %, ссылка 12 px/600 --ac подчёркнутая, две кнопки в столбик с зазором 8"></span></div>
+
+    <div class="ctrH">Поведение</div>
+    <div class="spec"><b>отправка</b><span data-v="Enter на телефоне — перенос строки, отправка только кнопкой (coarse pointer). Кнопка активна при тексте, загруженном фото или готовом голосовом; во время отправки — знак ожидания по контракту «Спиннеры», кнопка гаснет до 60 %. Черновик и фото сохраняются на устройстве при закрытии"></span></div>
+    <div class="spec"><b>фото</b><span data-v="до 10 за сообщение, загрузка начинается при выборе, превью с кольцом прогресса; неудача — красная обводка и «Повторить» по тапу. Тап по фото в треде — системный лайтбокс с листанием"></span></div>
+    <div class="spec"><b>голосовое</b><span data-v="тап по микрофону начинает запись, повторный останавливает — не удержание: удержание конфликтует с долгим нажатием на пузыре. До 5 минут. После остановки — превью с волной и кнопкой удалить, отправка общей кнопкой. Расшифровка появляется под волной, когда готова; до неё «Расшифровываем…» чернил 45 %; без согласия — только волна и длительность"></span></div>
+    <div class="spec"><b>принять</b><span data-v="на сообщении куратора клиент ставит «Принято» из листа действий, куратор видит acked_at; снимается тем же пунктом. Отметка не обязательна — это «прочитал и понял» без слов"></span></div>
+    <div class="spec"><b>ответ цитатой и правка</b><span data-v="«Ответить» ставит над композером полосу с цитатой и крестиком; отправленное несёт цитату в пузыре — только на чужие сообщения. «Изменить» открывает свой текст в композере с меткой «Правка»; отправка заменяет текст, цитата сохраняется. Признак «изменено» не показывается — куратор видит актуальный текст"></span></div>
+    <div class="spec"><b>история</b><span data-v="показываются последние 30 дней, старше — за кнопкой «Показать ранее · N»; страницы по 50 с сервера. Позиция прокрутки при докачке сверху сохраняется"></span></div>
+    <div class="spec"><b>новое сообщение вне мессенджера</b><span data-v="тост по правилам undo-bar.v4.dc.html без кольца: «Куратор Ольга · Посмотрела завтрак — добавьте…» в одну строку, тап открывает мессенджер. Счётчик непрочитанных — на пункте быстрых действий (home-widgets)"></span></div>
+    <div class="spec"><b>только чтение</b><span data-v="в «только чтении» мессенджер работает полностью: переписка не запись в дневник и гейтом не блокируется — см. subscription.v4.dc.html, строка «гейт записи»"></span></div>
+    <div class="spec"><b>клавиатура</b><span data-v="композер поднимается с клавиатурой, тред сжимается; при открытой клавиатуре подсказка «время и граммы» сворачивается в одну строку без пилюль"></span></div>
+    <div class="spec"><b>аппаратная кнопка назад, уменьшенное движение, крупный шрифт</b><span data-v="общие правила — home-widgets.v4.dc.html. Местное: назад закрывает по очереди лист действий → поиск → экран; при уменьшенном движении подсветка найденного сообщения показывается без затухания и снимается сразу"></span></div>
+    <div class="spec" style="border-bottom:none"><b>доступность</b><span data-v="экран — role='dialog' с aria-label «Переписка с куратором»; тред — role='log' aria-live='polite', новое сообщение озвучивается один раз; пузырь несёт автора и время в aria-label; кнопка отправки при пустом поле — aria-disabled, а не disabled, чтобы фокус не терялся"></span></div>
+
+    <div class="ctrH">Решения владельца · 5 сентября</div>
+    <div class="spec"><b>звонок куратору</b><span data-v="РЕШЕНИЕ ВЛАДЕЛЬЦА 5 сентября: КНОПКИ «СОЗВОН» НЕТ — ни в шапке, ни в меню «Ещё». В мессенджере нет ни одного метода звонка: API умеет отправку, тред, входящие и согласие на расшифровку. Кнопка на несуществующую механику — обещание, которого продукт не выполняет. Созвон Pro живёт вне приложения и договаривается в переписке"></span><i>вопрос закрыт, к нему не возвращаемся до появления самой механики в API</i></div>
+    <div class="spec" style="border-bottom:none"><b>долг канваса</b><span data-v="кадры расшифровки голосового (готовая и в процессе) нарисованы одним состоянием — «в процессе» показан строкой в контракте, отдельного кадра нет"></span></div>
+          <div class="ctrH">Разбор кадров · элемент за элементом</div>
+    <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 03</b><span data-v="точка"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 04</b><span data-v="флекс 1, направление column, выравнивание center, распределение center, поля 0 28px, выключка center"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 05</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--c2), выравнивание center, распределение center, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 06</b><span data-v="«Здесь начнётся переписка с куратором» — шрифт 700 15.5px/1.3 Figtree, цвет var(--tx), отступ сверху 16px"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 07</b><span data-v="«Отправьте фото еды, вопрос или как себя чувствуете» — шрифт 500 12.5px/1.5 Figtree, цвет rgba(var(--ink),.56), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 08</b><span data-v="направление column, зазор 8px, отступ сверху 20px, ширина 100%"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · 09</b><span data-v="«Фото завтрака» — распределение center"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 03</b><span data-v="точка"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 04</b><span data-v="распределение center"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 05</b><span data-v="«Показать ранее · 14» — высота от 36px, поля 0 14px, радиус 999px, фон var(--c1), шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.56), выравнивание center"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 06</b><span data-v="поля 6px 6px 8px"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 07</b><span data-v="«фото обеда» — ширина 170px, высота 118px"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 08</b><span data-v="«13:31» — выключка left"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 09</b><span data-v="выравнивание center, зазор 7px"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 10</b><span data-v="«Внесено в дневник» — флекс 1, шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 11</b><span data-v="«Обед · 13:05» — шрифт 500 11px/1 Figtree, цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 12</b><span data-v="направление column, зазор 5px, отступ сверху 9px"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 13</b><span data-v="зазор 8px, шрифт 500 12px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 14</b><span data-v="«180 г» — моноцифры: цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 15</b><span data-v="«210 ккал» — моноцифры: цвет rgba(var(--ink),.56), ширина 56px, выключка right"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 16</b><span data-v="выравнивание center, распределение space-between, отступ сверху 10px, разделитель сверху 1px solid rgba(var(--ink),.06)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 17</b><span data-v="«Итого 540 ккал» — моноцифры: шрифт 700 11.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · 18</b><span data-v="«Открыть день» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 03</b><span data-v="точка"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 04</b><span data-v="«8:40» — выключка left"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 05</b><span data-v="выравнивание flex-start, зазор 9px"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 06</b><span data-v="флекс 1, шрифт 500 12px/1.45 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 07</b><span data-v="«Скрыть» — шрифт 600 11.5px/1 Figtree, цвет rgba(var(--ink),.56), флекс none"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 08</b><span data-v="зазор 6px, отступ сверху 10px, обрез hidden"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · 09</b><span data-v="«Ужин в 19:20,» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 03</b><span data-v="точка"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 04</b><span data-v="поля 9px 11px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 05</b><span data-v="радиус 12px, фон var(--bg), поля 9px 11px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 06</b><span data-v="«71,4 кг» — моноцифры: шрифт 800 20px/1 Figtree, цвет var(--tx), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 07</b><span data-v="«натощак · минус 200 г за сутки» — моноцифры: шрифт 500 11.5px/1.3 Figtree, цвет rgba(var(--ink),.56), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 08</b><span data-v="выравнивание center, зазор 8px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 09</b><span data-v="ширина 30px, высота 30px, радиус 999px, фон var(--bg), выравнивание center, распределение center, цвет var(--ac), флекс none"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 10</b><span data-v="флекс 1, выравнивание center, зазор 2px, высота 22px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 11</b><span data-v="флекс 1, высота 7px, радиус 2px, фон rgba(var(--ink),.2)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 12</b><span data-v="флекс 1, высота 15px, радиус 2px, фон rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 13</b><span data-v="флекс 1, высота 22px, радиус 2px, фон rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 14</b><span data-v="флекс 1, высота 11px, радиус 2px, фон rgba(var(--ink),.2)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 15</b><span data-v="флекс 1, высота 18px, радиус 2px, фон rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 16</b><span data-v="флекс 1, высота 8px, радиус 2px, фон rgba(var(--ink),.2)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 17</b><span data-v="флекс 1, высота 14px, радиус 2px, фон rgba(var(--ink),.24)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 18</b><span data-v="флекс 1, высота 20px, радиус 2px, фон rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 19</b><span data-v="флекс 1, высота 9px, радиус 2px, фон rgba(var(--ink),.2)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 20</b><span data-v="флекс 1, высота 16px, радиус 2px, фон rgba(var(--ink),.24)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 21</b><span data-v="«0:32» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56), флекс none"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 22</b><span data-v="«Хорошо идёте. На ужин добавьте белок — грудку или» — шрифт 500 12.5px/1.45 Figtree, цвет var(--tx), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 23</b><span data-v="«9:02» — выключка left"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 24</b><span data-v="флекс 1, высота от 44px, радиус 22px, фон var(--tint), выравнивание center, зазор 10px, поля 0 15px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 25</b><span data-v="ширина 8px, высота 8px, радиус 999px, фон var(--red), флекс none"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 26</b><span data-v="«0:14» — моноцифры: шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 27</b><span data-v="флекс 1, выравнивание center, зазор 2px, высота 16px"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 28</b><span data-v="флекс 1, высота 5px, радиус 2px, фон rgba(var(--ink),.22)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 29</b><span data-v="флекс 1, высота 11px, радиус 2px, фон rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 30</b><span data-v="флекс 1, высота 16px, радиус 2px, фон rgba(var(--ink),.3)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 31</b><span data-v="флекс 1, высота 8px, радиус 2px, фон rgba(var(--ink),.22)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 32</b><span data-v="флекс 1, высота 13px, радиус 2px, фон rgba(var(--ink),.28)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 33</b><span data-v="флекс 1, высота 6px, радиус 2px, фон rgba(var(--ink),.2)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · 34</b><span data-v="«Стоп» — шрифт 700 11.5px/1 Figtree, цвет var(--ac), флекс none"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · 03</b><span data-v="точка"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · 04</b><span data-v="«13:31» — выключка left"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · 05</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · 06</b><span data-v="«Обед в 13:05, гречка 180 г, грудка 120 г» — шрифт 500 12px/1.4 Figtree, цвет rgba(var(--ink),.56), поля 4px 10px 10px, перенос nowrap, обрез hidden"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · 07</b><span data-v="цвет var(--red)"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · 03</b><span data-v="точка"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · 04</b><span data-v="фон var(--c1)"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · 05</b><span data-v="«13:31» — выключка left"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · 03</b><span data-v="«18 сообщений найдено» — цвет rgba(var(--ink),.56)"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · 04</b><span data-v="зазор 7px, поля 10px 14px 8px, обрез hidden"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · 05</b><span data-v="флекс 1, обрез hidden"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 03</b><span data-v="точка: фон var(--red)"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 04</b><span data-v="«18:30» — выключка left"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 05</b><span data-v="«Ужин в 19:20, творог 200 г» — прозрачность .6"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 06</b><span data-v="прозрачность .6, поля 6px 6px 8px"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 07</b><span data-v="«фото ужина» — ширина 170px, высота 118px"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 08</b><span data-v="«Повторить» — шрифт 700 11.5px/1 Figtree, цвет var(--ac), флекс none"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · 09</b><span data-v="«Спрошу завтра про пере» — цвет var(--tx)"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · 03</b><span data-v="точка"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · 04</b><span data-v="«18:30» — выключка left"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · 05</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · 06</b><span data-v="«Подробнее о данных» — шрифт 600 12px/1 Figtree, цвет var(--ac), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · 07</b><span data-v="направление column, зазор 8px, отступ сверху 18px"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · 08</b><span data-v="«Расшифровывать» — главная кнопка"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · 01</b><span data-v="«ОЛ» — аватар"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · 02</b><span data-v="флекс 1"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · 03</b><span data-v="точка"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · 04</b><span data-v="«13:31» — выключка left"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · 05</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · 06</b><span data-v="направление column, зазор 8px, отступ сверху 20px"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · 07</b><span data-v="«Удалить» — цвет var(--red)"></span></div>
+    <div class="ctrH">Разбор графики · SVG в кадрах</div>
+    <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 07</b><span data-v="поле рисунка 26×26 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 08</b><span data-v="кривая, точки M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4-.8L3 21l1.9-4.5A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 09</b><span data-v="поле рисунка 20×20 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 10</b><span data-v="кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 11</b><span data-v="точка r 4 в (12,13)"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 12</b><span data-v="кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 13</b><span data-v="кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · рисунок 14</b><span data-v="кривая, точки M12 19V5M5 12l7-7 7 7"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 07</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 08</b><span data-v="кривая, точки M20 6L9 17l-5-5"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 09</b><span data-v="поле рисунка 20×20 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 10</b><span data-v="кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 11</b><span data-v="точка r 4 в (12,13)"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 12</b><span data-v="кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 13</b><span data-v="кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · рисунок 14</b><span data-v="кривая, точки M12 19V5M5 12l7-7 7 7"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 07</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 08</b><span data-v="кривая, точки M20 6L9 17l-5-5"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 09</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 10</b><span data-v="точка r 9 в (12,12)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 11</b><span data-v="кривая, точки M12 7v5l3.5 2"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 12</b><span data-v="поле рисунка 20×20 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 13</b><span data-v="кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 14</b><span data-v="точка r 4 в (12,13)"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 15</b><span data-v="кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 16</b><span data-v="кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · рисунок 17</b><span data-v="кривая, точки M12 19V5M5 12l7-7 7 7"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 07</b><span data-v="поле рисунка 13×13 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 08</b><span data-v="кривая, точки M8 5v14l11-7z"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 09</b><span data-v="поле рисунка 20×20 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · рисунок 10</b><span data-v="кривая, точки M12 19V5M5 12l7-7 7 7"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 07</b><span data-v="кривая, точки M4 14h9a4 4 0 0 0 0-8H4"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 08</b><span data-v="кривая, точки M8 10L4 6l4-4"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 09</b><span data-v="прямоугольник 12×12, радиус 2"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 10</b><span data-v="кривая, точки M5 15V5a2 2 0 0 1 2-2h8"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · рисунок 11</b><span data-v="кривая, точки M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 07</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 08</b><span data-v="кривая, точки M20 6L9 17l-5-5"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 09</b><span data-v="поле рисунка 20×20 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 10</b><span data-v="кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 11</b><span data-v="точка r 4 в (12,13)"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 12</b><span data-v="кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 13</b><span data-v="кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · рисунок 14</b><span data-v="кривая, точки M12 19V5M5 12l7-7 7 7"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · рисунок 01</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · рисунок 02</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · рисунок 03</b><span data-v="поле рисунка 16×16 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · рисунок 04</b><span data-v="точка r 7 в (11,11)"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · рисунок 05</b><span data-v="кривая, точки M20 20l-4.3-4.3"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · рисунок 06</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 07</b><span data-v="поле рисунка 20×20 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 08</b><span data-v="кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 09</b><span data-v="точка r 4 в (12,13)"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 10</b><span data-v="кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 11</b><span data-v="кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · рисунок 12</b><span data-v="кривая, точки M12 19V5M5 12l7-7 7 7"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · рисунок 01</b><span data-v="поле рисунка 19×19 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · рисунок 02</b><span data-v="точка r 1.4 в (5,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · рисунок 03</b><span data-v="точка r 1.4 в (12,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · рисунок 04</b><span data-v="точка r 1.4 в (19,12), заливка currentColor, обводка none"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · рисунок 05</b><span data-v="поле рисунка 18×18 (viewBox 0 0 24 24)"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · рисунок 06</b><span data-v="кривая, точки M18 6L6 18M6 6l12 12"></span></div>
+    <div class="ctrH">Текст кадров дословно</div>
+    <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
+    <div class="spec"><b>Мессенджер · пустой тред · текст</b><span data-v="ОЛ › Куратор Ольга › отвечает обычно за час › Здесь начнётся переписка с куратором › Отправьте фото еды, вопрос или как себя чувствуете — куратор ответит и соберёт день. › Фото завтрака › Вес утром › Как самочувствие › Сообщение куратору"></span></div>
+    <div class="spec"><b>Мессенджер · тред с карточкой дня · текст</b><span data-v="ОЛ › Куратор Ольга › прочитала · 9:15 › Показать ранее · 14 › Сегодня › фото обеда › 13:07 › Обед в 13:05 — гречка 180 г, куриная грудка 120 г › 13:07 › Приняла. Гречку записала как варёную, грудку без кожи — соберу день. › 13:31 › Внесено в дневник › Обед · 13:05 › Гречка варёная › 180 г › 210 ккал › Куриная грудка › 120 г › 198 ккал › Масло оливковое › 14 г › 132 ккал › Итого 540 ккал › Открыть день › Внесено в день · 13:41 › Сообщение куратору"></span></div>
+    <div class="spec"><b>Мессенджер · Ждём и подсказка · текст</b><span data-v="ОЛ › Куратор Ольга › отвечает обычно за час › Ждём › Ужин › Вода › Вес › Обед › Сегодня › Вес утром: 71,4 кг › 8:12 › Хорошо. За неделю минус 400 г — идём по плану. › 8:40 › Обед в 13:05, гречка 180 г, грудка 120 г › 13:07 › Куратор смотрит · 13:12 › Время и вес в граммах › — тогда куратор соберёт день сразу › Скрыть › Сейчас · 13:05 › Час назад › Своё время › Ужин в 19:20,"></span></div>
+    <div class="spec"><b>Мессенджер · запись голосового · текст</b><span data-v="ОЛ › Куратор Ольга › отвечает обычно за час › Вчера › Вес утром › 71,4 кг › натощак · минус 200 г за сутки › 8:12 › 0:32 › Хорошо идёте. На ужин добавьте белок — грудку или творог, граммов сто пятьдесят. › 9:02 › 0:14 › Стоп"></span></div>
+    <div class="spec"><b>Мессенджер · лист действий · текст</b><span data-v="ОЛ › Куратор Ольга › прочитала · 9:15 › Сегодня › Обед в 13:05, гречка 180 г, грудка 120 г › 13:07 › Приняла, соберу день. › 13:31 › Обед в 13:05, гречка 180 г, грудка 120 г › Изменить › Скопировать текст › Удалить"></span></div>
+    <div class="spec"><b>Мессенджер · меню Ещё · текст</b><span data-v="ОЛ › Куратор Ольга › отвечает обычно за час › Сегодня › Обед в 13:05, гречка 180 г, грудка 120 г › 13:07 › Приняла, соберу день. › 13:31 › Обработано · 13:31 › Поиск по переписке › включая расшифровки голосовых › Расшифровка голосовых › включена с 2 сентября › Сообщение куратору"></span></div>
+    <div class="spec"><b>Мессенджер · поиск · текст</b><span data-v="ОЛ › Поиск по переписке › 18 сообщений найдено › гречка › Всё › С фото › Голосовые › Внесённые › Сегодня · 13:07 › Обед в 13:05, › гречка › 180 г, грудка 120 г › Вчера · 19:44 › Ужин: › гречка › 150 г и салат с маслом 12 г › 3 сентября · 9:02 · голосовое › …добавьте белок к › гречке › — грудку или творог… › 1 сентября · 13:20 › Гречку › считаем варёной, 90 ккал на сто грамм › 28 августа · 12:10 › Можно ли › гречку › каждый день?"></span></div>
+    <div class="spec"><b>Мессенджер · без сети · текст</b><span data-v="ОЛ › Куратор Ольга › нет сети — синхронизируем позже › Сегодня › Пришлите ужин, когда поедите. › 18:30 › Ужин в 19:20, творог 200 г › Ожидает сети › фото ужина › Ожидает сети › Нет сети. 2 сообщения и черновик сохранены на устройстве › Повторить › Спрошу завтра про пере"></span></div>
+    <div class="spec"><b>Мессенджер · согласие на расшифровку · текст</b><span data-v="ОЛ › Куратор Ольга › отвечает обычно за час › Сегодня › Пришлите, как прошёл день. › 18:30 › Расшифровывать голосовые? › Передадим выбранное аудио в Yandex SpeechKit и сохраним полученный текст в чате. В записи могут быть сведения о здоровье. Голосовое отправится и без расшифровки. › Подробнее о данных › Расшифровывать › Не сейчас"></span></div>
+    <div class="spec"><b>Мессенджер · удаление сообщения · текст</b><span data-v="ОЛ › Куратор Ольга › прочитала · 13:31 › Сегодня › Обед в 13:05, гречка 180 г, грудка 120 г › 13:07 › Приняла, соберу день. › 13:31 › Удалить сообщение? › У куратора оно тоже исчезнет. Если оно уже внесено в день — запись в дневнике останется. › Удалить › Оставить"></span></div>
+</div>
+
+  <div class="secH">Переписка</div>
+  <div class="frow" data-mir="m1">
+    <div><div class="lab"><b>Пустой тред</b><span>первое сообщение · три шаблона</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · пустой тред" data-vid="первое сообщение">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot"></i>отвечает обычно за час</span></span>
+        <span class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 28px;text-align:center;">
+        <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;color:var(--ac);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4-.8L3 21l1.9-4.5A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg></span>
+        <div style="font:700 15.5px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:16px;text-wrap:pretty;">Здесь начнётся переписка с куратором</div>
+        <div style="font:500 12.5px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:8px;text-wrap:pretty;">Отправьте фото еды, вопрос или как себя чувствуете — куратор ответит и соберёт день.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px;width:100%;">
+          <span class="pr" style="justify-content:center;">Фото завтрака</span>
+          <span class="pr" style="justify-content:center;">Вес утром</span>
+          <span class="pr" style="justify-content:center;">Как самочувствие</span>
+        </div>
+      </div>
+      <div class="comp">
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg></span>
+        <span class="inp">Сообщение куратору</span>
+        <span class="snd off"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Тред · фото и «Внесено в дневник»</b><span>состояние своего сообщения одной строкой</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · тред с карточкой дня" data-vid="карточка «Внесено в дневник» — системная">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot"></i>прочитала · 9:15</span></span>
+        <span class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="th">
+        <div style="display:flex;justify-content:center;"><span style="min-height:36px;padding:0 14px;border-radius:999px;background:var(--c1);font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);display:inline-flex;align-items:center;">Показать ранее · 14</span></div>
+        <div class="ds">Сегодня</div>
+        <div class="bb m" style="padding:6px 6px 8px;"><span class="imgp" style="width:170px;height:118px;">фото обеда</span><span class="bt" style="display:block;padding-right:7px;">13:07</span></div>
+        <div class="bb m">Обед в 13:05 — гречка 180 г, куриная грудка 120 г<span class="bt">13:07</span></div>
+        <div class="bb t">Приняла. Гречку записала как варёную, грудку без кожи — соберу день.<span class="bt" style="text-align:left;">13:31</span></div>
+        <div class="sys">
+          <div style="display:flex;align-items:center;gap:7px;">
+            <span class="dot"></span>
+            <span style="flex:1;font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">Внесено в дневник</span>
+            <span style="font:500 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);">Обед · 13:05</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:5px;margin-top:9px;">
+            <div style="display:flex;gap:8px;font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);"><span style="flex:1;">Гречка варёная</span><span class="n" style="color:rgba(var(--ink),.56);">180 г</span><span class="n" style="color:rgba(var(--ink),.56);width:56px;text-align:right;">210 ккал</span></div>
+            <div style="display:flex;gap:8px;font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);"><span style="flex:1;">Куриная грудка</span><span class="n" style="color:rgba(var(--ink),.56);">120 г</span><span class="n" style="color:rgba(var(--ink),.56);width:56px;text-align:right;">198 ккал</span></div>
+            <div style="display:flex;gap:8px;font:500 12px/1.3 Figtree,sans-serif;color:var(--tx);"><span style="flex:1;">Масло оливковое</span><span class="n" style="color:rgba(var(--ink),.56);">14 г</span><span class="n" style="color:rgba(var(--ink),.56);width:56px;text-align:right;">132 ккал</span></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:9px;border-top:1px solid rgba(var(--ink),.06);">
+            <span class="n" style="font:700 11.5px/1 Figtree,sans-serif;color:var(--tx);">Итого 540 ккал</span>
+            <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">Открыть день</span>
+          </div>
+        </div>
+        <div class="sta ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Внесено в день · 13:41</div>
+      </div>
+      <div class="comp">
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg></span>
+        <span class="inp">Сообщение куратору</span>
+        <span class="snd off"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>«Ждём» и подсказка</b><span>чипы недостающего · время и граммы</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · Ждём и подсказка" data-vid="подсказка «время и граммы» — рабочая">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot"></i>отвечает обычно за час</span></span>
+        <span class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="wt">
+        <span class="wtl">Ждём</span>
+        <span class="wc">Ужин</span>
+        <span class="wc">Вода</span>
+        <span class="wc dn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Вес</span>
+        <span class="wc dn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Обед</span>
+      </div>
+      <div class="th">
+        <div class="ds">Сегодня</div>
+        <div class="bb m">Вес утром: 71,4 кг<span class="bt">8:12</span></div>
+        <div class="bb t">Хорошо. За неделю минус 400 г — идём по плану.<span class="bt" style="text-align:left;">8:40</span></div>
+        <div class="bb m">Обед в 13:05, гречка 180 г, грудка 120 г<span class="bt">13:07</span></div>
+        <div class="sta"><span class="dot"></span>Куратор смотрит · 13:12</div>
+      </div>
+      <div class="hint">
+        <div style="display:flex;align-items:flex-start;gap:9px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+          <span style="flex:1;font:500 12px/1.45 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;"><b style="font-weight:700;">Время и вес в граммах</b> — тогда куратор соберёт день сразу</span>
+          <span style="font:600 11.5px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);flex:none;">Скрыть</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;overflow:hidden;">
+          <span class="hp">Сейчас · 13:05</span>
+          <span class="hp">Час назад</span>
+          <span class="hp">Своё время</span>
+        </div>
+      </div>
+      <div class="comp">
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg></span>
+        <span class="inp" style="color:var(--tx);">Ужин в 19:20, </span>
+        <span class="snd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Голосовое и намерение</b><span>запись идёт · карточка веса</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · запись голосового" data-vid="вид · композер">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot"></i>отвечает обычно за час</span></span>
+        <span class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="th">
+        <div class="ds">Вчера</div>
+        <div class="bb m" style="padding:9px 11px;">
+          <div style="border-radius:12px;background:var(--bg);padding:9px 11px;">
+            <div class="kick">Вес утром</div>
+            <div class="n" style="font:800 20px/1 Figtree,sans-serif;color:var(--tx);margin-top:6px;">71,4 кг</div>
+            <div class="n" style="font:500 11.5px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.56);margin-top:4px;">натощак · минус 200 г за сутки</div>
+          </div>
+          <span class="bt" style="display:block;">8:12</span>
+        </div>
+        <div class="bb t" style="padding:9px 11px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="width:30px;height:30px;border-radius:999px;background:var(--bg);display:flex;align-items:center;justify-content:center;color:var(--ac);flex:none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+            <span style="flex:1;display:flex;align-items:center;gap:2px;height:22px;">
+              <span style="flex:1;height:7px;border-radius:2px;background:rgba(var(--ink),.2);"></span><span style="flex:1;height:15px;border-radius:2px;background:rgba(var(--ink),.28);"></span><span style="flex:1;height:22px;border-radius:2px;background:rgba(var(--ink),.28);"></span><span style="flex:1;height:11px;border-radius:2px;background:rgba(var(--ink),.2);"></span><span style="flex:1;height:18px;border-radius:2px;background:rgba(var(--ink),.28);"></span><span style="flex:1;height:8px;border-radius:2px;background:rgba(var(--ink),.2);"></span><span style="flex:1;height:14px;border-radius:2px;background:rgba(var(--ink),.24);"></span><span style="flex:1;height:20px;border-radius:2px;background:rgba(var(--ink),.28);"></span><span style="flex:1;height:9px;border-radius:2px;background:rgba(var(--ink),.2);"></span><span style="flex:1;height:16px;border-radius:2px;background:rgba(var(--ink),.24);"></span>
+            </span>
+            <span class="n" style="font:600 11px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);flex:none;">0:32</span>
+          </div>
+          <div style="font:500 12.5px/1.45 Figtree,sans-serif;color:var(--tx);margin-top:9px;text-wrap:pretty;">Хорошо идёте. На ужин добавьте белок — грудку или творог, граммов сто пятьдесят.</div>
+          <span class="bt" style="text-align:left;">9:02</span>
+        </div>
+      </div>
+      <div class="comp">
+        <span style="flex:1;min-height:44px;border-radius:22px;background:var(--tint);display:flex;align-items:center;gap:10px;padding:0 15px;">
+          <span style="width:8px;height:8px;border-radius:999px;background:var(--red);flex:none;"></span>
+          <span class="n" style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);">0:14</span>
+          <span style="flex:1;display:flex;align-items:center;gap:2px;height:16px;"><span style="flex:1;height:5px;border-radius:2px;background:rgba(var(--ink),.22);"></span><span style="flex:1;height:11px;border-radius:2px;background:rgba(var(--ink),.28);"></span><span style="flex:1;height:16px;border-radius:2px;background:rgba(var(--ink),.3);"></span><span style="flex:1;height:8px;border-radius:2px;background:rgba(var(--ink),.22);"></span><span style="flex:1;height:13px;border-radius:2px;background:rgba(var(--ink),.28);"></span><span style="flex:1;height:6px;border-radius:2px;background:rgba(var(--ink),.2);"></span></span>
+          <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);flex:none;">Стоп</span>
+        </span>
+        <span class="snd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+      </div>
+    </div></div>
+  </div>
+  <div data-mirdst="m1"></div>
+
+  <div class="secH">Действия, поиск, сеть</div>
+  <div class="frow" data-mir="m2">
+    <div><div class="lab"><b>Лист действий</b><span>долгое нажатие на своём сообщении</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · лист действий" data-vid="вид · лист действий">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot"></i>прочитала · 9:15</span></span>
+        <span class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="th">
+        <div class="ds">Сегодня</div>
+        <div class="bb m">Обед в 13:05, гречка 180 г, грудка 120 г<span class="bt">13:07</span></div>
+        <div class="bb t">Приняла, соберу день.<span class="bt" style="text-align:left;">13:31</span></div>
+      </div>
+      <span style="position:absolute;inset:0;background:var(--scrim);backdrop-filter:blur(2.5px);"></span>
+      <div class="act">
+        <div style="font:500 12px/1.4 Figtree,sans-serif;color:rgba(var(--ink),.56);padding:4px 10px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Обед в 13:05, гречка 180 г, грудка 120 г</div>
+        <div class="ai"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h9a4 4 0 0 0 0-8H4"/><path d="M8 10L4 6l4-4"/></svg>Изменить</div>
+        <div class="ai"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Скопировать текст</div>
+        <div class="ai" style="color:var(--red);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Удалить</div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Меню «Ещё»</b><span>поиск и расшифровка</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · меню Ещё" data-vid="вид · меню «Ещё»">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot"></i>отвечает обычно за час</span></span>
+        <span class="ib" style="background:var(--c1);"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="th">
+        <div class="ds">Сегодня</div>
+        <div class="bb m">Обед в 13:05, гречка 180 г, грудка 120 г<span class="bt">13:07</span></div>
+        <div class="bb t">Приняла, соберу день.<span class="bt" style="text-align:left;">13:31</span></div>
+        <div class="sta ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Обработано · 13:31</div>
+      </div>
+      <div class="men">
+        <div class="mi"><b>Поиск по переписке</b><span>включая расшифровки голосовых</span></div>
+        <div class="mi"><b>Расшифровка голосовых</b><span>включена с 2 сентября</span></div>
+      </div>
+      <div class="comp">
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg></span>
+        <span class="inp">Сообщение куратору</span>
+        <span class="snd off"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Поиск</b><span>фильтры и совпадения</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · поиск" data-vid="вид · поиск">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Поиск по переписке</span><span class="mhs" style="color:rgba(var(--ink),.56);">18 сообщений найдено</span></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="srch">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.55)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+        <span style="flex:1;">гречка</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--ink),.45)" stroke-width="2.75" stroke-linecap="round" style="flex:none;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+      <div style="display:flex;gap:7px;padding:10px 14px 8px;overflow:hidden;">
+        <span class="chip on">Всё</span><span class="chip">С фото</span><span class="chip">Голосовые</span><span class="chip">Внесённые</span>
+      </div>
+      <div style="flex:1;overflow:hidden;">
+        <div class="sr"><span>Сегодня · 13:07</span><b>Обед в 13:05, <mark>гречка</mark> 180 г, грудка 120 г</b></div>
+        <div class="sr"><span>Вчера · 19:44</span><b>Ужин: <mark>гречка</mark> 150 г и салат с маслом 12 г</b></div>
+        <div class="sr"><span>3 сентября · 9:02 · голосовое</span><b>…добавьте белок к <mark>гречке</mark> — грудку или творог…</b></div>
+        <div class="sr"><span>1 сентября · 13:20</span><b><mark>Гречку</mark> считаем варёной, 90 ккал на сто грамм</b></div>
+        <div class="sr"><span>28 августа · 12:10</span><b>Можно ли <mark>гречку</mark> каждый день?</b></div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Без сети</b><span>очередь и ожидающее сообщение</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · без сети" data-vid="без сети">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot" style="background:var(--red);"></i>нет сети — синхронизируем позже</span></span>
+        <span class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="th">
+        <div class="ds">Сегодня</div>
+        <div class="bb t">Пришлите ужин, когда поедите.<span class="bt" style="text-align:left;">18:30</span></div>
+        <div class="bb m" style="opacity:.6;">Ужин в 19:20, творог 200 г<span class="bt">Ожидает сети</span></div>
+        <div class="bb m" style="opacity:.6;padding:6px 6px 8px;"><span class="imgp" style="width:170px;height:118px;">фото ужина</span><span class="bt" style="display:block;padding-right:7px;">Ожидает сети</span></div>
+      </div>
+      <div class="offl">
+        <i></i>
+        <span style="flex:1;text-wrap:pretty;">Нет сети. 2 сообщения и черновик сохранены на устройстве</span>
+        <span style="font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);flex:none;">Повторить</span>
+      </div>
+      <div class="comp">
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></span>
+        <span class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/></svg></span>
+        <span class="inp" style="color:var(--tx);">Спрошу завтра про пере</span>
+        <span class="snd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Согласие на расшифровку</b><span>один раз, перед первой</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · согласие на расшифровку" data-vid="вид · согласие">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot"></i>отвечает обычно за час</span></span>
+        <span class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="th">
+        <div class="ds">Сегодня</div>
+        <div class="bb t">Пришлите, как прошёл день.<span class="bt" style="text-align:left;">18:30</span></div>
+      </div>
+      <span style="position:absolute;inset:0;background:var(--scrim);backdrop-filter:blur(2.5px);"></span>
+      <div class="mdl">
+        <div class="mdt">Расшифровывать голосовые?</div>
+        <div class="mdp">Передадим выбранное аудио в Yandex SpeechKit и сохраним полученный текст в чате. В записи могут быть сведения о здоровье. Голосовое отправится и без расшифровки.</div>
+        <div style="font:600 12px/1 Figtree,sans-serif;color:var(--ac);text-decoration:underline;margin-top:12px;">Подробнее о данных</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:18px;">
+          <div class="btn">Расшифровывать</div>
+          <div class="btnq">Не сейчас</div>
+        </div>
+      </div>
+    </div></div>
+
+    <div><div class="lab"><b>Удаление сообщения</b><span>запись в дневнике остаётся</span></div>
+    <div class="ph" data-demo="stop" data-screen-label="Мессенджер · удаление сообщения" data-vid="вид · удаление">
+      <div class="mh">
+        <span class="av">ОЛ</span>
+        <span style="flex:1;"><span class="mhn">Куратор Ольга</span><span class="mhs"><i class="dot"></i>прочитала · 13:31</span></span>
+        <span class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg></span>
+        <span class="ib"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="th">
+        <div class="ds">Сегодня</div>
+        <div class="bb m">Обед в 13:05, гречка 180 г, грудка 120 г<span class="bt">13:07</span></div>
+        <div class="bb t">Приняла, соберу день.<span class="bt" style="text-align:left;">13:31</span></div>
+      </div>
+      <span style="position:absolute;inset:0;background:var(--scrim);backdrop-filter:blur(2.5px);"></span>
+      <div class="mdl">
+        <div class="mdt">Удалить сообщение?</div>
+        <div class="mdp">У куратора оно тоже исчезнет. Если оно уже внесено в день — запись в дневнике останется.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:20px;">
+          <div class="btnq" style="color:var(--red);">Удалить</div>
+          <div class="btnq">Оставить</div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+  <div data-mirdst="m2"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showContracts&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;showProtocol&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;},&quot;allPalettes&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Обзор канваса&quot;}}">
+class Component extends DCLogic {
+  pal = [['dk', 'Тёмная'], ['bl', 'Синяя'], ['bldk', 'Сине-тёмная']];
+  componentDidMount() { this.apply(); }
+  componentDidUpdate() { this.apply(); }
+  deliver(btn, txt, count) {
+    const host = btn.closest('[data-contract]') || btn.parentElement;
+    let box = host.querySelector('textarea[data-spec-out]');
+    if (!box) {
+      box = document.createElement('textarea');
+      box.setAttribute('data-spec-out', '');
+      box.setAttribute('readonly', '');
+      box.style.cssText = 'display:block;width:100%;box-sizing:border-box;height:130px;margin-top:12px;font:500 10.5px/1.55 ui-monospace,Menlo,monospace;color:#201e1d;background:#fffaf1;border:1px solid rgba(0,0,0,.12);border-radius:14px;padding:10px;resize:vertical;';
+      host.appendChild(box);
+    }
+    box.value = txt; box.focus(); box.select();
+    const say = (msg) => {
+      btn.textContent = msg;
+      clearTimeout(this._sayT);
+      this._sayT = setTimeout(() => { btn.textContent = 'скопировать контракт'; }, 2600);
+    };
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+    if (ok) { say('скопировано · ' + count + ' строк'); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(() => say('скопировано · ' + count + ' строк')).catch(() => say('буфер недоступен — текст выделен ниже'));
+    } else { say('буфер недоступен — текст выделен ниже'); }
+  }
+  renderVals() {
+    return {
+      copySpec: (e) => {
+        const rows = [...document.querySelectorAll('.spec')].map(r => {
+          const k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+          return k && v ? k.textContent.trim() + '\t' + v.getAttribute('data-v') : null;
+        }).filter(Boolean);
+        this.deliver(e.currentTarget, 'messenger · контракт (' + rows.length + ' строк)\n' + rows.join('\n'), rows.length);
+      }
+    };
+  }
+  audit() {
+    const specs = [...document.querySelectorAll('[data-contract] .spec')];
+    if (!specs.length) return ['НЕТ КОНТРАКТА'];
+    const out = [];
+    const frames = [...document.querySelectorAll('[data-screen-label]')].filter(f => !f.closest('.pal'));
+    const noAddr = frames.filter(f => !f.getAttribute('data-vid')).map(f => f.getAttribute('data-screen-label'));
+    if (noAddr.length) out.push('кадр без data-vid: ' + noAddr.join(' · '));
+    const emoji = frames.filter(f => /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(f.textContent)).map(f => f.getAttribute('data-screen-label'));
+    if (emoji.length) out.push('эмодзи на кадре: ' + emoji.join(' · '));
+    return out;
+  }
+  auditBar() {
+    const found = this.audit();
+    let bar = document.querySelector('[data-auditbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-auditbar', '');
+      bar.style.cssText = 'font:700 11px/1.6 ui-monospace,Menlo,monospace;margin:-14px 0 22px;text-wrap:pretty;max-width:1080px;';
+      const anchor = document.querySelector('[data-protobar]') || document.querySelector('[data-ctrbar]') || document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const none = found[0] === 'НЕТ КОНТРАКТА';
+    if (!none && !found.length) { bar.textContent = ''; bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    bar.textContent = none ? '— сверка не проводилась: у канваса нет контракта, условие сборки не выполнено' : '⚠ сверка: ' + found.join(' | ');
+    bar.style.color = none ? '#8a4a20' : '#a8382b';
+  }
+  contracts() {
+    const on = this.props.showContracts ?? false;
+    const list = [...document.querySelectorAll('[data-contract]')];
+    if (!list.length) return;
+    list.forEach(el => { el.style.display = on ? '' : 'none'; });
+    let bar = document.querySelector('[data-ctrbar]');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-ctrbar', '');
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:0 0 22px;white-space:nowrap;';
+      const anchor = document.querySelector('p');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    const n = list.length, m = n % 10, h = n % 100, one = m === 1 && h !== 11;
+    const word = one ? 'контракт' : (m >= 2 && m <= 4 && (h < 12 || h > 14) ? 'контракта' : 'контрактов');
+    const rows = document.querySelectorAll('[data-contract] .spec').length;
+    const rm = rows % 10, rh = rows % 100;
+    const rw = rm === 1 && rh !== 11 ? 'строка' : (rm >= 2 && rm <= 4 && (rh < 12 || rh > 14) ? 'строки' : 'строк');
+    bar.textContent = n + ' ' + word + ' на канвасе' + (rows ? ', ' + rows + ' ' + rw : '') + ' · ' + (on ? (one ? 'показан' : 'показаны') + ' ниже' : (one ? 'скрыт' : 'скрыты') + ' твиком «Контракты»');
+  }
+  protocols() {
+    const on = this.props.showProtocol ?? false;
+    const list = [...document.querySelectorAll('[data-demo="protocol"]')];
+    list.forEach(el => { const w = el.closest('.lab') ? el : el.parentElement; (w || el).style.display = on ? '' : 'none'; });
+    let bar = document.querySelector('[data-protobar]');
+    if (!list.length) { if (bar) bar.remove(); return; }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.setAttribute('data-protobar', '');
+      bar.style.cssText = 'font:600 11px/1.6 ui-monospace,Menlo,monospace;color:#8a4a20;margin:-14px 0 22px;';
+      const anchor = document.querySelector('[data-ctrbar]');
+      if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(bar, anchor.nextSibling);
+    }
+    bar.textContent = list.length + ' отвергнутых кадров ' + (on ? 'показаны' : 'скрыты твиком «Протокол»');
+  }
+  apply() {
+    this.contracts();
+    this.protocols();
+    this.auditBar();
+    const all = this.props.allPalettes ?? false;
+    document.querySelectorAll('[data-mirdst]').forEach(dst => {
+      dst.innerHTML = '';
+      if (!all) return;
+      const src = document.querySelector('[data-mir="' + dst.getAttribute('data-mirdst') + '"]');
+      if (!src) return;
+      this.pal.forEach(([cls, name]) => {
+        const cap = document.createElement('div');
+        cap.className = 'palcap';
+        cap.textContent = name;
+        const row = src.cloneNode(true);
+        row.removeAttribute('data-mir');
+        row.className = 'pal ' + cls + ' ' + row.className;
+        row.querySelectorAll('*').forEach(n => {
+          n.removeAttribute('data-screen-label'); n.removeAttribute('data-cc-id');
+          n.removeAttribute('data-dm-ref'); n.removeAttribute('data-comment-anchor'); n.removeAttribute('data-vid');
+        });
+        dst.append(cap, row);
+      });
+    });
+  }
+}
+</script>
+</body>
+</html>
