@@ -1869,7 +1869,17 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
     }
     applied.push(publicName);
   }
-  if (fields.weight !== undefined && fields.weight !== null) next.weightUpdatedAt = nowMs;
+  if (fields.weight !== undefined && fields.weight !== null) {
+    next.weightUpdatedAt = nowMs;
+    // Названный вес — измеренный, и пометку расчётного надо именно снять.
+    // Без этого день, где человек нажал «Не взвешивался», а потом вес вписали
+    // через коннектор, остаётся помеченным навсегда — и приложение исключает
+    // его из тренда и статистики уже с настоящим числом. Так же делает шаг
+    // чек-ина в приложении (persistMorningWeight, ветка estimated === false).
+    next.weightMorningSource = 'measured';
+    delete next.weightMorningEstimated;
+    delete next.weightMorningEstimateSource;
+  }
   // Поля с собственным штампом в merge (DAY_USER_MUTATION_GROUPS в
   // heys_sync_merge_v1.cjs): без штампа правка коннектора проигрывает облачной
   // версии, даже когда та старее, — и молча откатывается при следующем синке.
@@ -1903,6 +1913,26 @@ function updateDayFields(day, fields, { nowMs, clientId, byCurator = false }) {
  * между ними. Разойдутся — заметно по отказу инструмента на новом значении.
  */
 const COLD_EXPOSURE_TYPES = new Set(['none', 'coldShower', 'coldBath', 'coldSwim']);
+
+/**
+ * Утренний вес бывает измеренным и расчётным: кнопка «Не взвешивался» пишет в
+ * день среднее трёх последних измерений, а если их нет — вес профиля
+ * (apps/web/heys_steps_v1.js, estimateMorningWeight/persistMorningWeight).
+ * Приложение такой вес в тренд и статистику не пускает — шесть условий в
+ * heys_day_weight_trends_v1.js и heys_day_stats_v1.js. Коннектор до сих пор
+ * отдавал наружу голое число, поэтому по нему нельзя было отличить «встал на
+ * весы» от «система подставила»: единственный путь, на котором решение
+ * продукта обходилось.
+ *
+ * Условие — побуквенное зеркало isEstimatedMorningWeight из того же файла
+ * приложения. Двух полей достаточно: weightMorningSource теряется при проходе
+ * дня через heys_models_v1.js, а weightMorningEstimated переживает и его.
+ */
+function isEstimatedMorningWeight(day) {
+  const source = String((day && day.weightMorningSource) || '');
+  if (source === 'estimated_avg' || source === 'estimated_profile') return true;
+  return !!(day && day.weightMorningEstimated === true);
+}
 
 /**
  * Причины загрузочного дня — тот же каталог, что apps/web/heys_refeed_v1.js (REFEED_REASONS).
@@ -2214,6 +2244,11 @@ function checkinStatus(day, profile) {
       id: 'weight', label: 'вес', required: true,
       done: hasNum(day.weightMorning),
       curatorAuthored: authored.has('weightMorning'),
+      // done намеренно не зависит от расчётности: в приложении шаг закрывает
+      // любое положительное число (hasCheckinWeight), и разойтись с ним значит
+      // получить глухой гейт — heys_log_meal требовал бы чек-ин там, где
+      // приложение считает утро закрытым.
+      estimated: isEstimatedMorningWeight(day),
       value: day.weightMorning ?? null,
     },
     {
@@ -2815,6 +2850,7 @@ function summarizeDay(day) {
     meals,
     water_ml: Number(day.waterMl) || 0,
     weight_morning: day.weightMorning ?? null,
+    weight_morning_estimated: isEstimatedMorningWeight(day),
     steps: Number(day.steps) || 0,
     household_min: householdMinutes(day),
     sleep: {
@@ -2872,6 +2908,7 @@ function summarizeDayBrief(day) {
     meals: (day.meals || []).length,
     water_ml: Number(day.waterMl) || 0,
     weight_morning: day.weightMorning ?? null,
+    weight_morning_estimated: isEstimatedMorningWeight(day),
     steps: Number(day.steps) || 0,
     household_min: householdMinutes(day),
     training_min: trainingMinutes,
@@ -3027,6 +3064,7 @@ module.exports = {
   buildWorkoutLog,
   isRealTraining,
   isNotPerformedTraining,
+  isEstimatedMorningWeight,
   updateDayFields,
   householdMinutes,
   householdTrainings,

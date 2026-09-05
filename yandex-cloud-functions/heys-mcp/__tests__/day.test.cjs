@@ -233,6 +233,39 @@ test('шаги получают собственный штамп — иначе
   assert.equal(next.stepsUpdatedAt, 2000);
 });
 
+test('расчётный вес отличается от измеренного и не залипает', () => {
+  // Кнопка «Не взвешивался» в приложении пишет в день расчётное число и
+  // помечает его (heys_steps_v1.js, persistMorningWeight). Приложение такой
+  // вес в тренд не пускает; коннектор до 05.09 отдавал голое число, по
+  // которому измеренное от подставленного не отличить.
+  const estimated = {
+    date: '2026-09-05',
+    weightMorning: 91.4,
+    weightMorningEstimated: true,
+    weightMorningSource: 'estimated_avg',
+    weightMorningEstimateSource: 'estimated_avg',
+  };
+  assert.equal(day.isEstimatedMorningWeight(estimated), true);
+  assert.equal(day.summarizeDay(estimated).weight_morning_estimated, true);
+  assert.equal(day.checkinStatus(estimated, {}).steps.find((s) => s.id === 'weight').estimated, true);
+  // Шаг чек-ина расчётный вес закрывает — как hasCheckinWeight в приложении.
+  assert.equal(day.checkinStatus(estimated, {}).steps.find((s) => s.id === 'weight').done, true);
+
+  // Пометка живёт и когда через модель приложения потерялся weightMorningSource.
+  assert.equal(day.isEstimatedMorningWeight({ weightMorning: 91.4, weightMorningEstimated: true }), true);
+  assert.equal(day.isEstimatedMorningWeight({ weightMorning: 91.4 }), false);
+  assert.equal(day.summarizeDay({ date: '2026-09-05', weightMorning: 91.4 }).weight_morning_estimated, false);
+
+  // Главное: настоящий вес поверх расчётного снимает пометку. Без этого день
+  // остался бы исключённым из тренда приложения уже с измеренным числом.
+  const { day: next } = day.updateDayFields(estimated, { weight: 91.8 }, { nowMs: 3000, clientId: CLIENT });
+  assert.equal(next.weightMorning, 91.8);
+  assert.equal(next.weightMorningSource, 'measured');
+  assert.equal(next.weightMorningEstimated, undefined);
+  assert.equal(next.weightMorningEstimateSource, undefined);
+  assert.equal(day.isEstimatedMorningWeight(next), false);
+});
+
 test('updateDayFields падает на нечисловом весе', () => {
   const base = day.emptyDay('2026-08-01', CLIENT, 1000);
   assert.throws(() => day.updateDayFields(base, { weight: 'много' }, { nowMs: 2000, clientId: CLIENT }), /invalid_number/);

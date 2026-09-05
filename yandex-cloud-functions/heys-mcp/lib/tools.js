@@ -588,6 +588,7 @@ function createTools({
       // потеря записи была неотличима от успеха (20.08.2026: шаги остались 0).
       steps: Number(saved.steps) || 0,
       weight_morning: saved.weightMorning ?? null,
+      weight_morning_estimated: day.isEstimatedMorningWeight(saved),
       household_min: day.householdMinutes(saved),
       sleep: {
         start: saved.sleepStart || null,
@@ -617,7 +618,12 @@ function createTools({
    * публичные имена, что возвращает `applied` из day.updateDayFields.
    */
   const DAY_AFTER_FIELD_TEXT = {
-    weight: (a) => (a.weight_morning == null ? null : `вес ${a.weight_morning} кг`),
+    // Пометка расчётного — именно в тексте, а не только в structured: его
+    // модель часто не видит (lib/mcp.js), а heys_get_day вес в текст не
+    // печатает вовсе. Без этой строки «вес 91.8 кг» неотличим от измеренного.
+    weight: (a) => (a.weight_morning == null
+      ? null
+      : `вес ${a.weight_morning} кг${a.weight_morning_estimated ? ' (расчётный, не взвешивался)' : ''}`),
     steps: (a) => `шаги ${a.steps}`,
     water: (a) => `вода ${a.water_ml} мл`,
     household_min: (a) => `быт ${a.household_min} мин`,
@@ -3712,7 +3718,7 @@ function createTools({
         if (d.steps) parts.push(`шаги ${d.steps}`);
         if (d.sleep_hours) parts.push(`сон ${d.sleep_hours} ч`);
         if (d.training_min) parts.push(`тренировки ${d.training_min} мин`);
-        if (d.weight_morning) parts.push(`вес ${d.weight_morning}`);
+        if (d.weight_morning) parts.push(`вес ${d.weight_morning}${d.weight_morning_estimated ? ' (расчётный)' : ''}`);
         return `${d.date}: ${parts.join(', ')}`;
       }).join('; ');
       const text = filled.length
