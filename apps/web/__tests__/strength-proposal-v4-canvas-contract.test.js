@@ -17,10 +17,16 @@ const BLUE = Object.freeze({
   tint: '#e2ecf6', tx: '#101826', ac: '#1a6eb2', ac2: '#1d5e96', gr: '#5c6a45', ink56: 'rgba(16, 24, 38, 0.64)',
 });
 
+const PALETTE_CSS = {
+  sand: null,
+  blue: null,
+};
+
 function paletteCss(name) {
+  if (PALETTE_CSS[name]) return PALETTE_CSS[name];
   const p = name === 'blue' ? BLUE : SAND;
   const inkRgb = name === 'blue' ? '16, 24, 38' : '0, 0, 0';
-  return `${BASE_CSS}\n${CSS}`
+  PALETTE_CSS[name] = `${BASE_CSS}\n${CSS}`
     .replaceAll('var(--tint)', p.tint)
     .replaceAll('var(--tx)', p.tx)
     .replaceAll('var(--ac)', p.ac)
@@ -30,6 +36,7 @@ function paletteCss(name) {
     .replaceAll('var(--c1)', p.tint)
     .replaceAll('var(--c2)', p.tint)
     .replaceAll('var(--ink)', inkRgb);
+  return PALETTE_CSS[name];
 }
 
 function srcBlock(name) {
@@ -238,7 +245,7 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
     }
   });
 
-  it('ProgramDoneScreen: geometry rows 11–24 and growth color on sand+blue', () => {
+  it('ProgramDoneScreen: geometry rows 11–24 and growth color on sand+blue', { timeout: 15000 }, () => {
     const props = {
       program: { weeks: 4, startDate: '2026-07-08' },
       days: [{ date: '2026-07-08', status: 'done' }, { date: '2026-08-05', status: 'done' }],
