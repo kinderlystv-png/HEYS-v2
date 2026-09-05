@@ -1143,6 +1143,11 @@
         const progressKey = exerciseWorkProgressKey(openExLocal);
         if (progressKey) return progressKey;
       }
+      // M4: ключ единицы времени — в шапке (.sb-head-sub). M5/M6 — только в карточке.
+      if (openIdx >= 0 && openExLocal && openUnitLocal === 'time') {
+        const unitLabel = unitEntryLabel(openUnitLocal);
+        if (unitLabel) return unitLabel;
+      }
       if (proposalWho && startedAt > 0 && !completedAt) {
         return 'по плану ' + proposalWho + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : '');
       }
