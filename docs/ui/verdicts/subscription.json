@@ -213,7 +213,7 @@
     },
     "уменьшенное движение, крупный шрифт, офлайн": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js + heys_subscriptions_v1.js: нет «Нет сети — оплата недоступна» и подписи «данные могли устареть» в subscription-слое",
+      "f": "apps/web/heys_paywall_v1.js:784-918: PaywallModal/TrialQueue без offline-gate на CTA; apps/web/heys_subscriptions_v1.js:1307-1359: ContactCuratorScreen — нет строк «Нет сети — оплата недоступна» и «данные могли устареть»",
       "h": "b4562af6dc9a",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
@@ -271,7 +271,7 @@
     },
     "Подписка · строка в настройках · 04": {
       "v": "≠",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet без «6 из 7 блоков» и счётчика «3 новые»",
+      "f": "apps/web/heys_subscriptions_v1.js:733-763: getSettingsRowMeta возвращает только «Триал · до …»/«Pro · до …»; моноцифры «6 из 7 блоков» — крошки settings-system, не subscription row",
       "h": "aff87444cb0c",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
@@ -283,7 +283,7 @@
     },
     "Подписка · строка в настройках · 06": {
       "v": "≠",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: hdr-settings-sheet без «6 из 7 блоков» и счётчика «3 новые»",
+      "f": "apps/web/heys_subscriptions_v1.js:733-763: getSettingsRowMeta без счётчика «3 новые»; цвет var(--ac) для badge задаётся в settings-system, не в subscription row",
       "h": "3e3760f2c79f",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
@@ -294,11 +294,9 @@
       "h": "be26b94c0688"
     },
     "Подписка · экран · пробный период · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 02",
-      "h": "3e39d306ccfe",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:577-580: .sub-screen__status-card background var(--v4-surface) border-radius 20px padding 16px; sand #f7efe2 blue #eef3f9 (subscription-package-a-v4.test.js)",
+      "h": "3e39d306ccfe"
     },
     "Подписка · экран · пробный период · 03": {
       "v": "=",
@@ -306,11 +304,9 @@
       "h": "7cb50ddf0883"
     },
     "Подписка · экран · пробный период · 04": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 04",
-      "h": "1628d556df3e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:607-611: .sub-screen__hint font 500 12px/1.4 Figtree color var(--v4-ink-2) margin-top 6px font-variant-numeric tabular-nums",
+      "h": "1628d556df3e"
     },
     "Подписка · экран · пробный период · 05": {
       "v": "=",
@@ -318,11 +314,9 @@
       "h": "0825eb7189ac"
     },
     "Подписка · экран · пробный период · 06": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 06",
-      "h": "72feea3e2a4d",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:636-639: .sub-screen__features display flex flex-direction column gap 10px",
+      "h": "72feea3e2a4d"
     },
     "Подписка · экран · пробный период · 07": {
       "v": "=",
@@ -330,18 +324,14 @@
       "h": "650353c134e8"
     },
     "Подписка · экран · пробный период · 08": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 08",
-      "h": "813fbe526a44",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:670-672: .sub-screen__footer margin-top auto padding 0 18px 18px",
+      "h": "813fbe526a44"
     },
     "Подписка · экран · пробный период · 09": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 09",
-      "h": "cb72a3a962e9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:675-678: .sub-screen__footnote background var(--v4-surface) border-radius 16px padding 12px 14px",
+      "h": "cb72a3a962e9"
     },
     "Подписка · экран · пробный период · 10": {
       "v": "=",
@@ -354,11 +344,9 @@
       "h": "9453360f4ae8"
     },
     "Подписка · экран · пробный период · 12": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · 12",
-      "h": "ffa81894dcd2",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:693-705: .sub-screen__support align-items center justify-content space-between min-height 44px padding 0 3px margin-top 6px",
+      "h": "ffa81894dcd2"
     },
     "Подписка · экран · пробный период · 13": {
       "v": "=",
@@ -413,7 +401,7 @@
     },
     "Подписка · баннер сверху · 04": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: ReadOnlyBanner без пилюли «Подписка»",
+      "f": "apps/web/heys_paywall_v1.js:1145-1169: ReadOnlyBanner рендерит title+text без пилюли «Подписка» (flex-none min-height 34px radius 999px bg --acs); .readonly-banner-arrow отсутствует в non-compact, pill нет",
       "h": "9aff32f6de65",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
@@ -812,11 +800,9 @@
       "h": "be26b94c0688"
     },
     "Подписка · экран · активна · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 02",
-      "h": "3e39d306ccfe",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:577-580: .sub-screen__status-card background var(--v4-surface) border-radius 20px padding 16px; sand #f7efe2 blue #eef3f9",
+      "h": "3e39d306ccfe"
     },
     "Подписка · экран · активна · 03": {
       "v": "=",
@@ -824,11 +810,9 @@
       "h": "671d161e7758"
     },
     "Подписка · экран · активна · 04": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 04",
-      "h": "a982f6d7c993",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:606-611: .sub-screen__subline font 500 12px/1.4 Figtree color var(--v4-ink-2) margin-top 6px tabular-nums; heys_subscriptions_v1.js:1204-1205 «7 990 ₽ в месяц · оплачено до этой даты»",
+      "h": "a982f6d7c993"
     },
     "Подписка · экран · активна · 05": {
       "v": "=",
@@ -836,39 +820,29 @@
       "h": "0825eb7189ac"
     },
     "Подписка · экран · активна · 06": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 06",
-      "h": "72feea3e2a4d",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:636-639: .sub-screen__features display flex flex-direction column gap 10px",
+      "h": "72feea3e2a4d"
     },
     "Подписка · экран · активна · 07": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 07",
-      "h": "813fbe526a44",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:670-672: .sub-screen__footer margin-top auto padding 0 18px 18px",
+      "h": "813fbe526a44"
     },
     "Подписка · экран · активна · 08": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 08",
-      "h": "cb72a3a962e9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:675-678: .sub-screen__footnote background var(--v4-surface) border-radius 16px padding 12px 14px",
+      "h": "cb72a3a962e9"
     },
     "Подписка · экран · активна · 09": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 09",
-      "h": "f74b2fa32e9f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:681-683: .sub-screen__footnote-title font 700 12px/1.3 Figtree color var(--v4-ink); heys_subscriptions_v1.js:769 «Само ничего не спишется»",
+      "h": "f74b2fa32e9f"
     },
     "Подписка · экран · активна · 10": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 10",
-      "h": "9453360f4ae8",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:686-689: .sub-screen__footnote-text margin-top 5px font 500 11.5px/1.45 color var(--v4-ink-2)",
+      "h": "9453360f4ae8"
     },
     "Подписка · экран · активна · 11": {
       "v": "=",
@@ -876,11 +850,9 @@
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · активна · 12": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · активна · 12",
-      "h": "9e987eb80379",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:707-709: .sub-screen__support-link font 600 12px/1 color var(--v4-act-text); sand #8a4a20 blue #1d5e96",
+      "h": "9e987eb80379"
     },
     "Подписка · экран · активна · 13": {
       "v": "=",
@@ -893,11 +865,9 @@
       "h": "be26b94c0688"
     },
     "Подписка · экран · только чтение · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 02",
-      "h": "cf89b16538b5",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:583-584: .sub-screen__status-card--readonly background var(--v4-hero) border-radius 20px padding 16px; sand #efe3cf blue #e2ecf6 (= --tint)",
+      "h": "cf89b16538b5"
     },
     "Подписка · экран · только чтение · 03": {
       "v": "=",
@@ -920,32 +890,24 @@
       "h": "7b7545ce8968"
     },
     "Подписка · экран · только чтение · 07": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 07",
-      "h": "813fbe526a44",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:670-672: .sub-screen__footer margin-top auto padding 0 18px 18px",
+      "h": "813fbe526a44"
     },
     "Подписка · экран · только чтение · 08": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 08",
-      "h": "cb72a3a962e9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:675-678: .sub-screen__footnote background var(--v4-surface) border-radius 16px padding 12px 14px",
+      "h": "cb72a3a962e9"
     },
     "Подписка · экран · только чтение · 09": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 09",
-      "h": "f74b2fa32e9f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:681-683: .sub-screen__footnote-title font 700 12px/1.3; heys_subscriptions_v1.js:769 «Само ничего не спишется»",
+      "h": "f74b2fa32e9f"
     },
     "Подписка · экран · только чтение · 10": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 10",
-      "h": "9453360f4ae8",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:686-689: .sub-screen__footnote-text margin-top 5px font 500 11.5px/1.45",
+      "h": "9453360f4ae8"
     },
     "Подписка · экран · только чтение · 11": {
       "v": "=",
@@ -953,11 +915,9 @@
       "h": "ffa81894dcd2"
     },
     "Подписка · экран · только чтение · 12": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · только чтение · 12",
-      "h": "9e987eb80379",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:707-709: .sub-screen__support-link font 600 12px/1 color var(--v4-act-text); sand #8a4a20 blue #1d5e96",
+      "h": "9e987eb80379"
     },
     "Подписка · экран · только чтение · 13": {
       "v": "=",
@@ -1127,15 +1087,13 @@
       "h": "163302844c74"
     },
     "Подписка · экран · пробный период · рисунок 01": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 01",
-      "h": "7d9d1119f1bb",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:651-656: .sub-screen__feature-icon 15×15; heys_subscriptions_v1.js:706-716 subscriptionScreenCheckIcon viewBox 0 0 24 24",
+      "h": "7d9d1119f1bb"
     },
     "Подписка · экран · пробный период · рисунок 02": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js: sub-screen row Подписка · экран · пробный период · рисунок 02",
+      "f": "apps/web/heys_subscriptions_v1.js:1208-1227: SubscriptionSection без header close svg; paywallCloseIconMarkup:835 path M18 6L6 18 только в paywall modal",
       "h": "49950e24d175",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
