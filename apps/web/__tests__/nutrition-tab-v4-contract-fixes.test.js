@@ -9,9 +9,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { fireEvent, render } from '@testing-library/react';
+import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import * as RealReact from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as ReactDOMClient from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const NUTRITION_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_nutrition_v1.js'), 'utf8');
 const NUTRITION_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css'), 'utf8');
@@ -615,6 +616,13 @@ describe('nutrition-tab · состав чипа · 44 px видимым', () =>
     const after = NUTRITION_CSS.match(/\.nutrition-v4-supplements__chip::after \{[\s\S]*?\}/)?.[0] || '';
     expect(after).toMatch(/content:\s*none/);
   });
+
+  it('чип настройки вкладки держит 44 px видимой высотой без ::after-расширителя', () => {
+    const block = NUTRITION_CSS.match(/\.nutrition-v4-chip \{[\s\S]*?\}/)?.[0] || '';
+    expect(block).toMatch(/min-height:\s*44px/);
+    const after = NUTRITION_CSS.match(/\.nutrition-v4-chip::after \{[\s\S]*?\}/)?.[0] || '';
+    expect(after).toMatch(/content:\s*none/);
+  });
 });
 
 describe('nutrition-tab · запись не в сегодня · равный выбор и след', () => {
@@ -639,5 +647,105 @@ describe('nutrition-tab · запись не в сегодня · равный �
     expect(MEALS_SRC).toMatch(/return `\$\{n\} приём`/);
     expect(MEALS_SRC).toMatch(/return `\$\{n\} приёма`/);
     expect(MEALS_SRC).toMatch(/return `\$\{n\} приёмов`/);
+  });
+
+  it('лист равного выбора рендерит контрактные строки и подтверждает открытый день', async () => {
+    function todayISO() {
+      const d = new Date();
+      if (d.getHours() < 3) d.setDate(d.getDate() - 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    function offsetDay(key, delta) {
+      const [y, m, day] = key.split('-').map(Number);
+      const d = new Date(y, m - 1, day + delta);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    const todayKey = todayISO();
+    const openKey = offsetDay(todayKey, -1);
+
+    const originalReact = globalThis.React;
+    const originalReactDOM = globalThis.ReactDOM;
+    const originalHEYS = globalThis.HEYS;
+    globalThis.React = RealReact;
+    globalThis.ReactDOM = {
+      createRoot: ReactDOMClient.createRoot,
+      render: ReactDOMClient.createRoot,
+    };
+    globalThis.HEYS = {
+      Toast: { error: vi.fn() },
+      Undo: { push: vi.fn() },
+    };
+    globalThis.window = globalThis;
+    globalThis.window.HEYS = globalThis.HEYS;
+    globalThis.window.React = globalThis.React;
+    globalThis.window.ReactDOM = globalThis.ReactDOM;
+
+    // eslint-disable-next-line no-eval
+    eval(MEALS_SRC);
+
+    const confirmPromise = globalThis.HEYS.mealDateGuard.confirm(openKey, {
+      getTodayDay: () => ({
+        meals: [{ items: [1] }, { items: [1, 2] }, { items: [] }],
+      }),
+      getOpenDay: () => ({
+        meals: [{ items: [1] }, { items: [1] }],
+      }),
+    });
+
+    const sheet = await waitFor(() => {
+      const node = document.querySelector('.nutrition-v4-date-target-sheet');
+      expect(node).toBeTruthy();
+      return node;
+    });
+
+    expect(sheet.textContent).toContain('На какой день записать?');
+    expect(sheet.textContent).toContain('вы смотрите');
+    expect(sheet.textContent).toContain('открытый день');
+    expect(sheet.textContent).toContain('Сегодня,');
+    expect(sheet.textContent).toContain('2 приёма');
+    expect(sheet.textContent).toContain('Записать на');
+
+    await act(async () => {
+      fireEvent.click(sheet.querySelector('.nutrition-v4-sheet__cta'));
+    });
+    await expect(confirmPromise).resolves.toBe(openKey);
+    expect(document.getElementById('heys-meal-date-target-root')).toBeNull();
+
+    document.getElementById('heys-meal-date-target-root')?.remove();
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    globalThis.HEYS = originalHEYS;
+  });
+
+  it('след записи в чужой день уходит в Undo с отменой', () => {
+    const originalReact = globalThis.React;
+    const originalReactDOM = globalThis.ReactDOM;
+    const originalHEYS = globalThis.HEYS;
+    globalThis.React = RealReact;
+    globalThis.ReactDOM = {};
+    const undoPush = vi.fn();
+    globalThis.HEYS = { Undo: { push: undoPush } };
+    globalThis.window = globalThis;
+    globalThis.window.HEYS = globalThis.HEYS;
+
+    // eslint-disable-next-line no-eval
+    eval(MEALS_SRC);
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-20T10:00:00'));
+    const onUndo = vi.fn();
+    globalThis.HEYS.mealDateGuard.notifyRecordedInForeignDay('2026-08-19', onUndo);
+
+    expect(undoPush).toHaveBeenCalledWith(expect.objectContaining({
+      label: 'Записано в 19 августа',
+      duration: 6000,
+      onUndo,
+    }));
+
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    globalThis.HEYS = originalHEYS;
+    vi.useRealTimers();
   });
 });
