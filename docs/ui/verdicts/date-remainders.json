@@ -70,8 +70,8 @@
     },
     "стрелки": {
       "v": "=",
-      "f": "000-base:8176,8197 — кружок 34 с припуском ::after inset -5px даёт цель 44; гашение правой на сегодня было верным",
-      "h": "d6c07d581569"
+      "f": "000-base:8050 .date-picker-day-nav width/height 44 px видимым кружком, ::after expander снят; :8085 --disabled opacity 0.4; heys_day_pickers.js:360 правая остаётся в DOM с aria-disabled — apps/web/__tests__/polosa6-task106-date-remainders-touch-44px.test.js 4/4 + date-remainders-v4-smoke «капсула даты»",
+      "h": "8a5178a69447"
     },
     "тап по дате": {
       "v": "=",
@@ -759,9 +759,9 @@
       "h": "8b72cdbc4ec6"
     },
     "Дата · сегодня, прокручено · 47": {
-      "v": "—",
-      "f": "элемент вне границ зоны: строка «границы» отдаёт канвасу капсулу, стрелки, сетку календаря и содержимое шторок. Здесь — вкладка «Питание» в прокрученном виде — капсулы в кадре нет вовсе",
-      "h": "c90c81167d69"
+      "v": "=",
+      "f": "000-base:8103 trigger min-height 44 px в .hdr-sticky-strip (:3966 padding 16/18/10, тень на подложке :4012, не на капсуле); кадр рисует box-shadow на капсуле — верен контракт «вид липкой капсулы»",
+      "h": "331c30962c64"
     },
     "Дата · сегодня, прокручено · 48": {
       "v": "—",
@@ -1856,13 +1856,13 @@
     },
     "Капсула · ночь на 21 августа · 03": {
       "v": "=",
-      "f": "000-base:8050 .date-picker-day-nav radius 999, background --v4-surface; width/height 44 px по строке «вид капсулы» (кадр рисует 34); цвет --v4-ink-2; гейт razbor · 03 + smoke sand/blue",
-      "h": "c460f09ba1e6"
+      "f": "000-base:8043 .date-picker-day-nav width/height 44 px, radius 999, background --v4-surface, color --v4-ink-2; кадр обновлён 5 сентября с 34 на 44; apps/web/__tests__/polosa6-task106-date-remainders-touch-44px.test.js computed + date-remainders-v4-canvas-razbor ·03",
+      "h": "779e987f7662"
     },
     "Капсула · ночь на 21 августа · 04": {
       "v": "=",
-      "f": "000-base:8102 trigger height 36, radius 999, background --v4-surface; :8150 --night тот же грунт; :8219 lbl-inner gap 7; :8170 main 12.5/700 — гейт razbor · 04",
-      "h": "f7c770606b67"
+      "f": "000-base:8152 .date-picker-trigger--night height 36 px по строке «ночь до 03:00»; кадр рисует 44 — отступление в date-remainders-v4-canvas-razbor EXCEPTIONS ·04|height; гейт razbor ·04",
+      "h": "67855efe99e2"
     },
     "Капсула · ночь на 21 августа · рисунок 01": {
       "v": "=",
@@ -1908,6 +1908,11 @@
       "v": "=",
       "f": "000-base-and-gamification.css:3972 .hdr-sticky-strip { padding: 16px 18px 10px } — нижнее поле 10px подложки; отдельного margin у контента под ней нет. hdr-date-collapse.test.js :69",
       "h": "8c6514514e73"
+    },
+    "тач-цели": {
+      "v": "=",
+      "f": "Пакет 5 сентября: капсула min-height 44 px (:8103), чужой день height 44 (:8190), стрелки 44×44 без ::after; ночная капсула 36 px — исключение «ночь до 03:00»; apps/web/__tests__/polosa6-task106-date-remainders-touch-44px.test.js TOUCH_CONTRACT_LINES + computed sand=blue",
+      "h": "fdcd54a5ed0c"
     }
   },
   "frames": {

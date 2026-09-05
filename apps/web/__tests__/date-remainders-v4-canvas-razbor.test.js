@@ -35,6 +35,11 @@ const EXCEPTIONS = new Map([
   ['Дата · чужой день · 20|background', 'строка «вид чужого дня»: без заливки'],
   ['Дата · чужой день · 20|fontSize', 'строка «вид чужого дня»: 11 px'],
   ['Дата · чужой день · 20|color', 'строка «вид чужого дня»: тон --ac'],
+  // Строка «тач-цели»: пилюля «Сегодня» — видимая цель 44 px (min-height).
+  // Кадр «Дата · чужой день» ·20 рисует 28 px.
+  ['Дата · чужой день · 20|height', 'строка «тач-цели»: min-height 44 у .date-picker-inline-today'],
+  // Строка «ночь»: капсула 36 px до 03:00. Кадр «Капсула · ночь» ·4 рисует 44.
+  ['Капсула · ночь на 21 августа · 4|height', 'строка «ночь»: height 36 у .date-picker-trigger--night'],
   // Строка «вид шторки календаря»: «ряд сокращений дней 9,5 px/700 прописными
   // тоном чернил 40 %». Кадр набирает 600 и 42 %.
   ['Календарь · легенда · 10|fontWeight', 'строка «вид шторки календаря»: 700'],
@@ -64,7 +69,7 @@ const PAST = [
   [17, `${V4} .date-picker-day-nav`, ['width', 'height', 'radius', 'background', 'align', 'justify']],
   [18, `${V4} .date-picker-trigger--not-today`, ['radius', 'align']],
   [19, `${V4} .date-picker-lbl-inner`, ['align']],
-  [20, `${V4} .date-picker-inline-today`, ['height', 'fontWeight', 'lineHeight']],
+  [20, `${V4} .date-picker-inline-today`, ['fontWeight', 'lineHeight']],
 ];
 
 // Кадр «Капсула · ночь на 21 августа» — нейтральная капсула 00:00–03:00.
@@ -72,7 +77,7 @@ const NIGHT = [
   [2, '.date-picker-row', ['align']],
   [2, '.date-picker--v4 > .date-picker-row', ['gap']],
   [3, `${V4} .date-picker-day-nav`, ['radius', 'background', 'align', 'justify']],
-  [4, `${V4} .date-picker-trigger--night`, ['height', 'radius', 'background', 'align', 'justify']],
+  [4, `${V4} .date-picker-trigger--night`, ['radius', 'background', 'align', 'justify']],
   [4, `${V4} .date-picker-trigger--night .date-picker-lbl-inner`, ['gap']],
   [4, `${V4} .date-picker-lbl-inner .date-picker-main`, ['fontWeight', 'fontSize']],
 ];
@@ -130,7 +135,7 @@ describe('«Дата и остатки» · разбор кадров канва
     expect(rules.get(`${V4} .date-picker-trigger--night`).height).toBe('36px');
     expect(rules.get(`${V4} .date-picker-trigger--night`)['border-radius']).toBe('999px');
     expect(rules.get(`${V4} .date-picker-trigger--night .date-picker-lbl-inner`).gap).toBe('7px');
-    expect(rules.get(`${V4} .date-picker-trigger--not-today`).height).toBe('38px');
+    expect(rules.get(`${V4} .date-picker-trigger--not-today`).height).toBe('44px');
     expect(rules.get(`${V4} .date-picker-trigger--not-today`).gap).toBe('5px');
   });
 
@@ -142,7 +147,7 @@ describe('«Дата и остатки» · разбор кадров канва
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(13);
+    expect(EXCEPTIONS.size).toBe(15);
   });
 
   it('гейт называет свой охват', () => {
