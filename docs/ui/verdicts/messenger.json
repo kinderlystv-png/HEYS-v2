@@ -54,14 +54,18 @@
       "h": "06bb7bc1bad3"
     },
     "«Ждём» — вторая строка шапки": {
-      "v": "=",
-      "f": "heys_messenger_v1.js:2535 DayChecklistRow + getDayChecklist API; шаблоны приёма/веса/воды/активности onPick",
-      "h": "6663cb9ccd32"
+      "v": "≠",
+      "f": "heys_messenger_v1.js:2535 DayChecklistRow шаблоны/API сведены; 1000-messenger.css:313-340 chips min-height 44px — data-v «чипы 30 px»",
+      "h": "6663cb9ccd32",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:116"
     },
     "подсказка «время и граммы» — рабочая": {
-      "v": "=",
-      "f": "shouldShowFoodHint + FOOD_HINT_LEARNED_STREAK=10 (heys_messenger_v1.js:2361,2387); FoodHintCard pills + stepper в CSS .messenger-food-hint",
-      "h": "7bbada7b7f01"
+      "v": "≠",
+      "f": "heys_messenger_v1.js:2424 FoodHintCard + shouldShowFoodHint streak=10; 1000-messenger.css:1859 pills min-height 44px — data-v «пилюль 32 px»",
+      "h": "7bbada7b7f01",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:116"
     },
     "карточка «Внесено в дневник» — системная": {
       "v": "=",
@@ -110,16 +114,18 @@
       "h": "a412eae18f08"
     },
     "вид · шапка": {
-      "v": "—",
-      "f": "геометрия блока «шапка»: сверяется кадрами канваса, не одной CSS-строкой",
+      "v": "≠",
+      "f": "1000-messenger.css:148-377 padding 14/12/10/18, avatar 38px, title 14.5/700, subtitle 11/500, buttons 44px round — data-v «кнопки 40 px»",
       "h": "90529c6c4bba",
-      "naKind": "handoff"
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:116"
     },
     "вид · строка «Ждём»": {
-      "v": "—",
-      "f": "геометрия блока «строка «Ждём»»: сверяется кадрами канваса, не одной CSS-строкой",
+      "v": "≠",
+      "f": "1000-messenger.css:279-340 padding 8/18/10, label 9.5/.14em, chips min-height 44px padding 0/11 — data-v «чипы 30 px»",
       "h": "16d6db95a391",
-      "naKind": "handoff"
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:116"
     },
     "вид · тред": {
       "v": "=",
