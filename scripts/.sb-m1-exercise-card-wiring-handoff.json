@@ -1,0 +1,39 @@
+{
+  "zone": "strength-builder",
+  "scope": "Task 28 — M1 ExerciseCardScreen wiring in builder_ui",
+  "generated": "2026-09-05",
+  "rows": [
+    {
+      "key": "вид · карточка упражнения",
+      "fact": "view === 'exercise-card' монтирует ExerciseCardScreen (builder_ui:1542-1548); reachable из каталога через .sb-builder-catalog-bridge делегирование клика по .sb-cat-title (builder_ui:1549-1568)."
+    },
+    {
+      "key": "Конструктор · каталог · tap row",
+      "fact": "Тап по .sb-cat-title (не ★/+/create/search) → openExerciseCardFromCatalog(name) → setView('exercise-card') + cardExerciseName; + .sb-cat-add по-прежнему onPick/addExercise. Решение №50."
+    },
+    {
+      "key": "Конструктор · каталог · back scroll",
+      "fact": "catalogScrollTopRef + saveCatalogScroll/restoreCatalogScroll: при уходе в М1 сохраняется .sb-catalog-scroll scrollTop, при view==='catalog' восстанавливается (builder_ui:1009-1036)."
+    },
+    {
+      "key": "Упражнение · карточка · data",
+      "fact": "ExerciseCardScreen React.useEffect загружает exerciseMeta.get(initialName) — unit/primaryGroup/secondaryGroups при открытии из каталога (builder_ui:398-407)."
+    },
+    {
+      "key": "Упражнение · карточка · 01-19",
+      "fact": "Разметка/тексты М1 без изменений; экран теперь достижим — strength-builder-exercise-card-v4-canvas-contract.test.js зелёный."
+    },
+    {
+      "key": "вид · создание упражнения",
+      "fact": "Удалён мёртвый onCreate на CatalogScreen (бывш. builder_ui:1458 → setView('new')). Live create = CatalogScreen createDraft → NewExerciseScreen catalog_ui:140-151. view==='new' → CatUI.NewExerciseScreen сохранён для контракт-теста :79, без ExerciseCardScreen."
+    },
+    {
+      "key": "вид · служебная шапка сессии",
+      "fact": "sessionServiceHead() — единая шапка на list/empty/proposal-started (builder_ui:589-615, :288-296, :1696-1700, :1996-2010). title b = wl.title/sessionTitle(exercises); subtitle = exerciseWorkProgressKey при is-weight-entry, иначе дата/план/отдых — контракт :2293."
+    },
+    {
+      "key": "sheet · Повторить прошлую",
+      "fact": "sheetRows ctx получает lastSessionFor + onRepeatLast wrapper (builder_ui:2107-2118): повтор подставляет упражнения через onRepeatLast(last.exercises, planRevision), setOpenIdx(0)."
+    }
+  ]
+}

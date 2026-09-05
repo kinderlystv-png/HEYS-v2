@@ -275,26 +275,24 @@
       ? Parts.describePlanEdit(wl.exercises || exercises, proposal.exercises)
       : { frozen: [], ahead: [] };
     const who = proposal.proposedBy || 'Куратор';
-    const dayLabel = (training.plan && training.plan.dayLabel) || 'План на сегодня';
     const changeCount = diff.ahead.length;
     const acceptLabel = changeCount > 0
       ? 'Принять · ' + changeCount + ' ' + pluralChanges(changeCount)
       : 'Принять';
 
+    const PartsRef = HEYS.StrengthBuilderParts || {};
+    const sessionLabel = wl.title || (typeof PartsRef.sessionTitle === 'function'
+      ? PartsRef.sessionTitle(exercises)
+      : 'Силовая');
     return h('div', { className: 'sb-root sb-builder-screen sb-proposal-started' },
-      h('div', { className: 'sb-head' },
-        h('button', {
-          type: 'button', className: 'sb-icon-btn',
-          onClick: onClose, 'aria-label': 'Закрыть разбор'
-        }, '✕'),
-        h('div', { className: 'sb-head-title' },
-          h('b', null, dayLabel),
-          h('div', { className: 'sb-head-sub' },
-            'по плану ' + who + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : ''))
-        ),
-        agg && h('span', { className: 'sb-proposal-started-badge' },
+      sessionServiceHead({
+        onClose: onClose,
+        closeLabel: 'Закрыть разбор',
+        title: sessionLabel,
+        subtitle: 'по плану ' + who + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : ''),
+        trailing: agg && h('span', { className: 'sb-proposal-started-badge' },
           agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓')
-      ),
+      }),
       h('div', { className: 'sb-list sb-proposal-started-scroll' },
         h('div', { className: 'sb-proposal-started-banner' },
           h('span', { className: 'sb-proposal-started-banner-icon' }, who.slice(0, 1)),
@@ -394,6 +392,17 @@
     const [picker, setPicker] = React.useState('');
 
     if (!api) return null;
+
+    React.useEffect(function () {
+      const trimmed = String(initialName || '').trim();
+      if (!trimmed) return;
+      const meta = api.get(trimmed);
+      if (!meta) return;
+      setName(trimmed);
+      setUnit(meta.unit || '');
+      setPrimary(meta.primaryGroup || '');
+      setSecondary(Array.isArray(meta.secondaryGroups) ? meta.secondaryGroups.slice() : []);
+    }, [initialName, api]);
 
     const ready = !!String(name).trim() && !!unit && !!primary;
     const share = typeof api.synergistShare === 'number' ? api.synergistShare : 0.5;
@@ -576,6 +585,33 @@
     }, h('path', { d: 'M6 6l12 12M18 6L6 18' })));
   }
 
+  /** Контракт :2293 — одна служебная шапка на экранах сессии в builder_ui. */
+  function sessionServiceHead(options) {
+    const o = options || {};
+    return h('div', { className: 'sb-head' + (o.extraClass ? ' ' + o.extraClass : '') },
+      o.leading != null
+        ? o.leading
+        : h('button', {
+          type: 'button', className: 'sb-icon-btn',
+          onClick: o.onClose, 'aria-label': o.closeLabel || 'Закрыть'
+        }, o.closeGlyph || '✕'),
+      h('div', { className: 'sb-head-title' + (o.titleClass ? ' ' + o.titleClass : '') },
+        h('b', null, o.title),
+        o.subtitle != null && o.subtitle !== ''
+          && h('div', { className: 'sb-head-sub' }, o.subtitle)
+      ),
+      o.syncPending && h('span', {
+        className: 'sb-sync-badge',
+        title: 'Сохранено на телефоне, ждёт сеть'
+      }, '📡 Ждёт сеть'),
+      o.trailing,
+      typeof o.onOpenSheet === 'function' && h('button', {
+        type: 'button', className: 'sb-icon-btn',
+        onClick: o.onOpenSheet, 'aria-label': 'Ещё'
+      }, '⋯')
+    );
+  }
+
   function exerciseCountLabel(count) {
     const n = Math.max(0, Math.round(+count || 0));
     const mod100 = n % 100;
@@ -651,7 +687,7 @@
     const [warmupDropIdx, setWarmupDropIdx] = React.useState(-1);
     const [approachTypesIdx, setApproachTypesIdx] = React.useState(-1);
     const [dropSetCtx, setDropSetCtx] = React.useState(null);
-    const [draftName, setDraftName] = React.useState('');
+    const [cardExerciseName, setCardExerciseName] = React.useState('');
     const [linkFrom, setLinkFrom] = React.useState(0);
     const [sheetOpen, setSheetOpen] = React.useState(false);
     const [closeConfirm, setCloseConfirm] = React.useState(false);
@@ -663,6 +699,7 @@
     const [renumberCtx, setRenumberCtx] = React.useState(null);
     const [approachUndo, setApproachUndo] = React.useState(null);
     const skipUndoToastRef = React.useRef(false);
+    const catalogScrollTopRef = React.useRef(0);
     const [rest, setRest] = React.useState(function () {
       return restoreActiveRest(wl.activeRest, Date.now());
     });
@@ -948,6 +985,56 @@
       if (!progress.total) return '';
       return 'подход ' + progress.current + ' из ' + progress.total;
     }
+
+    function sessionHeadTitle() {
+      const PartsLocal = HEYS.StrengthBuilderParts || {};
+      return wl.title || (typeof PartsLocal.sessionTitle === 'function'
+        ? PartsLocal.sessionTitle(exercises)
+        : 'Силовая');
+    }
+
+    function sessionServiceSubtitle() {
+      if (rest && !rest.collapsed) return 'отдых между подходами';
+      const openExLocal = openIdx >= 0 ? exercises[openIdx] : null;
+      const openUnitLocal = openExLocal ? (openExLocal.unit || 'weight_reps') : '';
+      if (openIdx >= 0 && openExLocal && openUnitLocal === 'weight_reps') {
+        const progressKey = exerciseWorkProgressKey(openExLocal);
+        if (progressKey) return progressKey;
+      }
+      if (proposalWho && startedAt > 0 && !completedAt) {
+        return 'по плану ' + proposalWho + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : '');
+      }
+      return compactSessionDate(dateKey) + (startedAt ? ' · начата в ' + fmtTime(startedAt) : '');
+    }
+
+    function saveCatalogScroll() {
+      if (!global.document) return;
+      const el = global.document.querySelector('.sb-catalog-screen .sb-catalog-scroll');
+      if (el) catalogScrollTopRef.current = el.scrollTop;
+    }
+
+    function restoreCatalogScroll() {
+      if (!global.document) return;
+      global.requestAnimationFrame(function () {
+        const el = global.document.querySelector('.sb-catalog-screen .sb-catalog-scroll');
+        if (el) el.scrollTop = catalogScrollTopRef.current;
+      });
+    }
+
+    function openExerciseCardFromCatalog(name) {
+      saveCatalogScroll();
+      setCardExerciseName(String(name || '').trim());
+      setView('exercise-card');
+    }
+
+    function returnToCatalogFromCard() {
+      setView('catalog');
+    }
+
+    React.useEffect(function () {
+      if (view !== 'catalog') return;
+      restoreCatalogScroll();
+    }, [view]);
 
     function weightEditSessionContext(liveExercises, openEx, proposal) {
       const Parts = HEYS.StrengthBuilderParts || {};
@@ -1452,13 +1539,33 @@
         onOpenSheet: function () { setSheetOpen(true); }
       });
     }
-    if (view === 'catalog' && CatUI.CatalogScreen) {
-      return h(CatUI.CatalogScreen, {
-        onPick: addExercise,
-        onCreate: function (name) { setDraftName(name || ''); setView('new'); },
-        onBack: function () { setView('list'); },
-        historyFor: historyFor
+    if (view === 'exercise-card') {
+      return h(ExerciseCardScreen, {
+        initialName: cardExerciseName,
+        onDone: function () { returnToCatalogFromCard(); },
+        onCancel: returnToCatalogFromCard
       });
+    }
+    if (view === 'catalog' && CatUI.CatalogScreen) {
+      return h('div', {
+        className: 'sb-builder-catalog-bridge',
+        onClick: function (event) {
+          if (event.target.closest('.sb-star, .sb-cat-add, .sb-cat-create, .sb-icon-btn, .sb-chip, .sb-search')) {
+            return;
+          }
+          const title = event.target.closest('.sb-cat-title');
+          if (!title) return;
+          const nameEl = title.querySelector('b');
+          const name = nameEl && String(nameEl.textContent || '').trim();
+          if (name) openExerciseCardFromCatalog(name);
+        }
+      },
+        h(CatUI.CatalogScreen, {
+          onPick: addExercise,
+          onBack: function () { setView('list'); },
+          historyFor: historyFor
+        })
+      );
     }
     if (view === 'finish' && FinUIRef().FinishScreen) {
       const daySummary = typeof finishSummaryFor === 'function'
@@ -1546,7 +1653,7 @@
     }
     if (view === 'new' && CatUI.NewExerciseScreen) {
       return h(CatUI.NewExerciseScreen, {
-        initialName: draftName,
+        initialName: '',
         onDone: addExercise,
         onCancel: function () { setView('catalog'); }
       });
@@ -1586,14 +1693,12 @@
         return row.summary || '';
       }
       return h('div', { className: 'sb-root' },
-        h('div', { className: 'sb-head is-empty' },
-          closeIconButton(onClose, 'Закрыть конструктор'),
-          h('div', { className: 'sb-head-title' },
-            h('b', null, 'Силовая'),
-            h('div', { className: 'sb-head-sub' },
-              canStartPlan ? 'план на день · 0 подходов' : 'пусто · 0 подходов')
-          )
-        ),
+        sessionServiceHead({
+          extraClass: 'is-empty',
+          leading: closeIconButton(onClose, 'Закрыть конструктор'),
+          title: sessionHeadTitle(),
+          subtitle: canStartPlan ? 'план на день · 0 подходов' : 'пусто · 0 подходов'
+        }),
         h('div', { className: 'sb-empty-scroll' },
           h('div', { className: 'sb-empty-card' },
             h('b', null, canStartPlan ? 'План на сегодня готов' : 'Пустая тренировка'),
@@ -1888,41 +1993,21 @@
         ? ' sb-root--rest-docked ' + (rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded')
         : '')
     },
-      h('div', { className: 'sb-head' },
-        h('button', {
-          type: 'button', className: 'sb-icon-btn',
-          onClick: onClose, 'aria-label': 'Закрыть конструктор'
-        }, '✕'),
-        h('div', { className: 'sb-head-title' },
-          h('b', null, wl.title || (HEYS.StrengthBuilderParts || {}).sessionTitle(exercises)),
-          h('div', { className: 'sb-head-sub' }, rest && !rest.collapsed
-            ? 'отдых между подходами'
-            : openEx && openUnit === 'bodyweight'
-              ? bodyweightHeadKey(openEx)
-              : openEx && openUnit === 'weight_reps'
-                ? exerciseWorkProgressKey(openEx)
-                : openEx && unitEntryLabel(openUnit)
-                  ? unitEntryLabel(openUnit)
-                  : (proposalWho && startedAt > 0 && !completedAt
-                ? 'по плану ' + proposalWho + (elapsedSec > 0 ? ' · идёт ' + fmtClock(elapsedSec) : '')
-                : compactSessionDate(dateKey)
-                  + (startedAt ? ' · начата в ' + fmtTime(startedAt) : '')))
+      sessionServiceHead({
+        onClose: onClose,
+        closeLabel: 'Закрыть конструктор',
+        title: sessionHeadTitle(),
+        subtitle: sessionServiceSubtitle(),
+        syncPending: syncStatus === 'pending',
+        trailing: h(React.Fragment, null,
+          agg && startedAt > 0 && !completedAt && (openIdx >= 0 || pendingProposal)
+            && h('span', { className: 'sb-proposal-started-badge' },
+              agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓'),
+          startedAt > 0 && !completedAt && openIdx < 0 && !pendingProposal
+            && h('span', { className: 'sb-session-badge' }, 'идёт')
         ),
-        syncStatus === 'pending' && h('span', {
-          className: 'sb-sync-badge',
-          title: 'Сохранено на телефоне, ждёт сеть'
-        }, '📡 Ждёт сеть'),
-        agg && startedAt > 0 && !completedAt && (openIdx >= 0 || pendingProposal)
-          && h('span', { className: 'sb-proposal-started-badge' },
-            agg.doneApproaches + ' / ' + agg.totalApproaches + ' ✓'),
-        startedAt > 0 && !completedAt && openIdx < 0 && !pendingProposal
-          && h('span', { className: 'sb-session-badge' }, 'идёт'),
-        h('button', {
-          type: 'button', className: 'sb-icon-btn',
-          onClick: function () { setSheetOpen(true); },
-          'aria-label': 'Ещё'
-        }, '⋯')
-      ),
+        onOpenSheet: function () { setSheetOpen(true); }
+      }),
       h('div', { className: 'sb-stats' + (rest && !rest.collapsed ? ' sb-stats--rest' : '') },
         rest && !rest.collapsed
           ? elapsedSec > 0 && h('span', { className: 'sb-stat sb-stat-time' }, fmtClock(elapsedSec))
@@ -2018,7 +2103,18 @@
               setApproachTypesIdx: setApproachTypesIdx,
               hasPlanSnapshot: !!(training && training.planSnapshot
                 && Array.isArray(training.planSnapshot.exercises)
-                && training.planSnapshot.exercises.length)
+                && training.planSnapshot.exercises.length),
+              lastSessionFor: lastSessionFor,
+              onRepeatLast: function (lastExercises) {
+                if (typeof onRepeatLast !== 'function') return;
+                const candidatePlan = plannedExercisesFor(training);
+                const planRevision = planRevisionFor(candidatePlan ? training.plan : null);
+                Promise.resolve(onRepeatLast(lastExercises, planRevision)).then(function (repeatedExercises) {
+                  if (!Array.isArray(repeatedExercises) || !repeatedExercises.length) return;
+                  setExercises(repeatedExercises);
+                  setOpenIdx(0);
+                });
+              }
             }).map(function (row, i) {
               return h('button', {
                 key: i,
