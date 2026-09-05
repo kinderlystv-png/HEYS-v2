@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { closePlaywrightBrowser, getPlaywrightBrowser } from './helpers/playwright-browser.mjs';
+import {
+  getPlaywrightBrowser,
+  releasePlaywrightBrowserForSuite,
+  retainPlaywrightBrowserForSuite,
+} from './helpers/playwright-browser.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,9 +35,13 @@ async function renderCards() {
 
 // Запуск Chromium и отрисовка макета не укладываются в пятисекундный лимит
 // vitest по умолчанию: набор меряет живую геометрию, а не читает исходник.
-describe('strength builder offscreen timer geometry at 375x812', { timeout: 90_000, hookTimeout: 30_000 }, () => {
+describe('strength builder offscreen timer geometry at 375x812', { timeout: 90_000, hookTimeout: 60_000 }, () => {
+  beforeAll(() => {
+    retainPlaywrightBrowserForSuite();
+  });
+
   afterAll(async () => {
-    await closePlaywrightBrowser();
+    await releasePlaywrightBrowserForSuite();
   });
 
   it('keeps the restart surface compact and its primary action 48px tall', { timeout: 90_000 }, async () => {

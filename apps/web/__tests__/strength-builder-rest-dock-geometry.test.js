@@ -1,9 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { closePlaywrightBrowser, getPlaywrightBrowser } from './helpers/playwright-browser.mjs';
+import {
+  getPlaywrightBrowser,
+  releasePlaywrightBrowserForSuite,
+  retainPlaywrightBrowserForSuite,
+} from './helpers/playwright-browser.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,9 +66,13 @@ async function measureAtMaxScroll(collapsed) {
 
 // Запуск Chromium и отрисовка макета не укладываются в пятисекундный лимит
 // vitest по умолчанию: набор меряет живую геометрию, а не читает исходник.
-describe('strength builder rest dock geometry at 375x812', { timeout: 90_000, hookTimeout: 30_000 }, () => {
+describe('strength builder rest dock geometry at 375x812', { timeout: 90_000, hookTimeout: 60_000 }, () => {
+  beforeAll(() => {
+    retainPlaywrightBrowserForSuite();
+  });
+
   afterAll(async () => {
-    await closePlaywrightBrowser();
+    await releasePlaywrightBrowserForSuite();
   });
 
   it('activates the in-flow dock layout only while rest is present', () => {

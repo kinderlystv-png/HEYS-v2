@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import { readCanvasPackage } from '../../../scripts/lib/ui-v4-canvas-index.mjs';
 import {
   buildUiV4ProgressReport,
   formatUiV4ProgressReport,
-  loadCanonicalProgressInputs,
 } from '../../../scripts/ui-v4-progress-report.mjs';
+import { UI_V4_VISUAL_CASES } from '../scripts/ui-v4-visual-fixture.mjs';
+import { readCommittedVerdictZones } from './helpers/committed-verdict-zones.mjs';
 import {
   expectedCanvasZoneIds,
   totalContractRows,
@@ -117,9 +119,15 @@ describe('UI v4 progress report', { timeout: 45_000 }, () => {
     expect(() => buildUiV4ProgressReport(data)).toThrow(expected);
   });
 
-  it('loads the current canonical package without silently changing the denominator', { timeout: 45_000 }, () => {
-    const inputs = loadCanonicalProgressInputs();
-    const canvases = inputs.canvases;
+  it('loads the current canonical package without silently changing the denominator', { timeout: 90_000 }, () => {
+    // Canvas package is the contract denominator; verdict rows come from git HEAD so
+    // local WIP under docs/ui/verdicts cannot fake a closed debt gap.
+    const canvases = readCanvasPackage();
+    const inputs = {
+      verdicts: readCommittedVerdictZones(),
+      canvases,
+      visualCases: UI_V4_VISUAL_CASES,
+    };
     const zoneIds = expectedCanvasZoneIds(canvases);
 
     expect(Object.keys(inputs.verdicts.zones).sort()).toEqual(zoneIds);
@@ -139,8 +147,14 @@ describe('UI v4 progress report', { timeout: 45_000 }, () => {
       extraVerdictRows += verdictKeys.filter((key) => !canvasKeys.has(key)).length;
       verdictRows += verdictKeys.length;
     }
+    const coveredVerdictRows = verdictRows - extraVerdictRows;
     expect(missingContractRows - extraVerdictRows).toBe(canvasRows - verdictRows);
     expect(verdictRows).toBeGreaterThan(0);
-    expect(canvasRows).toBeGreaterThan(verdictRows - extraVerdictRows);
+    expect(coveredVerdictRows).toBeLessThanOrEqual(canvasRows);
+    expect(coveredVerdictRows).toBe(canvasRows - missingContractRows);
+
+    const report = buildUiV4ProgressReport(inputs);
+    expect(report.verdicts.total).toBe(coveredVerdictRows);
+    expect(report.assertions.rows).toBe(canvasRows);
   });
 });
