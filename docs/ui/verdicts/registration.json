@@ -2362,7 +2362,8 @@
       "v": "≠",
       "f": "плашка цены — .heys-supp-revoke-sheet__impact: column gap 5, padding 11/13, radius 16, margin-top 13, 600 11.5/1.4 (733:2235-2251). Кадр ждёт фон var(--tint); продукт color-mix(in srgb, var(--v4-warn-1) 22%, transparent) — решение дизайнера 5 сентября в комментарии 733:2242-2247",
       "h": "4961ec93b083",
-      "reasonCode": "owner-decision"
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/registration.v4.dc.html:525"
     },
     "Профиль · отзыв согласия на добавки · 14": {
       "v": "=",
@@ -2375,10 +2376,9 @@
       "h": "6af27462f1b2"
     },
     "Профиль · отзыв согласия на добавки · 16": {
-      "v": "≠",
-      "f": "«Отозвать и удалить» — .heys-supp-revoke-sheet__confirm min-height 48px, radius 999px, 700 13px/1; роль --v4-bad-text вместо кадрового --red. заливка --v4-bad-text: песок rgb(168,60,34), синий rgb(176,58,36); подпись --v4-btn-on-act: песок rgb(43,22,8), синий rgb(255,255,255) — registration-consent-revoke-colors.test.js. Кадр ждёт подпись #fffaf1 на всех наборах; на песочном --v4-btn-on-act даёт rgb(43,22,8)",
-      "h": "93fb959c334b",
-      "reasonCode": "canvas-conflict"
+      "v": "=",
+      "f": "«Отозвать и удалить» — .heys-supp-revoke-sheet__confirm min-height 48px, radius 999px, 700 13px/1, фон transparent, цвет --v4-bad-text: песок rgb(168,60,34), синий rgb(176,58,36); контраст на --v4-sand-surface-soft (#fffaf1) 6,06 / 5,81 — registration-consent-revoke-colors.test.js, 733:2270-2287. Решение владельца (полоса 4 · task 121, c21c1652f): destructive = красный текст без заливки, не кадровый --red/#fffaf1",
+      "h": "93fb959c334b"
     },
     "Профиль · отзыв согласия на добавки · 17": {
       "v": "=",
