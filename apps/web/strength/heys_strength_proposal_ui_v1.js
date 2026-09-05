@@ -1210,6 +1210,64 @@
     );
   }
 
+  const PROGRAM_DONE_SKIP_TAIL = ' Пропуски названы одной строкой и без имён: факт, но не приговор. Разбора «жим 70 вместо 75 три раза» и поимённого списка пропусков здесь нет — у куратора это рабочий инструмент, а у клиента тот же текст читается как перечень провалов.';
+
+  function programDoneDateRange(program, days) {
+    const dates = (days || []).map(function (d) { return d && d.date; }).filter(Boolean).sort();
+    if (dates.length >= 2) {
+      return fmtProgramStartDate(dates[0]) + ' — ' + fmtProgramStartDate(dates[dates.length - 1]);
+    }
+    if (dates.length === 1) return fmtProgramStartDate(dates[0]);
+    if (program && program.startDate) return fmtProgramStartDate(program.startDate);
+    return '';
+  }
+
+  function buildProgramDoneSnapshot(program, days, sessions, readDay) {
+    const ks = kernel();
+    let totalVolume = 0;
+    let recordCount = 0;
+    (days || []).forEach(function (d) {
+      if (!d || d.status !== 'done' || typeof readDay !== 'function') return;
+      let blob = null;
+      try { blob = readDay(d.date); } catch (_) { blob = null; }
+      const list = blob && Array.isArray(blob.trainings) ? blob.trainings : [];
+      const training = list.find(function (t) {
+        return t && t.workoutLog && t.plan;
+      });
+      if (!training || !ks || typeof ks.trainingTonnage !== 'function') return;
+      const stats = ks.trainingTonnage(training);
+      totalVolume += stats.totalVolume || 0;
+      recordCount += countSessionRecords(training);
+    });
+    if (!totalVolume && sessions && sessions.length && ks && typeof ks.trainingTonnage === 'function') {
+      sessions.forEach(function (s) {
+        const stats = ks.trainingTonnage({ workoutLog: { exercises: s.exercises || [] } });
+        totalVolume += stats.totalVolume || 0;
+      });
+    }
+    const growth = ks && ks.programGrowth ? ks.programGrowth(sessions || []) : null;
+    if (!recordCount && growth && growth.kind === 'growth' && growth.rows) {
+      recordCount = growth.rows.length;
+    }
+    return {
+      dateRange: programDoneDateRange(program, days),
+      tonnage: totalVolume,
+      records: recordCount,
+      weeks: program && program.weeks ? program.weeks : 0,
+      growth: growth,
+    };
+  }
+
+  function programDoneGrowthRow(row, opts) {
+    const o = opts || {};
+    return h('div', {
+      key: o.key || row.name,
+      className: 'program-done-growth-row' + (o.isLast ? ' is-last' : ''),
+    },
+      h('span', null, row.name),
+      h('span', { className: 'program-done-growth-val' }, row.value));
+  }
+
   /**
    * Программа пройдена (экран 16e). Про сделанное, а не про пропуски.
    *
@@ -1219,56 +1277,95 @@
    * одной строкой и без имён: факт, но не приговор.
    */
   function ProgramDoneScreen(props) {
-    const { program, sessions, doneCount, totalCount, skippedCount, onClose, onWriteCurator } = props;
-    const ks = kernel();
-    // Ядро недоступно — блока нет вовсе. Показать «Что удержано: 0 тренировок,
-    // 0 кг» человеку, который месяц ходил в зал, хуже, чем не показать ничего.
-    const growth = ks && ks.programGrowth ? ks.programGrowth(sessions || []) : null;
+    const {
+      program, days, sessions, doneCount, totalCount, skippedCount,
+      snapshot: snapshotIn, onClose, onWriteCurator,
+    } = props;
+    const snapshot = snapshotIn
+      || buildProgramDoneSnapshot(program, days, sessions, props.readDay);
+    const growth = snapshot && snapshot.growth;
     const hasHeld = growth && growth.held && growth.held.sessions > 0;
-    const weeks = program && program.weeks;
+    const canToggleHeld = growth && growth.kind === 'growth';
+    const showHeldToggle = React.useState(false);
+    const showHeld = showHeldToggle[0];
+    const setShowHeld = showHeldToggle[1];
+    const showGrowth = canToggleHeld && !showHeld;
+    const showHeldBlock = (!canToggleHeld && hasHeld) || (canToggleHeld && showHeld);
 
-    return h('div', { className: 'sb-root program-done' },
-      h('div', { className: 'sb-head' },
+    const growthRows = showGrowth && growth.rows
+      ? growth.rows.map(function (r, i) {
+        return programDoneGrowthRow({
+          name: r.name,
+          value: r.kind === 'weight'
+            ? r.from + ' → ' + r.to + ' кг'
+            : r.from + ' → ' + r.to + ' повт.',
+        }, { key: r.name, isLast: i === growth.rows.length - 1 });
+      })
+      : null;
+
+    const heldRows = showHeldBlock && growth && growth.held
+      ? [
+        programDoneGrowthRow({
+          name: 'Постоянство',
+          value: growth.held.sessions + ' ' + pluralSessions(growth.held.sessions),
+        }, { key: 'c' }),
+        programDoneGrowthRow({
+          name: 'Объём',
+          value: fmtVolume(growth.held.totalVolume),
+        }, { key: 'v' }),
+        programDoneGrowthRow({
+          name: 'Закрытых подходов',
+          value: String(growth.held.doneApproaches),
+        }, { key: 'a', isLast: true }),
+      ]
+      : null;
+
+    const skipLine = skippedCount > 0
+      ? (skippedCount + ' ' + pluralSessions(skippedCount)
+        + ' пропущены — на итог это повлияло мало.' + PROGRAM_DONE_SKIP_TAIL)
+      : '';
+
+    return h('div', { className: 'sb-root program-done sb-screen' },
+      h('div', { className: 'sb-head sb-finish-head' },
         h('button', { type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть' }, '✕'),
         h('div', { className: 'sb-head-title' },
-          h('b', null, weeks ? weeks + ' недели позади' : 'Цикл позади'),
-          h('div', { className: 'sb-head-sub' }, program && program.title ? program.title : 'Программа')
-        )
+          h('b', null, 'Программа пройдена'),
+          snapshot && snapshot.dateRange
+            && h('div', { className: 'sb-head-sub program-done-date' }, snapshot.dateRange)),
+        h('span', { className: 'program-done-badge' }, 'цикл закрыт')
       ),
-      h('div', { className: 'sb-list' },
+      h('div', { className: 'sb-list sb-finish-list' },
         h('div', { className: 'program-done-hero' },
           h('span', { className: 'program-done-hero-label' },
             'Тренировок из назначенных'),
           h('b', null, doneCount + ' из ' + totalCount),
           h('p', null, 'и вот что за ними стоит')
         ),
-        growth && growth.kind === 'growth'
-          ? h('section', { className: 'program-done-block' },
-            h('div', { className: 'sb-proposal-section-title' }, 'Что выросло'),
-            h('ul', { className: 'program-done-rows' },
-              growth.rows.map(function (r) {
-                return h('li', { key: r.name },
-                  h('b', null, r.name),
-                  h('span', null, r.kind === 'weight'
-                    ? r.from + ' → ' + r.to + ' кг'
-                    : r.from + ' → ' + r.to + ' повт.')
-                );
-              })
-            )
-          )
-          : hasHeld && h('section', { className: 'program-done-block' },
-            h('div', { className: 'sb-proposal-section-title' }, 'Что удержано'),
-            h('ul', { className: 'program-done-rows' },
-              h('li', { key: 'c' }, h('b', null, 'Постоянство'),
-                h('span', null, (growth.held ? growth.held.sessions : 0) + ' ' + pluralSessions(growth.held ? growth.held.sessions : 0))),
-              h('li', { key: 'v' }, h('b', null, 'Объём'),
-                h('span', null, fmtVolume(growth.held ? growth.held.totalVolume : 0))),
-              h('li', { key: 'a' }, h('b', null, 'Закрытых подходов'),
-                h('span', null, String(growth.held ? growth.held.doneApproaches : 0)))
-            )
-          ),
-        skippedCount > 0 && h('p', { className: 'program-done-skips' },
-          skippedCount + ' ' + pluralSessions(skippedCount) + ' пропущены — на итог это повлияло мало.'),
+        snapshot && h('div', { className: 'program-done-stats' },
+          h('div', { className: 'program-done-stat' },
+            h('span', { className: 'program-done-stat-label' }, 'Тоннаж'),
+            h('b', null, fmtVolume(snapshot.tonnage))),
+          h('div', { className: 'program-done-stat' },
+            h('span', { className: 'program-done-stat-label' }, 'Рекордов'),
+            h('b', null, String(snapshot.records || 0))),
+          h('div', { className: 'program-done-stat' },
+            h('span', { className: 'program-done-stat-label' }, 'Недель'),
+            h('b', null, String(snapshot.weeks || 0)))
+        ),
+        showGrowth && h(React.Fragment, null,
+          h('div', { className: 'program-done-tier' }, 'Что выросло'),
+          h('div', { className: 'program-done-growth' }, growthRows)
+        ),
+        showHeldBlock && h(React.Fragment, null,
+          h('div', { className: 'program-done-tier' }, 'Что удержано'),
+          h('div', { className: 'program-done-growth' }, heldRows)
+        ),
+        canToggleHeld && h('button', {
+          type: 'button',
+          className: 'program-done-secondary',
+          onClick: function () { setShowHeld(!showHeld); },
+        }, showHeld ? 'Показать рост' : 'Показать случай без роста'),
+        skipLine && h('p', { className: 'program-done-skips' }, skipLine),
         h('button', {
           type: 'button', className: 'sb-btn is-accent program-done-cta', onClick: onWriteCurator
         }, 'Написать куратору'),
@@ -1626,6 +1723,7 @@
   }
 
   Parts.ProgramDoneScreen = ProgramDoneScreen;
+  Parts.buildProgramDoneSnapshot = buildProgramDoneSnapshot;
   Parts.CycleScreen = CycleScreen;
   Parts.buildProgramCycleSnapshot = buildProgramCycleSnapshot;
 

@@ -2738,46 +2738,34 @@
       "h": "59a4d213b25f"
     },
     "Программа пройдена · 01": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "175bdcc2e73a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2905"
+      "v": "=",
+      "f": "Л01 шапка: ProgramDoneScreen .sb-head.sb-finish-head — heys_strength_proposal_ui_v1.js ProgramDoneScreen",
+      "h": "175bdcc2e73a"
     },
     "Программа пройдена · 02": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "07ffbada0ee7",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2906"
+      "v": "=",
+      "f": "Л02 column gap 3px: .sb-root.program-done .sb-head-title — 750-strength-builder.css:4247-4252",
+      "h": "07ffbada0ee7"
     },
     "Программа пройдена · 03": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "c4b4208e3021",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2907"
+      "v": "=",
+      "f": "Л03 «Программа пройдена» title b — ProgramDoneScreen head",
+      "h": "c4b4208e3021"
     },
     "Программа пройдена · 04": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "0b934293a975",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2908"
+      "v": "=",
+      "f": "Л04 date range .program-done-date tabular-nums: programDoneDateRange — proposal_ui_v1.js",
+      "h": "0b934293a975"
     },
     "Программа пройдена · 05": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "a9e2a1582436",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2909"
+      "v": "=",
+      "f": "Л05 badge .program-done-badge --gr-bg/--gr — 750-strength-builder.css:5686-5693; contract test sand palette",
+      "h": "a9e2a1582436"
     },
     "Программа пройдена · 06": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "c629f84f9712",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2910"
+      "v": "=",
+      "f": "Л06 scroll .sb-list.sb-finish-list — ProgramDoneScreen",
+      "h": "c629f84f9712"
     },
     "Программа пройдена · 07": {
       "v": "=",
@@ -2800,102 +2788,74 @@
       "h": "796cf355f726"
     },
     "Программа пройдена · 11": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "2c2ec98a753e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2915"
+      "v": "=",
+      "f": "Л11 .program-done-stats gap 8px margin-top 10px — 750-strength-builder.css:5728-5732",
+      "h": "2c2ec98a753e"
     },
     "Программа пройдена · 12": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "37fc97688d19",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2916"
+      "v": "=",
+      "f": "Л12 .program-done-stat flex column gap 4px padding 10px 12px radius 14px --c1 — 750-strength-builder.css:5734-5742",
+      "h": "37fc97688d19"
     },
     "Программа пройдена · 13": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "79b41ecea2a9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2917"
+      "v": "=",
+      "f": "Л13 .program-done-stat-label 600 9.5px/.12em uppercase — 750-strength-builder.css:5744-5749",
+      "h": "79b41ecea2a9"
     },
     "Программа пройдена · 14": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "132e4802acef",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2918"
+      "v": "=",
+      "f": "Л14 .program-done-stat b 800 19px tabular-nums --tx — 750-strength-builder.css:5751-5755",
+      "h": "132e4802acef"
     },
     "Программа пройдена · 15": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "0df9cd1034dd",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2919"
+      "v": "=",
+      "f": "Л15 .program-done-tier ярус «Что выросло» color var(--ac) — 750-strength-builder.css:5757-5763",
+      "h": "0df9cd1034dd"
     },
     "Программа пройдена · 16": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "d9a337aab838",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2920"
+      "v": "=",
+      "f": "Л16 список .program-done-growth (.cd) — ProgramDoneScreen",
+      "h": "d9a337aab838"
     },
     "Программа пройдена · 17": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2921"
+      "v": "=",
+      "f": "Л17 .program-done-growth-row flex baseline space-between — 750-strength-builder.css:5771-5780",
+      "h": "af81bb6e54c6"
     },
     "Программа пройдена · 18": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "09d2d92342f1",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2922"
+      "v": "=",
+      "f": "Л18 имя упражнения color var(--tx) — .program-done-growth-row",
+      "h": "09d2d92342f1"
     },
     "Программа пройдена · 19": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "6ee53d9dc46a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2923"
+      "v": "=",
+      "f": "Л19 .program-done-growth-val 700 12.5px color var(--gr) — 750-strength-builder.css:5786-5791; sand+blue contract test",
+      "h": "6ee53d9dc46a"
     },
     "Программа пройдена · 20": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "6b286135ed76",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2924"
+      "v": "=",
+      "f": "Л20 .program-done-growth-row.is-last border-bottom none — 750-strength-builder.css:5782-5784",
+      "h": "6b286135ed76"
     },
     "Программа пройдена · 21": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "f38afd86fac9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2925"
+      "v": "=",
+      "f": "Л21 .program-done-secondary margin-top 9px min-height 48px — 750-strength-builder.css:5793-5805",
+      "h": "f38afd86fac9"
     },
     "Программа пройдена · 22": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "f3ae7777b01d",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2926"
+      "v": "=",
+      "f": "Л22 .program-done-skips 500 11px/1.55 + PROGRAM_DONE_SKIP_TAIL — ProgramDoneScreen",
+      "h": "f3ae7777b01d"
     },
     "Программа пройдена · 23": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "aa179f90ff30",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2927"
+      "v": "=",
+      "f": "Л23 .program-done-cta margin-top 10px min-height 48px — 750-strength-builder.css:5814-5818",
+      "h": "aa179f90ff30"
     },
     "Программа пройдена · 24": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "1909f720f5fc",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2928"
+      "v": "=",
+      "f": "Л24 .program-done-note 500 11px/1.4 center margin-top 6px — 750-strength-builder.css:5820-5825",
+      "h": "1909f720f5fc"
     },
     "История упражнения · 01": {
       "v": "=",
@@ -8437,11 +8397,9 @@
       "h": "088e4b733206"
     },
     "Программа пройдена · текст": {
-      "v": "≠",
-      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста.",
-      "h": "a3158812f216",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:4075"
+      "v": "=",
+      "f": "Составная цепочка Г5: ProgramDoneScreen DOM — strength-proposal-v4-canvas-contract.test.js «ProgramDoneScreen · текст»",
+      "h": "a3158812f216"
     },
     "История упражнения · текст": {
       "v": "=",
@@ -8629,25 +8587,19 @@
       "h": "ec58e22c1a87"
     },
     "Исход · правка принята · текст": {
-      "v": "≠",
-      "f": "Составная copy-строка Л10 (канвас :4116): полный текст «Верх тела B › правка принята… › Продолжить тренировку»; клиентский runtime не монтирует экран исхода accept — только kernel acceptPlanProposal + ProposalCard/Review (proposal_ui_v1.js:1762-1765).",
-      "h": "011939dbcabb",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л10 composite: ProposalOutcomeScreen accepted + buildAcceptedOutcomeSnapshot — strength-proposal-v4-canvas-contract.test.js «Л10–Л12 · текст»",
+      "h": "011939dbcabb"
     },
     "Исход · отказ · текст": {
-      "v": "≠",
-      "f": "Составная copy-строка Л11 (канвас :4117): «Верх тела B › предложение отклонено… › Посмотреть, что он предлагал»; post-decline полноэкранный исход не рендерится — declinePlanProposal меняет status без UI Л11 (strength-proposal-ui.test.js).",
-      "h": "dd7126fe4dd3",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л11 composite: ProposalOutcomeScreen declined + buildDeclinedOutcomeSnapshot — strength-proposal-v4-canvas-contract.test.js «Л10–Л12 · текст»",
+      "h": "dd7126fe4dd3"
     },
     "Исход · без ответа · текст": {
-      "v": "≠",
-      "f": "Составная copy-строка Л12 (канвас :4118): «Тренировка завершена › … › не принято»; finish-screen показывает итог тренировки (finish_ui_v1.js:301-349), но не dedicated copy-цепочку исхода expired proposal Л12.",
-      "h": "5268a64f6338",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "v": "=",
+      "f": "Л12 composite: ProposalOutcomeScreen expired + buildExpiredOutcomeSnapshot — strength-proposal-v4-canvas-contract.test.js «Л10–Л12 · текст»",
+      "h": "5268a64f6338"
     },
     "Принятие · ветка чата · текст": {
       "v": "—",

@@ -1,0 +1,21 @@
+{
+  "zoneId": "strength-builder",
+  "task": "95-lane-1",
+  "rowsClosed": {
+    "programDone": 20,
+    "programDoneText": 1,
+    "outcomeText": 3,
+    "total": 24
+  },
+  "exceptions": [],
+  "tests": "HEYS_DESIGN_GATES=skip npx vitest run __tests__/strength-proposal-v4-canvas-contract.test.js __tests__/strength-proposal-ui.test.js",
+  "testPassCount": 33,
+  "files": [
+    "apps/web/strength/heys_strength_proposal_ui_v1.js",
+    "apps/web/styles/modules/750-strength-builder.css",
+    "apps/web/heys_day_trainings_v1.js",
+    "apps/web/__tests__/strength-proposal-v4-canvas-contract.test.js",
+    "apps/web/__tests__/strength-proposal-ui.test.js",
+    "docs/ui/verdicts/strength-builder.json"
+  ]
+}

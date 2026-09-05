@@ -3386,7 +3386,8 @@
         id: PROGRAM_DONE_ID,
         ariaLabel: 'Программа пройдена',
         render: (api) => React.createElement(Parts.ProgramDoneScreen, {
-          program, sessions, doneCount, totalCount: days.length, skippedCount,
+          program, days, sessions, doneCount, totalCount: days.length, skippedCount,
+          readDay: readDayFromStore,
           onClose: () => { api.close(); setDismissed(true); },
           onWriteCurator: () => {
             api.close();

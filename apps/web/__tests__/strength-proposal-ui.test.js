@@ -390,9 +390,10 @@ describe('программа пройдена (16e)', () => {
     expect(screen.getByText('Тренировок из назначенных')).toBeTruthy();
     expect(screen.getByText('Что выросло')).toBeTruthy();
     expect(screen.getByText('60 → 70 кг')).toBeTruthy();
-    // Пропуски — одной строкой и без имён.
+    // Пропуски — одной строкой: в сноске есть политика, но не поимённый список.
     expect(screen.getByText(/3 тренировки пропущены/)).toBeTruthy();
-    expect(screen.queryByText(/вместо/)).toBeNull();
+    expect(screen.getByText(/Пропуски названы одной строкой/)).toBeTruthy();
+    expect(screen.queryByRole('listitem')).toBeNull();
   });
 
   it('роста нет — «Что удержано», а не пустой список под заголовком «Что выросло»', () => {

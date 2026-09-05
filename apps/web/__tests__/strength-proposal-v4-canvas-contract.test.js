@@ -11,10 +11,10 @@ const CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-buil
 const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
 
 const SAND = Object.freeze({
-  tint: '#f6e6dd', tx: '#201e1d', ac2: '#a1471c', gr: '#5c6a45', ink56: 'rgba(0, 0, 0, .56)',
+  tint: '#f6e6dd', tx: '#201e1d', ac: '#8a4a20', ac2: '#a1471c', gr: '#5c6a45', ink56: 'rgba(0, 0, 0, .56)',
 });
 const BLUE = Object.freeze({
-  tint: '#e2ecf6', tx: '#101826', ac2: '#1d5e96', gr: '#5c6a45', ink56: 'rgba(16, 24, 38, 0.64)',
+  tint: '#e2ecf6', tx: '#101826', ac: '#1a6eb2', ac2: '#1d5e96', gr: '#5c6a45', ink56: 'rgba(16, 24, 38, 0.64)',
 });
 
 function paletteCss(name) {
@@ -23,8 +23,12 @@ function paletteCss(name) {
   return `${BASE_CSS}\n${CSS}`
     .replaceAll('var(--tint)', p.tint)
     .replaceAll('var(--tx)', p.tx)
+    .replaceAll('var(--ac)', p.ac)
     .replaceAll('var(--ac2)', p.ac2)
     .replaceAll('var(--gr)', p.gr)
+    .replaceAll('var(--gr-bg)', p.tint)
+    .replaceAll('var(--c1)', p.tint)
+    .replaceAll('var(--c2)', p.tint)
     .replaceAll('var(--ink)', inkRgb);
 }
 
@@ -204,15 +208,118 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
   });
 
   it('ProgramDoneScreen: hero count 30px on v4 ok-bg', () => {
+    const style = document.createElement('style');
+    style.textContent = paletteCss('sand');
+    document.head.appendChild(style);
+    try {
+      const { container } = render(React.createElement(Parts.ProgramDoneScreen, {
+        program: { title: 'Верх/низ', weeks: 4, startDate: '2026-07-08' },
+        days: [{ date: '2026-07-08', status: 'done' }, { date: '2026-08-05', status: 'done' }],
+        sessions: [
+          { date: '2026-07-01', exercises: [{ name: 'Жим', approaches: [{ weightKg: '60', reps: 8, done: true }] }] },
+          { date: '2026-07-08', exercises: [{ name: 'Жим', approaches: [{ weightKg: '65', reps: 8, done: true }] }] },
+          { date: '2026-07-15', exercises: [{ name: 'Жим', approaches: [{ weightKg: '70', reps: 8, done: true }] }] },
+        ],
+        doneCount: 9, totalCount: 12, skippedCount: 3,
+        onClose: () => {}, onWriteCurator: () => {},
+      }));
+      expect(screen.getByText('9 из 12')).toBeTruthy();
+      expect(screen.getByText('Тренировок из назначенных')).toBeTruthy();
+      expect(screen.getByText('и вот что за ними стоит')).toBeTruthy();
+      expect(screen.getByText('Программа пройдена')).toBeTruthy();
+      expect(screen.getByText('цикл закрыт')).toBeTruthy();
+      expect(screen.getByText('8 июля — 5 августа')).toBeTruthy();
+      const heroCount = container.querySelector('.program-done-hero b');
+      expect(getComputedStyle(heroCount).fontSize).toBe('30px');
+      const badge = container.querySelector('.program-done-badge');
+      expect(getComputedStyle(badge).color).toBe(SAND.gr);
+    } finally {
+      style.remove();
+    }
+  });
+
+  it('ProgramDoneScreen: geometry rows 11–24 and growth color on sand+blue', () => {
+    const props = {
+      program: { weeks: 4, startDate: '2026-07-08' },
+      days: [{ date: '2026-07-08', status: 'done' }, { date: '2026-08-05', status: 'done' }],
+      sessions: [
+        { date: '2026-07-01', exercises: [{ name: 'Жим лёжа', approaches: [{ weightKg: '75', reps: 8, done: true }] }] },
+        { date: '2026-07-08', exercises: [{ name: 'Жим лёжа', approaches: [{ weightKg: '80', reps: 8, done: true }] }] },
+        { date: '2026-07-15', exercises: [{ name: 'Жим лёжа', approaches: [{ weightKg: '85', reps: 8, done: true }] }] },
+      ],
+      doneCount: 9, totalCount: 12, skippedCount: 3,
+      onClose: () => {}, onWriteCurator: () => {},
+    };
+    for (const palette of ['sand', 'blue']) {
+      const style = document.createElement('style');
+      style.textContent = paletteCss(palette);
+      document.head.appendChild(style);
+      try {
+        const { container } = render(React.createElement(Parts.ProgramDoneScreen, props));
+        const stats = container.querySelector('.program-done-stats');
+        expect(getComputedStyle(stats).gap).toBe('8px');
+        expect(getComputedStyle(stats).marginTop).toBe('10px');
+        const stat = container.querySelector('.program-done-stat');
+        expect(getComputedStyle(stat).borderRadius).toBe('14px');
+        expect(getComputedStyle(stat).padding).toBe('10px 12px');
+        const statLabel = container.querySelector('.program-done-stat-label');
+        expect(getComputedStyle(statLabel).fontSize).toBe('9.5px');
+        const statVal = container.querySelector('.program-done-stat b');
+        expect(getComputedStyle(statVal).fontSize).toBe('19px');
+        const tier = container.querySelector('.program-done-tier');
+        expect(tier.textContent).toBe('Что выросло');
+        expect(getComputedStyle(tier).color).toBe(palette === 'blue' ? BLUE.ac : SAND.ac);
+        const growthVal = container.querySelector('.program-done-growth-val');
+        expect(getComputedStyle(growthVal).color).toBe(palette === 'blue' ? BLUE.gr : SAND.gr);
+        const secondary = container.querySelector('.program-done-secondary');
+        expect(getComputedStyle(secondary).marginTop).toBe('9px');
+        expect(getComputedStyle(secondary).minHeight).toBe('48px');
+        const cta = container.querySelector('.program-done-cta');
+        expect(getComputedStyle(cta).marginTop).toBe('10px');
+        const note = container.querySelector('.program-done-note');
+        expect(getComputedStyle(note).fontSize).toBe('11px');
+        expect(getComputedStyle(note).marginTop).toBe('6px');
+        cleanup();
+      } finally {
+        style.remove();
+      }
+    }
+  });
+
+  it('ProgramDoneScreen · текст: составная цепочка кадра Г5', () => {
     render(React.createElement(Parts.ProgramDoneScreen, {
-      program: { title: 'Верх/низ', weeks: 4 },
-      sessions: [],
-      doneCount: 9, totalCount: 12, skippedCount: 0,
+      program: { weeks: 4, startDate: '2026-07-08' },
+      days: [{ date: '2026-07-08', status: 'done' }, { date: '2026-08-05', status: 'done' }],
+      sessions: [
+        { date: '2026-07-01', exercises: [{ name: 'Жим лёжа', approaches: [{ weightKg: '75', reps: 8, done: true }] }] },
+        { date: '2026-07-08', exercises: [{ name: 'Жим лёжа', approaches: [{ weightKg: '80', reps: 8, done: true }] }] },
+        { date: '2026-07-15', exercises: [{ name: 'Жим лёжа', approaches: [{ weightKg: '85', reps: 8, done: true }] }] },
+      ],
+      doneCount: 9, totalCount: 12, skippedCount: 3,
       onClose: () => {}, onWriteCurator: () => {},
     }));
-    expect(screen.getByText('9 из 12')).toBeTruthy();
-    expect(screen.getByText('Тренировок из назначенных')).toBeTruthy();
-    expect(screen.getByText('и вот что за ними стоит')).toBeTruthy();
+    const composite = [
+      'Программа пройдена',
+      '8 июля — 5 августа',
+      'цикл закрыт',
+      'Тренировок из назначенных',
+      '9 из 12',
+      'и вот что за ними стоит',
+      'Тоннаж',
+      'Рекордов',
+      'Недель',
+      'Что выросло',
+      'Жим лёжа',
+      '75 → 85 кг',
+      'Показать случай без роста',
+      '3 тренировки пропущены — на итог это повлияло мало.',
+      'Написать куратору',
+      'Куратор уже видит итоги и готовит следующую.',
+    ].join(' › ');
+    const actual = document.body.textContent.replace(/\s+/g, ' ').trim();
+    for (const chunk of composite.split(' › ')) {
+      expect(actual).toContain(chunk);
+    }
   });
 
   it('source uses v4 role variables, not legacy hex literals', () => {
@@ -262,5 +369,43 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
     } finally {
       style.remove();
     }
+  });
+
+  it('Л10–Л12 · текст: составные цепочки исходов', () => {
+    const { ks } = { ks: window.HEYS.TrainingKernel.strength };
+    const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 60, 8, false)])]);
+    const accepted = ks.acceptPlanProposal(training, 9 * 3600 + 21 * 60 * 1000).training;
+    render(React.createElement(Parts.ProposalOutcomeScreen, {
+      training: accepted, variant: 'accepted', onClose: () => {}, onContinue: () => {},
+    }));
+    let actual = document.body.textContent.replace(/\s+/g, ' ').trim();
+    [
+      'Верх тела B', 'правка принята в', 'принято', 'План обновлён',
+      'Продолжить тренировку', 'Исход виден составом',
+    ].forEach((chunk) => expect(actual).toContain(chunk));
+    cleanup();
+
+    const declined = ks.declinePlanProposal(training, Date.now()).training;
+    render(React.createElement(Parts.ProposalOutcomeScreen, {
+      training: declined, variant: 'declined', onClose: () => {}, onReview: () => {},
+    }));
+    actual = document.body.textContent.replace(/\s+/g, ' ').trim();
+    [
+      'Верх тела B', 'предложение отклонено', 'План остался прежним',
+      'Посмотреть, что он предлагал', 'Одна кнопка, и та тихая',
+    ].forEach((chunk) => expect(actual).toContain(chunk));
+    cleanup();
+
+    const started = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, true), ap('a2', 75, 8, false)])]);
+    const expired = ks.expirePlanProposal(started, Date.now());
+    render(React.createElement(Parts.ProposalOutcomeScreen, {
+      training: expired, variant: 'expired', elapsedSec: 54 * 60 + 30, onClose: () => {},
+    }));
+    actual = document.body.textContent.replace(/\s+/g, ' ').trim();
+    [
+      'Тренировка завершена', '54:30', 'Тренировка закрыта',
+      'Сделано по прежнему плану', 'не принято',
+      'Предложение не блокирует завершение',
+    ].forEach((chunk) => expect(actual).toContain(chunk));
   });
 });
