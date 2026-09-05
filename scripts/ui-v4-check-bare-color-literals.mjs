@@ -70,19 +70,31 @@ const ALIAS = { '733-login-theme.css': '733-ui-v4-login-theme.css' };
 const BASELINE = {
   '000-base-and-gamification.css': 12,
   '100-metrics-and-graphs.css': 6,
-  '300-modals-and-day.css': 163,
-  '500-pwa-and-offline.css': 70,
-  '600-steps-and-aps.css': 46,
-  '610-aps-meal-flow.css': 73,
+  // 05.09: вошёл в охват, когда вердикты мессенджера начали называть его по
+  // имени. «Было 0» значило «не смотрели», а не «чисто»: 201 место жило в нём
+  // и раньше, без охраны. Счёт только падал — 235 до ce6880f76, 204 до
+  // aa9bb7cc0, 201 сейчас. Это впервые зафиксированный долг, не регресс.
+  '1000-messenger.css': 201,
+  '300-modals-and-day.css': 143,
+  '500-pwa-and-offline.css': 58,
+  '600-steps-and-aps.css': 45,
+  '610-aps-meal-flow.css': 68,
   '611-aps-product-card.css': 11,
-  '715-yesterday-verify.css': 35,
-  '730-widgets-dashboard.css': 104,
+  '715-yesterday-verify.css': 26,
+  '730-widgets-dashboard.css': 94,
   '733-ui-v4-login-theme.css': 9,
-  '740-cascade-card.css': 15,
-  '750-strength-builder.css': 6,
-  'critical.css': 26,
-  'heys-boot-mark.css': 1,
-  'heys-components.css': 394,
+  '740-cascade-card.css': 13,
+  '750-strength-builder.css': 3,
+  'critical.css': 23,
+  'heys-components.css': 350,
+  // Ноль записан НАМЕРЕННО и вручную: --update-baseline пишет только файлы с
+  // ненулевым счётом, поэтому вычищенный файл выпал бы из заморозки, а вместе
+  // с ней — из обхода, который держится на Object.keys(BASELINE). Дальше он
+  // был бы под охраной, только пока его называет хоть один вердикт; перепишут
+  // вердикты без имени файла — и гейт покажет ноль как «чисто». Ровно так
+  // 2 сентября потерялся 740-cascade-card.css. Ноль здесь означает «проверено
+  // и пусто», и любой новый литерал в этом файле уронит гейт.
+  'heys-boot-mark.css': 0,
 };
 
 /** Файлы, на которые ссылаются вердикты, — то есть сведённые. */
