@@ -138,12 +138,33 @@
   }
 
   function SupersetBlock(props) {
-    const { group, exercises, dateKey, onToggleCell, onAddRound, onSwap } = props;
+    const {
+      group, exercises, dateKey, onToggleCell, onAddRound, onSwap,
+      onOpenSheet, onDissolve, readOnly
+    } = props;
+    const [workOpen, setWorkOpen] = React.useState(false);
     const SK = kernel();
     if (!SK) return null;
     const rounds = SK.supersetRounds(exercises, group.groupId);
     const members = group.indexes.map(function (i) { return exercises[i]; });
     const memberCount = members.length;
+    const isTrisetWork = !!(rounds && memberCount >= 3);
+
+    if (workOpen && isTrisetWork) {
+      return h(TriSetWorkScreen, {
+        group: group,
+        exercises: exercises,
+        muscleLabel: trisetMuscleLabel(members),
+        onBack: function () { setWorkOpen(false); },
+        onOpenSheet: onOpenSheet,
+        onToggleCell: onToggleCell,
+        onAddRound: onAddRound,
+        onSwap: onSwap,
+        onDissolve: onDissolve,
+        readOnly: !!readOnly
+      });
+    }
+
     const title = rounds
       ? ('Связка · ' + memberCount + ' '
         + ruPlural(memberCount, 'упражнение', 'упражнения', 'упражнений'))
@@ -162,6 +183,12 @@
       ),
       h('span', { className: 'sb-ss-badge' + (rounds ? '' : ' sb-ss-badge--history') },
         rounds ? 'связка' : 'история'),
+      isTrisetWork && h('button', {
+        type: 'button', className: 'sb-icon-btn sb-ss-work-open',
+        onClick: function () { setWorkOpen(true); },
+        title: 'Трисет в работе',
+        'aria-label': 'Трисет в работе'
+      }, '↗'),
       rounds && h('button', {
         type: 'button', className: 'sb-icon-btn sb-ss-swap',
         onClick: function () { onSwap(group.groupId); },
@@ -2430,6 +2457,23 @@
         go: function () { ctx.close(); ctx.go('catalog'); }
       },
       {
+        icon: '✏️', t: 'Своё упражнение', d: 'три поля · третье только иногда',
+        chevron: 'dim',
+        go: function () {
+          ctx.close();
+          if (typeof ctx.openCustomExercise === 'function') {
+            ctx.openCustomExercise();
+            return;
+          }
+          if (typeof Parts.openCustomExercise === 'function') {
+            Parts.openCustomExercise({
+              initialName: '',
+              onDone: typeof ctx.onPickExercise === 'function' ? ctx.onPickExercise : undefined
+            });
+          }
+        }
+      },
+      {
         icon: '📈', t: 'История и рекорды', d: 'динамика веса и тоннажа',
         off: !current.name,
         chevron: 'dim',
@@ -3006,9 +3050,26 @@
   function SupersetBoundariesBody(props) {
     const replacements = Array.isArray(props.replacements) ? props.replacements : [];
     const frozen = Array.isArray(props.frozen) ? props.frozen : [];
+    const who = props.who || 'Куратор';
+    const allowFullScreen = props.allowFullScreen !== false;
+    const [fullScreen, setFullScreen] = React.useState(false);
     if (!replacements.length && !frozen.length) return null;
 
+    if (fullScreen) {
+      return h(SupersetBoundariesScreen, {
+        who: who,
+        replacements: replacements,
+        frozen: frozen,
+        onClose: function () { setFullScreen(false); }
+      });
+    }
+
     return h('div', { className: 'sb-ss-bound' },
+      allowFullScreen && h('button', {
+        type: 'button',
+        className: 'sb-proposal-review-link sb-ss-bound-expand',
+        onClick: function () { setFullScreen(true); }
+      }, 'на весь экран ›'),
       replacements.map(function (row, i) {
         return h('div', { key: 'r' + i, className: 'sb-ss-bound-grp' },
           h('div', { className: 'sb-ss-bound-pair' },
@@ -3333,6 +3394,71 @@
     );
   }
 
+  const STRENGTH_SUBVIEW_VIEW_KEYS = Object.freeze({
+    CUSTOM_EXERCISE: 'custom-exercise',
+    SUPERSET_BOUNDARIES: 'superset-boundaries',
+    TRISET_WORK: 'triset-work'
+  });
+
+  const CUSTOM_EXERCISE_FS_ID = 'strength-custom-exercise';
+
+  /**
+   * Полноэкранный вход В3 из шторки ⋯ и day-shell. Builder lane может
+   * пробросить ctx.openCustomExercise; иначе монтируем через TrainingKernel.fullscreen.
+   */
+  function openCustomExercise(opts) {
+    const o = opts || {};
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    if (!fs || typeof fs.mount !== 'function') return false;
+    return fs.mount({
+      id: CUSTOM_EXERCISE_FS_ID,
+      ariaLabel: 'Новое упражнение',
+      render: function (api) {
+        return h(CustomExerciseScreen, {
+          initialName: o.initialName || '',
+          onDone: function (name) {
+            if (typeof o.onDone === 'function') o.onDone(name);
+            api.close();
+          },
+          onCancel: function () {
+            if (typeof o.onCancel === 'function') o.onCancel();
+            api.close();
+          }
+        });
+      }
+    });
+  }
+
+  function closeCustomExercise() {
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    return fs && typeof fs.unmount === 'function' ? fs.unmount(CUSTOM_EXERCISE_FS_ID) : false;
+  }
+
+  /**
+   * Контракт для lane 1 (builder_ui): view-dispatch до CatUI/FinUI.
+   * Ключи — STRENGTH_SUBVIEW_VIEW_KEYS; props — как у соответствующих Screen.
+   */
+  function renderBuilderSubview(ctx) {
+    if (!ctx || !ctx.view) return null;
+    const props = ctx.props || {};
+    if (ctx.view === STRENGTH_SUBVIEW_VIEW_KEYS.CUSTOM_EXERCISE) {
+      return h(CustomExerciseScreen, props);
+    }
+    if (ctx.view === STRENGTH_SUBVIEW_VIEW_KEYS.SUPERSET_BOUNDARIES) {
+      return h(SupersetBoundariesScreen, props);
+    }
+    if (ctx.view === STRENGTH_SUBVIEW_VIEW_KEYS.TRISET_WORK) {
+      return h(TriSetWorkScreen, props);
+    }
+    return null;
+  }
+
+  Parts.STRENGTH_SUBVIEW_VIEW_KEYS = STRENGTH_SUBVIEW_VIEW_KEYS;
+  Parts.openCustomExercise = openCustomExercise;
+  Parts.closeCustomExercise = closeCustomExercise;
+  Parts.renderBuilderSubview = renderBuilderSubview;
   Parts.supersetGroupLetter = supersetGroupLetter;
   Parts.supersetMemberLines = supersetMemberLines;
   Parts.SupersetBoundariesBody = SupersetBoundariesBody;

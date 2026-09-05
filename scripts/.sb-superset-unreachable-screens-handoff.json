@@ -1,0 +1,32 @@
+{
+  "zone": "strength-builder",
+  "scope": "Lane 3 · superset_ui unreachable screens · Task 35",
+  "generated": "2026-09-05",
+  "rows": [
+    {
+      "key": "TriSetWorkScreen",
+      "verdict": "=",
+      "fact": "route: SupersetBlock (≥3 участника, раунды) → кнопка «Трисет в работе» → TriSetWorkScreen; file: apps/web/strength/heys_strength_superset_ui_v1.js:153-165,186-191"
+    },
+    {
+      "key": "SupersetBoundariesScreen",
+      "verdict": "=",
+      "fact": "route: SupersetBoundariesBody (разбор правки / proposal) → «на весь экран ›» → SupersetBoundariesScreen; file: apps/web/strength/heys_strength_superset_ui_v1.js:3052-3058,3062-3066"
+    },
+    {
+      "key": "CustomExerciseScreen",
+      "verdict": "=",
+      "fact": "route: sheetRows ⋯ → «Своё упражнение» → Parts.openCustomExercise → fullscreen CustomExerciseScreen; file: apps/web/strength/heys_strength_superset_ui_v1.js:2453-2468,3403-3424"
+    },
+    {
+      "key": "builder_ui · renderBuilderSubview",
+      "verdict": "?",
+      "fact": "route: lane 1 — вставить Parts.renderBuilderSubview({ view, props }) в view-dispatch BuilderScreen до CatUI; ключи Parts.STRENGTH_SUBVIEW_VIEW_KEYS; file: apps/web/strength/heys_strength_superset_ui_v1.js:3437-3449"
+    },
+    {
+      "key": "catalog · createDraft",
+      "verdict": "?",
+      "fact": "route: CatalogScreen createDraft сейчас рендерит локальный NewExerciseScreen, не CustomExerciseScreen; lane 4 — заменить на Parts.CustomExerciseScreen или общий адаптер; file: apps/web/strength/heys_strength_catalog_ui_v1.js:151-158"
+    }
+  ]
+}
