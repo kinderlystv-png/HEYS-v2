@@ -164,8 +164,8 @@
     },
     "вид · вход с компьютера": {
       "v": "≠",
-      "f": "DesktopGateScreen inline-styles: gradient, emoji 80px, нет колонки 480px / QR 198 / v4-типографики кадра",
-      "h": "21263af842d4",
+      "f": "Экран всё ещё legacy-gradient DesktopGateScreen, не v4-колонка 480/QR 198; тач-цели пакета 36 закрыты: copy/logout 44px видимым в heys_app_gates_v1.js + 500-pwa-and-offline.css",
+      "h": "0ae98ff9f0b5",
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:105"
     },
@@ -810,6 +810,11 @@
       "f": "текстовый слой кадра «Первый вход · с компьютера» — канвас, не runtime-копия v4-тура",
       "h": "690461063a3f",
       "naKind": "demo-only"
+    },
+    "тач-цели": {
+      "v": "=",
+      "f": "Пакет 36: .desktop-gate__copy-btn и .desktop-gate__logout-btn min-height 44px видимым — heys_app_gates_v1.js:156-186 + 500-pwa-and-offline.css:7393-7414; polosa4-task104-pkg36-touch-44px.test.js computed 44px sand.",
+      "h": "24ad1075664e"
     }
   },
   "frames": {

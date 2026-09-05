@@ -2421,8 +2421,8 @@
 }
 
 .cycle-date-picker-cell {
-  height: 38px;
-  min-height: 38px;
+  height: 44px;
+  min-height: 44px;
   padding: 0;
   border: none;
   border-radius: 11px;
@@ -7365,6 +7365,53 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 [data-theme$="dark"] .mc-modal--daily .mc-wheel-value--prev,
 [data-theme$="dark"] .mc-modal--daily .mc-wheel-value--next {
   color: rgba(242, 237, 230, 0.24);
+}
+
+/* Desktop gate (first-run · вход с компьютера) — видимые тач-цели без expander. */
+.desktop-gate__url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  max-width: 320px;
+  width: 100%;
+  margin-bottom: 32px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  box-sizing: border-box;
+}
+
+.desktop-gate__url {
+  flex: 1;
+  min-width: 0;
+  font: 500 14px/1.3 ui-monospace, Menlo, monospace;
+  word-break: break-all;
+  text-align: left;
+}
+
+.desktop-gate__copy-btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: inherit;
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.desktop-gate__logout-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  cursor: pointer;
 }
 
 /* MODULE 06 — PWA & Offline

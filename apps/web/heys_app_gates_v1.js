@@ -68,10 +68,32 @@
         if (!HEYS.DesktopGateScreen) {
             function DesktopGateScreen({ onLogout }) {
                 const currentUrl = window.location.origin;
+                const [copyLabel, setCopyLabel] = React.useState('Скопировать');
                 const qrSrc = React.useMemo(
                     () => HEYS.Gates.buildDesktopGateQrSrc(currentUrl),
                     [currentUrl]
                 );
+                const onCopyUrl = React.useCallback(() => {
+                    const markCopied = () => {
+                        setCopyLabel('Скопировано');
+                        window.setTimeout(() => setCopyLabel('Скопировать'), 2000);
+                    };
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(currentUrl).then(markCopied).catch(() => {});
+                        return;
+                    }
+                    try {
+                        const helper = document.createElement('textarea');
+                        helper.value = currentUrl;
+                        helper.setAttribute('readonly', '');
+                        helper.style.position = 'absolute';
+                        helper.style.left = '-9999px';
+                        document.body.appendChild(helper);
+                        helper.select();
+                        if (document.execCommand('copy')) markCopied();
+                        document.body.removeChild(helper);
+                    } catch (_) { /* clipboard unavailable */ }
+                }, [currentUrl]);
 
                 return React.createElement('div', {
                     className: 'desktop-gate',
@@ -130,19 +152,15 @@
                         })
                     ),
 
-                    // Ссылка
-                    React.createElement('div', {
-                        style: {
-                            background: 'rgba(255,255,255,0.15)',
-                            padding: '12px 20px',
-                            borderRadius: 12,
-                            fontSize: 14,
-                            fontFamily: 'monospace',
-                            marginBottom: 32,
-                            wordBreak: 'break-all',
-                            maxWidth: 320
-                        }
-                    }, currentUrl),
+                    // Ссылка + копирование (видимая пилюля 44 px)
+                    React.createElement('div', { className: 'desktop-gate__url-row' },
+                        React.createElement('span', { className: 'desktop-gate__url' }, currentUrl),
+                        React.createElement('button', {
+                            type: 'button',
+                            className: 'desktop-gate__copy-btn',
+                            onClick: onCopyUrl
+                        }, copyLabel)
+                    ),
 
                     // Инструкция PWA
                     React.createElement('div', {
@@ -164,17 +182,9 @@
 
                     // Кнопка выхода
                     onLogout && React.createElement('button', {
-                        onClick: onLogout,
-                        style: {
-                            background: 'rgba(255,255,255,0.2)',
-                            border: '1px solid rgba(255,255,255,0.3)',
-                            color: '#fff',
-                            padding: '12px 24px',
-                            borderRadius: 12,
-                            fontSize: 15,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                        }
+                        type: 'button',
+                        className: 'desktop-gate__logout-btn',
+                        onClick: onLogout
                     }, '← Выйти из аккаунта')
                 );
             }

@@ -1867,6 +1867,11 @@
       "v": "—",
       "f": "строка «границы» отдаёт нижнее меню продукту — сводит app-nav, не лист геймификации",
       "h": "428f2b1d84fc"
+    },
+    "тач-цели": {
+      "v": "=",
+      "f": "поднимать нечего: .game-v4-sheet__ach-row padding 13px 0 → ряд ≥44px; .game-v4-sheet__ach-medal 34px декор внутри цели — 000-base-and-gamification.css; polosa4-task104-pkg36-touch-44px.test.js.",
+      "h": "77ec5fb93de6"
     }
   },
   "frames": {

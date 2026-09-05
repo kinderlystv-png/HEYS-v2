@@ -1059,9 +1059,9 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
     expect(prop(bar, 'height')).toBe('8px');
   });
 
-  it('чип окна: высота 34, радиус 999 (контракт «вид · окно и бейджи»)', () => {
+  it('чип окна: высота 44, радиус 999 (контракт «вид · окно и бейджи»)', () => {
     const chip = cssBlock(insightsCss, 'insights-v4-window__chip');
-    expect(prop(chip, 'min-height')).toBe('34px');
+    expect(prop(chip, 'min-height')).toBe('44px');
     expect(prop(chip, 'border-radius')).toBe('999px');
   });
 

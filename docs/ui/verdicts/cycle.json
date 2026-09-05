@@ -2242,6 +2242,11 @@
       "f": "мета-строка пакета 35: общий пул «высота шага» разбит на три владельца; история прежних чисел в заметке <i>, не в data-v",
       "h": "4bb161ab8624",
       "naKind": "handoff"
+    },
+    "тач-цели": {
+      "v": "=",
+      "f": ".cycle-date-picker-cell height/min-height 44px — 500-pwa-and-offline.css:2423-2425; polosa4-task104-pkg36-touch-44px.test.js computed 44px.",
+      "h": "f6dc23e8e39d"
     }
   },
   "frames": {
