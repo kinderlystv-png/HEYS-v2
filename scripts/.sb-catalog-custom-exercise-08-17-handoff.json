@@ -1,0 +1,98 @@
+{
+  "zone": "strength-builder",
+  "scope": "apps/web/strength/heys_strength_catalog_ui_v1.js (NewExerciseScreen · Своё упражнение ·08–17)",
+  "generated": "2026-09-05",
+  "agent": "catalog subagent polosa 4",
+  "summary": {
+    "block": "Своё упражнение ·08–17",
+    "contractLines": 10,
+    "recommendEquals": 6,
+    "recommendNotEquals": 4,
+    "recommendDash": 0,
+    "recommendQuestion": 0,
+    "codeChanged": true,
+    "codeChange": "Unit picker: vertical .sb-radio → .sb-ex-cd / .sb-ex-unit-badge row (gap 6px, padding 9px 0, is-on --acs/--on-acs). CSS scoped :has(.sb-ex-name). Muscle chips unchanged — ·14–17 остаются ≠."
+  },
+  "computed": {
+    "sand": {
+      "selectedBg": "#c67139",
+      "selectedColor": "#2b1608",
+      "unselectedColor": "rgba(0, 0, 0, 0.62)",
+      "gap": "6px",
+      "rowPadding": "9px 0"
+    },
+    "blue": {
+      "selectedBg": "#2e7cc0",
+      "selectedColor": "#ffffff",
+      "unselectedColor": "rgba(16, 24, 38, 0.62)",
+      "gap": "6px",
+      "rowPadding": "9px 0"
+    },
+    "source": "strength-builder-custom-exercise-b3-badges-v4-canvas-contract.test.js · getComputedStyle jsdom"
+  },
+  "rows": [
+    {
+      "contractLine": "Своё упражнение · 08",
+      "verdict": "=",
+      "f": ".sb-ex-cd обёртка списка единиц — heys_strength_catalog_ui_v1.js:326–340; кадр .cd badge-row."
+    },
+    {
+      "contractLine": "Своё упражнение · 09",
+      "verdict": "=",
+      "f": ".sb-ex-cd-row padding 9px 0 border-bottom 0 — 750-strength-builder.css:1259–1262; computed sand/blue paddingTop/Bottom 9px."
+    },
+    {
+      "contractLine": "Своё упражнение · 10",
+      "verdict": "=",
+      "f": ".sb-ex-unit-badges flex wrap gap 6px — catalog_ui:328; 750:1264–1268; computed gap 6px sand+blue."
+    },
+    {
+      "contractLine": "Своё упражнение · 11",
+      "verdict": "=",
+      "f": ".sb-ex-unit-badge.is-on background --acs color --on-acs — 750:1282–1285; CATALOG_V4_BRIDGE :44–45; sand #c67139/#2b1608 · blue #2e7cc0/#ffffff."
+    },
+    {
+      "contractLine": "Своё упражнение · 12",
+      "verdict": "=",
+      "f": "Неактивная .sb-ex-unit-badge color rgba(var(--ink),0.62) — 750:1277; sand rgba(0,0,0,0.62) · blue rgba(16,24,38,0.62)."
+    },
+    {
+      "contractLine": "Своё упражнение · 13",
+      "verdict": "=",
+      "f": "Строка .cd для единиц — .sb-ex-cd-row вместо .sb-radio; см. ·08."
+    },
+    {
+      "contractLine": "Своё упражнение · 14",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676–1680) — polosa 4 не трогала muscle UI."
+    },
+    {
+      "contractLine": "Своё упражнение · 15",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "f": "Кадр «спина» 700 11.5 var(--ac); продукт chip primary — см. ·14."
+    },
+    {
+      "contractLine": "Своё упражнение · 16",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "f": "Кадр .cd divider none для muscle rows; продукт .sb-chips wrap без .cd rows."
+    },
+    {
+      "contractLine": "Своё упражнение · 17",
+      "verdict": "≠",
+      "reasonCode": "canvas-conflict",
+      "f": "Кадр «бицепс, плечи» 600 ink 56%; продукт .sb-chip.is-on --sb-mut."
+    }
+  ],
+  "outOfScope": {
+    "note": "·14–17 muscle table vs chips — следующая polosa. strength-builder.json не трогали.",
+    "cssOwner": "750-strength-builder.css:1258–1286",
+    "tests": [
+      "apps/web/__tests__/strength-builder-custom-exercise-b3-badges-v4-canvas-contract.test.js",
+      "apps/web/__tests__/strength-builder-custom-exercise-v4-canvas-contract.test.js",
+      "apps/web/__tests__/role-fallback-truth.test.js"
+    ]
+  }
+}

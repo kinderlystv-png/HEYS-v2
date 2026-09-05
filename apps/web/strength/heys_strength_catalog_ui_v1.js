@@ -57,6 +57,14 @@
     '--ac2': 'var(--v4-warn-text, #a1471c)'
   };
 
+  /** Кадр B3 ·08–12: подписи пилюль единиц как в strength-builder.v4.dc.html. */
+  var NEW_EX_UNIT_LABELS = {
+    weight_reps: 'вес × повторы',
+    bodyweight: 'свой вес',
+    time: 'время',
+    distance: 'метры'
+  };
+
   function formatFactorLabel(factor) {
     const api = metaApi();
     if (api && typeof api.formatBodyweightFactor === 'function') {
@@ -315,20 +323,22 @@
           h('span', null, '1 · Что меряем'),
           h('i', null, 'обязательно')
         ),
-        api.units.map(function (u) {
-          return h('button', {
-            key: u.id,
-            type: 'button',
-            className: 'sb-radio' + (unit === u.id ? ' is-on' : ''),
-            onClick: function () { setUnit(u.id); if (u.id !== 'bodyweight') setLikeNorm(''); }
-          },
-            h('span', { className: 'sb-radio-dot' }),
-            h('div', { className: 'sb-cat-title' },
-              h('b', null, u.label),
-              h('span', null, unitHint(u.id))
+        h('div', { className: 'sb-ex-cd' },
+          h('div', { className: 'sb-ex-cd-row' },
+            h('div', { className: 'sb-ex-unit-badges' },
+              api.units.map(function (u) {
+                const label = NEW_EX_UNIT_LABELS[u.id] || u.label.toLowerCase();
+                return h('button', {
+                  key: u.id,
+                  type: 'button',
+                  className: 'sb-ex-unit-badge' + (unit === u.id ? ' is-on' : ''),
+                  'aria-pressed': unit === u.id,
+                  onClick: function () { setUnit(u.id); if (u.id !== 'bodyweight') setLikeNorm(''); }
+                }, label);
+              })
             )
-          );
-        }),
+          )
+        ),
 
         h('div', { className: 'sb-step' },
           h('span', null, '2 · Группы мышц'),

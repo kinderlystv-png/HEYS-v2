@@ -1255,6 +1255,36 @@
   margin-top: 9px;
 }
 
+/* B3 «Своё упражнение» ·08–12: badge-row единиц (кадр .cd / .badge). */
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-cd-row {
+  padding: 9px 0;
+  border-bottom: 0;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-unit-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-unit-badge {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(var(--ink), 0.62); /* v4-intentional */
+  font: 700 9px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-unit-badge.is-on {
+  background: var(--acs, var(--v4-act, #c67139)); /* v4-intentional */
+  color: var(--on-acs, var(--v4-btn-on-act, #2b1608)); /* v4-intentional */
+}
+
 .sb-suggest {
   min-height: 36px;
   padding: 0 11px;

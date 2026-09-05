@@ -1,0 +1,6 @@
+feat(strength): B3 custom exercise unit badge-row ·08–12
+
+Replace vertical sb-radio unit picker on NewExerciseScreen with canvas
+badge-row (.sb-ex-unit-badge): gap 6px, row padding 9px 0, selected
+--acs/--on-acs. Scoped CSS under :has(.sb-ex-name). Contract test +
+handoff for lines 08–17 (muscle ·14–17 still ≠).
