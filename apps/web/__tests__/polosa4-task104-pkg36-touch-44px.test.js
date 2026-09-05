@@ -18,6 +18,7 @@ const CSS_GAMIFICATION = fs.readFileSync(
   path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'),
   'utf8',
 );
+const CSS_730 = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
 const GATES_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_app_gates_v1.js'), 'utf8');
 
 const CANVASES = {
@@ -32,6 +33,10 @@ const CANVASES = {
   gamification: path.join(
     ROOT,
     'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/gamification.v4.dc.html',
+  ),
+  'home-widgets': path.join(
+    ROOT,
+    'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/home-widgets.v4.dc.html',
   ),
 };
 
@@ -56,7 +61,7 @@ function prop(block, name) {
 function mountProbe(className, extra = '') {
   const host = document.createElement('div');
   host.setAttribute('data-palette', 'sand');
-  host.innerHTML = `<style>${PALETTE_CSS}\n${CSS_500}\n${CSS_734}\n${CSS_GAMIFICATION}</style>${extra}<div class="${className}"></div>`;
+  host.innerHTML = `<style>${PALETTE_CSS}\n${CSS_500}\n${CSS_734}\n${CSS_GAMIFICATION}\n${CSS_730}</style>${extra}<div class="${className}"></div>`;
   document.body.appendChild(host);
   return host.querySelector(`.${className.split(' ').pop()}`);
 }
@@ -99,5 +104,30 @@ describe('polosa4 task104 pkg36 · touch targets 44px', () => {
     expect(prop(ruleBlock(CSS_734, '.insights-v4-window__chip'), 'min-height')).toBe('44px');
     const chip = mountProbe('insights-v4-window__chip');
     expect(getComputedStyle(chip).minHeight).toBe('44px');
+  });
+
+  it('home-widgets · капсула даты nav/trigger 44px видимым; удаление — исключение ::after', () => {
+    const touch = readContractLine(CANVASES['home-widgets'], 'тач-цели');
+    expect(touch).toContain('44');
+    expect(touch).toContain('пилюля капсулы даты');
+
+    const navBlock = ruleBlock(CSS_GAMIFICATION, '.date-picker--v4 .date-picker-day-nav');
+    expect(prop(navBlock, 'width')).toBe('44px');
+    expect(prop(navBlock, 'height')).toBe('44px');
+    const triggerBlock = ruleBlock(CSS_GAMIFICATION, '.date-picker--v4 .date-picker-trigger');
+    expect(prop(triggerBlock, 'min-height')).toBe('44px');
+
+    const navHost = document.createElement('div');
+    navHost.setAttribute('data-palette', 'sand');
+    navHost.innerHTML = `<style>${PALETTE_CSS}\n${CSS_GAMIFICATION}</style><div class="date-picker date-picker--v4"><button type="button" class="date-picker-day-nav"></button></div>`;
+    document.body.appendChild(navHost);
+    const nav = navHost.querySelector('.date-picker-day-nav');
+    expect(getComputedStyle(nav).width).toBe('44px');
+    expect(getComputedStyle(nav).height).toBe('44px');
+
+    const deleteBlock = ruleBlock(CSS_730, '.widgets-tab--editing .widget__delete-btn');
+    expect(prop(deleteBlock, 'width')).toBe('22px');
+    expect(prop(deleteBlock, 'height')).toBe('22px');
+    expect(ruleBlock(CSS_730, '.widgets-tab--editing .widget__delete-btn::after')).toContain('44px');
   });
 });

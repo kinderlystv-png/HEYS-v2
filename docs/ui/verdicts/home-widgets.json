@@ -300,8 +300,8 @@
     },
     "удаление": {
       "v": "=",
-      "f": "ui:1343 кнопка с минусом без подтверждения, css:11659 круг 22 px, css:11668 область 44 px",
-      "h": "4e13474e1869"
+      "f": "730-widgets-dashboard.css:13418-13437 — кружок 22 px видимым, ::after 44 pt; единственное именованное исключение из правила тач-целей (контракт пакет 36)",
+      "h": "f5987ec837b5"
     },
     "добавление": {
       "v": "=",
@@ -830,8 +830,8 @@
     },
     "вид капсулы": {
       "v": "=",
-      "f": "вкладка виджетов капсулу не переопределяет: своих правил геометрии и тонов для неё в 730-widgets-dashboard.css нет",
-      "h": "f0b38d2747fe"
+      "f": "000-base-and-gamification.css:8038-8124 date-picker--v4 (стрелки 44×44, пилюля min-height 44px); 730-widgets-dashboard.css не переопределяет — источник date-remainders.v4.dc.html",
+      "h": "2d25acdeb57d"
     },
     "дефолт вида": {
       "v": "=",
@@ -4421,8 +4421,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Калории · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Калории · 67": {
@@ -4916,8 +4916,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Вода · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Вода · 67": {
@@ -5436,8 +5436,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Вес · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Вес · 67": {
@@ -5911,8 +5911,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Сон · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Сон · 67": {
@@ -6986,8 +6986,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Инсулиновая волна · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Инсулиновая волна · 67": {
@@ -7486,8 +7486,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · БЖУ · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · БЖУ · 67": {
@@ -7986,8 +7986,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Оценка дня · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Оценка дня · 67": {
@@ -8521,8 +8521,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Риск-радар · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Риск-радар · 67": {
@@ -9066,8 +9066,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Тренд здоровья · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Тренд здоровья · 67": {
@@ -9566,8 +9566,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Карта активности · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Карта активности · 67": {
@@ -10056,8 +10056,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Динамика веса · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Динамика веса · 67": {
@@ -10521,8 +10521,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Клетчатка · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Клетчатка · 67": {
@@ -11011,8 +11011,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Белок · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Белок · 67": {
@@ -11496,8 +11496,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Окно до сна · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Окно до сна · 67": {
@@ -12031,8 +12031,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Качество еды · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Качество еды · 67": {
@@ -12566,8 +12566,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Ритм приёмов · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Ритм приёмов · 67": {
@@ -13006,8 +13006,8 @@
       "h": "f4fe3c7e2316"
     },
     "Разбор · Готовность ко сну · 66": {
-      "v": "≠",
-      "f": "фоновая перерисовка Главной в листе рисует плитку «Вес» без спарклайна и прижимает число вправо; полноразмерный кадр «Главная · дефолтная раскладка» даёт спарклайн слева и space-between — продукт следует ему",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:7386 renderWeightDynamicsTileComposition — лист sheetPreview и Главная full рисуют один .widget-wd__curve-row; polosa4-task96-weight-tile-composition.test.js computed: justify-content space-between, flex row, hasSpark/sparkBeforeDelta на обоих; 730-widgets-dashboard.css:13614-13618",
       "h": "b6313eb6925f"
     },
     "Разбор · Готовность ко сну · 67": {
@@ -25027,6 +25027,11 @@
       "v": "=",
       "f": "002-ui-v4-palette-roles.css: --scrim на четыре набора (песочный rgba(42,26,12,.5), тёмные .62, синий rgba(16,24,38,.45)); --v4-modal-backdrop-dim алиас var(--scrim). 730-widgets-dashboard.css: .widgets-quick-scrim и .widget-wd-sheet__scrim — var(--scrim) + blur 2.5px; .widget-bd-sheet__scrim — var(--scrim) без блюра (строка «каркас разбора · общий»). Тесты: widgets-v4-canvas-geometry, widgets-bd-sheet-canvas-razbor, widgets-canvas-copy, home-widgets-breakdown-v4.",
       "h": "8027b5a06c60"
+    },
+    "тач-цели": {
+      "v": "=",
+      "f": "000-base-and-gamification.css:8050-8124 — nav 44×44 и trigger min-height 44px видимым, без ::after-расширителя; удаление — исключение 730-widgets-dashboard.css:13430-13437; ui-v4-check-touch-target-visible.mjs --check",
+      "h": "bd93727c0606"
     }
   },
   "frames": {
