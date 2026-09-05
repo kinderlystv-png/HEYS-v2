@@ -3464,8 +3464,8 @@
       "h": "8bef35e51adf"
     },
     "Каталог · нет места · 14": {
-      "v": "≠",
-      "f": "имя виджета: в продукте превью рисует плитку целиком вместе с её ключом, отдельная подпись остаётся для чтения с экрана; видимое имя есть у строк ожидания (то же: строка «вид · формат» рядом с превью не рисуется — формат виден по самой плитке — «Каталог · нет места · 14»)",
+      "v": "=",
+      "f": "heys_widgets_ui_v1.js:10429-10453 catalogTypeCopy(type, subtitle) — .widget-v4-catalog__desc «Месяц целиком · 2×2» рядом с превью и при widget-v4-catalog__item--blocked; 730-widgets-dashboard.css:12164-12170; widgets-catalog-glyph-v4.test.js",
       "h": "113a805e9c63"
     },
     "Каталог · нет места · 15": {
@@ -26238,6 +26238,110 @@
         "apps/web/__tests__/widget-variants-v4.test.js",
         "apps/web/__tests__/widgets-canvas-copy.test.js",
         "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Каталог · значки вместо эмодзи": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Каталог · значки вместо эмодзи · тёмная": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Каталог · значки вместо эмодзи · синяя": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Каталог · значки вместо эмодзи · сине-тёмная": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Калории · пустой день · 2×1": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Калории · пустой день · 2×2": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Кольца БЖУ · пустой день": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Колесо · крупное": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Колесо · рядовое": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Колесо · край шкалы": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Тренд здоровья · рост": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Тренд здоровья · мёртвая зона": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
+        "apps/web/styles/modules/730-widgets-dashboard.css"
+      ]
+    },
+    "Тренд здоровья · падение": {
+      "evidence": [
+        "apps/web/__tests__/widgets-v4-canvas-geometry.test.js",
+        "apps/web/heys_widgets_ui_v1.js",
+        "apps/web/heys_widgets_core_v1.js",
         "apps/web/styles/modules/730-widgets-dashboard.css"
       ]
     }

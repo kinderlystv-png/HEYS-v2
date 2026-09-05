@@ -77,6 +77,8 @@ function loadCatalogStrip() {
       data: {
         getWidgetData: () => ({})
       },
+      getBudgetInfo: () => ({ used: 32, total: 32, isOverflow: false }),
+      widgetCellCount: () => 4,
       VariantsV4: {
         getCatalog: () => [],
         getDefaultVariant: (type) => (type === 'heatmap'
@@ -210,6 +212,23 @@ describe('вид · значок вместо эмодзи — сведённы�
       ?.closest('button');
     expect(water.querySelector('.widget-v4-catalog__category')).toBeNull();
     expect(water.querySelector('.widget-v4-catalog__name').textContent).toBe('Вода');
+  });
+
+  it('кадр «нет места»: подпись вида «Месяц целиком · 2×2» рядом с превью', () => {
+    const CatalogStrip = loadCatalogStrip();
+    const { container } = render(RealReact.createElement(CatalogStrip, {
+      onSelect: () => {},
+      existingTypes: new Set(),
+      selectedDate: '2026-09-04'
+    }));
+
+    const heatmap = container.querySelector('.widget-v4-catalog__preview.widget--heatmap')
+      ?.closest('button');
+    expect(heatmap?.className).toContain('widget-v4-catalog__item--blocked');
+    expect(heatmap.querySelector('.widget-v4-catalog__desc').textContent)
+      .toBe('Месяц целиком · 2×2');
+    expect(contractValue(fs.readFileSync(CANVAS, 'utf8'), 'Каталог · нет места · 14'))
+      .toContain('Месяц целиком · 2×2');
   });
 
   it('держит поле значка 15×15 из рисунок 01, не пути кадра', () => {
