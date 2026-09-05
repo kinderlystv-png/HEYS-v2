@@ -346,17 +346,29 @@ describe('UI v4 verdict semantics', () => {
     ]);
   });
 
-  it('home-widgets считает все «≠»: 72 legacy + 10 typed-v1', () => {
-    const state = inspectVerdictSemantics(readAllZones(), new Set(['home-widgets']));
+  it('home-widgets считает все «≠»: legacy + typed сходится с файлом зоны', () => {
+    const zones = readAllZones();
+    const state = inspectVerdictSemantics(zones, new Set(['home-widgets']));
     expect(state.schemaProblems).toEqual([]);
-    expect(state.legacyByZone['home-widgets']).toEqual({
-      mismatch: 72,
-      typedMismatch: 10,
-      notApplicable: 1356,
-    });
-    const neqTotal =
-      state.legacyByZone['home-widgets'].mismatch + state.legacyByZone['home-widgets'].typedMismatch;
-    expect(neqTotal).toBe(82);
+
+    // Прежняя редакция сторожила три литерала (72 + 10 + 1356) и падала на
+    // починке: закрытие одной строки зоны делало красным того, кто чинил.
+    // Сторожим то, ради чего проверка заведена, — что счётчик не теряет «≠»:
+    // legacy и typed вместе дают ровно столько, сколько их в файле зоны.
+    const rows = Object.values(zones.zones['home-widgets'].rows);
+    const neqInFile = rows.filter((row) => row.v === '≠').length;
+    // notApplicable в счётчике — это ЛЕГАСИ-«—», то есть без naKind:
+    // типизированные считаются отдельно, иначе миграция была бы не видна.
+    const legacyNaInFile = rows.filter(
+      (row) => row.v === '—' && !Object.prototype.hasOwnProperty.call(row, 'naKind'),
+    ).length;
+
+    const counted = state.legacyByZone['home-widgets'];
+    expect(counted.mismatch + counted.typedMismatch).toBe(neqInFile);
+    expect(counted.notApplicable).toBe(legacyNaInFile);
+    // Зона не должна незаметно опустеть: если «≠» кончились, проверка теряет
+    // смысл и об этом надо узнать, а не получить зелёный ноль.
+    expect(neqInFile).toBeGreaterThan(0);
   });
 
   it('classifyMismatchVerdictRow различает legacy, typed-v1 и лишние ключи', () => {

@@ -67,7 +67,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [47, '19522329f4fb6522'],
   }),
   'curator-cabinet': Object.freeze({
-    mismatch: [30, '5ccedfacff5f9596'],
+    mismatch: [29, '85c5b18956a3e908'],
     typedMismatch: [5, '45c28c49d17e23d8'],
     notApplicable: [17, '227a240a10a24074'],
   }),
@@ -79,7 +79,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   cycle: Object.freeze({
     // 04.09: typed-v1 gate — 4 typed «≠»; legacy 32 → 21 после типизации и снятия строк.
     // 04.09 (вечер): bde48fd79 закрыл последний «?» — legacy mismatch 21 → 20.
-    mismatch: [20, '0ac57e2a54fd9cd3'],
+    mismatch: [16, 'd134809ca6644f52'],
     typedMismatch: [4, '73d74685b79f4e13'],
     notApplicable: [23, '7558e003ad93df9c'],
   }),
@@ -116,7 +116,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 3 сентября: notApplicable 1358 -> 1356. Строки «Смена вида · лист выбора»
     // 33 и 36 стояли «—» как адресация разметки кадра; после пересъёмки кадра
     // они называют числа превью 2×2 и карточки «До цели» и сведены с кодом.
-    mismatch: [72, 'c72c87c0eb292e47'],
+    mismatch: [71, '83e299ed8c97a94e'],
     typedMismatch: [10, 'b67076eb4cbac395'],
     notApplicable: [1356, 'b439428088a4c3d6'],
   }),
@@ -132,7 +132,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'nutrition-tab': Object.freeze({
     // 04.09: 9e3fc6c3d типизировал 26 legacy «≠» (31 → 5). «—» выросло 168 → 211:
     // закрытие ?-долга ea801dfbb и новые нетипизированные «—» без naKind.
-    mismatch: [5, '24d0bbb594da3e3d'],
+    mismatch: [4, '1502d5bd2b18735f'],
     notApplicable: [211, 'c56b7bc960bb40c0'],
   }),
   'product-card': Object.freeze({
@@ -157,7 +157,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 03.09 (вечер): две строки получили naKind handoff — «сведение зоны ·
     // вердикт» и «канон в чужом файле», обе про состояние разбора, а не про
     // продукт. Долг типизирован на две: «—» 136 → 134.
-    mismatch: [127, '84410b3594ff4c7e'],
+    mismatch: [126, 'a80bbfef2241182c'],
     typedMismatch: [17, '3aab0453f4ac87a7'],
     notApplicable: [134, '0fcd6b63be04a0c0'],
   }),
@@ -173,7 +173,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [23, '93658b5f26c8caeb'],
   }),
   spinners: Object.freeze({
-    mismatch: [29, '91bfbbe641b4664f'],
+    mismatch: [27, 'f750371cc4c3e2e0'],
     notApplicable: [33, '2f00fa5302804302'],
   }),
   'strength-builder': Object.freeze({
@@ -193,7 +193,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [107, '13d5a59f2d87bb7f'],
   }),
   'tab-activity': Object.freeze({
-    mismatch: [51, '9beed0acfd026056'],
+    mismatch: [48, '0176ec5ee86ac4f4'],
     typedMismatch: [1, '96ec01bd55e41071'],
     notApplicable: [62, 'b3191bb9fbbd6910'],
   }),
