@@ -125,7 +125,29 @@
             });
         }, []);
 
-        if (visibleRecs.length === 0) return null;
+        function renderProductButton(rec, prod, pIdx) {
+        const isSwap = rec.productCta === 'swap';
+        const portionLabel = prod.smartPortion?.label;
+        return React.createElement('button', {
+            key: prod.id || pIdx,
+            className: 'meal-optimizer__product' + (isSwap ? ' meal-optimizer__product--swap' : ''),
+            onClick: (e) => { e.stopPropagation(); handleAddProduct(prod, rec.id); },
+            title: isSwap ? `Заменить на ${prod.name}` : `Добавить ${prod.name}`
+        },
+            isSwap
+                ? React.createElement('span', { className: 'meal-optimizer__product-name' },
+                    'Заменить → ',
+                    prod.name,
+                    portionLabel ? `, ${portionLabel}` : '')
+                : [
+                    React.createElement('span', { key: 'name', className: 'meal-optimizer__product-name' }, prod.name),
+                    portionLabel && React.createElement('span', { key: 'portion', className: 'meal-optimizer__product-portion' }, portionLabel),
+                    React.createElement('span', { key: 'add', className: 'meal-optimizer__product-add' }, '+')
+                ]
+        );
+    }
+
+    if (visibleRecs.length === 0) return null;
 
         const bestRec = visibleRecs[0];
         const restRecs = visibleRecs.slice(1);
@@ -158,18 +180,7 @@
             ),
 
             bestRec.products && bestRec.products.length > 0 && React.createElement('div', { className: 'meal-optimizer__products' },
-                bestRec.products.map((prod, pIdx) =>
-                    React.createElement('button', {
-                        key: prod.id || pIdx,
-                        className: 'meal-optimizer__product',
-                        onClick: (e) => { e.stopPropagation(); handleAddProduct(prod, bestRec.id); },
-                        title: `Добавить ${prod.name}`
-                    },
-                        React.createElement('span', { className: 'meal-optimizer__product-name' }, prod.name),
-                        prod.smartPortion && React.createElement('span', { className: 'meal-optimizer__product-portion' }, prod.smartPortion.label),
-                        React.createElement('span', { className: 'meal-optimizer__product-add' }, '+')
-                    )
-                )
+                bestRec.products.map((prod, pIdx) => renderProductButton(bestRec, prod, pIdx))
             ),
 
             optExpanded && restRecs.length > 0 && React.createElement('div', { className: 'meal-optimizer__content' },
@@ -195,18 +206,7 @@
                         ),
 
                         rec.products && rec.products.length > 0 && React.createElement('div', { className: 'meal-optimizer__products' },
-                            rec.products.map((prod, pIdx) =>
-                                React.createElement('button', {
-                                    key: prod.id || pIdx,
-                                    className: 'meal-optimizer__product',
-                                    onClick: (e) => { e.stopPropagation(); handleAddProduct(prod, rec.id); },
-                                    title: `Добавить ${prod.name}`
-                                },
-                                    React.createElement('span', { className: 'meal-optimizer__product-name' }, prod.name),
-                                    prod.smartPortion && React.createElement('span', { className: 'meal-optimizer__product-portion' }, prod.smartPortion.label),
-                                    React.createElement('span', { className: 'meal-optimizer__product-add' }, '+')
-                                )
-                            )
+                            rec.products.map((prod, pIdx) => renderProductButton(rec, prod, pIdx))
                         )
                     )
                 )

@@ -2573,8 +2573,8 @@
       "h": "833ab27fb314"
     },
     "Питание · советы приёма · текст": {
-      "v": "≠",
-      "f": "heys_day_nutrition_v1.js:1568 .nutrition-v4-sheet__tips-toggle «Советы · N»; тексты из MealOptimizer (heys_meal_optimizer_v1.js). canvas 1050/1764: «Добавь овощей», «Сироп даёт…», «Заменить → корица» — rg по apps/web UI-строкам 0; «Заменить →» в продукте не рендерится (≠ «совет с заменой»)",
+      "v": "=",
+      "f": "heys_meal_optimizer_v1.js:831-867 need_fiber/syrup_swap_cinnamon; heys_day_meal_optimizer_section.js:128-147 — «Добавь овощей», «Сироп даёт…», «Заменить →»",
       "h": "b2e012665b40"
     },
     "Питание · копирование частью · текст": {
@@ -4117,6 +4117,20 @@
         "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js",
         "apps/web/heys_day_nutrition_v1.js",
         "apps/web/styles/modules/732-ui-v4-nutrition.css"
+      ]
+    },
+    "Питание · перенос приёма": {
+      "evidence": [
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js"
+      ]
+    },
+    "Питание · копирование продукта": {
+      "evidence": [
+        "apps/web/heys_day_nutrition_v1.js",
+        "apps/web/styles/modules/732-ui-v4-nutrition.css",
+        "apps/web/__tests__/nutrition-v4-canvas-geometry.test.js"
       ]
     }
   }

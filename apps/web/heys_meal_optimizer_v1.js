@@ -832,7 +832,7 @@
       trigger: { mealFiber: { max: 3 }, mealKcal: { min: 300 } },
       priority: 75,
       icon: '🥗',
-      title: 'Добавь клетчатку',
+      title: 'Добавь овощей — мало клетчатки',
       reason: 'Всего {fiber}г клетчатки в приёме',
       recommend: { categories: ['vegetables', 'fiber'], keywords: ['салат', 'огурец', 'капуста', 'брокколи'] }
     },
@@ -853,6 +853,17 @@
       title: 'Много простых углеводов',
       reason: '{simplePct}% углеводов — простые',
       recommend: { categories: ['protein', 'fiber'], keywords: ['орех', 'белок', 'овощи'] },
+      isWarning: true
+    },
+    {
+      id: 'syrup_swap_cinnamon',
+      trigger: { hasKeyword: ['сироп', 'патока', 'мёд', 'мед', 'варень', 'джем'], mealSimpleCarbs: { min: 8 } },
+      priority: 82,
+      icon: '⚠️',
+      title: 'Сироп даёт треть сахара дня',
+      reason: '{simpleGrams}г простых углеводов — замени на корицу',
+      productCta: 'swap',
+      recommend: { keywords: ['корица'] },
       isWarning: true
     }
   ];
@@ -1484,8 +1495,8 @@
         reason: `Только ${Math.round((mealTotals?.prot || 0) * 4 / (mealTotals?.kcal || 1) * 100)}% калорий из белка — добавь ${recShort || 'яйцо/творог'}`
       },
       'need_fiber': {
-        title: `Добавь клетчатку к ${mainProduct}`,
-        reason: `Всего ${Math.round(mealTotals?.fiber || 0)}г — нужно ${recShort || 'овощи/салат'}`
+        title: `Добавь овощей к ${mainProduct}`,
+        reason: `В приёме ${Math.round(mealTotals?.fiber || 0)}г — цель около 9г к этому времени`
       },
       'need_healthy_fat': {
         title: `Улучши жиры в ${mainProduct}`,
@@ -1494,6 +1505,10 @@
       'too_much_simple': {
         title: `${Math.round((mealTotals?.simple || 0) / (mealTotals?.carbs || 1) * 100)}% — простые углеводы`,
         reason: `Добавь ${recShort || 'белок/клетчатку'} — сгладит скачок сахара`
+      },
+      'syrup_swap_cinnamon': {
+        title: 'Сироп даёт треть сахара дня',
+        reason: `${Math.round(mealTotals?.simple || 0)}г простых углеводов — замени на корицу`
       },
 
       // TIMING
@@ -1684,6 +1699,7 @@
     // Подстановка переменных
     reason = reason.replace('{protPct}', Math.round((mealTotals?.prot || 0) * 4 / (mealTotals?.kcal || 1) * 100));
     reason = reason.replace('{fiber}', Math.round(mealTotals?.fiber || 0));
+    reason = reason.replace('{simpleGrams}', Math.round(mealTotals?.simple || 0));
     reason = reason.replace('{simplePct}', Math.round((mealTotals?.simple || 0) / (mealTotals?.carbs || 1) * 100));
 
     return { title, reason };
@@ -1838,6 +1854,7 @@
           isWarning: rule.isWarning || false,
           isInfo: rule.isInfo || false,
           mild: rule.mild || false,
+          productCta: rule.productCta || null,
           products: recProducts
         };
 

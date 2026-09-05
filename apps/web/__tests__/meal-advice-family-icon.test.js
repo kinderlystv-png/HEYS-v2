@@ -47,7 +47,7 @@ describe('семейство правила считается из тригге
     // сделал бы все проверки ниже вакуумными.
     expect(MO, 'MealOptimizer не поднялся').toBeTruthy();
     expect(Section, 'секция советов не поднялась').toBeTruthy();
-    expect(ALL_RULES().length).toBe(64);
+    expect(ALL_RULES().length).toBe(65);
   });
 
   it('каждое правило получает ровно одно из трёх семейств', () => {
@@ -81,7 +81,7 @@ describe('семейство правила считается из тригге
     // подогнать число.
     const count = { synergy: 0, balance: 0, timing: 0 };
     for (const rule of ALL_RULES()) count[MO.getRuleFamily(rule)] += 1;
-    expect(count).toEqual({ synergy: 37, balance: 12, timing: 15 });
+    expect(count).toEqual({ synergy: 38, balance: 12, timing: 15 });
   });
 
   it('живой приём отдаёт советы с проставленным семейством', () => {
