@@ -20,6 +20,12 @@
 //
 // Smoke (agent may run):
 //   node scripts/ui-v4-measure-zone.mjs --zone=home-widgets --verdict== --limit=3
+//
+// Verdict gate (2026-09-05, Polosa 6 Task 84 — control home-widgets, parser post-56dfb82bb):
+//   confirmsExistingEq: 13 · mismatchesExistingEq: 19 · inconclusive: 35 of 67 measured (52%)
+//   Решение: в вердикты не пускать. На сведённой зоне runner спорит чаще, чем подтверждает
+//   (19 > 13); 52% inconclusive — предложения нельзя задокументировать по дизайну.
+//   Runner остаётся диагностическим (JSON report only); автозапись в docs/ui/verdicts/ запрещена.
 
 import fs from 'node:fs';
 import path from 'node:path';
