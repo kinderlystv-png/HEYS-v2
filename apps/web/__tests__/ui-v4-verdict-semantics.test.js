@@ -49,25 +49,40 @@ describe('UI v4 verdict semantics', () => {
       'FinishScreen реализует метрики, но точная композиция/типографика canvas-кадра не совпадает.',
       'unsubstantiated-visual-mismatch',
     ],
+    [
+      'Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра.',
+      'needs-line-by-line-review',
+    ],
+    [
+      'Прежнее основание описывало непроверенное совпадение кадра, а не отличие этой строки.',
+      'prior-basis-unverified-match',
+    ],
+    [
+      'Прежнее основание описывало совпадение кадра, а не отличие этой строки.',
+      'basis-described-match',
+    ],
+    [
+      'Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.',
+      'needs-source-review',
+    ],
+    [
+      'Возвращено в вопрос до замера.',
+      'returned-pending-measurement',
+    ],
   ])('считает неизвестностью основание «%s»', (reason, kind) => {
     expect(classifyUnknownMismatchReason(reason)).toBe(kind);
   });
 
   it.each([
     [
-      'Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра.',
-      'needs-line-by-line-review',
+      'Точное визуальное соответствие не проверено построчно в runtime.',
+      'not-checked',
+      'not-checked',
+    ],
+    [
+      'Предстоит проверить точное соответствие кадру.',
+      'pending-verification',
       null,
-    ],
-    [
-      'Не проверено построчно: прежнее основание описывало совпадение кадра, а не отличие этой строки.',
-      'not-checked',
-      'not-checked',
-    ],
-    [
-      'Нужна построчная сверка по source/tests: прежнее основание прямо сообщало, что полный контракт строки не подтверждён.',
-      'not-confirmed',
-      'not-confirmed',
     ],
   ])('pending-паттерн «%s»', (reason, kindWithPending, kindWithoutPending) => {
     expect(classifyUnknownMismatchReason(reason, { includePending: true })).toBe(kindWithPending);

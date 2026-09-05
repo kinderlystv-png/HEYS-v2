@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // Не даёт неизвестности маскироваться под принятое расхождение.
+// Словарь заведён после strength-builder: 58 строк «≠» описывали непроверенный
+// вердикт, а не фактическое расхождение — гейт молчал, пока фразы не попали в словарь.
 //
 // `≠` означает установленный факт: код делает иначе и причина названа.
 // Фразы «не подтверждено», «не проверено», «нужен review» и общий вывод
@@ -16,6 +18,17 @@ import {
 } from './lib/ui-v4-verdicts.mjs';
 
 const UNKNOWN_MARKERS = [
+  {
+    id: 'needs-source-review',
+    re: /нужн[аоы]\s+построчн[а-яё]*\s+сверк[аи]\s+по\s+source/,
+  },
+  { id: 'needs-line-by-line-review', re: /нужн[аоы]\s+построчн/ },
+  {
+    id: 'prior-basis-unverified-match',
+    re: /прежн[а-яё]+\s+основан[а-яё]+\s+описывал[а-яё]*\s+непроверенн/,
+  },
+  { id: 'basis-described-match', re: /основан[а-яё]+\s+описывал[а-яё]*\s+совпаден/ },
+  { id: 'returned-pending-measurement', re: /возвращен[ао]\s+в\s+вопрос\s+до\s+замер/ },
   { id: 'not-confirmed', re: /не подтвержден(?:а|о|ы)?/ },
   { id: 'not-checked', re: /не провер(?:ен(?:а|о|ы)?|ял(?:ся|ась|ось|ись)?)/ },
   { id: 'review-required', re: /требует\s+(?:визуального\s+)?(?:pixel[- ]?)?review/ },
@@ -35,36 +48,6 @@ const UNKNOWN_MARKERS = [
 
 /** Task 78: намерение сверить, а не результат. Включаются в gate после ревью владельца. */
 export const PENDING_UNKNOWN_MARKERS = [
-  {
-    id: 'needs-line-by-line-review',
-    re: /нужн[аоы]\s+построчн/,
-    corpus: 'strength-builder 141× «Нужна построчная visual/runtime-сверка…»',
-  },
-  {
-    id: 'not-checked-line-by-line',
-    re: /не\s+проверено\s+построчн/,
-    corpus: 'strength-builder 58× «Не проверено построчно: прежнее основание…»',
-  },
-  {
-    id: 'prior-basis-unverified-match',
-    re: /прежн\w+\s+основан\w+\s+описывал\w*\s+непроверенн/,
-    corpus: 'strength-builder 80× непроверенное совпадение кадра',
-  },
-  {
-    id: 'basis-described-match',
-    re: /основан\w+\s+описывал\w*\s+совпаден/,
-    corpus: 'strength-builder 58× «описывало совпадение кадра»',
-  },
-  {
-    id: 'needs-source-review',
-    re: /нужн[аоы]\s+построчн\w*\s+сверк[аи]\s+по\s+source/,
-    corpus: 'strength-builder 3× source/tests сверка',
-  },
-  {
-    id: 'returned-pending-measurement',
-    re: /возвращен\w*\s+в\s+вопрос\s+до\s+замер/,
-    corpus: 'strength-builder 58× метка возврата в ?',
-  },
   {
     id: 'pending-verification',
     re: /предстоит\s+провер/,

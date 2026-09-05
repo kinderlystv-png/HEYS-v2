@@ -11,10 +11,10 @@ import {
 } from './lib/ui-v4-verdicts.mjs';
 import { inspectVerdictSemantics } from './ui-v4-check-verdict-semantics.mjs';
 
-// 05.09: strength-builder typedMismatch 201→186 — recount legacyVerdictKeysDigest.
+// 05.09: strength-builder typedMismatch 186→113 — cleanup unverified ≠ wording (task 82).
 const TYPED_BASELINE_OVERRIDE = Object.freeze({
   'strength-builder': Object.freeze({
-    typedMismatch: [186, '64fda86dae5db695'],
+    typedMismatch: [113, 'f23017be4b80abd3'],
   }),
 });
 
