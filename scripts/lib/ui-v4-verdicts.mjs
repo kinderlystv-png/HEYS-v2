@@ -69,7 +69,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'curator-cabinet': Object.freeze({
     mismatch: [29, '85c5b18956a3e908'],
     typedMismatch: [5, '45c28c49d17e23d8'],
-    notApplicable: [16, '18e1767ff39da867'],
+    notApplicable: [14, 'd5c0e5d25ec8306b'],
   }),
   'curator-edits': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
@@ -85,7 +85,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   'date-remainders': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
-    notApplicable: [271, '8cd18417a00fbfe4'],
+    notApplicable: [270, 'd6a5b9a4f801e52c'],
   }),
   'food-meal': Object.freeze({
     // 03.09: пакет снял четыре отступления разом — «четыре вкладки», квадрат
@@ -116,18 +116,27 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 3 сентября: notApplicable 1358 -> 1356. Строки «Смена вида · лист выбора»
     // 33 и 36 стояли «—» как адресация разметки кадра; после пересъёмки кадра
     // они называют числа превью 2×2 и карточки «До цели» и сведены с кодом.
-    mismatch: [71, '83e299ed8c97a94e'],
+    mismatch: [54, '579cd57a401cd331'],
     typedMismatch: [10, 'b67076eb4cbac395'],
     notApplicable: [1356, 'b439428088a4c3d6'],
   }),
   login: Object.freeze({
     mismatch: [47, '68f95f4b8789dcbd'],
-    notApplicable: [301, '624bf9693c19435e'],
+    notApplicable: [300, '09e96c95595984f5'],
+  }),
+  // Зона заведена 05.09: прежде записи не было, порог считался нулевым.
+  // 4 типизированных «≠» — код поднял чипы, пилюли и кнопки шапки до 44 px по
+  // правилу тач-целей, объявленному дизайнером 5 сентября, а строки контракта
+  // мессенджера всё ещё говорят 30/32/40 px: строку «тач-цели» в этот канвас
+  // он не довёз — она была в дереве два часа и исчезла. Отступление честное и
+  // названо: продукт следует правилу, кадр отстал. Вопрос дизайнеру, не долг кода.
+  messenger: Object.freeze({
+    typedMismatch: [4, '2013051693f33a06'],
   }),
   'norm-correction': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
     typedMismatch: [11, '49cc8221f457dea2'],
-    notApplicable: [37, '3f2cfeaa0a205b26'],
+    notApplicable: [36, '2a38d4aa2a1cf6e4'],
   }),
   'nutrition-tab': Object.freeze({
     // 04.09: 9e3fc6c3d типизировал 26 legacy «≠» (31 → 5). «—» выросло 168 → 211:
@@ -154,7 +163,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   registration: Object.freeze({
     // 04.09: Phase1-2 re-review — 2 audit «?» закрыты в «=» (8467957d7, 116a79e09); legacy 67→65.
-    mismatch: [65, '1db0a216d57de58e'],
+    mismatch: [38, '7687bae6e0410b3f'],
     notApplicable: [28, '1a861974e2dfd0f8'],
   }),
   'reports-insights': Object.freeze({
@@ -207,7 +216,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 68 стали «=» по факту кода. Храповик едет вниз: 181 → 102. Это и есть
     // разница между «функционал не закрыт» и «сведено» — первое чинится
     // кодом, и после починки порог обязан упасть, а не остаться про запас.
-    typedMismatch: [102, '2ce24b12a4a54108'],
+    typedMismatch: [81, 'cb41201c1094e608'],
     notApplicable: [105, '77c3b81bb6df56de'],
   }),
   // Зона заведена 05.09 вместе с первым разбором: прежде записи не было, и
@@ -225,10 +234,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // свели ПОСЛЕ того, как вердикт написали. Они возвращены в «?», в счёт не
     // входят. Остальные 49 из 78 вообще не называют файл со строкой — это
     // отдельный долг адресов, он назван в задаче полосам.
-    typedMismatch: [78, '16984e5ef29b8f0d'],
+    typedMismatch: [53, '58ca272f97902c3d'],
   }),
   'tab-activity': Object.freeze({
-    mismatch: [48, '0176ec5ee86ac4f4'],
+    mismatch: [41, 'f39024e4b3e39147'],
     typedMismatch: [1, '96ec01bd55e41071'],
     notApplicable: [62, 'b3191bb9fbbd6910'],
   }),
