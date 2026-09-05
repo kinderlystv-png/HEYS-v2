@@ -139,18 +139,34 @@ describe('UI v4 DOM evidence map: strength-builder / И3', () => {
     }
   });
 
-  it('keeps rows 18/19 tied to the current verdict decision', () => {
+  it('keeps intentional-deviation map rows aligned with verdict decisionRef', () => {
     const verdict = JSON.parse(fs.readFileSync(
       path.resolve(WEB_DIR, '../../docs/ui/verdicts/strength-builder.json'),
       'utf8',
     ));
-    for (const suffix of ['18', '19']) {
-      const identity = `${PLAN_FEED_FRAME.label} · ${suffix}`;
-      const mapRow = PLAN_FEED_DOM_CONTRACTS.find((row) => row.rowIdentity === identity);
-      expect(mapRow.nonAutomatable.reasonCode).toBe('intentional-deviation');
-      expect(mapRow.nonAutomatable.decisionRef).toBe(verdict.rows[identity].decisionRef);
-      expect(verdict.rows[identity].v).toBe('≠');
+    const framePrefix = `${PLAN_FEED_FRAME.label} · `;
+
+    const intentionalInMap = PLAN_FEED_DOM_CONTRACTS.filter(
+      (row) => row.nonAutomatable?.reasonCode === 'intentional-deviation',
+    );
+    for (const mapRow of intentionalInMap) {
+      const verdictRow = verdict.rows[mapRow.rowIdentity];
+      expect(verdictRow, mapRow.rowIdentity).toBeDefined();
+      expect(verdictRow.v, mapRow.rowIdentity).toBe('≠');
+      expect(mapRow.nonAutomatable.decisionRef, mapRow.rowIdentity)
+        .toBe(verdictRow.decisionRef);
     }
+
+    const staleIntentional = PLAN_FEED_DOM_CONTRACTS.filter((mapRow) => {
+      if (!mapRow.rowIdentity.startsWith(framePrefix)) return false;
+      const verdictRow = verdict.rows[mapRow.rowIdentity];
+      return verdictRow?.v === '='
+        && mapRow.nonAutomatable?.reasonCode === 'intentional-deviation';
+    });
+    expect(staleIntentional.map((row) => row.rowIdentity)).toEqual([]);
+
+    const frameVerdictRows = Object.keys(verdict.rows).filter((key) => key.startsWith(framePrefix));
+    expect(frameVerdictRows.length).toBeGreaterThan(0);
   });
 
   it('resolves every automatable selector with its declared cardinality in the real PlanCard DOM', () => {

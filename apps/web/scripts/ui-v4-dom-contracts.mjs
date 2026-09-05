@@ -12,9 +12,6 @@ export const NON_AUTOMATABLE_REASON_CODES = Object.freeze([
   'intentional-deviation',
 ]);
 
-const EARLY_START_DECISION =
-  'docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате';
-
 function computedStyle(selector, properties, options = {}) {
   return Object.freeze({
     kind: 'computed-style',
@@ -188,18 +185,17 @@ export const PLAN_FEED_DOM_CONTRACTS = Object.freeze([
     }),
   }),
   contract('18', '«Начать сейчас» — флекс 1, фон var(--acs), цвет var(--on-acs)', {
-    nonAutomatable: nonAutomatable(
-      'intentional-deviation',
-      'Unsafe early start is intentionally absent because the owner contract has no fact-date rule.',
-      EARLY_START_DECISION,
-    ),
+    assertion: computedStyle(':scope .sb-plan-actions--future .sb-plan-cta', {
+      flex: '1 1 0%',
+      backgroundColor: 'var(--acs)',
+      color: 'var(--on-acs)',
+    }, { locatorText: 'Начать сейчас', expectedText: 'Начать сейчас' }),
   }),
   contract('19', '«Перенести» — флекс none, поля 0 18px', {
-    nonAutomatable: nonAutomatable(
-      'intentional-deviation',
-      'Transfer is intentionally the sole primary action after unsafe early start is removed.',
-      EARLY_START_DECISION,
-    ),
+    assertion: dom(':scope .sb-plan-actions--future .sb-plan-cta', {
+      locatorText: 'Перенести',
+      expectedText: 'Перенести',
+    }),
   }),
   contract('20', '«Неделя 2 из 4 · мезоцикл «База»» — ярус', {
     assertion: dom(':scope > .sb-plan-week-label', {
