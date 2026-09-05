@@ -7181,7 +7181,7 @@
     if (!pathD) return null;
 
     return React.createElement('svg', {
-      className: 'widget-wd__spark ' + (stateClass || '') + (compact ? '' : ' ' + wdElClass('chart', true, playEntrance)),
+      className: ('widget-wd__spark ' + (stateClass || '') + ' ' + wdElClass('chart', true, playEntrance)).trim(),
       width: 58,
       height: 24,
       viewBox: '0 0 58 24',
@@ -7366,14 +7366,31 @@
     return windowLabel;
   }
 
-  function renderWeightDynamicsBody(variant, dyn, opts = {}) {
+  // Один путь состава плитки «Динамика веса»: и на Главной, и в превью
+  // листа. compact меняет только размер/анимацию, не порядок элементов.
+  function renderWeightDynamicsCurveRow({ dyn, deltaLine, stateClass, compact, playEntrance }) {
+    const spark = dyn?.hasDynamics
+      ? React.createElement(WeightDynamicsSparkSvg, {
+        sparkline: dyn.sparkline,
+        stateClass,
+        compact,
+        playEntrance
+      })
+      : null;
+    return React.createElement('div', { className: 'widget-wd__curve-row' },
+      spark,
+      deltaLine
+    );
+  }
+
+  function renderWeightDynamicsTileComposition(variant, dyn, opts = {}) {
     const {
       compact = false,
       sheetPreview = false,
       motion = null,
       playEntrance = compact ? false : widgetV4ShouldAnimateSparkDraw()
     } = opts;
-    const isTile = !compact;
+    const isTile = true;
     const stateClass = v4ValueStateClass(v4WeightDeltaStateFromDynamics(dyn));
     const windowLabel = dyn?.window?.label || 'Вес за месяц';
     const remainder = weightDynamicsRemainderMeta(dyn, variant);
@@ -7515,13 +7532,12 @@
         React.createElement('span', { className: 'widget-v4-kicker ' + wdElClass('kicker', isTile, playEntrance) }, windowLabel),
         headerRight
       ),
-      React.createElement('div', { className: 'widget-wd__curve-row' },
-        deltaLine,
-        dyn?.hasDynamics
-          ? React.createElement(WeightDynamicsSparkSvg, { sparkline: dyn.sparkline, stateClass, compact, playEntrance })
-          : null
-      )
+      renderWeightDynamicsCurveRow({ dyn, deltaLine, stateClass, compact, playEntrance })
     );
+  }
+
+  function renderWeightDynamicsBody(variant, dyn, opts = {}) {
+    return renderWeightDynamicsTileComposition(variant, dyn, opts);
   }
 
   function CrashRiskDynamicsVariantTile({ widget, data }) {
@@ -7534,7 +7550,7 @@
       onVariantSaved: ({ widgetId, variant }) => {
         HEYS.Widgets.emit?.('weightDynamics:variantSaved', { widgetId, variant });
       },
-      renderPreview: (id) => renderWeightDynamicsBody(id, dyn, { compact: true, sheetPreview: true })
+      renderPreview: (id) => renderWeightDynamicsTileComposition(id, dyn, { compact: true, sheetPreview: true })
     });
     const motion = useWeightDynamicsMotion(widget, dyn);
     const variantId = hook.renderVariant;
@@ -7569,7 +7585,7 @@
           '--widget-wd-chart-delay': `${WEIGHT_DYNAMICS_CHART_DELAY_MS}ms`
         }
       },
-        renderWeightDynamicsBody(variantId, dyn, { compact: false, motion, playEntrance: playSceneEntrance })
+        renderWeightDynamicsTileComposition(variantId, dyn, { compact: false, motion, playEntrance: playSceneEntrance })
       );
     }
 
@@ -12236,6 +12252,7 @@
   // Экспорт ради смоука видов «Динамики веса»: тело вида рисуется и на плитке,
   // и карточкой листа, а живьём для вида «График» нужны тридцать взвешиваний
   // подряд — руками такой день не собрать.
+  HEYS.Widgets.renderWeightDynamicsTileComposition = renderWeightDynamicsTileComposition;
   HEYS.Widgets.renderWeightDynamicsBody = renderWeightDynamicsBody;
   // Экспорт ради смоука строки «формат чисел · правило продукта»: разделитель
   // разрядов — невидимый символ, и глазами U+202F от U+00A0 не отличить.

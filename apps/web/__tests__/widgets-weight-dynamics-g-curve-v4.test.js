@@ -35,10 +35,11 @@ describe('Динамика · G сброшено и кривая — сведё�
   const dynSrc = fs.readFileSync(DYN, 'utf8');
   const rules = readRules(css);
 
-  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsBody');
+  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsTileComposition');
   const curveAt = uiSrc.indexOf('// curve (default)', bodyAt);
-  const tileAt = uiSrc.indexOf('function CrashRiskDynamicsVariantTile', curveAt);
-  const curve = uiSrc.slice(curveAt, tileAt > curveAt ? tileAt : curveAt + 800);
+  const bodyEnd = uiSrc.indexOf('function renderWeightDynamicsBody', curveAt);
+  const curve = uiSrc.slice(curveAt, bodyEnd > curveAt ? bodyEnd : curveAt + 800);
+  const tileAt = uiSrc.indexOf('function CrashRiskDynamicsVariantTile', bodyAt);
   const tileFn = uiSrc.slice(tileAt, uiSrc.indexOf('function CrashRiskWidgetContent', tileAt));
   const sparkAt = uiSrc.indexOf('function WeightDynamicsSparkSvg');
   const sparkEnd = uiSrc.indexOf('function WeightDynamicsChartSvg', sparkAt);
@@ -80,8 +81,9 @@ describe('Динамика · G сброшено и кривая — сведё�
     expect(curve).toContain('widget-wd__head');
     expect(curve).toContain('windowLabel');
     expect(curve).toContain('headerRight');
-    expect(curve).toContain('widget-wd__curve-row');
-    expect(curve).toContain('WeightDynamicsSparkSvg');
+    expect(curve).toContain('renderWeightDynamicsCurveRow');
+    expect(uiSrc).toContain('function renderWeightDynamicsCurveRow');
+    expect(uiSrc).toContain('WeightDynamicsSparkSvg');
     expect(curve).not.toContain('weightDynamicsDeltaKicker');
     expect(curve).not.toContain("'Вес по неделям'");
     expect(spark).toContain("viewBox: '0 0 58 24'");
