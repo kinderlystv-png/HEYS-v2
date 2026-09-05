@@ -3,14 +3,5 @@
   "tier": "a",
   "updatedAt": "2026-09-05",
   "note": "Обязательный Tier A: expect-inventory-count и verdict-count-object. Список может только уменьшаться.",
-  "findings": [
-    {
-      "id": "eb20e1669df4",
-      "file": "apps/web/__tests__/day-bibliography.test.js",
-      "line": 121,
-      "kind": "expect-inventory-count",
-      "snippet": "expect(B.registry.size).toBe(25);",
-      "reason": "expect().toBe(25) при inventory-контексте — число устареет при закрытии зоны/строки"
-    }
-  ]
+  "findings": []
 }
