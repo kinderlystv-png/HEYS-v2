@@ -212,8 +212,8 @@ apps/web/heys_ui_onboarding_v1.js:171
 apps/web/heys_ui_onboarding_v1.js:778
 apps/web/heys_user_tab_impl_v1.js::localStorage.setItem(SECTIONS_KEY
 apps/web/heys_user_tab_impl_v1.js::localStorage.setItem('heys_clients'
-apps/web/heys_user_v12.js:166
-apps/web/heys_user_v12.js:177
+apps/web/heys_user_v12.js:175
+apps/web/heys_user_v12.js:186
 apps/web/heys_weekly_reports_v2.js:38
 apps/web/heys_curator_actions_banner_v1.js:342
 apps/web/heys_curator_actions_banner_v1.js:378
