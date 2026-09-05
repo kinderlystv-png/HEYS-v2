@@ -1,4 +1,4 @@
-html, body { background: #fffaf1; }
+html, body { background: var(--v4-bg, #fffaf1); }
 html {
     /* Центр диска 56px — якорь сплэша PWA и heys-boot-mark (handoff app-splash.v4). */
     --heys-splash-disc-size: 56px;
@@ -8,11 +8,11 @@ html {
     --heys-splash-anchor-y: max(148px, 45%);
 }
 html[data-theme="sand"], html[data-theme-id="sand"],
-html[data-theme="light"] { background: #fffaf1; }
+html[data-theme="light"] { background: var(--v4-bg, #fffaf1); }
 html[data-theme="sand-dark"], html[data-theme-id="sand-dark"],
 html[data-theme="dark"] { background: var(--v4-bg, #141210); }
-html[data-theme="blue"], html[data-theme-id="blue"] { background: #ffffff; }
-html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1a26; }
+html[data-theme="blue"], html[data-theme-id="blue"] { background: var(--v4-bg, #ffffff); }
+html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: var(--v4-bg, #0d1a26); }
 
 /* Буквы в загрузчике больше нет (решение владельца 25 августа), но Figtree тут
    всё ещё нужен: подписи ступеней холодного старта, кнопка «Повторить» и строка
@@ -36,16 +36,16 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: #0d1
     --boot-disc: var(--v4-hero, #efe3cf);
     --boot-stroke: var(--v4-act, #c67139);
     --boot-letter: var(--v4-act-text, #8a4a20);
-    --boot-ink: #201e1d;
-    --boot-muted: rgba(0, 0, 0, .55);
-    --boot-ink-50: rgba(0, 0, 0, .5);
-    --boot-ink-58: rgba(0, 0, 0, .58);
+    --boot-ink: var(--v4-ink, #201e1d);
+    --boot-muted: var(--v4-ink-2, rgba(0, 0, 0, .55));
+    --boot-ink-50: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+    --boot-ink-58: color-mix(in srgb, var(--v4-ink, #201e1d) 58%, transparent);
     --boot-fail-disc: var(--v4-tint, #f6e6dd);
     --boot-fail-stroke: var(--v4-warn-3, #a1471c);
-    --boot-ok-disc: #eaefe0;
-    --boot-ok-stroke: #5c6a45;
-    --boot-morph-disc: #eef0e6;
-    --boot-morph-stroke: #8f9668;
+    --boot-ok-disc: var(--v4-ok-bg, #eaefe0);
+    --boot-ok-stroke: var(--v4-sand-ok-text, #5c6a45);
+    --boot-morph-disc: var(--v4-wgt-mint, #eaefe0);
+    --boot-morph-stroke: var(--v4-sand-ok-text, #5c6a45);
     --boot-btn: var(--v4-act, #c67139);
     --boot-btn-ink: var(--v4-btn-on-act, #2b1608);
 }
@@ -81,7 +81,7 @@ body:has(> .heys-boot-mark.is-fail) {
     inset: 0;
     z-index: 9000;
     overflow: hidden;
-    background: #fffaf1;
+    background: var(--v4-bg, #fffaf1);
 }
 #heys-boot-visual-guard .heys-boot-mark,
 .heys-boot-visual-guard .heys-boot-mark {
@@ -99,10 +99,10 @@ html[data-theme-id="sand-dark"] .heys-boot-visual-guard,
 html[data-theme="sand-dark"] #heys-boot-visual-guard { background: var(--v4-bg, #141210); }
 html[data-theme-id="blue"] #heys-boot-visual-guard,
 html[data-theme-id="blue"] .heys-boot-visual-guard,
-html[data-theme="blue"] #heys-boot-visual-guard { background: #ffffff; }
+html[data-theme="blue"] #heys-boot-visual-guard { background: var(--v4-bg, #ffffff); }
 html[data-theme-id="blue-dark"] #heys-boot-visual-guard,
 html[data-theme-id="blue-dark"] .heys-boot-visual-guard,
-html[data-theme="blue-dark"] #heys-boot-visual-guard { background: #0d1a26; }
+html[data-theme="blue-dark"] #heys-boot-visual-guard { background: var(--v4-bg, #0d1a26); }
 html[data-theme-id="sand-dark"] .heys-boot-mark,
 html[data-theme-id="sand-dark"] .heys-wait-mark,
 html[data-theme="sand-dark"] .heys-boot-mark,
@@ -110,68 +110,65 @@ html[data-theme="sand-dark"] .heys-wait-mark {
     --boot-disc: var(--v4-hero, #2f2820);
     --boot-stroke: var(--v4-act, #cf8144);
     --boot-letter: var(--v4-act-text, #e2a468);
-    --boot-ink: #f2ede6;
-    --boot-muted: rgba(242, 237, 230, .55);
-    --boot-ink-50: rgba(242, 237, 230, .5);
-    --boot-ink-58: rgba(242, 237, 230, .58);
+    --boot-ink: var(--v4-ink, #f2ede6);
+    --boot-muted: var(--v4-ink-2, rgba(242, 237, 230, .55));
+    --boot-ink-50: color-mix(in srgb, var(--v4-ink, #f2ede6) 50%, transparent);
+    --boot-ink-58: color-mix(in srgb, var(--v4-ink, #f2ede6) 58%, transparent);
     --boot-fail-disc: var(--v4-tint, #3a241a);
     --boot-fail-stroke: var(--v4-warn-2, #d07d4e);
-    --boot-ok-disc: #2a3224;
-    --boot-ok-stroke: #b4c094;
-    --boot-morph-disc: #2c2d22;
-    --boot-morph-stroke: #a8b07a;
+    --boot-ok-disc: var(--v4-ok-bg, #242c20);
+    --boot-ok-stroke: var(--v4-sand-ok-text, #9fb981);
+    --boot-morph-disc: var(--v4-wgt-mint, #242c20);
+    --boot-morph-stroke: var(--v4-sand-ok-text, #9fb981);
     --boot-btn: var(--v4-act, #cf8144);
-    --boot-btn-ink: var(--on-acs, #201509);
+    --boot-btn-ink: var(--v4-btn-on-act, #1a0f04);
 }
 html[data-theme-id="blue"] .heys-boot-mark,
 html[data-theme-id="blue"] .heys-wait-mark,
 html[data-theme="blue"] .heys-boot-mark,
 html[data-theme="blue"] .heys-wait-mark {
-    /* --c2 / --acs синего набора по v4-canvas.css: #e2ecf6 и #1d5e96.
-       Раньше стояли #e2edf7 и #2e7cc0 — знак в синей палитре был чужого тона. */
-    --boot-disc: #e2ecf6;
-    --boot-stroke: #1d5e96;
-    --boot-letter: #1d5e96;
-    --boot-ink: #101826;
-    --boot-muted: rgba(16, 24, 38, .55);
-    --boot-ink-50: rgba(16, 24, 38, .5);
-    --boot-ink-58: rgba(16, 24, 38, .58);
-    --boot-fail-disc: #fbe6e2;
-    --boot-fail-stroke: #b03a24;
-    --boot-ok-disc: #e6efe4;
-    --boot-ok-stroke: #4e6a48;
-    --boot-morph-disc: #e4eee8;
-    --boot-morph-stroke: #6a8aa0;
-    --boot-btn: #1d5e96;
-    --boot-btn-ink: #ffffff;
+    --boot-disc: var(--v4-hero, #e2ecf6);
+    --boot-stroke: var(--v4-act, #1d5e96);
+    --boot-letter: var(--v4-act-text, #1d5e96);
+    --boot-ink: var(--v4-ink, #101826);
+    --boot-muted: var(--v4-ink-2, rgba(16, 24, 38, .55));
+    --boot-ink-50: color-mix(in srgb, var(--v4-ink, #101826) 50%, transparent);
+    --boot-ink-58: color-mix(in srgb, var(--v4-ink, #101826) 58%, transparent);
+    --boot-fail-disc: var(--v4-tint, #fbe6e2);
+    --boot-fail-stroke: var(--v4-bad-text, #b03a24);
+    --boot-ok-disc: var(--v4-ok-bg, #e4efe7);
+    --boot-ok-stroke: var(--v4-ok-text, #1f6e4d);
+    --boot-morph-disc: var(--v4-wgt-mint, #e4efe7);
+    --boot-morph-stroke: var(--v4-water, #4c8fb8);
+    --boot-btn: var(--v4-act, #1d5e96);
+    --boot-btn-ink: var(--v4-btn-on-act, #ffffff);
 }
 html[data-theme-id="blue-dark"] .heys-boot-mark,
 html[data-theme-id="blue-dark"] .heys-wait-mark,
 html[data-theme="blue-dark"] .heys-boot-mark,
 html[data-theme="blue-dark"] .heys-wait-mark {
-    /* --c2 сине-тёмного набора — #1e3448 (было #13222f). */
-    --boot-disc: #1e3448;
-    --boot-stroke: #3f8fd0;
-    --boot-letter: #7fbceb;
-    --boot-ink: #e8eef6;
-    --boot-muted: rgba(232, 238, 246, .55);
-    --boot-ink-50: rgba(232, 238, 246, .5);
-    --boot-ink-58: rgba(232, 238, 246, .58);
+    --boot-disc: var(--v4-hero, #1e3448);
+    --boot-stroke: var(--v4-act, #3f8fd0);
+    --boot-letter: var(--v4-act-text, #7fbceb);
+    --boot-ink: var(--v4-ink, #eef3f8);
+    --boot-muted: var(--v4-ink-2, rgba(238, 243, 248, .63));
+    --boot-ink-50: color-mix(in srgb, var(--v4-ink, #eef3f8) 50%, transparent);
+    --boot-ink-58: color-mix(in srgb, var(--v4-ink, #eef3f8) 58%, transparent);
     --boot-fail-disc: var(--v4-tint, #33242a);
     --boot-fail-stroke: var(--v4-warn-2, #d05868);
-    --boot-ok-disc: #1b2a1e;
-    --boot-ok-stroke: #a8c49a;
-    --boot-morph-disc: #172428;
-    --boot-morph-stroke: #7aa8c4;
-    --boot-btn: #3f8fd0;
-    --boot-btn-ink: #0b1621;
+    --boot-ok-disc: var(--v4-ok-bg, #17302a);
+    --boot-ok-stroke: var(--v4-ok-text, #7fd1a0);
+    --boot-morph-disc: var(--v4-wgt-mint, #17302a);
+    --boot-morph-stroke: var(--v4-water, #6fa8c8);
+    --boot-btn: var(--v4-act, #3f8fd0);
+    --boot-btn-ink: var(--v4-btn-on-act, #ffffff);
 }
 html[data-theme-id="sand-dark"] .heys-wait-mark-overlay,
 html[data-theme="sand-dark"] .heys-wait-mark-overlay { background-color: var(--v4-bg, #141210); }
 html[data-theme-id="blue"] .heys-wait-mark-overlay,
-html[data-theme="blue"] .heys-wait-mark-overlay { background-color: #ffffff; }
+html[data-theme="blue"] .heys-wait-mark-overlay { background-color: var(--v4-bg, #ffffff); }
 html[data-theme-id="blue-dark"] .heys-wait-mark-overlay,
-html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26; }
+html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v4-bg, #0d1a26); }
 .heys-boot-mark__sign {
     position: absolute;
     left: 50%;
@@ -507,7 +504,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: #0d1a26
     z-index: 8;
     display: flex;
     background: inherit;
-    background-color: var(--bg, #fffaf1);
+    background-color: var(--v4-bg, #fffaf1);
 }
 @media (prefers-reduced-motion: reduce) {
     /* Контракт spinners, строка «без анимации»: вращение выключается, дуга

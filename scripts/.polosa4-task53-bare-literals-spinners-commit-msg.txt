@@ -1,0 +1,5 @@
+fix(spinners): warm bare literals phase2 → v4 roles
+
+Свести ведра 1/2 зоны spinners: heys-boot-mark.css — boot/wait tokens на v4-роли
+с палитровыми fallback; consents marketing → warn-surface/border/text; step_modal
+daily footer → warn-text. bucket2 spinners: 9 → 0. Янтарная лестница по смыслу.

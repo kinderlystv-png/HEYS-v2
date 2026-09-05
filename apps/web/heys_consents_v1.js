@@ -304,9 +304,9 @@
       marketing: {
         emoji: '📬',
         title: 'Что будем присылать?',
-        color: '#fef3c7', // amber-100
-        borderColor: '#f59e0b', // amber-500
-        textColor: '#92400e', // amber-800
+        color: V4_WARN_SURFACE,
+        borderColor: V4_WARN_BORDER,
+        textColor: V4_WARN_TEXT,
         points: [
           '💡 Полезные советы по питанию и здоровому образу жизни',
           '🎁 Информацию о новых функциях и акциях',

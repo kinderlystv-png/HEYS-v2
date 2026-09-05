@@ -1589,7 +1589,7 @@
               className: 'mc-daily-footer-reason',
               // Кадр «одна ошибка»: причина под кнопкой 600 11,5/1,45 тоном
               // --ac2 по центру. Стояло 13 — крупнее самой подписи полей.
-              style: { textAlign: 'center', fontWeight: 600, fontSize: 11.5, color: '#a1471c', lineHeight: 1.45, marginBottom: 6 }
+              style: { textAlign: 'center', fontWeight: 600, fontSize: 11.5, color: 'var(--v4-warn-text, #a1471c)', lineHeight: 1.45, marginBottom: 6 }
             }, liveInvalidReason || validationMessage),
             secondaryLabel && React.createElement('button', {
               type: 'button',

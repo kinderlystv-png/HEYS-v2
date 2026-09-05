@@ -1,0 +1,69 @@
+{
+  "task": "polosa4-task53-phase2",
+  "zone": "spinners",
+  "baseline": {
+    "warmTotal": 470,
+    "bucket2Spinners": { "files": 2, "places": 9 },
+    "note": "470 — после reports-insights; spinners b2: 730-widgets-dashboard.css×8 + heys-components.css×1 (параллельно сведены до старта); плюс consents×3, boot-mark×2, step_modal×1 в зоне"
+  },
+  "after": {
+    "warmTotal": 462,
+    "bucket2Spinners": { "files": 0, "places": 0 },
+    "bucket1SpinnersScope": { "files": 0, "places": 0, "note": "step_modal #a1471c → var(--v4-warn-text); 730 home-widgets b1 вне scope" }
+  },
+  "deltaWarmTotal": -8,
+  "deltaBucket2Zone": -9,
+  "files": [
+    {
+      "file": "apps/web/styles/heys-boot-mark.css",
+      "warmBefore": 2,
+      "warmAfter": 0,
+      "bucket": "1+2",
+      "changes": [
+        "html/body/guard/wait-overlay → var(--v4-bg)",
+        "4 набора: --boot-disc/stroke/letter/ink/fail/ok/morph/btn → v4-hero/act/act-text/ink/tint/warn/ok-bg/sand-ok-text/wgt-mint/water/btn-on-act",
+        "foreign-fallbacks: запасные = значения роли из палитры набора"
+      ]
+    },
+    {
+      "file": "apps/web/heys_consents_v1.js",
+      "warmBefore": 3,
+      "warmAfter": 0,
+      "bucket": 2,
+      "jsRequired": true,
+      "note": "friendlySummaries.marketing (CONSENT_TEXTS, dead path) → V4_WARN_SURFACE/BORDER/TEXT"
+    },
+    {
+      "file": "apps/web/heys_step_modal_v1.js",
+      "warmBefore": 1,
+      "warmAfter": 0,
+      "bucket": 1,
+      "jsRequired": true,
+      "note": "mc-daily-footer-reason #a1471c → var(--v4-warn-text, #a1471c)"
+    }
+  ],
+  "skipped": {
+    "730-widgets-dashboard.css": "8× b2 сведены параллельной сессией; 32× b1 home-widgets — вне scope (no widgets)",
+    "heys-components.css": "1× b2 сведён ранее; остаток b0 warm вне ведра 2",
+    "heys_loading_progress_v1.js": "без warm bare в зоне"
+  },
+  "computedSample": {
+    "sand": {
+      "pageBg": "#fffaf1",
+      "bootDisc": "#efe3cf",
+      "waitOkDisc": "#eaefe0",
+      "bootFailDisc": "#f6e6dd"
+    },
+    "blue": {
+      "pageBg": "#ffffff",
+      "bootDisc": "#e2ecf6",
+      "waitOkDisc": "#e4efe7",
+      "bootFailDisc": "#fbe6e2"
+    }
+  },
+  "checks": {
+    "polosa4-task53-bare-literals-spinners.test.js": "pass",
+    "role-fallback-truth.test.js": "pass",
+    "ui:v4:check:roles": "pass (foreign-fallbacks baseline 2813→2809 auto-tightened)"
+  }
+}
