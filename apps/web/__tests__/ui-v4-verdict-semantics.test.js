@@ -17,6 +17,24 @@ import {
   inspectVerdictSemantics,
 } from '../../../scripts/ui-v4-check-verdict-semantics.mjs';
 
+/** invariant: legacy/typed «≠» и legacy «—» считаются из rows, не литералом. */
+function countLegacyVerdictRows(rows) {
+  const list = Object.values(rows);
+  return {
+    neqInFile: list.filter((row) => row.v === '≠').length,
+    legacyNaInFile: list.filter(
+      (row) => row.v === '—' && !Object.prototype.hasOwnProperty.call(row, 'naKind'),
+    ).length,
+  };
+}
+
+function expectLegacyCountsMatchRows(counted, rows, { requireNeq = true } = {}) {
+  const { neqInFile, legacyNaInFile } = countLegacyVerdictRows(rows);
+  expect(counted.mismatch + counted.typedMismatch).toBe(neqInFile);
+  expect(counted.notApplicable).toBe(legacyNaInFile);
+  if (requireNeq) expect(neqInFile).toBeGreaterThan(0);
+}
+
 describe('UI v4 verdict semantics', () => {
   it.each([
     ['Полный контракт строки не подтверждён текущими source/tests.', 'not-confirmed'],
@@ -231,10 +249,9 @@ describe('UI v4 verdict semantics', () => {
     };
     const state = inspectVerdictSchema(data, { baseline });
 
-    expect(state.legacyByZone.migrating).toEqual({
-      mismatch: 1,
-      typedMismatch: 0,
-      notApplicable: 1,
+    // invariant: счётчик legacy сходится с fixture rows, не с зашитыми 1/0/1.
+    expectLegacyCountsMatchRows(state.legacyByZone.migrating, data.zones.migrating.rows, {
+      requireNeq: false,
     });
     expect(state.problems).toEqual([
       expect.objectContaining({
@@ -355,20 +372,10 @@ describe('UI v4 verdict semantics', () => {
     // починке: закрытие одной строки зоны делало красным того, кто чинил.
     // Сторожим то, ради чего проверка заведена, — что счётчик не теряет «≠»:
     // legacy и typed вместе дают ровно столько, сколько их в файле зоны.
-    const rows = Object.values(zones.zones['home-widgets'].rows);
-    const neqInFile = rows.filter((row) => row.v === '≠').length;
-    // notApplicable в счётчике — это ЛЕГАСИ-«—», то есть без naKind:
-    // типизированные считаются отдельно, иначе миграция была бы не видна.
-    const legacyNaInFile = rows.filter(
-      (row) => row.v === '—' && !Object.prototype.hasOwnProperty.call(row, 'naKind'),
-    ).length;
-
-    const counted = state.legacyByZone['home-widgets'];
-    expect(counted.mismatch + counted.typedMismatch).toBe(neqInFile);
-    expect(counted.notApplicable).toBe(legacyNaInFile);
-    // Зона не должна незаметно опустеть: если «≠» кончились, проверка теряет
-    // смысл и об этом надо узнать, а не получить зелёный ноль.
-    expect(neqInFile).toBeGreaterThan(0);
+    expectLegacyCountsMatchRows(
+      state.legacyByZone['home-widgets'],
+      zones.zones['home-widgets'].rows,
+    );
   });
 
   it('classifyMismatchVerdictRow различает legacy, typed-v1 и лишние ключи', () => {
