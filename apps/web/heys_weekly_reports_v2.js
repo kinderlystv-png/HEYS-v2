@@ -553,6 +553,7 @@
 
         const copy = card.copy;
         const showsNumber = card.frame !== 'recomposition';
+        const heroBeforeBody = card.frame === 'pending_curator' || card.frame === 'curator_kept';
         const heroValue = card.hero === 'currentNorm' || card.frame === 'matched'
             || card.frame === 'pending_curator' || card.frame === 'curator_kept'
             ? card.norms.current
@@ -598,6 +599,19 @@
                         + (card.frame === 'recomposition_indirect' ? ' is-weak' : '')
                 }, card.evidence)
                 : null,
+            heroBeforeBody && card.frame !== 'lowered' && showsNumber
+                ? h('div', { className: 'weekly-wrap-correction__hero' },
+                    h('span', { className: 'weekly-wrap-correction__hero-value' },
+                        HEYS.NormCorrection.formatKcal(heroValue)
+                    ),
+                    copy.heroCaption
+                        ? h('span', {
+                            className: 'weekly-wrap-correction__hero-caption'
+                                + (card.norms.deltaKcal > 0 ? ' is-up' : (card.norms.deltaKcal < 0 ? ' is-down' : ''))
+                        }, copy.heroCaption)
+                        : null
+                )
+                : null,
             card.frame !== 'lowered'
                 ? h('div', { className: 'weekly-wrap-correction__body' }, copy.body)
                 : null,
@@ -611,7 +625,7 @@
             // данных, и выбирать его рисующему нельзя. Ось значений не
             // рисуется: числа стоят подписями у последних точек.
             card.chart ? h(NormCorrectionChart, { chart: card.chart }) : null,
-            card.frame !== 'lowered' && showsNumber
+            !heroBeforeBody && card.frame !== 'lowered' && showsNumber
                 ? h('div', { className: 'weekly-wrap-correction__hero' },
                     h('span', { className: 'weekly-wrap-correction__hero-value' },
                         HEYS.NormCorrection.formatKcal(heroValue)
@@ -704,12 +718,27 @@
         );
     }
 
+    const NORM_CORRECTION_FULL_FRAMES = new Set(['lowered', 'pending_curator', 'curator_kept']);
+
+    function normCorrectionScreenHeader(card, rangeLabel) {
+        if (card?.frame === 'pending_curator') {
+            return { title: 'Норма на неделю', badge: 'решает куратор' };
+        }
+        if (card?.frame === 'curator_kept') {
+            return { title: 'Норма на неделю', badge: 'решение принято' };
+        }
+        return { title: 'Неделя закрыта', range: rangeLabel || 'Неделя' };
+    }
+
     function NormCorrectionScreen({ card, rangeLabel, onDecide }) {
         const h = global.React.createElement;
+        const header = normCorrectionScreenHeader(card, rangeLabel);
         return h('section', { className: 'norm-correction-screen' },
             h('header', { className: 'norm-correction-screen__header' },
-                h('span', { className: 'norm-correction-screen__title' }, 'Неделя закрыта'),
-                h('span', { className: 'norm-correction-screen__range' }, rangeLabel || 'Неделя')
+                h('span', { className: 'norm-correction-screen__title' }, header.title),
+                header.badge
+                    ? h('span', { className: 'norm-correction-screen__badge' }, header.badge)
+                    : h('span', { className: 'norm-correction-screen__range' }, header.range)
             ),
             h('div', { className: 'norm-correction-screen__content' },
                 h(NormCorrectionCard, { card, onDecide })
@@ -1110,7 +1139,7 @@
             setCorrectionTick((t) => t + 1);
         }, [correction, report]);
 
-        if (correction?.card?.frame === 'lowered') {
+        if (NORM_CORRECTION_FULL_FRAMES.has(correction?.card?.frame)) {
             return h(NormCorrectionScreen, {
                 card: correction.card,
                 rangeLabel: report?.rangeLabel || 'Неделя',

@@ -929,8 +929,8 @@
           previousNote: null,
           safeguardsLayer: null,
           facts: [
-            { label: 'Предложение было', value: formatKcal(norms.next) },
-            { label: 'Решение', value: 'оставить ' + formatKcal(norms.current) },
+            { label: 'Предложение было', value: formatKcal(norms.next), tone: 'muted' },
+            { label: 'Решение', value: 'оставить ' + formatKcal(norms.current), tone: 'quiet' },
             {
               label: 'Вернёмся к вопросу',
               value: 'в следующий понедельник',

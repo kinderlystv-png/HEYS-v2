@@ -1,0 +1,61 @@
+{
+  "task": "polosa4-task126-norm-correction-finish",
+  "part": 3,
+  "zone": "norm-correction",
+  "rehash": true,
+  "verdictsWritten": true,
+  "verdictNote": "16 строк закрыты =: Pro · на согласовании ·01–03, Pro · куратор решил не менять ·01–03·06–07·09·11·13–15·17·текст; факт исход решения куратора обновлён. Остаток зоны: 1 ≠ (карточка · исход недельной сверки — owner-decision).",
+  "contractLinesTargeted": [
+    "Pro · на согласовании · 01",
+    "Pro · на согласовании · 02",
+    "Pro · на согласовании · 03",
+    "Pro · куратор решил не менять · 01",
+    "Pro · куратор решил не менять · 02",
+    "Pro · куратор решил не менять · 03",
+    "Pro · куратор решил не менять · 06",
+    "Pro · куратор решил не менять · 07",
+    "Pro · куратор решил не менять · 09",
+    "Pro · куратор решил не менять · 11",
+    "Pro · куратор решил не менять · 13",
+    "Pro · куратор решил не менять · 14",
+    "Pro · куратор решил не менять · 15",
+    "Pro · куратор решил не менять · 17",
+    "Pro · куратор решил не менять · текст",
+    "исход решения куратора доезжает до клиента"
+  ],
+  "header": {
+    "pending_curator": "пилюля «решает куратор» — normCorrectionScreenHeader badge",
+    "curator_kept": "пилюля «решение принято» — тот же класс .norm-correction-screen__badge, другой текст",
+    "implementation": "NORM_CORRECTION_FULL_FRAMES + NormCorrectionScreen в heys_weekly_reports_v2.js"
+  },
+  "polosa2RegistrationNote": {
+    "zone": "registration",
+    "doNotEditVerdicts": true,
+    "lines": [
+      {
+        "key": "Профиль · отзыв согласия на добавки · 13",
+        "current": "≠",
+        "reason": "decisionRef на registration.v4.dc.html:525; продукт color-mix(var(--v4-warn-1) 22%) vs кадр var(--tint) — owner-decision, не task126",
+        "action": "полоса 2: сверить с дизайнером или закрыть по решению 5 сентября в 733:2242-2247"
+      },
+      {
+        "key": "Профиль · отзыв согласия на добавки · 16",
+        "current": "=",
+        "reason": "после task121 (c21c1652f) факт в вердикте уже верный: --v4-bad-text, не --red; отдельная правка registration.json не нужна",
+        "action": "полоса 2: если гейт colors зелёный — ничего; старые handoff-заметки про «--red вместо --v4-bad-text» устарели"
+      }
+    ]
+  },
+  "filesEdited": [
+    "apps/web/heys_weekly_reports_v2.js",
+    "apps/web/heys_norm_correction_v1.js",
+    "apps/web/styles/heys-components.css",
+    "apps/web/__tests__/norm-correction-curator-kept.test.js",
+    "apps/web/__tests__/norm-correction-weekly-card.test.js",
+    "docs/ui/verdicts/norm-correction.json"
+  ],
+  "checks": {
+    "smoke": "pnpm exec vitest run apps/web/__tests__/norm-correction-curator-kept.test.js apps/web/__tests__/norm-correction-weekly-card.test.js",
+    "drift": "node scripts/ui-v4-check-contract-drift.mjs --list norm-correction"
+  }
+}

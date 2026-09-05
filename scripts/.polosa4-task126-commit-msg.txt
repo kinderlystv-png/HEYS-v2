@@ -1,0 +1,6 @@
+feat(web): task126 norm-correction header + geometry verdicts
+
+Шапка «Норма на неделю» различает pending_curator («решает куратор»)
+и curator_kept («решение принято») через NormCorrectionScreen; геометрия
+кадра curator_kept и pending в CSS. Смоук: шапка + computed sand/blue.
+Вердикты norm-correction: rehash + 16 строк = (находка 08).

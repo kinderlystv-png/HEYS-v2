@@ -177,9 +177,12 @@ describe('поправка на факт · карточка сверки в ш�
 
   it('применённое Pro-снижение открывается самостоятельным canvas-экраном', () => {
     expect(SRC).toContain('function NormCorrectionScreen');
-    expect(SRC).toContain("correction?.card?.frame === 'lowered'");
+    expect(SRC).toContain('NORM_CORRECTION_FULL_FRAMES.has(correction?.card?.frame)');
     expect(SRC).toContain("className: 'norm-correction-screen__header'");
     expect(SRC).toContain("'Неделя закрыта'");
+    expect(SRC).toContain("'Норма на неделю'");
+    expect(SRC).toContain("badge: 'решает куратор'");
+    expect(SRC).toContain("badge: 'решение принято'");
     expect(SRC).toContain("modalClassName: 'mc-modal--weekly-wrap-v4'");
     expect(SRC).toContain("if (action === 'ok')");
     expect(SRC).toContain('HEYS.StepModal?.hide?.()');

@@ -1,12 +1,80 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const src = fs.readFileSync(
   path.resolve(__dirname, '../heys_norm_correction_v1.js'),
   'utf8'
 );
+const WEEKLY_SRC = fs.readFileSync(
+  path.resolve(__dirname, '../heys_weekly_reports_v2.js'),
+  'utf8'
+);
+const COMPONENTS_CSS = fs.readFileSync(
+  path.resolve(__dirname, '../styles/heys-components.css'),
+  'utf8'
+);
+const PALETTE_CSS = fs.readFileSync(
+  path.resolve(__dirname, '../styles/modules/002-ui-v4-palette-roles.css'),
+  'utf8'
+);
+
+function normalizeColor(color) {
+  if (!color) return color;
+  if (color.startsWith('#')) {
+    const hex = color.slice(1);
+    const full = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex;
+    const n = Number.parseInt(full, 16);
+    return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+  }
+  const rgba = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(color);
+  if (rgba) {
+    const alpha = rgba[4] === undefined ? 1 : Number(rgba[4]);
+    if (alpha === 1) return `rgb(${rgba[1]}, ${rgba[2]}, ${rgba[3]})`;
+    return `rgba(${rgba[1]}, ${rgba[2]}, ${rgba[3]}, ${alpha})`;
+  }
+  return color;
+}
+
+function applyTheme(palette) {
+  document.documentElement.setAttribute('data-palette', palette);
+  document.documentElement.setAttribute('data-theme', palette);
+  document.documentElement.setAttribute('data-theme-id', palette);
+}
+
+function mountHeader(badgeText) {
+  document.body.innerHTML = `
+    <style>${PALETTE_CSS}</style>
+    <style>${COMPONENTS_CSS}</style>
+    <section class="norm-correction-screen">
+      <header class="norm-correction-screen__header">
+        <span class="norm-correction-screen__title">Норма на неделю</span>
+        <span class="norm-correction-screen__badge">${badgeText}</span>
+      </header>
+      <div class="norm-correction-screen__content">
+        <div class="weekly-wrap-correction weekly-wrap-correction--curator_kept">
+          <div class="weekly-wrap-correction__title is-key">Ваша норма сегодня</div>
+          <div class="weekly-wrap-correction__hero">
+            <span class="weekly-wrap-correction__hero-value">2&nbsp;112</span>
+            <span class="weekly-wrap-correction__hero-caption">без изменений</span>
+          </div>
+          <div class="weekly-wrap-correction__body">Куратор посмотрел поправку.</div>
+          <div class="weekly-wrap-correction__facts">
+            <div class="weekly-wrap-correction__fact">
+              <span class="weekly-wrap-correction__fact-label">Предложение было</span>
+              <span class="weekly-wrap-correction__fact-value is-muted">2&nbsp;049</span>
+            </div>
+            <div class="weekly-wrap-correction__fact">
+              <span class="weekly-wrap-correction__fact-label">Решение</span>
+              <span class="weekly-wrap-correction__fact-value is-quiet">оставить 2&nbsp;112</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
 
 let NC;
 
@@ -106,8 +174,8 @@ describe('norm-correction · куратор оставил норму', () => {
     expect(card.copy.heroCaption).toBe('без изменений');
     expect(card.copy.body).toContain('Куратор посмотрел поправку');
     expect(card.facts).toEqual([
-      { label: 'Предложение было', value: '2\u00a0049' },
-      { label: 'Решение', value: 'оставить 2\u00a0112' },
+      { label: 'Предложение было', value: '2\u00a0049', tone: 'muted' },
+      { label: 'Решение', value: 'оставить 2\u00a0112', tone: 'quiet' },
       {
         label: 'Вернёмся к вопросу',
         value: 'в следующий понедельник',
@@ -201,5 +269,68 @@ describe('norm-correction · куратор оставил норму', () => {
     });
 
     expect(gathered?.card?.frame).toBe('curator_kept');
+  });
+});
+
+describe('norm-correction · шапка Pro-кадров', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+    document.documentElement.removeAttribute('data-palette');
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('data-theme-id');
+  });
+
+  it('полноэкранные Pro-кадры идут через NormCorrectionScreen с разными пилюлями', () => {
+    expect(WEEKLY_SRC).toContain("const NORM_CORRECTION_FULL_FRAMES = new Set(['lowered', 'pending_curator', 'curator_kept'])");
+    expect(WEEKLY_SRC).toContain("badge: 'решает куратор'");
+    expect(WEEKLY_SRC).toContain("badge: 'решение принято'");
+    expect(WEEKLY_SRC).toContain('NORM_CORRECTION_FULL_FRAMES.has(correction?.card?.frame)');
+  });
+
+  it('computed sand + blue · пилюля, ключ и факты curator_kept', () => {
+    const sample = {};
+    for (const palette of ['sand', 'blue']) {
+      applyTheme(palette);
+      mountHeader('решение принято');
+
+      const rootStyle = getComputedStyle(document.documentElement);
+      const badge = getComputedStyle(document.querySelector('.norm-correction-screen__badge'));
+      const titleKey = getComputedStyle(document.querySelector('.weekly-wrap-correction__title.is-key'));
+      const proposal = getComputedStyle(document.querySelector('.weekly-wrap-correction__fact-value.is-muted'));
+      const decision = getComputedStyle(document.querySelector('.weekly-wrap-correction__fact-value.is-quiet'));
+
+      expect(badge.textTransform).toBe('uppercase');
+      expect(badge.borderRadius).toBe('999px');
+      expect(titleKey.fontSize).toBe('10.5px');
+      expect(proposal.fontSize).toBe('12.5px');
+      expect(decision.fontSize).toBe('11px');
+
+      sample[palette] = {
+        ink2: rootStyle.getPropertyValue('--v4-ink-2').trim(),
+        ink3: rootStyle.getPropertyValue('--v4-ink-3').trim(),
+        inkData: rootStyle.getPropertyValue('--v4-ink-data').trim(),
+        hero: rootStyle.getPropertyValue('--v4-hero').trim(),
+        badgeBg: normalizeColor(badge.backgroundColor),
+        titleKey: normalizeColor(titleKey.color),
+        proposal: normalizeColor(proposal.color),
+        decision: normalizeColor(decision.color),
+      };
+
+      expect(sample[palette].ink2).toBe('rgba(0, 0, 0, 0.55)');
+      expect(sample[palette].ink3).toBe('rgba(0, 0, 0, 0.45)');
+    }
+
+    expect(sample.sand.inkData).toBe('rgba(0, 0, 0, 0.56)');
+    expect(sample.blue.inkData).toBe('rgba(16, 24, 38, 0.64)');
+
+    expect(sample.sand.ink2).toBe(sample.blue.ink2);
+    expect(sample.sand.ink3).toBe(sample.blue.ink3);
+    expect(sample.sand.inkData).not.toBe(sample.blue.inkData);
+    expect(sample.sand.badgeBg).toBe('rgb(239, 227, 207)');
+    expect(sample.blue.badgeBg).toBe('rgb(226, 236, 246)');
+    expect(sample.sand.hero).toBe('#efe3cf');
+    expect(sample.blue.hero).toBe('#e2ecf6');
+    expect(COMPONENTS_CSS).toMatch(/\.norm-correction-screen__badge \{[^}]*--v4-ink-2/);
+    expect(COMPONENTS_CSS).toMatch(/\.weekly-wrap-correction__fact-value\.is-muted \{[^}]*--v4-ink-2/);
   });
 });
