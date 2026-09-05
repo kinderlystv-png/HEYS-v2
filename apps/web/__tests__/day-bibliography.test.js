@@ -32,6 +32,17 @@ const CODE = [
   '../heys_norm_correction_v1.js',
 ].map((rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8')).join(' ');
 
+// Отдельный корпус для метаданных, и он ШИРЕ, чем CODE. CODE отвечает на вопрос
+// «на запись кто-то ссылается по id» — там экраны и аналитика. Автор и год
+// называются в других местах: движок поправки и константы инсайтов. Tomiyama
+// живёт именно там, и первая редакция этой проверки приняла его за выдуманную
+// метаданную только из-за узкого списка. Разница между списками намеренная.
+const META = [
+  '../heys_day_caloric_debt_core_v1.js',
+  '../insights/pi_constants.js',
+].map((rel) => fs.readFileSync(path.resolve(__dirname, rel), 'utf8')).join(' ');
+const NAMED = CODE + ' ' + META;
+
 let B;
 beforeEach(() => {
   window.HEYS = {};
@@ -118,7 +129,17 @@ describe('источники дневной части · реестр', () => {
     // подписи ссылки, в структуре разбора баланса или в списке аналитики.
     // Остальные номера в продукте — голые, и завести их записями значило бы
     // выдумать метаданные. Долг остаётся долгом и виден через missing().
-    expect(B.registry.size).toBe(25);
+    // Прежде здесь стояло toBe(25) — число, а не правило: тест падал бы на
+    // добавлении верной записи. Сторожим то, ради чего проверка заведена:
+    // запись живёт в реестре, только если её автор и год действительно есть
+    // в коде продукта. Голый PMID записью не становится.
+    const unverified = B.SOURCES.filter(
+      (s) => !NAMED.includes(s.author) || !NAMED.includes(String(s.year)),
+    );
+    expect(unverified.map((s) => s.id)).toEqual([]);
+    // Страховка от зелёного нуля: опустевший реестр не должен молчать.
+    expect(B.registry.size).toBeGreaterThan(0);
+    expect(B.registry.size).toBe(B.SOURCES.length);
     // Каждая запись обязана быть достижима из кода по своему id — иначе
     // реестр начнёт копить работы, на которые никто не ссылается.
     const orphans = B.SOURCES.filter((s) => !CODE.includes("'" + s.id + "'"));
