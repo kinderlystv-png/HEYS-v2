@@ -6,6 +6,7 @@ import { readCanvasPackage } from '../../../scripts/lib/ui-v4-canvas-index.mjs';
 
 const FIXTURE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const VISUAL_FIXTURE_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_ui_v4_visual_fixture_v1.js');
+export const SUBSCRIPTION_PRODUCT_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_subscriptions_v1.js');
 
 const FIXED_NOW = '2026-08-28T09:30:00+03:00';
 const FIXED_DAY = '2026-08-28';
@@ -112,6 +113,134 @@ const TASK72_FRAME_IDS = Object.freeze({
   'Мессенджер · удаление сообщения': 'messenger-delete-confirm',
 });
 
+/**
+ * Кадр подписки → корень продукта и детерминированный bootstrap состояния.
+ * mount реализован в heys_ui_v4_visual_fixture_v1.js по frameLabel.
+ */
+export const SUBSCRIPTION_VISUAL_SCENARIOS = Object.freeze([
+  {
+    id: 'subscription-settings-row',
+    frameLabel: 'Подписка · строка в настройках',
+    kind: 'demo-settings',
+    tab: 'widgets',
+    rootSelector:
+      '.tab-settings-menu--v4-sheet .hdr-settings-sheet__row[data-settings-key="subscription"]',
+    bootstrap: { surface: 'settings-row' },
+  },
+  {
+    id: 'subscription-trial-screen',
+    frameLabel: 'Подписка · экран · пробный период',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host',
+    bootstrap: { subscriptionStatus: 'trial', trial_ends_at: '2026-09-12' },
+  },
+  {
+    id: 'subscription-welcome',
+    frameLabel: 'Подписка · приветствие',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host',
+    bootstrap: { screen: 'welcome' },
+  },
+  {
+    id: 'subscription-readonly-banner',
+    frameLabel: 'Подписка · баннер сверху',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host .readonly-banner',
+    bootstrap: { screen: 'readonly-banner' },
+  },
+  {
+    id: 'subscription-readonly-toast',
+    frameLabel: 'Подписка · тост на действии',
+    kind: 'demo-subscription',
+    rootSelector: '.heys-undo-bar',
+    bootstrap: { screen: 'readonly-toast' },
+  },
+  {
+    id: 'subscription-contact-curator',
+    frameLabel: 'Подписка · контакт поддержки',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host',
+    bootstrap: { screen: 'contact-curator', readOnly: true },
+  },
+  {
+    id: 'subscription-plans-open',
+    frameLabel: 'Подписка · тарифы · места есть',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host .paywall-modal',
+    bootstrap: { trialQueue: 'open' },
+  },
+  {
+    id: 'subscription-plans-full',
+    frameLabel: 'Подписка · тарифы · мест нет',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host .paywall-modal',
+    bootstrap: { trialQueue: 'full' },
+  },
+  {
+    id: 'subscription-plans-pro-sport',
+    frameLabel: 'Подписка · тарифы · Pro Спорт',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host .paywall-modal',
+    bootstrap: { trialQueue: 'open', selectPlan: 'Pro Спорт' },
+  },
+  {
+    id: 'subscription-payment-review',
+    frameLabel: 'Подписка · проверьте заказ',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host',
+    bootstrap: { screen: 'payment-review' },
+  },
+  {
+    id: 'subscription-payment-success',
+    frameLabel: 'Подписка · оплата прошла',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host',
+    bootstrap: { screen: 'payment-success', plan: 'pro' },
+  },
+  {
+    id: 'subscription-active-screen',
+    frameLabel: 'Подписка · экран · активна',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host',
+    bootstrap: { subscriptionStatus: 'active', plan: 'pro', subscription_ends_at: '2026-10-03' },
+  },
+  {
+    id: 'subscription-readonly-screen',
+    frameLabel: 'Подписка · экран · только чтение',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host',
+    bootstrap: { subscriptionStatus: 'read_only', plan: 'pro' },
+  },
+  {
+    id: 'subscription-queue-queued',
+    frameLabel: 'Подписка · очередь · заявка подана',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host .paywall-modal',
+    bootstrap: { trialQueue: 'queued' },
+  },
+  {
+    id: 'subscription-queue-offer',
+    frameLabel: 'Подписка · очередь · место освободилось',
+    kind: 'demo-subscription',
+    rootSelector: '#ui-v4-subscription-screen-host .paywall-modal',
+    bootstrap: { trialQueue: 'offer' },
+  },
+]);
+
+function buildSubscriptionVisualCases() {
+  return SUBSCRIPTION_VISUAL_SCENARIOS.map((scenario) => ({
+    id: scenario.id,
+    zone: 'subscription',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: scenario.kind,
+    rootSelector: scenario.rootSelector,
+    bootstrap: scenario.bootstrap,
+    viewport: { width: 375, height: 812 },
+    ...(scenario.tab ? { tab: scenario.tab } : { frameLabel: scenario.frameLabel, themeId: 'sand' }),
+  }));
+}
+
 function buildTask72VisualCases() {
   const zones = {
     'first-run': [
@@ -121,23 +250,6 @@ function buildTask72VisualCases() {
       'Первый вход · шаг 4',
       'Первый вход · обзор пройден',
       'Первый вход · с компьютера',
-    ],
-    subscription: [
-      'Подписка · строка в настройках',
-      'Подписка · экран · пробный период',
-      'Подписка · приветствие',
-      'Подписка · баннер сверху',
-      'Подписка · тост на действии',
-      'Подписка · контакт поддержки',
-      'Подписка · тарифы · места есть',
-      'Подписка · тарифы · мест нет',
-      'Подписка · тарифы · Pro Спорт',
-      'Подписка · проверьте заказ',
-      'Подписка · оплата прошла',
-      'Подписка · экран · активна',
-      'Подписка · экран · только чтение',
-      'Подписка · очередь · заявка подана',
-      'Подписка · очередь · место освободилось',
     ],
     messenger: [
       'Мессенджер · пустой тред',
@@ -153,19 +265,20 @@ function buildTask72VisualCases() {
     ],
   };
 
-  return Object.entries(zones).flatMap(([zone, frames]) => frames.map((frameLabel) => {
-    const isSettingsRow = frameLabel === 'Подписка · строка в настройках';
-    return {
+  return [
+    ...buildSubscriptionVisualCases(),
+    ...Object.entries(zones).flatMap(([zone, frames]) => frames.map((frameLabel) => ({
       id: TASK72_FRAME_IDS[frameLabel],
       zone,
       status: 'automated',
       gate: 'diagnostic',
-      kind: isSettingsRow ? 'demo-settings' : 'demo-v4-visual-frame',
-      ...(isSettingsRow ? { tab: 'widgets' } : { frameLabel, themeId: 'sand' }),
+      kind: 'demo-v4-visual-frame',
+      frameLabel,
+      themeId: 'sand',
       rootSelector: TASK72_VISUAL_FRAME_ROOTS[frameLabel],
       viewport: { width: 375, height: 812 },
-    };
-  }));
+    }))),
+  ];
 }
 
 export const UI_V4_VISUAL_CASES = Object.freeze([
@@ -876,12 +989,44 @@ export function buildUiV4VisualSnapshot(item = {}) {
   };
 }
 
+function isSubscriptionVisualCase(item) {
+  return item.kind === 'demo-subscription'
+    || (item.kind === 'demo-v4-visual-frame' && item.frameLabel?.startsWith('Подписка ·'));
+}
+
+async function ensureSubscriptionProductModules(page) {
+  await page.waitForFunction(
+    () =>
+      typeof window.HEYS?.Paywall?.PaywallModal === 'function'
+      && typeof window.HEYS?.Subscription?.getStatus === 'function',
+    undefined,
+    { timeout: 45_000 },
+  );
+
+  const hasSubscriptions = await page.evaluate(
+    () => typeof window.HEYS?.Subscriptions?.SubscriptionSection === 'function',
+  );
+  if (hasSubscriptions) return;
+
+  if (!fs.existsSync(SUBSCRIPTION_PRODUCT_SCRIPT)) {
+    throw new Error(`Subscription product script missing: ${SUBSCRIPTION_PRODUCT_SCRIPT}`);
+  }
+
+  await page.addScriptTag({ path: SUBSCRIPTION_PRODUCT_SCRIPT });
+  await page.waitForFunction(
+    () => typeof window.HEYS?.Subscriptions?.SubscriptionSection === 'function',
+    undefined,
+    { timeout: 45_000 },
+  );
+}
+
 /**
  * Детерминированный переход к кадрам first-run / subscription / messenger.
  * Возвращает true, если сценарий обработан здесь (openCase не дублирует шаги).
  */
 export async function prepareUiV4VisualCase(page, item) {
-  if (item.kind !== 'demo-v4-visual-frame') return false;
+  const isVisualFrame = item.kind === 'demo-v4-visual-frame' || item.kind === 'demo-subscription';
+  if (!isVisualFrame) return false;
   if (!item.frameLabel) {
     throw new Error(`Visual case ${item.id} is missing frameLabel`);
   }
@@ -894,6 +1039,10 @@ export async function prepareUiV4VisualCase(page, item) {
 
   if (!fs.existsSync(VISUAL_FIXTURE_SCRIPT)) {
     throw new Error(`Visual fixture script missing: ${VISUAL_FIXTURE_SCRIPT}`);
+  }
+
+  if (isSubscriptionVisualCase(item)) {
+    await ensureSubscriptionProductModules(page);
   }
 
   await page.addScriptTag({ path: VISUAL_FIXTURE_SCRIPT });

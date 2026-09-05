@@ -1664,7 +1664,7 @@ async function openCase(browser, item, snapshot, options = {}) {
         .waitFor({ state: 'visible', timeout: 45_000 });
       await page.getByRole('button', { name: 'Настройки', exact: true }).click();
     }
-    if (item.kind === 'demo-v4-visual-frame') {
+    if (item.kind === 'demo-v4-visual-frame' || item.kind === 'demo-subscription') {
       const prepared = await prepareUiV4VisualCase(page, item);
       if (!prepared) {
         throw new Error(`Visual case ${item.id} was not prepared by prepareUiV4VisualCase`);

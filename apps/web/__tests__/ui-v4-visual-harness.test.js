@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildUiV4VisualSnapshot,
+  SUBSCRIPTION_VISUAL_SCENARIOS,
   UI_V4_CANVAS_ZONES,
   UI_V4_DOM_GATE_ZONES,
   UI_V4_PIXEL_GATE_ZONES,
@@ -326,6 +327,38 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
         .map(([key, row]) => `${key}: ${row.v}`);
       expect(unresolved, zone).toEqual([]);
     }
+  });
+
+  it('subscription: сценарии как данные с kind, rootSelector и bootstrap', () => {
+    expect(SUBSCRIPTION_VISUAL_SCENARIOS).toHaveLength(15);
+    for (const scenario of SUBSCRIPTION_VISUAL_SCENARIOS) {
+      expect(scenario.kind, scenario.id).toBeTruthy();
+      expect(scenario.rootSelector, scenario.id).toBeTruthy();
+      expect(scenario.bootstrap, scenario.id).toBeTruthy();
+    }
+    const cases = UI_V4_VISUAL_CASES.filter((entry) => entry.zone === 'subscription');
+    expect(cases).toHaveLength(15);
+    expect(cases.every((entry) => entry.status === 'automated' && entry.rootSelector)).toBe(true);
+    expect(cases.filter((entry) => entry.kind === 'demo-subscription')).toHaveLength(14);
+    expect(cases.find((entry) => entry.id === 'subscription-trial-screen')).toMatchObject({
+      kind: 'demo-subscription',
+      rootSelector: '#ui-v4-subscription-screen-host',
+      bootstrap: { subscriptionStatus: 'trial', trial_ends_at: '2026-09-12' },
+    });
+    expect(UI_V4_VISUAL_CASES.some((entry) => entry.zone === 'subscription' && entry.status === 'scenario-pending'))
+      .toBe(false);
+
+    const captureSource = fs.readFileSync(
+      path.resolve(__dirname, '../scripts/ui-v4-visual-capture.mjs'),
+      'utf8',
+    );
+    const fixtureSource = fs.readFileSync(
+      path.resolve(__dirname, '../scripts/ui-v4-visual-fixture.mjs'),
+      'utf8',
+    );
+    expect(captureSource).toContain("item.kind === 'demo-subscription'");
+    expect(fixtureSource).toContain('ensureSubscriptionProductModules');
+    expect(fixtureSource).toContain('SUBSCRIPTION_PRODUCT_SCRIPT');
   });
 
   it('использует фиксированные синтетические данные без идентификаторов клиента', () => {

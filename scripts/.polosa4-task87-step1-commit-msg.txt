@@ -1,0 +1,5 @@
+fix(ui-v4): task87 step1 — subscription visual scenarios as data
+
+SUBSCRIPTION_VISUAL_SCENARIOS: kind, rootSelector, bootstrap per frame.
+Harness loads heys_subscriptions_v1.js before mount (HEYS.Subscriptions on :3001).
+demo-subscription kind; fixture mount script committed.
