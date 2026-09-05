@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readZone, setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+import { snapshotForeignRowStrings, assertForeignRowsUnchanged } from './lib/handoff-batch-apply.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FACTS = path.join(ROOT, 'scripts/.polosa4-subscription-facts.json');
@@ -41,6 +42,9 @@ function main() {
   const zone = readZone('subscription');
   if (!zone) throw new Error('subscription zone missing');
 
+  const handoffKeys = new Set(handoff.rows.map((row) => row.contractKey));
+  const foreignBefore = snapshotForeignRowStrings(zone.rows, handoffKeys);
+
   const counts = { applied: 0, skipped: 0, byV: {} };
   for (const row of handoff.rows) {
     const key = row.contractKey;
@@ -57,7 +61,13 @@ function main() {
     counts.byV[verdict] = (counts.byV[verdict] || 0) + 1;
   }
 
+  // Строки зоны, которых handoff не касается, обязаны остаться байт в байт.
+  // setVerdictKey пишет по одному ключу под локом, но список ключей приходит
+  // из внешнего файла: опечатка в contractKey или лишняя запись в handoff
+  // переписали бы чужую строку тихо и правдоподобно. Сверка со снимком делает
+  // это падением, а не находкой через неделю.
   const live = readZone('subscription');
+  assertForeignRowsUnchanged(foreignBefore, live.rows);
   const final = { '=': 0, '≠': 0, '?': 0, '—': 0 };
   for (const row of Object.values(live.rows)) final[row.v] = (final[row.v] || 0) + 1;
   console.log(JSON.stringify({ applied: counts.applied, skipped: counts.skipped, byV: counts.byV, final }, null, 2));
