@@ -1,0 +1,1093 @@
+{
+  "meta": {
+    "generated": "2026-09-05T07:32:32.607Z",
+    "zone": "strength-builder",
+    "zones": ["strength-builder"],
+    "decisionRefRows": 180,
+    "proposalCount": 4,
+    "noAnchorCount": 175,
+    "canvasPackDir": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4"
+  },
+  "proposals": [
+    {
+      "zone": "strength-builder",
+      "key": "вес выше плана — прогресс, а не нарушение",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "proposedDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2143",
+      "source": "f: :2143"
+    },
+    {
+      "zone": "strength-builder",
+      "key": "вид · выбор групп мышц",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "proposedDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2278",
+      "source": "f: Канвас :2278"
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 07",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "proposedDecisionRef": "apps/web/__tests__/activity-plan-card-frame.test.js:70",
+      "source": "f: apps/web/__tests__/activity-plan-card-frame.test.js:70"
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 22",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "proposedDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:666",
+      "source": "f: :666"
+    }
+  ],
+  "noAnchorInF": [
+    {
+      "zone": "strength-builder",
+      "key": "вид · исходы предложения",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Три полноэкранных исхода (Л10–Л12) не реализованы как отдельные экраны; есть kernel status + ProposalOutcome на finish. 58 frame ? → batch ≠ или отдельная задача на outcome screens."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "вид · отчёт за период",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 01",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 02",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 03",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 05",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 06",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 07",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 08",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 09",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 10",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 11",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 15",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · 16",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · без ответа · текст",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 01",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 02",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 03",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 05",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 06",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 07",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 08",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 09",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 10",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 11",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 15",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 16",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · 17",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · отказ · текст",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 01",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 02",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 03",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 05",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 06",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 07",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 08",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 09",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 10",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 11",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 15",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 16",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 17",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 18",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 19",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 20",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 21",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · 22",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Исход · правка принята · текст",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "каталог",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Поведение =; расхождение в строке «каталог»: контракт «60 кг × 8», кадр/код «60 × 8». catalog_ui:78-89,164-167; strength-builder-ui.test.js:512."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Конструктор · итоги · 58",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "«В шаблоны» в FinishScreen нет; save-flow снят (UI_V4 § Б3). finish-v4-canvas-contract.test.js row 58 исключён."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Конструктор · тренировка идёт · спокойнее · 11",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "⠿ намеренно не рендерится (нет reorder persistence); calm-canvas-contract.test.js:243-244, UI_V4_CODEX § intentional."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Куратор и зал · 03",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "sessionTitle(exercises), не «Тренировка идёт»: builder_ui:1208, superset_ui sessionTitle:405."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Куратор и зал · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Подзаголовок fmtTime, без «что приходит от куратора…»: builder_ui:1209-1212."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Куратор и зал · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "CuratorPlanStrip showActions:false mid-session: builder_ui:1257-1262."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Куратор и зал · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "«Начать по плану» не рендерится mid-session: superset_ui CuratorPlanStrip:2026-2028."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Куратор и зал · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "«Своя» не рендерится mid-session: superset_ui:2027-2028."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Куратор и зал · 23",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "«Снять подход» disabled — video не поддерживается: superset_ui:1653-1658."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Куратор и зал · 32",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "«отправлено в …» — var(--sb-mut), не var(--gr): 750-strength-builder.css:5703-5706."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Куратор и зал · 36",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "«не отправлена» только при notePending+sync pending: buildSyncQueueRows:2071-2077."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 08",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: «7 упражнений · назначил Артём» 500 11.5px/1.4 rgba(ink,.56) margin-top 4px. Runtime: planProse «{dayLabel} · {n} упр. · … В расход не идёт…» — superset_ui:2609-2619; .sb-plan-meta 500 12px/1.55 margin 8px 0 0 — 731:954-957."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 09",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:226-229."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 10",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: одна вторичная «Не смогу сегодня» margin-top 9px. Runtime: ряд .sb-plan-actions «Перенести»+«Пропустить» margin-top 9px — superset_ui:2626-2634, 731:970-973; осознанный разнос перенос/пропуск — activity-plan-card-frame.test.js:3-7, 225-291."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: список .cd. Runtime: .sb-move-days внутри .sb-sheet (модалка), не inline .cd на странице — superset_ui:2303-2317; вертикальный список — 731:1215-1223 vs кадр .cd:646-652."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: строка .cd .row. Runtime: button.sb-move-day flex row — superset_ui:2305-2316; геометрия 731:1225-1240 (min-height 52px, padding 10px 12px) — не класс .row кадра."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: дата свободного дня color var(--tx). CSS задаёт только font на .sb-move-day-copy b (600 12.5px) без color — 731:1255-1258; внутри <button> текст наследует buttontext, не --tx/--v4-ink."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 15",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: «Свободно» 500 11px/1.3 rgba(ink,.56). CSS: font 500 11px/1.3 на span без color — 731:1260-1262; подпись «Свободно» в MoveSheet — superset_ui:2313."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 17",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопределено в 731 без dim текста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 18",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: пилюля «занят» color rgba(ink,.4). Runtime: .sb-move-day.is-busy > i с color var(--v4-ink-3)=rgba(0,0,0,.45) + фон --v4-hero — 731:1269-1274; контракт .4 vs .45 и лишняя заливка."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · 20",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Контракт: «выбрано» 500 11px/1.3 color var(--ac). Runtime: span «выбрано» при pick — superset_ui:2313; CSS span без accent-color на .is-on — 731:1260-1262, 1276-1279."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Перенос · след в обе стороны · текст",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Агрегат кадра Г3 (план+inline-список+след+сноска) vs разнесённый runtime: PlanCard assigned/moved + MoveSheet modal + trace на is-moved/is-future. Механика есть (move/skip/movedTo/movedFrom — superset_ui:2398-2408, 2595-2621); копия и компоновка не совпадают с одним скроллом кадра."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "План в ленте дня · 18",
+      "currentDecisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате",
+      "f": "Unsafe early start намеренно absent — owner contract без fact-date rule. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "План в ленте дня · 19",
+      "currentDecisionRef": "docs/ui/UI_V4_CODEX_DESIGN_DISCREPANCIES.md#strength-builder-будущий-план-нельзя-молча-начать-на-будущей-дате",
+      "f": "Transfer — sole primary action после снятия unsafe early start (owner decision). f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3»."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 05",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3»."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 06",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "А1б: .sb-head sessionTitle + .sb-ex-count (builder_ui:1236, superset_ui:1979); кадр Е1 — шапка упражнения + badge «3 из 3»."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 23",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 24",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 25",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 26",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 27",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Подход · таблица ввода · 28",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Правка легла не полностью · 01",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792",
+      "f": "Кадр Д2: шапка .top; продукт — .sb-finish-head с ✕ и «Тренировка завершена» heys_strength_finish_ui_v1.js:302-311."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Правка легла не полностью · 02",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792",
+      "f": "Кадр: column gap 3px в .top; продукт: row head с icon-btn + title column — 750:1931-1957."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Правка легла не полностью · 03",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792",
+      "f": "Контракт «Верх тела B · завершена»; продукт b «Тренировка завершена» finish_ui:307."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Правка легла не полностью · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792",
+      "f": "Контракт mono «18 подходов · 4 120 кг · 52 мин»; продукт — плитки .sb-finish-metrics finish_ui:316-320."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Правка легла не полностью · 17",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:792",
+      "f": "Канвас .sm-сноска; ProposalOutcome не рендерит footnote — heys_strength_proposal_ui_v1.js:451-494 (CSS .sb-proposal-outcome-footnote заготовлен)."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 01",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 02",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 03",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 05",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 06",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 07",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 08",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 09",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 10",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 11",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 15",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 16",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 17",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 18",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · 19",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа · отчёт за период · текст",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "PeriodReportScreen/CycleReportScreen отсутствуют; «вид · отчёт за период» + кадры «Программа пройдена» не покрыты ProgramDoneScreen как stop-кадр."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 01",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 02",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 03",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 05",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 06",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 11",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 15",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 16",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 17",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 18",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 19",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 20",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 21",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 22",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 23",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · 24",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Программа пройдена · текст",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "ProgramDoneScreen (proposal_ui:505-562) функционален; canvas «Программа пройдена · 01-21» — другая геометрия hero/блоков роста."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "прочерк — значение, а не пустота",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Прочерки «—» в .sb-cell.is-blank (superset_ui:242,718), не .dash 56 % из контракта."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 08",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр .cd badge-row; продукт — вертикальные .sb-radio (heys_strength_catalog_ui_v1.js:288–301). Роли v4 через CATALOG_V4_BRIDGE; носитель ≠ pill."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 09",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр .cd row padding 9px 0; .sb-radio min-height 56px padding 9px 12px — 750-strength-builder.css:1782–1794."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 10",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр gap 6px wrap badges; продукт column .sb-radio без wrap — layout catalog_ui."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 11",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Выбранная .sb-radio.is-on --sb-accbg/--v4-act (750:1796–1799); кадр pill --acs/--on-acs — роли ok, форма ≠ badge."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Неактивная .sb-radio --sb-mut ≈ ink 62%; кадр badge rgba ink .62."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Строка .cd в кадре; в runtime .sb-radio — см. ·08."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр table row «Основная» var(--tx); продукт .sb-chip.is-primary --sb-accTx (750:1676–1680)."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 15",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Primary chip --sb-accTx/--v4-act-text; кадр «спина» 700 11.5 var(--ac) — семантика совпадает, носитель chip."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 16",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Кадр .cd divider none; продукт .sb-chips wrap без divider."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Своё упражнение · 17",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:506",
+      "f": "Secondary .sb-chip.is-on --sb-mut; кадр «бицепс, плечи» 600 ink 56%."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 01",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 02",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 03",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 04",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 05",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 06",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 07",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 08",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 09",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 10",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 11",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 12",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 13",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 14",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 15",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 16",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 17",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 18",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 19",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 20",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · 21",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "Сессия · брошена вчера · текст",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "В heys_strength_builder_ui_v1.js нет finishPastDay/deletePastSession; кадры «Сессия · … · 01-22» (post-hoc lifecycle) не рендерятся. f слабый — усилить file:line при применении."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "третий пропуск подряд — сигнал куратору",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Счётчика трёх назначенных подряд и curator signal нет; SkipSheet (superset_ui:1494+) — локальный пропуск."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "у предложения три исхода, и все нарисованы",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "Kernel: accept/decline/expire (strength-proposal-ui.test.js). Полноэкранных кадров Л10–Л12 («План обновлён», «предложение отклонено», «без ответа») в proposal_ui нет — только смена plan.proposal.status и частичный ProposalOutcome на итогах. 59 frame-строк Исход · * — ?; нужен отдельный UI scope или ≠ пакетом."
+    },
+    {
+      "zone": "strength-builder",
+      "key": "шторка нужна разработчику первой",
+      "currentDecisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:754",
+      "f": "sheetRows (superset_ui:2160-2199) без «отчёт цикла»; контракт dev-first шторку с cycle report не закрыт."
+    }
+  ]
+}
