@@ -788,7 +788,7 @@ body.board-dark-nav .heys-tab-skeleton {
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
-  background: #f3e0d2;
+  background: var(--v4-sand-tint, #f3e0d2);
 }
 
 [data-theme$="dark"] .hdr-date-group .date-picker--v4 .date-picker-trigger {
@@ -990,7 +990,7 @@ body:has(:is(
   html:not([data-theme]) .hdr-top {
     background: transparent;
     border: none;
-    color: #f5ead8;
+    color: var(--v4-ink, #f2ede6);
   }
 
   html:not([data-theme]) .hdr-bottom {
@@ -1036,7 +1036,7 @@ body:has(:is(
 [data-theme$="dark"] .hdr-top {
   background: transparent;
   border: none;
-  color: #f5ead8;
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .hdr-bottom {
@@ -1098,7 +1098,7 @@ body:has(:is(
 }
 
 .card.tone-yellow {
-  background: rgba(234, 179, 8, 0.08);
+  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 8%, transparent);
 }
 
 .card.tone-green {

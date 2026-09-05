@@ -1,0 +1,96 @@
+{
+  "task": "polosa4-task46-phase1",
+  "scope": "5 файлов вне зон вердиктов (ведро 2); правились только незамороженные",
+  "baseline": {
+    "warmTotal": 527,
+    "bucket2OutsideZones": { "files": 5, "places": 190 }
+  },
+  "after": {
+    "warmTotal": 520,
+    "bucket2OutsideZones": { "files": 2, "places": 186 }
+  },
+  "deltaWarmTotal": -7,
+  "deltaOutsideZones": -4,
+  "fiveFiles": [
+    "apps/web/styles/modules/fingers.css",
+    "apps/web/styles/modules/drums-finger-trainer.css",
+    "apps/web/styles/modules/612-training-step.css",
+    "apps/web/styles/modules/725-metabolic-intelligence.css",
+    "apps/web/styles/critical.css"
+  ],
+  "frozenSkipped": [
+    {
+      "file": "apps/web/styles/modules/fingers.css",
+      "warmBefore": 208,
+      "bucket2Before": 163,
+      "status": "frozen until release"
+    },
+    {
+      "file": "apps/web/styles/modules/drums-finger-trainer.css",
+      "warmBefore": 23,
+      "bucket2Before": 23,
+      "status": "frozen until release"
+    }
+  ],
+  "edited": [
+    {
+      "file": "apps/web/styles/modules/612-training-step.css",
+      "warmBefore": 2,
+      "warmAfter": 0,
+      "bucketBreakdown": { "before": { "2": 2 }, "after": {} },
+      "selectors": [".ts-slider — #eab308 → var(--v4-warn-soft, #c9922e) в градиенте", ".ts-slider-negative — то же"]
+    },
+    {
+      "file": "apps/web/styles/modules/725-metabolic-intelligence.css",
+      "warmBefore": 1,
+      "warmAfter": 0,
+      "bucketBreakdown": { "before": { "2": 1 }, "after": {} },
+      "selectors": [".whatif-custom__field input[type=range] — #eab308 → var(--v4-warn-soft, #c9922e)"]
+    },
+    {
+      "file": "apps/web/styles/critical.css",
+      "warmBefore": 4,
+      "warmAfter": 0,
+      "bucketBreakdown": { "before": { "2": 4 }, "after": {} },
+      "selectors": [
+        "[data-theme$=dark] .hdr-top, prefers-color-scheme dark .hdr-top — #f5ead8 → var(--v4-ink, #f2ede6)",
+        ".hdr-date-group .date-picker-trigger--not-today — #f3e0d2 → var(--v4-sand-tint, #f3e0d2)",
+        ".card.tone-yellow — rgba(234,179,8,0.08) → color-mix warn-soft 8%"
+      ]
+    }
+  ],
+  "computedSample": {
+    "sand": {
+      "hdr-top": "#201e1d",
+      "past-day-trigger": "#f3e0d2",
+      "tone-yellow": "#fffaf1"
+    },
+    "blue": {
+      "hdr-top": "#101826",
+      "past-day-trigger": "#f3e0d2",
+      "tone-yellow": "#ffffff"
+    },
+    "sand-dark": {
+      "hdr-top": "#f2ede6",
+      "past-day-trigger": "#3a2620"
+    },
+    "blue-dark": {
+      "hdr-top": "#eef3f8",
+      "past-day-trigger": "#1b3a54"
+    }
+  },
+  "checks": {
+    "ui:v4:check:roles": "pass",
+    "role-fallback-truth": "pass",
+    "polosa4-task46-bare-literals-phase1.test.js": "pass"
+  },
+  "phase2Remainder": {
+    "home-widgets": 29,
+    "reports-insights": 24,
+    "nutrition-tab": 16,
+    "water-add": 10,
+    "spinners": 9,
+    "otherZones": "curator-cabinet 5, norm-correction 5, checkin-morning 4, registration 4, gamification 4, cycle 2, settings-system 2, product-card 2, food-meal 1, pwa-update 1, undo-bar 1",
+    "frozenOutsideZones": "fingers 163 + drums 23 = 186 (ведро 2)"
+  }
+}

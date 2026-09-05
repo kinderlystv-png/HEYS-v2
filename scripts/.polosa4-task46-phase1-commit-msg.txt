@@ -1,0 +1,7 @@
+fix(ui-v4): polosa4 task46 phase1 — warm literals outside verdict zones
+
+Переведены 7 тёплых мест в трёх незамороженных файлах из пяти «вне зон
+вердиктов»: critical.css, 612-training-step.css, 725-metabolic-intelligence.css.
+fingers/drums (186 мест) оставлены замороженными. Warm total 527→520; вне зон
+ведро 2: 190→186 (остались только fingers+drums). Тест computed sand/blue +
+pnpm ui:v4:check:roles.
