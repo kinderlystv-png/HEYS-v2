@@ -167,6 +167,14 @@ export const READ_SCREEN_SOURCE = `(plan) => {
   return { missing: false, elements: out };
 }`;
 
+/** Playwright-safe wrapper: string arrow sources must not go through evaluate() directly. */
+export async function readScreenFromPage(page, plan) {
+  return page.evaluate(({ source, readPlan }) => {
+    const read = eval(source);
+    return read(readPlan);
+  }, { source: READ_SCREEN_SOURCE, readPlan: plan });
+}
+
 /** Короткий человекочитаемый адрес элемента: тег и первые классы. */
 export function describeElement(el, index) {
   const cls = (el.cls || '').trim().split(/\s+/).filter(Boolean).slice(0, 3).join('.');

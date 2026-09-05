@@ -32,7 +32,7 @@ import { parseContractAssertions } from './lib/ui-v4-assertions.mjs';
 import {
   describeReads,
   matchRowAgainstScreen,
-  READ_SCREEN_SOURCE,
+  readScreenFromPage,
 } from './lib/ui-v4-dom-measure.mjs';
 import { evaluateDomEvidence } from './lib/ui-v4-dom-evidence.mjs';
 import { readZone } from './lib/ui-v4-verdicts.mjs';
@@ -131,9 +131,9 @@ function buildRowReport({ parsed, matchResult, existingVerdict }) {
         : '?';
 
   return {
-    key: parsed.identity,
-    expectation: parsed.value,
-    measured: formatMeasured(matchResult),
+    строка: parsed.identity,
+    ожидание: parsed.value,
+    измеренное: formatMeasured(matchResult),
     status: matchResult.status,
     strength,
     proposal,
@@ -143,6 +143,8 @@ function buildRowReport({ parsed, matchResult, existingVerdict }) {
     mismatchesExistingEq: existingVerdict?.v === '=' && matchResult.status === 'mismatched',
   };
 }
+
+export { buildRowReport, frameLabelFromIdentity, groupRowsForMeasurement, summarizeReportRows };
 
 function groupRowsForMeasurement({ contractRows, verdictRows, caseByLabel, verdictEqOnly = false }) {
   const groups = new Map();
@@ -228,7 +230,10 @@ async function measureVisualCase(browser, visualCase, entries) {
       rootSelector: session.measureRootSelector,
       limit: DOM_ELEMENT_LIMIT,
     };
-    const screen = await session.page.evaluate(READ_SCREEN_SOURCE, readPlan);
+    const screen = await readScreenFromPage(session.page, readPlan);
+    if (!screen || typeof screen !== 'object') {
+      throw new Error(`readScreenFromPage returned invalid payload for ${visualCase.id}`);
+    }
     const evaluate = ({ parsed, evidence }) => evaluateDomEvidence({ parsed, evidence });
 
     return entries.map((entry) => {
@@ -316,7 +321,7 @@ function formatTextReport(report) {
 
   for (const entry of report.rows) {
     lines.push(
-      `${entry.key} · ${entry.expectation} · ${entry.measured} · ${entry.status}` +
+      `${entry.строка} · ${entry.ожидание} · ${entry.измеренное} · ${entry.status}` +
         (entry.proposal ? ` · proposal ${entry.proposal}` : entry.excludedStrength1 ? ' · strength1-excluded' : ''),
     );
   }
