@@ -195,12 +195,31 @@ describe('cold-start spinner mark', () => {
   it('keeps the sign palettes on the canvas --c2 / --acs values', () => {
     // Синие наборы расходились с v4-canvas.css: #e2edf7 против --c2 #e2ecf6,
     // #2e7cc0 против --acs #1d5e96, #13222f против --c2 #1e3448.
-    expect(css).toContain('--boot-disc: #e2ecf6;');
-    expect(css).toContain('--boot-stroke: #1d5e96;');
-    expect(css).toContain('--boot-disc: #1e3448;');
+    // 4 сентября литералы перевели на роли (--v4-hero / --v4-act); запасное
+    // значение сохраняет контрактные #e2ecf6, #1d5e96 и #1e3448.
+    expect(css).toMatch(
+      /html\[data-theme-id="blue"\][\s\S]*?--boot-disc:\s*var\(--v4-hero,\s*#e2ecf6\)/,
+    );
+    expect(css).toMatch(
+      /html\[data-theme-id="blue"\][\s\S]*?--boot-stroke:\s*var\(--v4-act,\s*#1d5e96\)/,
+    );
+    expect(css).toMatch(
+      /html\[data-theme-id="blue-dark"\][\s\S]*?--boot-disc:\s*var\(--v4-hero,\s*#1e3448\)/,
+    );
     expect(css).not.toContain('--boot-disc: #e2edf7;');
     expect(css).not.toContain('--boot-stroke: #2e7cc0;');
     expect(css).not.toContain('--boot-disc: #13222f;');
+    // invariant: роль с запасным значением; голый литерал без var() снова не
+    // проходит — иначе откат на #e2edf7 / #2e7cc0 / #13222f пройдёт молча.
+    expect(css).not.toMatch(
+      /html\[data-theme-id="blue"\][\s\S]*?--boot-disc:\s*#e2ecf6;/,
+    );
+    expect(css).not.toMatch(
+      /html\[data-theme-id="blue"\][\s\S]*?--boot-stroke:\s*#1d5e96;/,
+    );
+    expect(css).not.toMatch(
+      /html\[data-theme-id="blue-dark"\][\s\S]*?--boot-disc:\s*#1e3448;/,
+    );
   });
 
   it('captions the sign at 15/7/12 with ink 50 percent', () => {
