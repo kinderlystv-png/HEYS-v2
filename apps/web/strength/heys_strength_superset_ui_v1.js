@@ -1981,17 +1981,22 @@
             })
           )
         ),
-        h('div', { className: 'sb-rest-line sb-rest-cd' },
-          h('span', { className: 'sb-rest-copy sb-rest-cd-copy' },
-            '⏱ Отдых ' + fmtClock(+ex.restSec || 90) + ' '
-            + (ex.restManual
-              ? '— вручную'
-              : (+ex.rpe > 0 ? '— по тяжести ' + ex.rpe : '— по умолчанию'))),
+        h('div', { className: 'sb-rest-line sb-rest-cd-row' },
+          h('span', { className: 'sb-rest-copy' },
+            h('b', { className: 'sb-rest-cd-title' }, 'Отдых ' + fmtClock(+ex.restSec || 90)),
+            h('span', { className: 'sb-rest-cd-sub' },
+              ex.restManual
+                ? 'вручную'
+                : (+ex.rpe > 0 ? 'из тяжести ' + ex.rpe : 'по умолчанию'))),
+          h('span', {
+            className: 'sb-rest-cd',
+            'aria-hidden': 'true',
+          }, fmtClock(+ex.restSec || 90)),
           h('button', {
             type: 'button',
             className: 'sb-rest-manual sb-rest-manual--e1' + (ex.restManual ? ' is-on' : ''),
             onClick: function () { onRestManual(index, !ex.restManual); }
-          }, ex.restManual ? 'Авто' : 'Вручную')
+          }, ex.restManual ? 'авто' : 'вручную')
         ),
         h('div', { className: 'sb-approach-pills' },
           h('button', {

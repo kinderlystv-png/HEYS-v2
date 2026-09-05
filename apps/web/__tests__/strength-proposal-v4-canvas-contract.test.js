@@ -8,13 +8,16 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(WEB_DIR, 'strength/heys_strength_proposal_ui_v1.js'), 'utf8');
 const CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8');
+const ACTIVITY_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/731-ui-v4-activity.css'), 'utf8');
 const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
 
 const SAND = Object.freeze({
-  tint: '#f6e6dd', tx: '#201e1d', ac: '#8a4a20', ac2: '#a1471c', gr: '#5c6a45', ink56: 'rgba(0, 0, 0, .56)',
+  bg: '#fffaf1', tint: '#f6e6dd', tx: '#201e1d', ac: '#8a4a20', ac2: '#a1471c', gr: '#5c6a45',
+  grBg: '#eaefe0', ink56: 'rgba(0, 0, 0, 0.56)', bad: '#a83c22',
 });
 const BLUE = Object.freeze({
-  tint: '#e2ecf6', tx: '#101826', ac: '#1a6eb2', ac2: '#1d5e96', gr: '#5c6a45', ink56: 'rgba(16, 24, 38, 0.64)',
+  bg: '#eef3fa', tint: '#e2ecf6', tx: '#101826', ac: '#1a6eb2', ac2: '#1d5e96', gr: '#5c6a45',
+  grBg: '#eaefe0', ink56: 'rgba(16, 24, 38, 0.56)', bad: '#a8382b',
 });
 
 const PALETTE_CSS = {
@@ -26,16 +29,19 @@ function paletteCss(name) {
   if (PALETTE_CSS[name]) return PALETTE_CSS[name];
   const p = name === 'blue' ? BLUE : SAND;
   const inkRgb = name === 'blue' ? '16, 24, 38' : '0, 0, 0';
-  PALETTE_CSS[name] = `${BASE_CSS}\n${CSS}`
+  PALETTE_CSS[name] = `${BASE_CSS}\n${ACTIVITY_CSS}\n${CSS}`
+    .replaceAll('var(--bg)', p.bg)
     .replaceAll('var(--tint)', p.tint)
     .replaceAll('var(--tx)', p.tx)
     .replaceAll('var(--ac)', p.ac)
     .replaceAll('var(--ac2)', p.ac2)
     .replaceAll('var(--gr)', p.gr)
-    .replaceAll('var(--gr-bg)', p.tint)
+    .replaceAll('var(--gr-bg)', p.grBg)
+    .replaceAll('var(--val-bad)', p.bad)
     .replaceAll('var(--c1)', p.tint)
     .replaceAll('var(--c2)', p.tint)
-    .replaceAll('var(--ink)', inkRgb);
+    .replaceAll('var(--ink)', inkRgb)
+    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
   return PALETTE_CSS[name];
 }
 
@@ -458,6 +464,71 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
     );
     return { program, days, readDay, training };
   }
+
+  it('CycleReportScreen · computed: green roles and assigned cell on sand+blue', { timeout: 15000 }, () => {
+    const fx = completedCycleFixture();
+    const snapshot = Parts.buildCycleReportSnapshot(
+      fx.program, fx.days, fx.readDay, { training: fx.training },
+    );
+    for (const palette of ['sand', 'blue']) {
+      const p = palette === 'blue' ? BLUE : SAND;
+      const style = document.createElement('style');
+      style.textContent = paletteCss(palette);
+      document.head.appendChild(style);
+      try {
+        const { container } = render(React.createElement(Parts.CycleReportScreen, {
+          snapshot,
+          onClose: () => {},
+        }));
+        const summaryDot = container.querySelector('.sb-plan-vs-dot.is-summary');
+        const progressVal = container.querySelector(
+          '.sb-plan-vs-row.is-progress .sb-plan-vs-cell.is-positive .sb-plan-vs-cell-val',
+        );
+        const assignedCell = container.querySelector('.sb-plan-vs-cell.is-assigned');
+        expect(getComputedStyle(summaryDot).backgroundColor).toBe(p.gr);
+        expect(getComputedStyle(progressVal).color).toBe(p.gr);
+        expect(getComputedStyle(assignedCell).backgroundColor).toBe(p.bg);
+        cleanup();
+      } finally {
+        style.remove();
+      }
+    }
+  });
+
+  it('PeriodReportScreen · computed: outcome tones and debt card on sand+blue', { timeout: 15000 }, () => {
+    const fx = completedCycleFixture();
+    const snapshot = Parts.buildPeriodReportSnapshot(
+      fx.program, fx.days, fx.readDay, { incomplete: true },
+    );
+    for (const palette of ['sand', 'blue']) {
+      const p = palette === 'blue' ? BLUE : SAND;
+      const style = document.createElement('style');
+      style.textContent = paletteCss(palette);
+      document.head.appendChild(style);
+      try {
+        const { container } = render(React.createElement(Parts.PeriodReportScreen, {
+          snapshot,
+          onClose: () => {},
+        }));
+        const okVal = container.querySelector('.sb-period-outcome-val.is-ok');
+        const badVal = container.querySelector('.sb-period-outcome-val.is-bad');
+        const detail = container.querySelector('.sb-period-outcome-detail');
+        const debtTitle = container.querySelector('.sb-period-debt-title');
+        const debtCard = container.querySelector('.sb-period-debt-card');
+        const label = container.querySelector('.sb-period-outcome-label');
+        const normColor = (value) => String(value).replace(/\s+/g, ' ').trim();
+        expect(normColor(getComputedStyle(okVal).color)).toBe(p.gr);
+        expect(normColor(getComputedStyle(badVal).color)).toBe(p.bad);
+        expect(normColor(getComputedStyle(detail).color)).toBe(p.ink56);
+        expect(getComputedStyle(debtTitle).color).toBe(p.ac2);
+        expect(getComputedStyle(debtCard).backgroundColor).toBe(p.tint);
+        expect(getComputedStyle(label).color).toBe(p.tx);
+        cleanup();
+      } finally {
+        style.remove();
+      }
+    }
+  });
 
   it('CycleReportScreen: completed cycle shows plan-vs-done report shell', () => {
     const fx = completedCycleFixture();

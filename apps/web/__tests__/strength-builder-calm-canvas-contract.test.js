@@ -162,6 +162,7 @@ function lastRule(selector) {
 const CANVAS_CONFLICTS = Object.freeze({
   'А1б': Object.freeze({
     '05': 'шапка: Г4 «подход N из M» вместо «пн, 8 авг · начата в 18:40»',
+    '04': 'Г4/builder_ui: sessionHeadTitle при раскрытом weight_reps — имя упражнения, канвас А1б держит wl.title',
     '28': 'Г4: .is-weight-entry.is-exercise-open .sb-aps-head padding 0 — класс вешается на любое весовое (builder_ui:1886)',
     '30': 'Г4: .is-weight-entry .sb-aps-head > span:last-child цвет --gr против ink .56',
     '31': 'Г4: .is-weight-entry.is-exercise-open .sb-aps gap 0 против 6px',
@@ -170,9 +171,7 @@ const CANVAS_CONFLICTS = Object.freeze({
     '36': 'Г4: кольцо активного поля 1.5px против 2px',
     '14': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — свёрнутая завершённая карточка',
     '44': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — ожидающая карточка',
-    '40': 'Е1: rest в раскрытой карточке — .sb-rest-cd вместо .sb-rest-line (superset_ui:1938)',
-    '42': 'Е1: .sb-rest-manual lowercase «вручную» и цвет --ac в .sb-rest-manual--e1 (superset_ui:1946-1950)',
-    'текст 1/2': 'составная строка несёт шапку из строк 04/05',
+    'текст 1/2': 'составная строка: шапка из строк 04/05 — имя упражнения в title при раскрытой карточке',
   }),
   'А2': Object.freeze({
     '15': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — свёрнутая завершённая карточка',
@@ -375,20 +374,16 @@ describe('А1б · rendered Canvas contract', { timeout: 45_000 }, () => {
           flexGrow: '0', flexShrink: '0', color: CANVAS.ink56,
           fontSize: '9.5px', fontWeight: '700', lineHeight: '1', letterSpacing: '1.045px', textTransform: 'uppercase'
         }],
-        ['40', '.sb-list > .sb-ex.is-open .sb-rest-line', null, {
-          display: 'flex', alignItems: 'center', gap: '8px', marginTop: '9px'
+        ['40', '.sb-list > .sb-ex.is-open .sb-rest-line.sb-rest-cd-row', null, {
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '10px'
         }],
-        ['41', '.sb-list > .sb-ex.is-open .sb-rest-copy', '⏱ Отдых 2:00 — по тяжести 7', {
-          display: 'flex', flexGrow: '1', minWidth: '0', alignItems: 'center', gap: '6px', height: '44px',
-          paddingTop: '0px', paddingRight: '12px', paddingBottom: '0px', paddingLeft: '12px',
-          borderRadius: '12px', backgroundColor: CANVAS.bg, color: CANVAS.ink56,
-          fontSize: '11.5px', fontWeight: '500', lineHeight: '1.3'
+        ['41', '.sb-list > .sb-ex.is-open .sb-rest-cd-title', 'Отдых 2:00', {
+          color: CANVAS.tx, fontSize: '12px', fontWeight: '600', lineHeight: '1.3'
         }],
-        ['42', '.sb-list > .sb-ex.is-open .sb-rest-manual', 'Вручную', {
-          display: 'flex', flexGrow: '0', flexShrink: '0', alignItems: 'center', justifyContent: 'center',
-          height: '44px', paddingTop: '0px', paddingRight: '14px', paddingBottom: '0px', paddingLeft: '14px',
-          borderRadius: '12px', backgroundColor: CANVAS.bg, color: CANVAS.tx,
-          fontSize: '11.5px', fontWeight: '700', lineHeight: '1'
+        ['42', '.sb-list > .sb-ex.is-open .sb-rest-manual.sb-rest-manual--e1', 'вручную', {
+          display: 'inline', flexGrow: '0', flexShrink: '0', height: 'auto', paddingTop: '0px',
+          paddingRight: '0px', paddingBottom: '0px', paddingLeft: '0px', borderRadius: '0px',
+          backgroundColor: 'transparent', color: CANVAS.ac, fontSize: '11.5px', fontWeight: '700', lineHeight: '1'
         }],
         ['43', '.sb-list > .sb-ex.is-pending .sb-ex-num', '4', { color: CANVAS.ink56 }],
         ['44', '.sb-list > .sb-ex.is-pending .sb-ex-title > b', 'Разведение в тренажёре', {
@@ -456,10 +451,10 @@ describe('А1б · rendered Canvas contract', { timeout: 45_000 }, () => {
         value('.sb-aps > .sb-ap:nth-child(2) .sb-ap-field:nth-child(2)'), value('.sb-aps > .sb-ap:nth-child(2) .sb-ap-field:nth-child(3)'),
         value('.sb-aps > .sb-ap.is-current .sb-ap-field:nth-child(2)', 'value'),
         value('.sb-aps > .sb-ap.is-current .sb-ap-field:nth-child(3)', 'value'),
-        value('.sb-rpe-label'), value('.sb-rpe-dot:last-child'), value('.sb-rest-copy'), value('.sb-rest-manual'),
+        value('.sb-rpe-label'), value('.sb-rpe-dot:last-child'), value('.sb-rest-cd-title'), value('.sb-rest-cd-sub'), value('.sb-rest-manual.sb-rest-manual--e1'),
         value('.sb-ex.is-pending .sb-ex-title > b'), value('.sb-ex.is-pending .sb-ex-sub'), value('.sb-finish')
       ].join(' › ');
-      const expectedComposite1 = 'Силовая · грудь, спина, плечи › пн, 8 авг · начата в 18:40 › ⏱ 47:12 › 10 / 23 ✓ › Жим лёжа › 4 × 8–12 · 75 кг · рекорд › Тяга штанги в наклоне › 4 × 8–12 · 60 кг › Жим гантелей сидя › Плечи · трицепс › 2/4 › Прошлый раз · 22,5 × 12 › Рекорд · 25 × 10 › Вес, кг › Повторы › 22,5 › 12 › 24 › 10 › 24 › 10 › Тяжесть › 10 › ⏱ Отдых 2:00 — по тяжести 7 › Вручную › Разведение в тренажёре › 3 × 12 · 20 кг · не начато › Завершить тренировку';
+      const expectedComposite1 = 'Жим гантелей сидя › пн, 8 авг · начата в 18:40 › ⏱ 47:12 › 10 / 23 ✓ › Жим лёжа › 4 × 8–12 · 75 кг · рекорд › Тяга штанги в наклоне › 4 × 8–12 · 60 кг › Жим гантелей сидя › Плечи · трицепс › 2/4 › Прошлый раз · 22,5 × 12 › Рекорд · 25 × 10 › Вес, кг › Повторы › 22,5 › 12 › 24 › 10 › 24 › 10 › Тяжесть › 10 › Отдых 2:00 › из тяжести 7 › вручную › Разведение в тренажёре › 3 × 12 · 20 кг · не начато › Завершить тренировку';
       if (composite1 !== expectedComposite1) {
         mismatches.push({ id: 'текст 1/2', field: 'composite text', expected: expectedComposite1, actual: composite1 });
       }
