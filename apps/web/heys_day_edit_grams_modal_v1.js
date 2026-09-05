@@ -11,6 +11,23 @@
   function renderEditGramsModal(params) {
     if (!React || !ReactDOM) return null;
 
+    function PortionStarIcon({ size = 10 }) {
+      return React.createElement('svg', {
+        className: 'grams-portion-btn__star-icon',
+        width: size,
+        height: size,
+        viewBox: '0 0 24 24',
+        fill: 'currentColor',
+        stroke: 'currentColor',
+        strokeWidth: 2,
+        strokeLinejoin: 'round',
+        'aria-hidden': 'true',
+        focusable: 'false'
+      }, React.createElement('path', {
+        d: 'M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z'
+      }));
+    }
+
     const {
       editGramsTarget,
       editGramsValue,
@@ -117,7 +134,11 @@
                 }
               }, 
                 React.createElement('span', { className: 'portion-name' }, portion.name),
-                React.createElement('span', { className: 'portion-grams' }, portion.grams + 'г')
+                React.createElement('span', { className: 'portion-grams' }, portion.grams + 'г'),
+                isRecommended && React.createElement('span', {
+                  className: 'grams-portion-btn__star',
+                  'aria-hidden': 'true'
+                }, React.createElement(PortionStarIcon))
               );
             })
           ),

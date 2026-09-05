@@ -1124,11 +1124,13 @@
       const PartsLocal = HEYS.StrengthBuilderParts || {};
       const openExLocal = openIdx >= 0 ? exercises[openIdx] : null;
       const openUnitLocal = openExLocal ? (openExLocal.unit || 'weight_reps') : '';
-      if (openIdx >= 0 && openExLocal && (openUnitLocal === 'time' || openUnitLocal === 'distance')) {
-        const progress = exerciseWorkProgress(openExLocal);
-        const count = progress.total
-          || (Array.isArray(openExLocal.approaches) ? openExLocal.approaches.length : 0);
-        return (openExLocal.name || 'Без названия') + ' · ' + approachCountLabel(count);
+      if (openIdx >= 0 && openExLocal) {
+        if (openUnitLocal === 'time' || openUnitLocal === 'distance') {
+          const progress = exerciseWorkProgress(openExLocal);
+          const count = progress.total
+            || (Array.isArray(openExLocal.approaches) ? openExLocal.approaches.length : 0);
+          return (openExLocal.name || 'Без названия') + ' · ' + approachCountLabel(count);
+        }
       }
       return wl.title || (typeof PartsLocal.sessionTitle === 'function'
         ? PartsLocal.sessionTitle(exercises)
@@ -1139,9 +1141,9 @@
       if (rest && !rest.collapsed) return 'отдых между подходами';
       const openExLocal = openIdx >= 0 ? exercises[openIdx] : null;
       const openUnitLocal = openExLocal ? (openExLocal.unit || 'weight_reps') : '';
-      if (openIdx >= 0 && openExLocal && openUnitLocal === 'weight_reps') {
-        const progressKey = exerciseWorkProgressKey(openExLocal);
-        if (progressKey) return progressKey;
+      if (openIdx >= 0 && openExLocal && (openUnitLocal === 'weight_reps' || openUnitLocal === 'bodyweight')) {
+        const progress = exerciseWorkProgress(openExLocal);
+        if (progress.total) return progress.current + ' из ' + progress.total;
       }
       // M4: ключ единицы времени — в шапке (.sb-head-sub). M5/M6 — только в карточке.
       if (openIdx >= 0 && openExLocal && openUnitLocal === 'time') {

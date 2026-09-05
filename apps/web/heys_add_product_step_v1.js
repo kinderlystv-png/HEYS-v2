@@ -149,6 +149,39 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     );
   }
 
+  function StarIcon({ filled = false, size = 16, className = '' }) {
+    return React.createElement('svg', {
+      className: className || undefined,
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: filled ? 'currentColor' : 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    }, React.createElement('path', {
+      d: 'M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z'
+    }));
+  }
+
+  function LucideCheckIcon({ size = 12, strokeWidth = 3, className = '' }) {
+    return React.createElement('svg', {
+      className: className || undefined,
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    }, React.createElement('path', { d: 'M5 13l4 4L19 7' }));
+  }
+
   // === ГЛОБАЛЬНЫЙ СЧЁТЧИК ВЕРСИИ ПРОДУКТОВ ===
   // Должен быть доступен всем компонентам внутри модуля
   let globalProductsVersion = 0;
@@ -237,6 +270,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   const BARCODE_CAMERA_AUTOSTART_KEY = 'heys_barcode_camera_autostart';
+  const BARCODE_SCAN_UNRECOGNIZED_MS = 10000;
 
   const stopBarcodeCameraStream = (stream) => {
     try { stream?.getTracks?.().forEach((track) => track.stop()); } catch (_) { }
@@ -3436,6 +3470,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const scannerRef = useRef(null);
     const readyTimerRef = useRef(null);
     const debugRefreshTimerRef = useRef(null);
+    const unrecognizedTimerRef = useRef(null);
+    const [scanUnrecognized, setScanUnrecognized] = useState(false);
     const startRequestRef = useRef(false);
     const autoStartAttemptedRef = useRef(false);
     const cameraDebugRef = useRef([]);
@@ -3618,6 +3654,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         clearTimeout(debugRefreshTimerRef.current);
         debugRefreshTimerRef.current = null;
       }
+      if (unrecognizedTimerRef.current) {
+        clearTimeout(unrecognizedTimerRef.current);
+        unrecognizedTimerRef.current = null;
+      }
+      setScanUnrecognized(false);
       try { scannerRef.current?.stop?.(); } catch (_) { }
       scannerRef.current = null;
       scheduleBarcodeCameraRelease(streamRef.current);
@@ -3794,6 +3835,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }
         });
         if (scanner?.success) {
+          if (unrecognizedTimerRef.current) {
+            clearTimeout(unrecognizedTimerRef.current);
+          }
+          unrecognizedTimerRef.current = setTimeout(() => {
+            setScanUnrecognized(true);
+          }, BARCODE_SCAN_UNRECOGNIZED_MS);
           if (debugRefreshTimerRef.current) clearTimeout(debugRefreshTimerRef.current);
           debugRefreshTimerRef.current = setTimeout(() => {
             const barcodeDebug = HEYS.barcode?.getDebugState?.() || null;
@@ -3938,6 +3985,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           'Наведите на штрихкод упаковки'),
         fullscreen && React.createElement('div', { className: 'aps-barcode-finder-hint' },
           'Держите ровно, свет сзади мешает'),
+        scanUnrecognized && React.createElement('div', {
+          className: 'aps-barcode-unrecognized',
+          role: 'status',
+          'aria-live': 'polite'
+        }, 'Код не распознан'),
         React.createElement('div', { className: 'aps-barcode-manual' },
           React.createElement('input', {
             className: 'aps-barcode-input',
@@ -7175,7 +7227,9 @@ NOVA: 1
 
       // Превью распознанного продукта
       parsedPreview && React.createElement('div', { className: 'aps-create-preview' },
-        React.createElement('div', { className: 'aps-preview-title' }, 'Распознано'),
+        React.createElement('div', { className: 'aps-preview-title' },
+          React.createElement(LucideCheckIcon, { size: 12, strokeWidth: 3, className: 'aps-preview-title__check' }),
+          'Распознано'),
         React.createElement('div', { className: 'aps-preview-name' }, parsedPreview.name),
         shouldDisplayProductBrand(parsedPreview) && React.createElement('div', { className: 'aps-preview-brand' }, getProductBrand(parsedPreview)),
         React.createElement('div', { className: 'aps-preview-macros' },
@@ -7202,10 +7256,16 @@ NOVA: 1
       },
         React.createElement('input', {
           type: 'checkbox',
-          className: 'aps-create-publish__box',
+          className: 'aps-create-publish__input',
           checked: publishToShared,
           onChange: (e) => setPublishToShared(e.target.checked)
         }),
+        React.createElement('span', {
+          className: 'aps-create-publish__box' + (publishToShared ? ' is-checked' : ''),
+          'aria-hidden': 'true'
+        },
+          publishToShared && React.createElement(LucideCheckIcon, { size: 14, strokeWidth: 3.2 })
+        ),
         React.createElement('span', { className: 'aps-create-publish__label' },
           'Опубликовать в общую базу'),
         React.createElement('span', { className: 'aps-create-publish__where' },
@@ -8366,6 +8426,12 @@ NOVA: 1
                 checked: !!form[item.key],
                 onChange: (e) => updateField(item.key, e.target.checked)
               }),
+              React.createElement('span', {
+                className: 'pe-toggle__box' + (form[item.key] ? ' is-checked' : ''),
+                'aria-hidden': 'true'
+              },
+                form[item.key] && React.createElement(LucideCheckIcon, { size: 11, strokeWidth: 3.2 })
+              ),
               React.createElement('span', null, item.label)
             )
           )
@@ -9890,7 +9956,9 @@ NOVA: 1
         type: 'button',
         className: 'aps-v4-harm-custom-toggle',
         onClick: () => { setShowCustom(!showCustom); haptic('light'); }
-      }, showCustom ? 'Скрыть шкалу' : 'Указать своё значение'),
+      },
+        e(PencilEditIcon),
+        showCustom ? 'Скрыть шкалу' : 'Указать своё значение'),
 
       harmSourceMode === 'own' && showCustom && WheelPicker && e('div', { className: 'aps-v4-harm-wheel' },
         e('div', { className: 'aps-v4-harm-wheel__picker' },
@@ -11402,7 +11470,7 @@ NOVA: 1
             },
             title: isFavorite ? 'Убрать из избранного' : 'Добавить в избранное',
             'aria-label': isFavorite ? 'Убрать из избранного' : 'Добавить в избранное'
-          }, isFavorite ? '★' : '☆');
+          }, React.createElement(StarIcon, { filled: isFavorite, size: 16 }));
         }, // На grams — звёздочка избранного; на остальных — счётчик базы
         // Callback при создании продукта — обновляем список (не используется при 2 шагах, оставляем для совместимости)
         onProductCreated: (product) => {
@@ -11605,6 +11673,7 @@ NOVA: 1
     ProductEditBasicStep,
     ProductEditExtraStep,
     HarmSelectStep,
+    BarcodeScannerModal,
     BarcodeScanIcon,
     getCategoryIcon,
     computeSmartProducts,

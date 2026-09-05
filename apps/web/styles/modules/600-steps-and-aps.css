@@ -1394,6 +1394,11 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   color: var(--v4-ok-text, #5c6a45);
 }
 
+.aps-preview-title__check {
+  flex: none;
+  color: currentColor;
+}
+
 [data-theme$='dark'] .aps-preview-title {
   color: #34d399;
 }
@@ -2781,6 +2786,10 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 .mc-modal:has(.aps-v4-flow) .mc-header-btn--fav.is-active {
   color: var(--v4-sand-act-deep, #8a4a20);
+}
+
+.mc-modal:has(.aps-v4-flow) .mc-header-btn--fav svg {
+  display: block;
 }
 
 /* === APS v4 · экран порции (канвас #5) === */
