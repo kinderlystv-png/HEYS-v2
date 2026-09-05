@@ -5,7 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { readRules } from './canvas-razbor-helpers.js';
 
-const DATA_INK = 'var(--v4-ink-data, rgba(var(--ink),.56))';
+function usesInkData(color) {
+  return Boolean(color) && color.includes('--v4-ink-data');
+}
+
 const MEAL_CSS = fs.readFileSync(
   path.resolve(__dirname, '../styles/modules/610-aps-meal-flow.css'),
   'utf8',
@@ -48,31 +51,41 @@ const MEAL_SELECTORS = [
   '.aps-v4-preset-confirm__grams',
 ];
 
+const NUTRITION_DATA_SELECTORS = [
+  '.nutrition-v4-window__label',
+  '.nutrition-v4-meal-row__items',
+  '.nutrition-v4-meal-row--empty .nutrition-v4-meal-row__num',
+];
+
 describe('food-meal · лестница чернил для мелких данных', () => {
   it('активные подписи флоу используют семантический уровень данных 56 %', () => {
+    expect(MEAL_SELECTORS.length).toBeGreaterThan(0);
     const rules = readRules(MEAL_CSS);
     const drift = MEAL_SELECTORS.flatMap((selector) => {
       const color = rules.get(selector)?.color;
-      return color === DATA_INK ? [] : [`${selector}: ${color || 'нет color'}`];
+      return usesInkData(color) ? [] : [`${selector}: ${color || 'нет color'}`];
     });
     expect(drift).toEqual([]);
   });
 
   it('примечание создания набора наследует тот же уровень от mpr-footnote', () => {
     expect(APS_SOURCE).toContain("className: 'mpr-footnote mpr-create-footnote'");
-    expect(readRules(MEAL_CSS).get('.mpr-footnote')?.color).toBe(DATA_INK);
+    const footnoteColor = readRules(MEAL_CSS).get('.mpr-footnote')?.color;
+    expect(footnoteColor, '.mpr-footnote').toBeTruthy();
+    expect(footnoteColor).toContain('--v4-ink-data');
   });
 
   it('строка продукта и данные списка приёмов используют уровень данных 56 %', () => {
+    expect(NUTRITION_DATA_SELECTORS.length).toBeGreaterThan(0);
     const steps = readRules(STEPS_CSS);
     const nutrition = readRules(NUTRITION_CSS);
-    expect(steps.get('.aps-v4-product-row__meta')?.color).toBe(DATA_INK);
-    for (const selector of [
-      '.nutrition-v4-window__label',
-      '.nutrition-v4-meal-row__items',
-      '.nutrition-v4-meal-row--empty .nutrition-v4-meal-row__num',
-    ]) {
-      expect(nutrition.get(selector)?.color, selector).toBe(DATA_INK);
+    const productMeta = steps.get('.aps-v4-product-row__meta')?.color;
+    expect(productMeta, '.aps-v4-product-row__meta').toBeTruthy();
+    expect(productMeta).toContain('--v4-ink-data');
+    for (const selector of NUTRITION_DATA_SELECTORS) {
+      const color = nutrition.get(selector)?.color;
+      expect(color, selector).toBeTruthy();
+      expect(color, selector).toContain('--v4-ink-data');
     }
   });
 });

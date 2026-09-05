@@ -1,0 +1,8 @@
+fix(strength): entry head keys in ExerciseCard per canvas M5/M6
+
+Wire unitEntryLabel/bodyweightHeadKey into open exercise card subtitle;
+remove duplicate unit label from session service head so distance/time keys
+live once in the card per contract.
+
+Verified: strength-builder-distance-entry-v4-canvas-contract (2/2),
+strength-builder-weight-entry-v4-canvas-contract (3/3).

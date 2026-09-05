@@ -307,7 +307,7 @@ function createCleanRefWorktree(ref) {
     },
   );
   if (add.status !== 0) {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
+    safeRemovePath(tempRoot);
     return { ok: false, error: String(add.stderr || add.stdout || '').trim() };
   }
   return { ok: true, tempRoot, checkoutDir };
@@ -356,36 +356,72 @@ function attachWorkspaceRuntime(
   }
 }
 
+function isFilesystemReparsePoint(linkPath) {
+  try {
+    if (fs.lstatSync(linkPath).isSymbolicLink()) return true;
+  } catch {
+    return false;
+  }
+  if (process.platform !== 'win32') return false;
+  try {
+    fs.readlinkSync(linkPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function unlinkFilesystemReparsePoint(linkPath) {
+  try {
+    fs.unlinkSync(linkPath);
+  } catch {
+    fs.rmdirSync(linkPath); // Windows junction
+  }
+}
+
 /**
- * Снять junction-ссылки на настоящий node_modules до того, как временное
- * дерево пойдёт под нож.
+ * Удалить каталог, не заходя в symlink/junction.
  *
- * Инцидент 31 августа 2026: удаление временного дерева проваливалось сквозь
- * эти ссылки и вычищало реальный node_modules корня, а через вложенные
- * ссылки apps/web/node_modules/@heys — и исходники пакетов. Дальше каждый
- * push видел «missing runtime», звал pnpm install, тот падал на битом дереве,
- * и круг повторялся. Ссылку снимаем сами: unlink убирает саму ссылку и не
- * трогает то, на что она указывает.
+ * `fs.rmSync({ recursive: true })` на Windows проваливается сквозь junction
+ * checkout/node_modules → реальный workspace и дальше по @heys/* в packages/*.
+ * Инциденты 31.08 и 05.09.2026.
+ */
+function safeRemovePath(targetPath, { rmSync = fs.rmSync, unlinkSync = fs.unlinkSync, rmdirSync = fs.rmdirSync } = {}) {
+  let stat;
+  try {
+    stat = fs.lstatSync(targetPath);
+  } catch {
+    return;
+  }
+
+  if (isFilesystemReparsePoint(targetPath)) {
+    unlinkFilesystemReparsePoint(targetPath);
+    return;
+  }
+
+  if (!stat.isDirectory()) {
+    rmSync(targetPath, { force: true });
+    return;
+  }
+
+  for (const name of fs.readdirSync(targetPath)) {
+    safeRemovePath(path.join(targetPath, name), { rmSync, unlinkSync, rmdirSync });
+  }
+  rmdirSync(targetPath);
+}
+
+/**
+ * Снять junction-ссылки на настоящий node_modules до удаления temp-дерева.
+ * Дополнительная страховка поверх safeRemovePath.
  */
 function detachWorkspaceRuntime(checkoutDir) {
   for (const relative of [['node_modules'], ['apps', 'web', 'node_modules']]) {
     const link = path.join(checkoutDir, ...relative);
-    let stat;
+    if (!isFilesystemReparsePoint(link)) continue;
     try {
-      stat = fs.lstatSync(link);
+      unlinkFilesystemReparsePoint(link);
     } catch {
-      continue; // ссылки нет — снимать нечего
-    }
-    if (!stat.isSymbolicLink()) continue; // настоящий каталог не трогаем
-    try {
-      fs.unlinkSync(link);
-    } catch {
-      try {
-        fs.rmdirSync(link); // Windows отдаёт junction только через rmdir
-      } catch {
-        // Не сняли — дальше чистить опасно, пусть каталог останется в temp.
-        throw new Error(`cannot detach workspace runtime link: ${link}`);
-      }
+      throw new Error(`cannot detach workspace runtime link: ${link}`);
     }
   }
 }
@@ -405,7 +441,7 @@ function removeCleanRefWorktree(worktree) {
     encoding: 'utf8',
     shell: false,
   });
-  fs.rmSync(worktree.tempRoot, { recursive: true, force: true });
+  safeRemovePath(worktree.tempRoot);
 }
 
 function getCacheState() {
@@ -600,12 +636,15 @@ if (import.meta.url === invokedPath) {
 
 export {
   attachWorkspaceRuntime,
+  detachWorkspaceRuntime,
   getChangedFilesBetween,
   getCliOption,
   getDirtyAppsWebSourcesFromPorcelain,
   getMissingVitestRuntimeMessage,
   isAppsWebTestSource,
+  isFilesystemReparsePoint,
   resolveVitestExecutable,
+  safeRemovePath,
   sanitizeCacheRef,
   selectRelevantTests,
 };

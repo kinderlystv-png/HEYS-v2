@@ -1,0 +1,30 @@
+{
+  "task": "60-lane1-entry-clusters",
+  "clusters": {
+    "distance-entry": {
+      "rootCause": "unitEntryLabel('distance') rendered in both sessionServiceSubtitle (sb-head-sub) and missing from ExerciseCard sb-ex-sub; after wiring card key, duplicate broke getByText",
+      "fix": "exerciseOpenHeadKey in ExerciseCard + remove session-head unitEntryLabel fallback",
+      "files": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/strength/heys_strength_builder_ui_v1.js"
+      ],
+      "tests": "strength-builder-distance-entry-v4-canvas-contract.test.js",
+      "pass": "2/2"
+    },
+    "weight-entry": {
+      "rootCause": "bodyweightHeadKey/unitEntryLabel existed in builder but ExerciseCard sb-ex-sub still showed summary.join (groups · свой вес) instead of contract key «свой вес · коэффициент 1,0»",
+      "fix": "exerciseOpenHeadKey calls Parts.bodyweightHeadKey when open; PartsReg exports helpers from builder",
+      "files": [
+        "apps/web/strength/heys_strength_superset_ui_v1.js",
+        "apps/web/strength/heys_strength_builder_ui_v1.js"
+      ],
+      "tests": "strength-builder-weight-entry-v4-canvas-contract.test.js",
+      "pass": "3/3"
+    }
+  },
+  "ownerHandoff": [],
+  "verification": [
+    "vitest run on both test files (5/5)",
+    "rg: no unitEntryLabel(openUnitLocal) in sessionServiceSubtitle; exerciseOpenHeadKey wired in ExerciseCard"
+  ]
+}

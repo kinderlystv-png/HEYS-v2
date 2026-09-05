@@ -1,0 +1,6 @@
+fix(strength): wire open-card rest copy for dispute-k K9
+
+The rest row inside an open exercise body was split into a dead
+!open && .sb-rest-line branch and a separate .sb-rest-cd block, so
+marking a set done never exposed .sb-rest-copy. Unify on .sb-rest-line
+with E1 alias classes; default rest copy stays 1:30 without RPE.

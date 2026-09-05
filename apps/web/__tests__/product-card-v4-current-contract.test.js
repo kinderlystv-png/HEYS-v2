@@ -133,7 +133,7 @@ describe('product-card current v4 contract', () => {
     expect(rule(CSS_611, '.aps-v4-portions-row')).toContain('grid-template-columns: minmax(0, 1fr) 78px 44px');
     expect(rule(CSS_611, '.aps-v4-portions-row__remove')).toContain('width: 44px');
     expect(rule(CSS_611, '.aps-v4-portions-add')).toContain('margin-top: 8px');
-    expect(rule(COMPONENTS, '.pe-segment-btn')).toContain('min-height: 40px');
+    expect(rule(COMPONENTS, '.pe-segment-btn')).toContain('min-height: 44px');
     expect(rule(COMPONENTS, '.pe-segment-btn')).toContain('var(--v4-ink-data');
     expect(rule(CSS_611, '.aps-v4-harm-compare__card--own .aps-v4-harm-compare__label')).toContain('font-size: 10px');
   });

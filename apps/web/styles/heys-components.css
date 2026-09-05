@@ -2051,8 +2051,11 @@ body.tour-active .ios-pwa-banner {
 }
 
 .mc-modal--meal-create .mc-header-btn--back {
-  width: 17px;
-  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   padding: 0;
   font-size: 0;
   line-height: 0;
@@ -2076,8 +2079,11 @@ body.tour-active .ios-pwa-banner {
 
 .mc-modal--meal-create .mc-header-btn--close {
   position: relative;
-  width: 17px;
-  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
   padding: 0;
   font-size: 0;
   line-height: 0;
@@ -4707,12 +4713,10 @@ body.tour-active .ios-pwa-banner {
   cursor: pointer;
 }
 
-/* Высота поля отличается не парностью, а шагом: кадр «основные» держит 44 и
-   для одиночных полей, и для пар Ккал/Белок, кадр «дополнительно» — 40.
-   Правило на .pe-grid уронило бы КБЖУ основного шага, поэтому шаг узнаётся по
-   единственному, что есть только в нём, — флагам. */
+/* Высота поля на шаге «Дополнительно» — как на «Основные»: кадр тач-целей
+   поднял все поля шага до 44. Прежнее правило 40 опиралось на старый кадр. */
 .pe-step:has(.pe-toggles) .pe-input {
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .pe-grid {
@@ -4854,7 +4858,7 @@ body.tour-active .ios-pwa-banner {
 
 .pe-portions-name,
 .pe-portions-grams-input {
-  min-height: 40px;
+  min-height: 44px;
   font-size: 12px;
   background: var(--v4-bg, #fffaf1);
 }
@@ -4874,14 +4878,13 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
-/* Кнопка «Шаблон» на грунте по кадру: высота от 32, пилюля, 11 px/700 тоном
-   акцента. Прежде голубая плашка прежней системы — рамка #bfdbfe на фоне
-   #eff6ff. */
+/* Кнопка «Шаблон» на грунте по кадру: высота от 44, пилюля, 11 px/700 тоном
+   акцента. Прежнеe 32 — до правки тач-целей 5 сентября. */
 .pe-portions-template-btn {
   flex: none;
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
+  min-height: 44px;
   padding: 0 12px;
   border: none;
   border-radius: 999px;
@@ -5001,15 +5004,14 @@ body.tour-active .ios-pwa-banner {
   gap: 6px;
 }
 
-/* Клетка выбора по кадру: высота от 40, радиус 12, первая поверхность,
-   12,5 px/600 чернилами 45 %. Прежде белая плашка в холодной рамке с цветом
-   #374151 прежней системы. */
+/* Клетка выбора по кадру: высота от 44, радиус 12, первая поверхность,
+   12,5 px/600 чернилами 45 %. Прежнеe 40 — до правки тач-целей 5 сентября. */
 .pe-segment-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 6px;
   border: none;
   border-radius: 12px;

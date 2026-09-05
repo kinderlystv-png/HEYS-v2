@@ -1,4 +1,6 @@
-import path from 'path';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { describe, expect, it } from 'vitest';
 
@@ -9,14 +11,86 @@ const scriptUrl = pathToFileURL(SCRIPT_PATH).href;
 
 const {
   attachWorkspaceRuntime,
+  detachWorkspaceRuntime,
   getCliOption,
   getDirtyAppsWebSourcesFromPorcelain,
   getMissingVitestRuntimeMessage,
   isAppsWebTestSource,
+  isFilesystemReparsePoint,
   resolveVitestExecutable,
+  safeRemovePath,
   sanitizeCacheRef,
   selectRelevantTests,
 } = await import('../../../scripts/pre-push-vitest-cache.mjs');
+
+function mkdirp(target) {
+  fs.mkdirSync(target, { recursive: true });
+}
+
+function writeFile(target, content) {
+  mkdirp(path.dirname(target));
+  fs.writeFileSync(target, content);
+}
+
+function buildLinkedWorkspaceSandbox() {
+  const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'heys-prepush-ws-'));
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'heys-prepush-temp-'));
+  const checkoutDir = path.join(tempRoot, 'checkout');
+
+  writeFile(path.join(workspace, 'packages', 'core', 'package.json'), '{"name":"@heys/core"}');
+  writeFile(path.join(workspace, 'packages', 'api', 'package.json'), '{"name":"@heys/api"}');
+  writeFile(path.join(workspace, 'scripts', 'eslint-rules', 'index.js'), 'module.exports = {};');
+
+  mkdirp(path.join(workspace, 'node_modules', '@heys'));
+  mkdirp(path.join(workspace, 'apps', 'web', 'node_modules', '@heys'));
+  fs.symlinkSync(
+    path.join(workspace, 'scripts', 'eslint-rules'),
+    path.join(workspace, 'node_modules', '@heys', 'eslint-plugin'),
+    'junction',
+  );
+  fs.symlinkSync(
+    path.join(workspace, 'packages', 'core'),
+    path.join(workspace, 'apps', 'web', 'node_modules', '@heys', 'core'),
+    'junction',
+  );
+  fs.symlinkSync(
+    path.join(workspace, 'packages', 'api'),
+    path.join(workspace, 'apps', 'web', 'node_modules', '@heys', 'api'),
+    'junction',
+  );
+  mkdirp(path.join(workspace, 'node_modules', '.bin'));
+  writeFile(path.join(workspace, 'node_modules', '.bin', 'vitest.cmd'), '@echo off\n');
+
+  mkdirp(checkoutDir);
+  mkdirp(path.join(checkoutDir, 'apps', 'web'));
+  const vitest = path.join(workspace, 'node_modules', '.bin', 'vitest.cmd');
+  const attach = attachWorkspaceRuntime(checkoutDir, vitest);
+  expect(attach.ok).toBe(true);
+
+  const countPackageManifests = () =>
+    ['core', 'api'].filter((pkg) =>
+      fs.existsSync(path.join(workspace, 'packages', pkg, 'package.json')),
+    ).length;
+
+  return {
+    workspace,
+    tempRoot,
+    checkoutDir,
+    countPackageManifests,
+    cleanup() {
+      try {
+        fs.rmSync(workspace, { recursive: true, force: true });
+      } catch {
+        // workspace may already be partially deleted by the unsafe path under test
+      }
+      try {
+        fs.rmSync(tempRoot, { recursive: true, force: true });
+      } catch {
+        // temp may already be gone
+      }
+    },
+  };
+}
 
 describe('pre-push Vitest cache helpers', () => {
   it('parses --ref options without depending on process argv', () => {
@@ -129,5 +203,58 @@ R  apps/web/old.ts -> apps/web/src/new.ts
       'Vitest was not started: executable node_modules/.bin/vitest is unavailable in this or any linked worktree.',
       'Install workspace dependencies once: pnpm install --frozen-lockfile',
     ]);
+  });
+
+  it('detects Windows junctions as detachable reparse points', () => {
+    const sandbox = buildLinkedWorkspaceSandbox();
+    try {
+      const checkoutNm = path.join(sandbox.checkoutDir, 'node_modules');
+      expect(isFilesystemReparsePoint(checkoutNm)).toBe(true);
+    } finally {
+      detachWorkspaceRuntime(sandbox.checkoutDir);
+      safeRemovePath(sandbox.tempRoot);
+      sandbox.cleanup();
+    }
+  });
+
+  it('recursive rmSync follows junction chains into package sources inside the deleted tree', () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'heys-prepush-unsafe-'));
+    const packagesCore = path.join(tempRoot, 'packages', 'core');
+    const linkedNm = path.join(tempRoot, 'linked-nm');
+    const checkoutNm = path.join(tempRoot, 'checkout', 'node_modules');
+
+    writeFile(path.join(packagesCore, 'package.json'), '{"name":"@heys/core"}');
+    mkdirp(path.join(linkedNm, '@heys'));
+    fs.symlinkSync(packagesCore, path.join(linkedNm, '@heys', 'core'), 'junction');
+    mkdirp(path.join(tempRoot, 'checkout'));
+    fs.symlinkSync(linkedNm, checkoutNm, 'junction');
+
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+    expect(fs.existsSync(path.join(packagesCore, 'package.json'))).toBe(false);
+  });
+
+  it('safeRemovePath deletes temp checkout without touching linked workspace packages', () => {
+    const sandbox = buildLinkedWorkspaceSandbox();
+    try {
+      expect(sandbox.countPackageManifests()).toBe(2);
+      safeRemovePath(sandbox.tempRoot);
+      expect(fs.existsSync(sandbox.tempRoot)).toBe(false);
+      expect(sandbox.countPackageManifests()).toBe(2);
+      expect(fs.existsSync(path.join(sandbox.workspace, 'node_modules'))).toBe(true);
+    } finally {
+      sandbox.cleanup();
+    }
+  });
+
+  it('detachWorkspaceRuntime plus safeRemovePath matches pre-push cleanup contract', () => {
+    const sandbox = buildLinkedWorkspaceSandbox();
+    try {
+      detachWorkspaceRuntime(sandbox.checkoutDir);
+      safeRemovePath(sandbox.tempRoot);
+      expect(sandbox.countPackageManifests()).toBe(2);
+      expect(fs.existsSync(path.join(sandbox.checkoutDir, 'node_modules'))).toBe(false);
+    } finally {
+      sandbox.cleanup();
+    }
   });
 });

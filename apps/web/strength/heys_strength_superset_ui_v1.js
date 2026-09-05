@@ -1847,7 +1847,9 @@
         h('span', { className: 'sb-ex-num' }, String(index + 1)),
         h('span', { className: 'sb-ex-title' },
           h('b', null, ex.name || 'Без названия'),
-          h('span', { className: 'sb-ex-sub' }, summary.join(' · '))
+          h('span', { className: 'sb-ex-sub' }, open
+            ? (exerciseOpenHeadKey(ex, unit) || summary.join(' · '))
+            : summary.join(' · '))
         ),
         h('span', { className: 'sb-ex-signals' },
           h('span', {
@@ -1979,32 +1981,17 @@
             })
           )
         ),
-        !open && h('div', { className: 'sb-rest-line' },
-          h('span', { className: 'sb-rest-copy' },
+        h('div', { className: 'sb-rest-line sb-rest-cd' },
+          h('span', { className: 'sb-rest-copy sb-rest-cd-copy' },
             '⏱ Отдых ' + fmtClock(+ex.restSec || 90) + ' '
             + (ex.restManual
               ? '— вручную'
               : (+ex.rpe > 0 ? '— по тяжести ' + ex.rpe : '— по умолчанию'))),
           h('button', {
             type: 'button',
-            className: 'sb-rest-manual' + (ex.restManual ? ' is-on' : ''),
+            className: 'sb-rest-manual sb-rest-manual--e1' + (ex.restManual ? ' is-on' : ''),
             onClick: function () { onRestManual(index, !ex.restManual); }
           }, ex.restManual ? 'Авто' : 'Вручную')
-        ),
-        open && h('div', { className: 'sb-rest-cd', style: { display: 'block' } },
-          h('div', { className: 'sb-rest-cd-row' },
-            h('div', { className: 'sb-rest-cd-copy' },
-              h('b', null, 'Отдых ' + fmtClock(+ex.restSec || 90)),
-              h('span', null, ex.restManual
-                ? 'вручную'
-                : (+ex.rpe > 0 ? 'из тяжести ' + ex.rpe : 'по умолчанию'))
-            ),
-            h('button', {
-              type: 'button',
-              className: 'sb-rest-manual sb-rest-manual--e1' + (ex.restManual ? ' is-on' : ''),
-              onClick: function () { onRestManual(index, !ex.restManual); }
-            }, ex.restManual ? 'авто' : 'вручную')
-          )
         ),
         h('div', { className: 'sb-approach-pills' },
           h('button', {
@@ -2086,6 +2073,41 @@
     return humanDate(dateKey).replace(/^[^,]+,\s*/, '');
   }
 
+  function exerciseWorkProgress(exercise) {
+    const SK = kernel();
+    const approaches = Array.isArray(exercise && exercise.approaches) ? exercise.approaches : [];
+    let workTotal = 0;
+    let currentWork = 0;
+    approaches.forEach(function (approach) {
+      if (SK && SK.isWarmupApproach(approach)) return;
+      workTotal += 1;
+      const done = SK ? SK.isApproachDone(approach) : !!(approach && approach.done);
+      if (!done && !currentWork) currentWork = workTotal;
+    });
+    if (!currentWork && workTotal > 0) currentWork = workTotal;
+    return { current: currentWork, total: workTotal };
+  }
+
+  function exerciseWorkProgressKey(exercise) {
+    const progress = exerciseWorkProgress(exercise);
+    if (!progress.total) return '';
+    return 'подход ' + progress.current + ' из ' + progress.total;
+  }
+
+  /** Г4/M5/M6: ключ под названием в открытой карточке — единица или «подход N из M». */
+  function exerciseOpenHeadKey(ex, unit) {
+    const PartsLocal = HEYS.StrengthBuilderParts || {};
+    const u = unit || (ex && ex.unit) || 'weight_reps';
+    if (u === 'bodyweight' && typeof PartsLocal.bodyweightHeadKey === 'function') {
+      return PartsLocal.bodyweightHeadKey(ex);
+    }
+    if ((u === 'time' || u === 'distance') && typeof PartsLocal.unitEntryLabel === 'function') {
+      return PartsLocal.unitEntryLabel(u);
+    }
+    if (u === 'weight_reps') return exerciseWorkProgressKey(ex);
+    return '';
+  }
+
   /** Подпись упражнения во втором слое: группы из справочника, а не выдумка UI. */
   function groupsLabel(name) {
     const m = HEYS.exerciseMeta;
@@ -2112,6 +2134,8 @@
   Parts.approachTypesTitle = approachTypesTitle;
   Parts.approachTypesHeadKey = approachTypesHeadKey;
   Parts.warmupDropHeadKey = warmupDropHeadKey;
+  Parts.exerciseWorkProgressKey = exerciseWorkProgressKey;
+  Parts.exerciseOpenHeadKey = exerciseOpenHeadKey;
   Parts.startedAtMs = startedAtMs;
 
   /**

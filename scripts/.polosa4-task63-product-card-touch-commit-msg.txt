@@ -1,0 +1,5 @@
+fix(ui-v4): polosa4 task63 product-card touch 44px visible
+
+Тач-цели product-card: видимый габарит ≥44 px без ::after expanders
+(образец nutrition chips). Снят invisible hit-area у fullscreen barcode close;
+подняты чипы/шаблон/поля/NOVA/ручной ввод. Контрактный тест sand+blue computed.

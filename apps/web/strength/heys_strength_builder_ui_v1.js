@@ -2392,4 +2392,8 @@
   SB.close = close;
   SB.BuilderScreen = BuilderScreen;
   SB.ExerciseCardScreen = ExerciseCardScreen;
+
+  const PartsReg = HEYS.StrengthBuilderParts = HEYS.StrengthBuilderParts || {};
+  PartsReg.unitEntryLabel = unitEntryLabel;
+  PartsReg.bodyweightHeadKey = bodyweightHeadKey;
 })(typeof window !== 'undefined' ? window : globalThis);

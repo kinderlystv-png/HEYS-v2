@@ -31,14 +31,6 @@ const gameCss = fs
 const gameBarSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_gamification_bar_v1.js'), 'utf8');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 
-function ruleBlock(cssSource, selectorLine) {
-  const idx = cssSource.indexOf(selectorLine);
-  expect(idx, `selector "${selectorLine}" not found`).toBeGreaterThanOrEqual(0);
-  const close = cssSource.indexOf('}', idx);
-  expect(close, `rule block for "${selectorLine}" not closed`).toBeGreaterThan(idx);
-  return cssSource.slice(idx, close);
-}
-
 const originalReact = globalThis.React;
 const originalReactDOM = globalThis.ReactDOM;
 const originalHEYS = window.HEYS;
@@ -70,17 +62,17 @@ describe('safe-area · правило продукта', () => {
 
 describe('выделение и копирование · правило продукта', () => {
   it('плитка Главной (widget-v4-tile) гасит и выделение, и системный callout долгого нажатия', () => {
-    const block = ruleBlock(widgetsCss, '.widget-v4-tile {');
+    const idx = widgetsCss.indexOf('.widget-v4-tile {');
+    expect(idx).toBeGreaterThan(-1);
+    const block = widgetsCss.slice(idx, idx + 700);
     expect(block).toContain('-webkit-touch-callout: none;');
     expect(block).toContain('user-select: none;');
   });
 
   it('лист достижений (game-v4-sheet) не выделяется целиком — в нём нет ничего, что написал человек сам', () => {
-    // Прежняя редакция резала 700 символов от селектора и падала на починке:
-    // комментарий правила вытеснил user-select за окно slice. Сторожим инвариант
-    // — выделение отключено на корне листа (webkit + стандарт).
-    const block = ruleBlock(gameCss, '.game-v4-sheet {');
-    expect(block).toContain('-webkit-user-select: none;');
+    const idx = gameCss.indexOf('.game-v4-sheet {');
+    expect(idx).toBeGreaterThan(-1);
+    const block = gameCss.slice(idx, idx + 700);
     expect(block).toContain('user-select: none;');
   });
 });

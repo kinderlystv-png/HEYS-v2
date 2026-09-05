@@ -1,0 +1,88 @@
+{
+  "task": "polosa4-task63-product-card-touch-44px",
+  "zone": "product-card",
+  "package": 36,
+  "rehash": false,
+  "verdictsWritten": false,
+  "contractLinesClosed": 18,
+  "closedLines": [
+    "тач-цели",
+    "Продукт · вставка строки · 08",
+    "Продукт · вставка строки · 15",
+    "Продукт · вставка строки · 22",
+    "Продукт · дополнительно · 11",
+    "Продукт · дополнительно · 14",
+    "Продукт · дополнительно · 16",
+    "Продукт · дополнительно · 17",
+    "Продукт · порции · рекомендованные чипы",
+    "Продукт · порции · Использовать шаблон",
+    "Правка продукта · основные · Шаблон",
+    "Правка продукта · основные · поля порции",
+    "Правка продукта · основные · NOVA",
+    "Штрихкод · наведение · крест",
+    "Штрихкод · ручной ввод · поле",
+    "Штрихкод · ручной ввод · OK",
+    "Создание · промпт и буфер",
+    "Создание · поле бренда"
+  ],
+  "filesEdited": [
+    "apps/web/styles/modules/611-aps-product-card.css",
+    "apps/web/styles/heys-components.css",
+    "apps/web/__tests__/product-card-v4-current-contract.test.js",
+    "apps/web/__tests__/polosa4-task63-product-card-touch-44px.test.js"
+  ],
+  "expandersRemoved": [
+    {
+      "selector": ".aps-barcode-overlay--v4-fullscreen .aps-barcode-close::after",
+      "was": "invisible 44×44 hit-area over visible 30×30 circle",
+      "became": "visible 44×44 button, ::after rule deleted"
+    }
+  ],
+  "intentionallyNotRaised": [
+    ".pe-portions-remove-btn 40×40 (кадр правки ·26)",
+    ".pe-field--inline 31px (витамины — не нажимают)",
+    ".aps-create-barcode-clear 38px inside 44 row",
+    "progress dots 6×6",
+    "publish checkbox 20px",
+    "scanner gram presets — food-meal forbidden"
+  ],
+  "pattern": "nutrition-v4-chip::after { content: none } — visible min-height, no invisible expander",
+  "checks": {
+    "polosa4-task63-product-card-touch-44px.test.js": "pass (3/3, computed sand=blue 44px)",
+    "product-card-v4-current-contract.test.js": "pass (5/5)",
+    "ui:v4:check:roles": "pass",
+    "role-fallback-truth": "pass"
+  },
+  "computedTable": {
+    "sand": {
+      "prompt-btn": 44,
+      "example-btn": 44,
+      "publish-row": 44,
+      "brand-input": 44,
+      "barcode-input": 44,
+      "barcode-submit": 44,
+      "fullscreen-close": 44,
+      "suggest-chip": 44,
+      "use-template": 44,
+      "pe-segment": 44,
+      "pe-template": 44,
+      "pe-input-main": 44,
+      "pe-input-extra": 44
+    },
+    "blue": {
+      "prompt-btn": 44,
+      "example-btn": 44,
+      "publish-row": 44,
+      "brand-input": 44,
+      "barcode-input": 44,
+      "barcode-submit": 44,
+      "fullscreen-close": 44,
+      "suggest-chip": 44,
+      "use-template": 44,
+      "pe-segment": 44,
+      "pe-template": 44,
+      "pe-input-main": 44,
+      "pe-input-extra": 44
+    }
+  }
+}
