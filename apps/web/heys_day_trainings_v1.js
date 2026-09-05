@@ -841,6 +841,206 @@
     });
   }
 
+  function matchesPlanRevision(t0, expectedPlan, expectedStatus, expectedTrainingUpdatedAt) {
+    if (!expectedPlan) return !t0.plan;
+    if (!t0 || !t0.plan || t0.plan.status !== (expectedStatus || 'assigned')) return false;
+    if (expectedTrainingUpdatedAt !== undefined) {
+      const currentUpdatedAt = Number.isFinite(+t0.updatedAt) ? +t0.updatedAt : null;
+      const expectedUpdatedAt = Number.isFinite(+expectedTrainingUpdatedAt) ? +expectedTrainingUpdatedAt : null;
+      if (currentUpdatedAt !== expectedUpdatedAt) return false;
+    }
+    const currentId = t0.plan.id || null;
+    const currentAssignedAt = Number.isFinite(+t0.plan.assignedAt) ? +t0.plan.assignedAt : null;
+    return currentId === (expectedPlan.id || null)
+      && currentAssignedAt === (Number.isFinite(+expectedPlan.assignedAt) ? +expectedPlan.assignedAt : null);
+  }
+
+  /**
+   * Слот дня для назначения: unknown — холодный кэш, busy — три факта или план.
+   * knownEmptyDates — даты, подтверждённые authoritative batch как пустые.
+   */
+  function planSlotForDate(dateStr, knownEmptyDates) {
+    let day = null;
+    try { day = readDayFromStore(dateStr); } catch (_) { day = null; }
+    if (!day && knownEmptyDates && knownEmptyDates.has(dateStr)) {
+      day = { date: dateStr, trainings: [] };
+    }
+    const list = day && Array.isArray(day.trainings) ? day.trainings : [];
+    const real = list.filter(function (t) {
+      return t && (t.time || (Array.isArray(t.z) && t.z.some(function (m) { return +m > 0; })) || t.workoutLog);
+    });
+    const unknown = !day;
+    const busy = unknown || real.length >= 3;
+    return { unknown: unknown, busy: busy, day: day };
+  }
+
+  function dayStorageKey(dateStr) {
+    const U = HEYS.utils || {};
+    let cid = '';
+    try { cid = HEYS.currentClientId || ''; } catch (_) { cid = ''; }
+    return cid ? 'heys_' + cid + '_dayv2_' + dateStr : 'heys_dayv2_' + dateStr;
+  }
+
+  function writeTrainingInStore(dateStr, trainingId, mutator) {
+    const U = HEYS.utils || {};
+    if (!dateStr || !trainingId || typeof U.lsGet !== 'function' || typeof U.lsSet !== 'function') {
+      return { ok: false };
+    }
+    const key = dayStorageKey(dateStr);
+    const existing = U.lsGet(key, null) || { date: dateStr, meals: [], trainings: [] };
+    const list = Array.isArray(existing.trainings) ? existing.trainings.slice() : [];
+    const idx = list.findIndex(function (item) { return item && item.id === trainingId; });
+    if (idx < 0) return { ok: false, reason: 'missing_training' };
+    const next = mutator(list[idx]);
+    if (!next) return { ok: false, reason: 'rejected' };
+    const ts = Date.now();
+    list[idx] = { ...next, updatedAt: ts };
+    try {
+      U.lsSet(key, Object.assign({}, existing, { date: dateStr, trainings: list, updatedAt: ts }));
+      return { ok: true, training: list[idx] };
+    } catch (_) {
+      return { ok: false, reason: 'write_failed' };
+    }
+  }
+
+  /** Owner #53: факт старта пишется в целевой день, не в будущую дату назначения. */
+  function materializePlanStartInStore(dateStr, trainingId, expectedPlan) {
+    return writeTrainingInStore(dateStr, trainingId, function (t0) {
+      if (!matchesPlanRevision(t0, expectedPlan, 'assigned')) return null;
+      const source = t0.planSnapshot && Array.isArray(t0.planSnapshot.exercises)
+        ? t0.planSnapshot.exercises
+        : [];
+      if (!source.length || !source.every(function (ex) { return ex && String(ex.name || '').trim(); })) return null;
+      const startedExercises = cloneExercisesForReplay(source);
+      const startedAt = Date.now();
+      const wl0 = {
+        version: 1,
+        zoneMinutes: [0, 0, 0, 0],
+        totalDurationMinutes: 0,
+        exercises: startedExercises,
+        startedAt: startedAt
+      };
+      return {
+        ...t0,
+        strengthEntryMode: 'workout_builder',
+        plan: { ...t0.plan, status: 'started' },
+        workoutLog: wl0,
+        z: [0, 0, 0, 0]
+      };
+    });
+  }
+
+  function buildMovedAssignedTraining(t0, fromDate, toDate, transferId) {
+    const movedTrainingId = 'tr_' + Math.random().toString(36).slice(2, 10);
+    const movedAt = Date.now();
+    const moved = {
+      ...t0,
+      id: movedTrainingId,
+      workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+      z: [0, 0, 0, 0],
+      plan: {
+        ...t0.plan,
+        status: 'assigned',
+        movedFrom: fromDate,
+        movedAt: movedAt,
+        transferId: transferId,
+        movedSourceId: t0.id || null
+      },
+      updatedAt: movedAt
+    };
+    delete moved.plan.movedTo;
+    return moved;
+  }
+
+  function markSourcePlanMovedInStore(fromDate, sourceIndex, toDate, transferId, expectedPlan, expectedUpdatedAt) {
+    const U = HEYS.utils || {};
+    if (typeof U.lsGet !== 'function' || typeof U.lsSet !== 'function') return { ok: false };
+    const key = dayStorageKey(fromDate);
+    const existing = U.lsGet(key, null);
+    if (!existing || !Array.isArray(existing.trainings)) return { ok: false };
+    const list = existing.trainings.slice();
+    const cur = list[sourceIndex];
+    if (cur && cur.plan && cur.plan.status === 'moved'
+      && cur.plan.transferId === transferId) {
+      return { ok: true, training: cur };
+    }
+    if (!matchesPlanRevision(cur, expectedPlan, 'assigned', expectedUpdatedAt)
+      || hasMeaningfulLiveWorkout(cur)) return { ok: false, reason: 'stale_revision' };
+    const movedAt = Date.now();
+    list[sourceIndex] = {
+      ...cur,
+      workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+      z: [0, 0, 0, 0],
+      plan: { ...cur.plan, status: 'moved', movedTo: toDate, movedAt: movedAt, transferId: transferId },
+      updatedAt: movedAt
+    };
+    try {
+      U.lsSet(key, Object.assign({}, existing, { trainings: list, updatedAt: movedAt }));
+      return { ok: true, training: list[sourceIndex] };
+    } catch (_) {
+      return { ok: false, reason: 'write_failed' };
+    }
+  }
+
+  /**
+   * Owner #53: перенос назначения на сегодня + старт факта в сегодня.
+   * Fail-closed: cold-cache (unknown slot), занятый день, stale revision.
+   */
+  function earlyStartAssignedPlan(opts) {
+    const fromDate = opts && opts.fromDate;
+    const toDate = opts && opts.toDate;
+    const sourceIndex = opts && opts.sourceIndex;
+    const expectedPlan = opts && opts.expectedPlan;
+    const expectedUpdatedAt = opts && opts.expectedUpdatedAt;
+    const knownEmptyDates = opts && opts.knownEmptyDates;
+    if (!fromDate || !toDate || String(fromDate) <= String(toDate)) {
+      return Promise.resolve({ ok: false, reason: 'invalid_dates' });
+    }
+    const slot = planSlotForDate(toDate, knownEmptyDates);
+    if (slot.unknown) return Promise.resolve({ ok: false, reason: 'cold_cache' });
+    if (slot.busy) return Promise.resolve({ ok: false, reason: 'busy_day' });
+    const src = readDayFromStore(fromDate);
+    const t0 = src && Array.isArray(src.trainings) ? src.trainings[sourceIndex] : null;
+    const source = t0 && t0.planSnapshot && Array.isArray(t0.planSnapshot.exercises)
+      ? t0.planSnapshot.exercises
+      : [];
+    if (!t0 || !matchesPlanRevision(t0, expectedPlan, 'assigned', expectedUpdatedAt)
+      || hasMeaningfulLiveWorkout(t0) || !source.length) {
+      return Promise.resolve({ ok: false, reason: 'stale_revision' });
+    }
+    const moveTransferId = stableMoveTransferId(fromDate, toDate, expectedPlan);
+    if (!moveTransferId) return Promise.resolve({ ok: false, reason: 'missing_transfer' });
+    const moved = buildMovedAssignedTraining(t0, fromDate, toDate, moveTransferId);
+    const targetReceipt = appendTrainingToDay(toDate, moved, moveTransferId);
+    if (!targetReceipt.ok) return Promise.resolve({ ok: false, reason: 'target_write_failed' });
+    const targetTrainingId = targetReceipt.trainingId;
+    if (!targetTrainingId) return Promise.resolve({ ok: false, reason: 'target_write_failed' });
+    const sourcePatch = typeof opts.patchSource === 'function'
+      ? opts.patchSource(moveTransferId, toDate)
+      : markSourcePlanMovedInStore(fromDate, sourceIndex, toDate, moveTransferId, expectedPlan, expectedUpdatedAt);
+    return Promise.resolve(sourcePatch).then(function (sourceResult) {
+      const sourceOk = sourceResult === true
+        || (sourceResult && (sourceResult.ok || sourceResult.trainingId || sourceResult.training));
+      if (!sourceOk) {
+        removeTrainingFromDayById(toDate, targetTrainingId, moveTransferId);
+        return { ok: false, reason: 'source_write_failed' };
+      }
+      const started = materializePlanStartInStore(toDate, targetTrainingId, expectedPlan);
+      if (!started.ok) {
+        removeTrainingFromDayById(toDate, targetTrainingId, moveTransferId);
+        return { ok: false, reason: 'start_failed' };
+      }
+      return {
+        ok: true,
+        fromDate: fromDate,
+        toDate: toDate,
+        transferId: moveTransferId,
+        targetTrainingId: targetTrainingId,
+        sourceTrainingId: t0.id || null
+      };
+    });
+  }
+
   function finishStartedWorkoutPlan(training) {
     if (!training || !training.plan || training.plan.status !== 'started') return training;
     return {
@@ -3013,6 +3213,7 @@
   function ProgramPlanCard(props) {
     const state = useProgramState(props.clientId);
     const hydratedMoveOptions = useAuthoritativeMoveOptions(props.dateKey, props.clientId);
+    const todaySlot = useTodayPlanSlot(props.clientId);
     const plan = props.training && props.training.plan;
     const weekOverview = !state.loading
       ? projectProgramWeek(state.program, state.days, props.dateKey, plan)
@@ -3024,12 +3225,14 @@
       : props.weekPlace;
     const Parts = HEYS.StrengthBuilderParts || {};
     if (!Parts.PlanCard) return null;
+    const canStartNow = !props.isFutureDay || !!(todaySlot && !todaySlot.unknown && !todaySlot.busy);
     return React.createElement(Parts.PlanCard, {
       ...props,
       moveOptions: hydratedMoveOptions,
       weekPlace: ownerWeekPlace,
       weekOverview: weekOverview,
-      weekLabel: weekOverview ? planWeekLabel(state.program, plan) : ''
+      weekLabel: weekOverview ? planWeekLabel(state.program, plan) : '',
+      canStartNow: canStartNow
     });
   }
 
@@ -3068,6 +3271,42 @@
       return function () { cancelled = true; };
     }, [dateKey, clientId]);
     return options;
+  }
+
+  /** Owner #53: слот сегодняшнего дня для раннего старта — fail-closed на cold-cache. */
+  function useTodayPlanSlot(clientId) {
+    const today = todayDateKeyForPlan();
+    const [slot, setSlot] = React.useState(function () { return planSlotForDate(today); });
+    React.useEffect(function () {
+      let cancelled = false;
+      const api = HEYS.YandexAPI;
+      if (!clientId || !api || typeof api.getKVBatch !== 'function') {
+        setSlot(planSlotForDate(today));
+        return undefined;
+      }
+      (async function () {
+        try {
+          const result = await api.getKVBatch(clientId, ['heys_dayv2_' + today]);
+          if (!result || result.error || !Array.isArray(result.data)) {
+            if (!cancelled) setSlot(planSlotForDate(today));
+            return;
+          }
+          const hasToday = result.data.some(function (row) {
+            return row && String(row.k || '').endsWith('dayv2_' + today);
+          });
+          const knownEmpty = hasToday ? null : new Set([today]);
+          const cloud = HEYS.cloud;
+          if (hasToday && cloud && typeof cloud.fetchDays === 'function') {
+            await cloud.fetchDays([today]);
+          }
+          if (!cancelled) setSlot(planSlotForDate(today, knownEmpty));
+        } catch (_) {
+          if (!cancelled) setSlot(planSlotForDate(today));
+        }
+      })();
+      return function () { cancelled = true; };
+    }, [clientId, today]);
+    return slot;
   }
 
   /**
@@ -4132,17 +4371,7 @@
               planSnapshot: rawT.planSnapshot
             };
             function matchesOpenedPlanRevision(t0, expectedPlan, expectedStatus, expectedTrainingUpdatedAt) {
-              if (!expectedPlan) return !t0.plan;
-              if (!t0.plan || t0.plan.status !== (expectedStatus || 'assigned')) return false;
-              if (expectedTrainingUpdatedAt !== undefined) {
-                const currentUpdatedAt = Number.isFinite(+t0.updatedAt) ? +t0.updatedAt : null;
-                const expectedUpdatedAt = Number.isFinite(+expectedTrainingUpdatedAt) ? +expectedTrainingUpdatedAt : null;
-                if (currentUpdatedAt !== expectedUpdatedAt) return false;
-              }
-              const currentId = t0.plan.id || null;
-              const currentAssignedAt = Number.isFinite(+t0.plan.assignedAt) ? +t0.plan.assignedAt : null;
-              return currentId === (expectedPlan.id || null)
-                && currentAssignedAt === (Number.isFinite(+expectedPlan.assignedAt) ? +expectedPlan.assignedAt : null);
+              return matchesPlanRevision(t0, expectedPlan, expectedStatus, expectedTrainingUpdatedAt);
             }
             function openBuilder() {
               const U = HEYS.utils;
@@ -4312,6 +4541,18 @@
               });
               if (typeof haptic === 'function') haptic('light');
             }
+            try {
+              const pending = HEYS.__strengthPendingBuilderOpen;
+              if (pending && pending.dateKey === dateKey && pending.trainingId
+                && (rawT.id || null) === pending.trainingId) {
+                const openKey = pending.dateKey + ':' + pending.trainingId;
+                if (HEYS.__strengthOpenedPending !== openKey) {
+                  HEYS.__strengthOpenedPending = openKey;
+                  HEYS.__strengthPendingBuilderOpen = null;
+                  queueMicrotask(function () { openBuilder(); });
+                }
+              }
+            } catch (_pend) { /* noop */ }
             // Программа куратора, слой 3: назначенный, но не начатый план
             // получает свою карточку вместо обычной сводки — экран 02/09
             // макета. rawT, не T: T пересобирается вручную для остальной
@@ -4477,11 +4718,64 @@
                     return null;
                   });
                 },
-                onStart: function (e) {
+                onStart: function (e, expectedPlan) {
                   if (e && e.stopPropagation) e.stopPropagation();
-                  // Карточка только открывает draft. Конкретный выбор внутри
-                  // Builder атомарно материализует live-log и снимает assigned.
-                  openBuilder();
+                  if (!isFutureDay) {
+                    openBuilder();
+                    return;
+                  }
+                  const today = todayDateKeyForPlan();
+                  const knownEmpty = new Set([today]);
+                  try {
+                    const todayDay = readDayFromStore(today);
+                    if (todayDay) knownEmpty.delete(today);
+                  } catch (_) { /* noop */ }
+                  return earlyStartAssignedPlan({
+                    fromDate: dateKey,
+                    toDate: today,
+                    sourceIndex: ti,
+                    expectedPlan: expectedPlan || rawT.plan,
+                    expectedUpdatedAt: rawT.updatedAt,
+                    knownEmptyDates: knownEmpty.size ? knownEmpty : null,
+                    patchSource: function (moveTransferId, toDate) {
+                      return patchTrainingAcknowledged(ti, function (cur) {
+                        if (cur && cur.plan && cur.plan.status === 'moved'
+                          && cur.plan.transferId === moveTransferId) {
+                          return { training: cur, value: true };
+                        }
+                        if (!matchesOpenedPlanRevision(cur, expectedPlan || rawT.plan, 'assigned', rawT.updatedAt)
+                          || hasMeaningfulLiveWorkout(cur)) return null;
+                        const movedAt = Date.now();
+                        return {
+                          training: {
+                            ...cur,
+                            workoutLog: { version: 1, zoneMinutes: [0, 0, 0, 0], exercises: [] },
+                            z: [0, 0, 0, 0],
+                            plan: {
+                              ...cur.plan,
+                              status: 'moved',
+                              movedTo: toDate,
+                              movedAt: movedAt,
+                              transferId: moveTransferId
+                            }
+                          },
+                          value: true
+                        };
+                      });
+                    }
+                  }).then(function (result) {
+                    if (!result || !result.ok) return result;
+                    try {
+                      HEYS.__strengthPendingBuilderOpen = {
+                        dateKey: result.toDate,
+                        trainingId: result.targetTrainingId
+                      };
+                      if (HEYS.ui && typeof HEYS.ui.setSelectedDate === 'function') {
+                        HEYS.ui.setSelectedDate(result.toDate);
+                      }
+                    } catch (_) { /* noop */ }
+                    return result;
+                  });
                 },
                 // Пропуск — явное «не делал»: без него незакрытый план остаётся
                 // «assigned» и вечно просится начать. Перенос хранится отдельно
@@ -4843,6 +5137,11 @@
     removeTrainingFromDayById,
     stableMoveTransferId,
     hasMeaningfulLiveWorkout,
+    matchesPlanRevision,
+    planSlotForDate,
+    materializePlanStartInStore,
+    markSourcePlanMovedInStore,
+    earlyStartAssignedPlan,
     ProgramPathScreen,
     placeInWeek,
     projectProgramWeek,

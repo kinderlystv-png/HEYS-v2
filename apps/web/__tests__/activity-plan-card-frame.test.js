@@ -83,16 +83,15 @@ describe('Карточка плана говорит словами кадра',
     expect(document.querySelector('.sb-plan-meta').textContent).toContain('2 упр.');
   });
 
-  it('будущий план сразу показывает состав snapshot и не предлагает небезопасный ранний старт', () => {
-    const onOpenReadonly = vi.fn();
-    renderCard({ isFutureDay: true, onOpenReadonly });
+  it('будущий план сразу показывает состав snapshot и предлагает безопасный ранний старт', () => {
+    const onStart = vi.fn();
+    renderCard({ isFutureDay: true, canStartNow: true, onStart });
 
     expect(screen.getByRole('list', { name: 'Состав плана' })).toBeTruthy();
     expect(screen.getByText('Присед')).toBeTruthy();
     expect(screen.getByText('Тяга')).toBeTruthy();
-    expect(screen.queryByText('Начать сейчас')).toBeNull();
-    expect(screen.queryByText('Начать')).toBeNull();
-    expect(onOpenReadonly).not.toHaveBeenCalled();
+    expect(screen.getByText('Начать сейчас')).toBeTruthy();
+    expect(onStart).not.toHaveBeenCalled();
   });
 
   it('будущий план дословно объясняет canvas-инвариант до старта', () => {
@@ -246,14 +245,16 @@ describe('Перенос и пропуск — два разных действ�
     expect(screen.queryByText('Мало сил')).toBeNull();
   });
 
-  it('на будущем дне перенос — единственное и визуально главное безопасное действие', () => {
+  it('на будущем дне «Начать сейчас» и «Перенести» — две равные пилюли', () => {
     renderCard({
       isFutureDay: true,
+      canStartNow: true,
       moveOptions: [{ date: '2026-08-31', label: 'Завтра, понедельник 31 августа' }],
     });
+    const start = screen.getByText('Начать сейчас');
     const move = screen.getByText('Перенести');
+    expect(start.className).toContain('is-accent');
     expect(move.className).toContain('is-accent');
-    expect(screen.queryByText('Начать сейчас')).toBeNull();
   });
 
   it('занятый день назван причиной и не выбирается', () => {

@@ -1,0 +1,14 @@
+{
+  "rows": [
+    {
+      "key": "План в ленте дня · 18",
+      "verdict": "=",
+      "fact": "«Начать сейчас» на будущем назначенном дне: superset_ui PlanCard isFutureDay — .sb-plan-actions--future .sb-plan-cta is-accent; heys_day_trainings_v1.js earlyStartAssignedPlan + onStart → перенос на todayDateKeyForPlan() и materializePlanStartInStore."
+    },
+    {
+      "key": "План в ленте дня · 19",
+      "verdict": "=",
+      "fact": "Вторая пилюля «Перенести» рядом с «Начать сейчас» на будущем дне; перенос не единственное действие. След переноса: source plan.status=moved + movedTo, target plan.movedFrom + transferId — markSourcePlanMovedInStore / patchSource в earlyStartAssignedPlan."
+    }
+  ]
+}

@@ -2648,7 +2648,7 @@
 
   function PlanCard(props) {
     const { training, dateKey, isFutureDay, isPastDay, weekPlace, weekOverview, weekLabel,
-      moveOptions, onStart, onSkip, onMove, onResumeSkipped } = props;
+      moveOptions, onStart, onSkip, onMove, onResumeSkipped, canStartNow } = props;
     const wl = (training && training.workoutLog) || {};
     const liveExercises = Array.isArray(wl.exercises) ? wl.exercises : [];
     const snapshot = (training && training.planSnapshot) || {};
@@ -2813,13 +2813,13 @@
     }
 
     if (isFutureDay) {
-      // Будущий день остаётся read-only: canvas просит «Начать сейчас», но без
-      // owner-правила даты факта это записало бы завтрашнюю работу в завтра.
-      // Состав показываем сразу — решение о переносе принимают по объёму.
+      // Owner #53: «Начать сейчас» переносит назначение на сегодня и пишет
+      // факт в сегодня; след переноса остаётся на обеих датах.
       const previewRows = planPreviewRows(exercises);
       const shown = previewRows.slice(0, 4);
       const totalApproaches = planApproachCount(exercises);
       const canMoveFuture = !!(moveOptions && moveOptions.some(function (option) { return !option.busy; }));
+      const startAllowed = canStartNow !== false;
       const hasSkippedWeekDay = Array.isArray(weekOverview)
         && weekOverview.some(function (day) { return day.kind === 'skipped'; });
       const hasMovedWeekDay = Array.isArray(weekOverview)
@@ -2849,9 +2849,18 @@
               'и ещё ' + previewRows.slice(shown.length).reduce(function (sum, row) { return sum + row.memberCount; }, 0)
               + (totalApproaches ? ' · всего ' + totalApproaches + ' подходов' : ''))
           ),
-          canMoveFuture && h('div', { className: 'sb-plan-actions sb-plan-actions--future' },
+          h('div', { className: 'sb-plan-actions sb-plan-actions--future' },
             h('button', {
               type: 'button', className: 'sb-btn is-accent sb-plan-cta',
+              disabled: !!pendingAction || !startAllowed,
+              onClick: function (e) {
+                if (e && e.stopPropagation) e.stopPropagation();
+                runPlanAction('start', function () { return onStart(e, plan); });
+              }
+            }, pendingAction === 'start' ? 'Переношу…' : 'Начать сейчас'),
+            canMoveFuture && h('button', {
+              type: 'button', className: 'sb-btn is-accent sb-plan-cta',
+              disabled: !!pendingAction,
               onClick: function () { setMoveOpen(true); }
             }, 'Перенести')
           ),
@@ -2903,7 +2912,8 @@
         h('span', { className: 'sb-plan-trace' },
           plan.movedFrom
             ? 'Перенесено с ' + humanDate(plan.movedFrom) + ' · веса те же.'
-            : 'План — это назначение, а не факт: карточка запланированного дня не попадает ни в тоннаж, ни в счётчики, ни в движок нагрузки, пока тренировка не начата.')
+            : 'План — это назначение, а не факт: карточка запланированного дня не попадает ни в тоннаж, ни в счётчики, ни в движок нагрузки, пока тренировка не начата.'),
+        actionError && h('p', { className: 'sb-confirm-text', role: 'alert' }, actionError)
       );
     }
 
