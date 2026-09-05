@@ -469,6 +469,54 @@
         commitSelection(pendingDay, pendingDate || dateKey);
       }, [pendingDay, pendingDate, dateKey, earlyWarn, commitSelection]);
 
+      const handleResetWeek = React.useCallback(() => {
+        if (isReadOnly || !hasStoredDay) return;
+        if (typeof window !== 'undefined' && window.confirm && !window.confirm('Сбросить отметки этой недели?')) {
+          return;
+        }
+        clearCycleWeek(dateKey, getter, setter);
+        if (typeof setDay === 'function') {
+          setDay((prev) => ({
+            ...(prev || {}),
+            date: dateKey,
+            cycleDay: null,
+            cycleStatus: null,
+            cycleUpdatedAt: Date.now(),
+            updatedAt: Date.now(),
+          }));
+        } else {
+          notifyDayUpdated(dateKey);
+        }
+        setEditMode(false);
+        setPendingDay(null);
+        haptic?.('light');
+      }, [dateKey, getter, setter, hasStoredDay, haptic, isReadOnly, setDay]);
+
+      const nutritionCycleSource = variant === 'nutrition' && editMode
+        ? React.createElement('div', {
+          className: 'nutrition-v4-block__source'
+            + (pendingDay != null ? ' nutrition-v4-block__source--confirm' : ''),
+        }, 'Питание · блок «Особый период»')
+        : null;
+
+      const filledActions = hasStoredDay && !isReadOnly && React.createElement('div', { className: 'cycle-card-v4__actions' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'cycle-card-v4__action',
+          onClick: () => {
+            setEditMode(true);
+            setPendingDay(storedDay);
+            setPendingDate(dateKey);
+          },
+          disabled: !backdateAllowed,
+        }, 'Изменить'),
+        React.createElement('button', {
+          type: 'button',
+          className: 'cycle-card-v4__reset',
+          onClick: handleResetWeek,
+        }, 'Сбросить неделю')
+      );
+
       const dayButtons = React.createElement('div', {
         className: variant === 'nutrition' ? 'nutrition-v4-cycle-days' : 'cycle-card-v4__days',
         role: 'radiogroup',
@@ -603,6 +651,7 @@
 
         if (variant === 'nutrition') {
           return React.createElement('section', { className: 'nutrition-v4-block', 'data-block': 'cycle' },
+            nutritionCycleSource,
             React.createElement('div', { className: 'nutrition-v4-block__head' },
               React.createElement('b', null, 'Особый период'),
               React.createElement('span', { className: 'nutrition-v4-block__meta' }, 'Указать день')
@@ -650,7 +699,8 @@
           React.createElement('div', { className: 'cycle-card-v4__insight-text' },
             `${phase?.name || 'Особый период'}. Лёгкий перебор в эти дни — норма, а не срыв: организм тратит больше и держит воду.`
           )
-        )
+        ),
+        filledActions
       );
 
       if (variant === 'nutrition') {

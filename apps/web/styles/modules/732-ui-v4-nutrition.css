@@ -681,6 +681,19 @@
   margin-top: 10px;
 }
 
+/* Кадры cycle ·04/·01: надстрока «Питание · блок «Особый период»». */
+.nutrition-v4-block__source {
+  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  margin: 8px 0 10px;
+}
+
+.nutrition-v4-block__source--confirm {
+  margin: 0 0 10px;
+}
+
 .nutrition-v4-block__head {
   display: flex;
   align-items: baseline;
