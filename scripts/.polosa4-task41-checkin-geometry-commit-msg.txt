@@ -1,0 +1,6 @@
+fix(ui-v4): checkin-morning exception-geometry 9/9
+
+Просроченная строка — фон --v4-tint вместо --v4-sand-tint; остальные
+восемь EXCEPTION уже совпадали с контрактом (дорожка 26, засечки 8,
+подвал 8, пилюли 44, метка 10, ярус 13/7, сноска 14|26). Контрактный
+тест computed sand+blue: checkin-morning-v4-exception-geometry.test.js.

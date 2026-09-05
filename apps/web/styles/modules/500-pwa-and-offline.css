@@ -1475,7 +1475,9 @@
    равной силе перебивало и фон, и поля просроченной строки — тинта на экране
    не было вовсе. */
 .mc-rest-row.mc-rest-row--overdue {
-  background: var(--v4-sand-tint, #f6e6dd);
+  /* Контракт «вид просроченной строки»: фон --tint (= --v4-tint). Кадр «32»
+     рисует канвасный --tint #f6e6dd; --v4-sand-tint на три ступени темнее. */
+  background: var(--v4-tint, #f6e6dd);
   box-shadow: inset 0 0 0 1.5px var(--v4-warn-text, #a1471c);
   padding: 12px 14px 13px;
 }
