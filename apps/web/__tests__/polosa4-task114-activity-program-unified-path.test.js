@@ -364,4 +364,41 @@ describe('polosa4 task114 · программа на «Активе» · оди�
       expect(snap.subFontSize).toBe('11px');
     }, 10000);
   });
+
+  describe('task 125 · тоны кадра .56 и шеврон строки тренировок', () => {
+    function mountProbe(className, tag = 'span', text = 'probe') {
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+      const el = document.createElement(tag);
+      el.className = className;
+      el.textContent = text;
+      host.appendChild(el);
+      return el;
+    }
+
+    it('hero footer, history link, breakdown note — правило --v4-ink-data (кадр .56)', () => {
+      for (const className of [
+        'activity-v4-hero__footer',
+        'activity-v4-history__link',
+        'activity-v4-breakdown__note',
+      ]) {
+        const start = CSS.indexOf(`.${className}`);
+        expect(start).toBeGreaterThan(-1);
+        const block = CSS.slice(start, CSS.indexOf('\n}', start) + 2);
+        expect(block).toMatch(/color:\s*var\(--v4-ink-data/);
+      }
+    });
+
+    it('Тренировки · журнал · 11: value row center и gap 8px у шеврона', () => {
+      mountTheme('sand');
+      const row = mountProbe('activity-v4-today__value activity-v4-today__value--chevron', 'span');
+      const chevron = document.createElement('i');
+      chevron.textContent = '›';
+      row.appendChild(chevron);
+      const style = getComputedStyle(row);
+      expect(style.display).toBe('flex');
+      expect(style.alignItems).toBe('center');
+      expect(style.gap).toBe('8px');
+    });
+  });
 });
