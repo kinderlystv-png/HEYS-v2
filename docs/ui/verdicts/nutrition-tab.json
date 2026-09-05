@@ -460,7 +460,7 @@
     },
     "вид чипа": {
       "v": "=",
-      "f": "Высота 34 и ::after inset -5px дают область нажатия 44 — 732-ui-v4-nutrition.css:924-946",
+      "f": "732-ui-v4-nutrition.css:1063 .nutrition-v4-chip — min-height 44px (:1068), ::after content:none (:1081-1083); видимая цель без расширителя, как «состав чипа» 5 сент; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :620-625",
       "h": "ee64712e5a56"
     },
     "что нельзя выключить": {
@@ -615,7 +615,7 @@
     },
     "вход в настройку курса": {
       "v": "=",
-      "f": "Пилюля «Курс» между счётчиком и «Всё сразу», 28 px обводкой --v4-act без заливки — heys_day_nutrition_v1.js:912-916",
+      "f": "732-ui-v4-nutrition.css:1520 .nutrition-v4-supplements__pill.is-course — min-height 44px, inline-flex, обводка --v4-act; heys_day_nutrition_v1.js:912-916; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :627-634",
       "h": "3e3696f9cfcd"
     },
     "курса нет": {

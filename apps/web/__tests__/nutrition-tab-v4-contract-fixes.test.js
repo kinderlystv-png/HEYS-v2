@@ -623,6 +623,15 @@ describe('nutrition-tab · состав чипа · 44 px видимым', () =>
     const after = NUTRITION_CSS.match(/\.nutrition-v4-chip::after \{[\s\S]*?\}/)?.[0] || '';
     expect(after).toMatch(/content:\s*none/);
   });
+
+  it('пилюли шапки добавок и «Весь расчёт» держат 44 px видимой высотой', () => {
+    const pill = NUTRITION_CSS.match(/\.nutrition-v4-supplements__pill \{[\s\S]*?\}/)?.[0] || '';
+    expect(pill).toMatch(/min-height:\s*44px/);
+    const groupPill = NUTRITION_CSS.match(/\.nutrition-v4-supplements__group-pill \{[\s\S]*?\}/)?.[0] || '';
+    expect(groupPill).toMatch(/min-height:\s*44px/);
+    const disclose = NUTRITION_CSS.match(/\.nutrition-v4-disclose \{[\s\S]*?\}/)?.[0] || '';
+    expect(disclose).toMatch(/min-height:\s*44px/);
+  });
 });
 
 describe('nutrition-tab · запись не в сегодня · равный выбор и след', () => {

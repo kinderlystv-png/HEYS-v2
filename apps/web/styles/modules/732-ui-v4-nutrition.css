@@ -963,7 +963,7 @@
   justify-content: center;
   gap: 6px;
   width: 100%;
-  min-height: 40px;
+  min-height: 44px;
   margin-top: 12px;
   padding: 0 14px;
   border: none;
@@ -1518,7 +1518,9 @@
 }
 
 .nutrition-v4-supplements__pill {
-  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0 11px;
   border: 1.5px solid color-mix(in srgb, var(--v4-ink, #111827) 16%, transparent);
   border-radius: 999px;
@@ -1551,7 +1553,7 @@
 .nutrition-v4-supplements__group-pill {
   width: 126px;
   flex: none;
-  min-height: 30px;
+  min-height: 44px;
   padding: 0 10px;
   border: none;
   border-radius: 999px;
