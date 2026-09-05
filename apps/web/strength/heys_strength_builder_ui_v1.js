@@ -1142,8 +1142,8 @@
       const openExLocal = openIdx >= 0 ? exercises[openIdx] : null;
       const openUnitLocal = openExLocal ? (openExLocal.unit || 'weight_reps') : '';
       if (openIdx >= 0 && openExLocal && (openUnitLocal === 'weight_reps' || openUnitLocal === 'bodyweight')) {
-        const progress = exerciseWorkProgress(openExLocal);
-        if (progress.total) return progress.current + ' из ' + progress.total;
+        const key = exerciseWorkProgressKey(openExLocal);
+        if (key) return key;
       }
       // M4: ключ единицы времени — в шапке (.sb-head-sub). M5/M6 — только в карточке.
       if (openIdx >= 0 && openExLocal && openUnitLocal === 'time') {
