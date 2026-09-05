@@ -1,0 +1,5 @@
+fix(norm-correction): раздел владения «вид кабинета куратора»
+
+Контракт package 36: карточка 330 px в клиентском кадре, оболочка —
+curator-cabinet. Вердикт — с naKind foreign-zone, rehash a43fc6c13f48,
+drift norm-correction чист.
