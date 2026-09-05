@@ -1,0 +1,45 @@
+{
+  "zone": "strength-builder",
+  "scope": "Task 48 — resolve 5 orphan M1 keys from Task 43 audit for strip-2 cleanup",
+  "generated": "2026-09-05",
+  "sources": {
+    "audit": "scripts/.sb-task43-audit-handoff.json",
+    "m1Handoff": "scripts/.sb-m1-exercise-card-wiring-handoff.json",
+    "canvas": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html",
+    "verdicts": "docs/ui/verdicts/strength-builder.json"
+  },
+  "verification": {
+    "methodA_entitySearch": "По сущности канваса (кадр/класс/data-vid/метка кадра), не по фразе orphan-ключа: Б2+·14/·16 (строка каталога), Б2+·06 (scroll area), М1+вид·карточка упражнения (три поля), Упражнение·карточка·01–19 (19 нумерованных строк), пусто·13 «Повторить 5 августа» (не sheet-строка).",
+    "methodB_verdictsVsContract": "rg orphan-ключей в strength-builder.json rows — 0/5; пересечение canvas↔verdicts: ·14, ·06, вид·карточка, ·01–·19 (по одному), пусто·13 — все есть в обоих, orphan-ключей нет."
+  },
+  "rows": [
+    {
+      "key": "Конструктор · каталог · tap row",
+      "action": "rename",
+      "renameTo": "Конструктор · каталог · 14",
+      "reason": "Method A: кадр Б2 «Конструктор · каталог», контракт ·14 data-v «строка списка», ·16 «Тяга штанги в наклоне» — сущность тапа по .sb-cat-title; переход в М1 не назван отдельной строкой. Method B: «Конструктор · каталог · 14» есть в canvas :2659 и verdicts rows; orphan «tap row» — ни там, ни там."
+    },
+    {
+      "key": "Конструктор · каталог · back scroll",
+      "action": "delete",
+      "reason": "Method A: ·06 «область прокрутки» (:2651) описывает scroll container, не восстановление scrollTop при возврате из М1; catalogScrollTopRef — wiring builder_ui:1009-1036 без строки контракта. Method B: ни «back scroll», ни эквивалент restore-scroll в verdicts rows; ·06 покрывает только геометрию области."
+    },
+    {
+      "key": "Упражнение · карточка · data",
+      "action": "rename",
+      "renameTo": "вид · карточка упражнения",
+      "reason": "Method A: кадр М1 data-vid «вид · карточка упражнения», контракт :2277 — единица, группы, коэффициент (три поля схемы); exerciseMeta.get — загрузка этих полей. Method B: «вид · карточка упражнения» в canvas и verdicts rows (=); orphan «· data» отсутствует в обоих."
+    },
+    {
+      "key": "Упражнение · карточка · 01-19",
+      "action": "delete",
+      "reason": "Method A: агрегат «·01-19» в canvas 0; живые строки «Упражнение · карточка · 01»…«· 19» (:3855–3873) — 19 штук. Method B: те же 19 ключей в verdicts rows; bucket «01-19» ни в canvas, ни в verdicts — дублирует нумерованные строки."
+    },
+    {
+      "key": "sheet · Повторить прошлую",
+      "action": "rename",
+      "renameTo": "Конструктор · пусто · плана нет · 13",
+      "reason": "Method A: кадр пустой тренировки, контракт ·13 data-v «Повторить 5 августа» (:2620); дубликат на плане — ·21 (:2643); prose «пустая тренировка» (:2207) «Повтор прошлой…». Кадр И2 шторки рисует 6 строк без repeat-last; продукт кладёт в sheetRows — wiring, не canvas-имя. Method B: «Конструктор · пусто · плана нет · 13» в verdicts (=, repeatDateLabel); «sheet · Повторить прошлую» отсутствует."
+    }
+  ]
+}
