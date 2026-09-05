@@ -15,6 +15,7 @@ const FILES = {
   ship: 'scripts/ship.mjs',
   pushAgent: 'scripts/push-agent.mjs',
   pushPreflight: 'scripts/push-preflight.mjs',
+  gitCommitIsolated: 'scripts/git-commit-isolated.mjs',
   integrateAgents: 'scripts/integrate-agents.mjs',
   stagingGuard: 'scripts/check-agent-staging.mjs',
   commitMsgHook: '.husky/commit-msg',
@@ -35,6 +36,7 @@ const PACKAGE_SCRIPT_CONTRACTS = {
   'push:preflight': 'node scripts/push-preflight.mjs',
   'push:ready': 'node scripts/release-prepare-and-commit.mjs',
   'push:safe': 'node scripts/push-safe.mjs',
+  'git:commit:isolated': 'node scripts/git-commit-isolated.mjs',
   ship: 'node scripts/ship.mjs',
 };
 

@@ -35,6 +35,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prepareGeneratedBaselineForShip } from './legacy-generated-baseline.mjs';
+import { commitWithIsolatedIndex, normalizeExplicitPaths } from './lib/git-isolated-index.mjs';
 import { isWhatsNewEnabled } from './release-features.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -42,13 +43,19 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const PREPARE_RELEASE = path.join(__dirname, 'prepare-release.mjs');
 const DEFAULT_DEPLOY_WORKFLOW = 'Deploy to Yandex Cloud';
 
-const args = process.argv.slice(2);
+const argv = process.argv.slice(2);
+const dashDashIdx = argv.indexOf('--');
+const flagArgv = dashDashIdx === -1 ? argv : argv.slice(0, dashDashIdx);
+const explicitCommitPaths =
+  dashDashIdx === -1 ? [] : normalizeExplicitPaths(argv.slice(dashDashIdx + 1), { repoRoot: ROOT_DIR });
+const args = flagArgv;
 const flags = {
   dryRun: args.includes('--dry-run'),
   noPush: args.includes('--no-push'),
   noWatch: args.includes('--no-watch'),
   skipSyncLocal: args.includes('--skip-sync-local'),
   allowNonMain: args.includes('--allow-non-main'),
+  isolatedPaths: explicitCommitPaths.length > 0,
   // SEC: skip ship-lock acquisition. Use for emergency hot-fix only when you
   // KNOW no other agent is shipping — bypasses the multi-agent serialisation.
   noLock: args.includes('--no-lock'),
@@ -146,9 +153,21 @@ export function parseCommitMessage(raw) {
   };
 }
 
-function ensureStagedAndReady(subjectLine) {
+function ensureStagedAndReady(subjectLine, { isolatedPaths = [] } = {}) {
   const status = gitSafe(['status', '--porcelain']);
-  if (!status) fail('Nothing to commit (working tree clean).');
+  if (!status && isolatedPaths.length === 0) fail('Nothing to commit (working tree clean).');
+
+  if (isolatedPaths.length > 0) {
+    out(
+      `[ship] 🪶 isolated-index commit · paths=${isolatedPaths.length} (shared index ignored)`,
+    );
+    for (const p of isolatedPaths.slice(0, 10)) out(`[ship]    · ${p}`);
+    if (isolatedPaths.length > 10) out(`[ship]    …+${isolatedPaths.length - 10} more`);
+    if (!flags.dryRun) {
+      process.env.HEYS_COMMIT_SOURCE_ONLY = '1';
+    }
+    return;
+  }
 
   const stagedRaw = gitSafe(['diff', '--cached', '--name-only']);
   const dirtyRaw = gitSafe(['diff', '--name-only']);
@@ -507,8 +526,9 @@ function cleanupStaleGitLocks() {
 
 function main() {
   if (!rawMessage) {
-    err('Usage: pnpm ship "<conventional commit message>" [--dry-run] [--no-push] [--no-watch]');
+    err('Usage: pnpm ship "<conventional commit message>" [--dry-run] [--no-push] [--no-watch] [-- path1 path2]');
     err('Example: pnpm ship "feat(fingers): reorder layout cards"');
+    err('Isolated: pnpm ship "fix(ui): my files" --no-push -- apps/web/foo.js docs/bar.md');
     err('Body:    pnpm ship "fix(sync): short subject\\n\\nLonger body details."');
     process.exit(1);
   }
@@ -551,16 +571,33 @@ function main() {
   process.env.HEYS_INTEGRATION = '1';
   process.env.HEYS_STAGING_MODE = 'integration';
 
-  ensureStagedAndReady(subjectLine);
+  ensureStagedAndReady(subjectLine, { isolatedPaths: explicitCommitPaths });
 
-  // Staging is explicit (see ensureStagedAndReady) — agent already did `git add`.
+  // Staging is explicit (see ensureStagedAndReady) — agent already did `git add`,
+  // or passed `-- paths` for an isolated-index commit that ignores shared staging.
   // Pre-commit hook (mode=integration) will rebuild affected bundles from the
   // staged source and stage the generated outputs into the same commit.
 
   // Subject and body as separate -m flags so commitlint only sees the header.
-  const commitArgs = ['commit', '-m', subjectLine];
+  const commitArgs = ['-m', subjectLine];
   if (body) commitArgs.push('-m', body);
-  run('git', commitArgs, { label: `💾 commit: ${subjectLine}` });
+
+  if (flags.isolatedPaths) {
+    if (flags.dryRun) {
+      out(`[dry-run] isolated commit paths: ${explicitCommitPaths.join(', ')}`);
+      out(`[dry-run] git commit ${commitArgs.map((a) => JSON.stringify(a)).join(' ')}`);
+      return;
+    }
+    const { sha, staged } = commitWithIsolatedIndex({
+      repoRoot: ROOT_DIR,
+      paths: explicitCommitPaths,
+      commitArgs,
+      env: process.env,
+    });
+    out(`[ship] 💾 isolated commit ${sha.slice(0, 8)} · ${staged.length} file(s)`);
+  } else {
+    run('git', ['commit', ...commitArgs], { label: `💾 commit: ${subjectLine}` });
+  }
 
   // Generate release metadata only while the centralized feature is enabled.
   if (isWhatsNewEnabled()) {

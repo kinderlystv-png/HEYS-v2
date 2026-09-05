@@ -38,13 +38,13 @@ mechanics; it never grants permission.
 
 ## 2. Choose the operation before staging
 
-| User grant                               | Canonical operation                                                                        | Push? |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------ | ----- |
-| No commit grant                          | Source edit + scoped local preview only                                                    | No    |
-| Commit-only, one intended staged group   | `pnpm ship "<conventional message>" --no-push`                                             | No    |
-| Commit + push, one intended staged group | `pnpm ship "<conventional message>"` — after push runs `sync:local` automatically          | Yes   |
-| Push already-created commit(s)           | `pnpm push:agent -- --confirm-push ...` — after push runs `sync:local` automatically       | Yes   |
-| Explicit collector integration           | `pnpm agents:integrate --confirm-integration ...` from a clean intended collector worktree | No    |
+| User grant                               | Canonical operation                                                                                         | Push? |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----- |
+| No commit grant                          | Source edit + scoped local preview only                                                                     | No    |
+| Commit-only, one intended staged group   | `pnpm ship "<conventional message>" --no-push` or `pnpm ship "<msg>" --no-push -- <paths>` (isolated index) | No    |
+| Commit + push, one intended staged group | `pnpm ship "<conventional message>"` — after push runs `sync:local` automatically                           | Yes   |
+| Push already-created commit(s)           | `pnpm push:agent -- --confirm-push ...` — after push runs `sync:local` automatically                        | Yes   |
+| Explicit collector integration           | `pnpm agents:integrate --confirm-integration ...` from a clean intended collector worktree                  | No    |
 
 `pnpm ship` rejects an empty staged set, expects `main` by default, and refuses
 a non-`main` branch unless `--allow-non-main` is intentional. Without
@@ -96,11 +96,19 @@ Before any staging or branch mutation:
 
 1. Run `git status --short --branch`, inspect `git diff` and
    `git diff --cached`, and identify the exact intended files.
-2. Group files into logical commits. Prefer `git add -- <paths>`. Use
-   `git add -A` only when the user or collector explicitly accepts every dirty
-   file as one intended scope. To split work into multiple commits, stage paths
-   and commit twice — never `git checkout HEAD -- <path>` to “drop” unstaged
-   changes; that wipes uncommitted work with no git recovery.
+2. Group files into logical commits. Prefer explicit isolated commits on a
+   shared checkout when multiple polosas run in parallel:
+   `pnpm git:commit:isolated -F <msg-file> -- <paths>` or
+   `pnpm ship "<msg>" --no-push -- <paths>`. These use `GIT_INDEX_FILE` and
+   **never read foreign staging** on the shared `.git/index`. Do **not** use
+   `git commit -- <paths>` on a shared checkout — it still commits everything
+   already staged on the shared index. For solo integration commits without
+   parallel writers, `git add -- <paths>` + `pnpm ship` on the shared index
+   remains valid (ship-lock serialises `pnpm ship`). Use `git add -A` only when
+   the user or collector explicitly accepts every dirty file as one intended
+   scope. To split work into multiple commits, stage paths and commit twice —
+   never `git checkout HEAD -- <path>` to “drop” unstaged changes; that wipes
+   uncommitted work with no git recovery.
 3. Before `git checkout`, `git restore`, or `git reset` on explicit paths, run
    `git diff --stat -- <paths>`. If output is non-empty, do not run the command.
    Do not stash, checkout, restore, reset, delete generated files or resolve
@@ -190,6 +198,38 @@ Never use `--no-verify` or `HUSKY=0` as a normal flow. `pnpm ship` cannot pass
 `--no-verify`. For direct Git commands, bypassing hooks requires a separate,
 explicit user instruction for that exact operation and a report of the skipped
 gates. `pnpm push:safe` is deprecated and does not provide a safe bypass.
+
+### Isolated index commits (`GIT_INDEX_FILE`)
+
+Parallel polosas on one checkout share a single `.git/index`. Foreign `git add`
+from another session makes `git commit -- <paths>` commit the wrong files
+(message says one scope, index carries another).
+
+**Canonical isolated entrypoints:**
+
+```bash
+HEYS_COMMIT_SOURCE_ONLY=1 pnpm git:commit:isolated -F <msg-file> -- <paths>
+pnpm ship "<conventional message>" --no-push -- <paths>
+```
+
+Mechanism (`scripts/lib/git-isolated-index.mjs`):
+
+1. Allocate a temp index under `.claude/isolated-index/`.
+2. `git read-tree HEAD` into that index only — shared index untouched.
+3. `git add -- <paths>` into the temp index only.
+4. `git commit` with `GIT_INDEX_FILE` pointing at the temp index.
+
+**Husky / lint-staged verdict:** pre-commit hooks run as children of
+`git commit` and inherit `GIT_INDEX_FILE`. `lint-staged`,
+`check-agent-staging.mjs`, `auto-sync-legacy-bundles.mjs --staged`, and
+hook-side `git add` all operate on the isolated index for the duration of that
+commit — not on foreign shared staging. `commit-msg` (commitlint) is
+index-independent. Verified by `scripts/git-isolated-index-race.test.mjs`
+(staged-set routing + foreign-staging leak repro).
+
+**Do not use** bare `git commit -F … -- <paths>` on a shared checkout when other
+polosas may be active. Ship-lock serialises `pnpm ship` but not raw `git add` /
+`git commit`.
 
 ## 6. Codex shipping flow
 
@@ -301,6 +341,8 @@ review justifies adding it there.
 - [`package.json`](../../package.json)
 - [`scripts/check-agent-shipping-docs.mjs`](../../scripts/check-agent-shipping-docs.mjs)
 - [`scripts/ship.mjs`](../../scripts/ship.mjs)
+- [`scripts/git-commit-isolated.mjs`](../../scripts/git-commit-isolated.mjs)
+- [`scripts/lib/git-isolated-index.mjs`](../../scripts/lib/git-isolated-index.mjs)
 - [`scripts/push-agent.mjs`](../../scripts/push-agent.mjs)
 - [`scripts/push-preflight.mjs`](../../scripts/push-preflight.mjs)
 - [`scripts/release-prepare-and-commit.mjs`](../../scripts/release-prepare-and-commit.mjs)

@@ -59,6 +59,7 @@
     "ensure:local": "node scripts/ensure-local-toolchain.mjs --fix --stop-dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "git:commit:isolated": "node scripts/git-commit-isolated.mjs",
     "healthcheck": "node scripts/healthcheck.js",
     "iw:sync-config": "node scripts/sync-iw-inline-config.cjs",
     "legacy:serve": "npx http-server dist/production -p 3001 -c-1",
