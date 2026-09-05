@@ -1,0 +1,44 @@
+[
+  {
+    "key": "Подход · таблица ввода · 23-28",
+    "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+    "lines": "1926-1952",
+    "change": "В раскрытой карточке (open) показывается колонка .sb-rest-cd вместо .sb-rest-line/.sb-rest-copy; кнопка «вручную» рабочая."
+  },
+  {
+    "key": "вид · след переноса",
+    "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+    "lines": "2559-2618,2781+,2858+,2946+",
+    "change": "MovePicker/InlineMovePicker: выбор дня inline на карточке PlanCard (кадр Г3), без модалки .sb-sheet-back."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 14-15",
+    "file": "apps/web/styles/modules/731-ui-v4-activity.css",
+    "lines": "1225-1267",
+    "change": "Явный color/--v4-ink на .sb-move-day и подписи «Свободно» (ink 56%), без наследования buttontext."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 17-18",
+    "file": "apps/web/styles/modules/731-ui-v4-activity.css",
+    "lines": "1269-1285",
+    "change": "Занятый день и пилюля «занят» приглушены до ink 40%, без фона badge."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 20",
+    "file": "apps/web/styles/modules/731-ui-v4-activity.css",
+    "lines": "1292-1295",
+    "change": "«выбрано» на .sb-move-day.is-on — accent через --v4-act-text на span."
+  },
+  {
+    "key": "Перенос · след в обе стороны · 22",
+    "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+    "lines": "2598,2717,2945",
+    "change": "PLAN_MOVE_FOOTNOTE на карточке (assigned/moved) и в inline-переносе, не только в MoveSheet."
+  },
+  {
+    "key": "шторка — семь входов",
+    "file": "apps/web/strength/heys_strength_superset_ui_v1.js",
+    "lines": "2455-2466",
+    "change": "7-я строка sheetRows: «Повторить прошлую» + handler ctx.onRepeatLast(lastSession.exercises)."
+  }
+]

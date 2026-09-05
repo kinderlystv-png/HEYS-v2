@@ -220,6 +220,14 @@ describe('Карточка плана говорит словами кадра',
     // Контракт строка 18: план до старта не даёт расхода, и это сказано словом.
     expect(meta).toContain('В расход не идёт, пока не начнёте.');
   });
+
+  it('сноска механизма переноса видна на карточке, не только в sheet', () => {
+    renderCard();
+    const footnote = document.querySelector('.sb-plan-footnote');
+    expect(footnote).toBeTruthy();
+    expect(footnote.textContent).toContain('Отдельного механизма переноса нет');
+    expect(footnote.textContent).toContain('перенос превратится в пропуск');
+  });
 });
 
 describe('Перенос и пропуск — два разных действия', () => {
@@ -300,15 +308,15 @@ describe('Перенос и пропуск — два разных действ�
 
     fireEvent.click(document.querySelector('.sb-plan-actions button'));
     fireEvent.click(document.querySelector('.sb-move-day'));
-    fireEvent.click(document.querySelector('.sb-sheet .sb-btn.is-accent'));
+    fireEvent.click(document.querySelector('.sb-plan-move-inline .sb-btn.is-accent'));
 
-    expect(document.querySelector('.sb-sheet')).not.toBeNull();
-    expect(document.querySelector('.sb-sheet .sb-btn.is-accent').disabled).toBe(true);
+    expect(document.querySelector('.sb-plan-move-inline')).not.toBeNull();
+    expect(document.querySelector('.sb-plan-move-inline .sb-btn.is-accent').disabled).toBe(true);
     expect(onMove).toHaveBeenCalledWith('2026-08-31', expect.objectContaining({ id: 'pl_1', status: 'assigned' }));
 
     resolveMove(null);
     await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy());
-    expect(document.querySelector('.sb-sheet')).not.toBeNull();
+    expect(document.querySelector('.sb-plan-move-inline')).not.toBeNull();
   });
 
   it('не считает rollback failure успехом и явно оставляет перенос на проверку', async () => {
@@ -319,10 +327,10 @@ describe('Перенос и пропуск — два разных действ�
 
     fireEvent.click(document.querySelector('.sb-plan-actions button'));
     fireEvent.click(document.querySelector('.sb-move-day'));
-    fireEvent.click(document.querySelector('.sb-sheet .sb-btn.is-accent'));
+    fireEvent.click(document.querySelector('.sb-plan-move-inline .sb-btn.is-accent'));
 
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('оба дня'));
-    expect(document.querySelector('.sb-sheet')).not.toBeNull();
+    expect(document.querySelector('.sb-plan-move-inline')).not.toBeNull();
   });
 
   it('void owner callback не считается acknowledgment и не закрывает пропуск', async () => {
@@ -411,6 +419,20 @@ describe('Геометрия задана только внутри блока �
     const days = rule('.activity-v4-program .sb-move-days');
     expect(days).toContain('flex-direction: column');
     expect(days).toContain('overflow: visible');
-    expect(rule('.activity-v4-program .sb-move-day')).toContain('width: 100%');
+    const row = rule('.activity-v4-program .sb-move-day');
+    expect(row).toContain('width: 100%');
+    expect(row).toContain('padding: 13px 16px');
+    expect(row).toContain('color: var(--v4-ink');
+    expect(rule('.activity-v4-program .sb-move-day-copy b')).toContain('var(--v4-ink');
+    expect(rule('.activity-v4-program .sb-move-day-copy span')).toContain('rgba(var(--ink), 0.56)');
+    expect(rule('.activity-v4-program .sb-move-day.is-busy .sb-move-day-copy b'))
+      .toContain('rgba(var(--ink), 0.4)');
+    expect(rule('.activity-v4-program .sb-move-day.is-busy > i'))
+      .toContain('rgba(var(--ink), 0.4)');
+    expect(rule('.activity-v4-program .sb-move-day.is-on .sb-move-day-copy span'))
+      .toContain('var(--v4-act-text');
+    const footnote = rule('.activity-v4-program .sb-plan-footnote');
+    expect(footnote).toContain('margin-top: 12px');
+    expect(footnote).toContain('rgba(var(--ink), 0.56)');
   });
 });

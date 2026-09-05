@@ -1923,7 +1923,7 @@
             })
           )
         ),
-        h('div', { className: 'sb-rest-line' },
+        !open && h('div', { className: 'sb-rest-line' },
           h('span', { className: 'sb-rest-copy' },
             '⏱ Отдых ' + fmtClock(+ex.restSec || 90) + ' '
             + (ex.restManual
@@ -1935,7 +1935,7 @@
             onClick: function () { onRestManual(index, !ex.restManual); }
           }, ex.restManual ? 'Авто' : 'Вручную')
         ),
-        h('div', { className: 'sb-rest-cd', 'aria-hidden': 'true' },
+        open && h('div', { className: 'sb-rest-cd', style: { display: 'block' } },
           h('div', { className: 'sb-rest-cd-row' },
             h('div', { className: 'sb-rest-cd-copy' },
               h('b', null, 'Отдых ' + fmtClock(+ex.restSec || 90)),
@@ -1945,9 +1945,9 @@
             ),
             h('button', {
               type: 'button',
-              className: 'sb-rest-manual sb-rest-manual--e1',
-              tabIndex: -1
-            }, 'вручную')
+              className: 'sb-rest-manual sb-rest-manual--e1' + (ex.restManual ? ' is-on' : ''),
+              onClick: function () { onRestManual(index, !ex.restManual); }
+            }, ex.restManual ? 'авто' : 'вручную')
           )
         ),
         h('div', { className: 'sb-approach-pills' },
@@ -2412,6 +2412,11 @@
     const exercises = ctx.exercises || [];
     const current = exercises[ctx.openIdx >= 0 ? ctx.openIdx : 0] || {};
     const hasPlanSnapshot = !!(ctx.hasPlanSnapshot);
+    const lastSession = typeof ctx.lastSessionFor === 'function' ? ctx.lastSessionFor() : null;
+    const canRepeatLast = !!(lastSession
+      && Array.isArray(lastSession.exercises)
+      && lastSession.exercises.length
+      && typeof ctx.onRepeatLast === 'function');
     return [
       {
         icon: '↕️', t: 'Порядок упражнений', d: 'стрелками или перетаскиванием',
@@ -2446,6 +2451,18 @@
         icon: '📝', t: 'Заметка к тренировке', d: 'самочувствие, зал, партнёр',
         chevron: 'dim',
         go: function () { ctx.close(); ctx.go('finish'); }
+      },
+      {
+        icon: '🔁', t: 'Повторить прошлую', d: canRepeatLast
+          ? ('тот же состав · ' + lastSession.exercises.length + ' упр.')
+          : 'нет сохранённой прошлой тренировки',
+        off: !canRepeatLast,
+        chevron: 'dim',
+        go: function () {
+          if (!canRepeatLast) return;
+          ctx.close();
+          ctx.onRepeatLast(lastSession.exercises);
+        }
       }
     ];
   }
@@ -2536,50 +2553,93 @@
   }
 
   const PLAN_MOVE_FOOTNOTE = 'Отдельного механизма переноса нет: это обычное назначение на свободный день плюс след в обе стороны. Клиент переносит сам, без подтверждения — пока куратор ответит, день уйдёт, и перенос превратится в пропуск.';
+  const PLAN_MOVE_TRACE = 'Исходный день останется со следом переноса, новый — с тем же планом и весами.';
 
   /** Ближайшие свободные дни для переноса (16a). Занятый день не предлагается. */
-  function MoveSheet(props) {
-    const { options, onCancel, onConfirm, busy, error } = props;
+  function MovePicker(props) {
+    const { options, pick, setPick, busy, error, onCancel, onConfirm, onSkipInstead, inline } = props;
+    const list = h('div', { className: 'sb-move-days' },
+      (options || []).map(function (o) {
+        return h('button', {
+          key: o.date, type: 'button',
+          className: 'sb-move-day' + (pick === o.date ? ' is-on' : '') + (o.busy ? ' is-busy' : ''),
+          disabled: !!busy || o.busy,
+          onClick: function () { if (!busy && !o.busy) setPick(o.date); }
+        },
+          h('span', { className: 'sb-move-day-copy' },
+            h('b', null, o.label || o.human || o.weekday),
+            h('span', null, o.busy ? (o.details || 'Занято') : (pick === o.date ? 'выбрано' : 'Свободно'))
+          ),
+          h('i', null, o.unknown ? 'не загружен' : o.busy ? 'занят' : (pick === o.date ? '✓' : 'перенести'))
+        );
+      })
+    );
+    const actions = h('div', { className: 'sb-pain-actions' },
+      h('button', { type: 'button', className: 'sb-btn', disabled: !!busy, onClick: onCancel }, 'Передумал'),
+      h('button', {
+        type: 'button', className: 'sb-btn is-accent',
+        disabled: !pick || !!busy,
+        onClick: function () { if (pick) onConfirm(pick); }
+      }, busy ? 'Переношу…' : (pick ? 'Перенести' : 'Выбери день'))
+    );
+    const shared = h(React.Fragment, null,
+      inline && h('div', { className: 'sb-tier' }, 'Куда перенести · выбор дня'),
+      !inline && h('p', { className: 'sb-confirm-text' },
+        'Тренировка переедет целиком, вместе с весами. Куратор увидит новую дату.'),
+      list,
+      error && h('p', { className: 'sb-confirm-text', role: 'alert' }, error),
+      actions,
+      typeof onSkipInstead === 'function' && h('button', {
+        type: 'button', className: 'sb-move-skip',
+        disabled: !!busy,
+        onClick: function () { if (!busy) onSkipInstead(); }
+      }, 'Совсем пропустить'),
+      h('p', { className: 'sb-plan-trace' }, PLAN_MOVE_TRACE),
+      h('p', { className: 'sb-plan-footnote' }, PLAN_MOVE_FOOTNOTE)
+    );
+    if (inline) {
+      return h('div', { className: 'sb-plan-move-inline' }, shared);
+    }
+    return shared;
+  }
+
+  function InlineMovePicker(props) {
     const [pick, setPick] = React.useState('');
-    return h('div', { className: 'sb-sheet-back', onClick: busy ? undefined : onCancel },
-      h('div', { className: 'sb-sheet', onClick: function (e) { e.stopPropagation(); } },
+    return h(MovePicker, {
+      options: props.options,
+      pick: pick,
+      setPick: setPick,
+      busy: props.busy,
+      error: props.error,
+      onCancel: props.onCancel,
+      onConfirm: props.onConfirm,
+      onSkipInstead: props.onSkipInstead,
+      inline: true
+    });
+  }
+
+  function MoveSheet(props) {
+    const [pick, setPick] = React.useState('');
+    return h('div', { className: 'sb-sheet-back', onClick: props.busy ? undefined : props.onCancel },
+      h('div', {
+        className: 'sb-sheet',
+        role: 'dialog',
+        'aria-modal': 'true',
+        onClick: function (e) { e.stopPropagation(); }
+      },
         h('div', { className: 'sb-sheet-grip' }),
         h('b', { className: 'sb-confirm-title' }, 'Куда перенести · выбор дня'),
-        h('p', { className: 'sb-confirm-text' },
-          'Тренировка переедет целиком, вместе с весами. Куратор увидит новую дату.'),
-        h('div', { className: 'sb-move-days' },
-          options.map(function (o) {
-            return h('button', {
-              key: o.date, type: 'button',
-              className: 'sb-move-day' + (pick === o.date ? ' is-on' : '') + (o.busy ? ' is-busy' : ''),
-              disabled: !!busy || o.busy,
-              onClick: function () { if (!busy && !o.busy) setPick(o.date); }
-            },
-              h('span', { className: 'sb-move-day-copy' },
-                h('b', null, o.label || o.human || o.weekday),
-                h('span', null, o.busy ? (o.details || 'Занято') : (pick === o.date ? 'выбрано' : 'Свободно'))
-              ),
-              h('i', null, o.unknown ? 'не загружен' : o.busy ? 'занят' : (pick === o.date ? '✓' : 'перенести'))
-            );
-          })
-        ),
-        error && h('p', { className: 'sb-confirm-text', role: 'alert' }, error),
-        h('div', { className: 'sb-pain-actions' },
-          h('button', { type: 'button', className: 'sb-btn', disabled: !!busy, onClick: onCancel }, 'Передумал'),
-          h('button', {
-            type: 'button', className: 'sb-btn is-accent',
-            disabled: !pick || !!busy,
-            onClick: function () { if (pick) onConfirm(pick); }
-          }, busy ? 'Переношу…' : (pick ? 'Перенести' : 'Выбери день'))
-        ),
-        h('button', {
-          type: 'button', className: 'sb-move-skip',
-          disabled: !!busy,
-          onClick: function () { if (!busy && props.onSkipInstead) props.onSkipInstead(); }
-        }, 'Совсем пропустить'),
-        h('p', { className: 'sb-plan-trace' },
-          'Исходный день останется со следом переноса, новый — с тем же планом и весами.'),
-        h('p', { className: 'sb-plan-footnote' }, PLAN_MOVE_FOOTNOTE)
+        h(MovePicker, {
+          options: props.options,
+          pick: pick,
+          setPick: setPick,
+          busy: props.busy,
+          error: props.error,
+          onCancel: props.onCancel,
+          onConfirm: props.onConfirm,
+          onSkipInstead: props.onSkipInstead,
+          inline: false
+        })
       )
     );
   }
@@ -2653,7 +2713,8 @@
         h('span', { className: 'sb-plan-meta' },
           plan.movedTo ? 'Не пропуск — тренировка ждёт ' + humanDate(plan.movedTo) : 'Не пропуск — перенесён'),
         plan.movedTo && h('span', { className: 'sb-plan-trace' },
-          humanDate(dateKey) + ' · откуда перенесли → ' + humanDate(plan.movedTo))
+          humanDate(dateKey) + ' · откуда перенесли → ' + humanDate(plan.movedTo)),
+        h('p', { className: 'sb-plan-footnote' }, PLAN_MOVE_FOOTNOTE)
       );
     }
 
@@ -2717,7 +2778,7 @@
             'Пропущенный день остаётся пустым: тоннажа нет, подходов нет, в отчёте недели '
             + 'он не считается выполненным. Никаких упрёков — просто неделя короче на одну тренировку.')
         ),
-        moveOpen && h(MoveSheet, {
+        moveOpen && h(InlineMovePicker, {
           options: moveOptions,
           busy: pendingAction === 'move',
           error: actionError,
@@ -2794,7 +2855,7 @@
               onClick: function () { setMoveOpen(true); }
             }, 'Перенести')
           ),
-          moveOpen && h(MoveSheet, {
+          moveOpen && h(InlineMovePicker, {
             options: moveOptions,
             busy: pendingAction === 'move',
             error: actionError,
@@ -2881,8 +2942,8 @@
           onClick: function () { setSkipOpen(true); }
         }, 'Пропустить')
       ),
-      h('p', { className: 'sb-plan-footnote' }, PLAN_MOVE_FOOTNOTE),
-      moveOpen && h(MoveSheet, {
+      !moveOpen && h('p', { className: 'sb-plan-footnote' }, PLAN_MOVE_FOOTNOTE),
+      moveOpen && h(InlineMovePicker, {
         options: moveOptions,
         busy: pendingAction === 'move',
         error: actionError,

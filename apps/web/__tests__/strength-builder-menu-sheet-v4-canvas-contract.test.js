@@ -43,10 +43,11 @@ function loadParts() {
 describe('И2 · Шторка ⋯ · canvas contract', () => {
   afterEach(() => cleanup());
 
-  it('держит шесть входов canvas и геометрию листа', () => {
+  it('держит семь входов canvas и геометрию листа', () => {
     expect(SUPERSET).toContain('Назначено против сделано');
     expect(SUPERSET).toContain('Круговой режим');
     expect(SUPERSET).toContain('Заметка к тренировке');
+    expect(SUPERSET).toContain('Повторить прошлую');
     expect(CSS).toMatch(/\.sb-builder-screen \.sb-sheet-grip[\s\S]*width: 38px;/);
     expect(CSS).toMatch(/\.sb-sheet-menu-copy[\s\S]*gap: 3px;/);
   });
@@ -105,6 +106,7 @@ describe('И2 · Шторка ⋯ · canvas contract', () => {
       expect(screen.getByText('Круговой режим')).toBeTruthy();
       expect(screen.getByText('Назначено против сделано')).toBeTruthy();
       expect(screen.getByText('Заметка к тренировке')).toBeTruthy();
+      expect(screen.getByText('Повторить прошлую')).toBeTruthy();
 
       fireEvent.click(screen.getByText('Назначено против сделано'));
       expect(seen).toEqual(['plan-vs-done']);
