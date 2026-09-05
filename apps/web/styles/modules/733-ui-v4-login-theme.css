@@ -2239,7 +2239,13 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   margin-top: 13px;
   padding: 11px 13px;
   border-radius: 16px;
-  background: var(--v4-warn-surface, color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent));
+  /* Роли --v4-warn-surface не существует: она была выдумана здесь, и цвет
+     всегда брался из запасного значения — то есть не следовал набору
+     вовсе. Дизайнер подтвердил 5 сентября: «это чужая роль мимо набора,
+     и её стоит убрать, а не легализовать». Смысл целиком несёт сам
+     color-mix: предупреждающий тон набора на 22 %, и --v4-warn-1
+     объявлена во всех четырёх наборах. */
+  background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 22%, transparent);
   font-size: 11.5px;
   line-height: 1.4;
 }
