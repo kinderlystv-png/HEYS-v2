@@ -1278,5 +1278,157 @@
       "f": "Строка добавлена дизайнером, вердикта нет",
       "h": "88d83d9b62d0"
     }
+  },
+  "frames": {
+    "Подписка · строка в настройках": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · экран · пробный период": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · приветствие": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · баннер сверху": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · тост на действии": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · контакт поддержки": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · тарифы · места есть": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · тарифы · мест нет": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · тарифы · Pro Спорт": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · проверьте заказ": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · оплата прошла": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · экран · активна": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · экран · только чтение": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · очередь · заявка подана": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Подписка · очередь · место освободилось": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    }
   }
 }

@@ -1,0 +1,92 @@
+{
+  "task": "72-lane-1-visual-fixture",
+  "before": {
+    "missingEntries": {
+      "first-run": 6,
+      "subscription": 15,
+      "messenger": 10,
+      "totalThreeZones": 31,
+      "global": 33
+    },
+    "visualCases": 48,
+    "scenarioPending": 11
+  },
+  "after": {
+    "missingEntries": {
+      "first-run": 0,
+      "subscription": 0,
+      "messenger": 0,
+      "totalThreeZones": 0,
+      "global": 2
+    },
+    "visualCases": 76,
+    "scenarioPending": 8,
+    "framesEvidenced": {
+      "first-run": "6/6",
+      "subscription": "15/15",
+      "messenger": "10/10"
+    }
+  },
+  "zones": {
+    "first-run": {
+      "cases": 6,
+      "kinds": ["demo-v4-visual-frame"],
+      "rootSelectors": [".tour-overlay", ".heys-undo-bar", ".desktop-gate"],
+      "productFiles": [
+        "apps/web/heys_ui_onboarding_v1.js",
+        "apps/web/heys_app_gates_v1.js",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js"
+      ]
+    },
+    "subscription": {
+      "cases": 15,
+      "kinds": ["demo-settings", "demo-v4-visual-frame"],
+      "rootSelectors": [
+        ".tab-settings-menu--v4-sheet .hdr-settings-sheet__row[data-settings-key=\"subscription\"]",
+        "#ui-v4-subscription-screen-host",
+        "#ui-v4-subscription-screen-host .readonly-banner",
+        "#ui-v4-subscription-screen-host .paywall-modal",
+        ".heys-undo-bar"
+      ],
+      "productFiles": [
+        "apps/web/heys_subscriptions_v1.js",
+        "apps/web/heys_paywall_v1.js",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js"
+      ]
+    },
+    "messenger": {
+      "cases": 10,
+      "kinds": ["demo-v4-visual-frame"],
+      "rootSelectors": [
+        ".messenger-modal",
+        ".messenger-modal .msg-applied-card",
+        ".messenger-modal .messenger-day-checklist",
+        ".messenger-modal .messenger-composer--recording",
+        ".messenger-action-sheet",
+        ".messenger-header-menu",
+        ".messenger-search-panel",
+        ".messenger-modal .messenger-offline-bar",
+        ".messenger-confirm-dialog"
+      ],
+      "productFiles": ["apps/web/heys_messenger_v1.js", "apps/web/heys_ui_v4_visual_fixture_v1.js"]
+    }
+  },
+  "fixtureFiles": [
+    "apps/web/scripts/ui-v4-visual-fixture.mjs",
+    "apps/web/scripts/ui-v4-visual-capture.mjs",
+    "apps/web/heys_ui_v4_visual_fixture_v1.js"
+  ],
+  "verdictFramesOnly": [
+    "docs/ui/verdicts/first-run.json",
+    "docs/ui/verdicts/subscription.json",
+    "docs/ui/verdicts/messenger.json"
+  ],
+  "verification": {
+    "progressReport": "node scripts/ui-v4-progress-report.mjs",
+    "harness": "pnpm exec vitest run __tests__/ui-v4-visual-harness.test.js (apps/web) — 10/10 passed"
+  },
+  "notes": [
+    "Row verdicts (v/f/h) not touched; only frames.evidence added for progress-report.",
+    "Global missingEntries 2 remain in food-meal (outside lane-1 scope)."
+  ]
+}

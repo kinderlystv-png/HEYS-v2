@@ -1,4 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { readCanvasPackage } from '../../../scripts/lib/ui-v4-canvas-index.mjs';
+
+const FIXTURE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const VISUAL_FIXTURE_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_ui_v4_visual_fixture_v1.js');
 
 const FIXED_NOW = '2026-08-28T09:30:00+03:00';
 const FIXED_DAY = '2026-08-28';
@@ -35,6 +42,131 @@ export const UI_V4_DOM_GATE_ZONES = Object.freeze([
   'spinners',
   'undo-bar',
 ]);
+
+const TASK72_VISUAL_FRAME_ROOTS = Object.freeze({
+  'Первый вход · шаг 1': '.tour-overlay',
+  'Первый вход · шаг 2': '.tour-overlay',
+  'Первый вход · шаг 3': '.tour-overlay',
+  'Первый вход · шаг 4': '.tour-overlay',
+  'Первый вход · обзор пройден': '.heys-undo-bar',
+  'Первый вход · с компьютера': '.desktop-gate',
+  'Подписка · строка в настройках':
+    '.tab-settings-menu--v4-sheet .hdr-settings-sheet__row[data-settings-key="subscription"]',
+  'Подписка · экран · пробный период': '#ui-v4-subscription-screen-host',
+  'Подписка · приветствие': '#ui-v4-subscription-screen-host',
+  'Подписка · баннер сверху': '#ui-v4-subscription-screen-host .readonly-banner',
+  'Подписка · тост на действии': '.heys-undo-bar',
+  'Подписка · контакт поддержки': '#ui-v4-subscription-screen-host',
+  'Подписка · тарифы · места есть': '#ui-v4-subscription-screen-host .paywall-modal',
+  'Подписка · тарифы · мест нет': '#ui-v4-subscription-screen-host .paywall-modal',
+  'Подписка · тарифы · Pro Спорт': '#ui-v4-subscription-screen-host .paywall-modal',
+  'Подписка · проверьте заказ': '#ui-v4-subscription-screen-host',
+  'Подписка · оплата прошла': '#ui-v4-subscription-screen-host',
+  'Подписка · экран · активна': '#ui-v4-subscription-screen-host',
+  'Подписка · экран · только чтение': '#ui-v4-subscription-screen-host',
+  'Подписка · очередь · заявка подана': '#ui-v4-subscription-screen-host .paywall-modal',
+  'Подписка · очередь · место освободилось': '#ui-v4-subscription-screen-host .paywall-modal',
+  'Мессенджер · пустой тред': '.messenger-modal',
+  'Мессенджер · тред с карточкой дня': '.messenger-modal .msg-applied-card',
+  'Мессенджер · Ждём и подсказка': '.messenger-modal .messenger-day-checklist',
+  'Мессенджер · запись голосового': '.messenger-modal .messenger-composer--recording',
+  'Мессенджер · лист действий': '.messenger-action-sheet',
+  'Мессенджер · меню Ещё': '.messenger-header-menu',
+  'Мессенджер · поиск': '.messenger-search-panel',
+  'Мессенджер · без сети': '.messenger-modal .messenger-offline-bar',
+  'Мессенджер · согласие на расшифровку': '.messenger-confirm-dialog',
+  'Мессенджер · удаление сообщения': '.messenger-confirm-dialog',
+});
+
+const TASK72_FRAME_IDS = Object.freeze({
+  'Первый вход · шаг 1': 'first-run-step-1',
+  'Первый вход · шаг 2': 'first-run-step-2',
+  'Первый вход · шаг 3': 'first-run-step-3',
+  'Первый вход · шаг 4': 'first-run-step-4',
+  'Первый вход · обзор пройден': 'first-run-overview-done',
+  'Первый вход · с компьютера': 'first-run-desktop-gate',
+  'Подписка · строка в настройках': 'subscription-settings-row',
+  'Подписка · экран · пробный период': 'subscription-trial-screen',
+  'Подписка · приветствие': 'subscription-welcome',
+  'Подписка · баннер сверху': 'subscription-readonly-banner',
+  'Подписка · тост на действии': 'subscription-readonly-toast',
+  'Подписка · контакт поддержки': 'subscription-contact-curator',
+  'Подписка · тарифы · места есть': 'subscription-plans-open',
+  'Подписка · тарифы · мест нет': 'subscription-plans-full',
+  'Подписка · тарифы · Pro Спорт': 'subscription-plans-pro-sport',
+  'Подписка · проверьте заказ': 'subscription-payment-review',
+  'Подписка · оплата прошла': 'subscription-payment-success',
+  'Подписка · экран · активна': 'subscription-active-screen',
+  'Подписка · экран · только чтение': 'subscription-readonly-screen',
+  'Подписка · очередь · заявка подана': 'subscription-queue-queued',
+  'Подписка · очередь · место освободилось': 'subscription-queue-offer',
+  'Мессенджер · пустой тред': 'messenger-empty-thread',
+  'Мессенджер · тред с карточкой дня': 'messenger-day-card',
+  'Мессенджер · Ждём и подсказка': 'messenger-wait-hint',
+  'Мессенджер · запись голосового': 'messenger-voice-recording',
+  'Мессенджер · лист действий': 'messenger-action-sheet',
+  'Мессенджер · меню Ещё': 'messenger-more-menu',
+  'Мессенджер · поиск': 'messenger-search',
+  'Мессенджер · без сети': 'messenger-offline',
+  'Мессенджер · согласие на расшифровку': 'messenger-transcription-consent',
+  'Мессенджер · удаление сообщения': 'messenger-delete-confirm',
+});
+
+function buildTask72VisualCases() {
+  const zones = {
+    'first-run': [
+      'Первый вход · шаг 1',
+      'Первый вход · шаг 2',
+      'Первый вход · шаг 3',
+      'Первый вход · шаг 4',
+      'Первый вход · обзор пройден',
+      'Первый вход · с компьютера',
+    ],
+    subscription: [
+      'Подписка · строка в настройках',
+      'Подписка · экран · пробный период',
+      'Подписка · приветствие',
+      'Подписка · баннер сверху',
+      'Подписка · тост на действии',
+      'Подписка · контакт поддержки',
+      'Подписка · тарифы · места есть',
+      'Подписка · тарифы · мест нет',
+      'Подписка · тарифы · Pro Спорт',
+      'Подписка · проверьте заказ',
+      'Подписка · оплата прошла',
+      'Подписка · экран · активна',
+      'Подписка · экран · только чтение',
+      'Подписка · очередь · заявка подана',
+      'Подписка · очередь · место освободилось',
+    ],
+    messenger: [
+      'Мессенджер · пустой тред',
+      'Мессенджер · тред с карточкой дня',
+      'Мессенджер · Ждём и подсказка',
+      'Мессенджер · запись голосового',
+      'Мессенджер · лист действий',
+      'Мессенджер · меню Ещё',
+      'Мессенджер · поиск',
+      'Мессенджер · без сети',
+      'Мессенджер · согласие на расшифровку',
+      'Мессенджер · удаление сообщения',
+    ],
+  };
+
+  return Object.entries(zones).flatMap(([zone, frames]) => frames.map((frameLabel) => {
+    const isSettingsRow = frameLabel === 'Подписка · строка в настройках';
+    return {
+      id: TASK72_FRAME_IDS[frameLabel],
+      zone,
+      status: 'automated',
+      gate: 'diagnostic',
+      kind: isSettingsRow ? 'demo-settings' : 'demo-v4-visual-frame',
+      ...(isSettingsRow ? { tab: 'widgets' } : { frameLabel, themeId: 'sand' }),
+      rootSelector: TASK72_VISUAL_FRAME_ROOTS[frameLabel],
+      viewport: { width: 375, height: 812 },
+    };
+  }));
+}
 
 export const UI_V4_VISUAL_CASES = Object.freeze([
   {
@@ -538,6 +670,7 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       clipRoundedCorners: 28,
     },
   },
+  ...buildTask72VisualCases(),
   ...UI_V4_CANVAS_ZONES.filter(
     (zone) =>
       ![
@@ -554,6 +687,9 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
         'reports-insights',
         'strength-builder',
         'norm-correction',
+        'first-run',
+        'subscription',
+        'messenger',
       ].includes(zone),
   ).map((zone) => ({
     id: `${zone}-scenario-pending`,
@@ -718,4 +854,43 @@ export function buildUiV4VisualSnapshot(item = {}) {
     },
     products: PRODUCTS.map((product) => ({ ...product })),
   };
+}
+
+/**
+ * Детерминированный переход к кадрам first-run / subscription / messenger.
+ * Возвращает true, если сценарий обработан здесь (openCase не дублирует шаги).
+ */
+export async function prepareUiV4VisualCase(page, item) {
+  if (item.kind !== 'demo-v4-visual-frame') return false;
+  if (!item.frameLabel) {
+    throw new Error(`Visual case ${item.id} is missing frameLabel`);
+  }
+
+  await page.waitForFunction(
+    () => !!window.React && !!window.ReactDOM?.createRoot,
+    undefined,
+    { timeout: 45_000 },
+  );
+
+  if (!fs.existsSync(VISUAL_FIXTURE_SCRIPT)) {
+    throw new Error(`Visual fixture script missing: ${VISUAL_FIXTURE_SCRIPT}`);
+  }
+
+  await page.addScriptTag({ path: VISUAL_FIXTURE_SCRIPT });
+
+  if (item.frameLabel.startsWith('Первый вход · шаг')) {
+    await page.addScriptTag({
+      path: path.join(FIXTURE_ROOT, 'apps/web/heys_ui_onboarding_v1.js'),
+    });
+  }
+
+  await page.evaluate(async ({ frameLabel, themeId }) => {
+    if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+    if (!window.HEYS?.uiV4VisualFixture?.mount) {
+      throw new Error('HEYS.uiV4VisualFixture.mount unavailable after script load');
+    }
+    await window.HEYS.uiV4VisualFixture.mount(frameLabel);
+  }, { frameLabel: item.frameLabel, themeId: item.themeId || null });
+
+  return true;
 }

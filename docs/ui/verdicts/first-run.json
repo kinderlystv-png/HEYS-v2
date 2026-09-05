@@ -658,5 +658,67 @@
       "f": "Строка добавлена дизайнером, вердикта нет",
       "h": "690461063a3f"
     }
+  },
+  "frames": {
+    "Первый вход · шаг 1": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_ui_onboarding_v1.js",
+        "apps/web/heys_app_gates_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Первый вход · шаг 2": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_ui_onboarding_v1.js",
+        "apps/web/heys_app_gates_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Первый вход · шаг 3": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_ui_onboarding_v1.js",
+        "apps/web/heys_app_gates_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Первый вход · шаг 4": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_ui_onboarding_v1.js",
+        "apps/web/heys_app_gates_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Первый вход · обзор пройден": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_ui_onboarding_v1.js",
+        "apps/web/heys_app_gates_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    },
+    "Первый вход · с компьютера": {
+      "evidence": [
+        "apps/web/scripts/ui-v4-visual-fixture.mjs",
+        "apps/web/scripts/ui-v4-visual-capture.mjs",
+        "apps/web/heys_ui_v4_visual_fixture_v1.js",
+        "apps/web/heys_ui_onboarding_v1.js",
+        "apps/web/heys_app_gates_v1.js",
+        "apps/web/heys_undo_v1.js"
+      ]
+    }
   }
 }

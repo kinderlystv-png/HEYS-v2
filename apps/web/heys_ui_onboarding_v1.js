@@ -835,7 +835,53 @@
         localStorage.removeItem(STORAGE_KEY);
       }
       trackTourEvent('onboarding_tour_reset', {});
-    }
+    },
+
+    ensureVisualFixtureTargets() {
+      const boxes = [
+        { id: 'tour-hero-stats', top: 96, left: 16, width: 168, height: 72 },
+        { id: 'tour-calorie-graph', top: 176, left: 16, width: 168, height: 56 },
+        { id: 'tour-insulin-wave', top: 240, left: 16, width: 168, height: 56 },
+        { id: 'tour-fab-buttons', top: 620, left: 150, width: 72, height: 72 },
+        { id: 'tour-widgets-tab', top: 748, left: 24, width: 72, height: 48 },
+        { id: 'tour-stats-tab', top: 748, left: 270, width: 72, height: 48 },
+      ];
+      for (const box of boxes) {
+        if (document.getElementById(box.id)) continue;
+        const el = document.createElement('div');
+        el.id = box.id;
+        Object.assign(el.style, {
+          position: 'fixed',
+          top: `${box.top}px`,
+          left: `${box.left}px`,
+          width: `${box.width}px`,
+          height: `${box.height}px`,
+          pointerEvents: 'none',
+          zIndex: '1',
+        });
+        document.body.appendChild(el);
+      }
+    },
+
+    async openVisualFixtureStep(stepIndex) {
+      this.ensureVisualFixtureTargets();
+      if (state.isActive) {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        if (state.overlayEl) state.overlayEl.remove();
+        if (state.highlightEl) state.highlightEl.remove();
+        if (state.tooltipEl) state.tooltipEl.remove();
+        state.overlayEl = null;
+        state.highlightEl = null;
+        state.tooltipEl = null;
+        state.isActive = false;
+        document.body.classList.remove('tour-active');
+        document.body.style.overflow = '';
+      }
+      await this.start({ force: true, skipWelcome: true });
+      const safeIndex = Math.min(Math.max(0, stepIndex), TOUR_STEPS.length - 1);
+      state.currentStepIndex = safeIndex;
+      this.renderStep();
+    },
   };
 
   // ═══════════════════════════════════════════════════════════════════════════

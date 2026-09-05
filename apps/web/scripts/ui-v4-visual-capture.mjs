@@ -16,6 +16,7 @@ import {
 
 import {
   buildUiV4VisualSnapshot,
+  prepareUiV4VisualCase,
   UI_V4_CANVAS_ZONES,
   UI_V4_DOM_GATE_ZONES,
   UI_V4_PIXEL_GATE_ZONES,
@@ -274,7 +275,8 @@ async function startCanvasServer() {
   };
 }
 
-async function openCase(browser, item, snapshot) {
+async function openCase(browser, item, snapshot, options = {}) {
+  let keepOpen = false;
   const viewport = item.viewport || { width: 390, height: 844 };
   const context = await browser.newContext({
     viewport,
@@ -1625,6 +1627,12 @@ async function openCase(browser, item, snapshot) {
         .waitFor({ state: 'visible', timeout: 45_000 });
       await page.getByRole('button', { name: 'Настройки', exact: true }).click();
     }
+    if (item.kind === 'demo-v4-visual-frame') {
+      const prepared = await prepareUiV4VisualCase(page, item);
+      if (!prepared) {
+        throw new Error(`Visual case ${item.id} was not prepared by prepareUiV4VisualCase`);
+      }
+    }
     await page.locator(item.rootSelector).first().waitFor({ state: 'visible', timeout: 45_000 });
     if (item.id === 'home-widgets-default') {
       // The strict pair is the Canvas grid crop. Product FABs are fixed overlays outside
@@ -2574,6 +2582,18 @@ async function openCase(browser, item, snapshot) {
       throw new Error(`Optional feature consent перекрыл visual case ${item.id}`);
     }
 
+    if (options.measureOnly) {
+      keepOpen = true;
+      return {
+        id: item.id,
+        zone: item.zone,
+        page,
+        context,
+        measureRootSelector: item.captureSelector || item.rootSelector,
+        themeId: item.themeId || 'sand',
+      };
+    }
+
     const file = path.join(OUT_DIR, `${item.id}${item.canvasFrame ? '.runtime' : ''}.png`);
     if (item.captureSelector) {
       const captureRoot = page.locator(item.captureSelector);
@@ -2647,9 +2667,11 @@ async function openCase(browser, item, snapshot) {
       consoleErrors,
     };
   } finally {
-    await context.close();
+    if (!keepOpen) await context.close();
   }
 }
+
+export { ensureServer, openCase };
 
 async function captureCanvasFrame(browser, item, canvasOrigin) {
   const viewport = item.viewport || { width: 390, height: 844 };
@@ -3324,7 +3346,10 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('[ui-v4-visual] failed:', error?.stack || error);
-  process.exit(1);
-});
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMain) {
+  main().catch((error) => {
+    console.error('[ui-v4-visual] failed:', error?.stack || error);
+    process.exit(1);
+  });
+}
