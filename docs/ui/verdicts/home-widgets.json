@@ -14031,13 +14031,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Калории · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Калории · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Калории · 11": {
@@ -14276,13 +14276,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Кольца БЖУ · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Кольца БЖУ · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Кольца БЖУ · 11": {
@@ -14526,13 +14526,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Вода · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Вода · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Вода · 11": {
@@ -14696,13 +14696,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Сон · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Сон · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Сон · 11": {
@@ -14896,13 +14896,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Оценка дня · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Оценка дня · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Оценка дня · 11": {
@@ -15081,13 +15081,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Тепловая карта · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Тепловая карта · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Тепловая карта · 11": {
@@ -15251,13 +15251,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Риск-радар · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Риск-радар · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Риск-радар · 11": {
@@ -15426,13 +15426,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Тренд здоровья · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Тренд здоровья · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Тренд здоровья · 11": {
@@ -15551,13 +15551,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Инсулиновая волна · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Инсулиновая волна · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Инсулиновая волна · 11": {
@@ -15761,13 +15761,13 @@
       "h": "934f58b3314f"
     },
     "Шторка · Вес · 09": {
-      "v": "≠",
-      "f": "инвариант product-модалок: dim берётся из --v4-modal-backdrop-dim (0.45), кадр рисует 0.42",
+      "v": "=",
+      "f": ".widget-wd-sheet__scrim background var(--scrim) + backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) — 730-widgets-dashboard.css:13863-13865; роль --scrim песок 002-ui-v4-palette-roles.css:302 rgba(42,26,12,.5) (синий :592 rgba(16,24,38,.45))",
       "h": "abe0368a1d76"
     },
     "Шторка · Вес · 10": {
-      "v": "≠",
-      "f": "нижнее поле листа держит env(safe-area-inset-bottom) — кадр рисует телефон без выреза",
+      "v": "=",
+      "f": ".widget-wd-sheet padding: 16px 16px calc(18px + env(safe-area-inset-bottom, 0px)) — apps/web/styles/modules/730-widgets-dashboard.css:13880; кадр «Шторка · … · 10» рисует телефон без выреза, safe-area добавляет продукт",
       "h": "74e20d97f9a1"
     },
     "Шторка · Вес · 11": {

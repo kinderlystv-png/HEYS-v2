@@ -1,0 +1,5 @@
+docs(ui): task136 home-widgets shutter 09/10 verdicts
+
+Designer closure: canvas frames omit notch — product adds safe-area itself;
+dimming uses --scrim role instead of removed --v4-modal-backdrop-dim.
+20 rows (10 widgets × 09+10), foreign-row guard.
