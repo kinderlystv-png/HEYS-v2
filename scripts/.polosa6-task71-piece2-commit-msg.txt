@@ -1,0 +1,5 @@
+fix(verdict-guard): classify task51 writer as GUARDED
+
+.task51-apply-verified-equals.mjs was discovered as sole HIGH-risk writer
+(wholesale writeZone in orphan handoff). Add etalon guard marker and switch
+orphan rename/delete to deleteZoneRow/patchZoneRow per-key APIs.
