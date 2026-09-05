@@ -384,6 +384,7 @@ describe('вид листа «Настроить подробно» — геом
         const handle = ruleBlock(BASE_CSS, '.notify-detail__handle {');
         expect(handle).toContain('width: 38px;');
         expect(handle).toContain('height: 4px;');
+        expect(handle).toContain('rgba(var(--v4-ink-rgb');
     });
 
     it('ярусы карточками радиусом 18, строки по 44, разделитель линией набора', () => {

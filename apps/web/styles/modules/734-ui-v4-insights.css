@@ -838,6 +838,13 @@
   background: var(--v4-card, #f7efe2);
   border-radius: 20px;
   padding: 16px;
+  /* Сброс legacy .meal-rec-card из 720-predictive-insights.css: в ярусе
+     «Питание» карточка планера — v4-поверхность, не дневниковый виджет. */
+  border: none;
+  margin-bottom: 0;
+  cursor: default;
+  box-shadow: none;
+  transition: none;
 }
 
 .meal-rec-v4__head {

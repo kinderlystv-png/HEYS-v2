@@ -10597,6 +10597,10 @@ body:has(:is(
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
+  /* Кадр «чипы быстрых действий · 27»: подвал с кнопкой «Готово» в продукте
+     не рисуем — закрытие по крестику и тапу снаружи. Зазор 56 px под нижнюю
+     навигацию даём отступом скроллера, чтобы последний ярус не упирался в таббар. */
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Функциональный скролл к раскрытой строке — не гасим при prefers-reduced-motion (animate-always + JS easing). */
@@ -10935,8 +10939,8 @@ body:has(:is(
      карточке --c2 уходит на грунт --bg с обводкой inset 1,5 px чернил 14 %,
      иначе на той же поверхности пропадает. Выбранный (.is-on) — без изменений. */
   background: var(--v4-bg, #fffaf1);
-  box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.14);
-  color: rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 0 0 1.5px rgba(var(--v4-ink-rgb, 0, 0, 0), 0.14);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -11272,7 +11276,7 @@ body:has(:is(
   height: 4px;
   margin: 0 auto 14px;
   border-radius: 999px;
-  background: var(--v4-track) /* v4-intentional */;
+  background: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.14);
 }
 
 .notify-detail__head {
@@ -18008,6 +18012,9 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet {
+  /* Painted module (2026-08-12): внутри листа --v4-hero = песочная вторая
+     поверхность на всех наборах, а не палитровый --v4-hero корня. */
+  --v4-hero: var(--v4-sand-hero, #efe3cf);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -18097,7 +18104,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__hero--cream {
-  background: var(--v4-sand-hero, #efe3cf);
+  background: var(--v4-hero, #efe3cf);
   border-radius: 26px;
   padding: 24px 20px 20px;
   margin-top: 14px;

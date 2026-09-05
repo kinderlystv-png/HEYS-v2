@@ -1,0 +1,6 @@
+fix(ui-v4): polosa4 task41 legacy surfaces → v4 roles (4 zones)
+
+Переведены legacy-поверхности вне v4 для gamification, nutrition-tab,
+reports-insights и settings-system: hero на --v4-hero с sand-lock,
+строки приёма питания на палитровые роли, meal-rec-card--v4 без 720-наследия,
+ручка notify-detail и чипы настроек на ink-rgb. Контрактный тест sand/blue.

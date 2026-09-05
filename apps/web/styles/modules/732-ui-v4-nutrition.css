@@ -252,7 +252,7 @@
 }
 
 .nutrition-v4-window__label {
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
 /* Шалфей только когда окно действительно открыто: раньше значение было
@@ -338,11 +338,11 @@
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: var(--v4-sand-hero, #efe3cf);
+  background: var(--v4-hero, #efe3cf);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .nutrition-v4-meal-row__kcal {
@@ -350,7 +350,7 @@
   font-size: 13px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
@@ -368,7 +368,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
 .nutrition-v4-meal-row__chevron {
@@ -391,7 +391,7 @@
   padding: 0 12px;
   border: none;
   border-radius: 999px;
-  background: var(--v4-sand-hero, #efe3cf);
+  background: var(--v4-hero, #efe3cf);
   box-shadow: none;
   font-size: 11px;
   font-weight: 700;
@@ -418,7 +418,7 @@
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__num {
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__title,

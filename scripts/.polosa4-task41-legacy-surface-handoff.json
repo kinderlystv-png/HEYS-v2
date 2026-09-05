@@ -1,0 +1,131 @@
+{
+  "task": "polosa4-task41-class-legacy-surface",
+  "generatedAt": "2026-09-05",
+  "rowsInScope": 8,
+  "rowsFixed": 8,
+  "rowsOutsideScope": 1,
+  "checks": [
+    "pnpm ui:v4:check:roles",
+    "cd apps/web && npx vitest run __tests__/role-fallback-truth.test.js",
+    "cd apps/web && npx vitest run __tests__/polosa4-task41-legacy-surface-v4.test.js"
+  ],
+  "entries": [
+    {
+      "zone": "gamification",
+      "contractKey": "Новый уровень · 0 мс · 05",
+      "selector": ".game-v4-sheet__hero--cream",
+      "was": {
+        "role": "background: var(--v4-sand-hero, #efe3cf)",
+        "computedSand": "#efe3cf",
+        "computedBlue": "#efe3cf (sand-lock через --v4-sand-hero на .game-v4-sheet)"
+      },
+      "became": {
+        "role": "background: var(--v4-hero, #efe3cf); .game-v4-sheet { --v4-hero: var(--v4-sand-hero) }",
+        "computedSand": "#efe3cf",
+        "computedBlue": "#efe3cf"
+      },
+      "recommend": "=",
+      "note": "Поверхность на роли v4-hero с sand-lock. Отступление position:relative без overflow:hidden — именованное, не surface."
+    },
+    {
+      "zone": "gamification",
+      "contractKey": "Новый уровень · 420 мс · 05",
+      "selector": ".game-v4-sheet__hero--cream",
+      "was": { "role": "var(--v4-sand-hero)", "computedSand": "#efe3cf", "computedBlue": "#efe3cf" },
+      "became": { "role": "var(--v4-hero) + sand-lock", "computedSand": "#efe3cf", "computedBlue": "#efe3cf" },
+      "recommend": "=",
+      "note": "Тот же селектор, что 0 мс · 05"
+    },
+    {
+      "zone": "gamification",
+      "contractKey": "Новый уровень · 1200 мс · 05",
+      "selector": ".game-v4-sheet__hero--cream",
+      "was": { "role": "var(--v4-sand-hero)", "computedSand": "#efe3cf", "computedBlue": "#efe3cf" },
+      "became": { "role": "var(--v4-hero) + sand-lock", "computedSand": "#efe3cf", "computedBlue": "#efe3cf" },
+      "recommend": "=",
+      "note": "Тот же селектор, что 0 мс · 05"
+    },
+    {
+      "zone": "gamification",
+      "contractKey": "Новый уровень · 1600 мс · 05",
+      "selector": ".game-v4-sheet__hero--cream",
+      "was": { "role": "var(--v4-sand-hero)", "computedSand": "#efe3cf", "computedBlue": "#efe3cf" },
+      "became": { "role": "var(--v4-hero) + sand-lock", "computedSand": "#efe3cf", "computedBlue": "#efe3cf" },
+      "recommend": "=",
+      "note": "Тот же селектор, что 0 мс · 05"
+    },
+    {
+      "zone": "nutrition-tab",
+      "contractKey": "Питание · приём раскрыт · текст",
+      "selector": ".nutrition-v4-meal-row__num, __kcal, __items, __add",
+      "was": {
+        "role": "--v4-sand-hero / --v4-sand-act-deep / --v4-sand-ink; rgba(var(--ink),.56)",
+        "computedSand": "num #efe3cf / act-text #8a4a20 / items rgba(0,0,0,.56)",
+        "computedBlue": "num #efe3cf (sand-locked) / те же литералы --ink"
+      },
+      "became": {
+        "role": "--v4-hero, --v4-act-text, --v4-ink, --v4-ink-data с --v4-ink-rgb",
+        "computedSand": "num #efe3cf / act-text #8a4a20 / items #8f8f8f",
+        "computedBlue": "num #e2ecf6 / act-text #1d5e96 / items #8f8f8f"
+      },
+      "recommend": "=",
+      "note": "UX inline→лист не меняли; поверхности строки приёма переведены на палитровые роли v4."
+    },
+    {
+      "zone": "reports-insights",
+      "contractKey": "Инсайты · ярус Питание · 06",
+      "selector": ".meal-rec-card--v4, .meal-rec-v4__why",
+      "was": {
+        "role": "наследование .meal-rec-card из 720-predictive-insights.css (--card-bg, border, shadow)",
+        "computedSand": "card #ffffff + border legacy / why var(--v4-ink-2)",
+        "computedBlue": "card #ffffff + border legacy / why var(--v4-ink-2)"
+      },
+      "became": {
+        "role": ".meal-rec-card--v4: --v4-card, border:none, box-shadow:none; .meal-rec-v4__why: --v4-ink-2",
+        "computedSand": "card #f7efe2 / why rgba(0,0,0,.55)",
+        "computedBlue": "card #eef3f9 / why rgba(0,0,0,.55)"
+      },
+      "recommend": "="
+    },
+    {
+      "zone": "settings-system",
+      "contractKey": "Настройки · настроить подробно · 03",
+      "selector": ".notify-detail__handle",
+      "was": {
+        "role": "background: var(--v4-track)",
+        "computedSand": "rgba(0,0,0,0.12)",
+        "computedBlue": "rgba(0,0,0,0.12)"
+      },
+      "became": {
+        "role": "background: rgba(var(--v4-ink-rgb), 0.14)",
+        "computedSand": "rgba(0,0,0,0.14)",
+        "computedBlue": "rgba(16,24,38,0.14)"
+      },
+      "recommend": "="
+    },
+    {
+      "zone": "settings-system",
+      "contractKey": "Настройки · чипы быстрых действий · 27",
+      "selector": ".hdr-settings-sheet__scroll, .hdr-settings-sheet__fab-chip",
+      "was": {
+        "role": "без padding-bottom под таббар; chip rgba(0,0,0,.14/.55) литералы",
+        "computedSand": "scroll pb 0; chip border rgba(0,0,0,.14)",
+        "computedBlue": "scroll pb 0; chip border rgba(0,0,0,.14)"
+      },
+      "became": {
+        "role": "scroll padding-bottom calc(56px + safe-area); chip --v4-ink-rgb/.14 и --v4-ink-2",
+        "computedSand": "scroll pb 56px+safe; chip border ink 14%",
+        "computedBlue": "scroll pb 56px+safe; chip border ink 14% (blue rgb)"
+      },
+      "recommend": "=",
+      "note": "Отдельный .foot «Готово» не добавляли — закрытие по крестику; зазор под навигацию в скроллере."
+    }
+  ],
+  "outsideScope": [
+    {
+      "zone": "strength-builder",
+      "contractKey": "(1 строка класса legacy-v4 в снимке)",
+      "reason": "полосы 1/3 — apps/web/strength/* не трогали"
+    }
+  ]
+}
