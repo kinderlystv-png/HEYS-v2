@@ -187,7 +187,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 05.09: reverse-coverage aggregate frames + JSON repair — typedMismatch 214→201
     // (13 typed «≠» сведены в «=» при пересмотре кадров пакета 04.09).
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [201, '185877fe0cf91c3f'],
+    // 05.09: полосы 1/3/4 свели М1, М2/М3 и бейджи единиц В3 — 27 typed «≠»
+    // стали «=» по факту кода, не по правке числа. Храповик едет только вниз.
+    typedMismatch: [174, 'df869c83b408a2c8'],
     notApplicable: [107, '13d5a59f2d87bb7f'],
   }),
   'tab-activity': Object.freeze({
@@ -560,6 +562,95 @@ function writeFileAtomic(filePath, content) {
   }
 }
 
+const ZONE_LOCK_DISABLED = process.env.HEYS_VERDICT_DISABLE_ZONE_LOCK === '1';
+const ZONE_RMW_DELAY_MS = Number(process.env.HEYS_VERDICT_RMW_DELAY_MS || 0);
+
+function zoneLockPath(zoneId) {
+  return path.join(VERDICTS_DIR, `.${zoneId}.json.write.lock`);
+}
+
+function sleepSync(ms) {
+  if (ms <= 0) return;
+  const deadline = Date.now() + ms;
+  while (Date.now() < deadline) {
+    // Sync spin — scripts only; keeps RMW window open for guard tests.
+  }
+}
+
+function readZoneLockPayload(lockPath) {
+  try {
+    return JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function isStaleZoneLock(lockPath) {
+  const payload = readZoneLockPayload(lockPath);
+  if (!payload?.pid) return true;
+  if (payload.time && Date.now() - payload.time > 120_000) return true;
+  try {
+    process.kill(payload.pid, 0);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+function acquireZoneWriteLock(zoneId, { timeoutMs = 60_000 } = {}) {
+  if (ZONE_LOCK_DISABLED) return null;
+  const lockPath = zoneLockPath(zoneId);
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const fd = fs.openSync(lockPath, 'wx');
+      try {
+        fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, time: Date.now() }), 'utf8');
+      } finally {
+        fs.closeSync(fd);
+      }
+      return lockPath;
+    } catch (error) {
+      if (error.code !== 'EEXIST') throw error;
+      if (isStaleZoneLock(lockPath)) {
+        try {
+          fs.unlinkSync(lockPath);
+        } catch {
+          // Another writer may have won the race — retry.
+        }
+        continue;
+      }
+      sleepSync(5 + Math.floor(Math.random() * 10));
+    }
+  }
+  throw new Error(`Не удалось захватить lock зоны «${zoneId}» за ${timeoutMs}ms`);
+}
+
+function releaseZoneWriteLock(lockPath) {
+  if (!lockPath) return;
+  try {
+    fs.unlinkSync(lockPath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+}
+
+/** Cross-process mutex for one zone file's read-modify-write cycle. */
+export function withZoneWriteLock(zoneId, fn, { timeoutMs = 60_000 } = {}) {
+  const lockPath = acquireZoneWriteLock(zoneId, { timeoutMs });
+  try {
+    return fn();
+  } finally {
+    releaseZoneWriteLock(lockPath);
+  }
+}
+
+function maybeRmwDelay() {
+  if (process.env.HEYS_VERDICT_GUARD_TEST === '1' && ZONE_RMW_DELAY_MS > 0) {
+    sleepSync(ZONE_RMW_DELAY_MS);
+  }
+}
+
 export function writeZone(zoneId, zone) {
   fs.mkdirSync(VERDICTS_DIR, { recursive: true });
   writeFileAtomic(zonePath(zoneId), `${JSON.stringify(zone, null, 2)}\n`);
@@ -661,54 +752,63 @@ export function shouldSkipStaleHandoff(liveRow, handoffVerdict, {
  * Handoff re-runs: pass `{ handoff: true, handoffH }` — settled rows with a newer `h` are skipped.
  */
 export function setVerdictKey(zoneId, key, patch, opts = {}) {
-  const {
-    root = ROOT,
-    skipIf,
-    dryRun = false,
-    handoffH,
-    handoff = handoffH != null,
-    allowDowngrade = false,
-  } = opts;
-  const zone = readZone(zoneId);
-  if (!zone) throw new Error(`Зоны «${zoneId}» нет.`);
-  const row = zone.rows[key];
-  if (!row) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
-  if (skipIf?.(row)) return { skipped: true, reason: 'skipIf', was: { v: row.v, f: row.f, h: row.h } };
+  return withZoneWriteLock(zoneId, () => {
+    const {
+      root = ROOT,
+      skipIf,
+      dryRun = false,
+      handoffH,
+      handoff = handoffH != null,
+      allowDowngrade = false,
+    } = opts;
+    const zone = readZone(zoneId);
+    if (!zone) throw new Error(`Зоны «${zoneId}» нет.`);
+    const row = zone.rows[key];
+    if (!row) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
+    if (skipIf?.(row)) return { skipped: true, reason: 'skipIf', was: { v: row.v, f: row.f, h: row.h } };
 
-  const guard = shouldSkipStaleHandoff(row, patch.verdict, { allowDowngrade, handoffH, handoff });
-  if (guard.skip) {
-    return {
-      skipped: true,
-      reason: guard.reason,
-      message: guard.message,
-      was: { v: row.v, f: row.f, h: row.h },
-    };
-  }
+    const guard = shouldSkipStaleHandoff(row, patch.verdict, { allowDowngrade, handoffH, handoff });
+    if (guard.skip) {
+      return {
+        skipped: true,
+        reason: guard.reason,
+        message: guard.message,
+        was: { v: row.v, f: row.f, h: row.h },
+      };
+    }
 
-  const was = { v: row.v, f: row.f, h: row.h };
-  applyVerdictToRow(row, patch, root);
-  if (!dryRun) writeZone(zoneId, zone);
-  return { skipped: false, was, now: { v: row.v, f: row.f, h: row.h } };
+    const was = { v: row.v, f: row.f, h: row.h };
+    applyVerdictToRow(row, patch, root);
+    maybeRmwDelay();
+    if (!dryRun) writeZone(zoneId, zone);
+    return { skipped: false, was, now: { v: row.v, f: row.f, h: row.h } };
+  });
 }
 
 /**
  * Fresh read → mutate one row (any fields, e.g. rehash `h`) → write.
  */
 export function patchZoneRow(zoneId, key, mutator, { dryRun = false } = {}) {
-  const zone = readZone(zoneId);
-  if (!zone?.rows?.[key]) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
-  const before = JSON.stringify(zone.rows[key]);
-  mutator(zone.rows[key], zone);
-  const changed = JSON.stringify(zone.rows[key]) !== before;
-  if (changed && !dryRun) writeZone(zoneId, zone);
-  return { changed, row: zone.rows[key] };
+  return withZoneWriteLock(zoneId, () => {
+    const zone = readZone(zoneId);
+    if (!zone?.rows?.[key]) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
+    const before = JSON.stringify(zone.rows[key]);
+    mutator(zone.rows[key], zone);
+    const changed = JSON.stringify(zone.rows[key]) !== before;
+    maybeRmwDelay();
+    if (changed && !dryRun) writeZone(zoneId, zone);
+    return { changed, row: zone.rows[key] };
+  });
 }
 
 /** Delete one verdict row with fresh read before write (rehash «gone» keys). */
 export function deleteZoneRow(zoneId, key, { dryRun = false } = {}) {
-  const zone = readZone(zoneId);
-  if (!zone?.rows?.[key]) return { deleted: false };
-  delete zone.rows[key];
-  if (!dryRun) writeZone(zoneId, zone);
-  return { deleted: true };
+  return withZoneWriteLock(zoneId, () => {
+    const zone = readZone(zoneId);
+    if (!zone?.rows?.[key]) return { deleted: false };
+    delete zone.rows[key];
+    maybeRmwDelay();
+    if (!dryRun) writeZone(zoneId, zone);
+    return { deleted: true };
+  });
 }
