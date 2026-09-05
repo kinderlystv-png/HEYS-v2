@@ -1,0 +1,94 @@
+{
+  "zone": "home-widgets",
+  "scope": "Task 38 — canvas-conflict-not-implemented · heys_widgets_ui_v1.js only",
+  "generated": "2026-09-05",
+  "implemented": [
+    {
+      "key": "Смена вида · лист выбора · рисунок 08",
+      "class": "canvas-conflict-feature",
+      "fact": "WeightDynamicsChartSvg: sheetPreview+compact рисует circle r=3.5 на chart.last; иначе без точки — heys_widgets_ui_v1.js:7223-7270, renderPreview sheetPreview:true"
+    },
+    {
+      "key": "Каталог · значки вместо эмодзи · 07",
+      "class": "canvas-conflict-feature",
+      "fact": "CatalogStrip bar budget: inline 9.5px/600 mono (кадр 07), не 11px правило hdr-edit — heys_widgets_ui_v1.js:10307-10316"
+    }
+  ],
+  "implementedCount": 2,
+  "foreign": [
+    {
+      "key": "Сон · Долг за неделю · 03",
+      "class": "canvas-conflict-geometry",
+      "reason": "копия кикера «Недосып за 7 дней» vs контракт «Недосып · 7 дней» — отдельный scope сна, не canvas-conflict-feature"
+    },
+    {
+      "key": "Сон · Долг за неделю · 04",
+      "class": "canvas-conflict-geometry",
+      "reason": "мета «норма 7,5» vs «7,5 ч» — копия сна"
+    },
+    {
+      "key": "Сон · Долг за неделю · текст",
+      "class": "canvas-conflict-geometry",
+      "reason": "строка кадра vs контракт :189 — копия сна"
+    },
+    {
+      "key": "Смена вида · лист выбора · 34",
+      "class": "canvas-conflict-geometry",
+      "reason": "намеренное уменьшение превью vs плитка — decisionRef FINDINGS_HISTORY, designer-pending"
+    },
+    {
+      "key": "Смена вида · лист выбора · рисунок 06",
+      "class": "canvas-conflict-geometry",
+      "reason": "намеренное уменьшение превью — designer-pending"
+    },
+    {
+      "key": "Смена вида · лист выбора · рисунок 07",
+      "class": "canvas-conflict-geometry",
+      "reason": "намеренное уменьшение превью — designer-pending"
+    },
+    {
+      "key": "Каталог · значки вместо эмодзи · 13",
+      "class": "canvas-conflict-geometry",
+      "reason": "превью 1×1 фон --c2 — CSS 730, вне widgets_ui-only strip"
+    },
+    {
+      "key": "Каталог · значки вместо эмодзи · 18",
+      "class": "canvas-conflict-geometry",
+      "reason": "чипы на плитке vs колонка каталога — layout CSS/preview"
+    },
+    {
+      "key": "strength-builder · *",
+      "class": "canvas-conflict-feature",
+      "reason": "superset-only / strength-builder scope — forbidden в Task 38"
+    }
+  ],
+  "notCode": [
+    {
+      "key": "Разбор · Вес · 92",
+      "class": "functional-flow",
+      "reason": "ввод пилюлями в листе vs переход в день — «записано дизайнеру», ждём решения"
+    },
+    {
+      "key": "Разбор · Вес · 93",
+      "class": "functional-flow",
+      "reason": "то же — designer-pending"
+    },
+    {
+      "key": "Разбор · Вес · 94",
+      "class": "functional-flow",
+      "reason": "то же — designer-pending"
+    },
+    {
+      "key": "Разбор · Вес · 95",
+      "class": "functional-flow",
+      "reason": "то же — designer-pending"
+    },
+    {
+      "key": "Каталог · нет места · 14",
+      "class": "missing-element",
+      "reason": "подпись рядом с превью vs плитка целиком — продуктовое решение превью, не баг кода"
+    }
+  ],
+  "tests": ["apps/web/__tests__/widgets-canvas-conflict-not-implemented.test.js"],
+  "verify": "HEYS_DESIGN_GATES=skip pnpm exec vitest run apps/web/__tests__/widgets-canvas-conflict-not-implemented.test.js"
+}

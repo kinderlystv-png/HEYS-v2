@@ -1,0 +1,8 @@
+fix(widgets): Task 38 canvas-conflict-not-implemented in widgets_ui
+
+- WeightDynamicsChartSvg: last-point dot r=3.5 in compact sheet preview
+  (Смена вида · лист выбора · рисунок 08)
+- CatalogStrip header budget: 9.5px mono per glyph-catalog frame 07
+- Handoff: scripts/.sb-task38-widgets-handoff.json (2 implemented, foreign/notCode)
+
+Verified: HEYS_DESIGN_GATES=skip vitest widgets-canvas-conflict-not-implemented

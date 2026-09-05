@@ -7220,9 +7220,18 @@
    * толщина — в экранных, и dash-узор разъезжается с самой линией. Проявление
    * даёт .widget-wd__el--chart, оно же и в остальных видах.
    */
-  function WeightDynamicsChartSvg({ chart, stateClass, compact, playEntrance = widgetV4ShouldAnimateSparkDraw() }) {
+  function WeightDynamicsChartSvg({
+    chart,
+    stateClass,
+    compact,
+    sheetPreview = false,
+    playEntrance = widgetV4ShouldAnimateSparkDraw()
+  }) {
     const pathD = React.useMemo(() => weightDynamicsPointsToPath(chart?.points), [chart?.points]);
     if (!pathD) return null;
+    // Кадр «Смена вида · лист выбора · рисунок 08»: превью листа рисует последнюю
+    // точку r 3.5. На живой плитке и в compact вне листа точки нет.
+    const lastDot = compact && sheetPreview ? chart?.last : null;
 
     return React.createElement('span', {
       className: 'widget-wd__chart ' + (stateClass || '')
@@ -7252,7 +7261,14 @@
           strokeLinecap: 'round',
           strokeLinejoin: 'round',
           vectorEffect: 'non-scaling-stroke'
-        })
+        }),
+        lastDot ? React.createElement('circle', {
+          className: 'widget-wd__chart-dot',
+          cx: lastDot.x,
+          cy: lastDot.y,
+          r: 3.5,
+          fill: 'currentColor'
+        }) : null
       )
     );
   }
@@ -7353,6 +7369,7 @@
   function renderWeightDynamicsBody(variant, dyn, opts = {}) {
     const {
       compact = false,
+      sheetPreview = false,
       motion = null,
       playEntrance = compact ? false : widgetV4ShouldAnimateSparkDraw()
     } = opts;
@@ -7486,6 +7503,7 @@
           chart: dyn.chart,
           stateClass,
           compact,
+          sheetPreview,
           playEntrance
         })
       );
@@ -7516,7 +7534,7 @@
       onVariantSaved: ({ widgetId, variant }) => {
         HEYS.Widgets.emit?.('weightDynamics:variantSaved', { widgetId, variant });
       },
-      renderPreview: (id) => renderWeightDynamicsBody(id, dyn, { compact: true })
+      renderPreview: (id) => renderWeightDynamicsBody(id, dyn, { compact: true, sheetPreview: true })
     });
     const motion = useWeightDynamicsMotion(widget, dyn);
     const variantId = hook.renderVariant;
@@ -10304,7 +10322,17 @@
         }, 'Отмена'),
         React.createElement('span', { className: 'widget-v4-catalog__bar-mid' },
           React.createElement('span', { className: 'widget-v4-catalog__bar-name' }, 'Каталог'),
-          React.createElement('span', { className: 'widget-v4-catalog__budget n' },
+          React.createElement('span', {
+            className: 'widget-v4-catalog__budget n',
+            // Кадр «Каталог · значки вместо эмодзи · 07»: 9.5px/1 моно, 56 % —
+            // шапка листа; общее правило «вид счётчика места» (11px) для hdr-edit.
+            style: {
+              fontSize: '9.5px',
+              fontWeight: 600,
+              lineHeight: 1,
+              fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace"
+            }
+          },
             'занято ',
             React.createElement('span', {
               className: 'widget-v4-catalog__budget__num'
