@@ -396,26 +396,29 @@
 
     const periodRow = calendarViewMode === VIEW_MONTH
       ? React.createElement('div', { className: 'ma-habit-cal-period ma-habit-cal-period--month' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'ma-habit-cal-period-nav',
-          'aria-label': 'Предыдущий месяц',
-          onClick: () => {
-            setMonthAnchorKey((k) => shiftMonthAnchorIso(k, -1));
-          }
-        }, '\u2039'),
-        React.createElement('span', {
-          className: 'ma-habit-cal-period-label ma-habit-cal-period-label--month',
-          'aria-live': 'polite'
-        }, calendarData.title),
-        React.createElement('button', {
-          type: 'button',
-          className: 'ma-habit-cal-period-nav',
-          'aria-label': 'Следующий месяц',
-          onClick: () => {
-            setMonthAnchorKey((k) => shiftMonthAnchorIso(k, 1));
-          }
-        }, '\u203A')
+        React.createElement('span', { className: 'ma-habit-cal-period-nav-group' },
+          React.createElement('button', {
+            type: 'button',
+            className: 'ma-habit-cal-period-nav',
+            'aria-label': 'Предыдущий месяц',
+            onClick: () => {
+              setMonthAnchorKey((k) => shiftMonthAnchorIso(k, -1));
+            }
+          }, '\u2039'),
+          React.createElement('span', {
+            className: 'ma-habit-cal-period-label ma-habit-cal-period-label--month',
+            'aria-live': 'polite'
+          }, calendarData.title),
+          React.createElement('button', {
+            type: 'button',
+            className: 'ma-habit-cal-period-nav',
+            'aria-label': 'Следующий месяц',
+            onClick: () => {
+              setMonthAnchorKey((k) => shiftMonthAnchorIso(k, 1));
+            }
+          }, '\u203A')
+        ),
+        React.createElement('span', { className: 'ma-habit-cal-period-mode' }, 'режим «Месяц»')
       )
       : (!isActivityV4
         ? React.createElement('div', { className: 'ma-habit-cal-period ma-habit-cal-period--28' },

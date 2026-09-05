@@ -839,7 +839,7 @@
         muted: trainingsRow.muted,
         strong: trainingsRow.strong,
         running: trainingsRow.running,
-        chevron: trainingsRow.running,
+        chevron: !!regularTrainingsBlock,
         onClick: regularTrainingsBlock ? () => setCardioOpen((v) => !v) : undefined,
         expanded: regularTrainingsBlock ? cardioOpen : undefined
       }),
