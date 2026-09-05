@@ -1150,7 +1150,7 @@
   padding-bottom: 16px;
   border-radius: 26px;
   background: var(--v4-bg, #ffffff);
-  box-shadow: 0 18px 50px rgba(33, 30, 25, 0.34);
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--v4-ink, #211e19) 34%, transparent);
   overflow-y: auto;
   overscroll-behavior: contain;
   transition: transform 180ms ease-out;

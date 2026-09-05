@@ -1,0 +1,88 @@
+{
+  "task": "polosa4-task53-phase2-nutrition-tab",
+  "zone": "nutrition-tab",
+  "baseline": {
+    "capturedAt": "2026-09-05 task-start",
+    "command": "node scripts/ui-v4-list-bare-literals.mjs --buckets",
+    "warmTotal": 520,
+    "nutritionTab": {
+      "bucket1": 34,
+      "bucket2": 9,
+      "bucket3": 4,
+      "bucket0": 47,
+      "bucket2Files": [
+        "730-widgets-dashboard.css (1, shared — widgets forbidden)",
+        "heys_paywall_v1.js (4)",
+        "heys_day_diary_section.js (2, shared home-widgets)",
+        "heys_supplements_v1.js (2)"
+      ]
+    }
+  },
+  "after": {
+    "command": "node scripts/ui-v4-list-bare-literals.mjs --buckets",
+    "warmTotal": 463,
+    "nutritionTab": {
+      "bucket2": 6,
+      "bucket2Files": ["heys_paywall_v1.js (4)", "heys_supplements_v1.js (2)"]
+    },
+    "note": "warmTotal и bucket2 по зоне сдвинулись параллельными правками; наш CSS-diff — 1 место bucket0 в 732."
+  },
+  "deltaThisTask": {
+    "filesEdited": ["apps/web/styles/modules/732-ui-v4-nutrition.css"],
+    "bucket0Removed": 1,
+    "selector": ".nutrition-v4-sheet box-shadow",
+    "was": "rgba(33, 30, 25, 0.34)",
+    "became": "color-mix(in srgb, var(--v4-ink, #211e19) 34%, transparent)"
+  },
+  "buckets": {
+    "1": {
+      "action": "skip",
+      "reason": "34 мест — в основном 730-widgets-dashboard (зона widgets запрещена) + product-card"
+    },
+    "2": {
+      "action": "handoff-polosa3-js",
+      "remaining": 6,
+      "entries": [
+        {
+          "file": "heys_paywall_v1.js",
+          "fn": "TrialQueueSection / meta",
+          "places": 4,
+          "literals": ["#fef3c7", "#fde68a", "#f59e0b×2"],
+          "suggest": "linear-gradient/border/color → V4_WARN_* constants как в heys_supplements_v1.js"
+        },
+        {
+          "file": "heys_supplements_v1.js",
+          "fn": "priorityColors.medium",
+          "places": 2,
+          "literals": ["#fde047", "#ca8a04"],
+          "suggest": "medium: { bg: V4_WARN_SURFACE, border: V4_WARN_SOFT, text: V4_WARN_TEXT }"
+        }
+      ]
+    },
+    "3": {
+      "action": "canvas-contract-exception",
+      "reason": "--nut-dim/--nut-dim-icon держат тон канваса (--dim); nutrition-v4-structure + canvas-razbor тесты требуют #6b5f4f на sand"
+    }
+  },
+  "forbiddenSkipped": [
+    "730-widgets-dashboard.css (widgets)",
+    "400-water-and-hydration.css --wr-dim (water-add)",
+    "heys_add_product_step_v1.js (product-card)",
+    "fingers/strength/builder/cycle/curator/monthly_reports/index/tab-activity/verdicts"
+  ],
+  "computedSample": {
+    "sand": {
+      "nutDim": "#6b5f4f",
+      "sheetShadow": "uses var(--v4-ink) mix, not rgba(33,30,25)"
+    },
+    "blue": {
+      "nutDim": "#5a6474",
+      "sheetShadow": "uses var(--v4-ink) mix, differs from sand"
+    }
+  },
+  "jsConflictNote": "Продуктовый JS nutrition не трогали: 6 bucket-2 мест (paywall 4 + supplements 2) и 7 bucket-0 в heys_iw_ui.js — разводка полоса 3. CSS-only закрыл 1 warm rgba в 732.",
+  "checks": {
+    "ui:v4:check:roles": "pass",
+    "polosa4-task53-bare-literals-nutrition-tab.test.js": "pass"
+  }
+}
