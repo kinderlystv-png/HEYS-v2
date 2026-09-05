@@ -155,7 +155,7 @@ describe('polosa4 task96 · динамика веса curve · один путь
     expect(a).toEqual(b);
   });
 
-  it('computed: лист (compact) и Главная (full) — space-between, спарклайн слева', () => {
+  it('computed: лист открыт (sheetPreview) и Главная закрыта (full) — space-between, спарклайн слева', () => {
     const { renderComposition } = loadComposition();
     const sheetHost = document.createElement('div');
     sheetHost.className = 'widget-wd widget-wd--preview widget widget--2x1 widget--crashRisk';
@@ -190,7 +190,14 @@ describe('polosa4 task96 · динамика веса curve · один путь
     expect(sheetSnap.display).toBe('flex');
     expect(homeSnap.display).toBe('flex');
 
-    console.info('[polosa4-task96 computed]', JSON.stringify({ sheet: sheetSnap, home: homeSnap }));
+    const sample = { sheetOpen: sheetSnap, homeClosed: homeSnap };
+    console.info('[polosa4-task96 computed]', JSON.stringify(sample));
+    expect(sample.sheetOpen.justifyContent).toBe('space-between');
+    expect(sample.homeClosed.justifyContent).toBe('space-between');
+    expect(sample.sheetOpen.hasSpark).toBe(true);
+    expect(sample.homeClosed.hasSpark).toBe(true);
+    expect(sample.sheetOpen.display).toBe('flex');
+    expect(sample.homeClosed.display).toBe('flex');
   });
 
   it('computed: sand и blue — спарклайн на месте на обоих наборах', () => {
