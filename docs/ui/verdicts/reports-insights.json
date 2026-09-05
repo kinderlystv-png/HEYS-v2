@@ -4464,8 +4464,8 @@
       "h": "0d870165fdc4"
     },
     "Визуал v4 · Отчёты · рисунок 11": {
-      "v": "≠",
-      "f": "путь M9 6l6 6-6 6 в продукте не рисуется: шеврон собран глифом, не svg",
+      "v": "=",
+      "f": "heys_monthly_reports_v1.js:267-279 — svg path M9 6l6 6-6 6 в .reports-v4-periods-card__days-chevron; 733-ui-v4-reports.css:1791-1795",
       "h": "163302844c74"
     },
     "Визуал v4 · Отчёты · рисунок 12": {
@@ -6319,6 +6319,14 @@
         "apps/web/styles/modules/734-ui-v4-insights.css",
         "apps/web/__tests__/reports-insights-v4-canvas-geometry.test.js",
         "apps/web/__tests__/insights-v4-canvas-razbor.test.js"
+      ]
+    },
+    "Лист периодов": {
+      "evidence": [
+        "apps/web/heys_day_tab_impl_v1.js",
+        "apps/web/heys_monthly_reports_v1.js",
+        "apps/web/styles/modules/733-ui-v4-reports.css",
+        "apps/web/__tests__/reports-insights-v4-canvas-geometry.test.js"
       ]
     }
   }
