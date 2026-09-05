@@ -2204,8 +2204,13 @@
 
 .cur-cab__create-bar {
   flex-shrink: 0;
-  padding: 12px 18px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 0 18px calc(16px + env(safe-area-inset-bottom, 0px));
   background: var(--v4-bg, #f6f1e8);
+}
+
+/* Кадр «Кабинет · Клиенты · 21»: отступ сверху 12 у вторичной кнопки набора. */
+.cur-cab__create-bar .cur-cab__create {
+  margin-top: 12px;
 }
 
 /* Шапка карточки клиента одной строкой: аватар, имя с телефоном, пилюля
