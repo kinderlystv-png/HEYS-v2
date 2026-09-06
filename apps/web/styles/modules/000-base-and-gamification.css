@@ -8251,31 +8251,24 @@ body:has(.offline-banner) .wrap {
   opacity: 0.55;
 }
 
-/* Кадр food-meal «Приёмы дня · список · 03»: пилюля прыжка на сегодня — видимая
-   цель 44 с заливкой --c2, 10,5 px/700 тоном --ac; без невидимого ::after. */
+/* date-remainders «вид чужого дня» (правка 1 сентября): «Сегодня» — надпись
+   11 px/700 тоном --ac, без заливки; min-height 44 — строка «тач-цели»
+   (6 сентября), видимая цель без ::after. */
 .date-picker--v4 .date-picker-inline-today {
   flex: none;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
   margin: 0;
-  padding: 0 10px;
+  padding: 0;
   border: none;
-  border-radius: 999px;
-  background: var(--v4-hero, #efe3cf);
-  /* v4-intentional */
+  background: transparent;
   color: var(--v4-act-text);
   font-family: inherit;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-}
-
-@media (hover: hover) {
-  .date-picker--v4 .date-picker-inline-today:hover {
-    filter: brightness(1.05);
-  }
 }
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
@@ -9480,9 +9473,9 @@ svg.date-picker-icon {
     line-height: 1;
   }
 
-  /* Кадр food-meal «Приёмы дня · список · 03» — тот же кегль и на узком. */
+  /* date-remainders «вид чужого дня» — тот же кегль и на узком. */
   .date-picker--v4 .date-picker-inline-today {
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
   }

@@ -1847,9 +1847,11 @@
       "h": "6194ff3614ad"
     },
     "Приёмы дня · список · 03": {
-      "v": "=",
-      "f": ".date-picker-inline-today — min-height 44, padding 0 10px, background var(--v4-hero) (--c2), 700 10.5px, color var(--v4-act-text); 000-base-and-gamification.css:8261, heys_day_pickers.js:356",
-      "h": "2c5b4c4db653"
+      "v": "≠",
+      "f": "Кадр food-meal рисует залитую --c2 пилюлю 10,5 px, поля 0 10. Тот же класс .date-picker-inline-today в продукте следует date-remainders «вид чужого дня» (:8256): transparent, 11px/700 --v4-act-text, min-height 44. Строка food-meal «шапка и окно приёмов» отдаёт вид капсулы date-remainders.v4.dc.html.",
+      "h": "2c5b4c4db653",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149"
     },
     "Приёмы дня · список · 04": {
       "v": "—",

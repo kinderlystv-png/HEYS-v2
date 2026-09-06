@@ -321,7 +321,20 @@ body:has(.page-reports) .hdr::after {
   padding-top: 0;
   box-sizing: border-box;
   width: 100%;
+}
+
+/* Сетка виджетов может давать горизонтальный bleed — режем на контейнере
+   вкладки, не на .page-day: overflow-x:hidden там ломает position:sticky у
+   readonly-banner--sticky (скролл идёт через body, а не через .page-day). */
+.widgets-tab {
   overflow-x: hidden;
+}
+
+/* Базовый mobile-guard (000-base §40.5) задаёт overflow-x:hidden !important
+   для .page-day — снимаем, горизонталь держит body; bleed баннера (−18px)
+   укладывается в border-box вкладки без отдельного clip. */
+.page-day {
+  overflow-x: visible !important;
 }
 
 /* Главная: сетка целиком на экране ≥740 px — без принудительного скролла страницы. */

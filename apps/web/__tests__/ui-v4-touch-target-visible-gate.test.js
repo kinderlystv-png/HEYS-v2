@@ -158,7 +158,11 @@ describe('ui-v4 touch-target visible gate', () => {
     expect(resolveTouchZone('733-ui-v4-login-theme.css', '.heys-login-theme__done', 'heys-login-theme__done')).toBe(
       'login',
     );
-    expect(resolveTouchZone('000-base-and-gamification.css', '.btn', 'btn')).toBeNull();
+    expect(resolveTouchZone('000-base-and-gamification.css', '.btn', 'btn')).toBe('shared');
+    expect(resolveTouchZone('000-base-and-gamification.css', '.hdr-theme-btn', 'hdr-theme-btn')).toBe('shared');
+    expect(resolveTouchZone('heys-components.css', '.monthly-reports-tab', 'monthly-reports-tab')).toBe(
+      'reports-insights',
+    );
   });
 
   it('resolveTouchZone · cycle-календарь из 500-pwa в cycle', () => {

@@ -142,7 +142,7 @@ describe('ряд ввода и отправка', () => {
     const send = cssSource.match(/\n\.messenger-send \{[^}]*\}/)[0];
     expect(send).toMatch(/width:\s*44px/);
     expect(send).toMatch(/border-radius:\s*50%/);
-    expect(send).toMatch(/background:\s*#1d70b7/);
+    expect(send).toMatch(/background:\s*var\(--v4-act/);
     expect(send).not.toMatch(/linear-gradient/);
   });
 

@@ -26,16 +26,16 @@ describe('DatePicker v4 капсула', () => {
         expect(baseCss).toContain('.date-picker--v4 .date-picker-trigger-lbl');
     });
 
-    // 2026-09-05: food-meal «Приёмы дня · список · 03» — залитая пилюля 10,5 px/700.
-    it('CSS — кегли по контракту (12.5 / 10.5 / 10)', () => {
+    // date-remainders «вид чужого дня» (1 сентября) — надпись 11 px/700 без заливки.
+    it('CSS — кегли по контракту (12.5 / 11 / 10)', () => {
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-lbl-inner \.date-picker-main[\s\S]{0,120}font-size:\s*12\.5px/,
         );
         expect(baseCss).toMatch(
-            /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,320}font-size:\s*10\.5px/,
-        );
-        expect(baseCss).not.toMatch(
             /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,320}font-size:\s*11px/,
+        );
+        expect(baseCss).toMatch(
+            /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,320}background:\s*transparent/,
         );
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-sub--relative[\s\S]{0,120}font-size:\s*10px/,

@@ -55,7 +55,7 @@ export const EXEMPTION_REGISTRY = [
   {
     type: 'range-slider',
     match: (sel) =>
-      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|aps-grams-slider|meal-mood-scale__slider)/i.test(
+      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|aps-grams-slider|meal-mood-scale__slider|outcome-modal__slider|reading-reader__font-control)/i.test(
         sel,
       ),
     reason: 'ползунок диапазона — не полноразмерная кнопка, контракт отдельной геометрии',
@@ -114,9 +114,24 @@ export const EXEMPTION_REGISTRY = [
     reason: 'home-widgets: ручка перетаскивания — не тач-CTA',
   },
   {
+    type: 'named-exception',
+    selector: '.photo-processed-checkbox',
+    reason: 'чекбокс обработки фото — индикатор, не полноразмерная кнопка',
+  },
+  {
+    type: 'dev-only',
+    match: (sel) => /dev-clear-weight/i.test(sel),
+    reason: 'dev-only сброс веса — не prod CTA',
+  },
+  {
     type: 'toggle-knob',
     match: (sel) => /(?:^|\s)\.ios-toggle(?:\b|-)/i.test(sel) && !/ios-toggle-label/i.test(sel),
     reason: 'тумблер — нажимается вся строка 44, узел 26 только показывает состояние (cycle/water контракт)',
+  },
+  {
+    type: 'toggle-knob',
+    match: (sel) => /(?:^|\s)\.toggle-slider\b/i.test(sel),
+    reason: 'тумблер профиля — цель вся строка label, не ползунок',
   },
   {
     type: 'toggle-row',
@@ -165,13 +180,18 @@ export const SELECTOR_ZONE_RULES = [
   },
   { test: (s) => /\.hdr-settings-sheet|\.tab-settings-menu|\.notify-detail__/.test(s), zone: 'settings-system' },
   { test: (s) => /\.profile-v4-toggle|\.pwa-banner|\.update-toast|\.ca-banner|\.ca-modal|\.wn-/.test(s), zone: 'pwa-update' },
+  { test: (s) => /\.confirm-modal-btn|\.delete-confirm-btn/.test(s), zone: 'shared' },
+  { test: (s) => /\.tab-switch-labels--/.test(s), zone: 'reports-insights' },
 ];
 
 /** @type {{ re: RegExp, zone: string }[]} */
 export const CLASS_ZONE_RULES = [
   { re: /^heys-login-/, zone: 'login' },
-  { re: /^nutrition-v4-/, zone: 'nutrition-tab' },
-  { re: /^water-|^advice-v4-|^advice-list-|^advice-toggle|^macro-toast/, zone: 'water-add' },
+  { re: /^nutrition-v4-|^diary-compact|^diary-fiber/, zone: 'nutrition-tab' },
+  {
+    re: /^water-|^advice-v4-|^advice-list-|^advice-toggle|^macro-toast|^advice-diagnostics|^advice-technical/,
+    zone: 'water-add',
+  },
   { re: /^ios-toggle/, zone: 'water-add' },
   { re: /^cycle-|^mc-rest-cycle|^mc-cycle-/, zone: 'cycle' },
   { re: /^yv-/, zone: 'checkin-morning' },
@@ -181,24 +201,52 @@ export const CLASS_ZONE_RULES = [
   },
   { re: /^mood-|^steps-slider|^wheel-item|^quick-chip|^sleep-/, zone: 'checkin-morning' },
   { re: /^widgets-|^widget-/, zone: 'home-widgets' },
-  { re: /^hdr-settings-|^tab-settings-|^notify-detail/, zone: 'settings-system' },
+  {
+    re: /^hdr-settings-|^tab-settings-|^notify-detail|^profile-section|^profile-advice|^profile-inline|^profile-push/,
+    zone: 'settings-system',
+  },
   { re: /^messenger-|^msg-/, zone: 'messenger' },
   { re: /^sb-|^ct-wb-/, zone: 'strength-builder' },
-  { re: /^aps-|^meal-|^mpc-|^mpr-|^flow-selection/, zone: 'food-meal' },
-  { re: /^pe-|^aps-create|^aps-barcode/, zone: 'product-card' },
-  { re: /^cur-cab|^cur-chip|^cur-fine|^cur-row|^cdo-/, zone: 'service-curator' },
-  { re: /^insights-|^reports-v4|^heys-score-insights|^meal-rec-v4|^cascade-card|^phenotype-|^early-warning|^pattern-debug|^weekly-wrap|^whatif-|^adv-analytics|^feedback-|^predictive-dashboard|^dual-risk|^reason-card/, zone: 'reports-insights' },
-  { re: /^activity-v4-|^ma-habit-cal/, zone: 'tab-activity' },
+  {
+    re: /^aps-|^meal-|^mpc-|^mpr-|^flow-selection|^grams-manual|^mobile-mood|^mobile-time|^photo-confirm|^photo-delete/,
+    zone: 'food-meal',
+  },
+  { re: /^pe-|^aps-create|^aps-barcode|^product-name-edit$/, zone: 'product-card' },
+  { re: /^cur-cab|^cur-chip|^cur-fine|^cur-row|^cdo-|^client-dropdown|^curator-dropdown/, zone: 'service-curator' },
+  {
+    re: /^insights-|^reports-v4|^heys-score-insights|^meal-rec-v4|^cascade-card|^phenotype-|^early-warning|^pattern-debug|^weekly-wrap|^whatif-|^adv-analytics|^feedback-|^predictive-dashboard|^dual-risk|^reason-card|^ews-badge|^ndte-badge|^info-button$|^info-modal__|^status-card__action$|^tab-switch-label$|^outcome-modal|^score-explainer|^monthly-reports|^monthly-week|^reports-sleep|^category-filter-bar|^priority-filter-bar/,
+    zone: 'reports-insights',
+  },
+  {
+    re: /^activity-v4-|^ma-habit-cal|^program-next-line$|^zone-formula-edit|^steps-goal-preset$/,
+    zone: 'tab-activity',
+  },
   { re: /^game-|^achievement-|^level-up/, zone: 'gamification' },
   { re: /^paywall-|^readonly-banner|^readonly-toast/, zone: 'subscription' },
-  { re: /^date-picker/, zone: 'date-remainders' },
-  { re: /^pwa-banner|^update-toast|^ca-banner|^ca-modal|^profile-v4|^wn-/, zone: 'pwa-update' },
-  { re: /^week-heatmap|^macro-|^weight-|^sparkline|^balance-|^debt-science|^goal-bonus|^kcal-period|^household-|^compact-|^training-|^add-training|^zone-clickable|^caloric-balance/, zone: 'home-widgets' },
-  { re: /^planning-|^gantt-|^chrono-|^goal-map/, zone: 'planning' },
+  { re: /^date-picker|^cal-nav$|^cal-cell$|^cal-today|^yesterday-quick|^today-quick/, zone: 'date-remainders' },
+  {
+    re: /^pwa-banner|^update-toast|^ca-banner|^ca-modal|^profile-v4|^wn-|^offline-banner-|^offline-nodata-|^sync-pending|^sync-vpn|^sync-lock/,
+    zone: 'pwa-update',
+  },
+  {
+    re: /^week-heatmap|^macro-|^weight-|^sparkline|^balance-|^debt-science|^goal-bonus|^kcal-period|^household-|^compact-|^training-|^add-training|^zone-clickable|^caloric-balance|^measurements-card|^correlation-clickable$|^deficit-card-modern$|^metric-popup-close$|^day-score-|^day-subtab$/,
+    zone: 'home-widgets',
+  },
+  { re: /^planning-|^gantt-|^chrono-|^goal-map|^reading-/, zone: 'planning' },
   { re: /^refeed-/, zone: 'food-meal' },
   { re: /^ts-/, zone: 'tab-activity' },
-  { re: /^onboarding-|^desktop-gate|^copy-logout/, zone: 'first-run' },
+  { re: /^onboarding-|^desktop-gate|^copy-logout|^push-first-day-/, zone: 'first-run' },
   { re: /^tour-|^heys-undo/, zone: 'undo-bar' },
+  // Общий shell: .btn, шапка, табы, свайп, модалки подтверждения — не одна зона экрана.
+  { re: /^btn$|^confirm-modal-btn$|^delete-confirm-btn$/, zone: 'shared' },
+  { re: /^hdr-/, zone: 'shared' },
+  { re: /^theme-fab$|^theme-toggle$/, zone: 'shared' },
+  { re: /^tab$|^tab--/, zone: 'shared' },
+  { re: /^tab-switch-group$/, zone: 'shared' },
+  { re: /^swipeable-/, zone: 'shared' },
+  { re: /^suggest-item$/, zone: 'shared' },
+  { re: /^cloud-sync-/, zone: 'shared' },
+  { re: /^past-day-banner/, zone: 'shared' },
 ];
 
 /**
@@ -816,16 +864,23 @@ async function main() {
   }
 
   if (updateBaseline) {
+    const byZone = {};
+    for (const [zone, counts] of Object.entries(inventory.byZone)) {
+      if (zone === '(unknown)') continue;
+      byZone[zone] = counts.violations;
+    }
     const baseline = {
       captured: inventory.captured,
       totalViolations: inventory.counts.violations,
       unknownViolations: inventory.scope.unknownViolations,
+      byZone,
       byFile: inventory.byFile,
       violationKeys: violationKeys(inventory),
     };
     writeJson(BASELINE_PATH, baseline);
     console.log(
       `Baseline updated: ${baseline.totalViolations} violations, ` +
+        `${baseline.unknownViolations} unknown, ${Object.keys(byZone).length} zones, ` +
         `${baseline.violationKeys.length} keys → ${path.relative(ROOT, BASELINE_PATH)}`,
     );
     return;

@@ -876,8 +876,6 @@ body.planning-tab-active .widgets-quick-fab-wrap {
 }
 
 .advice-list-header-link {
-  appearance: none;
-  -webkit-appearance: none;
   flex: 0 0 auto;
   min-width: 0;
   padding: 0;
@@ -890,11 +888,16 @@ body.planning-tab-active .widgets-quick-fab-wrap {
   font-weight: 600;
   letter-spacing: 0;
   white-space: nowrap;
-  cursor: pointer;
 }
 
 .advice-list-header-link--read-all {
+  appearance: none;
+  -webkit-appearance: none;
   color: var(--v4-ok-text, #5c6a45);
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
 }
 
 @media (hover: hover) {
@@ -1882,7 +1885,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .data-overview-table tbody tr {
-  cursor: pointer;
   transition: background 0.15s ease;
 }
 
@@ -2547,9 +2549,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-list-container--v4 .advice-list-header-link--read-all {
   color: var(--v4-act-text, #8a4a20);
   font: 700 11.5px/1 Figtree, sans-serif;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
 }
 
 /* Строка «вид шапки шторки»: ряд выравнивается по baseline — «Прочитать все»
@@ -2878,6 +2877,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   gap: 6px;
   margin-top: 11px;
+  min-height: 44px;
   padding: 0;
   border: none;
   background: transparent;
@@ -3048,6 +3048,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   gap: 11px;
   margin-top: 16px;
+  min-height: 44px;
   /* Элемент 14 (был 29): подпись 600 12/1,4 чернилами 55 %. */
   font: 600 12px/1.4 Figtree, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
@@ -3118,7 +3119,12 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-settings__back {
   border: none;
   background: transparent;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font: 700 18px/1 Figtree, sans-serif;
   color: rgba(32, 30, 29, 0.55);
   cursor: pointer;
@@ -3501,11 +3507,11 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   min-width: 0;
 }
 
-/* Кадр «Совет · всплывающий · 12»: круг 26×26; кадр «Совет · всплывающий ·
-   рисунок 01»: глиф крестика 12×12 — размер SVG ниже, не общий 14 px детали. */
+/* Кадр «Совет · всплывающий · 12»: круг 44×44 видимой целью (было 26);
+   глиф крестика 12×12 — размер SVG ниже, не общий 14 px детали. */
 .advice-v4-toast-card__close {
-  width: 26px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
   flex: none;
   border: none;
   border-radius: 999px;

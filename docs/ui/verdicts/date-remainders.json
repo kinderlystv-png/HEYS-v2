@@ -55,7 +55,7 @@
     },
     "вид чужого дня": {
       "v": "=",
-      "f": "000-base:8223 капсула и :8237 оба кружка идут --v4-tint по модификатору .date-picker--past (pickers:267), текст чернилами. Ответ дизайнера №13 от 31 августа снял роль --v4-past: прежнее отступление закрыто, перекраска синего набора названа намеренной в самой строке",
+      "f": "000-base:8223 капсула и :8237 оба кружка — --v4-tint по .date-picker--past; :8256 .date-picker-inline-today — надпись 11px/700 тоном --v4-act-text без заливки (transparent), min-height 44 по строке «тач-цели». Замер палитры 06.09: --v4-hero (=--c2) песочный rgb(239, 227, 207) / синий rgb(226, 236, 246); канвас --acs rgb(198, 113, 57) / rgb(29, 94, 150); тон --v4-act-text песочный rgb(138, 74, 32) / синий rgb(29, 94, 150). Ответ 1 сентября снял роль --v4-past",
       "h": "b374a22914a2"
     },
     "вид липкой капсулы": {
@@ -1237,9 +1237,11 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149"
     },
     "Дата · прошлый день, прокручено · 44": {
-      "v": "=",
-      "f": "000-base-and-gamification.css:8256 .date-picker-inline-today — авторитет food-meal «Приёмы дня · список · 03» (verdict «=», тот же класс): min-height 44, padding 0 10, radius 999, background var(--v4-hero)=--c2 (песочный rgb(239,227,207), синий rgb(226,236,246)), 700 10.5px/1, color var(--v4-act-text)=--ac (песочный rgb(138,74,32), синий rgb(29,94,150)). Кадр ·44 (--acs, 0 14) и строка «вид чужого дня» (11 px без заливки) уступают: date-remainders-v4-canvas-razbor.test.js EXCEPTIONS :33-50, UI_V4_FINDINGS.md рабочая ставка — заливка --c2.",
-      "h": "09b64dfc0f4d"
+      "v": "≠",
+      "f": "Кадр ·44 требует залитую --acs пилюлю 10,5 px, поля 0 14, тон --on-acs (Замер палитры 06.09: --v4-hero (=--c2) песочный rgb(239, 227, 207) / синий rgb(226, 236, 246); канвас --acs rgb(198, 113, 57) / rgb(29, 94, 150); тон --v4-act-text песочный rgb(138, 74, 32) / синий rgb(29, 94, 150)). Продукт: 000-base:8256 .date-picker-inline-today — transparent, 11px/700 --v4-act-text, min-height 44, padding 0. Именованная строка «вид чужого дня» (1 сентября) в файле-источнике запрещает заливку; кадр ·44 пакета 42 не принят.",
+      "h": "09b64dfc0f4d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149"
     },
     "Дата · прошлый день, прокручено · 45": {
       "v": "—",
