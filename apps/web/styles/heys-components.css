@@ -1648,11 +1648,13 @@ body.tour-active .ios-pwa-banner {
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   list-style: none;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
 }
 
 .weekly-wrap-correction__safeguards-more > summary::-webkit-details-marker {
   display: none;
-  min-height: 44px;
 }
 
 .weekly-wrap-correction__safeguards-more[open] > summary {
@@ -5504,6 +5506,7 @@ width: 44px;
   border: none;
   border-radius: 12px;
   padding: 10px 16px;
+  min-height: 44px;
   background: var(--level-color, #22c55e);
   color: var(--v4-bg, #ffffff);
   font-weight: 700;
@@ -5762,6 +5765,7 @@ width: 44px;
   color: var(--v4-sand-ink-slate, #1f2937);
   border-radius: 10px;
   padding: 6px 10px;
+  min-height: 44px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -14740,4 +14744,11 @@ width: 44px;
 
 [data-theme$="dark"] .wn-got-it {
   box-shadow: 0 18px 32px -24px rgba(59, 130, 246, 0.86);
+}
+
+
+/* task69-touch-44 — do not remove without baseline update */
+.client-dropdown__close,
+.curator-dropdown-switch__tab {
+  min-height: 44px;
 }

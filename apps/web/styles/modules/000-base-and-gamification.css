@@ -287,16 +287,22 @@ body.emoji-system {
 }
 
 .card {
-
-    padding: 8px !important;
-  
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  box-sizing: border-box;
 }
 
 .btn {
-
-    min-height: 40px !important;
-    padding: 8px 12px !important;
-  
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .btn.acc {
@@ -320,6 +326,7 @@ body.emoji-system {
   opacity: 0.7;
   transition: opacity 120ms ease;
 
+  min-height: 44px;
 }
 
 input:active,
@@ -334,10 +341,8 @@ select:active {
 }
 
 .section-title {
-
-    margin-bottom: 4px !important;
-    font-size: 13px !important;
-  
+  font-weight: 600;
+  margin-bottom: 6px;
 }
 
 label {
@@ -1087,6 +1092,8 @@ td:first-child input {
   font: inherit;
   text-align: left;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .program-next-text {
@@ -1987,7 +1994,7 @@ td:first-child input {
 }
 
 .ct-wb-ex-fold-toggle:active {
-  cursor: pointer;
+  opacity: 0.85;
 }
 
 .ct-wb-ex-num {
@@ -3545,11 +3552,11 @@ flex: 0 0 auto;
 
 /* Кнопки − / + компактнее, чтобы не вылезали за карточку; вправо по сетке «Добавить подход» */
 .ct-wb-stepper--ap-reps .ct-wb-stepper-btn {
-  flex: 0 0 34px;
-  width: 34px;
-  min-width: 34px;
-  min-height: 36px;
-  height: 36px;
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  height: 44px;
   font-size: 18px;
 }
 
@@ -3658,9 +3665,10 @@ flex: 0 0 auto;
 }
 
 .ct-wb-stepper-btn {
-  flex: 0 0 30px;
-  width: 30px;
-  min-width: 30px;
+  flex: 0 0 44px;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
   padding: 0;
   box-sizing: border-box;
   border-radius: 8px;
@@ -5070,6 +5078,7 @@ color: var(--v4-sand-ink, #201e1d);
   align-items: center;
   gap: 6px;
   width: 100%;
+  min-height: 44px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   overflow: hidden;
@@ -7503,7 +7512,6 @@ color: var(--v4-sand-ink, #201e1d);
   border: none;
   background: transparent;
   padding: 10px 0;
-  margin: -10px 0;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -7536,7 +7544,6 @@ color: var(--v4-sand-ink, #201e1d);
   border: none;
   background: transparent;
   padding: 10px 0;
-  margin: -10px 0;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -7948,9 +7955,9 @@ color: var(--v4-sand-ink, #201e1d);
   align-items: center;
   justify-content: center;
   position: relative;
-  min-width: 28px;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
@@ -7958,7 +7965,6 @@ color: var(--v4-sand-ink, #201e1d);
   transition: background-color, transform, box-shadow 0.2s ease;
   animation: ewsBadgeAppear 0.4s ease;
   flex-shrink: 0;
-  margin-left: -2px;
 }
 
 .ews-badge__icon {
@@ -10682,48 +10688,260 @@ body:has([data-heys-visible-frame="consent"]) .tabs {
 
 /* Any app modal/backdrop must own the screen on iOS. The fixed bottom dock,
    CRS strip and FABs are promoted compositor layers there, so hide them while
-   an overlay is mounted instead of relying only on z-index. */
-body:has(:is(
-  .modal-backdrop,
-  /* Кабинет куратора: экран, а не модалка, но док под ним прятать так же. */
-  .cur-cab,
-  .time-picker-backdrop,
-  .confirm-modal-backdrop,
-  .date-picker-backdrop,
-  .wn-backdrop,
-  .paywall-overlay,
-  .mpr-overlay,
-  .photo-confirm-overlay,
-  .planning-modal-overlay,
-  .planning-checklists-modal-overlay,
-  .planning-slot-delete-overlay,
-  .gantt-quick-edit-backdrop,
-  .chrono-picker-overlay,
-  .chrono-delete-overlay,
-  .chrono-history-overlay,
-  .chrono-entry-edit-overlay,
-  .chrono-duration-overlay,
-  .chrono-timeline-overlay,
-  .widget-relapse-risk__modal-overlay,
-  .widgets-catalog-overlay,
-  .widgets-settings-overlay,
-  .info-modal-overlay,
-  .pattern-debug-modal,
-  .meal-rec-card__products-overlay,
-  .advice-list-overlay,
-  .fingers-fs-rpe-overlay,
-  .drums-ft-modal
-)) :is(
-  .tabs,
-  .crs-bar-container,
-  .theme-fab,
-  .fab-group,
-  #tour-fab-buttons,
-  .widgets-fab-left,
-  .planning-subnav,
-  .planning-tasks-scale-fab,
-  .planning-checklists-archive-badge
-) {
+   an overlay is mounted instead of relying only on z-index.
+   Развёрнуто без body:has(:is): — jsdom/nwsapi падает на вложенном :is в :has. */
+body:has(.modal-backdrop) .tabs,
+body:has(.modal-backdrop) .crs-bar-container,
+body:has(.modal-backdrop) .theme-fab,
+body:has(.modal-backdrop) .fab-group,
+body:has(.modal-backdrop) #tour-fab-buttons,
+body:has(.modal-backdrop) .widgets-fab-left,
+body:has(.modal-backdrop) .planning-subnav,
+body:has(.modal-backdrop) .planning-tasks-scale-fab,
+body:has(.modal-backdrop) .planning-checklists-archive-badge,
+body:has(.cur-cab) .tabs,
+body:has(.cur-cab) .crs-bar-container,
+body:has(.cur-cab) .theme-fab,
+body:has(.cur-cab) .fab-group,
+body:has(.cur-cab) #tour-fab-buttons,
+body:has(.cur-cab) .widgets-fab-left,
+body:has(.cur-cab) .planning-subnav,
+body:has(.cur-cab) .planning-tasks-scale-fab,
+body:has(.cur-cab) .planning-checklists-archive-badge,
+body:has(.time-picker-backdrop) .tabs,
+body:has(.time-picker-backdrop) .crs-bar-container,
+body:has(.time-picker-backdrop) .theme-fab,
+body:has(.time-picker-backdrop) .fab-group,
+body:has(.time-picker-backdrop) #tour-fab-buttons,
+body:has(.time-picker-backdrop) .widgets-fab-left,
+body:has(.time-picker-backdrop) .planning-subnav,
+body:has(.time-picker-backdrop) .planning-tasks-scale-fab,
+body:has(.time-picker-backdrop) .planning-checklists-archive-badge,
+body:has(.confirm-modal-backdrop) .tabs,
+body:has(.confirm-modal-backdrop) .crs-bar-container,
+body:has(.confirm-modal-backdrop) .theme-fab,
+body:has(.confirm-modal-backdrop) .fab-group,
+body:has(.confirm-modal-backdrop) #tour-fab-buttons,
+body:has(.confirm-modal-backdrop) .widgets-fab-left,
+body:has(.confirm-modal-backdrop) .planning-subnav,
+body:has(.confirm-modal-backdrop) .planning-tasks-scale-fab,
+body:has(.confirm-modal-backdrop) .planning-checklists-archive-badge,
+body:has(.date-picker-backdrop) .tabs,
+body:has(.date-picker-backdrop) .crs-bar-container,
+body:has(.date-picker-backdrop) .theme-fab,
+body:has(.date-picker-backdrop) .fab-group,
+body:has(.date-picker-backdrop) #tour-fab-buttons,
+body:has(.date-picker-backdrop) .widgets-fab-left,
+body:has(.date-picker-backdrop) .planning-subnav,
+body:has(.date-picker-backdrop) .planning-tasks-scale-fab,
+body:has(.date-picker-backdrop) .planning-checklists-archive-badge,
+body:has(.wn-backdrop) .tabs,
+body:has(.wn-backdrop) .crs-bar-container,
+body:has(.wn-backdrop) .theme-fab,
+body:has(.wn-backdrop) .fab-group,
+body:has(.wn-backdrop) #tour-fab-buttons,
+body:has(.wn-backdrop) .widgets-fab-left,
+body:has(.wn-backdrop) .planning-subnav,
+body:has(.wn-backdrop) .planning-tasks-scale-fab,
+body:has(.wn-backdrop) .planning-checklists-archive-badge,
+body:has(.paywall-overlay) .tabs,
+body:has(.paywall-overlay) .crs-bar-container,
+body:has(.paywall-overlay) .theme-fab,
+body:has(.paywall-overlay) .fab-group,
+body:has(.paywall-overlay) #tour-fab-buttons,
+body:has(.paywall-overlay) .widgets-fab-left,
+body:has(.paywall-overlay) .planning-subnav,
+body:has(.paywall-overlay) .planning-tasks-scale-fab,
+body:has(.paywall-overlay) .planning-checklists-archive-badge,
+body:has(.mpr-overlay) .tabs,
+body:has(.mpr-overlay) .crs-bar-container,
+body:has(.mpr-overlay) .theme-fab,
+body:has(.mpr-overlay) .fab-group,
+body:has(.mpr-overlay) #tour-fab-buttons,
+body:has(.mpr-overlay) .widgets-fab-left,
+body:has(.mpr-overlay) .planning-subnav,
+body:has(.mpr-overlay) .planning-tasks-scale-fab,
+body:has(.mpr-overlay) .planning-checklists-archive-badge,
+body:has(.photo-confirm-overlay) .tabs,
+body:has(.photo-confirm-overlay) .crs-bar-container,
+body:has(.photo-confirm-overlay) .theme-fab,
+body:has(.photo-confirm-overlay) .fab-group,
+body:has(.photo-confirm-overlay) #tour-fab-buttons,
+body:has(.photo-confirm-overlay) .widgets-fab-left,
+body:has(.photo-confirm-overlay) .planning-subnav,
+body:has(.photo-confirm-overlay) .planning-tasks-scale-fab,
+body:has(.photo-confirm-overlay) .planning-checklists-archive-badge,
+body:has(.planning-modal-overlay) .tabs,
+body:has(.planning-modal-overlay) .crs-bar-container,
+body:has(.planning-modal-overlay) .theme-fab,
+body:has(.planning-modal-overlay) .fab-group,
+body:has(.planning-modal-overlay) #tour-fab-buttons,
+body:has(.planning-modal-overlay) .widgets-fab-left,
+body:has(.planning-modal-overlay) .planning-subnav,
+body:has(.planning-modal-overlay) .planning-tasks-scale-fab,
+body:has(.planning-modal-overlay) .planning-checklists-archive-badge,
+body:has(.planning-checklists-modal-overlay) .tabs,
+body:has(.planning-checklists-modal-overlay) .crs-bar-container,
+body:has(.planning-checklists-modal-overlay) .theme-fab,
+body:has(.planning-checklists-modal-overlay) .fab-group,
+body:has(.planning-checklists-modal-overlay) #tour-fab-buttons,
+body:has(.planning-checklists-modal-overlay) .widgets-fab-left,
+body:has(.planning-checklists-modal-overlay) .planning-subnav,
+body:has(.planning-checklists-modal-overlay) .planning-tasks-scale-fab,
+body:has(.planning-checklists-modal-overlay) .planning-checklists-archive-badge,
+body:has(.planning-slot-delete-overlay) .tabs,
+body:has(.planning-slot-delete-overlay) .crs-bar-container,
+body:has(.planning-slot-delete-overlay) .theme-fab,
+body:has(.planning-slot-delete-overlay) .fab-group,
+body:has(.planning-slot-delete-overlay) #tour-fab-buttons,
+body:has(.planning-slot-delete-overlay) .widgets-fab-left,
+body:has(.planning-slot-delete-overlay) .planning-subnav,
+body:has(.planning-slot-delete-overlay) .planning-tasks-scale-fab,
+body:has(.planning-slot-delete-overlay) .planning-checklists-archive-badge,
+body:has(.gantt-quick-edit-backdrop) .tabs,
+body:has(.gantt-quick-edit-backdrop) .crs-bar-container,
+body:has(.gantt-quick-edit-backdrop) .theme-fab,
+body:has(.gantt-quick-edit-backdrop) .fab-group,
+body:has(.gantt-quick-edit-backdrop) #tour-fab-buttons,
+body:has(.gantt-quick-edit-backdrop) .widgets-fab-left,
+body:has(.gantt-quick-edit-backdrop) .planning-subnav,
+body:has(.gantt-quick-edit-backdrop) .planning-tasks-scale-fab,
+body:has(.gantt-quick-edit-backdrop) .planning-checklists-archive-badge,
+body:has(.chrono-picker-overlay) .tabs,
+body:has(.chrono-picker-overlay) .crs-bar-container,
+body:has(.chrono-picker-overlay) .theme-fab,
+body:has(.chrono-picker-overlay) .fab-group,
+body:has(.chrono-picker-overlay) #tour-fab-buttons,
+body:has(.chrono-picker-overlay) .widgets-fab-left,
+body:has(.chrono-picker-overlay) .planning-subnav,
+body:has(.chrono-picker-overlay) .planning-tasks-scale-fab,
+body:has(.chrono-picker-overlay) .planning-checklists-archive-badge,
+body:has(.chrono-delete-overlay) .tabs,
+body:has(.chrono-delete-overlay) .crs-bar-container,
+body:has(.chrono-delete-overlay) .theme-fab,
+body:has(.chrono-delete-overlay) .fab-group,
+body:has(.chrono-delete-overlay) #tour-fab-buttons,
+body:has(.chrono-delete-overlay) .widgets-fab-left,
+body:has(.chrono-delete-overlay) .planning-subnav,
+body:has(.chrono-delete-overlay) .planning-tasks-scale-fab,
+body:has(.chrono-delete-overlay) .planning-checklists-archive-badge,
+body:has(.chrono-history-overlay) .tabs,
+body:has(.chrono-history-overlay) .crs-bar-container,
+body:has(.chrono-history-overlay) .theme-fab,
+body:has(.chrono-history-overlay) .fab-group,
+body:has(.chrono-history-overlay) #tour-fab-buttons,
+body:has(.chrono-history-overlay) .widgets-fab-left,
+body:has(.chrono-history-overlay) .planning-subnav,
+body:has(.chrono-history-overlay) .planning-tasks-scale-fab,
+body:has(.chrono-history-overlay) .planning-checklists-archive-badge,
+body:has(.chrono-entry-edit-overlay) .tabs,
+body:has(.chrono-entry-edit-overlay) .crs-bar-container,
+body:has(.chrono-entry-edit-overlay) .theme-fab,
+body:has(.chrono-entry-edit-overlay) .fab-group,
+body:has(.chrono-entry-edit-overlay) #tour-fab-buttons,
+body:has(.chrono-entry-edit-overlay) .widgets-fab-left,
+body:has(.chrono-entry-edit-overlay) .planning-subnav,
+body:has(.chrono-entry-edit-overlay) .planning-tasks-scale-fab,
+body:has(.chrono-entry-edit-overlay) .planning-checklists-archive-badge,
+body:has(.chrono-duration-overlay) .tabs,
+body:has(.chrono-duration-overlay) .crs-bar-container,
+body:has(.chrono-duration-overlay) .theme-fab,
+body:has(.chrono-duration-overlay) .fab-group,
+body:has(.chrono-duration-overlay) #tour-fab-buttons,
+body:has(.chrono-duration-overlay) .widgets-fab-left,
+body:has(.chrono-duration-overlay) .planning-subnav,
+body:has(.chrono-duration-overlay) .planning-tasks-scale-fab,
+body:has(.chrono-duration-overlay) .planning-checklists-archive-badge,
+body:has(.chrono-timeline-overlay) .tabs,
+body:has(.chrono-timeline-overlay) .crs-bar-container,
+body:has(.chrono-timeline-overlay) .theme-fab,
+body:has(.chrono-timeline-overlay) .fab-group,
+body:has(.chrono-timeline-overlay) #tour-fab-buttons,
+body:has(.chrono-timeline-overlay) .widgets-fab-left,
+body:has(.chrono-timeline-overlay) .planning-subnav,
+body:has(.chrono-timeline-overlay) .planning-tasks-scale-fab,
+body:has(.chrono-timeline-overlay) .planning-checklists-archive-badge,
+body:has(.widget-relapse-risk__modal-overlay) .tabs,
+body:has(.widget-relapse-risk__modal-overlay) .crs-bar-container,
+body:has(.widget-relapse-risk__modal-overlay) .theme-fab,
+body:has(.widget-relapse-risk__modal-overlay) .fab-group,
+body:has(.widget-relapse-risk__modal-overlay) #tour-fab-buttons,
+body:has(.widget-relapse-risk__modal-overlay) .widgets-fab-left,
+body:has(.widget-relapse-risk__modal-overlay) .planning-subnav,
+body:has(.widget-relapse-risk__modal-overlay) .planning-tasks-scale-fab,
+body:has(.widget-relapse-risk__modal-overlay) .planning-checklists-archive-badge,
+body:has(.widgets-catalog-overlay) .tabs,
+body:has(.widgets-catalog-overlay) .crs-bar-container,
+body:has(.widgets-catalog-overlay) .theme-fab,
+body:has(.widgets-catalog-overlay) .fab-group,
+body:has(.widgets-catalog-overlay) #tour-fab-buttons,
+body:has(.widgets-catalog-overlay) .widgets-fab-left,
+body:has(.widgets-catalog-overlay) .planning-subnav,
+body:has(.widgets-catalog-overlay) .planning-tasks-scale-fab,
+body:has(.widgets-catalog-overlay) .planning-checklists-archive-badge,
+body:has(.widgets-settings-overlay) .tabs,
+body:has(.widgets-settings-overlay) .crs-bar-container,
+body:has(.widgets-settings-overlay) .theme-fab,
+body:has(.widgets-settings-overlay) .fab-group,
+body:has(.widgets-settings-overlay) #tour-fab-buttons,
+body:has(.widgets-settings-overlay) .widgets-fab-left,
+body:has(.widgets-settings-overlay) .planning-subnav,
+body:has(.widgets-settings-overlay) .planning-tasks-scale-fab,
+body:has(.widgets-settings-overlay) .planning-checklists-archive-badge,
+body:has(.info-modal-overlay) .tabs,
+body:has(.info-modal-overlay) .crs-bar-container,
+body:has(.info-modal-overlay) .theme-fab,
+body:has(.info-modal-overlay) .fab-group,
+body:has(.info-modal-overlay) #tour-fab-buttons,
+body:has(.info-modal-overlay) .widgets-fab-left,
+body:has(.info-modal-overlay) .planning-subnav,
+body:has(.info-modal-overlay) .planning-tasks-scale-fab,
+body:has(.info-modal-overlay) .planning-checklists-archive-badge,
+body:has(.pattern-debug-modal) .tabs,
+body:has(.pattern-debug-modal) .crs-bar-container,
+body:has(.pattern-debug-modal) .theme-fab,
+body:has(.pattern-debug-modal) .fab-group,
+body:has(.pattern-debug-modal) #tour-fab-buttons,
+body:has(.pattern-debug-modal) .widgets-fab-left,
+body:has(.pattern-debug-modal) .planning-subnav,
+body:has(.pattern-debug-modal) .planning-tasks-scale-fab,
+body:has(.pattern-debug-modal) .planning-checklists-archive-badge,
+body:has(.meal-rec-card__products-overlay) .tabs,
+body:has(.meal-rec-card__products-overlay) .crs-bar-container,
+body:has(.meal-rec-card__products-overlay) .theme-fab,
+body:has(.meal-rec-card__products-overlay) .fab-group,
+body:has(.meal-rec-card__products-overlay) #tour-fab-buttons,
+body:has(.meal-rec-card__products-overlay) .widgets-fab-left,
+body:has(.meal-rec-card__products-overlay) .planning-subnav,
+body:has(.meal-rec-card__products-overlay) .planning-tasks-scale-fab,
+body:has(.meal-rec-card__products-overlay) .planning-checklists-archive-badge,
+body:has(.advice-list-overlay) .tabs,
+body:has(.advice-list-overlay) .crs-bar-container,
+body:has(.advice-list-overlay) .theme-fab,
+body:has(.advice-list-overlay) .fab-group,
+body:has(.advice-list-overlay) #tour-fab-buttons,
+body:has(.advice-list-overlay) .widgets-fab-left,
+body:has(.advice-list-overlay) .planning-subnav,
+body:has(.advice-list-overlay) .planning-tasks-scale-fab,
+body:has(.advice-list-overlay) .planning-checklists-archive-badge,
+body:has(.fingers-fs-rpe-overlay) .tabs,
+body:has(.fingers-fs-rpe-overlay) .crs-bar-container,
+body:has(.fingers-fs-rpe-overlay) .theme-fab,
+body:has(.fingers-fs-rpe-overlay) .fab-group,
+body:has(.fingers-fs-rpe-overlay) #tour-fab-buttons,
+body:has(.fingers-fs-rpe-overlay) .widgets-fab-left,
+body:has(.fingers-fs-rpe-overlay) .planning-subnav,
+body:has(.fingers-fs-rpe-overlay) .planning-tasks-scale-fab,
+body:has(.fingers-fs-rpe-overlay) .planning-checklists-archive-badge,
+body:has(.drums-ft-modal) .tabs,
+body:has(.drums-ft-modal) .crs-bar-container,
+body:has(.drums-ft-modal) .theme-fab,
+body:has(.drums-ft-modal) .fab-group,
+body:has(.drums-ft-modal) #tour-fab-buttons,
+body:has(.drums-ft-modal) .widgets-fab-left,
+body:has(.drums-ft-modal) .planning-subnav,
+body:has(.drums-ft-modal) .planning-tasks-scale-fab,
+body:has(.drums-ft-modal) .planning-checklists-archive-badge {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
@@ -11215,8 +11433,8 @@ body:has(:is(
 .hdr-settings-sheet__close {
 
   flex: none;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 999px;
   
@@ -11228,17 +11446,12 @@ body:has(:is(
   cursor: pointer;
   position: relative;
 
-}
+
+  min-height: 44px;
+  min-width: 44px;}
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.hdr-settings-sheet__close::after {
-  content: '';
-  position: absolute;
-  inset: -5px;
-}
-
-
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push {
   margin: 0 0 2px;
 }
@@ -11916,8 +12129,8 @@ body:has(:is(
 .notify-detail__close {
   flex: none;
   position: relative;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 999px;
   background: var(--v4-surface, #f7efe2);
@@ -11926,15 +12139,11 @@ body:has(:is(
   align-items: center;
   justify-content: center;
   cursor: pointer;
-}
+
+  min-height: 44px;
+  min-width: 44px;}
 
 /* Цель касания 44 pt при видимом круге 30 — прозрачным припуском. */
-.notify-detail__close::after {
-  content: '';
-  position: absolute;
-  inset: -7px;
-}
-
 .notify-detail__tier {
   margin: 18px 0 8px;
   font: 700 10px/1 Figtree, system-ui, sans-serif;
@@ -13558,7 +13767,6 @@ body:has(:is(
   width: auto;
   min-width: 82px;
   min-height: 44px;
-  min-height: 28px;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -14329,7 +14537,9 @@ body:has(:is(
 }
 
 @media (hover: hover) {
-  background: var(--v4-edge, rgba(0, 0, 0, 0.18)); /* v4-intentional */
+  .cal-nav:hover {
+    background: var(--v4-edge, rgba(0, 0, 0, 0.18)); /* v4-intentional */
+  }
 }
 
 /* Кнопка быстрого перехода на вчера (в header рядом с DatePicker) —
@@ -14377,7 +14587,8 @@ body:has(:is(
   background: var(--v4-act, #c67139);
   color: white;
   min-width: 44px;
-  height: 34px;
+  min-height: 44px;
+  height: 44px;
   padding: 0 8px;
   border-radius: 8px;
   cursor: pointer;
@@ -14388,7 +14599,6 @@ body:has(:is(
   justify-content: center;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-  min-height: 44px;
 
 }
 
@@ -15295,6 +15505,8 @@ body:has(:is(
     -webkit-tap-highlight-color: transparent;
     box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
   
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
   .mpc-toggle-add-row .mpc-products-toggle.expanded {
@@ -16584,7 +16796,7 @@ body:has(:is(
 
   /* Кнопки — чуть компактнее */
   .btn {
-    min-height: 40px !important;
+    min-height: 44px !important;
     padding: 8px 12px !important;
   }
 
@@ -18526,9 +18738,10 @@ body:has(:is(
 .ews-badge,
 .push-badge,
 .yesterday-quick-btn {
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
   padding: 0 !important;
   border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.92) !important;
@@ -18616,9 +18829,10 @@ body:has(:is(
 /* Yesterday quick btn — amber accent через границу + цвет цифры,
  * чуть крупнее остальных бейджей чтобы число читалось */
 .yesterday-quick-btn {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
   border-radius: 10px !important;
   color: var(--v4-act-text, #8a4a20) !important;
   font-size: 13px !important;
@@ -19620,4 +19834,40 @@ html.heys-bg-paused *::after {
   .game-v4-sheet__hero-num-in {
     animation: none;
   }
+}
+
+
+/* task69-touch-44 — do not remove without baseline update */
+.hdr-settings-sheet__close,
+.tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__soft-card,
+.hdr-settings-sheet__row,
+.hdr-settings-sheet__chip,
+.hdr-settings-sheet__fab-chip,
+.hdr-settings-sheet__diag-toggle,
+.hdr-settings-sheet__diag-btn,
+.notify-detail__close,
+.notify-detail__row,
+.notify-detail__capsule-select,
+.tab-settings-diary-toggle,
+.tab-settings-item,
+.profile-section--collapsed,
+.profile-push-status__btn,
+.profile-advice-chip,
+.profile-inline-check,
+.notify-detail__capsule,
+.swipeable-delete-btn,
+.swipeable-action-btn,
+.mpc-grams,
+.mpc-grams-btn,
+.mpc-products-toggle,
+.mpc-toggle-add-row .mpc-products-toggle,
+.mobile-time-btn,
+.mobile-mood-btn,
+.meal-delete-btn,
+.photo-confirm-btn,
+.confirm-modal-btn,
+.delete-confirm-btn {
+  min-height: 44px;
+  min-width: 44px;
+  box-sizing: border-box;
 }

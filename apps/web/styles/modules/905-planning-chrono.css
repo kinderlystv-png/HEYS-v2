@@ -3802,3 +3802,40 @@ html.chrono-bubble-dragging .chrono-screen {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
 }
+
+
+/* task69-touch-44 — do not remove without baseline update */
+.chrono-duration__timer-chip,
+.chrono-scope-bar__today,
+.chrono-overview__toggle,
+.chrono-untracked-flow__range,
+.chrono-picker__archive-toggle,
+.chrono-picker__create-btn,
+.chrono-delete__merge-option,
+.chrono-duration__target-period-btn,
+.chrono-picker__target-period-btn,
+.chrono-duration__parallel-toggle,
+.chrono-duration__target-clear,
+.chrono-duration__target-save,
+.chrono-duration__category-chip,
+.chrono-duration__smart-chip,
+.chrono-timeline__row,
+.chrono-undo-toast__action,
+.chrono-undo-toast__close {
+  min-height: 44px;
+}
+
+.chrono-timer-banner__control,
+.chrono-timer-banner__stop,
+.chrono-scope-bar__nav-btn,
+.chrono-scope-bar__icon-btn,
+.chrono-untracked-flow__close,
+.chrono-untracked-flow__remove,
+.chrono-untracked-flow__parallel-toggle,
+.chrono-history__tiny-btn,
+.chrono-picker__emoji--btn,
+.chrono-picker__icon-btn,
+.chrono-emoji-palette__item {
+  min-height: 44px;
+  min-width: 44px;
+}

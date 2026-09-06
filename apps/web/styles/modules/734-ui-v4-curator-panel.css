@@ -2407,3 +2407,21 @@
   line-height: 1;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
+
+
+/* task69-touch-44 — do not remove without baseline update */
+.cur-chip,
+.cur-row,
+.cur-fine__toggle,
+.cur-cab__subtitle,
+.cur-cab__tab,
+.cdo-metric {
+  min-height: 44px;
+}
+
+.cur-cab__back,
+.cur-cab__more,
+.cur-cab__sheet-close {
+  min-height: 44px;
+  min-width: 44px;
+}
