@@ -118,7 +118,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 33 и 36 стояли «—» как адресация разметки кадра; после пересъёмки кадра
     // они называют числа превью 2×2 и карточки «До цели» и сведены с кодом.
     // 05.09: 17 legacy «≠» типизированы reasonCode — долг 71 → 54.
-    mismatch: [54, '579cd57a401cd331'],
+    // 06.09, полоса 2/4: 20 legacy «≠» сведены в «=» по факту кода — 54 → 34.
+    mismatch: [34, 'db0f835f4f8a2c67'],
     typedMismatch: [10, 'b67076eb4cbac395'],
     notApplicable: [1356, 'b439428088a4c3d6'],
   }),
@@ -153,7 +154,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [76, 'ea3054255c5fd126'],
   }),
   'pwa-update': Object.freeze({
-    mismatch: [10, '5e473419ff0364c9'],
+    // 06.09, полоса 2/4: 6 legacy «≠» сведены в «=» по факту кода — 10 → 4.
+    mismatch: [4, 'ab226dcce4751fdf'],
     notApplicable: [47, '55f97943665ec79d'],
   }),
   questionnaire: Object.freeze({
@@ -222,7 +224,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // разница между «функционал не закрыт» и «сведено» — первое чинится
     // кодом, и после починки порог обязан упасть, а не остаться про запас.
     // 05.09: 21 typed «≠» сведены в «=» по факту кода — долг 102 → 81.
-    typedMismatch: [81, 'cb41201c1094e608'],
+    // 06.09, полоса 2/4: одна typed «≠» сведена в «=» по факту кода — 81 → 80.
+    typedMismatch: [80, 'aa0418f63a6490b8'],
     notApplicable: [105, '77c3b81bb6df56de'],
   }),
   // Зона заведена 05.09 вместе с первым разбором: прежде записи не было, и
@@ -244,7 +247,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     typedMismatch: [50, '8a6c954d844945e6'],
   }),
   'tab-activity': Object.freeze({
-    mismatch: [48, '0176ec5ee86ac4f4'],
+    // 06.09, полоса 2/4: 5 legacy «≠» сведены в «=» по факту кода — 48 → 43.
+    mismatch: [43, 'cc17516c76389156'],
     typedMismatch: [1, '96ec01bd55e41071'],
     notApplicable: [62, 'b3191bb9fbbd6910'],
   }),
