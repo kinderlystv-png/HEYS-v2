@@ -138,7 +138,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // typedMismatch 1 → 10, notApplicable 270 → 260.
     // 06.09, приёмка пакета 44: «Капсула · ночь · 03» — var(--ink-2) = --v4-ink-2 → «=»;
     // typedMismatch 10 → 9.
-    typedMismatch: [9, '22cfc2945ad9c0ed'],
+    // 06.09, пилюля «Сегодня»: «Дата · прошлый день, прокручено · 44» — кадр ·44
+    // (--acs) против строки-источника «вид чужого дня» (:149); typedMismatch 9 → 10.
+    typedMismatch: [10, 'f766e34037cd216a'],
     // 05.09: одна строка «—» получила naKind handoff — долг типизирован: 271 → 270.
     notApplicable: [260, '7fc4f9975dc981ed'],
   }),
@@ -154,8 +156,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 04.09: typed-v1 gate — 22 typed «≠»; legacy 31 → 27.
     // 06.09, package 44 + legacy 22: 9 legacy «≠» → 0 (6→=, 5 typed «≠»);
     // typedMismatch 36 → 41.
+    // 06.09, пилюля «Сегодня»: food-meal «Приёмы дня · список · 03» — кадр
+    // --c2 против date-remainders «вид чужого дня»; typedMismatch 41 → 42.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [41, '5c00c3355b70069b'],
+    typedMismatch: [42, 'bc5759cbb0faa849'],
     notApplicable: [87, '21bc4201a8c68471'],
   }),
   gamification: Object.freeze({
