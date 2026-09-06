@@ -928,6 +928,14 @@ function writeZoneRowMutation(zoneId, key, mutateRow) {
   const fresh = readZone(zoneId);
   if (!fresh?.rows?.[key]) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
   mutateRow(fresh.rows[key], fresh);
+  // Окно гонки для guard-теста — ЗДЕСЬ, между свежим чтением и записью. Снаружи
+  // оно бесполезно: этот повторный `readZone` его и закрывает, поэтому writer B
+  // успевал прочитать уже записанное writer A, потери не случалось и тест
+  // «без лока обновление теряется» падал на «expected 0 to be greater than 0».
+  // Ставили задержку сначала 25 мс, потом 800 — не помогло ни разу, потому что
+  // дело было не в ширине окна, а в его месте. Под HEYS_VERDICT_GUARD_TEST=1,
+  // в проде это ноль.
+  maybeRmwDelay();
   writeZone(zoneId, fresh);
 }
 
