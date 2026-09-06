@@ -1,16 +1,20 @@
 // K1–K12 · спорные состояния · canvas contract + smoke behavior
 
-import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  createStyleHost,
+  loadStrengthModuleSet,
+  readWebFile,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = path.resolve(__dirname, '..');
-const CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8');
-const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
+const CSS = readWebFile(WEB_DIR, 'styles/modules/750-strength-builder.css');
+const BASE_CSS = readWebFile(WEB_DIR, 'styles/modules/000-base-and-gamification.css');
 
 const CANVAS = Object.freeze({
   bg: '#fffaf1', c1: '#f7efe2', c2: '#efe3cf', tint: '#f6e6dd', tx: '#201e1d',
@@ -59,34 +63,20 @@ function computedCss(palette) {
     .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
 }
 
-function loadBuilder() {
-  if (!globalThis.window) globalThis.window = globalThis;
-  globalThis.window.HEYS = globalThis.HEYS = {};
-  globalThis.React = globalThis.window.React = React;
-  const ev = (rel) => {
-    // eslint-disable-next-line no-eval
-    eval(fs.readFileSync(path.join(WEB_DIR, rel), 'utf8'));
-  };
-  ev('_kernel/heys_kernel_strength_v1.js');
-  ev('heys_exercise_catalog_v1.js');
-  ev('strength/heys_strength_superset_ui_v1.js');
-  ev('strength/heys_strength_catalog_ui_v1.js');
-  ev('strength/heys_strength_finish_ui_v1.js');
-  ev('strength/heys_strength_builder_ui_v1.js');
-  return globalThis.HEYS.StrengthBuilder;
-}
+const COMPILED_CSS = { sand: null, blue: null };
+let SB;
+let BuilderParts;
+let styleHost;
 
 const work = (weightKg, reps, done, extra) => ({
   weightKg: String(weightKg), reps, done: !!done, ...(extra || {}),
 });
 
 function mountBuilder(props, palette = CANVAS) {
-  const style = document.createElement('style');
-  style.textContent = `${BASE_CSS}\n${computedCss(palette)}`;
-  document.head.appendChild(style);
-  const SB = loadBuilder();
+  const key = palette === BLUE ? 'blue' : 'sand';
+  styleHost.set(COMPILED_CSS[key]);
   render(React.createElement(SB.BuilderScreen, props));
-  return () => { cleanup(); style.remove(); };
+  return () => { cleanup(); };
 }
 
 const HEX_RGB = {
@@ -108,7 +98,22 @@ function expectColor(node, property, expected) {
 }
 
 describe('K · спорные состояния · canvas contract', { timeout: 45_000 }, () => {
+  beforeAll(() => {
+    const heys = loadStrengthModuleSet(WEB_DIR, 'builder', React);
+    SB = heys.StrengthBuilder;
+    BuilderParts = heys.StrengthBuilderParts;
+    COMPILED_CSS.sand = `${BASE_CSS}\n${computedCss(CANVAS)}`;
+    COMPILED_CSS.blue = `${BASE_CSS}\n${computedCss(BLUE)}`;
+    styleHost = createStyleHost();
+    styleHost.set(COMPILED_CSS.sand);
+  });
+
   afterEach(() => cleanup());
+
+  afterAll(() => {
+    styleHost?.remove();
+    delete globalThis.window?.HEYS;
+  });
 
   it('K1 · rest collapsed on closed exercise tap — geometry sand+blue', () => {
     vi.useFakeTimers();
@@ -199,14 +204,8 @@ describe('K · спорные состояния · canvas contract', { timeout:
   });
 
   it('K3 · warmup toggle opens renumber screen with delta colors', () => {
-    const Parts = (() => {
-      loadBuilder();
-      return globalThis.HEYS.StrengthBuilderParts;
-    })();
-    const style = document.createElement('style');
-    style.textContent = `${BASE_CSS}\n${computedCss(CANVAS)}`;
-    document.head.appendChild(style);
-    render(React.createElement(Parts.RenumberScreen, {
+    styleHost.set(COMPILED_CSS.sand);
+    render(React.createElement(BuilderParts.RenumberScreen, {
       ex: {
         name: 'Жим', approaches: [
           { weightKg: '40', reps: 10, done: true, type: 'warmup' },
@@ -225,8 +224,6 @@ describe('K · спорные состояния · canvas contract', { timeout:
     expect(document.querySelector('.sb-renumber-delta')).toBeTruthy();
     expectColor(document.querySelector('.sb-renumber-tonnage b'), 'color', CANVAS.tx);
     expect(document.querySelector('.sb-renumber-num.is-warmup')?.textContent).toMatch(/Р|разм/i);
-    cleanup();
-    style.remove();
   });
 
   it('K5 · superset has no drop button', () => {

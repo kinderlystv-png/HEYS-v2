@@ -1,14 +1,18 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
 import { fileURLToPath } from 'url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  createStyleHost,
+  loadStrengthModuleSet,
+  readWebFile,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CATALOG = fs.readFileSync(path.join(WEB_DIR, 'strength/heys_strength_catalog_ui_v1.js'), 'utf8');
-const CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8');
-const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
+const CATALOG = readWebFile(WEB_DIR, 'strength/heys_strength_catalog_ui_v1.js');
+const CSS = readWebFile(WEB_DIR, 'styles/modules/750-strength-builder.css');
+const BASE_CSS = readWebFile(WEB_DIR, 'styles/modules/000-base-and-gamification.css');
 
 const PALETTES = Object.freeze({
   sand: {
@@ -63,17 +67,9 @@ function compileCss(paletteName) {
     .replaceAll('env(safe-area-inset-bottom, 0px)', '0px')}`;
 }
 
-function loadNewExerciseScreen() {
-  window.HEYS = {};
-  window.React = React;
-  const ev = (rel) => {
-    // eslint-disable-next-line no-eval
-    eval(fs.readFileSync(path.join(WEB_DIR, rel), 'utf8'));
-  };
-  ev('heys_exercise_catalog_v1.js');
-  ev('strength/heys_strength_catalog_ui_v1.js');
-  return window.HEYS.StrengthCatalogUI.NewExerciseScreen;
-}
+const COMPILED_CSS = { sand: null, blue: null };
+let NewExerciseScreen;
+let styleHost;
 
 function expectStyle(node, expected, label) {
   const actual = getComputedStyle(node);
@@ -83,12 +79,9 @@ function expectStyle(node, expected, label) {
 }
 
 function renderNewExercise(paletteName = 'sand') {
-  const NewExerciseScreen = loadNewExerciseScreen();
   const palette = PALETTES[paletteName];
   const inkRgb = paletteName === 'blue' ? '16, 24, 38' : '0, 0, 0';
-  const style = document.createElement('style');
-  style.textContent = `${BASE_CSS}\n${compileCss(paletteName)}`;
-  document.head.appendChild(style);
+  styleHost.set(COMPILED_CSS[paletteName]);
   render(React.createElement(NewExerciseScreen, {
     onDone: () => {},
     onCancel: () => {},
@@ -103,7 +96,7 @@ function renderNewExercise(paletteName = 'sand') {
     '--c1': palette.c1,
   });
   fireEvent.click(screen.getByRole('button', { name: 'вес × повторы' }));
-  return { style, palette };
+  return { palette };
 }
 
 function renderNewExerciseWithMuscles(paletteName = 'sand') {
@@ -115,11 +108,19 @@ function renderNewExerciseWithMuscles(paletteName = 'sand') {
 }
 
 describe('strength builder · B3 своё упражнение ·08–12 badge-row v4 canvas contract', () => {
-  let style;
+  beforeAll(() => {
+    const heys = loadStrengthModuleSet(WEB_DIR, 'catalogNewExercise', React);
+    NewExerciseScreen = heys.StrengthCatalogUI.NewExerciseScreen;
+    COMPILED_CSS.sand = `${BASE_CSS}\n${compileCss('sand')}`;
+    COMPILED_CSS.blue = `${BASE_CSS}\n${compileCss('blue')}`;
+    styleHost = createStyleHost();
+    styleHost.set(COMPILED_CSS.sand);
+  });
 
-  afterEach(() => {
-    cleanup();
-    style?.remove();
+  afterEach(() => cleanup());
+
+  afterAll(() => {
+    styleHost?.remove();
     delete window.HEYS;
   });
 
@@ -135,7 +136,7 @@ describe('strength builder · B3 своё упражнение ·08–12 badge-r
   });
 
   it('доказывает computed-style badge-row на песочном наборе', { timeout: 20000 }, () => {
-    ({ style } = renderNewExercise('sand'));
+    renderNewExercise('sand');
     const palette = PALETTES.sand;
     const row = document.querySelector('.sb-ex-cd-row');
     const badges = document.querySelector('.sb-ex-unit-badges');
@@ -149,7 +150,7 @@ describe('strength builder · B3 своё упражнение ·08–12 badge-r
   });
 
   it('держит роли выбранной пилюли на синем наборе', { timeout: 20000 }, () => {
-    ({ style } = renderNewExercise('blue'));
+    renderNewExercise('blue');
     const palette = PALETTES.blue;
     expectStyle(screen.getByRole('button', { name: 'вес × повторы' }), {
       backgroundColor: palette.acs,
@@ -178,7 +179,7 @@ describe('strength builder · B3 своё упражнение ·08–12 badge-r
   });
 
   it('доказывает computed-style muscle rows ·14–17 на песочном наборе', { timeout: 20000 }, () => {
-    ({ style } = renderNewExerciseWithMuscles('sand'));
+    renderNewExerciseWithMuscles('sand');
     const palette = PALETTES.sand;
     const primaryRow = screen.getByText('Основная').closest('.sb-ex-muscle-row');
     const secondaryRow = screen.getByText('Помогают').closest('.sb-ex-muscle-row');
@@ -207,7 +208,7 @@ describe('strength builder · B3 своё упражнение ·08–12 badge-r
   });
 
   it('держит роли muscle rows ·14–17 на синем наборе', { timeout: 20000 }, () => {
-    ({ style } = renderNewExerciseWithMuscles('blue'));
+    renderNewExerciseWithMuscles('blue');
     const palette = PALETTES.blue;
     const primaryValue = screen.getByText('Основная')
       .closest('.sb-ex-muscle-row')

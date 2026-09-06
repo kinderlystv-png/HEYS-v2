@@ -55,8 +55,9 @@ function srcBlock(name) {
 let sharedParts;
 
 function loadPartsOnce() {
-  if (!sharedParts) {
-    sharedParts = loadStrengthModuleSet(WEB_DIR, 'proposal', React).StrengthBuilderParts;
+  if (!sharedParts || !globalThis.window.HEYS?.TrainingKernel) {
+    loadStrengthModuleSet(WEB_DIR, 'proposal', React);
+    sharedParts = globalThis.window.HEYS.StrengthBuilderParts;
   }
   return sharedParts;
 }
