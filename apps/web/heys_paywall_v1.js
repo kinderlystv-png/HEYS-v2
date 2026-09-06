@@ -98,7 +98,7 @@
         id: 'pro',
         name: 'Pro',
         price: PAYWALL_CONFIG.prices.pro,
-        desc: 'Куратор ведёт дневник, чат, созвон раз в неделю',
+        desc: 'Куратор ведёт дневник, чат, недельный чек-ин',
         popular: true,
       },
       {
