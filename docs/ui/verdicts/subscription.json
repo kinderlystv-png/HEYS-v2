@@ -307,8 +307,8 @@
     },
     "Подписка · экран · пробный период · 04": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:607-611: .sub-screen__hint font 500 12px/1.4 Figtree color var(--v4-ink-2) margin-top 6px font-variant-numeric tabular-nums",
-      "h": "1628d556df3e"
+      "f": "apps/web/heys_paywall_v1.js:607-611: .sub-screen__hint font 500 12px/1.4 Figtree color var(--v4-ink-2) margin-top 6px font-variant-numeric tabular-nums Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "45eda9770458"
     },
     "Подписка · экран · пробный период · 05": {
       "v": "=",
@@ -322,8 +322,8 @@
     },
     "Подписка · экран · пробный период · 07": {
       "v": "=",
-      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
-      "h": "650353c134e8"
+      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "b4685ebaefc7"
     },
     "Подписка · экран · пробный период · 08": {
       "v": "=",
@@ -539,8 +539,8 @@
     },
     "Подписка · тарифы · места есть · 09": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45)",
-      "h": "b2393a91cffd"
+      "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d5063e42ec48"
     },
     "Подписка · тарифы · места есть · 10": {
       "v": "=",
@@ -610,8 +610,8 @@
     },
     "Подписка · тарифы · мест нет · 09": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45)",
-      "h": "b2393a91cffd"
+      "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d5063e42ec48"
     },
     "Подписка · тарифы · мест нет · 10": {
       "v": "=",
@@ -625,8 +625,8 @@
     },
     "Подписка · тарифы · мест нет · 12": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:268: .paywall-trial-status--busy color var(--v4-ink-2); «Мест нет · в очереди N»",
-      "h": "c9839ed24f34"
+      "f": "apps/web/heys_paywall_v1.js:268: .paywall-trial-status--busy color var(--v4-ink-2); «Мест нет · в очереди N» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "8855b58475ed"
     },
     "Подписка · тарифы · мест нет · 13": {
       "v": "=",
@@ -671,8 +671,8 @@
     },
     "Подписка · тарифы · Pro Спорт · 07": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:590: .paywall-footnote font 500 11.5px/1.45; margin-top 10px; текст про согласование",
-      "h": "430eeb011f5a"
+      "f": "apps/web/heys_paywall_v1.js:590: .paywall-footnote font 500 11.5px/1.45; margin-top 10px; текст про согласование Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9849b4a1efbc"
     },
     "Подписка · проверьте заказ · 01": {
       "v": "—",
@@ -795,8 +795,8 @@
     },
     "Подписка · экран · активна · 04": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:606-611: .sub-screen__subline font 500 12px/1.4 Figtree color var(--v4-ink-2) margin-top 6px tabular-nums; heys_subscriptions_v1.js:1204-1205 «7 990 ₽ в месяц · оплачено до этой даты»",
-      "h": "a982f6d7c993"
+      "f": "apps/web/heys_paywall_v1.js:606-611: .sub-screen__subline font 500 12px/1.4 Figtree color var(--v4-ink-2) margin-top 6px tabular-nums; heys_subscriptions_v1.js:1204-1205 «7 990 ₽ в месяц · оплачено до этой даты» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "88b2b001aa13"
     },
     "Подписка · экран · активна · 05": {
       "v": "=",
@@ -951,8 +951,8 @@
     },
     "Подписка · очередь · заявка подана · 09": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45)",
-      "h": "b2393a91cffd"
+      "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d5063e42ec48"
     },
     "Подписка · очередь · заявка подана · 10": {
       "v": "=",
@@ -966,8 +966,8 @@
     },
     "Подписка · очередь · заявка подана · 12": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:1045: подпись «Сообщим, когда место освободится» margin-top 4px",
-      "h": "519e6bd209f9"
+      "f": "apps/web/heys_paywall_v1.js:1045: подпись «Сообщим, когда место освободится» margin-top 4px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "b179ba3feb06"
     },
     "Подписка · очередь · заявка подана · 13": {
       "v": "=",
@@ -1017,8 +1017,8 @@
     },
     "Подписка · очередь · место освободилось · 09": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45)",
-      "h": "b2393a91cffd"
+      "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d5063e42ec48"
     },
     "Подписка · очередь · место освободилось · 10": {
       "v": "=",
@@ -1037,8 +1037,8 @@
     },
     "Подписка · очередь · место освободилось · 13": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:1027: подпись «на подтверждение»",
-      "h": "f98c823028d9"
+      "f": "apps/web/heys_paywall_v1.js:1027: подпись «на подтверждение» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "b0c0e5795112"
     },
     "Подписка · очередь · место освободилось · 14": {
       "v": "=",
@@ -1383,8 +1383,8 @@
     },
     "Подписка · проверьте заказ · 14": {
       "v": "=",
-      "f": "«Отмена» — .paywall-cancel align-items center, justify-content center, min-height 44px, font 600 12px/1 (735-ui-v4-subscription.css:346-358); замер chromium: 339×44, 600, 12px, line-height 12px, цвет rgba(0,0,0,.55) через var(--v4-ink-2) под контрактные 56 % — та же ступень лестницы чернил, что уже закрыта в «Подписка · экран · активна · 04» и «· 10».",
-      "h": "b81b231f9fa9"
+      "f": "«Отмена» — .paywall-cancel align-items center, justify-content center, min-height 44px, font 600 12px/1 (735-ui-v4-subscription.css:346-358); замер chromium: 339×44, 600, 12px, line-height 12px, цвет rgba(0,0,0,.55) через var(--v4-ink-2) под контрактные 56 % — та же ступень лестницы чернил, что уже закрыта в «Подписка · экран · активна · 04» и «· 10». Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d1dd223bd149"
     }
   },
   "frames": {

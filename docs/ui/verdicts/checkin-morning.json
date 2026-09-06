@@ -598,8 +598,8 @@
     },
     "Чек-ин · вчерашний день · 03": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:912-915 .mc-daily-header-caption — font 600 11px/1 Figtree, color var(--v4-ink-data); computed sand rgba(0,0,0,0.56), blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,177,481); текст «Перед чек-ином» — heys_yesterday_verify_v1.js:2757 hint, рендер heys_step_modal_v1.js:1467-1470",
-      "h": "d1ef17223c4e"
+      "f": "500-pwa-and-offline.css:912-915 .mc-daily-header-caption — font 600 11px/1 Figtree, color var(--v4-ink-data); computed sand rgba(0,0,0,0.56), blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,177,481); текст «Перед чек-ином» — heys_yesterday_verify_v1.js:2757 hint, рендер heys_step_modal_v1.js:1467-1470 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "98acc403371e"
     },
     "Чек-ин · вчерашний день · 04": {
       "v": "=",
@@ -613,8 +613,8 @@
     },
     "Чек-ин · вчерашний день · 06": {
       "v": "=",
-      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — 500 12px/1.5 color var(--v4-ink-2), отступ 8px в кадре на подзаголовке; гейт элемент 06",
-      "h": "fbd55d7cc62e"
+      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — 500 12px/1.5 color var(--v4-ink-2), отступ 8px в кадре на подзаголовке; гейт элемент 06 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "4786f5087b83"
     },
     "Чек-ин · вчерашний день · 07": {
       "v": "=",
@@ -628,8 +628,8 @@
     },
     "Чек-ин · вчерашний день · 09": {
       "v": "=",
-      "f": "715-yesterday-verify.css:803-806 .yv-food-label — font 600 12.5px/1 (row), color sand rgba(0,0,0,0.55) / blue rgba(0,0,0,0.55)",
-      "h": "3669a679666e"
+      "f": "715-yesterday-verify.css:803-806 .yv-food-label — font 600 12.5px/1 (row), color sand rgba(0,0,0,0.55) / blue rgba(0,0,0,0.55) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "7412e2b7dd9e"
     },
     "Чек-ин · вчерашний день · 10": {
       "v": "=",
@@ -643,8 +643,8 @@
     },
     "Чек-ин · вчерашний день · 12": {
       "v": "=",
-      "f": "715-yesterday-verify.css:758-763 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); гейт элемент 12",
-      "h": "8ffb5d36e681"
+      "f": "715-yesterday-verify.css:758-763 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); гейт элемент 12 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "da6b1bafc50c"
     },
     "Чек-ин · вчерашний день · 13": {
       "v": "=",
@@ -663,18 +663,18 @@
     },
     "Чек-ин · вчерашний день · 16": {
       "v": "=",
-      "f": "715-yesterday-verify.css:751-755 .yv-pack-secondary — flex 1 min-height 48px background var(--v4-c1) color var(--v4-ink-2); песочная/синяя computed rgba(0,0,0,0.55); гейт элемент 16",
-      "h": "fdbf62fea33b"
+      "f": "715-yesterday-verify.css:751-755 .yv-pack-secondary — flex 1 min-height 48px background var(--v4-c1) color var(--v4-ink-2); песочная/синяя computed rgba(0,0,0,0.55); гейт элемент 16 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a9f43f217395"
     },
     "Чек-ин · вчерашний день · 17": {
       "v": "=",
-      "f": "715-yesterday-verify.css:744-746 .yv-pack-secondary--feelings flex 1.25, остальное как элемент 16; песочная/синяя color rgba(0,0,0,0.55); гейт элемент 17",
-      "h": "a8d8da3970b8"
+      "f": "715-yesterday-verify.css:744-746 .yv-pack-secondary--feelings flex 1.25, остальное как элемент 16; песочная/синяя color rgba(0,0,0,0.55); гейт элемент 17 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "13920ea5dc2f"
     },
     "Чек-ин · вчерашний день · 18": {
       "v": "=",
-      "f": "715-yesterday-verify.css:1069-1074 .yv-text-later — min-height 44px color rgba(0,0,0,0.45) прозрачный фон; песочная/синяя computed идентично; гейт элемент 18",
-      "h": "d91044d7699a"
+      "f": "715-yesterday-verify.css:1069-1074 .yv-text-later — min-height 44px color rgba(0,0,0,0.45) прозрачный фон; песочная/синяя computed идентично; гейт элемент 18 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "595592f0cb74"
     },
     "Чек-ин · вчера по ощущениям · 01": {
       "v": "=",
@@ -688,8 +688,8 @@
     },
     "Чек-ин · вчера по ощущениям · 03": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); дата в шапке YV-кадров",
-      "h": "eb42d44cc846"
+      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); дата в шапке YV-кадров Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d98125be10b7"
     },
     "Чек-ин · вчера по ощущениям · 04": {
       "v": "=",
@@ -708,8 +708,8 @@
     },
     "Чек-ин · вчера по ощущениям · 07": {
       "v": "=",
-      "f": "715-yesterday-verify.css:704-709,1078 .yv-hero-sub — font 500 12px/1.5, color rgba(32,30,29,0.55) sand/blue, margin-top 7px",
-      "h": "9da75e4b0c99"
+      "f": "715-yesterday-verify.css:704-709,1078 .yv-hero-sub — font 500 12px/1.5, color rgba(32,30,29,0.55) sand/blue, margin-top 7px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "c089f31db3cf"
     },
     "Чек-ин · вчера по ощущениям · 08": {
       "v": "=",
@@ -728,8 +728,8 @@
     },
     "Чек-ин · вчера по ощущениям · 11": {
       "v": "=",
-      "f": "715-yesterday-verify.css:862-866 .yv-force-kcal — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
-      "h": "d700900ec3af"
+      "f": "715-yesterday-verify.css:862-866 .yv-force-kcal — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "40a7ea47ac0b"
     },
     "Чек-ин · вчера по ощущениям · 12": {
       "v": "=",
@@ -758,8 +758,8 @@
     },
     "Чек-ин · вчера по ощущениям · 17": {
       "v": "=",
-      "f": "715-yesterday-verify.css:303-306 .yv-slider-label — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
-      "h": "1c2320602426"
+      "f": "715-yesterday-verify.css:303-306 .yv-slider-label — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "6316ce3fb320"
     },
     "Чек-ин · вчера по ощущениям · 18": {
       "v": "=",
@@ -783,13 +783,13 @@
     },
     "Чек-ин · вчера по ощущениям · 22": {
       "v": "=",
-      "f": "715-yesterday-verify.css .yv-slider-ticks margin-top 8px (контракт); кадр 7px. Computed sand+blue 8px — checkin-morning-v4-exception-geometry.test.js.",
-      "h": "500bb09715fb"
+      "f": "715-yesterday-verify.css .yv-slider-ticks margin-top 8px (контракт); кадр 7px. Computed sand+blue 8px — checkin-morning-v4-exception-geometry.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "b86cbf351946"
     },
     "Чек-ин · вчера по ощущениям · 23": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "bbaaf37c2df4"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "329038483335"
     },
     "Чек-ин · вчера по ощущениям · 24": {
       "v": "=",
@@ -813,8 +813,8 @@
     },
     "Чек-ин · по ощущениям своё число · 03": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); дата в шапке YV-кадров",
-      "h": "eb42d44cc846"
+      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); дата в шапке YV-кадров Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d98125be10b7"
     },
     "Чек-ин · по ощущениям своё число · 04": {
       "v": "=",
@@ -833,8 +833,8 @@
     },
     "Чек-ин · по ощущениям своё число · 07": {
       "v": "=",
-      "f": "715-yesterday-verify.css:704-709,1078 .yv-hero-sub — font 500 12px/1.5, color rgba(32,30,29,0.55) sand/blue, margin-top 7px",
-      "h": "c62f1f30ac56"
+      "f": "715-yesterday-verify.css:704-709,1078 .yv-hero-sub — font 500 12px/1.5, color rgba(32,30,29,0.55) sand/blue, margin-top 7px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "2629454af1f3"
     },
     "Чек-ин · по ощущениям своё число · 08": {
       "v": "=",
@@ -853,8 +853,8 @@
     },
     "Чек-ин · по ощущениям своё число · 11": {
       "v": "=",
-      "f": "715-yesterday-verify.css:862-866 .yv-force-kcal — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
-      "h": "d700900ec3af"
+      "f": "715-yesterday-verify.css:862-866 .yv-force-kcal — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "40a7ea47ac0b"
     },
     "Чек-ин · по ощущениям своё число · 12": {
       "v": "=",
@@ -868,8 +868,8 @@
     },
     "Чек-ин · по ощущениям своё число · 14": {
       "v": "=",
-      "f": "715-yesterday-verify.css:303-306 .yv-slider-label — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
-      "h": "1c2320602426"
+      "f": "715-yesterday-verify.css:303-306 .yv-slider-label — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "6316ce3fb320"
     },
     "Чек-ин · по ощущениям своё число · 15": {
       "v": "=",
@@ -893,13 +893,13 @@
     },
     "Чек-ин · по ощущениям своё число · 19": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "500bb09715fb"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "b86cbf351946"
     },
     "Чек-ин · по ощущениям своё число · 20": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "c44822fb43cb"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "afa2220b8033"
     },
     "Чек-ин · по ощущениям своё число · 21": {
       "v": "=",
@@ -923,8 +923,8 @@
     },
     "Чек-ин · пачка незакрытых дней · 03": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «Перед чек-ином» в пачке",
-      "h": "d1ef17223c4e"
+      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «Перед чек-ином» в пачке Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "98acc403371e"
     },
     "Чек-ин · пачка незакрытых дней · 04": {
       "v": "=",
@@ -938,8 +938,8 @@
     },
     "Чек-ин · пачка незакрытых дней · 06": {
       "v": "=",
-      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — font-weight 500 font-size 12px line-height 1.5 color var(--v4-ink-2); computed песочная/синяя rgba(0,0,0,.55); отступ сверху 8px через .yv-hero gap 8px; гейт элемент 06",
-      "h": "1af849aaf83a"
+      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — font-weight 500 font-size 12px line-height 1.5 color var(--v4-ink-2); computed песочная/синяя rgba(0,0,0,.55); отступ сверху 8px через .yv-hero gap 8px; гейт элемент 06 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "dda985faccb8"
     },
     "Чек-ин · пачка незакрытых дней · 07": {
       "v": "=",
@@ -953,8 +953,8 @@
     },
     "Чек-ин · пачка незакрытых дней · 09": {
       "v": "=",
-      "f": "715-yesterday-verify.css:762-767 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); computed песочная rgba(0,0,0,.56) синяя rgba(16,24,38,.64); гейт элемент 09",
-      "h": "37319fde5262"
+      "f": "715-yesterday-verify.css:762-767 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); computed песочная rgba(0,0,0,.56) синяя rgba(16,24,38,.64); гейт элемент 09 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a741f638a4ea"
     },
     "Чек-ин · пачка незакрытых дней · 10": {
       "v": "=",
@@ -973,8 +973,8 @@
     },
     "Чек-ин · пачка незакрытых дней · 13": {
       "v": "=",
-      "f": "715-yesterday-verify.css:755-759 .yv-pack-secondary — flex 1 min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 13",
-      "h": "53532f0e949e"
+      "f": "715-yesterday-verify.css:755-759 .yv-pack-secondary — flex 1 min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 13 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "337257d7447f"
     },
     "Чек-ин · пачка после очистки · 01": {
       "v": "=",
@@ -988,8 +988,8 @@
     },
     "Чек-ин · пачка после очистки · 03": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «Перед чек-ином» в пачке",
-      "h": "d1ef17223c4e"
+      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «Перед чек-ином» в пачке Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "98acc403371e"
     },
     "Чек-ин · пачка после очистки · 04": {
       "v": "=",
@@ -1003,8 +1003,8 @@
     },
     "Чек-ин · пачка после очистки · 06": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "04100184481c"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f3a7cb34b34f"
     },
     "Чек-ин · пачка после очистки · 07": {
       "v": "=",
@@ -1018,8 +1018,8 @@
     },
     "Чек-ин · пачка после очистки · 09": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "02659717dd7b"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "759ccc484a1c"
     },
     "Чек-ин · пачка после очистки · 10": {
       "v": "=",
@@ -1033,8 +1033,8 @@
     },
     "Чек-ин · пачка после очистки · 12": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "d91044d7699a"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "595592f0cb74"
     },
     "Чек-ин · день из пачки · 01": {
       "v": "=",
@@ -1048,8 +1048,8 @@
     },
     "Чек-ин · день из пачки · 03": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «День N из M» в дне из пачки",
-      "h": "4e0004f388ef"
+      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «День N из M» в дне из пачки Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "c81f6026ce1d"
     },
     "Чек-ин · день из пачки · 04": {
       "v": "=",
@@ -1068,8 +1068,8 @@
     },
     "Чек-ин · день из пачки · 07": {
       "v": "=",
-      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — font-weight 500 font-size 12px line-height 1.5 color var(--v4-ink-2); computed песочная/синяя rgba(0,0,0,.55); гейт элемент 07",
-      "h": "f486feaa917f"
+      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — font-weight 500 font-size 12px line-height 1.5 color var(--v4-ink-2); computed песочная/синяя rgba(0,0,0,.55); гейт элемент 07 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "7e7e3f8b93b4"
     },
     "Чек-ин · день из пачки · 08": {
       "v": "=",
@@ -1083,8 +1083,8 @@
     },
     "Чек-ин · день из пачки · 10": {
       "v": "=",
-      "f": "715-yesterday-verify.css:801 .yv-food-row — color rgba(0,0,0,.55) на подписи «Еда»; computed песочная/синяя rgba(0,0,0,.55)",
-      "h": "3669a679666e"
+      "f": "715-yesterday-verify.css:801 .yv-food-row — color rgba(0,0,0,.55) на подписи «Еда»; computed песочная/синяя rgba(0,0,0,.55) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "7412e2b7dd9e"
     },
     "Чек-ин · день из пачки · 11": {
       "v": "=",
@@ -1098,8 +1098,8 @@
     },
     "Чек-ин · день из пачки · 13": {
       "v": "=",
-      "f": "715-yesterday-verify.css:762-767 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); computed песочная rgba(0,0,0,.56) синяя rgba(16,24,38,.64); гейт элемент 13",
-      "h": "64e7dc742718"
+      "f": "715-yesterday-verify.css:762-767 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); computed песочная rgba(0,0,0,.56) синяя rgba(16,24,38,.64); гейт элемент 13 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "6aaf16a7c88b"
     },
     "Чек-ин · день из пачки · 14": {
       "v": "=",
@@ -1118,18 +1118,18 @@
     },
     "Чек-ин · день из пачки · 17": {
       "v": "=",
-      "f": "715-yesterday-verify.css:755-759 .yv-pack-secondary — flex 1 min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 17",
-      "h": "fdbf62fea33b"
+      "f": "715-yesterday-verify.css:755-759 .yv-pack-secondary — flex 1 min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 17 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a9f43f217395"
     },
     "Чек-ин · день из пачки · 18": {
       "v": "=",
-      "f": "715-yesterday-verify.css:744-746 .yv-pack-row .yv-pack-secondary--feelings — flex 1.25; min-height 48px border-radius 999px background var(--v4-c1); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249); гейт элемент 18",
-      "h": "a8d8da3970b8"
+      "f": "715-yesterday-verify.css:744-746 .yv-pack-row .yv-pack-secondary--feelings — flex 1.25; min-height 48px border-radius 999px background var(--v4-c1); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249); гейт элемент 18 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "13920ea5dc2f"
     },
     "Чек-ин · день из пачки · 19": {
       "v": "=",
-      "f": "715-yesterday-verify.css:1069-1076 .yv-text-later — min-height 44px font 700 12px/1 color rgba(0,0,0,.45) background transparent; computed песочная/синяя rgba(0,0,0,.45); гейт элемент 19",
-      "h": "939d9a04d849"
+      "f": "715-yesterday-verify.css:1069-1076 .yv-text-later — min-height 44px font 700 12px/1 color rgba(0,0,0,.45) background transparent; computed песочная/синяя rgba(0,0,0,.45); гейт элемент 19 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1a89462258ad"
     },
     "Чек-ин · пустой день из пачки · 01": {
       "v": "=",
@@ -1143,8 +1143,8 @@
     },
     "Чек-ин · пустой день из пачки · 03": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «День 2 из 4» пустой день из пачки",
-      "h": "9c77d72f426c"
+      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «День 2 из 4» пустой день из пачки Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d02594bc453f"
     },
     "Чек-ин · пустой день из пачки · 04": {
       "v": "=",
@@ -1163,8 +1163,8 @@
     },
     "Чек-ин · пустой день из пачки · 07": {
       "v": "=",
-      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — font-weight 500 font-size 12px line-height 1.5 color var(--v4-ink-2); computed песочная/синяя rgba(0,0,0,.55); гейт элемент 07",
-      "h": "3a51c2b20529"
+      "f": "715-yesterday-verify.css:704-710 .yv-hero-sub — font-weight 500 font-size 12px line-height 1.5 color var(--v4-ink-2); computed песочная/синяя rgba(0,0,0,.55); гейт элемент 07 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "2aea57ee11f1"
     },
     "Чек-ин · пустой день из пачки · 08": {
       "v": "=",
@@ -1178,8 +1178,8 @@
     },
     "Чек-ин · пустой день из пачки · 10": {
       "v": "=",
-      "f": "715-yesterday-verify.css:801 .yv-food-row — color rgba(0,0,0,.55) на подписи «Еда»; computed песочная/синяя rgba(0,0,0,.55)",
-      "h": "3669a679666e"
+      "f": "715-yesterday-verify.css:801 .yv-food-row — color rgba(0,0,0,.55) на подписи «Еда»; computed песочная/синяя rgba(0,0,0,.55) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "7412e2b7dd9e"
     },
     "Чек-ин · пустой день из пачки · 11": {
       "v": "=",
@@ -1193,8 +1193,8 @@
     },
     "Чек-ин · пустой день из пачки · 13": {
       "v": "=",
-      "f": "715-yesterday-verify.css:762-767 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); computed песочная rgba(0,0,0,.56) синяя rgba(16,24,38,.64); гейт элемент 13",
-      "h": "32101654a9d6"
+      "f": "715-yesterday-verify.css:762-767 .yv-pack-note — margin-top 12px font 500 11px/1.5 color var(--v4-ink-data); computed песочная rgba(0,0,0,.56) синяя rgba(16,24,38,.64); гейт элемент 13 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "619e159288b3"
     },
     "Чек-ин · пустой день из пачки · 14": {
       "v": "=",
@@ -1214,18 +1214,18 @@
     },
     "Чек-ин · пустой день из пачки · 17": {
       "v": "=",
-      "f": "715-yesterday-verify.css:748-750 .yv-pack-row .yv-pack-secondary--confirm-empty — flex 1.35; 755-759 .yv-pack-secondary min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 17",
-      "h": "055760bb70c3"
+      "f": "715-yesterday-verify.css:748-750 .yv-pack-row .yv-pack-secondary--confirm-empty — flex 1.35; 755-759 .yv-pack-secondary min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 17 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "11bc310a2781"
     },
     "Чек-ин · пустой день из пачки · 18": {
       "v": "=",
-      "f": "715-yesterday-verify.css:755-759 .yv-pack-secondary — flex 1 min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 18",
-      "h": "7f89df727345"
+      "f": "715-yesterday-verify.css:755-759 .yv-pack-secondary — flex 1 min-height 48px border-radius 999px background var(--v4-c1) color var(--v4-ink-2); computed bg песочная rgb(247,239,226) синяя rgb(238,243,249), color rgba(0,0,0,.55); гейт элемент 18 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "4f9dccb9312d"
     },
     "Чек-ин · пустой день из пачки · 19": {
       "v": "=",
-      "f": "715-yesterday-verify.css:1069-1076 .yv-text-later — min-height 44px font 700 12px/1 color rgba(0,0,0,.45) background transparent; computed песочная/синяя rgba(0,0,0,.45); гейт элемент 19",
-      "h": "939d9a04d849"
+      "f": "715-yesterday-verify.css:1069-1076 .yv-text-later — min-height 44px font 700 12px/1 color rgba(0,0,0,.45) background transparent; computed песочная/синяя rgba(0,0,0,.45); гейт элемент 19 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1a89462258ad"
     },
     "Чек-ин · сила для пачки · 01": {
       "v": "=",
@@ -1239,8 +1239,8 @@
     },
     "Чек-ин · сила для пачки · 03": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «11 — 14 августа» сила для пачки",
-      "h": "0c362feeb1d0"
+      "f": "500-pwa-and-offline.css:912 .mc-daily-header-caption — font 600 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56); «11 — 14 августа» сила для пачки Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "edaa660c59f9"
     },
     "Чек-ин · сила для пачки · 04": {
       "v": "=",
@@ -1259,8 +1259,8 @@
     },
     "Чек-ин · сила для пачки · 07": {
       "v": "=",
-      "f": "715-yesterday-verify.css:704-709,1078 .yv-hero-sub — font 500 12px/1.5, color rgba(32,30,29,0.55) sand/blue, margin-top 7px",
-      "h": "b2a37c69b2ac"
+      "f": "715-yesterday-verify.css:704-709,1078 .yv-hero-sub — font 500 12px/1.5, color rgba(32,30,29,0.55) sand/blue, margin-top 7px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "0cbdb896b7a5"
     },
     "Чек-ин · сила для пачки · 08": {
       "v": "=",
@@ -1279,8 +1279,8 @@
     },
     "Чек-ин · сила для пачки · 11": {
       "v": "=",
-      "f": "715-yesterday-verify.css:862-866 .yv-force-kcal — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
-      "h": "0441f9a0e280"
+      "f": "715-yesterday-verify.css:862-866 .yv-force-kcal — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f3d58c1a7920"
     },
     "Чек-ин · сила для пачки · 12": {
       "v": "=",
@@ -1309,8 +1309,8 @@
     },
     "Чек-ин · сила для пачки · 17": {
       "v": "=",
-      "f": "715-yesterday-verify.css:303-306 .yv-slider-label — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
-      "h": "f2bac9d72093"
+      "f": "715-yesterday-verify.css:303-306 .yv-slider-label — font 600 11.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "e50f470d1087"
     },
     "Чек-ин · сила для пачки · 18": {
       "v": "=",
@@ -1334,13 +1334,13 @@
     },
     "Чек-ин · сила для пачки · 22": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "500bb09715fb"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "b86cbf351946"
     },
     "Чек-ин · сила для пачки · 23": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "8a067b6e5a75"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "e7784f9ffffa"
     },
     "Чек-ин · сила для пачки · 24": {
       "v": "=",
@@ -1354,8 +1354,8 @@
     },
     "Чек-ин · сила для пачки · 26": {
       "v": "=",
-      "f": "715-yesterday-verify.css:1069-1075 .yv-text-later — min-height 44px, font 600 12px/1, color rgba(0,0,0,0.45) sand/blue",
-      "h": "939d9a04d849"
+      "f": "715-yesterday-verify.css:1069-1075 .yv-text-later — min-height 44px, font 600 12px/1, color rgba(0,0,0,0.45) sand/blue Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1a89462258ad"
     },
     "Чек-ин · вес · 01": {
       "v": "=",
@@ -1379,8 +1379,8 @@
     },
     "Чек-ин · вес · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "18e84f6cdf20"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9a19d014a9f2"
     },
     "Чек-ин · вес · 06": {
       "v": "=",
@@ -1394,8 +1394,8 @@
     },
     "Чек-ин · вес · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "b91e95fe852b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "32b0d0c0c951"
     },
     "Чек-ин · вес · 09": {
       "v": "=",
@@ -1404,8 +1404,8 @@
     },
     "Чек-ин · вес · 10": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "9aa405edad0e"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "19c379ee4a72"
     },
     "Чек-ин · вес · 11": {
       "v": "=",
@@ -1419,8 +1419,8 @@
     },
     "Чек-ин · вес · 13": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "6be6af5a4213"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "143ac27402e0"
     },
     "Чек-ин · вес · 14": {
       "v": "=",
@@ -1434,8 +1434,8 @@
     },
     "Чек-ин · вес · 16": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "c43b73f3371b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "29b54faf5bde"
     },
     "Чек-ин · вес · 17": {
       "v": "=",
@@ -1469,8 +1469,8 @@
     },
     "Чек-ин · вес · 23": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:878 .mc-daily-footer-secondary — flex 1, min-height 48px, radius 999px, background sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468), color sand rgba(0,0,0,0.55) / blue rgba(0,0,0,0.55)",
-      "h": "d2faa8f2fc61"
+      "f": "500-pwa-and-offline.css:878 .mc-daily-footer-secondary — flex 1, min-height 48px, radius 999px, background sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468), color sand rgba(0,0,0,0.55) / blue rgba(0,0,0,0.55) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1c8d7d225a6c"
     },
     "Чек-ин · вес · 24": {
       "v": "=",
@@ -1499,8 +1499,8 @@
     },
     "Чек-ин · первый вес · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "1ac343724695"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "7f7531579aa9"
     },
     "Чек-ин · первый вес · 06": {
       "v": "=",
@@ -1509,8 +1509,8 @@
     },
     "Чек-ин · первый вес · 07": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "9aa405edad0e"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "19c379ee4a72"
     },
     "Чек-ин · первый вес · 08": {
       "v": "=",
@@ -1524,13 +1524,13 @@
     },
     "Чек-ин · первый вес · 10": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "6be6af5a4213"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "143ac27402e0"
     },
     "Чек-ин · первый вес · 11": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "a0c66caec7f6"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f362305f6a62"
     },
     "Чек-ин · первый вес · 12": {
       "v": "=",
@@ -1539,8 +1539,8 @@
     },
     "Чек-ин · первый вес · 13": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "c43b73f3371b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "29b54faf5bde"
     },
     "Чек-ин · первый вес · 14": {
       "v": "=",
@@ -1569,8 +1569,8 @@
     },
     "Чек-ин · первый вес · 19": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "80342a6caafb"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "e91afa78c7b5"
     },
     "Чек-ин · первый вес · 20": {
       "v": "=",
@@ -1579,8 +1579,8 @@
     },
     "Чек-ин · первый вес · 21": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:878 .mc-daily-footer-secondary — flex 1, min-height 48px, radius 999px, background sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468), color sand rgba(0,0,0,0.55) / blue rgba(0,0,0,0.55)",
-      "h": "d2faa8f2fc61"
+      "f": "500-pwa-and-offline.css:878 .mc-daily-footer-secondary — flex 1, min-height 48px, radius 999px, background sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468), color sand rgba(0,0,0,0.55) / blue rgba(0,0,0,0.55) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1c8d7d225a6c"
     },
     "Чек-ин · первый вес · 22": {
       "v": "=",
@@ -1604,8 +1604,8 @@
     },
     "Чек-ин · расчётный вес · 04": {
       "v": "=",
-      "f": "heys_steps_v1.js:1798 .mc-step-kicker «Вес на утро» — font 600 13px/1, tracking .02em, color rgba(0,0,0,0.6) sand/blue",
-      "h": "9aa405edad0e"
+      "f": "heys_steps_v1.js:1798 .mc-step-kicker «Вес на утро» — font 600 13px/1, tracking .02em, color rgba(0,0,0,0.6) sand/blue Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "19c379ee4a72"
     },
     "Чек-ин · расчётный вес · 05": {
       "v": "=",
@@ -1614,13 +1614,13 @@
     },
     "Чек-ин · расчётный вес · 06": {
       "v": "=",
-      "f": "heys_steps_v1.js:1800 — инлайн героя estimated: fontSize 58 fontWeight 600 lineHeight 0.9 color rgba(0,0,0,.45) letterSpacing -.045em; гейт «расчётный вес набран числами своих кадров»",
-      "h": "3f5bb7aec6ca"
+      "f": "heys_steps_v1.js:1800 — инлайн героя estimated: fontSize 58 fontWeight 600 lineHeight 0.9 color rgba(0,0,0,.45) letterSpacing -.045em; гейт «расчётный вес набран числами своих кадров» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a4cfe1cea98a"
     },
     "Чек-ин · расчётный вес · 07": {
       "v": "=",
-      "f": "инлайн шага приведён к числам кадра 31 августа: у сноски задан вес 500, у единицы и строк среднего — интерлиньяж 1 (heys_steps_v1.js). Прежде вес и интерлиньяж не задавались вовсе и брались браузерные",
-      "h": "6be6af5a4213"
+      "f": "инлайн шага приведён к числам кадра 31 августа: у сноски задан вес 500, у единицы и строк среднего — интерлиньяж 1 (heys_steps_v1.js). Прежде вес и интерлиньяж не задавались вовсе и брались браузерные Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "143ac27402e0"
     },
     "Чек-ин · расчётный вес · 08": {
       "v": "=",
@@ -1634,13 +1634,13 @@
     },
     "Чек-ин · расчётный вес · 10": {
       "v": "=",
-      "f": "heys_steps_v1.js:1814-1817 — заголовок списка взвешиваний font 600 11.5px/1.5 color rgba(0,0,0,.6) внутри карточки estimated",
-      "h": "0eb45fe086c2"
+      "f": "heys_steps_v1.js:1814-1817 — заголовок списка взвешиваний font 600 11.5px/1.5 color rgba(0,0,0,.6) внутри карточки estimated Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "129305bdad84"
     },
     "Чек-ин · расчётный вес · 11": {
       "v": "=",
-      "f": "строка среднего в шаге расчётного веса: инлайн в apps/web/heys_steps_v1.js (ветка estimated, ряд estimateSamples) — space-between, отступ сверху 11, 600 12/1. Тон поднят с литерала 50 % до роли --v4-ink-data (56 %) по строке «вторичные тоны», уточнение 2 сентября: «строки прошлых взвешиваний … подняты до 56 %». Числа и роль сторожит гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js («расчётный вес набран числами своих кадров»)",
-      "h": "c40dd3c8538b"
+      "f": "строка среднего в шаге расчётного веса: инлайн в apps/web/heys_steps_v1.js (ветка estimated, ряд estimateSamples) — space-between, отступ сверху 11, 600 12/1. Тон поднят с литерала 50 % до роли --v4-ink-data (56 %) по строке «вторичные тоны», уточнение 2 сентября: «строки прошлых взвешиваний … подняты до 56 %». Числа и роль сторожит гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js («расчётный вес набран числами своих кадров») Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "307246c9b3c3"
     },
     "Чек-ин · расчётный вес · 12": {
       "v": "=",
@@ -1649,13 +1649,13 @@
     },
     "Чек-ин · расчётный вес · 13": {
       "v": "=",
-      "f": "вторая строка того же ряда: тот же инлайн и та же роль --v4-ink-data (56 %) — 600 12/1, space-between. Отступ у продукта один на весь ряд (11), кадр даёт второй строке 9; отступление названо в списке EXCEPTIONS гейта apps/web/__tests__/checkin-v4-canvas-razbor.test.js («ряд строк среднего: один отступ 11») и в пары по marginTop не идёт",
-      "h": "9771e9cc9942"
+      "f": "вторая строка того же ряда: тот же инлайн и та же роль --v4-ink-data (56 %) — 600 12/1, space-between. Отступ у продукта один на весь ряд (11), кадр даёт второй строке 9; отступление названо в списке EXCEPTIONS гейта apps/web/__tests__/checkin-v4-canvas-razbor.test.js («ряд строк среднего: один отступ 11») и в пары по marginTop не идёт Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a13949ada800"
     },
     "Чек-ин · расчётный вес · 14": {
       "v": "=",
-      "f": "инлайн шага приведён к числам кадра 31 августа: у сноски задан вес 500, у единицы и строк среднего — интерлиньяж 1 (heys_steps_v1.js). Прежде вес и интерлиньяж не задавались вовсе и брались браузерные",
-      "h": "fe30088c141f"
+      "f": "инлайн шага приведён к числам кадра 31 августа: у сноски задан вес 500, у единицы и строк среднего — интерлиньяж 1 (heys_steps_v1.js). Прежде вес и интерлиньяж не задавались вовсе и брались браузерные Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f4a86fdd9355"
     },
     "Чек-ин · расчётный вес · 15": {
       "v": "—",
@@ -1664,8 +1664,8 @@
     },
     "Чек-ин · расчётный вес · 16": {
       "v": "=",
-      "f": "кнопки подвала: «Ввести вес» на первой поверхности и «Дальше» главной, обе высотой от 48 с радиусом 999",
-      "h": "43b323d47fc7"
+      "f": "кнопки подвала: «Ввести вес» на первой поверхности и «Дальше» главной, обе высотой от 48 с радиусом 999 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "06238eba1098"
     },
     "Чек-ин · расчётный вес · 17": {
       "v": "=",
@@ -1689,8 +1689,8 @@
     },
     "Чек-ин · расчётный вес без истории · 04": {
       "v": "=",
-      "f": "heys_steps_v1.js:1798 .mc-step-kicker «Вес на утро» — font 600 13px/1, tracking .02em, color rgba(0,0,0,0.6) sand/blue",
-      "h": "9aa405edad0e"
+      "f": "heys_steps_v1.js:1798 .mc-step-kicker «Вес на утро» — font 600 13px/1, tracking .02em, color rgba(0,0,0,0.6) sand/blue Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "19c379ee4a72"
     },
     "Чек-ин · расчётный вес без истории · 05": {
       "v": "=",
@@ -1699,13 +1699,13 @@
     },
     "Чек-ин · расчётный вес без истории · 06": {
       "v": "=",
-      "f": "heys_steps_v1.js:1800 inline estimated hero — fontSize 58, fontWeight 600, lineHeight 0.9, color rgba(0,0,0,0.45)",
-      "h": "4559f15e4073"
+      "f": "heys_steps_v1.js:1800 inline estimated hero — fontSize 58, fontWeight 600, lineHeight 0.9, color rgba(0,0,0,0.45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "fb0e27838e28"
     },
     "Чек-ин · расчётный вес без истории · 07": {
       "v": "=",
-      "f": "инлайн шага приведён к числам кадра 31 августа: у сноски задан вес 500, у единицы и строк среднего — интерлиньяж 1 (heys_steps_v1.js). Прежде вес и интерлиньяж не задавались вовсе и брались браузерные",
-      "h": "6be6af5a4213"
+      "f": "инлайн шага приведён к числам кадра 31 августа: у сноски задан вес 500, у единицы и строк среднего — интерлиньяж 1 (heys_steps_v1.js). Прежде вес и интерлиньяж не задавались вовсе и брались браузерные Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "143ac27402e0"
     },
     "Чек-ин · расчётный вес без истории · 08": {
       "v": "=",
@@ -1719,13 +1719,13 @@
     },
     "Чек-ин · расчётный вес без истории · 10": {
       "v": "=",
-      "f": "heys_steps_v1.js:1831-1833 profile copy — font 600 11.5px/1.5, color rgba(0,0,0,0.6)",
-      "h": "0732eb29b26d"
+      "f": "heys_steps_v1.js:1831-1833 profile copy — font 600 11.5px/1.5, color rgba(0,0,0,0.6) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "78e8643401d7"
     },
     "Чек-ин · расчётный вес без истории · 11": {
       "v": "=",
-      "f": "инлайн шага приведён к числам кадра 31 августа: у сноски задан вес 500, у единицы и строк среднего — интерлиньяж 1 (heys_steps_v1.js). Прежде вес и интерлиньяж не задавались вовсе и брались браузерные",
-      "h": "9de492a9cb19"
+      "f": "инлайн шага приведён к числам кадра 31 августа: у сноски задан вес 500, у единицы и строк среднего — интерлиньяж 1 (heys_steps_v1.js). Прежде вес и интерлиньяж не задавались вовсе и брались браузерные Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "18d7435149b8"
     },
     "Чек-ин · расчётный вес без истории · 12": {
       "v": "—",
@@ -1734,8 +1734,8 @@
     },
     "Чек-ин · расчётный вес без истории · 13": {
       "v": "=",
-      "f": "«Ввести вес» — вторичная кнопка подвала высотой от 48 с радиусом 999 на первой поверхности",
-      "h": "43b323d47fc7"
+      "f": "«Ввести вес» — вторичная кнопка подвала высотой от 48 с радиусом 999 на первой поверхности Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "06238eba1098"
     },
     "Чек-ин · расчётный вес без истории · 14": {
       "v": "=",
@@ -1764,8 +1764,8 @@
     },
     "Чек-ин · сон · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "ad17f268d0f6"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "5f6e22200c6f"
     },
     "Чек-ин · сон · 06": {
       "v": "=",
@@ -1779,8 +1779,8 @@
     },
     "Чек-ин · сон · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "ac188952a7b9"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "4531a52ce217"
     },
     "Чек-ин · сон · 09": {
       "v": "=",
@@ -1799,8 +1799,8 @@
     },
     "Чек-ин · сон · 12": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "cecf0c72dd21"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "bbbb916d34b2"
     },
     "Чек-ин · сон · 13": {
       "v": "=",
@@ -1849,8 +1849,8 @@
     },
     "Чек-ин · сон · 22": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "8a8f5939ff99"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "7189897c0ed4"
     },
     "Чек-ин · сон · 23": {
       "v": "=",
@@ -1909,13 +1909,13 @@
     },
     "Чек-ин · как вы сегодня · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "1c108759ad0d"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "84ab0106802b"
     },
     "Чек-ин · как вы сегодня · 06": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "d36a945523a6"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a228c09ef71c"
     },
     "Чек-ин · как вы сегодня · 07": {
       "v": "=",
@@ -1934,8 +1934,8 @@
     },
     "Чек-ин · как вы сегодня · 10": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "cecf0c72dd21"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "bbbb916d34b2"
     },
     "Чек-ин · как вы сегодня · 11": {
       "v": "=",
@@ -1974,8 +1974,8 @@
     },
     "Чек-ин · как вы сегодня · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "d66a51a1eff1"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "31ec6f61ead8"
     },
     "Чек-ин · как вы сегодня · 19": {
       "v": "=",
@@ -2009,8 +2009,8 @@
     },
     "Чек-ин · цель по шагам · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3c9b2107bc6b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9dee3474d59f"
     },
     "Чек-ин · цель по шагам · 06": {
       "v": "=",
@@ -2024,13 +2024,13 @@
     },
     "Чек-ин · цель по шагам · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "55910bf20d34"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d28da1265a"
     },
     "Чек-ин · цель по шагам · 09": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "bd97069c1b88"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "6fb3ddcaf11b"
     },
     "Чек-ин · цель по шагам · 10": {
       "v": "=",
@@ -2074,13 +2074,13 @@
     },
     "Чек-ин · цель по шагам · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "09e541cc4fce"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "eaf395d5f7c7"
     },
     "Чек-ин · цель по шагам · 19": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "7c9d4525d32c"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a55427d95095"
     },
     "Чек-ин · цель по шагам · 20": {
       "v": "=",
@@ -2094,8 +2094,8 @@
     },
     "Чек-ин · цель по шагам · 22": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "8458a07b37e0"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a8124331cb7a"
     },
     "Чек-ин · цель по шагам · 23": {
       "v": "=",
@@ -2114,8 +2114,8 @@
     },
     "Чек-ин · цель по шагам · 26": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "b7d953957c43"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "513555daf3c1"
     },
     "Чек-ин · цель по шагам · 27": {
       "v": "=",
@@ -2169,8 +2169,8 @@
     },
     "Чек-ин · остальное · 09": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px",
-      "h": "1858faaac019"
+      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "cd2335bcf87f"
     },
     "Чек-ин · остальное · 10": {
       "v": "=",
@@ -2199,8 +2199,8 @@
     },
     "Чек-ин · остальное · 15": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1427 .mc-rest-coffee-note — font 500 11px/1.2, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), nowrap",
-      "h": "6f94be2fab58"
+      "f": "500-pwa-and-offline.css:1427 .mc-rest-coffee-note — font 500 11px/1.2, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), nowrap Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9748d721182f"
     },
     "Чек-ин · остальное · 16": {
       "v": "=",
@@ -2219,8 +2219,8 @@
     },
     "Чек-ин · остальное · 19": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1454 .mc-rest-coffee-why — font 500 11px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 10px",
-      "h": "63ea545a6e7e"
+      "f": "500-pwa-and-offline.css:1454 .mc-rest-coffee-why — font 500 11px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 10px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "8cd7db176355"
     },
     "Чек-ин · остальное · 20": {
       "v": "=",
@@ -2249,8 +2249,8 @@
     },
     "Чек-ин · остальное · 25": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2704 .mc-rest-supp-time — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481)",
-      "h": "254c0eded4c5"
+      "f": "500-pwa-and-offline.css:2704 .mc-rest-supp-time — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9ea7b9dca2b9"
     },
     "Чек-ин · остальное · 26": {
       "v": "=",
@@ -2269,8 +2269,8 @@
     },
     "Чек-ин · остальное · 29": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1451 .mc-rest-card-hint — font 500 11px/1.4, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px",
-      "h": "d82de0ffa360"
+      "f": "500-pwa-and-offline.css:1451 .mc-rest-card-hint — font 500 11px/1.4, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d624da6d25"
     },
     "Чек-ин · остальное · 30": {
       "v": "=",
@@ -2289,13 +2289,13 @@
     },
     "Чек-ин · остальное · 33": {
       "v": "≠",
-      "f": "500-pwa-and-offline.css:1677-1682 .mc-rest-card-hint font:500 11.5px/1.5 margin-top:5px; кадр «33» «Прошло 9 дней…» 11px/1.4 margin-top:3px",
-      "h": "adee9803f543"
+      "f": "500-pwa-and-offline.css:1677-1682 .mc-rest-card-hint font:500 11.5px/1.5 margin-top:5px; кадр «33» «Прошло 9 дней…» 11px/1.4 margin-top:3px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "3a8a38fb4ae7"
     },
     "Чек-ин · остальное · 34": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2627 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3)",
-      "h": "5d91ce3f4673"
+      "f": "500-pwa-and-offline.css:2627 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a2cf7c6e06ef"
     },
     "Чек-ин · остальное · 35": {
       "v": "=",
@@ -2349,8 +2349,8 @@
     },
     "Чек-ин · замеры просрочены · 09": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px",
-      "h": "bdc1c5069a1f"
+      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "58d238b2c51a"
     },
     "Чек-ин · замеры просрочены · 10": {
       "v": "=",
@@ -2379,8 +2379,8 @@
     },
     "Чек-ин · замеры просрочены · 15": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1427 .mc-rest-coffee-note — font 500 11px/1.2, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), nowrap",
-      "h": "6f94be2fab58"
+      "f": "500-pwa-and-offline.css:1427 .mc-rest-coffee-note — font 500 11px/1.2, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), nowrap Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9748d721182f"
     },
     "Чек-ин · замеры просрочены · 16": {
       "v": "=",
@@ -2399,8 +2399,8 @@
     },
     "Чек-ин · замеры просрочены · 19": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1454 .mc-rest-coffee-why — font 500 11px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 10px",
-      "h": "63ea545a6e7e"
+      "f": "500-pwa-and-offline.css:1454 .mc-rest-coffee-why — font 500 11px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 10px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "8cd7db176355"
     },
     "Чек-ин · замеры просрочены · 20": {
       "v": "=",
@@ -2429,8 +2429,8 @@
     },
     "Чек-ин · замеры просрочены · 25": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2704 .mc-rest-supp-time — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481)",
-      "h": "254c0eded4c5"
+      "f": "500-pwa-and-offline.css:2704 .mc-rest-supp-time — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9ea7b9dca2b9"
     },
     "Чек-ин · замеры просрочены · 26": {
       "v": "=",
@@ -2449,8 +2449,8 @@
     },
     "Чек-ин · замеры просрочены · 29": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1451 .mc-rest-card-hint — font 500 11px/1.4, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px",
-      "h": "d82de0ffa360"
+      "f": "500-pwa-and-offline.css:1451 .mc-rest-card-hint — font 500 11px/1.4, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d624da6d25"
     },
     "Чек-ин · замеры просрочены · 30": {
       "v": "=",
@@ -2489,8 +2489,8 @@
     },
     "Чек-ин · замеры просрочены · 37": {
       "v": "≠",
-      "f": "500-pwa-and-offline.css:1677-1682 .mc-rest-card-hint font:500 11.5px/1.5 margin-top:5px; кадр «37» «Без обхвата…» 11px/1.4 margin-top:3px",
-      "h": "4346fad7ff9d"
+      "f": "500-pwa-and-offline.css:1677-1682 .mc-rest-card-hint font:500 11.5px/1.5 margin-top:5px; кадр «37» «Без обхвата…» 11px/1.4 margin-top:3px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "7f315f6c2511"
     },
     "Чек-ин · замеры просрочены · 38": {
       "v": "=",
@@ -2549,8 +2549,8 @@
     },
     "Чек-ин · холод тип · 09": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px",
-      "h": "3dd0fae93877"
+      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "143ca1f6a75a"
     },
     "Чек-ин · холод тип · 10": {
       "v": "=",
@@ -2569,8 +2569,8 @@
     },
     "Чек-ин · холод тип · 13": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:991-994 .mc-rest-card — radius 20px, padding 16px 17px, background sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468); строка «вид карточки шага»",
-      "h": "a875c090dfc7"
+      "f": "500-pwa-and-offline.css:991-994 .mc-rest-card — radius 20px, padding 16px 17px, background sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468); строка «вид карточки шага» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "339ed6956cd2"
     },
     "Чек-ин · холод тип · 14": {
       "v": "=",
@@ -2579,8 +2579,8 @@
     },
     "Чек-ин · холод тип · 15": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1427 .mc-rest-coffee-note — font 500 11px/1.2, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), nowrap",
-      "h": "6bf9bef2da4d"
+      "f": "500-pwa-and-offline.css:1427 .mc-rest-coffee-note — font 500 11px/1.2, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), nowrap Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "2649f955eced"
     },
     "Чек-ин · холод тип · 16": {
       "v": "=",
@@ -2589,8 +2589,8 @@
     },
     "Чек-ин · холод тип · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1444 .mc-rest-coffee-actions .mc-pill — flex 1, min-width 64px, min-height 44px, radius 999px, font 700 12.5px/1",
-      "h": "789548106800"
+      "f": "500-pwa-and-offline.css:1444 .mc-rest-coffee-actions .mc-pill — flex 1, min-width 64px, min-height 44px, radius 999px, font 700 12.5px/1 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f58846692443"
     },
     "Чек-ин · холод тип · 18": {
       "v": "=",
@@ -2629,8 +2629,8 @@
     },
     "Чек-ин · холод тип · 25": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2704 .mc-rest-supp-time — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481)",
-      "h": "67640eae6e5f"
+      "f": "500-pwa-and-offline.css:2704 .mc-rest-supp-time — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "81f8a6b59007"
     },
     "Чек-ин · холод тип · 26": {
       "v": "=",
@@ -2669,8 +2669,8 @@
     },
     "Чек-ин · замеры · 06": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1294 .mc-rest-layer-hint — font 500 11px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px",
-      "h": "3c2ed95636c5"
+      "f": "500-pwa-and-offline.css:1294 .mc-rest-layer-hint — font 500 11px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "6b778c8c6a16"
     },
     "Чек-ин · замеры · 07": {
       "v": "=",
@@ -2694,8 +2694,8 @@
     },
     "Чек-ин · замеры · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1352 .mc-rest-measure-unit — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481)",
-      "h": "8b60efcc7122"
+      "f": "500-pwa-and-offline.css:1352 .mc-rest-measure-unit — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "585436705d41"
     },
     "Чек-ин · замеры · 12": {
       "v": "=",
@@ -2704,8 +2704,8 @@
     },
     "Чек-ин · замеры · 13": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1366 .mc-rest-measure-side-label — font 500 10px/1.2, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481)",
-      "h": "0002c999f9d8"
+      "f": "500-pwa-and-offline.css:1366 .mc-rest-measure-side-label — font 500 10px/1.2, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "b39aa56f839d"
     },
     "Чек-ин · замеры · 14": {
       "v": "=",
@@ -2719,8 +2719,8 @@
     },
     "Чек-ин · замеры · 16": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1371 .mc-rest-measure-side-pill — min-height 32px, radius 999px, font 700 11px/1",
-      "h": "17ce57287124"
+      "f": "500-pwa-and-offline.css:1371 .mc-rest-measure-side-pill — min-height 32px, radius 999px, font 700 11px/1 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "dc9d50bfb74f"
     },
     "Чек-ин · замеры · 17": {
       "v": "=",
@@ -2734,8 +2734,8 @@
     },
     "Чек-ин · замеры · 19": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1394 .mc-rest-measure-foot-hint — font 500 10.5px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 10px",
-      "h": "c75f509534d2"
+      "f": "500-pwa-and-offline.css:1394 .mc-rest-measure-foot-hint — font 500 10.5px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 10px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "2111c78c25a4"
     },
     "Чек-ин · замеры · 20": {
       "v": "=",
@@ -2789,8 +2789,8 @@
     },
     "Чек-ин · остальное минимум · 09": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px",
-      "h": "1858faaac019"
+      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "cd2335bcf87f"
     },
     "Чек-ин · остальное минимум · 10": {
       "v": "=",
@@ -2814,8 +2814,8 @@
     },
     "Чек-ин · остальное минимум · 14": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1451 .mc-rest-card-hint — font 500 11px/1.4, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px",
-      "h": "d82de0ffa360"
+      "f": "500-pwa-and-offline.css:1451 .mc-rest-card-hint — font 500 11px/1.4, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d624da6d25"
     },
     "Чек-ин · остальное минимум · 15": {
       "v": "=",
@@ -2834,8 +2834,8 @@
     },
     "Чек-ин · остальное минимум · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs",
-      "h": "4e3eb408f554"
+      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "caab327199ae"
     },
     "Чек-ин · остальное минимум · 19": {
       "v": "=",
@@ -2889,8 +2889,8 @@
     },
     "Чек-ин · остальное со строкой периода · 09": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px",
-      "h": "1858faaac019"
+      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "cd2335bcf87f"
     },
     "Чек-ин · остальное со строкой периода · 10": {
       "v": "=",
@@ -2934,8 +2934,8 @@
     },
     "Чек-ин · остальное со строкой периода · 18": {
       "v": "≠",
-      "f": "500-pwa-and-offline.css:1677-1682 .mc-rest-card-hint font:500 11.5px/1.5 margin-top:5px; кадр «18» «Нормы дня…» 11px/1.4 margin-top:3px",
-      "h": "9390ba2600e3"
+      "f": "500-pwa-and-offline.css:1677-1682 .mc-rest-card-hint font:500 11.5px/1.5 margin-top:5px; кадр «18» «Нормы дня…» 11px/1.4 margin-top:3px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1402e16286a9"
     },
     "Чек-ин · остальное со строкой периода · 19": {
       "v": "=",
@@ -2949,8 +2949,8 @@
     },
     "Чек-ин · остальное со строкой периода · 21": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2627 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3)",
-      "h": "5d91ce3f4673"
+      "f": "500-pwa-and-offline.css:2627 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a2cf7c6e06ef"
     },
     "Чек-ин · остальное со строкой периода · 22": {
       "v": "=",
@@ -3004,8 +3004,8 @@
     },
     "Чек-ин · остальное на неделе периода · 09": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px",
-      "h": "369e6ca60a1a"
+      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "83fe2a06aac0"
     },
     "Чек-ин · остальное на неделе периода · 10": {
       "v": "=",
@@ -3014,8 +3014,8 @@
     },
     "Чек-ин · остальное на неделе периода · 11": {
       "v": "=",
-      "f": "клетка невыбранного дня: .mc-rest-cycle-day-btn в apps/web/styles/modules/500-pwa-and-offline.css — флекс 1, высота от 44, радиус 14, фон --v4-bg, 700 13/1. Тон поднят с литерала 50 % до роли --v4-ink-data (56 %) по строке «вторичные тоны», уточнение 2 сентября: «номера дней особого периода — тоже». Сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "790992825056"
+      "f": "клетка невыбранного дня: .mc-rest-cycle-day-btn в apps/web/styles/modules/500-pwa-and-offline.css — флекс 1, высота от 44, радиус 14, фон --v4-bg, 700 13/1. Тон поднят с литерала 50 % до роли --v4-ink-data (56 %) по строке «вторичные тоны», уточнение 2 сентября: «номера дней особого периода — тоже». Сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "222e5172166c"
     },
     "Чек-ин · остальное на неделе периода · 12": {
       "v": "=",
@@ -3079,13 +3079,13 @@
     },
     "Чек-ин · остальное на неделе периода · 24": {
       "v": "≠",
-      "f": "500-pwa-and-offline.css:1677-1682 .mc-rest-card-hint font:500 11.5px/1.5 margin-top:5px; кадр «24» «Задержка воды…» 11px/1.4 margin-top:3px",
-      "h": "2469340340be"
+      "f": "500-pwa-and-offline.css:1677-1682 .mc-rest-card-hint font:500 11.5px/1.5 margin-top:5px; кадр «24» «Задержка воды…» 11px/1.4 margin-top:3px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "30abe29e9681"
     },
     "Чек-ин · остальное на неделе периода · 25": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2704 .mc-rest-supp-time — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481)",
-      "h": "f22665ddc149"
+      "f": "500-pwa-and-offline.css:2704 .mc-rest-supp-time — font 500 11px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "23b90470a4f6"
     },
     "Чек-ин · остальное на неделе периода · 26": {
       "v": "=",
@@ -3139,13 +3139,13 @@
     },
     "Чек-ин · курс добавок пуст · 09": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2881 .mc-supp-flow-note — font 500 11px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 12px, text-align center",
-      "h": "ff8cb4362161"
+      "f": "500-pwa-and-offline.css:2881 .mc-supp-flow-note — font 500 11px/1.45, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 12px, text-align center Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "e5eaed4665dc"
     },
     "Чек-ин · курс добавок пуст · 10": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2816 .mc-supp-flow-btn--primary — min-height 44px, radius 999px, background --v4-sand-act",
-      "h": "63094c99e6a9"
+      "f": "500-pwa-and-offline.css:2816 .mc-supp-flow-btn--primary — min-height 44px, radius 999px, background --v4-sand-act Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "24653fadc569"
     },
     "Чек-ин · курс добавок пуст · 11": {
       "v": "=",
@@ -3189,8 +3189,8 @@
     },
     "Добавки · курс · 06": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "cf85861f7df0"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "aea9b5aee0e3"
     },
     "Добавки · курс · 07": {
       "v": "=",
@@ -3219,8 +3219,8 @@
     },
     "Добавки · курс · 12": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "f08702e19115"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "29f97c3e7729"
     },
     "Добавки · курс · 13": {
       "v": "—",
@@ -3264,8 +3264,8 @@
     },
     "Добавки · добавление · 07": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "9926d87e471a"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "c3a8bee28cd2"
     },
     "Добавки · добавление · 08": {
       "v": "=",
@@ -3336,8 +3336,8 @@
     },
     "Добавки · доза и время · 06": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "870ec2c53b06"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f9773190f77a"
     },
     "Добавки · доза и время · 07": {
       "v": "=",
@@ -3361,13 +3361,13 @@
     },
     "Добавки · доза и время · 11": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3688dbe65a62"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "01b2f8e03625"
     },
     "Добавки · доза и время · 12": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "e37e7b8c65fa"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "eba23d906023"
     },
     "Добавки · доза и время · 13": {
       "v": "=",
@@ -3381,8 +3381,8 @@
     },
     "Добавки · доза и время · 15": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3df4b3a87bd1"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "11d1daf90cb3"
     },
     "Добавки · доза и время · 16": {
       "v": "—",
@@ -3436,8 +3436,8 @@
     },
     "Чек-ин · согласие не подписано · 09": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px",
-      "h": "1858faaac019"
+      "f": "500-pwa-and-offline.css:1676 .mc-rest-cold-hint — font 500 11.5px/1.5, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "cd2335bcf87f"
     },
     "Чек-ин · согласие не подписано · 10": {
       "v": "=",
@@ -3461,8 +3461,8 @@
     },
     "Чек-ин · согласие не подписано · 14": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1451 .mc-rest-card-hint — font 500 11px/1.4, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px",
-      "h": "d82de0ffa360"
+      "f": "500-pwa-and-offline.css:1451 .mc-rest-card-hint — font 500 11px/1.4, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481), margin-top 4px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d624da6d25"
     },
     "Чек-ин · согласие не подписано · 15": {
       "v": "=",
@@ -3491,8 +3491,8 @@
     },
     "Чек-ин · согласие не подписано · 20": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "2d922620e929"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "6226a3568d0f"
     },
     "Чек-ин · согласие не подписано · 21": {
       "v": "=",
@@ -3536,8 +3536,8 @@
     },
     "Чек-ин · шаги при коротком сне · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3c9b2107bc6b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9dee3474d59f"
     },
     "Чек-ин · шаги при коротком сне · 06": {
       "v": "=",
@@ -3551,13 +3551,13 @@
     },
     "Чек-ин · шаги при коротком сне · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "55910bf20d34"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d28da1265a"
     },
     "Чек-ин · шаги при коротком сне · 09": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "bd83b2cc4282"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "67b87926e652"
     },
     "Чек-ин · шаги при коротком сне · 10": {
       "v": "=",
@@ -3601,18 +3601,18 @@
     },
     "Чек-ин · шаги при коротком сне · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "09e541cc4fce"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "eaf395d5f7c7"
     },
     "Чек-ин · шаги при коротком сне · 19": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "7c9d4525d32c"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a55427d95095"
     },
     "Чек-ин · шаги при коротком сне · 20": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "49de19d7347a"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "637fc85a820f"
     },
     "Чек-ин · шаги при коротком сне · 21": {
       "v": "=",
@@ -3646,8 +3646,8 @@
     },
     "Чек-ин · шаги при тяжёлом утре · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3c9b2107bc6b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9dee3474d59f"
     },
     "Чек-ин · шаги при тяжёлом утре · 06": {
       "v": "=",
@@ -3661,13 +3661,13 @@
     },
     "Чек-ин · шаги при тяжёлом утре · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "55910bf20d34"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d28da1265a"
     },
     "Чек-ин · шаги при тяжёлом утре · 09": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "38a319257936"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "20ebc91be9fa"
     },
     "Чек-ин · шаги при тяжёлом утре · 10": {
       "v": "=",
@@ -3711,18 +3711,18 @@
     },
     "Чек-ин · шаги при тяжёлом утре · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "09e541cc4fce"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "eaf395d5f7c7"
     },
     "Чек-ин · шаги при тяжёлом утре · 19": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "7c9d4525d32c"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a55427d95095"
     },
     "Чек-ин · шаги при тяжёлом утре · 20": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "005a0438a8f2"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "c1c0daf9dc2c"
     },
     "Чек-ин · шаги при тяжёлом утре · 21": {
       "v": "=",
@@ -3756,8 +3756,8 @@
     },
     "Чек-ин · шаги после тренировки · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3c9b2107bc6b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9dee3474d59f"
     },
     "Чек-ин · шаги после тренировки · 06": {
       "v": "=",
@@ -3771,13 +3771,13 @@
     },
     "Чек-ин · шаги после тренировки · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "55910bf20d34"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d28da1265a"
     },
     "Чек-ин · шаги после тренировки · 09": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "8d5c5a75e070"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "40b211c97656"
     },
     "Чек-ин · шаги после тренировки · 10": {
       "v": "=",
@@ -3821,18 +3821,18 @@
     },
     "Чек-ин · шаги после тренировки · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "09e541cc4fce"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "eaf395d5f7c7"
     },
     "Чек-ин · шаги после тренировки · 19": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "7c9d4525d32c"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a55427d95095"
     },
     "Чек-ин · шаги после тренировки · 20": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "57fb53e0b968"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "fc388e3b8df1"
     },
     "Чек-ин · шаги после тренировки · 21": {
       "v": "=",
@@ -3866,8 +3866,8 @@
     },
     "Чек-ин · шаги на потолке · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3c9b2107bc6b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9dee3474d59f"
     },
     "Чек-ин · шаги на потолке · 06": {
       "v": "=",
@@ -3881,13 +3881,13 @@
     },
     "Чек-ин · шаги на потолке · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "55910bf20d34"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d28da1265a"
     },
     "Чек-ин · шаги на потолке · 09": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "43cad3a2daa7"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "e410726a72a2"
     },
     "Чек-ин · шаги на потолке · 10": {
       "v": "=",
@@ -3931,18 +3931,18 @@
     },
     "Чек-ин · шаги на потолке · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "09e541cc4fce"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "eaf395d5f7c7"
     },
     "Чек-ин · шаги на потолке · 19": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "7c9d4525d32c"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a55427d95095"
     },
     "Чек-ин · шаги на потолке · 20": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "da9a92ac898e"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "5378385b72ff"
     },
     "Чек-ин · шаги на потолке · 21": {
       "v": "=",
@@ -3976,8 +3976,8 @@
     },
     "Чек-ин · шаги без истории · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3c9b2107bc6b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9dee3474d59f"
     },
     "Чек-ин · шаги без истории · 06": {
       "v": "=",
@@ -3991,13 +3991,13 @@
     },
     "Чек-ин · шаги без истории · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "55910bf20d34"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d28da1265a"
     },
     "Чек-ин · шаги без истории · 09": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3d80336553e8"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d02792bdd295"
     },
     "Чек-ин · шаги без истории · 10": {
       "v": "=",
@@ -4041,18 +4041,18 @@
     },
     "Чек-ин · шаги без истории · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "09e541cc4fce"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "eaf395d5f7c7"
     },
     "Чек-ин · шаги без истории · 19": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "7c9d4525d32c"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a55427d95095"
     },
     "Чек-ин · шаги без истории · 20": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "2e061034dfc5"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "98e2a0884642"
     },
     "Чек-ин · шаги без истории · 21": {
       "v": "=",
@@ -4086,8 +4086,8 @@
     },
     "Чек-ин · шаги своё число · 05": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "3c9b2107bc6b"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9dee3474d59f"
     },
     "Чек-ин · шаги своё число · 06": {
       "v": "=",
@@ -4101,13 +4101,13 @@
     },
     "Чек-ин · шаги своё число · 08": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "55910bf20d34"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "99d28da1265a"
     },
     "Чек-ин · шаги своё число · 09": {
       "v": "=",
-      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "b4a97ac2114b"
+      "f": "сведено по роли --v4-ink-data (56 %) и проверено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "7c1f7f7a467d"
     },
     "Чек-ин · шаги своё число · 10": {
       "v": "=",
@@ -4151,13 +4151,13 @@
     },
     "Чек-ин · шаги своё число · 18": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "09e541cc4fce"
+      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "eaf395d5f7c7"
     },
     "Чек-ин · шаги своё число · 19": {
       "v": "=",
-      "f": "heys_steps_v1.js inline marginTop 26px без карточки/рефида, 14px с карточкой или рефидом (контракт); кадр 20px. Симуляция — exception-geometry test.",
-      "h": "88830933ad2f"
+      "f": "heys_steps_v1.js inline marginTop 26px без карточки/рефида, 14px с карточкой или рефидом (контракт); кадр 20px. Симуляция — exception-geometry test. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "ef4617ffc797"
     },
     "Чек-ин · шаги своё число · 20": {
       "v": "=",
@@ -4216,8 +4216,8 @@
     },
     "Чек-ин · записано · 10": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:798 .mc-recorded-row — justify space-between, font 600 12px/1.4",
-      "h": "34fbad0bbaf5"
+      "f": "500-pwa-and-offline.css:798 .mc-recorded-row — justify space-between, font 600 12px/1.4 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f4784038ad49"
     },
     "Чек-ин · записано · 11": {
       "v": "=",
@@ -4236,8 +4236,8 @@
     },
     "Чек-ин · записано · 14": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:819 .mc-recorded-row__kcal — color --v4-act-text",
-      "h": "cf9d3f9bec34"
+      "f": "500-pwa-and-offline.css:819 .mc-recorded-row__kcal — color --v4-act-text Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "5d7ef3441963"
     },
     "Чек-ин · записано · 15": {
       "v": "=",
@@ -4296,8 +4296,8 @@
     },
     "Чек-ин · записано с расчётным весом · 10": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:798 .mc-recorded-row — justify space-between, font 600 12px/1.4",
-      "h": "8bf26873c93e"
+      "f": "500-pwa-and-offline.css:798 .mc-recorded-row — justify space-between, font 600 12px/1.4 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "6f4b015c0bf0"
     },
     "Чек-ин · записано с расчётным весом · 11": {
       "v": "=",
@@ -4321,8 +4321,8 @@
     },
     "Чек-ин · записано с расчётным весом · 15": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:823 .mc-recorded-row__mark — font 700 9px/1, letter-spacing .08em, color --v4-act-text, text «РАСЧЁТ»",
-      "h": "eb1c5a3099a7"
+      "f": "500-pwa-and-offline.css:823 .mc-recorded-row__mark — font 700 9px/1, letter-spacing .08em, color --v4-act-text, text «РАСЧЁТ» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "a56bb731528e"
     },
     "Чек-ин · записано с расчётным весом · 16": {
       "v": "=",
@@ -5015,14 +5015,14 @@
     },
     "Рутина · резервный вопрос после еды · 02": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками.",
-      "h": "eb73d9e257de",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "ab9f779febc9",
       "naKind": "foreign-zone"
     },
     "Рутина · резервный вопрос после еды · 03": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками.",
-      "h": "64f4e6a02aef",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "8b1e2288c14b",
       "naKind": "foreign-zone"
     },
     "Рутина · резервный вопрос после еды · 04": {
@@ -5033,8 +5033,8 @@
     },
     "Рутина · резервный вопрос после еды · 05": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками.",
-      "h": "e9a5bb49854a",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "97528f669dfd",
       "naKind": "foreign-zone"
     },
     "Рутина · резервный вопрос после еды · 06": {
@@ -5051,14 +5051,14 @@
     },
     "Рутина · резервный вопрос после еды · 08": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками.",
-      "h": "0469f6250275",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "da96f3c43d5c",
       "naKind": "foreign-zone"
     },
     "Рутина · резервный вопрос после еды · 09": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками.",
-      "h": "ed4bf6725d88",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1ef4700b6c4f",
       "naKind": "foreign-zone"
     },
     "Рутина · резервный вопрос после еды · 10": {
@@ -5090,8 +5090,8 @@
     },
     "Рутина · резервный вопрос после еды · 15": {
       "v": "=",
-      "f": "300-modals-and-day.css:1811-1812 .mc-header-left order:3; :1866-1872 .mc-header-btn--close 44×44 margin -10/0/-10/-12px; ::before/::after 2.75px rgba(var(--v4-ink-rgb),.42)",
-      "h": "752c84486760"
+      "f": "300-modals-and-day.css:1811-1812 .mc-header-left order:3; :1866-1872 .mc-header-btn--close 44×44 margin -10/0/-10/-12px; ::before/::after 2.75px rgba(var(--v4-ink-rgb),.42) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "fcf235f78af2"
     },
     "Рутина · резервный вопрос после еды · 16": {
       "v": "=",
@@ -5105,8 +5105,8 @@
     },
     "Рутина · резервный вопрос после еды · 18": {
       "v": "=",
-      "f": "heys_steps_v1.js:5759 hint «Статус привычки»; 300-modals-and-day.css:1846-1849 font-size:11.5px font-weight:500 color:var(--v4-ink-data)",
-      "h": "0403cdeda566"
+      "f": "heys_steps_v1.js:5759 hint «Статус привычки»; 300-modals-and-day.css:1846-1849 font-size:11.5px font-weight:500 color:var(--v4-ink-data) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "dd09435f1fb3"
     },
     "Рутина · резервный вопрос после еды · 19": {
       "v": "=",
@@ -5120,8 +5120,8 @@
     },
     "Рутина · резервный вопрос после еды · 21": {
       "v": "=",
-      "f": "heys_steps_v1.js:5405-5406 .ma-followup-note-text; 300-modals-and-day.css:1911-1916 font-size:11.5px font-weight:500 margin-top:5px color:var(--v4-ink-data)",
-      "h": "446c52bebc65"
+      "f": "heys_steps_v1.js:5405-5406 .ma-followup-note-text; 300-modals-and-day.css:1911-1916 font-size:11.5px font-weight:500 margin-top:5px color:var(--v4-ink-data) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "3dd819274430"
     },
     "Рутина · резервный вопрос после еды · 22": {
       "v": "=",
@@ -5185,13 +5185,13 @@
     },
     "Рутина · резервный вопрос после еды · 34": {
       "v": "=",
-      "f": "731-ui-v4-activity.css:716-721 .ma-habit-cal-legend-item gap:6px font:500 10.5px/1.2 color:var(--v4-ink-2)",
-      "h": "06a9c6311eba"
+      "f": "731-ui-v4-activity.css:716-721 .ma-habit-cal-legend-item gap:6px font:500 10.5px/1.2 color:var(--v4-ink-2) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "27f705e0bb3e"
     },
     "Рутина · резервный вопрос после еды · 35": {
       "v": "=",
-      "f": "heys_morning_activation_calendar_v1.js:536 .ma-habit-cal-tally; 300-modals-and-day.css:2003-2009 font-size:10.5px font-weight:600 margin-top:12px",
-      "h": "87f5c94f245e"
+      "f": "heys_morning_activation_calendar_v1.js:536 .ma-habit-cal-tally; 300-modals-and-day.css:2003-2009 font-size:10.5px font-weight:600 margin-top:12px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "c0e34f5a9874"
     },
     "Рутина · резервный вопрос после еды · 36": {
       "v": "=",
@@ -5238,14 +5238,14 @@
     },
     "Рутина · причина пропуска · 02": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта.",
-      "h": "eb73d9e257de",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "ab9f779febc9",
       "naKind": "foreign-zone"
     },
     "Рутина · причина пропуска · 03": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта.",
-      "h": "64f4e6a02aef",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "8b1e2288c14b",
       "naKind": "foreign-zone"
     },
     "Рутина · причина пропуска · 04": {
@@ -5256,8 +5256,8 @@
     },
     "Рутина · причина пропуска · 05": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта.",
-      "h": "e9a5bb49854a",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "97528f669dfd",
       "naKind": "foreign-zone"
     },
     "Рутина · причина пропуска · 06": {
@@ -5274,14 +5274,14 @@
     },
     "Рутина · причина пропуска · 08": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта.",
-      "h": "0469f6250275",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "da96f3c43d5c",
       "naKind": "foreign-zone"
     },
     "Рутина · причина пропуска · 09": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта.",
-      "h": "ed4bf6725d88",
+      "f": "Экран «Питания» под шторкой, нарисованный приглушённым ради контекста. Строка «вид · причина пропуска» отсылает к виду резервного вопроса, а тот проводит границу прямо: «сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26 — затемнение канваса, а не правило продукта. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1ef4700b6c4f",
       "naKind": "foreign-zone"
     },
     "Рутина · причина пропуска · 10": {
@@ -5301,8 +5301,8 @@
     },
     "Рутина · причина пропуска · 13": {
       "v": "=",
-      "f": "300-modals-and-day.css:1856-1878 .mc-header-btn--close 44×44 margin:-10px 0 -10px -12px; ::before/::after rgba(var(--v4-ink-rgb),.42)",
-      "h": "752c84486760"
+      "f": "300-modals-and-day.css:1856-1878 .mc-header-btn--close 44×44 margin:-10px 0 -10px -12px; ::before/::after rgba(var(--v4-ink-rgb),.42) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "fcf235f78af2"
     },
     "Рутина · причина пропуска · 14": {
       "v": "=",
@@ -5316,8 +5316,8 @@
     },
     "Рутина · причина пропуска · 16": {
       "v": "=",
-      "f": "heys_steps_v1.js:5780 hint; 300-modals-and-day.css:1846-1849 font-size:11.5px color:var(--v4-ink-data) — sand rgba(0,0,0,.56) blue rgba(16,24,38,.64)",
-      "h": "efda56de2a64"
+      "f": "heys_steps_v1.js:5780 hint; 300-modals-and-day.css:1846-1849 font-size:11.5px color:var(--v4-ink-data) — sand rgba(0,0,0,.56) blue rgba(16,24,38,.64) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "4f0687d450b2"
     },
     "Рутина · причина пропуска · 17": {
       "v": "=",
@@ -5336,8 +5336,8 @@
     },
     "Рутина · резервный вопрос после еды · 39": {
       "v": "=",
-      "f": "heys_steps_v1.js:5421-5422 .ma-followup-footnote; 300-modals-and-day.css:1951-1957 font:500 11px/1.5 margin-top:11px color:var(--v4-ink-data)",
-      "h": "cd96d49d6764"
+      "f": "heys_steps_v1.js:5421-5422 .ma-followup-footnote; 300-modals-and-day.css:1951-1957 font:500 11px/1.5 margin-top:11px color:var(--v4-ink-data) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "9eb5c2da7b4f"
     },
     "Рутина · причина пропуска · 18": {
       "v": "=",
@@ -5346,8 +5346,8 @@
     },
     "Рутина · причина пропуска · 19": {
       "v": "=",
-      "f": "heys_steps_v1.js:5732-5733 .ma-skip-reason-footnote; 300-modals-and-day.css:1993-1999 font:500 11px/1.5 margin-top:11px color:var(--v4-ink-data)",
-      "h": "65e1b0ccb0c2"
+      "f": "heys_steps_v1.js:5732-5733 .ma-skip-reason-footnote; 300-modals-and-day.css:1993-1999 font:500 11px/1.5 margin-top:11px color:var(--v4-ink-data) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "33c7690cbc81"
     },
     "Рутина · резервный вопрос после еды · рисунок 01": {
       "v": "=",
