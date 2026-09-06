@@ -1,7 +1,7 @@
 {
   "generatedAt": "2026-08-17T06:43:32.669Z",
-  "description": "SAST baseline (SEC-014 ratchet) — known critical+high findings, manually triaged as false-positives или tracked в отдельных SEC-NNN. SAST fails только на новых находках вне этого списка. Регенерация: `node scripts/security/sast-scan.js --update-baseline`.",
-  "count": 26,
+  "description": "SAST baseline (SEC-014 ratchet) — known critical+high findings, manually triaged as false-positives или tracked в отдельных SEC-NNN. SAST fails только на новых находках вне этого списка. Регенерация: `node scripts/security/sast-scan.js --update-baseline`. 06.09: добавлен eval в тестовом harness канвас-контрактов — он заменил такие же eval, уже стоявшие в самих тестах, и живёт только в __tests__; продуктового кода не касается.",
+  "count": 27,
   "fingerprints": [
     "sqlInjection|apps/web/heys_cloud_shared_v1.js|c32030e90e04",
     "sqlInjection|apps/web/heys_core_v12.js|983f220ea0c4",
@@ -18,6 +18,7 @@
     "xss|apps/landing/design/landing-d/support.js|0ce012c3cb8f",
     "xss|apps/landing/src/components/FAQAccordion.tsx|eb91b2f84fad",
     "xss|apps/landing/src/components/versions/d/FaqD.tsx|eb91b2f84fad",
+    "xss|apps/web/__tests__/helpers/strength-canvas-contract-harness.js|0de4ac8a3d23",
     "xss|apps/web/day/_meals.js|eb91b2f84fad",
     "xss|apps/web/heys_client_access_code_setup_v1.js|eb91b2f84fad",
     "xss|apps/web/heys_consents_v1.js|eb91b2f84fad",
