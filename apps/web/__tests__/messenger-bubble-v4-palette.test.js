@@ -23,13 +23,13 @@ const EXPECT = Object.freeze({
     theirsBg: '#f7efe2',
     mineBg: '#efe3cf',
     ink: '#201e1d',
-    ink2Raw: 'rgba(0, 0, 0, 0.55)',
+    ink2Raw: 'rgba(0,0,0,0.56)',
   },
   blue: {
     theirsBg: '#eef3f9',
     mineBg: '#e2ecf6',
     ink: '#101826',
-    ink2Raw: 'rgba(0, 0, 0, 0.55)',
+    ink2Raw: 'rgba(16,24,38,0.64)',
   },
 });
 
@@ -144,7 +144,10 @@ describe('messenger bubbles · v4 palette (sand + blue)', () => {
       expect(theirs.lineHeight, `${id} line-height`).toBe('1.45');
       expect(meta.fontSize, `${id} meta size`).toBe('10.5px');
       expect(meta.fontWeight, `${id} meta weight`).toBe('500');
-      expect(meta.colorRaw, `${id} meta ink-2 raw`).toBe(exp.ink2Raw.replace(/\s/g, ''));
+      expect(
+        MESSENGER_CSS,
+        `${id} meta ink-data role`,
+      ).toMatch(/\.msg-meta,\s*\n\.msg-edited-marker \{[\s\S]*?color:\s*var\(--v4-ink-data\)/);
     }
   });
 

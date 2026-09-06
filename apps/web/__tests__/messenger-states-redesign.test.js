@@ -333,10 +333,10 @@ describe('интент-сообщения', () => {
 describe('контраст и узкий экран', () => {
   it('мета-текст поднят до читаемого контраста', () => {
     // 11px #A8B0B8 на #FCFBF8 давал ~2.5:1 — ниже нормы.
-    // UI v4: ink-2 роль без fallback (happy-dom + палитра на всех наборах).
+    // UI v4: ink-data роль без fallback (контракт 56%/64%).
     const meta = cssSource.match(/\.msg-meta,\r?\n\.msg-edited-marker \{[^}]*\}/)[0];
-    expect(meta).toMatch(/color:\s*var\(--v4-ink-2\)/);
-    expect(cssSource).toMatch(/\[data-theme\$="dark"\] \.msg-meta,\r?\n\[data-theme\$="dark"\] \.msg-edited-marker \{\s*color:\s*var\(--v4-ink-2\)/);
+    expect(meta).toMatch(/color:\s*var\(--v4-ink-data\)/);
+    expect(cssSource).toMatch(/\[data-theme\$="dark"\] \.msg-meta,\r?\n\[data-theme\$="dark"\] \.msg-edited-marker \{\s*color:\s*var\(--v4-ink-data\)/);
   });
 
   it('на 320 px уменьшаются шапка, кнопки и поле', () => {
