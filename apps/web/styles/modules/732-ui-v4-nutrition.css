@@ -1070,7 +1070,9 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #2563eb);
-  font-size: 11px;
+  /* 06.09: было 11px. Контракт просит 12, и это не косметика: дизайнер назвал
+     порог сам — «12,5 против 13 неважно, но 11 против 12 уже ниже минимума». */
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   color: var(--v4-btn-on-act, #2b1608);
