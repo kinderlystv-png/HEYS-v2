@@ -41,7 +41,7 @@ describe('Сон · Долг за неделю — сведённый кусок
       .toBe('распределение space-between, выравнивание baseline');
     expect(contractValue(canvas, 'Сон · Долг за неделю · 03')).toBe('«Недосып за 7 дней» — ключ');
     expect(contractValue(canvas, 'Сон · Долг за неделю · 04'))
-      .toBe('«норма 7,5» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«норма 7,5» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Сон · Долг за неделю · 05'))
       .toBe('выравнивание flex-end, распределение space-between, зазор 9px, отступ сверху auto');
     expect(contractValue(canvas, 'Сон · Долг за неделю · 06'))

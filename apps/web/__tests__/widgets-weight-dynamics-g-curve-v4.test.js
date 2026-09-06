@@ -54,7 +54,7 @@ describe('Динамика · G сброшено и кривая — сведё�
     expect(contractValue(canvas, 'Динамика · G сброшено и кривая · 03'))
       .toBe('«Вес за месяц» — ключ');
     expect(contractValue(canvas, 'Динамика · G сброшено и кривая · 04'))
-      .toBe('«до цели 3,6» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«до цели 3,6» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Динамика · G сброшено и кривая · 05'))
       .toBe('выравнивание flex-end, распределение space-between, зазор 8px, отступ сверху auto');
     expect(contractValue(canvas, 'Динамика · G сброшено и кривая · 06'))

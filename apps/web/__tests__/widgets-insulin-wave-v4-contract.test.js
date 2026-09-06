@@ -53,7 +53,7 @@ describe('Инсулиновая волна · сведённые stop-кадр�
 
   it('читает ключевые строки из актуального data-v', () => {
     expect(contractValue(canvas, 'Инсулиновая волна · День как есть · 04'))
-      .toBe('«3 приёма» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«3 приёма» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Инсулиновая волна · Текущая волна · 06'))
       .toBe('«40» — моноцифры: шрифт 600 26px/1 Figtree, цвет var(--ac), трекинг -.03em');
     expect(contractValue(canvas, 'волна · счётчик приёмов'))

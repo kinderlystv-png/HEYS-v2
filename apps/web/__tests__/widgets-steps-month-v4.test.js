@@ -51,7 +51,7 @@ describe('Шаги · Месяц — сведённый кусок', () => {
     expect(contractValue(canvas, 'Шаги · Месяц · 04'))
       .toBe('«8 870» — моноцифры: шрифт 600 26px/.9 Figtree, трекинг -.03em, цвет var(--tx)');
     expect(contractValue(canvas, 'Шаги · Месяц · 05'))
-      .toBe('«цель 10 000» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«цель 10 000» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Шаги · Месяц · 06'))
       .toBe('позиция relative, выравнивание flex-end, зазор 2px, высота 44px, отступ сверху auto');
     expect(contractValue(canvas, 'Шаги · Месяц · 07'))

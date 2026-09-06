@@ -52,7 +52,7 @@ describe('Шаги · Неделя — сведённый кусок', () => {
     expect(contractValue(canvas, 'Шаги · Неделя · 03'))
       .toBe('«Шаги» — ключ: перенос nowrap');
     expect(contractValue(canvas, 'Шаги · Неделя · 04'))
-      .toBe('«в среднем 8 940» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«в среднем 8 940» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Шаги · Неделя · 05'))
       .toBe('выравнивание flex-end, зазор 3px, высота 30px, отступ сверху auto');
     expect(contractValue(canvas, 'Шаги · Неделя · 06'))

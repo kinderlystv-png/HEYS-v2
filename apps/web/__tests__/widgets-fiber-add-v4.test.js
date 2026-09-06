@@ -46,13 +46,13 @@ describe('Клетчатка · Добрать — сведённый кусок
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Клетчатка · Добрать · 03')).toBe('«Клетчатка» — ключ');
     expect(contractValue(canvas, 'Клетчатка · Добрать · 04'))
-      .toBe('«18 из 26 г» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«18 из 26 г» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Клетчатка · Добрать · 05'))
       .toBe('выравнивание baseline, зазор 4px, отступ сверху auto');
     expect(contractValue(canvas, 'Клетчатка · Добрать · 06'))
       .toBe('«+8» — моноцифры: шрифт 600 19px/1 Figtree, трекинг -.02em, цвет var(--tx)');
     expect(contractValue(canvas, 'Клетчатка · Добрать · 07'))
-      .toBe('«Овощи · Бобовые · Цельные злаки» — моноцифры: шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.56), отступ сверху 4px');
+      .toBe('«Овощи · Бобовые · Цельные злаки» — моноцифры: шрифт 600 8.5px/1 Figtree, цвет var(--ink-2), отступ сверху 4px');
     expect(contractValue(canvas, 'Клетчатка · Добрать · текст'))
       .toBe('38 › Клетчатка › 18 из 26 г › +8 › г добрать › Овощи · Бобовые · Цельные злаки');
   });

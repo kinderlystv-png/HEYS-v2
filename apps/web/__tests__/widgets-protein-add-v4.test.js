@@ -52,7 +52,7 @@ describe('Белок · Добрать — сведённый кусок', () =>
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Белок · Добрать · 03')).toBe('«Белок» — ключ');
     expect(contractValue(canvas, 'Белок · Добрать · 04'))
-      .toBe('«112 из 140 г» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«112 из 140 г» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Белок · Добрать · 05'))
       .toBe('выравнивание baseline, зазор 4px, отступ сверху auto');
     expect(contractValue(canvas, 'Белок · Добрать · 06'))

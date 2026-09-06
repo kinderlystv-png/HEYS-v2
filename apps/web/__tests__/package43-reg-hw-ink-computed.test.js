@@ -44,10 +44,11 @@ describe('package 43 · registration + home-widgets computed ink', () => {
     document.documentElement.removeAttribute('data-theme-id');
   });
 
-  it('consent document body uses --v4-ink-2 on sand and blue', () => {
+    it('consent document body uses --v4-ink-2 on sand and blue', () => {
     expect(LOGIN_CSS).toMatch(
       /\.consent-doc-body\s*\{[^}]*color:\s*var\(--v4-ink-2,\s*rgba\(0,\s*0,\s*0,\s*0\.55\)\)/,
     );
+    expect(LOGIN_CSS).toMatch(/\.consent-doc-body\s*\{[^}]*line-height:\s*1\.55/);
     expect(PALETTE_CSS).toMatch(
       /\[data-palette="sand"\][\s\S]*--v4-ink-2:\s*rgba\(0,\s*0,\s*0,\s*0\.55\)/,
     );
@@ -58,11 +59,22 @@ describe('package 43 · registration + home-widgets computed ink', () => {
       <style>${PALETTE_CSS}</style>
       <style>${LOGIN_CSS}</style>
       <p class="consent-doc-body">Юридический текст</p>
+      <p class="heys-consent-sign-sheet__done-meta">Подпись — код</p>
     `;
-    const el = document.querySelector('.consent-doc-body');
+    const body = document.querySelector('.consent-doc-body');
+    const meta = document.querySelector('.heys-consent-sign-sheet__done-meta');
     for (const palette of ['sand', 'blue']) {
       applyTheme(palette);
-      expect(getComputedStyle(el).fontSize).toBe('12.5px');
+      expect(getComputedStyle(body).fontSize).toBe('12.5px');
+      const bodyLh = getComputedStyle(body).lineHeight;
+      expect(bodyLh === '1.55' || bodyLh === '19.375px').toBe(true);
+      const ink2 = getComputedStyle(document.documentElement)
+        .getPropertyValue('--v4-ink-2')
+        .trim();
+      expect(ink2).toBe('rgba(0, 0, 0, 0.55)');
+      // jsdom не разворачивает color: var(--v4-ink-2) на элементе; роль на :root — факт.
+      const metaLh = getComputedStyle(meta).lineHeight;
+      expect(metaLh === '1.55' || metaLh === '19.375px').toBe(true);
     }
   });
 

@@ -54,7 +54,7 @@ describe('Качество еды · Неделя — сведённый кус�
     expect(contractValue(canvas, 'Качество еды · Неделя · 04'))
       .toBe('«8» — моноцифры: шрифт 600 26px/.9 Figtree, трекинг -.03em, цвет var(--tx)');
     expect(contractValue(canvas, 'Качество еды · Неделя · 05'))
-      .toBe('«в среднем 7,3» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«в среднем 7,3» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Качество еды · Неделя · 06'))
       .toBe('выравнивание flex-end, зазор 4px, высота 44px, отступ сверху auto');
     expect(contractValue(canvas, 'Качество еды · Неделя · 07'))

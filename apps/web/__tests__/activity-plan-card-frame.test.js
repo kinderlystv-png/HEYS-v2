@@ -413,7 +413,7 @@ describe('Геометрия задана только внутри блока �
     const trace = rule('.activity-v4-program .sb-plan-feed > .sb-plan-trace');
     expect(trace).toContain('margin-top: 12px');
     expect(trace).toContain('line-height: 1.55');
-    expect(trace).toContain('rgba(var(--ink), 0.56)');
+    expect(trace).toContain('var(--ink-2)');
   });
 
   it('выбор переноса в Активе — вертикальный список строк', () => {
@@ -425,15 +425,15 @@ describe('Геометрия задана только внутри блока �
     expect(row).toContain('padding: 13px 16px');
     expect(row).toContain('color: var(--v4-ink');
     expect(rule('.activity-v4-program .sb-move-day-copy b')).toContain('var(--v4-ink');
-    expect(rule('.activity-v4-program .sb-move-day-copy span')).toContain('rgba(var(--ink), 0.56)');
+    expect(rule('.activity-v4-program .sb-move-day-copy span')).toContain('var(--ink-2)');
     expect(rule('.activity-v4-program .sb-move-day.is-busy .sb-move-day-copy b'))
-      .toContain('rgba(var(--ink), 0.4)');
+      .toContain('var(--ink-4)');
     expect(rule('.activity-v4-program .sb-move-day.is-busy > i'))
-      .toContain('rgba(var(--ink), 0.4)');
+      .toContain('var(--ink-4)');
     expect(rule('.activity-v4-program .sb-move-day.is-on .sb-move-day-copy span'))
       .toContain('var(--v4-act-text');
     const footnote = rule('.activity-v4-program .sb-plan-footnote');
     expect(footnote).toContain('margin-top: 12px');
-    expect(footnote).toContain('rgba(var(--ink), 0.56)');
+    expect(footnote).toContain('var(--ink-2)');
   });
 });

@@ -234,7 +234,7 @@ describe('виджеты g1 в сфере палитры', () => {
         expect(cssSrc).toContain('.widget-calories__hero-bar-num--bad');
         expect(cssSrc).toContain('.widget-calories__hero-bar-over');
         expect(cssSrc).toMatch(/\.widget-calories__hero-bar\s*\{[^}]*background:\s*rgba\(var\(--v4-ink-rgb\), 0\.1\)/s);
-        expect(cssSrc).toMatch(/\.widget-calories__hero-bar-num--ink\s*\{[^}]*0\.85/s);
+        expect(cssSrc).toMatch(/\.widget-calories__hero-bar-num--ink\s*\{[^}]*--v4-ink/s);
     });
 
     it('главная — малые плитки используют точную геометрию и тона HW1', () => {

@@ -50,7 +50,7 @@ describe('Качество еды · Что снизило — сведённы�
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Качество еды · Что снизило · 03')).toBe('«Качество еды» — ключ');
     expect(contractValue(canvas, 'Качество еды · Что снизило · 04'))
-      .toBe('«8 из 10» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«8 из 10» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Качество еды · Что снизило · 05'))
       .toBe('выравнивание baseline, зазор 4px, отступ сверху auto');
     expect(contractValue(canvas, 'Качество еды · Что снизило · 06'))

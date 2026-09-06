@@ -45,7 +45,7 @@ describe('Динамика · как сейчас — уходящий кадр'
     expect(contractValue(canvas, 'Динамика · как сейчас · 05'))
       .toBe('моноцифры: зазор 10px, отступ сверху auto, шрифт 700 9.5px/1 Figtree');
     expect(contractValue(canvas, 'Динамика · как сейчас · 06'))
-      .toBe('«7» — цвет rgba(var(--ink),.56)');
+      .toBe('«7» — цвет var(--ink-2)');
     expect(contractValue(canvas, 'Динамика · как сейчас · 07'))
       .toBe('«14» — цвет var(--ac), разделитель 2px solid var(--acs)');
     const board = canvas.slice(canvas.indexOf('data-screen-label="Динамика · как сейчас"'));

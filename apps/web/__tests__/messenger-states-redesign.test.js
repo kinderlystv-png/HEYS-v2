@@ -341,7 +341,8 @@ describe('контраст и узкий экран', () => {
 
   it('на 320 px уменьшаются шапка, кнопки и поле', () => {
     const narrow = cssSource.match(/@media \(max-width: 359px\) \{[\s\S]*?\n\}/)[0];
-    expect(narrow).toMatch(/\.messenger-avatar \{\s*width: 36px/);
+    expect(narrow).not.toMatch(/\.messenger-header-button \{\s*width: 32px/);
+    expect(narrow).toMatch(/\.messenger-attach,\s*\n\s*\.messenger-voice \{\s*width: 44px/);
     expect(narrow).toMatch(/\.messenger-send \{\s*width: 42px/);
     // Прежде здесь ждали max-width: 88% — сужение пузыря на узком экране.
     // Оно стало лишним: базовая ширина пузыря приведена к строке контракта

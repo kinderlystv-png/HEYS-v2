@@ -234,8 +234,8 @@ function shapePairs(razbor, stopFrames) {
 const SHEET_TAIL = [
   ['отступ сверху 16px, направление column, зазор 11px', '.widget-bd-sheet__stats', ['marginTop', 'direction', 'gap']],
   ['выравнивание baseline, распределение space-between, зазор 12px', '.widget-bd-sheet__stat-row', ['align', 'justify', 'gap']],
-  ['шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)', '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['шрифт 500 11.5px/1.4 Figtree, цвет rgba(var(--ink),.56), отступ сверху 14px', '.widget-bd-sheet__norm', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ['шрифт 500 11px/1.3 Figtree, цвет var(--ink-2)', '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['шрифт 500 11.5px/1.4 Figtree, цвет var(--ink-2), отступ сверху 14px', '.widget-bd-sheet__norm', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   ['моноцифры: флекс none, шрифт 700 12px/1 Figtree, цвет var(--tx)', '.widget-bd-sheet__stat-value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   ['высота от 48px, радиус 999px, фон var(--acs), цвет var(--on-acs)', ['.widget-bd-sheet__chip', '.widget-bd-sheet__action'], ['minHeight', 'radius', 'background', 'color', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight']]
 ];
@@ -319,7 +319,7 @@ const MACROS = [
     ['.widget-v4-deficit-rows', '.widget-v4-deficit-rows__row'],
     ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 
-  ['Шторка · Кольца БЖУ', 'высота 4px, радиус 999px, фон rgba(var(--ink),.08)', 0,
+  ['Шторка · Кольца БЖУ', 'высота 4px, радиус 999px, фон rgba(var(--ink),.18)', 0,
     '.widget-v4-goalbar', ['height', 'radius']]
 ];
 
@@ -361,7 +361,7 @@ const WAVE_SLEEP = [
     '.widget-v4-sleep-window__target', ['radius', 'background']],
   ['Шторка · Сон', 'позиция absolute, ширина 57%, радиус 999px', 0,
     '.widget-v4-sleep-window__actual', ['radius', 'background']],
-  ['Шторка · Сон', 'распределение space-between, шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56), отступ сверху 7px', 0,
+  ['Шторка · Сон', 'распределение space-between, шрифт 600 9px/1 Figtree, цвет var(--ink-2), отступ сверху 7px', 0,
     '.widget-v4-sleep-window__labels', ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']]
 ];
 
@@ -377,7 +377,7 @@ const QUICK = [
     '.widgets-quick-sheet__row', ['align', 'gap', 'minHeight']],
   ['Быстрые действия · раскрыто', '«Мессенджер»', 0,
     '.widgets-quick-sheet__row-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['Быстрые действия · раскрыто', 'высота 1px, фон rgba(var(--ink),.08)', 0,
+  ['Быстрые действия · раскрыто', 'высота 1px, фон rgba(var(--ink),.18)', 0,
     '.widgets-quick-sheet__divider', ['height', 'background']],
   ['Быстрые действия · раскрыто', '«1,7 из 2,7»', 0,
     '.widgets-quick-sheet__meta', ['fontWeight', 'fontSize', 'lineHeight', 'color']],

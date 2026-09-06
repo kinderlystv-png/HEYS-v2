@@ -47,7 +47,7 @@ describe('Белок · нет данных — сведённый кусок', 
     expect(contractValue(canvas, 'Белок · нет данных · 02')).toBe('«Белок» — ключ');
     expect(contractValue(canvas, 'Белок · нет данных · 03')).toBe('отступ сверху auto');
     expect(contractValue(canvas, 'Белок · нет данных · 04'))
-      .toBe('«—» — моноцифры: шрифт 600 21px/1 Figtree, цвет rgba(var(--ink),.42)');
+      .toBe('«—» — моноцифры: шрифт 600 21px/1 Figtree, цвет var(--ink-3)');
     expect(contractValue(canvas, 'Белок · нет данных · текст')).toBe('Белок');
   });
 

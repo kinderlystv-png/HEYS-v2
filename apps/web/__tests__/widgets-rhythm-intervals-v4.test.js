@@ -49,7 +49,7 @@ describe('Ритм приёмов · Интервалы — сведённый �
       .toBe('распределение space-between, выравнивание baseline');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 03')).toBe('«Ритм · интервалы» — ключ');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 04'))
-      .toBe('«4 приёма» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«4 приёма» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 05'))
       .toBe('выравнивание baseline, зазор 5px, отступ сверху 7px');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 06'))
@@ -59,7 +59,7 @@ describe('Ритм приёмов · Интервалы — сведённый �
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 08'))
       .toBe('выравнивание center, зазор 7px');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 09'))
-      .toBe('«8:40 → 13:05» — моноцифры: флекс none, ширина 74px, шрифт 600 8.5px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«8:40 → 13:05» — моноцифры: флекс none, ширина 74px, шрифт 600 8.5px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 10'))
       .toBe('флекс 1, высота 5px, радиус 999px, фон rgba(var(--ink),.08)');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 11'))

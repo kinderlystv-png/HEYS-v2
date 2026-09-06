@@ -49,7 +49,7 @@ describe('Окно до сна · Как сейчас — сведённый к�
     expect(contractValue(canvas, 'Окно до сна · Как сейчас · 04'))
       .toBe('«2:40» — моноцифры: шрифт 600 21px/1 Figtree, трекинг -.02em, цвет var(--gr)');
     expect(contractValue(canvas, 'Окно до сна · Как сейчас · 05'))
-      .toBe('«чисто» — шрифт 500 8.5px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«чисто» — шрифт 500 8.5px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Окно до сна · Как сейчас · текст'))
       .toBe('43 › До сна › 2:40 › чисто');
   });

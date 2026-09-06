@@ -47,7 +47,7 @@ describe('Ритм приёмов · Лента дня — сведённый к
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Ритм приёмов · Лента дня · 03')).toBe('«Ритм приёмов» — ключ');
     expect(contractValue(canvas, 'Ритм приёмов · Лента дня · 04'))
-      .toBe('«4 за день» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«4 за день» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Ритм приёмов · Лента дня · 05'))
       .toBe('позиция relative, высота 14px, отступ сверху auto');
     expect(contractValue(canvas, 'Ритм приёмов · Лента дня · 06'))
@@ -57,7 +57,7 @@ describe('Ритм приёмов · Лента дня — сведённый к
     expect(contractValue(canvas, 'Ритм приёмов · Лента дня · 08'))
       .toBe('позиция absolute, ширина 2px, фон var(--tx)');
     expect(contractValue(canvas, 'Ритм приёмов · Лента дня · 09'))
-      .toBe('моноцифры: распределение space-between, шрифт 600 8px/1 Figtree, цвет rgba(var(--ink),.56), отступ сверху 4px');
+      .toBe('моноцифры: распределение space-between, шрифт 600 8px/1 Figtree, цвет var(--ink-2), отступ сверху 4px');
     expect(contractValue(canvas, 'Ритм приёмов · Лента дня · текст'))
       .toBe('48 › Ритм приёмов › 4 за день › 6:00 › 24:00');
   });

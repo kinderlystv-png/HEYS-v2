@@ -53,7 +53,7 @@ describe('Оценка дня · Семь дней — сведённый кус
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 05'))
       .toBe('выравнивание flex-end, зазор 4px, высота 22px, отступ сверху auto');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 06'))
-      .toBe('флекс 1, высота 13px, радиус 2px, фон rgba(var(--ink),.13)');
+      .toBe('флекс 1, высота 13px, радиус 2px, фон rgba(var(--ink),.28)');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 12'))
       .toBe('флекс 1, высота 14px, радиус 2px, фон var(--acs)');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · текст'))

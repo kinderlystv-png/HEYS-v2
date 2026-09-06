@@ -52,7 +52,7 @@ describe('Оценка дня · Из чего сложилась — сведё
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 07'))
       .toBe('высота 5px, радиус 999px, фон var(--gr2)');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 08'))
-      .toBe('«еда» — шрифт 600 8px/1 Figtree, цвет rgba(var(--ink),.56), отступ сверху 5px');
+      .toBe('«еда» — шрифт 600 8px/1 Figtree, цвет var(--ink-2), отступ сверху 5px');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 09'))
       .toBe('высота 5px, радиус 999px, фон var(--ovl)');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 10'))

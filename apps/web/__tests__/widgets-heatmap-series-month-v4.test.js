@@ -63,11 +63,11 @@ describe('Тепловая карта · Серия и Месяц целиком
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · 05'))
       .toBe('радиус 3px, фон var(--ovl)');
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · 06'))
-      .toBe('радиус 3px, фон rgba(var(--ink),.08)');
+      .toBe('радиус 3px, фон rgba(var(--ink),.14)');
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · 07'))
       .toBe('радиус 3px, фон var(--acs)');
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · 08'))
-      .toBe('«18 из 28 дней в норме» — моноцифры: отступ сверху auto, шрифт 600 9.5px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«18 из 28 дней в норме» — моноцифры: отступ сверху auto, шрифт 600 9.5px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · текст'))
       .toBe('21 › Месяц целиком › 18 из 28 дней в норме');
   });

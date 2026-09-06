@@ -64,7 +64,7 @@ describe('строка приёма дня против кадра food-meal', (
     });
     expect(drift).toEqual([]);
     expect(rules.get('.nutrition-v4-meal-row__items').color)
-      .toBe('var(--v4-ink-data, rgba(var(--ink),.56))');
+      .toBe('var(--v4-ink-data, var(--ink-2))');
   });
 
   it('числа листа правки совпадают с кадром', () => {

@@ -175,7 +175,7 @@ describe('Кольца БЖУ · сведённые stop-кадры', () => {
 
   it('пустой день — кольца без дуги и «— / N»', () => {
     expect(contractValue(canvas, 'Кольца БЖУ · пустой день · 05'))
-      .toBe('«—» — моноцифры: отступ сверху 5px, шрифт 700 13px/1 Figtree, цвет rgba(var(--ink),.42)');
+      .toBe('«—» — моноцифры: отступ сверху 5px, шрифт 700 13px/1 Figtree, цвет var(--ink-3)');
     const body = macrosBody();
     expect(body).toContain('empty: true');
     expect(uiSrc).toContain('widget-v4-macro__fact--empty');

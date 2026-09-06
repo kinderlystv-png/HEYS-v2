@@ -48,7 +48,7 @@ describe('Тренд здоровья · мёртвая зона — сведё�
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · 05'))
       .toBe('«−1» — моноцифры: шрифт 600 26px/1 Figtree, цвет var(--tx)');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · 06'))
-      .toBe('флекс none, отступ снизу 2px, цвет rgba(var(--ink),.3)');
+      .toBe('флекс none, отступ снизу 2px, цвет var(--ink-30)');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · рисунок 01'))
       .toBe('поле рисунка 58×24 (viewBox 0 0 58 24)');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · рисунок 02'))

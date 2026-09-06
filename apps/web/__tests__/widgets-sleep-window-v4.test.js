@@ -46,13 +46,13 @@ describe('Сон · Окно сна — сведённый кусок', () => {
       .toBe('«6,4 ч» — моноцифры: шрифт 700 10px/1 Figtree');
     expect(contractValue(canvas, 'Сон · Окно сна · 05')).toBe('отступ сверху auto');
     expect(contractValue(canvas, 'Сон · Окно сна · 06'))
-      .toBe('позиция relative, высота 7px, радиус 999px, фон rgba(var(--ink),.07)');
+      .toBe('позиция relative, высота 7px, радиус 999px, фон var(--ink-30)');
     expect(contractValue(canvas, 'Сон · Окно сна · 07'))
-      .toBe('позиция absolute, ширина 68%, радиус 999px, фон rgba(var(--ink),.13)');
+      .toBe('позиция absolute, ширина 68%, радиус 999px, фон var(--ink-30)');
     expect(contractValue(canvas, 'Сон · Окно сна · 08'))
       .toBe('позиция absolute, ширина 57%, радиус 999px, фон #7d98a6');
     expect(contractValue(canvas, 'Сон · Окно сна · 09'))
-      .toBe('моноцифры: распределение space-between, шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56), отступ сверху 7px');
+      .toBe('моноцифры: распределение space-between, шрифт 600 9px/1 Figtree, цвет var(--ink-2), отступ сверху 7px');
     expect(contractValue(canvas, 'Сон · Окно сна · текст'))
       .toBe('15 › Сон · окно › 6,4 ч › лёг 01:10 › встал 07:30');
   });

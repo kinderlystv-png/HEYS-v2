@@ -53,9 +53,9 @@ describe('Калории · сведённые stop-кадры', () => {
     expect(contractValue(canvas, 'Калории · Как сейчас · 03'))
       .toBe('«642» — моноцифры: шрифт 600 34px/.9 Figtree, цвет var(--ac), трекинг -.035em');
     expect(contractValue(canvas, 'Калории · Как сейчас · 06'))
-      .toBe('высота 6px, радиус 999px, фон rgba(var(--ink),.1)');
+      .toBe('высота 6px, радиус 999px, фон rgba(var(--ink),.22)');
     expect(contractValue(canvas, 'Калории · Как сейчас · 11'))
-      .toBe('«съедено» — шрифт 500 8.5px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«съедено» — шрифт 500 8.5px/1 Figtree, цвет var(--ink-2)');
   });
 
   it('держит четыре вида калорий в каталоге и hero по умолчанию', () => {
@@ -184,7 +184,7 @@ describe('Калории · сведённые stop-кадры', () => {
 
   it('пустой день — прочерк и норма без полосы', () => {
     expect(contractValue(canvas, 'Калории · пустой день · 2×1 · 04'))
-      .toBe('«—» — моноцифры: шрифт 600 21px/1 Figtree, цвет rgba(var(--ink),.42)');
+      .toBe('«—» — моноцифры: шрифт 600 21px/1 Figtree, цвет var(--ink-3)');
     const emptyAt = hero().indexOf('if (data?.hasData !== true)');
     const emptyChunk = hero().slice(emptyAt, emptyAt + 1800);
     expect(emptyChunk).toContain('widget-calories--empty');

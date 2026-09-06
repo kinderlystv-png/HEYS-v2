@@ -654,7 +654,7 @@ describe('strength builder: спокойные состояния активно
 
   it('выделяет открытое упражнение спокойно, а ввод — рамкой полей', () => {
     expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ex.is-open'))
-      .toContain('box-shadow: inset 0 0 0 1.5px rgba(var(--ink), 0.14)');
+      .toContain('box-shadow: inset 0 0 0 1.5px var(--ink-30)');
     expect(lastRule('.sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-field:not(.is-reps-missing)'))
       .toContain('box-shadow: inset 0 0 0 2px var(--sb-acc-strong)');
     expect(lastRule('.sb-ap.is-current .sb-ap-num')).not.toContain('background: var(--sb-acc)');

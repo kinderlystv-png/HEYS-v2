@@ -58,11 +58,11 @@ describe('Динамика · C столбики — сведённый кусо
     expect(contractValue(canvas, 'Динамика · C столбики · 05'))
       .toBe('выравнивание flex-end, зазор 4px, высота 24px, отступ сверху auto');
     expect(contractValue(canvas, 'Динамика · C столбики · 06'))
-      .toBe('флекс 1, высота 24px, радиус 2px, фон rgba(var(--ink),.13)');
+      .toBe('флекс 1, высота 24px, радиус 2px, фон var(--ink-30)');
     expect(contractValue(canvas, 'Динамика · C столбики · 07'))
-      .toBe('флекс 1, высота 19px, радиус 2px, фон rgba(var(--ink),.13)');
+      .toBe('флекс 1, высота 19px, радиус 2px, фон var(--ink-30)');
     expect(contractValue(canvas, 'Динамика · C столбики · 08'))
-      .toBe('флекс 1, высота 20px, радиус 2px, фон rgba(var(--ink),.13)');
+      .toBe('флекс 1, высота 20px, радиус 2px, фон rgba(var(--ink),.28)');
     expect(contractValue(canvas, 'Динамика · C столбики · 09'))
       .toBe('флекс 1, высота 13px, радиус 2px, фон var(--gr2)');
     expect(contractValue(canvas, 'Динамика · C столбики · текст'))

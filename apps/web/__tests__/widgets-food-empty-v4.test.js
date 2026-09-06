@@ -51,7 +51,7 @@ describe('Качество еды · нет данных — сведённый 
     expect(contractValue(canvas, 'Качество еды · нет данных · 02')).toBe('«Качество» — ключ');
     expect(contractValue(canvas, 'Качество еды · нет данных · 03')).toBe('отступ сверху auto');
     expect(contractValue(canvas, 'Качество еды · нет данных · 04'))
-      .toBe('«—» — моноцифры: шрифт 600 21px/1 Figtree, цвет rgba(var(--ink),.42)');
+      .toBe('«—» — моноцифры: шрифт 600 21px/1 Figtree, цвет var(--ink-3)');
     expect(contractValue(canvas, 'Качество еды · нет данных · текст')).toBe('Качество');
   });
 

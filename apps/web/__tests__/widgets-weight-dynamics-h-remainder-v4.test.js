@@ -61,7 +61,7 @@ describe('Динамика · H сброшено и остаток — свед�
     expect(contractValue(canvas, 'Динамика · H сброшено и остаток · 03'))
       .toBe('«Вес за месяц» — ключ');
     expect(contractValue(canvas, 'Динамика · H сброшено и остаток · 04'))
-      .toBe('«осталось 3,6» — моноцифры: шрифт 600 9px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«осталось 3,6» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Динамика · H сброшено и остаток · 05'))
       .toBe('выравнивание baseline, зазор 3px, отступ сверху auto');
     expect(contractValue(canvas, 'Динамика · H сброшено и остаток · 06'))

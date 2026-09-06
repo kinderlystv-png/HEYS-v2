@@ -48,9 +48,9 @@ describe('Окно до сна · нет данных — сведённый к�
     expect(contractValue(canvas, 'Окно до сна · нет данных · 03'))
       .toBe('выравнивание baseline, зазор 5px, отступ сверху auto');
     expect(contractValue(canvas, 'Окно до сна · нет данных · 04'))
-      .toBe('«—» — моноцифры: шрифт 600 21px/1 Figtree, цвет rgba(var(--ink),.42)');
+      .toBe('«—» — моноцифры: шрифт 600 21px/1 Figtree, цвет var(--ink-3)');
     expect(contractValue(canvas, 'Окно до сна · нет данных · 05'))
-      .toBe('«не ел» — шрифт 500 7.5px/1 Figtree, цвет rgba(var(--ink),.56)');
+      .toBe('«не ел» — шрифт 500 7.5px/1 Figtree, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Окно до сна · нет данных · текст')).toBe('До сна › не ел');
   });
 
