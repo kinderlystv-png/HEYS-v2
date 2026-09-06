@@ -6,6 +6,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const CONTRACT_TEST = fileURLToPath(import.meta.url);
+const PROPOSAL_UI = path.join(WEB_DIR, 'strength/heys_strength_proposal_ui_v1.js');
 const CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8');
 const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
 
@@ -90,6 +92,19 @@ describe('strength builder · D3 superset boundaries v4 canvas contract', () => 
   afterAll(() => {
     style?.remove();
     delete window.HEYS;
+  });
+
+  it('harness lock: D3 eval stays superset_ui-only, logic lives in superset_ui (tasks 127/141)', () => {
+    const harness = fs.readFileSync(CONTRACT_TEST, 'utf8');
+    const loadPartsBlock = harness.slice(
+      harness.indexOf('function loadParts()'),
+      harness.indexOf('function canvasDemo()'),
+    );
+    expect(loadPartsBlock, 'D3 contract must not eval proposal_ui (5s timeout regression)').not
+      .toMatch(/heys_strength_proposal_ui_v1\.js/);
+    const proposal = fs.readFileSync(PROPOSAL_UI, 'utf8');
+    expect(proposal, 'describeSupersetBoundaries canonical home is superset_ui').not
+      .toMatch(/function describeSupersetBoundaries\s*\(/);
   });
 
   it('renders the canvas copy for replacement and frozen blocks', () => {
