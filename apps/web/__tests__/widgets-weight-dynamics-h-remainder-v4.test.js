@@ -35,12 +35,22 @@ describe('Динамика · H сброшено и остаток — свед�
   const dynSrc = fs.readFileSync(DYN, 'utf8');
   const rules = readRules(css);
 
-  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsBody');
+  // 09998a768 свёл плитку к одному пути отрисовки: ветки вариантов уехали из
+  // renderWeightDynamicsBody (остался двухстрочный делегат) в
+  // renderWeightDynamicsTileComposition. Якорь среза — новая функция;
+  // сторожевое правило то же: состав ветки варианта.
+  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsTileComposition');
   const barAt = uiSrc.indexOf("if (variant === 'bar_remainder')", bodyAt);
   const chartAt = uiSrc.indexOf('// Кадр «Динамика · E график 2×2»', barAt);
   const bar = uiSrc.slice(barAt, chartAt > barAt ? chartAt : barAt + 600);
   const curveAt = uiSrc.indexOf('// curve (default)', bodyAt);
   const curve = uiSrc.slice(curveAt, uiSrc.indexOf('function CrashRiskDynamicsVariantTile', curveAt));
+  // Спарклайн после 09998a768 живёт не в самой ветке curve, а в общем
+  // renderWeightDynamicsCurveRow — одном ряде и для Главной, и для превью листа
+  // (раньше их рисовали два куска и они разошлись: у одного спарклайна не было).
+  // Поэтому «curve рисует спарклайн» проверяем парой: ветка зовёт ряд, ряд его строит.
+  const rowAt = uiSrc.indexOf('function renderWeightDynamicsCurveRow');
+  const curveRow = uiSrc.slice(rowAt, uiSrc.indexOf('function renderWeightDynamicsTileComposition', rowAt));
   const crashBlock = variantsSrc.match(/crashRisk:\s*\[([\s\S]*?)\n\s*\]/)?.[1] || '';
 
   it('читает девять строк кадра из актуального data-v', () => {
@@ -76,7 +86,8 @@ describe('Динамика · H сброшено и остаток — свед�
     expect(bar).not.toContain('weightDynamicsDeltaKicker');
     expect(bar).not.toContain("'Вес по неделям'");
     expect(bar).not.toContain('WeightDynamicsSparkSvg');
-    expect(curve).toContain('WeightDynamicsSparkSvg');
+    expect(curve).toContain('renderWeightDynamicsCurveRow');
+    expect(curveRow).toContain('WeightDynamicsSparkSvg');
     expect(dynSrc).toContain("label: 'Вес за месяц'");
     expect(dynSrc).toContain('remainderShort = `осталось ${abs}`');
     expect(uiSrc).toContain("if (variant === 'bar_remainder' || variant === 'to_goal')");

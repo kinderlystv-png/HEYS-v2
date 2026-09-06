@@ -35,7 +35,11 @@ describe('Динамика · C столбики — сведённый кусо
   const dynSrc = fs.readFileSync(DYN, 'utf8');
   const rules = readRules(css);
 
-  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsBody');
+  // 09998a768 свёл плитку к одному пути отрисовки: ветки вариантов уехали из
+  // renderWeightDynamicsBody (остался двухстрочный делегат) в
+  // renderWeightDynamicsTileComposition. Якорь среза — новая функция;
+  // сторожевое правило то же: состав ветки варианта.
+  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsTileComposition');
   const weeksAt = uiSrc.indexOf("if (variant === 'weeks')", bodyAt);
   const toGoalAt = uiSrc.indexOf("if (variant === 'to_goal')", weeksAt);
   const weeks = uiSrc.slice(weeksAt, toGoalAt > weeksAt ? toGoalAt : weeksAt + 500);

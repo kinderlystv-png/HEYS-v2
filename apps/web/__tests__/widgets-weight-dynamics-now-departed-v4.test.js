@@ -25,7 +25,11 @@ describe('Динамика · как сейчас — уходящий кадр'
   const uiSrc = fs.readFileSync(UI, 'utf8');
   const variantsSrc = fs.readFileSync(VARIANTS, 'utf8');
 
-  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsBody');
+  // 09998a768 свёл плитку к одному пути отрисовки: ветки вариантов уехали из
+  // renderWeightDynamicsBody (остался двухстрочный делегат) в
+  // renderWeightDynamicsTileComposition. Якорь среза — новая функция;
+  // сторожевое правило то же: состав ветки варианта.
+  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsTileComposition');
   const tileAt = uiSrc.indexOf('function CrashRiskDynamicsVariantTile', bodyAt);
   const body = uiSrc.slice(bodyAt, tileAt > bodyAt ? tileAt : bodyAt + 2500);
   const crashBlock = variantsSrc.match(/crashRisk:\s*\[([\s\S]*?)\n\s*\]/)?.[1] || '';

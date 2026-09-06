@@ -33,7 +33,11 @@ describe('Динамика · D до цели — сведённый кусок'
   const variantsSrc = fs.readFileSync(VARIANTS, 'utf8');
   const rules = readRules(css);
 
-  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsBody');
+  // 09998a768 свёл плитку к одному пути отрисовки: ветки вариантов уехали из
+  // renderWeightDynamicsBody (остался двухстрочный делегат) в
+  // renderWeightDynamicsTileComposition. Якорь среза — новая функция;
+  // сторожевое правило то же: состав ветки варианта.
+  const bodyAt = uiSrc.indexOf('function renderWeightDynamicsTileComposition');
   const goalAt = uiSrc.indexOf("if (variant === 'to_goal')", bodyAt);
   const numAt = uiSrc.indexOf("if (variant === 'number_only')", goalAt);
   const goal = uiSrc.slice(goalAt, numAt > goalAt ? numAt : goalAt + 700);
