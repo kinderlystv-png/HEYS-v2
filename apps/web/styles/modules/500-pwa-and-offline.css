@@ -6923,7 +6923,7 @@ html[data-theme-id="sand-dark"] .ca-tab-dot-mark,
 
 html[data-theme-id="blue"] .ca-modal-backdrop--visible,
 [data-theme="blue"][data-palette="blue"] .ca-modal-backdrop--visible {
-  background: rgba(10, 22, 38, 0.5);
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }
@@ -6996,7 +6996,7 @@ html[data-theme-id="blue"] .ca-tab-dot-mark,
 
 html[data-theme-id="blue-dark"] .ca-modal-backdrop--visible,
 [data-theme="blue-dark"][data-palette="blue"] .ca-modal-backdrop--visible {
-  background: rgba(0, 8, 16, 0.62);
+  background: var(--scrim, rgba(42, 26, 12, 0.5));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
 }

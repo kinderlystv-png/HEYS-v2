@@ -740,7 +740,12 @@
   width: 34px;
   height: 34px;
   border-radius: 999px;
-  background: var(--v4-surface-2, #efe4d4);
+  /* Роли --v4-surface-2 не существует: она была выдумана здесь, и цвет
+     всегда брался из запасного значения — то есть не следовал набору ни
+     в одном из четырёх. Вторая поверхность в наборе называется --v4-hero
+     (канвасный --c2), и её песочное значение #efe3cf — тот же тон, что
+     пытались подобрать литералом. */
+  background: var(--v4-hero, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
   display: inline-flex;
   align-items: center;

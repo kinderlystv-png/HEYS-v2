@@ -20,12 +20,18 @@ describe('curator sheet palette contract', () => {
     expect(css).not.toMatch(/\[data-theme\$="dark"\]\s+\.ca-modal\b/);
   });
 
-  it('uses palette-specific backdrops with 2.5px blur', () => {
-    expect(css).toMatch(/\.ca-modal-backdrop--visible\s*\{[^}]*rgba\(42,\s*26,\s*12,\s*0\.5\)/);
-    expect(css).toMatch(/html\[data-theme-id="sand-dark"\][^{]*\.ca-modal-backdrop--visible[^}]*rgba\(0,\s*0,\s*0,\s*0\.62\)/);
-    expect(css).toMatch(/html\[data-theme-id="blue"\][^{]*\.ca-modal-backdrop--visible[^}]*rgba\(10,\s*22,\s*38,\s*0\.5\)/);
-    expect(css).toMatch(/html\[data-theme-id="blue-dark"\][^{]*\.ca-modal-backdrop--visible[^}]*rgba\(0,\s*8,\s*16,\s*0\.62\)/);
+  it('затемнение подложки берётся ролью набора, размытие 2,5 px', () => {
+    // Прежде здесь стояли ЧЕТЫРЕ захардкоженных rgba — по одному на палитру, —
+    // и это ровно то, что снято решением дизайнера 5 сентября: одно затемнение
+    // на все наборы не отделяло лист от экрана на тёмном фоне, а четыре записи
+    // одного и того же разъезжались запасными значениями (по коду встречались
+    // .42, .55 и .62). Теперь роль --scrim объявлена в четырёх наборах и
+    // различается сама; переопределять её под палитру не нужно, и проверять
+    // литералы по палитрам — значит охранять снятое решение.
+    expect(css).toMatch(/\.ca-modal-backdrop--visible\s*\{[^}]*background:\s*var\(--scrim/);
     expect(css).toMatch(/\.ca-modal-backdrop--visible\s*\{[^}]*backdrop-filter:\s*blur\(var\(--v4-modal-backdrop-blur,\s*2\.5px\)\)/);
+    // Своего rgba у подложки не осталось ни в одном правиле.
+    expect(css).not.toMatch(/\.ca-modal-backdrop--visible\s*\{[^}]*background:\s*rgba\(/);
   });
 
   it('paints blue delta accent #1d5e96 / #7fbceb, not terracotta', () => {
