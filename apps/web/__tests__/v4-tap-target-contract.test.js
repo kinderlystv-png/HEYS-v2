@@ -44,12 +44,6 @@ const cases = [
     visible: 40,
   },
   {
-    what: 'ссылка «Прочитать все» в шапке шторки советов',
-    file: 'styles/modules/400-water-and-hydration.css',
-    host: '.advice-list-header-link',
-    inset: '-16px 0',
-  },
-  {
     what: 'кнопка действия в баре отмены',
     file: 'styles/heys-components.css',
     host: '.heys-undo-bar__btn',
@@ -93,5 +87,18 @@ describe('контракт цели касания 44 pt', () => {
     const css = read('styles/heys-components.css');
     expect(rule(css, '.heys-undo-bar__content')).toMatch(/padding:\s*11px/);
     expect(rule(css, '.heys-undo-bar__btn::after')).toContain('inset: -11px 0');
+  });
+
+  // Обратная сторона того же контракта: где дизайнер решил держать 44 ВИДИМЫМ
+  // размером, припуска быть не должно — палец не видит отрицательных полей.
+  // Решение 6 сентября, строка контракта «области нажатия» канваса tips: у
+  // «Прочитать все» снят припуск ::after inset −16px, высота задана своим
+  // min-height. Без этой проверки припуск вернулся бы молча, и обе половины
+  // правила одновременно считались бы выполненными.
+  it('«Прочитать все» держит 44 своим размером, а не припуском', () => {
+    const css = read('styles/modules/400-water-and-hydration.css');
+    expect(rule(css, '.advice-list-header-link::after')).toBeNull();
+    expect(rule(css, '.advice-list-container--v4 .advice-list-header-link--read-all'))
+      .toMatch(/min-height:\s*44px/);
   });
 });

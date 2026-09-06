@@ -8141,10 +8141,13 @@ body:has(.offline-banner) .wrap {
    Прежний --v4-past красил ночь ровно тем же тоном, что чужой день; сама роль
    снята 31 августа ответом дизайнера №13.
    Кнопки «Сегодня» в ночной капсуле нет, поэтому и раскладка обычная —
-   текст по центру. */
+   текст по центру.
+   Высота — 44 своим min-height (кадр «Капсула · ночь» ·04 и решение 6 сентября
+   «44 pt держится видимым размером у каждой цели зоны»). Прежние 36 px не
+   назывались ни одной строкой контракта: «ночь до 03:00» говорит про тон,
+   слова и ширину, но не про высоту. */
 .date-picker--v4 .date-picker-trigger--night {
-  height: 36px;
-  min-height: 36px;
+  min-height: 44px;
   margin: 0;
   border-radius: 999px;
   align-items: center;
@@ -8187,8 +8190,10 @@ body:has(.offline-banner) .wrap {
   color: var(--v4-bad-text, #a8382b);
 }
 
+/* Кадр «Дата · чужой день» ·18 в пакете 42: «высота ОТ 44px». Фиксированная
+   height не давала капсуле расти при крупном системном шрифте — контракт
+   «нажатие и крупный шрифт» требует роста по высоте. */
 .date-picker--v4 .date-picker-trigger--not-today {
-  height: 44px;
   min-height: 44px;
   align-items: center;
   /* v4-intentional */
@@ -8600,19 +8605,32 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   font-size: inherit;
 }
 
-/* Кадр «Календарь · легенда», элемент 27: кнопка полями 15 px и кеглем 13.
-   База пикера даёт 8/12 и 12 — дореформенные числа, из-за них кнопка выходила
-   заметно мельче кадра. */
+/* Кадр «Календарь · легенда» ставит кнопку под легендой через «отступ сверху
+   16px» и разделителя между ними не рисует. База пикера давала 12 + 12 и
+   линию --v4-line: в шторке это лишний ярус, а число из кадра не сходилось.
+   Правило узкое — только шторка календаря: тот же .date-picker-footer берёт
+   планировщик (heys_planning_tasks_v1.js:583), и его зона здесь не решает. */
+.date-picker-sheet .date-picker-footer {
+  margin-top: 16px;
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Кадр «Календарь · легенда», элемент 27, редакция пакета 42: «высота от 48px,
+   поля 0 15px». Прежние `padding: 15px` без своей высоты набирали 45 px из
+   полей и интерлиньяжа — правило дизайнера от 6 сентября («высота цели
+   задаётся своим min-height») запрещает именно это: набранная высота едет
+   вместе с кеглем. База пикера даёт 8/12 и 12 — дореформенные числа. */
 .date-picker-sheet .date-picker-btn.today-btn {
   background: var(--v4-tint-warm, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   border-radius: 999px;
-  padding: 15px;
+  min-height: 48px;
+  padding: 0 15px;
   font-size: 13px;
   font-weight: 700;
+  line-height: 1;
 }
-
-  color: var(--v4-bg, #fff); /* v4-intentional */
 
 .date-picker-sheet .legend-swatch {
   flex: none;
@@ -9414,13 +9432,14 @@ svg.date-picker-icon {
     gap: 3px;
   }
 
+  /* Числа те же, что в основном блоке выше (:8149 и :8196): кадр «Капсула ·
+     ночь» ·04 и «Дата · чужой день» ·18 — «высота от 44px». Именно этот блок
+     действует на 375 px, поэтому расхождение здесь молча отменяло бы правку. */
   .date-picker--v4 .date-picker-trigger--night {
-    height: 36px;
-    min-height: 36px;
+    min-height: 44px;
   }
 
   .date-picker--v4 .date-picker-trigger--not-today {
-    height: 44px;
     min-height: 44px;
     gap: 5px;
     padding: 0 4px 0 11px;

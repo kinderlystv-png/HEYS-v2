@@ -884,17 +884,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
   letter-spacing: 0;
   white-space: nowrap;
   cursor: pointer;
-  position: relative;
 }
-
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.advice-list-header-link::after {
-  content: '';
-  position: absolute;
-  inset: -16px 0;
-}
-
 
 .advice-list-header-link--read-all {
   color: var(--v4-ok-text, #5c6a45);
@@ -2225,9 +2215,11 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Поля 11/15 по кадру дают высоту 33 — прежняя min-height 32 её только
-     занижала, цель нажатия от этого не пострадала. */
-  padding: 11px 15px;
+  /* Кадр «Совет · отмена с таймером · 13»: высота от 44 задана СВОИМ
+     min-height, поля только боковые. Прежние 11/15 набирали 33,5 — цель
+     нажатия была ниже нормы, и менялась бы вслед за кеглем. */
+  min-height: 44px;
+  padding: 0 15px;
   font: 700 11.5px/1 Figtree, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   border: none;
@@ -2536,9 +2528,17 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: var(--v4-ink, #201e1d);
 }
 
+/* Кадры «Советы · шторка · 08» и «Совет · панель оценки · 08»: цель нажатия
+   44 pt держится ВИДИМЫМ размером самой пилюли — своим min-height, а не
+   прозрачным припуском ::after и не набором из полей с интерлиньяжем
+   (решение дизайнера 6 сентября, строка контракта «области нажатия»).
+   Набранная высота уезжает вслед за кеглем и молча уходит ниже нормы. */
 .advice-list-container--v4 .advice-list-header-link--read-all {
   color: var(--v4-act-text, #8a4a20);
   font: 700 11.5px/1 Figtree, sans-serif;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Строка «вид шапки шторки»: ряд выравнивается по baseline — «Прочитать все»
@@ -2888,12 +2888,19 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   padding: 16px 18px max(20px, env(safe-area-inset-bottom, 0px));
 }
 
+/* Кадр «Совет · деталь · 16»: диалоговая кнопка держит 48 своим min-height —
+   ей по правилу проекта положено 48, а не 44 (решение дизайнера 6 сентября,
+   строка «области нажатия»). Прежние поля 15 с интерлиньяжем 1 набирали 43. */
 .advice-v4-detail__primary {
   width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #c67139);
-  padding: 15px;
+  padding: 0 15px;
   font: 700 13px/1 Figtree, sans-serif;
   color: var(--v4-btn-on-act, #2b1608);
   cursor: pointer;
@@ -2966,7 +2973,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   inset: 0;
   z-index: 10050;
   display: flex;
-  /* Элемент 21: лист прижат к низу экрана, а не висит по центру. */
+  /* Элемент 06 (был 21 до пакета 6 сентября): лист прижат к низу экрана,
+     а не висит по центру. */
   align-items: flex-end;
   justify-content: center;
   padding: 0;
@@ -2989,7 +2997,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
     0 18px 44px rgba(80, 50, 20, 0.16);
 }
 
-/* Элемент 22. */
+/* Элемент 07 (был 22). */
 .advice-v4-disclaimer-card__handle {
   width: 38px;
   height: 4px;
@@ -2998,7 +3006,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   background: var(--v4-track, rgba(0, 0, 0, 0.14));
 }
 
-/* Элемент 23: «Первый совет» — ярус, а не заголовок. Стоял 15/700 чернилами,
+/* Элемент 08 (был 23): «Первый совет» — ярус, а не заголовок. Стоял 15/700 чернилами,
    то есть крупнее фразы под ним, и глаз читал служебное слово раньше самой
    мысли. */
 .advice-v4-disclaimer-card__title {
@@ -3008,7 +3016,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: var(--v4-act-text, #8a4a20);
 }
 
-/* Элемент 24: главная фраза листа — 17/700. Стояла 13/600, мельче оговорки
+/* Элемент 09 (был 24): главная фраза листа — 17/700. Стояла 13/600, мельче оговорки
    под ней. */
 .advice-v4-disclaimer-card__lead {
   margin: 10px 0 0;
@@ -3017,7 +3025,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   text-wrap: pretty;
 }
 
-/* Элемент 25. */
+/* Элемент 10 (был 25). */
 .advice-v4-disclaimer-card__note {
   margin-top: 18px;
   padding: 16px 17px;
@@ -3025,7 +3033,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   background: var(--v4-c1, #f7efe2);
 }
 
-/* Элемент 26. */
+/* Элемент 11 (был 26). */
 .advice-v4-disclaimer-card__text {
   margin: 0;
   font: 500 12.5px/1.6 Figtree, sans-serif;
@@ -3038,28 +3046,40 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   gap: 11px;
   margin-top: 16px;
-  /* Элемент 29: подпись 600 12/1,4 чернилами 55 %. */
+  /* Элемент 14 (был 29): подпись 600 12/1,4 чернилами 55 %. */
   font: 600 12px/1.4 Figtree, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
   cursor: pointer;
 }
 
-/* Элемент 28: квадрат 20 с радиусом 6 в акценте — форма кадра, а не круглый
+/* Элемент 13 (был 28): квадрат 20 с радиусом 6 в акценте — форма кадра, а не круглый
    системный чекбокс 16. */
 .advice-v4-disclaimer-card__check input {
   width: 20px;
   height: 20px;
+  /* Замер computed на 375 px показал 20 × 36: под `@media (max-width: 640px)`
+     общее правило `input, select, textarea { min-height: 36px !important }`
+     (000-base-and-gamification.css:15749) перебивало высоту, и квадрат кадра
+     рисовался вытянутым. `height: 20px` этого не ловит — min-height сильнее.
+     Своё `!important` здесь единственный способ: чужое стоит с ним же. */
+  min-height: 20px !important;
   border-radius: 6px;
   accent-color: var(--v4-act, #c67139);
 }
 
+/* Кадр «Оговорка · 15»: тот же диалоговый ряд 48, что у «Понятно», — высота
+   своим min-height, поля только боковые. */
 .advice-v4-disclaimer-card__primary {
   width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 16px;
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #c67139);
-  padding: 15px;
+  padding: 0 15px;
   font: 700 13px/1 Figtree, sans-serif;
   /* Тон текста здесь тот же случай, что у кнопки экрана науки: роль
      --v4-btn-on-act объявлена только в песочных наборах, в синих рисуется
@@ -3394,10 +3414,16 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
    тёмных палитрах кнопка оставалась той же. */
 .advice-v4-science__primary {
   width: 100%;
+  /* Кадр «Научное описание · 17»: тот же диалоговый ряд 48, что у «Понятно»
+     детали, — высота своим min-height, поля только боковые. */
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #c67139);
-  padding: 15px;
+  padding: 0 15px;
   font: 700 13px/1 Figtree, sans-serif;
   /* Запасное здесь не мёртвое: в синих наборах --v4-btn-on-act не заведена —
      вместо цвета там стоит заметка «ждёт дизайнера», CSS её отбрасывает, и
@@ -3433,9 +3459,14 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   border-radius: 22px;
   background: var(--v4-c1, #f7efe2);
   padding: 16px;
+  /* Кадр «Совет · всплывающий · 06» даёт плашке ту же тень, что панелям оценки
+     и возврата, — .advice-v4-panel выше по файлу её уже держит. Прежние
+     0 1px 2px rgba(80,50,20,.09) и 0 14px 40px rgba(80,50,20,.14) были мягче и
+     песочного тона: плашка над нижним меню отрывалась от экрана слабее
+     соседних панелей того же рисунка. */
   box-shadow:
-    0 1px 2px rgba(80, 50, 20, 0.09),
-    0 14px 40px rgba(80, 50, 20, 0.14);
+    0 2px 6px rgba(0, 0, 0, 0.14),
+    0 16px 36px rgba(0, 0, 0, 0.2);
 }
 
 /* Кадр рисует ту же тройку, что карточка в шторке: полоса состояния, текст,
@@ -3464,8 +3495,10 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   min-width: 0;
 }
 
-/* Строка «области нажатия» даёт крестику детали круг 30 с областью 44; тем же
-   приёмом крестик плашки остаётся 26 и получает прозрачный припуск. */
+/* Крестику детали кадр даёт круг 30, крестику плашки 26; область до 44 обоим
+   добирает прозрачный припуск. Решение 6 сентября сняло припуск у пилюль-
+   действий зоны, но круглые крестики оно не называет ни целью, ни исключением
+   — вопрос дизайнеру записан в UI_V4_FINDINGS, до ответа приём сохранён. */
 .advice-v4-toast-card__close {
   position: relative;
   width: 26px;
@@ -3515,8 +3548,14 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   border: none;
   border-radius: 999px;
   /* Горизонтальных полей нет: кнопки делят ряд поровну, и ненулевая база
-     при border-box увела бы доли от кадра — тот же приём, что у ряда оценки. */
-  padding: 11px 0;
+     при border-box увела бы доли от кадра — тот же приём, что у ряда оценки.
+     Кадр «Совет · всплывающий · 14»: высота от 44 своим min-height, а не
+     набранная из полей 11/11 с интерлиньяжем 1 — та давала 33,5. */
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   font: 700 11.5px/1 Figtree, sans-serif;
   cursor: pointer;
 }
@@ -3526,7 +3565,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
-/* Кадр «Совет · всплывающий · 29»: «Открыть» — фон --acs, текст --on-acs.
+/* Кадр «Совет · всплывающий · 14» (был 29): «Открыть» — фон --acs, текст --on-acs.
    В синих наборах --v4-btn-on-act не заведена (контраст ждёт дизайнера) —
    тот же приём, что у .advice-v4-science__primary. */
 .advice-v4-toast-card__primary {

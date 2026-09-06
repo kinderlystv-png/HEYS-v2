@@ -31,7 +31,7 @@ const V4 = '.advice-list-container--v4';
 const EXCEPTIONS = new Map([
   // Кадр рисует крестик плашки глифом 12 px, крестик детали — 14 px. Глиф
   // общий (renderAdviceV4Icon 'close'), второго размера не заводим.
-  ['Совет · всплывающий · 27|glyph', 'общий глиф крестика 14 px вместо 12'],
+  ['Совет · всплывающий · 12|glyph', 'общий глиф крестика 14 px вместо 12'],
   // Кадр даёт нижнее поле 20; в продукте оно не меньше кадрового, но уступает
   // безопасной зоне телефона — иначе на аппаратах с жестовой панелью кнопка
   // упирается в неё. Число кадра сохранено внутри max().
@@ -46,7 +46,10 @@ const SHEET = [
   [4, '.advice-list-handle', ['width', 'height', 'radius', 'background', 'marginBottom']],
   [5, `${V4} .advice-list-header-top`, ['align']],
   [6, `${V4} .advice-list-title`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [8, `${V4} .advice-list-header-link--read-all`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // «Прочитать все» держит 44 своим min-height: пакет 6 сентября снял
+  // прозрачный припуск ::after inset −16px, которым цель набиралась прежде.
+  [8, `${V4} .advice-list-header-link--read-all`,
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'minHeight', 'align']],
   [9, `${V4} .advice-group-header`, ['fontWeight', 'fontSize', 'tracking', 'color']],
   [10, [`${V4} .advice-list-item-wrapper`, `${V4} .advice-list-item-v4`],
     ['background', 'radius', 'padding', 'marginTop']],
@@ -62,6 +65,10 @@ const SHEET = [
 
 // Кадр «Совет · панель оценки» — свайп влево открыл оценку.
 const RATING = [
+  // Тот же элемент, что в шторке: кадр называет его числа и здесь, поэтому
+  // строка сверяется, а не остаётся вне пар с вердиктом «сведено соседом».
+  [8, `${V4} .advice-list-header-link--read-all`,
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'minHeight', 'align']],
   [10, [`${V4} .advice-list-item-wrapper`, '.advice-v4-rate-panel'], ['marginTop', 'radius', 'background']],
   [12, '.advice-v4-rate-panel', ['width', 'align', 'justify']],
   [13, '.advice-v4-rate-panel__label', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
@@ -84,30 +91,35 @@ const UNSAVED = [
 // Кадр «Совет · оценка после свайпа» перенесён в tips 1 сентября. Фон дня,
 // шапка и нижнее меню принадлежат своим зонам; здесь сверяется сама панель.
 const RATING_AFTER_SWIPE = [
-  [21, '.advice-v4-panel', ['background', 'radius', 'padding']],
-  [22, '.advice-v4-panel__head', ['align', 'gap']],
-  [23, '.advice-v4-panel__title', ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [24, '.advice-v4-panel__hint', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [25, '.advice-v4-panel__actions', ['gap', 'marginTop']],
-  [26, ['.advice-v4-panel__btn', '.advice-v4-panel__btn--useful'],
+  ['Пропустить', -7, '.advice-v4-panel', ['background', 'radius', 'padding']],
+  ['Пропустить', -6, '.advice-v4-panel__head', ['align', 'gap']],
+  ['Пропустить', -5, '.advice-v4-panel__title', ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Пропустить', -4, '.advice-v4-panel__hint', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Пропустить', -3, '.advice-v4-panel__actions', ['gap', 'marginTop']],
+  ['Пропустить', -2, ['.advice-v4-panel__btn', '.advice-v4-panel__btn--useful'],
     ['flex', 'minHeight', 'radius', 'background', 'align', 'justify', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [27, ['.advice-v4-panel__btn', '.advice-v4-panel__btn--miss'],
+  ['Пропустить', -1, ['.advice-v4-panel__btn', '.advice-v4-panel__btn--miss'],
     ['flex', 'minHeight', 'radius', 'background', 'align', 'justify', 'gap', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [28, '.advice-v4-panel__skip',
+  ['Пропустить', 0, '.advice-v4-panel__skip',
     ['textAlign', 'marginTop', 'minHeight', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Кадр «Совет · отмена с таймером»: окружающий экран принадлежит другим
 // зонам; tips владеет панелью, кольцом обратного отсчёта и кнопкой возврата.
 const HIDE_UNDO = [
-  [21, ['.advice-v4-panel', '.advice-v4-panel--hide'], ['background', 'radius', 'padding']],
-  [22, '.advice-v4-hide-row', ['align', 'gap']],
-  [23, '.advice-v4-hide-ring', ['width', 'height', 'align', 'justify']],
-  [24, '.advice-v4-hide-ring__num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [25, '.advice-v4-hide-copy', ['flex']],
-  [26, '.advice-v4-hide-copy__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [27, '.advice-v4-hide-copy__subtitle', ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [28, '.advice-v4-hide-return', ['padding', 'radius', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Вернуть', -7, ['.advice-v4-panel', '.advice-v4-panel--hide'], ['background', 'radius', 'padding']],
+  ['Вернуть', -6, '.advice-v4-hide-row', ['align', 'gap']],
+  ['Вернуть', -5, '.advice-v4-hide-ring', ['width', 'height', 'align', 'justify']],
+  ['Вернуть', -4, '.advice-v4-hide-ring__num', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Вернуть', -3, '.advice-v4-hide-copy', ['flex']],
+  ['Вернуть', -2, '.advice-v4-hide-copy__title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Вернуть', -1, '.advice-v4-hide-copy__subtitle',
+    ['marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // «Вернуть» держит 44 своим min-height: пакет 6 сентября снял набранную из
+  // полей 11/15 высоту 33,5, поля остались только боковыми.
+  ['Вернуть', 0, '.advice-v4-hide-return',
+    ['flex', 'minHeight', 'align', 'padding', 'radius', 'background',
+      'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Кадр «Совет · деталь» — экран, а не третий слой над шторкой.
@@ -125,31 +137,43 @@ const DETAIL = [
   [12, '.advice-v4-detail__science-box', ['background', 'radius', 'padding', 'marginTop']],
   [13, '.advice-v4-detail__science-box', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [14, '.advice-v4-detail__tech-link', ['align', 'gap', 'marginTop', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [16, '.advice-v4-detail__primary', ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  // «Понятно» — диалоговый ряд 48 своим min-height (было 43 из полей 15).
+  [16, '.advice-v4-detail__primary',
+    ['minHeight', 'align', 'justify', 'radius', 'background', 'padding',
+      'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Кадр «Советы · пусто» — из всего кадра зоне принадлежит только плашка:
 // шапка, скелет карточек и нижнее меню за ней — экраны других зон.
+//
+// Номера здесь и ниже взяты якорем, а не числом. Пакет 6 сентября снял из
+// шапки полосу уровня и группу значков, и все номера в шести кадрах уехали
+// на 15 вверх — гейт покраснел на «строки разбора нет», хотя ни продукт, ни
+// кадр в этой части не менялись. Якорь держится за текст самого элемента.
 const EMPTY = [
-  [19, '.advice-v4-empty-toast', ['background', 'radius', 'padding', 'align', 'gap']],
-  [20, '.advice-v4-empty-toast__text', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Пока всё по плану', -1, '.advice-v4-empty-toast', ['background', 'radius', 'padding', 'align', 'gap']],
+  ['Пока всё по плану', 0, '.advice-v4-empty-toast__text', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Кадр «Совет · всплывающий» — плашка над нижним меню Главной. Зоне
-// принадлежат элементы 21–30; выше и ниже — экран Главной за плашкой.
+// принадлежит сама плашка; выше и ниже — экран Главной за ней.
 const TOAST = [
-  [21, '.advice-v4-toast-card', ['background', 'radius', 'padding']],
-  [22, '.advice-v4-toast-card__row', ['align', 'gap']],
-  [23, ['.advice-v4-toast-card__stripe', '.advice-v4-toast-card__stripe--ok'],
+  ['Открыть', -8, '.advice-v4-toast-card', ['background', 'radius', 'padding']],
+  ['Открыть', -7, '.advice-v4-toast-card__row', ['align', 'gap']],
+  ['Открыть', -6, ['.advice-v4-toast-card__stripe', '.advice-v4-toast-card__stripe--ok'],
     ['width', 'radius', 'background']],
-  [25, '.advice-v4-toast-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [26, '.advice-v4-toast-card__meta', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
-  [27, '.advice-v4-toast-card__close', ['width', 'height', 'radius', 'background', 'align', 'justify']],
-  [28, '.advice-v4-toast-card__actions', ['gap', 'marginTop']],
-  [29, '.advice-v4-toast-card__secondary',
-    ['radius', 'padding', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [30, '.advice-v4-toast-card__primary',
-    ['radius', 'padding', 'background', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Открыть', -4, '.advice-v4-toast-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Открыть', -3, '.advice-v4-toast-card__meta',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ['Открыть', -2, '.advice-v4-toast-card__close',
+    ['width', 'height', 'radius', 'background', 'align', 'justify']],
+  ['Открыть', -1, '.advice-v4-toast-card__actions', ['gap', 'marginTop']],
+  // «Открыть» держит 44 своим min-height: пакет 6 сентября снял набранную из
+  // полей высоту 33,5. Пары под второй кнопкой ряда больше нет — кадр рисует
+  // одну кнопку, «Позже» в разборе не значится (см. запись в UI_V4_FINDINGS).
+  ['Открыть', 0, '.advice-v4-toast-card__primary',
+    ['flex', 'minHeight', 'align', 'justify', 'radius', 'background',
+      'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Кадр «Научное описание» — экран под советом: что за этим стоит, список
@@ -168,8 +192,10 @@ const SCIENCE = [
   [12, '.advice-v4-science__source-meta', ['fontWeight', 'fontSize', 'color']],
   [14, '.advice-v4-science__footnote', ['align', 'gap', 'background', 'radius', 'padding', 'marginTop']],
   [15, '.advice-v4-science__footnote-text', ['fontWeight', 'fontSize', 'lineHeight']],
+  // «Понятно» — тот же диалоговый ряд 48, что у детали.
   [17, '.advice-v4-science__primary',
-    ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
+    ['minHeight', 'align', 'justify', 'radius', 'background', 'padding',
+      'fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Кадр «Настройки советов» — единственное место, где советы настраиваются.
@@ -195,20 +221,25 @@ const SETTINGS = [
 // Кадр «Оговорка» — лист первого совета. Зоне принадлежат элементы 20–30;
 // выше — экран дня за листом. Сведён 31 августа.
 const DISCLAIMER = [
-  [20, '.advice-v4-disclaimer-overlay', ['background']],
-  [21, '.advice-v4-disclaimer-card', ['background', 'radius', 'padding']],
-  [22, '.advice-v4-disclaimer-card__handle', ['width', 'height', 'radius']],
-  [23, '.advice-v4-disclaimer-card__title',
+  ['Показать совет', -10, '.advice-v4-disclaimer-overlay', ['background']],
+  ['Показать совет', -9, '.advice-v4-disclaimer-card', ['background', 'radius', 'padding']],
+  ['Показать совет', -8, '.advice-v4-disclaimer-card__handle', ['width', 'height', 'radius']],
+  ['Показать совет', -7, '.advice-v4-disclaimer-card__title',
     ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'color']],
-  [24, '.advice-v4-disclaimer-card__lead',
+  ['Показать совет', -6, '.advice-v4-disclaimer-card__lead',
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
-  [25, '.advice-v4-disclaimer-card__note', ['background', 'radius', 'padding', 'marginTop']],
-  [26, '.advice-v4-disclaimer-card__text', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [27, '.advice-v4-disclaimer-card__check', ['align', 'gap', 'marginTop']],
-  [28, '.advice-v4-disclaimer-card__check input', ['width', 'height']],
-  [29, '.advice-v4-disclaimer-card__check', ['fontWeight', 'fontSize', 'lineHeight']],
-  [30, '.advice-v4-disclaimer-card__primary',
-    ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'lineHeight']],
+  ['Показать совет', -5, '.advice-v4-disclaimer-card__note',
+    ['background', 'radius', 'padding', 'marginTop']],
+  ['Показать совет', -4, '.advice-v4-disclaimer-card__text',
+    ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['Показать совет', -3, '.advice-v4-disclaimer-card__check', ['align', 'gap', 'marginTop']],
+  ['Показать совет', -2, '.advice-v4-disclaimer-card__check input', ['width', 'height']],
+  ['Показать совет', -1, '.advice-v4-disclaimer-card__check',
+    ['fontWeight', 'fontSize', 'lineHeight']],
+  // «Показать совет» — диалоговый ряд 48 своим min-height (было 43 из полей 15).
+  ['Показать совет', 0, '.advice-v4-disclaimer-card__primary',
+    ['minHeight', 'align', 'justify', 'radius', 'background', 'padding',
+      'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
 ];
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
