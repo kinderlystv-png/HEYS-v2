@@ -8608,7 +8608,7 @@
 }
 /* a2 — нейтральный мягкий, не конкурирует с danger */
 .fingers-grip-tile__a2 {
-  color: var(--v4-ink-2, #6b7280);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 [data-theme$="dark"] .fingers-grip-tile__a2 { color: #cbd5e1; }
 /* danger — окрашен в цвет уровня риска */
