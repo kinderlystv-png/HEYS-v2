@@ -973,10 +973,10 @@
     },
     "Актив · правка куратора · 07": {
       "v": "≠",
-      "f": ".sb-plan-meta в .sb-proposal-card — проза правки на месте, тон 55 %; строка «Сделанное не тронется» при закрытых подходах — heys_strength_proposal_ui_v1.js",
+      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "85be5c5273ef",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:767"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
     },
     "Актив · правка куратора · 08": {
       "v": "=",
@@ -1117,10 +1117,10 @@
     },
     "Календарь зарядки · 02": {
       "v": "≠",
-      "f": "отдельного экрана нет: календарь открывается вторым слоем в ярусе «История» (.activity-v4-history__cal)",
+      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "0e8543e0dac0",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
     },
     "Календарь зарядки · 03": {
       "v": "=",
@@ -1438,10 +1438,10 @@
     },
     "Актив · день собран · текст": {
       "v": "≠",
-      "f": "копия сведена; при плане на сегодня — карточка «план назначен» (решение 31.08), а не компактная строка кадра ·16–17",
+      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "1a4f585440ba",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:558"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
     },
     "Актив · разбор цели · текст": {
       "v": "=",
@@ -1480,10 +1480,10 @@
     },
     "Тренировки · журнал подходов · текст": {
       "v": "≠",
-      "f": "продуктовая копия на месте; кадр описывает завершённый журнал, продукт — идущую сессию (канон 31.08)",
+      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "eb285eda82d2",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:590"
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
     },
     "Рабочие веса · нечего сравнивать · текст": {
       "v": "=",
