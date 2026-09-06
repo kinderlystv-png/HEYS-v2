@@ -53,7 +53,10 @@ export const ALLOWED_NA_KINDS = Object.freeze([
 // Затянуть заморозку всё равно обязаны — храповик считает текущее состояние.
 export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'app-splash': Object.freeze({
-    mismatch: [4, 'b3d70a6cb7d03136'],
+    // 06.09, task 152: одна legacy «≠» сведена в «=» (4 → 3); одна типизирована
+    // reasonCode — typedMismatch 0 → 1.
+    mismatch: [3, '10eccc4e729a7f26'],
+    typedMismatch: [1, '5bfe3b9a7f7d936e'],
     notApplicable: [42, 'bd8795aa1e28be3e'],
   }),
   // 3 сентября (вечер): числа те же, отпечаток другой. Пакет перевёл четыре
@@ -62,8 +65,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   // Это не послабление: 19 и 47 не изменились.
   'checkin-morning': Object.freeze({
     // 04.09: одна legacy «≠» типизирована reasonCode — долг 19 → 18.
-    mismatch: [9, '5cbfb835dab52307'],
-    typedMismatch: [1, '3959d964b3a77b88'],
+    // 06.09, task 152: одна legacy «≠» сведена в «=» (9 → 8); одна типизирована
+    // reasonCode — typedMismatch 1 → 2.
+    mismatch: [8, '44515f2fe2e59d59'],
+    typedMismatch: [2, 'b0ea8bda06eb9577'],
     notApplicable: [47, '19522329f4fb6522'],
   }),
   'curator-cabinet': Object.freeze({
@@ -79,8 +84,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   cycle: Object.freeze({
     // 04.09: typed-v1 gate — 4 typed «≠»; legacy 32 → 21 после типизации и снятия строк.
     // 04.09 (вечер): bde48fd79 закрыл последний «?» — legacy mismatch 21 → 20.
-    mismatch: [16, 'd134809ca6644f52'],
-    typedMismatch: [4, '73d74685b79f4e13'],
+    // 06.09, task 152: disable CTA сведён в «=» (16 → 14); две frame-dispute
+    // типизированы reasonCode — typedMismatch 4 → 5.
+    mismatch: [14, '4a6067c8ff8f3396'],
+    typedMismatch: [5, 'f679faa2ee194275'],
     notApplicable: [23, '7558e003ad93df9c'],
   }),
   'date-remainders': Object.freeze({
@@ -141,7 +148,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'nutrition-tab': Object.freeze({
     // 04.09: 9e3fc6c3d типизировал 26 legacy «≠» (31 → 5). «—» выросло 168 → 211:
     // закрытие ?-долга ea801dfbb и новые нетипизированные «—» без naKind.
-    mismatch: [1, '8ff1b4c337a585ff'],
+    // 06.09, task 152: swap CTA сведён в «=» — legacy mismatch 1 → 0.
+    mismatch: [0, 'e3b0c44298fc1c14'],
     notApplicable: [211, 'c56b7bc960bb40c0'],
   }),
   'product-card': Object.freeze({
@@ -150,7 +158,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // Рост записан, а не заморожен обратно: это перевод «не смотрели» в судимое,
     // а не появление нового необоснованного вердикта. Отдельный долг зоны при этом
     // назван вслух: у всех 76 «—» нет naKind, а разных фактов на «—» — 26 из 76.
-    mismatch: [59, 'cc40ca548502a272'],
+    // 06.09, task 152: одна legacy «≠» сведена в «=» (59 → 58); одна типизирована
+    // reasonCode — typedMismatch 0 → 1.
+    mismatch: [58, '46e2bc7b10fc88db'],
+    typedMismatch: [1, '546fc0e845793148'],
     notApplicable: [76, 'ea3054255c5fd126'],
   }),
   'pwa-update': Object.freeze({
@@ -165,12 +176,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   registration: Object.freeze({
     // 04.09: Phase1-2 re-review — 2 audit «?» закрыты в «=» (8467957d7, 116a79e09); legacy 67→65.
     // 05.09: 27 legacy «≠» типизированы reasonCode — долг 65 → 38.
-    mismatch: [38, '7687bae6e0410b3f'],
-    // 05.09: рост 0 → 1 — одна строка «Профиль · отзыв согласия на добавки · 13»
-    // переведена из legacy «≠» в typed-v1 owner-decision (color-mix vs var(--tint)
-    // в плашке цены; решение дизайнера 5 сентября в 733:2242-2247). Это учёт
-    // типизации, а не новый необоснованный вердикт.
-    typedMismatch: [1, '0ff91fd5bddbeaae'],
+    // 06.09, task 152: одна legacy «≠» сведена в «=» (38 → 37); одна типизирована
+    // reasonCode — typedMismatch 1 → 2.
+    mismatch: [37, 'ac924ecccc11984b'],
+    typedMismatch: [2, 'cc2aeef1a0bae834'],
     notApplicable: [28, '1a861974e2dfd0f8'],
   }),
   'reports-insights': Object.freeze({
@@ -182,7 +191,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     notApplicable: [134, '0fcd6b63be04a0c0'],
   }),
   'service-curator': Object.freeze({
-    mismatch: [2, 'b360becf15443345'],
+    // 06.09, task 152: одна legacy «≠» сведена в «=» (2 → 1); одна типизирована
+    // reasonCode — typedMismatch 0 → 1.
+    mismatch: [1, '9ec248fc79a278d5'],
+    typedMismatch: [1, '46d6f9ad3fff2817'],
     notApplicable: [10, '1a79551c98be8a55'],
   }),
   'settings-system': Object.freeze({
