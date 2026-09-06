@@ -74,7 +74,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // Крест закрытия сканера — рисунок кадра, а не типографский знак: у «×»
   // толщина и наклон идут от шрифта, а кадр задаёт линии 2,75 в поле 24.
-  function CloseIcon({ size = 14 }) {
+  function CloseIcon({ size = 17 }) {
     return React.createElement('svg', {
       width: size,
       height: size,
@@ -6078,7 +6078,20 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         // стопкой в общем ряду, и «Создать продукт» ничем не отличался от
         // «Искать по названию», кроме заливки. Классы свои, а не общие
         // состояния поиска: те же классы делит соседняя зона приёма еды.
-        barcodeNotFoundCode && React.createElement(React.Fragment, null,
+        barcodeNotFoundCode && React.createElement('div', { className: 'aps-barcode-nf-screen' },
+          React.createElement('div', { className: 'aps-barcode-nf-head' },
+            React.createElement('div', { className: 'aps-barcode-nf-title' }, 'Штрихкод'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'aps-barcode-nf-close',
+              'aria-label': 'Закрыть',
+              onClick: () => {
+                setBarcodeNotFoundCode(null);
+                setBarcodeResults([]);
+                requestAnimationFrame(() => inputRef.current?.focus());
+              }
+            }, React.createElement(CloseIcon))
+          ),
           React.createElement('div', { className: 'aps-barcode-not-found-screen', role: 'status' },
             React.createElement('div', { className: 'aps-barcode-nf__code' },
               `Код ${barcodeNotFoundCode}`),
@@ -6111,7 +6124,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 requestAnimationFrame(() => inputRef.current?.focus());
               }
             }, 'Искать по названию')
-          )
+          ),
+          React.createElement('div', { className: 'aps-barcode-nf__note' },
+            'Отдельно от «камера не смогла прочитать»: там код не распознан и надо '
+            + 'навести заново, здесь код известен и его просто нет в базе.')
         ),
         barcodeNotice && barcodeNotice.type === 'error' && React.createElement('div', {
           className: 'aps-barcode-notice is-error',
@@ -9929,8 +9945,8 @@ NOVA: 1
             else setShowCustom(true);
           }
         },
-          e('div', { className: 'aps-v4-harm-compare__label' }, hasManualHarm ? 'из описания' : 'Указать значение'),
-          hasManualHarm && e('div', { className: 'aps-v4-harm-compare__value' }, Number(manualHarm).toFixed(1)),
+          e('div', { className: 'aps-v4-harm-compare__label' }, 'из описания'),
+          e('div', { className: 'aps-v4-harm-compare__value' }, hasManualHarm ? Number(manualHarm).toFixed(1) : '—'),
           e('div', { className: 'aps-v4-harm-compare__dot' })
         ),
         e('button', {

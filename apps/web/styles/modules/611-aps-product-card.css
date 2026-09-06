@@ -806,6 +806,40 @@
   color: var(--v4-ink, #f2ede6);
 }
 
+/* Кадр «Штрихкод · не найден · 01–03»: шапка с круглым закрытием 44 и рисунком 17. */
+.aps-barcode-nf-screen {
+  display: flex;
+  flex-direction: column;
+}
+
+.aps-barcode-nf-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aps-barcode-nf-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--v4-ink, #201e1d);
+}
+
+.aps-barcode-nf-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  cursor: pointer;
+}
+
 /* Кадр «Штрихкод · не найден»: карточка на второй поверхности, внутри — код,
    что случилось, объяснение и главное действие. Прежде карточка стояла на
    --v4-sand-accent-bg (#f0dcc6): такой роли кадр не называет, он даёт --c2. */
@@ -884,6 +918,15 @@
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+}
+
+.aps-barcode-nf__note {
+  margin-top: 16px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-wrap: pretty;
+  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
 /* Счётчик базы в шапке шага: моноцифры 10,5/600 чернилами 56 % по разбору
@@ -1013,28 +1056,22 @@
   text-align: center;
   cursor: pointer;
   background: var(--v4-surface, #f7efe2);
+  box-shadow: none;
 }
 
-.aps-v4-harm-compare__card--system {
+.aps-v4-harm-compare__card.is-active {
   background: var(--v4-ok-bg, #eaefe0);
   box-shadow: inset 0 0 0 1.5px var(--v4-sand-ok-text, #5c6a45);
 }
 
-.aps-v4-harm-compare__card--own .aps-v4-harm-compare__label {
+.aps-v4-harm-compare__card:not(.is-active) .aps-v4-harm-compare__label {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
 }
 
-.aps-v4-harm-compare__card--system .aps-v4-harm-compare__label {
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--v4-sand-ok-text, #5c6a45);
-}
-
-.aps-v4-harm-compare__card--own .aps-v4-harm-compare__value {
+.aps-v4-harm-compare__card:not(.is-active) .aps-v4-harm-compare__value {
   margin-top: 9px;
   font-size: 30px;
   font-weight: 600;
@@ -1042,12 +1079,29 @@
   color: var(--v4-ink, #201e1d);
 }
 
-.aps-v4-harm-compare__card--system .aps-v4-harm-compare__value {
+.aps-v4-harm-compare__label {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.aps-v4-harm-compare__value {
   margin-top: 9px;
   font-size: 30px;
   font-weight: 600;
   line-height: 1;
+}
+
+.aps-v4-harm-compare__card.is-active .aps-v4-harm-compare__label {
   color: var(--v4-sand-ok-text, #5c6a45);
+}
+
+.aps-v4-harm-compare__card.is-active .aps-v4-harm-compare__value {
+  color: var(--v4-sand-ok-text, #5c6a45);
+}
+
+.aps-v4-harm-compare__card--own .aps-v4-harm-compare__label {
+  font-size: 10px;
 }
 
 .aps-v4-harm-compare__dot {
