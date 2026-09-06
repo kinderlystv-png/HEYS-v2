@@ -74,7 +74,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   font-size: 9px;
   font-weight: 700;
@@ -91,7 +91,13 @@
 
 /* «Копят данные» — рабочее состояние первых трёх недель, а не тревога. */
 .cur-chip.is-muted {
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+}
+
+/* Кадр «Очередь · Анкеты/Решения · 06»: пилюля «закрыть» на --c2 тоном --ink-2,
+   а не общий ink-3 фильтров подвкладок. */
+.cur-cab__queue-head > .cur-chip {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .cur-chip.is-muted.is-on {
@@ -573,7 +579,7 @@
 }
 
 .cur-sheet__hist-dash {
-  stroke: var(--v4-track, rgba(0, 0, 0, 0.12));
+  stroke: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
   stroke-width: 1;
   stroke-dasharray: 3 4;
 }

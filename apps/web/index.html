@@ -996,11 +996,11 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
     <!-- Preload критических boot-бандлов (2026-02-25 bundle migration) -->
-    <link rel="preload" href="boot-core.bundle.ae4c8b321edd.js" as="script" />
-    <link rel="preload" href="boot-calc.bundle.73dd2fd35701.js" as="script" />
-    <link rel="preload" href="boot-day.bundle.44561a1edf73.js" as="script" />
-    <link rel="preload" href="boot-app.bundle.f6ed1e69cbe2.js" as="script" />
-    <link rel="preload" href="boot-init.bundle.d472dc64aa0a.js" as="script" />
+    <link rel="preload" href="boot-core.bundle.5e5aa0aacf34.js" as="script" />
+    <link rel="preload" href="boot-calc.bundle.224c014cb5c8.js" as="script" />
+    <link rel="preload" href="boot-day.bundle.e3fd63a92c90.js" as="script" />
+    <link rel="preload" href="boot-app.bundle.e1b924ebbfe5.js" as="script" />
+    <link rel="preload" href="boot-init.bundle.5db080418f1b.js" as="script" />
     <!-- React бандлится локально через Vite (миграция с CDN).
          Preload даёт parallel fetch во время парсинга HTML: к моменту, когда
          разбор доходит до <script src="/react-bundle.js"> внизу body, бандл уже
@@ -1566,13 +1566,10 @@
                      «Буквы в загрузчике нет вовсе, порога 300 мс нет — дуга
                      стоит с первого кадра». Расхождения больше нет. -->
                 <span class="heys-boot-mark__spin animate-always" aria-hidden="true">
-                    <!-- Контракты app-splash «вид диска в загрузчике» и spinners
-                         «вид знака»: дуга 50 обводкой 2,6 со скруглёнными
-                         концами, под ней полный круг того же радиуса и толщины
-                         под .28. Кадр «Стык · загрузчик» рисует 58/2,6/.13 —
-                         контракт старше кадра. -->
+                    <!-- app-splash «Стык · загрузчик · рисунок 02/03»: круг r 9.2
+                         тоном --v4-ink-30, дуга M12 2.8… тоном --acs. -->
                     <svg width="50" height="50" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <circle cx="12" cy="12" r="9.2" stroke="currentColor" stroke-width="2.6" opacity="0.28"></circle>
+                        <circle cx="12" cy="12" r="9.2" stroke="var(--v4-ink-30, rgba(0,0,0,0.3))" stroke-width="2.6" fill="none"></circle>
                         <path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"></path>
                     </svg>
                 </span>
@@ -3292,11 +3289,11 @@
          Сгенерировано: node scripts/bundle-legacy.mjs  (pnpm bundle:legacy)
          Состав и хеши: bundle-manifest.json
          Хеш в имени = вечный кэш (cache-first SW). -->
-    <script defer src="boot-core.bundle.ae4c8b321edd.js" fetchpriority="high"></script>
-    <script defer src="boot-calc.bundle.73dd2fd35701.js"></script>
-    <script defer src="boot-day.bundle.44561a1edf73.js"></script>
-    <script defer src="boot-app.bundle.f6ed1e69cbe2.js"></script>
-    <script defer src="boot-init.bundle.d472dc64aa0a.js"
+    <script defer src="boot-core.bundle.5e5aa0aacf34.js" fetchpriority="high"></script>
+    <script defer src="boot-calc.bundle.224c014cb5c8.js"></script>
+    <script defer src="boot-day.bundle.e3fd63a92c90.js"></script>
+    <script defer src="boot-app.bundle.e1b924ebbfe5.js"></script>
+    <script defer src="boot-init.bundle.5db080418f1b.js"
         onerror="window.__heysShowRecoveryUI && window.__heysShowRecoveryUI('CRITICAL_SCRIPT_LOAD: boot-init.bundle')"></script>
 
     <!-- ⚡ PERF 2026-06-13: D1 (solid-шапка на Android вместо frosted glass —

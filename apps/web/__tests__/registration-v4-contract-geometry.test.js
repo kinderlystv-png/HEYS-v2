@@ -107,17 +107,27 @@ describe('регистрация v4: решения контракта', () => {
       expect(at, text).toBeGreaterThan(-1);
       expect(source.slice(Math.max(0, at - before), at), text).toContain('color: INK_DATA');
     };
+    const nearbyInk2 = (source, text, before = 320) => {
+      const at = source.indexOf(text);
+      expect(at, text).toBeGreaterThan(-1);
+      expect(source.slice(Math.max(0, at - before), at), text).toContain('color: INK_2');
+    };
 
     nearby(profile, 'Формула основного обмена у мужчин и женщин разная.');
     nearby(profile, 'Куратор обращается к вам по имени, поэтому оно должно читаться.');
-    nearby(profile, 'Программа рассчитана на взрослых, и документы подписывает совершеннолетний.');
+    // package 43: юридическое пояснение 12,5 px / --v4-ink-2, не INK_DATA 56 %.
+    expect(profile).toMatch(
+      /fontSize: 12\.5, fontWeight: 500, marginTop: 5, color: 'var\(--v4-ink-2, rgba\(0,0,0,\.55\)\)'[\s\S]{0,80}'Программа рассчитана на взрослых/,
+    );
     nearby(profile, 'При росте ${height} см нижняя граница нормы');
     nearby(profile, 'Волна задаёт, сколько после приёма пищи держится подъём инсулина');
     nearby(profile, 'До этого дня приложение можно не открывать — считать ещё нечего.');
     nearby(profile, 'Норма калорий считается каждый день по факту');
     nearby(consents, 'Введите код доступа — он заменяет собственноручную подпись.');
-    nearby(consents, 'Необязательное отмечается тапом и меняется в настройках');
-    nearby(consents, 'Копия подписи хранится в профиле — её видно в настройках');
+    nearbyInk2(consents, 'Необязательное отмечается тапом и меняется в настройках');
+    expect(consents).toMatch(
+      /className: 'heys-consent-sign-sheet__done-note'[\s\S]{0,120}Копия подписи хранится в профиле — её видно в настройках/,
+    );
     nearby(stepModal, 'Попытка ${profileRetryAttempt} · следующая через');
     expect(userTab).toMatch(/className: 'profile-v4__subtier-title',[\s\S]{0,100}color: INK_DATA/);
   });

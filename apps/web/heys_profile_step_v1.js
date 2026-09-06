@@ -751,7 +751,7 @@
         },
           React.createElement('div', { style: { fontSize: 12, fontWeight: 700, lineHeight: 1.4, color: '#a1471c' } },
             'Приложением можно пользоваться с 18 лет'),
-          React.createElement('div', { style: { fontSize: 11.5, fontWeight: 500, marginTop: 5, color: INK_DATA, lineHeight: 1.55 } },
+          React.createElement('div', { style: { fontSize: 12.5, fontWeight: 500, marginTop: 5, color: 'var(--v4-ink-2, rgba(0,0,0,.55))', lineHeight: 1.55 } },
             'Программа рассчитана на взрослых, и документы подписывает совершеннолетний. Колесо дальше не идёт.')
         )
       ),

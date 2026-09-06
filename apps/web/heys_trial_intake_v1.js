@@ -155,6 +155,8 @@
   const hintStyle = { marginTop: 5, fontSize: 11.5, lineHeight: 1.45, color: INK_55, fontWeight: 500 };
   const titleStyle = { fontSize: 22, fontWeight: 700, lineHeight: 1.2, letterSpacing: '-.02em', color: INK, margin: 0 };
   const subtitleStyle = { fontSize: 12.5, fontWeight: 500, lineHeight: 1.55, color: INK_55, margin: '9px 0 0' };
+  const legalTextStyle = { fontSize: 12.5, fontWeight: 500, lineHeight: 1.45 };
+  const legalConsentLabelStyle = { fontSize: 12.5, fontWeight: 600, lineHeight: 1.45 };
   // Строка «области нажатия»: кнопки футера 48.
   const pillStyle = {
     minHeight: 48, borderRadius: 999, border: 0, padding: '0 18px',
@@ -470,7 +472,7 @@
       key: `warning-mark-${field}`,
       style: {
         display: 'flex', gap: 11, alignItems: 'flex-start', color: INK,
-        fontSize: 12, fontWeight: 600, lineHeight: 1.5,
+        ...legalConsentLabelStyle,
         minHeight: 44, cursor: 'pointer',
       },
     },
@@ -523,7 +525,7 @@
             // чекбокс за экран, и подтвердить нечем.
             maxHeight: 186, overflowY: 'auto',
             padding: '14px 16px', borderRadius: 18, background: SURFACE_1,
-            color: INK, fontSize: 12, lineHeight: 1.6,
+            color: INK, ...legalTextStyle, lineHeight: 1.6,
             display: 'grid', gap: 10,
             // Строка «вид блока предупреждения» (переписана 25 августа): текст
             // предупреждения выделяется и копируется — человек имеет право
@@ -534,7 +536,7 @@
             WebkitUserSelect: 'text',
           },
         },
-          React.createElement('div', { style: { fontWeight: 700, fontSize: 12, lineHeight: 1.35, color: WARN_TEXT } }, WARNING_TEXT_TITLE),
+          React.createElement('div', { style: { fontWeight: 700, ...legalTextStyle, lineHeight: 1.35, color: WARN_TEXT } }, WARNING_TEXT_TITLE),
           ...WARNING_TEXT_PARAGRAPHS.map((paragraph, index) => React.createElement('p', {
             key: `warning-p-${index}`,
             style: { margin: 0 },
@@ -1749,8 +1751,11 @@
         // Строка «доступность»: причина озвучивается как описание кнопки, а не
         // алертом после нажатия — поэтому у неё свой id, а не role="alert".
         id: 'intake-blocked-reason',
-        style: { marginTop: 22, fontSize: 11, fontWeight: 500, lineHeight: 1.45,
-          textAlign: 'center', color: INK_DATA },
+        style: {
+          marginTop: 22,
+          ...(current?.id === 'warning' ? legalTextStyle : { fontSize: 11, fontWeight: 500, lineHeight: 1.45 }),
+          textAlign: 'center', color: INK_DATA,
+        },
       }, current?.id === 'warning' ? 'Поставьте галочку выше' : 'Заполните поля со звёздочкой') : null,
       React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: missingRequired ? 9 : 20 } },
         step > 0 ? React.createElement('button', {

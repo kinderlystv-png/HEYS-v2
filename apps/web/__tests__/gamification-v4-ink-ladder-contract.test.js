@@ -14,7 +14,6 @@ const rule = (selector) => {
 
 describe('gamification v4 · data ink ladder', () => {
   it.each([
-    '.game-v4-sheet__hero-muted',
     '.game-v4-sheet__streak-bar-caption',
     '.game-v4-sheet__card-sub',
     '.game-v4-sheet__card-meta',
@@ -26,6 +25,19 @@ describe('gamification v4 · data ink ladder', () => {
     '.game-v4-sheet__footnote',
   ])('%s uses the 56%% data role', (selector) => {
     expect(rule(selector)).toContain('var(--v4-ink-data');
+  });
+
+  it('.game-v4-sheet__hero-muted uses ink-2 at 12.5px per frame ·08', () => {
+    const heroMuted = rule('.game-v4-sheet__hero-muted');
+    expect(heroMuted).toContain('font-size: 12.5px');
+    expect(heroMuted).toContain('var(--v4-ink-2');
+  });
+
+  it('.game-v4-sheet__ach-name uses ink-2 per package 43 row ·15', () => {
+    const achName = rule('.game-v4-sheet__ach-name');
+    expect(achName).toContain('font-size: 12.5px');
+    expect(achName).toContain('font-weight: 700');
+    expect(achName).toContain('var(--v4-ink-2');
   });
 
   it('keeps mission progress captions contextual instead of changing every card', () => {

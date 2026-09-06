@@ -248,13 +248,13 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   margin-top: 12px;
-  padding: 0 16px;
+  padding: 0;
   border: none;
-  border-radius: 999px;
-  background: var(--v4-chip, #efe3cf);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  border-radius: 0;
+  background: none;
+  font: 600 12px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
 }
@@ -741,17 +741,17 @@
   border-radius: 999px;
   background: none;
   font: 600 11.5px/1.1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
   cursor: pointer;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .insights-v4-window__chip.is-active {
-  background: var(--v4-card, #f7efe2);
+  background: var(--v4-chip, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -793,13 +793,13 @@
   flex: 1;
   min-width: 0;
   font: 700 12.5px/1.35 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #201e1d);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .insights-v4-patterns__support {
   flex: none;
   font: 500 11px/1.2 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .insights-v4-nutrition {

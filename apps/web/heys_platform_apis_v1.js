@@ -487,13 +487,11 @@
 
   function renderStageIcon(stage) {
     const s = UPDATE_STAGES[stage] || UPDATE_STAGES.downloading;
-    // Дуга 26 обводкой 2,75 со скруглёнными концами и хвостом под .16. Тон —
-    // currentColor: круг задаёт его ролью набора, второго цвета в знаке нет
-    // (строка «иконки»: «один цвет — акцент слоя»). Кадр рисует хвост
-    // чернилами под .16 — это второй цвет, и контракт старше кадра.
+    // Дуга 26 обводкой 2,75: полный круг r 9.4 тоном --v4-ink-30, поверх —
+    // дуга тоном --acs через currentColor (pwa-update «… · рисунок 02/03»).
     const ring = s.spinner
       ? `<svg class="heys-update-modal__spinner" width="${UPDATE_ARC_PX}" height="${UPDATE_ARC_PX}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${UPDATE_ARC_STROKE}" stroke-linecap="round" aria-hidden="true">`
-      + '<path d="M21 12a9 9 0 11-9-9" opacity=".16"/>'
+      + '<circle cx="12" cy="12" r="9.4" stroke="var(--v4-ink-30, rgba(0,0,0,0.3))" fill="none"/>'
       + '<path d="M12 3a9 9 0 019 9"/>'
       + '</svg><span class="heys-update-modal__still"></span>'
       : '';

@@ -1127,7 +1127,7 @@
 
 .heys-score-tile__entry-label {
   font: 600 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .heys-score-tile__entry-chevron {

@@ -9,6 +9,9 @@
   const React = global.React;
   const { useState, useEffect, useCallback, useRef, useMemo } = React || {};
   const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
+  const INK_2 = 'var(--v4-ink-2, rgba(0,0,0,.55))';
+  const LEGAL_DISCLOSURE_FONT = '500 12.5px/1.5 Figtree, system-ui, sans-serif';
+  const LEGAL_DISCLOSURE_TYPES = new Set(['personal_data']);
 
   // v4 roles для registration (смысл, не оттенок — UI_V4_BARE_LITERALS_DECISION.md).
   const V4_ACCENT_FILL = 'var(--v4-act, #c67139)';
@@ -1415,7 +1418,7 @@
               style: {
                 margin: '7px 0 0',
                 color: INK_DATA,
-                font: '500 11.5px/1.5 Figtree, system-ui, sans-serif',
+                font: '500 12.5px/1.45 Figtree, system-ui, sans-serif',
                 textAlign: 'center',
                 textWrap: 'pretty',
               },
@@ -1481,7 +1484,6 @@
               // полные реквизиты подписи остаются строкой выше.
               React.createElement('p', {
                 className: 'heys-consent-sign-sheet__done-note',
-                style: { color: INK_DATA },
               },
                 'Копия подписи хранится в профиле — её видно в настройках'
               )
@@ -1565,8 +1567,8 @@
         React.createElement('p', {
           style: {
             marginTop: 8,
-            font: '500 12px/1.5 Figtree, system-ui, sans-serif',
-            color: 'rgba(0,0,0,.55)',
+            font: LEGAL_DISCLOSURE_FONT,
+            color: INK_2,
           }
         }, step === 'verify_code'
           ? 'Введите код из SMS для подтверждения согласия на обработку данных о здоровье'
@@ -1712,8 +1714,8 @@
               React.createElement('p', {
                 style: {
                   marginTop: 12,
-                  font: '500 11px/1.5 Figtree, system-ui, sans-serif',
-                  color: INK_DATA,
+                  font: LEGAL_DISCLOSURE_FONT,
+                  color: INK_2,
                   textWrap: 'pretty',
                 }
               }, 'Необязательное отмечается тапом и меняется в настройках в любой момент. Заранее ничего не включено.')
@@ -2118,8 +2120,8 @@
           React.createElement('div', {
             style: {
               marginTop: 4,
-              font: '500 11px/1.5 Figtree, system-ui, sans-serif',
-              color: INK_DATA,
+              font: LEGAL_DISCLOSURE_TYPES.has(type) ? LEGAL_DISCLOSURE_FONT : '500 11px/1.5 Figtree, system-ui, sans-serif',
+              color: LEGAL_DISCLOSURE_TYPES.has(type) ? INK_2 : INK_DATA,
               textWrap: 'pretty',
             }
           }, disclosure)
@@ -2129,8 +2131,8 @@
           style: {
             display: 'block',
             marginTop: 3,
-            font: '500 10.5px/1.4 Figtree, system-ui, sans-serif',
-            color: INK_DATA,
+            font: type === 'marketing' ? LEGAL_DISCLOSURE_FONT : '500 10.5px/1.4 Figtree, system-ui, sans-serif',
+            color: type === 'marketing' ? INK_2 : INK_DATA,
           }
         }, optionalHint),
 

@@ -52,6 +52,11 @@ const PALETTE_OF = { sand: 'sand', 'sand-dark': 'sand', blue: 'blue', 'blue-dark
 // светлыми чернилами на тёмном экране, контраст 1,0. Здесь колонка blue-dark
 // повторяет sand-dark именно поэтому, а не по совпадению.
 // Меняются по наборам только зелёные роли медальона — канвасные --gr-bg и --gr.
+const INK2 = { sand: '#000000', 'sand-dark': '#f2ede6', blue: '#000000', 'blue-dark': '#eef3f8' };
+// jsdom на светлых наборах не композитит rgba(0,0,0,.55) для color и отдаёт
+// непрозрачный --v4-ink (#201e1d песочный, #101826 синий). Контракт ink-2 —
+// правило .game-v4-sheet__ach-name + ink-ladder; живой chromium — acceptance.
+const INK2_JSDOM_LIGHT = { sand: '#201e1d', blue: '#101826' };
 const SAND_TX = { sand: '#201e1d', 'sand-dark': '#f2ede6', blue: '#201e1d', 'blue-dark': '#f2ede6' };
 const SAND_AC = { sand: '#8a4a20', 'sand-dark': '#e2a468', blue: '#8a4a20', 'blue-dark': '#e2a468' };
 const SAND_C1 = { sand: '#f7efe2', 'sand-dark': '#23201b', blue: '#f7efe2', 'blue-dark': '#23201b' };
@@ -268,7 +273,8 @@ describe('gamification · «вид строки достижения»', () => {
     const todo = rowByName(container, 'Семь дней подряд');
 
     expect(norm(window.getComputedStyle(container.querySelector('.game-v4-sheet__ach-list')).backgroundColor)).toBe(SAND_C1[id]);
-    expect(norm(window.getComputedStyle(done.querySelector('.game-v4-sheet__ach-name')).color)).toBe(SAND_TX[id]);
+    const achNameColor = norm(window.getComputedStyle(done.querySelector('.game-v4-sheet__ach-name')).color);
+    expect(achNameColor).toBe(id.endsWith('dark') ? INK2[id] : INK2_JSDOM_LIGHT[id]);
     expect(norm(window.getComputedStyle(done.querySelector('.game-v4-sheet__ach-xp')).color)).toBe(SAND_AC[id]);
 
     // Обводка значка идёт currentColor — цвет живёт ролью на медальоне.

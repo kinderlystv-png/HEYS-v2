@@ -18,6 +18,12 @@ const rule = (css, selector) => {
 describe('cycle v4 · data ink ladder', () => {
   it.each([
     ['.mc-rest-cycle-none-btn', DAILY_CSS],
+    ['.mc-rest-cycle-week-hint', DAILY_CSS],
+  ])('%s uses the ink-2 role after package 43', (selector, css) => {
+    expect(rule(css, selector)).toContain('var(--v4-ink-2');
+  });
+
+  it.each([
     ['.mc-rest-cycle-ended-note', DAILY_CSS],
     ['.cycle-card-v4__date-confirm-sub', DAILY_CSS],
     ['.cycle-card-v4__insight-text', DAILY_CSS],

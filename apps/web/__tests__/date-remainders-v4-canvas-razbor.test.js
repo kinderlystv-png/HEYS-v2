@@ -30,16 +30,32 @@ const EXCEPTIONS = new Map([
   // сегодня» ·16 совпадает. Прежнее «9» в .date-picker-row — наследие строки
   // до переписи; в v4-ряду стоит 8.
   ['Дата · чужой день · 16|gap', 'строка «вид капсулы»: зазор ряда 9 в .date-picker-row'],
-  // Строка «вид чужого дня»: «„Сегодня" 11 px/700 тоном --ac». Кадр рисует
-  // залитую терракотой пилюлю 10,5 px.
-  ['Дата · чужой день · 20|background', 'строка «вид чужого дня»: без заливки'],
-  ['Дата · чужой день · 20|fontSize', 'строка «вид чужого дня»: 11 px'],
-  ['Дата · чужой день · 20|color', 'строка «вид чужого дня»: тон --ac'],
+  // Пилюля «Сегодня» — единственный элемент зоны, о котором спорят три
+  // источника, и код следует третьему, а не строке «вид чужого дня»:
+  //   · строка «вид чужого дня» (1 сентября): надпись 11 px/700 тоном --ac,
+  //     без заливки;
+  //   · кадр «Дата · чужой день» ·20: 28 px, тон --ac, без заливки;
+  //   · кадр «Дата · прошлый день, прокручено» ·44: залитая --acs пилюля
+  //     10,5 px, поля 0 14;
+  //   · food-meal «Приёмы дня · список · 03»: залитая --c2 пилюля 10,5 px,
+  //     поля 0 10, тон --ac — ровно то, что стоит в коде и что закрыто
+  //     вердиктом «=» в зоне food-meal.
+  // Замер 6 сентября (chromium, 375 px): .date-picker-inline-today —
+  // background #efe3cf песочный / #e2ecf6 синий, то есть заливка ЕСТЬ.
+  // Прежняя формулировка исключения («строка „вид чужого дня“: без заливки»)
+  // утверждала обратное. Отступление оставлено, но названо верно; вопрос
+  // дизайнеру заведён в docs/ui/UI_V4_FINDINGS.md.
+  ['Дата · чужой день · 20|background', 'код следует food-meal «Приёмы дня · список · 03»: заливка --c2'],
+  ['Дата · чужой день · 20|fontSize', 'код следует food-meal «Приёмы дня · список · 03»: 10,5 px'],
+  ['Дата · чужой день · 20|color', 'код следует food-meal «Приёмы дня · список · 03»: тон --ac'],
   // Строка «тач-цели»: пилюля «Сегодня» — видимая цель 44 px (min-height).
   // Кадр «Дата · чужой день» ·20 рисует 28 px.
   ['Дата · чужой день · 20|height', 'строка «тач-цели»: min-height 44 у .date-picker-inline-today'],
-  // Строка «ночь»: капсула 36 px до 03:00. Кадр «Капсула · ночь» ·4 рисует 44.
-  ['Капсула · ночь на 21 августа · 4|height', 'строка «ночь»: height 36 у .date-picker-trigger--night'],
+  // Правило дизайнера 6 сентября (строка «тач-цели»): «высота у целей задана
+  // СВОИМ min-height, а не набрана из padding и line-height». Кадр рисует
+  // цель инлайновым `height:44px` — число то же, свойство другое; код держит
+  // min-height 44 (000-base:8149 и дубль в @media (max-width: 640px)).
+  ['Капсула · ночь на 21 августа · 4|height', 'правило «тач-цели»: 44 задаётся min-height, а не height'],
   // Строка «вид шторки календаря»: «ряд сокращений дней 9,5 px/700 прописными
   // тоном чернил 40 %». Кадр набирает 600 и 42 %.
   ['Календарь · легенда · 10|fontWeight', 'строка «вид шторки календаря»: 700'],
@@ -67,7 +83,8 @@ const EXCEPTIONS = new Map([
 const PAST = [
   [16, '.date-picker-row', ['align']],
   [17, `${V4} .date-picker-day-nav`, ['width', 'height', 'radius', 'background', 'align', 'justify']],
-  [18, `${V4} .date-picker-trigger--not-today`, ['radius', 'align']],
+  // Пакет 42 переписал ·18 на «высота ОТ 44px» — сверяется min-height.
+  [18, `${V4} .date-picker-trigger--not-today`, ['radius', 'align', 'minHeight']],
   [19, `${V4} .date-picker-lbl-inner`, ['align']],
   [20, `${V4} .date-picker-inline-today`, ['fontWeight', 'lineHeight']],
 ];
@@ -99,8 +116,10 @@ const SHEET = [
   [23, `${S} .legend-swatch--cycle`, ['width', 'height', 'radius']],
   [24, `${S} .legend-swatch--refeed`, ['width', 'height', 'radius']],
   [26, `${S} .legend-swatch--selected`, ['width', 'height', 'radius', 'background']],
+  // Пакет 42: «высота от 48px, поля 0 15px» — своя min-height вместо набранной.
   [27, ['.date-picker-btn', `${S} .date-picker-btn.today-btn`],
-    ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'color']],
+    ['radius', 'background', 'padding', 'fontWeight', 'fontSize', 'color', 'minHeight',
+      'align', 'justify']],
 ];
 
 // Сколько строк разбора берут пары этого гейта. Заморожено: падение значит,
@@ -132,10 +151,13 @@ describe('«Дата и остатки» · разбор кадров канва
     expect(rules.get(`${V4} .date-picker-lbl-inner`).gap).toBe('6px');
     expect(rules.get(`${V4} .date-picker-day-nav`).width).toBe('44px');
     expect(rules.get(`${V4} > .date-picker-row`).gap).toBe('8px');
-    expect(rules.get(`${V4} .date-picker-trigger--night`).height).toBe('36px');
+    // Пакет 42: у обеих капсул высота своя min-height 44, фиксированной нет.
+    expect(rules.get(`${V4} .date-picker-trigger--night`)['min-height']).toBe('44px');
+    expect(rules.get(`${V4} .date-picker-trigger--night`).height).toBeUndefined();
     expect(rules.get(`${V4} .date-picker-trigger--night`)['border-radius']).toBe('999px');
     expect(rules.get(`${V4} .date-picker-trigger--night .date-picker-lbl-inner`).gap).toBe('7px');
-    expect(rules.get(`${V4} .date-picker-trigger--not-today`).height).toBe('44px');
+    expect(rules.get(`${V4} .date-picker-trigger--not-today`)['min-height']).toBe('44px');
+    expect(rules.get(`${V4} .date-picker-trigger--not-today`).height).toBeUndefined();
     expect(rules.get(`${V4} .date-picker-trigger--not-today`).gap).toBe('5px');
   });
 

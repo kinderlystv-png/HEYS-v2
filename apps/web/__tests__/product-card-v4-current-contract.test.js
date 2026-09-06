@@ -63,12 +63,17 @@ const REVIEWED_DATA_ROWS = [
 ];
 
 describe('product-card current v4 contract', () => {
-  it('keeps the 27 reviewed product data rows on the current 56% floor', () => {
+  it('keeps the 27 reviewed product data rows on the ink-2 role floor', () => {
     const rows = contractRows();
     expect(REVIEWED_DATA_ROWS).toHaveLength(27);
     for (const key of REVIEWED_DATA_ROWS) {
       expect(rows.has(key), key).toBe(true);
-      expect(rows.get(key), key).toContain('.56)');
+      const row = rows.get(key);
+      if (key === 'Штрихкод · наведение · 19') {
+        expect(row, key).toMatch(/rgba\(242,\s*237,\s*230,\s*\.56\)/);
+      } else {
+        expect(row, key).toMatch(/var\(--ink-2\)/);
+      }
     }
   });
 

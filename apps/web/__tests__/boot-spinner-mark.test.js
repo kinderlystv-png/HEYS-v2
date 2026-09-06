@@ -27,6 +27,7 @@ describe('cold-start spinner mark', () => {
     expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="50" height="50"/);
     expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?stroke-width="2\.6"/);
     expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?r="9\.2"/);
+    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?var\(--v4-ink-30/);
     expect(html).not.toMatch(/heys-boot-mark__spin[\s\S]*?<svg width="26"/);
     expect(html).toContain('role="status"');
     expect(html).toContain('<span class="heys-boot-mark__sr">Загрузка</span>');

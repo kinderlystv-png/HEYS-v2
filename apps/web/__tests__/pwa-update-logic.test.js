@@ -686,11 +686,13 @@ describe('PWA update protection', () => {
         expect(arc.getAttribute('stroke-width'), stage).toBe('2.75');
         expect(arc.getAttribute('stroke-linecap'), stage).toBe('round');
         expect(arc.getAttribute('stroke'), stage).toBe('currentColor');
-        // Хвост — та же дуга под .16, второго цвета в знаке нет.
-        const tail = arc.querySelectorAll('path');
-        expect(tail.length, stage).toBe(2);
-        expect(tail[0].getAttribute('opacity'), stage).toBe('.16');
-        expect(arc.innerHTML, stage).not.toMatch(/rgba|#[0-9a-f]{3,6}/i);
+        const tail = arc.querySelector('circle');
+        expect(tail, stage).not.toBeNull();
+        expect(tail.getAttribute('r'), stage).toBe('9.4');
+        expect(tail.getAttribute('stroke'), stage).toContain('v4-ink-30');
+        const head = arc.querySelector('path');
+        expect(head, stage).not.toBeNull();
+        expect(head.getAttribute('d'), stage).toBe('M12 3a9 9 0 019 9');
         // Глиф стадии пуст: ни стрелки загрузки, ни круговых стрелок.
         expect(icon.querySelector('.heys-update-modal__glyph').innerHTML.trim(), stage).toBe('');
         expect(icon.classList.contains('heys-update-modal__icon--done'), stage).toBe(false);

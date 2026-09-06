@@ -51,7 +51,11 @@ describe('DatePicker v4 капсула', () => {
     // припуск делает цель невидимой глазу и непроверяемой замером». Тест до
     // этого сторожил литерал 34 и потому упал на починке — ровно тот случай,
     // о котором правило «тест, записанный литералом, охраняет литерал».
-    it('CSS — геометрия капсулы: сегодня 44/14, ночь 36/999, стрелки 44', () => {
+    // Ночь стала 44 пакетом 42 (6 сентября): числа 36 не называла ни одна
+    // строка контракта, кадр «Капсула · ночь» ·04 всегда рисовал 44, а решение
+    // «44 pt у каждой цели зоны» закрыло вопрос. Тест снова сторожил литерал —
+    // теперь сторожит правило: своя min-height, фиксированной height нет.
+    it('CSS — геометрия капсулы: сегодня 44/14, ночь 44/999, стрелки 44', () => {
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-trigger \{[\s\S]*?min-height:\s*44px/,
         );
@@ -59,7 +63,10 @@ describe('DatePicker v4 капсула', () => {
             /\.date-picker--v4 \.date-picker-trigger \{[\s\S]*?border-radius:\s*14px/,
         );
         expect(baseCss).toMatch(
-            /\.date-picker--v4 \.date-picker-trigger--night[\s\S]{0,200}height:\s*36px/,
+            /\.date-picker--v4 \.date-picker-trigger--night \{[\s\S]{0,200}min-height:\s*44px/,
+        );
+        expect(baseCss).not.toMatch(
+            /\.date-picker--v4 \.date-picker-trigger--night \{[^}]*[\s;]height:\s*\d/,
         );
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-day-nav[\s\S]{0,120}width:\s*44px/,
