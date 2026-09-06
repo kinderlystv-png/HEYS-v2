@@ -46,7 +46,6 @@ function loadParts() {
   };
   ev('_kernel/heys_kernel_strength_v1.js');
   ev('strength/heys_strength_superset_ui_v1.js');
-  ev('strength/heys_strength_proposal_ui_v1.js');
   return window.HEYS.StrengthBuilderParts;
 }
 

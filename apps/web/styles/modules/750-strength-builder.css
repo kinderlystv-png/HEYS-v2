@@ -5494,6 +5494,12 @@
 
 /* Кадр Д3 «Связка · границы правки». */
 .sb-ss-bound-screen {
+  contain: layout style paint;
+}
+
+.sb-ss-bound-pair,
+.sb-ss-bound-col,
+.sb-ss-bound-list {
   contain: layout style;
 }
 
