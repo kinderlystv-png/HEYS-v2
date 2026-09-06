@@ -1,0 +1,1270 @@
+{
+  "task": 169,
+  "generatedAt": "2026-09-06T00:35:54.894Z",
+  "method": "polosa3 slice (sorted thirds, polosa4-task151-candidate-split-export.mjs)",
+  "filters": ["Действие", "Контраст 4.5", "Цель 44"],
+  "totals": {
+    "polosa3": 74,
+    "skippedKnownBlockers": 2,
+    "triaged": 72,
+    "bulkOk": 13,
+    "exclude": 59
+  },
+  "excludeByTrigger": {
+    "Действие": 59,
+    "Контраст 4.5": 1,
+    "Цель 44": 1
+  },
+  "excludeNames": {
+    "Действие": [
+      "Настройки · чипы быстрых действий · 28",
+      "Настройки · чипы быстрых действий · рисунок 06",
+      "вторая неудача",
+      "Спиннер · в кнопке · рисунок 04",
+      "Спиннер · вторая неудача · 06",
+      "Спиннер · вторая неудача · рисунок 02",
+      "Спиннер · не удалось запустить · рисунок 01",
+      "Спиннер · не удалось запустить · рисунок 02",
+      "одиннадцать групп, список закрыт",
+      "Перенос · след в обе стороны · 12",
+      "Перенос · след в обе стороны · 22",
+      "Перенос · след в обе стороны · текст",
+      "Подход · таблица ввода · 04",
+      "Подход · таблица ввода · 05",
+      "Подход · таблица ввода · 06",
+      "Подход · таблица ввода · 24",
+      "Подход · таблица ввода · 25",
+      "Правка легла не полностью · 01",
+      "Правка легла не полностью · 03",
+      "Правка легла не полностью · 04",
+      "Правка легла не полностью · 17",
+      "Сессия · брошена вчера · 01",
+      "Сессия · брошена вчера · 02",
+      "Сессия · брошена вчера · 03",
+      "Сессия · брошена вчера · 04",
+      "Сессия · брошена вчера · 05",
+      "Сессия · брошена вчера · 13",
+      "Сессия · брошена вчера · 19",
+      "Сессия · брошена вчера · 21",
+      "третий пропуск подряд — сигнал куратору",
+      "у предложения три исхода, и все нарисованы",
+      "шторка — семь входов",
+      "шторка нужна разработчику первой",
+      "доступность",
+      "иконки",
+      "оплата · уход и возврат",
+      "очередь · оффер истёк",
+      "Подписка · баннер сверху · текст",
+      "Подписка · контакт поддержки · рисунок 05",
+      "Подписка · контакт поддержки · рисунок 07",
+      "Подписка · контакт поддержки · рисунок 08",
+      "Подписка · контакт поддержки · рисунок 09",
+      "Подписка · контакт поддержки · текст",
+      "Подписка · приветствие · текст",
+      "Подписка · строка в настройках · 04",
+      "Подписка · тост на действии · рисунок 02",
+      "Подписка · тост на действии · рисунок 03",
+      "Подписка · тост на действии · текст",
+      "Подписка · экран · активна · рисунок 02",
+      "Подписка · экран · активна · текст",
+      "Подписка · экран · пробный период · рисунок 02",
+      "Подписка · экран · только чтение · рисунок 01",
+      "Подписка · экран · только чтение · рисунок 02",
+      "приветствие · один раз",
+      "слова на экране",
+      "Актив · правка куратора · 07",
+      "Тренировки · журнал подходов · текст",
+      "Советы · не сохранено · рисунок 02",
+      "Советы · не сохранено · рисунок 03"
+    ],
+    "Контраст 4.5": ["доступность"],
+    "Цель 44": ["Настройки · чипы быстрых действий · 28"]
+  },
+  "bulkOkNames": [
+    "Домашний экран · лист · рисунок 08",
+    "Спиннер · без подписи · 03",
+    "Спиннер · долгий старт · рисунок 01",
+    "Спиннер · долгий старт · рисунок 03",
+    "Спиннер · ошибка · рисунок 02",
+    "Спиннер · ошибка · рисунок 03",
+    "Спиннер · холодный старт · рисунок 01",
+    "Спиннер · холодный старт · рисунок 03",
+    "Конструктор · тренировка идёт · спокойнее · 05",
+    "Куратор и зал · 03",
+    "Куратор и зал · 23",
+    "один счёт на весь цикл",
+    "Календарь зарядки · 02"
+  ],
+  "rows": [
+    {
+      "id": "settings-system::Домашний экран · лист · рисунок 08",
+      "zoneId": "settings-system",
+      "key": "Домашний экран · лист · рисунок 08",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "settings-system::Настройки · чипы быстрых действий · 28",
+      "zoneId": "settings-system",
+      "key": "Настройки · чипы быстрых действий · 28",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие", "Цель 44"],
+      "triggers": {
+        "action": ["кнопк", "действ", "быстрых действий", "Готово", "чипы быстрых действий"],
+        "contrast": [],
+        "touch": ["чипы быстрых действий · 28"]
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "settings-system::Настройки · чипы быстрых действий · рисунок 06",
+      "zoneId": "settings-system",
+      "key": "Настройки · чипы быстрых действий · рисунок 06",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["действ", "быстрых действий", "чипы быстрых действий"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::вторая неудача",
+      "zoneId": "spinners",
+      "key": "вторая неудача",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["вторая неудача"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · без подписи · 03",
+      "zoneId": "spinners",
+      "key": "Спиннер · без подписи · 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · в кнопке · рисунок 04",
+      "zoneId": "spinners",
+      "key": "Спиннер · в кнопке · рисунок 04",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["кнопк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · вторая неудача · 06",
+      "zoneId": "spinners",
+      "key": "Спиннер · вторая неудача · 06",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["кнопк", "Написать куратору", "вторая неудача"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · вторая неудача · рисунок 02",
+      "zoneId": "spinners",
+      "key": "Спиннер · вторая неудача · рисунок 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["вторая неудача"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · долгий старт · рисунок 01",
+      "zoneId": "spinners",
+      "key": "Спиннер · долгий старт · рисунок 01",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · долгий старт · рисунок 03",
+      "zoneId": "spinners",
+      "key": "Спиннер · долгий старт · рисунок 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · не удалось запустить · рисунок 01",
+      "zoneId": "spinners",
+      "key": "Спиннер · не удалось запустить · рисунок 01",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["удал", "не удалось"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · не удалось запустить · рисунок 02",
+      "zoneId": "spinners",
+      "key": "Спиннер · не удалось запустить · рисунок 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["удал", "не удалось"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · ошибка · рисунок 02",
+      "zoneId": "spinners",
+      "key": "Спиннер · ошибка · рисунок 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · ошибка · рисунок 03",
+      "zoneId": "spinners",
+      "key": "Спиннер · ошибка · рисунок 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · холодный старт · рисунок 01",
+      "zoneId": "spinners",
+      "key": "Спиннер · холодный старт · рисунок 01",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "spinners::Спиннер · холодный старт · рисунок 03",
+      "zoneId": "spinners",
+      "key": "Спиннер · холодный старт · рисунок 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Конструктор · тренировка идёт · спокойнее · 05",
+      "zoneId": "strength-builder",
+      "key": "Конструктор · тренировка идёт · спокойнее · 05",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Куратор и зал · 03",
+      "zoneId": "strength-builder",
+      "key": "Куратор и зал · 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Куратор и зал · 04",
+      "zoneId": "strength-builder",
+      "key": "Куратор и зал · 04",
+      "skipped": true,
+      "skipReason": "task152-blocker",
+      "bulkOk": false,
+      "exclude": ["task152-blocker"]
+    },
+    {
+      "id": "strength-builder::Куратор и зал · 23",
+      "zoneId": "strength-builder",
+      "key": "Куратор и зал · 23",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::один счёт на весь цикл",
+      "zoneId": "strength-builder",
+      "key": "один счёт на весь цикл",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::одиннадцать групп, список закрыт",
+      "zoneId": "strength-builder",
+      "key": "одиннадцать групп, список закрыт",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подход"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Перенос · след в обе стороны · 12",
+      "zoneId": "strength-builder",
+      "key": "Перенос · след в обе стороны · 12",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["перенос", "перенос ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Перенос · след в обе стороны · 22",
+      "zoneId": "strength-builder",
+      "key": "Перенос · след в обе стороны · 22",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["перенос", "перенос ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Перенос · след в обе стороны · текст",
+      "zoneId": "strength-builder",
+      "key": "Перенос · след в обе стороны · текст",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["выбор", "перенос", "пропуск", "перенос ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Подход · таблица ввода · 04",
+      "zoneId": "strength-builder",
+      "key": "Подход · таблица ввода · 04",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подход", "ввод", "Подход ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Подход · таблица ввода · 05",
+      "zoneId": "strength-builder",
+      "key": "Подход · таблица ввода · 05",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подход", "ввод", "Подход ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Подход · таблица ввода · 06",
+      "zoneId": "strength-builder",
+      "key": "Подход · таблица ввода · 06",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подход", "ввод", "Подход ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Подход · таблица ввода · 24",
+      "zoneId": "strength-builder",
+      "key": "Подход · таблица ввода · 24",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подход", "ввод", "Подход ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Подход · таблица ввода · 25",
+      "zoneId": "strength-builder",
+      "key": "Подход · таблица ввода · 25",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подход", "ввод", "Подход ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Правка легла не полностью · 01",
+      "zoneId": "strength-builder",
+      "key": "Правка легла не полностью · 01",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["Правка легла"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Правка легла не полностью · 03",
+      "zoneId": "strength-builder",
+      "key": "Правка легла не полностью · 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["Правка легла"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Правка легла не полностью · 04",
+      "zoneId": "strength-builder",
+      "key": "Правка легла не полностью · 04",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подход", "Правка легла"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Правка легла не полностью · 17",
+      "zoneId": "strength-builder",
+      "key": "Правка легла не полностью · 17",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["Правка легла"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Сессия · брошена вчера · 01",
+      "zoneId": "strength-builder",
+      "key": "Сессия · брошена вчера · 01",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["брошен", "сесс", "Сессия ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Сессия · брошена вчера · 02",
+      "zoneId": "strength-builder",
+      "key": "Сессия · брошена вчера · 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["брошен", "сесс", "Сессия ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Сессия · брошена вчера · 03",
+      "zoneId": "strength-builder",
+      "key": "Сессия · брошена вчера · 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["брошен", "сесс", "Сессия ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Сессия · брошена вчера · 04",
+      "zoneId": "strength-builder",
+      "key": "Сессия · брошена вчера · 04",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["брошен", "сесс", "подход", "Сессия ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Сессия · брошена вчера · 05",
+      "zoneId": "strength-builder",
+      "key": "Сессия · брошена вчера · 05",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["брошен", "сесс", "Сессия ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Сессия · брошена вчера · 13",
+      "zoneId": "strength-builder",
+      "key": "Сессия · брошена вчера · 13",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["брошен", "сесс", "Сессия ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Сессия · брошена вчера · 19",
+      "zoneId": "strength-builder",
+      "key": "Сессия · брошена вчера · 19",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["брошен", "сесс", "Сессия ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::Сессия · брошена вчера · 21",
+      "zoneId": "strength-builder",
+      "key": "Сессия · брошена вчера · 21",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["брошен", "сесс", "Сессия ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::третий пропуск подряд — сигнал куратору",
+      "zoneId": "strength-builder",
+      "key": "третий пропуск подряд — сигнал куратору",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["пропуск", "третий пропуск", "сигнал куратору"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::у предложения три исхода, и все нарисованы",
+      "zoneId": "strength-builder",
+      "key": "у предложения три исхода, и все нарисованы",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["кнопк", "сесс", "три исхода"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::шторка — семь входов",
+      "zoneId": "strength-builder",
+      "key": "шторка — семь входов",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["шторк", "сесс", "подход", "Повторить", "семь входов", "шторка"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "strength-builder::шторка нужна разработчику первой",
+      "zoneId": "strength-builder",
+      "key": "шторка нужна разработчику первой",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["шторк", "шторка нужна", "шторка"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::доступность",
+      "zoneId": "subscription",
+      "key": "доступность",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие", "Контраст 4.5"],
+      "triggers": {
+        "action": ["действ", "оффер"],
+        "contrast": ["доступност", "доступность"],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::иконки",
+      "zoneId": "subscription",
+      "key": "иконки",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["только чтение"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::оплата · уход и возврат",
+      "zoneId": "subscription",
+      "key": "оплата · уход и возврат",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["оплат", "возврат", "подписк", "оплата · уход", "оплата ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::очередь · оффер истёк",
+      "zoneId": "subscription",
+      "key": "очередь · оффер истёк",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["оффер", "очередь · оффер", "очередь ·"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · баннер сверху · текст",
+      "zoneId": "subscription",
+      "key": "Подписка · баннер сверху · текст",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · контакт поддержки · рисунок 05",
+      "zoneId": "subscription",
+      "key": "Подписка · контакт поддержки · рисунок 05",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · контакт поддержки · рисунок 07",
+      "zoneId": "subscription",
+      "key": "Подписка · контакт поддержки · рисунок 07",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · контакт поддержки · рисунок 08",
+      "zoneId": "subscription",
+      "key": "Подписка · контакт поддержки · рисунок 08",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · контакт поддержки · рисунок 09",
+      "zoneId": "subscription",
+      "key": "Подписка · контакт поддержки · рисунок 09",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · контакт поддержки · текст",
+      "zoneId": "subscription",
+      "key": "Подписка · контакт поддержки · текст",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["оплат", "пробн", "подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · приветствие · текст",
+      "zoneId": "subscription",
+      "key": "Подписка · приветствие · текст",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["пробн", "подписк", "подход"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · строка в настройках · 04",
+      "zoneId": "subscription",
+      "key": "Подписка · строка в настройках · 04",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · тост на действии · рисунок 02",
+      "zoneId": "subscription",
+      "key": "Подписка · тост на действии · рисунок 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · тост на действии · рисунок 03",
+      "zoneId": "subscription",
+      "key": "Подписка · тост на действии · рисунок 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · тост на действии · текст",
+      "zoneId": "subscription",
+      "key": "Подписка · тост на действии · текст",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["действ", "подписк", "тост на действии", "только чтение"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · экран · активна · рисунок 02",
+      "zoneId": "subscription",
+      "key": "Подписка · экран · активна · рисунок 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · экран · активна · текст",
+      "zoneId": "subscription",
+      "key": "Подписка · экран · активна · текст",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["оплат", "подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · экран · пробный период · рисунок 02",
+      "zoneId": "subscription",
+      "key": "Подписка · экран · пробный период · рисунок 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["пробн", "подписк"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · экран · только чтение · рисунок 01",
+      "zoneId": "subscription",
+      "key": "Подписка · экран · только чтение · рисунок 01",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк", "только чтение"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::Подписка · экран · только чтение · рисунок 02",
+      "zoneId": "subscription",
+      "key": "Подписка · экран · только чтение · рисунок 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["подписк", "только чтение"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::приветствие · один раз",
+      "zoneId": "subscription",
+      "key": "приветствие · один раз",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["приветствие · один раз"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "subscription::слова на экране",
+      "zoneId": "subscription",
+      "key": "слова на экране",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["кнопк", "действ", "оплат", "пробн", "подписк", "слова на экране"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "tab-activity::Актив · день собран · текст",
+      "zoneId": "tab-activity",
+      "key": "Актив · день собран · текст",
+      "skipped": true,
+      "skipReason": "task152-blocker",
+      "bulkOk": false,
+      "exclude": ["task152-blocker"]
+    },
+    {
+      "id": "tab-activity::Актив · правка куратора · 07",
+      "zoneId": "tab-activity",
+      "key": "Актив · правка куратора · 07",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["правка куратора"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "tab-activity::Календарь зарядки · 02",
+      "zoneId": "tab-activity",
+      "key": "Календарь зарядки · 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": [],
+      "triggers": {
+        "action": [],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": true,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "tab-activity::Тренировки · журнал подходов · текст",
+      "zoneId": "tab-activity",
+      "key": "Тренировки · журнал подходов · текст",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["журнал", "подход"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "tips::Советы · не сохранено · рисунок 02",
+      "zoneId": "tips",
+      "key": "Советы · не сохранено · рисунок 02",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["не сохран", "не сохранено"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    },
+    {
+      "id": "tips::Советы · не сохранено · рисунок 03",
+      "zoneId": "tips",
+      "key": "Советы · не сохранено · рисунок 03",
+      "verdict": "≠",
+      "fact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "exclude": ["Действие"],
+      "triggers": {
+        "action": ["не сохран", "не сохранено"],
+        "contrast": [],
+        "touch": []
+      },
+      "bulkOk": false,
+      "skipped": false,
+      "skipReason": null
+    }
+  ]
+}

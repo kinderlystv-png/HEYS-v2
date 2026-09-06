@@ -2714,7 +2714,7 @@
     },
     "Регистрация · подписано · текст": {
       "v": "≠",
-      "f": "копия и смысл совпадают; версия «Обработка персональных данных» в продукте — 1.0 из legal registry (heys_legal_versions_v1.js:16, heys_consents_v1.js:47), кадр рисует демо «в. 1.4»",
+      "f": "копия экрана совпадает; версия «Обработка персональных данных» в продукте — 1.0 (heys_legal_versions_v1.js:16, heys_consents_v1.js:47), кадр демо «в. 1.4» — расхождение legal registry, не UI/CSS; передать legal review, код не менять без владельца",
       "h": "7d5f81d7ae70",
       "reasonCode": "logic-invariant",
       "decisionRef": "apps/web/heys_legal_versions_v1.js:16"

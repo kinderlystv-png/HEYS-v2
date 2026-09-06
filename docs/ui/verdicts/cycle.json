@@ -764,13 +764,13 @@
       "h": "10d7f95a470e"
     },
     "Цикл · график веса · 02": {
-      "v": "≠",
-      "f": "heys_day_stats_v1.js:4132 — заголовок «Вес · 30 дней», кадр требует «Вес и тренд»",
+      "v": "=",
+      "f": "heys_day_stats_v1.js:4132-4134 — заголовок «Вес и тренд» при hasCycleReportContext; 733-ui-v4-reports.css:84-92 .reports-v4-dynamics-card__label — 600 10.5px/1, letter-spacing .04em, color var(--v4-ink-3)",
       "h": "063e6984f3b0"
     },
     "Цикл · график веса · 03": {
-      "v": "—",
-      "f": "Подпись «Пустые точки…» под карточкой — пояснение канvаса; в продукте только тултип точки (heys_day_stats_v1.js:4298-4302 .sparkline-popup--retention__text)",
+      "v": "=",
+      "f": "heys_day_stats_v1.js:4218-4220 .reports-v4-weight-cycle-footnote — подпись «Пустые точки — дни с задержкой воды…»; 733-ui-v4-reports.css:171-175 margin-top 6px, 500 10.5px/1.4",
       "h": "10129c1701cf"
     },
     "Цикл · календарь · 01": {
@@ -1334,11 +1334,9 @@
       "h": "b016e142df9e"
     },
     "Цикл · график веса · текст": {
-      "v": "≠",
-      "f": "heys_day_stats_v1.js:4132 — заголовок «Вес · 30 дней» (reports v4), кадр cycle требует «Вес и тренд»; подпись «Пустые точки…» — пояснение канваса",
-      "h": "470408dd2cf9",
-      "reasonCode": "owner-decision",
-      "decisionRef": "apps/web/heys_day_stats_v1.js:4132"
+      "v": "=",
+      "f": "heys_day_stats_v1.js:4132-4134 — при hasCycleReportContext заголовок «Вес и тренд», иначе «Вес · 30 дней»; :4218-4220 .reports-v4-weight-cycle-footnote — «Пустые точки — дни с задержкой воды…»",
+      "h": "470408dd2cf9"
     },
     "Цикл · календарь · текст": {
       "v": "=",
@@ -2246,9 +2244,9 @@
       "naKind": "handoff"
     },
     "тач-цели": {
-      "v": "=",
-      "f": ".cycle-date-picker-cell height/min-height 44px — 500-pwa-and-offline.css:2423-2425; polosa4-task104-pkg36-touch-44px.test.js computed 44px.",
-      "h": "f6dc23e8e39d"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .cycle-date-picker-cell height/min-height 44px — 500-pwa-and-offline.css:2423-2425; polosa4-task104-pkg36-touch-44px.test.js computed 44px.",
+      "h": "0455750bd936"
     }
   },
   "frames": {
