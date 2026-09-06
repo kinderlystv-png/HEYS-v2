@@ -35,10 +35,10 @@
     },
     "уменьшенное движение": {
       "v": "≠",
-      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "f": "дуга вращается с первого кадра; при prefers-reduced-motion — дыхание 1,6 с по контракту spinners «без анимации» (heys-boot-mark.css:482), а не статичный диск до 300 мс как в app-splash",
       "h": "41ece7827ed5",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/verdicts/spinners.json:76"
     },
     "геометрия": {
       "v": "=",
