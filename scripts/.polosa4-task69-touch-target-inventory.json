@@ -39,34 +39,30 @@
     "heys-components.css"
   ],
   "counts": {
-    "violations": 658,
+    "violations": 584,
     "exceptions": 39,
-    "widthAssumed": 64,
-    "interactiveRules": 1002
+    "widthAssumed": 71,
+    "interactiveRules": 1003
   },
   "byZone": {
     "cycle": {
-      "violations": 115,
+      "violations": 113,
       "exceptions": 4
     },
     "home-widgets": {
       "violations": 78,
       "exceptions": 4
     },
-    "messenger": {
-      "violations": 31,
-      "exceptions": 1
-    },
     "(unknown)": {
       "violations": 180,
       "exceptions": 6
     },
     "checkin-morning": {
-      "violations": 63,
+      "violations": 50,
       "exceptions": 6
     },
     "water-add": {
-      "violations": 23,
+      "violations": 8,
       "exceptions": 0
     },
     "pwa-update": {
@@ -90,33 +86,28 @@
       "exceptions": 0
     },
     "nutrition-tab": {
-      "violations": 7,
+      "violations": 5,
       "exceptions": 1
-    },
-    "login": {
-      "violations": 9,
-      "exceptions": 0
     },
     "service-curator": {
       "violations": 9,
       "exceptions": 0
     },
-    "subscription": {
-      "violations": 1,
-      "exceptions": 0
-    },
     "strength-builder": {
-      "violations": 15,
+      "violations": 14,
+      "exceptions": 1
+    },
+    "messenger": {
+      "violations": 0,
       "exceptions": 1
     }
   },
   "byFile": {
     "000-base-and-gamification.css": 111,
     "100-metrics-and-graphs.css": 41,
-    "1000-messenger.css": 31,
     "200-dark-and-effects.css": 9,
-    "300-modals-and-day.css": 16,
-    "400-water-and-hydration.css": 23,
+    "300-modals-and-day.css": 3,
+    "400-water-and-hydration.css": 8,
     "500-pwa-and-offline.css": 41,
     "600-steps-and-aps.css": 19,
     "610-aps-meal-flow.css": 21,
@@ -129,14 +120,12 @@
     "725-metabolic-intelligence.css": 22,
     "730-widgets-dashboard.css": 37,
     "731-ui-v4-activity.css": 5,
-    "732-ui-v4-nutrition.css": 7,
-    "733-ui-v4-login-theme.css": 9,
-    "733-ui-v4-reports.css": 4,
+    "732-ui-v4-nutrition.css": 5,
+    "733-ui-v4-reports.css": 2,
     "734-ui-v4-curator-panel.css": 9,
     "734-ui-v4-insights.css": 6,
-    "735-ui-v4-subscription.css": 1,
     "740-cascade-card.css": 4,
-    "750-strength-builder.css": 15,
+    "750-strength-builder.css": 14,
     "800-meal-optimizer.css": 3,
     "900-planning.css": 98,
     "905-planning-chrono.css": 30,
@@ -1970,378 +1959,6 @@
       "tricks": []
     },
     {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-header-menu__item",
-      "className": "messenger-header-menu__item",
-      "zone": "messenger",
-      "width": 100,
-      "height": 37.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": "button.messenger-day-checklist__chip",
-      "className": "messenger-day-checklist__chip",
-      "zone": "messenger",
-      "width": 0,
-      "height": 21.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-header-button",
-      "className": "messenger-header-button",
-      "zone": "messenger",
-      "width": 36,
-      "height": 36,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-empty__prompt",
-      "className": "messenger-empty__prompt",
-      "zone": "messenger",
-      "width": 0,
-      "height": 28.4,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".msg-action",
-      "className": "msg-action",
-      "zone": "messenger",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-show-older",
-      "className": "messenger-show-older",
-      "zone": "messenger",
-      "width": 0,
-      "height": 28.4,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".msg-audio-play",
-      "className": "msg-audio-play",
-      "zone": "messenger",
-      "width": 34,
-      "height": 34,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".msg-audio-wave",
-      "className": "msg-audio-wave",
-      "zone": "messenger",
-      "width": 44,
-      "height": 42,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".msg-attachment-item",
-      "className": "msg-attachment-item",
-      "zone": "messenger",
-      "width": 0,
-      "height": 26.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".msg-attachment-error button",
-      "className": "msg-attachment-error",
-      "zone": "messenger",
-      "width": 0,
-      "height": 34,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-pending-remove",
-      "className": "messenger-pending-remove",
-      "zone": "messenger",
-      "width": 18,
-      "height": 18,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-recording-stop",
-      "className": "messenger-recording-stop",
-      "zone": "messenger",
-      "width": 0,
-      "height": 34,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-pending-audio-remove",
-      "className": "messenger-pending-audio-remove",
-      "zone": "messenger",
-      "width": 28,
-      "height": 28,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-consent-primary,\n.messenger-consent-secondary",
-      "className": "messenger-consent-primary",
-      "zone": "messenger",
-      "width": 0,
-      "height": 38,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-attach,\n.messenger-voice",
-      "className": "messenger-attach",
-      "zone": "messenger",
-      "width": 38,
-      "height": 38,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-lightbox__button",
-      "className": "messenger-lightbox__button",
-      "zone": "messenger",
-      "width": 38,
-      "height": 38,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".msg-edit-cancel,\n.msg-edit-save",
-      "className": "msg-edit-cancel",
-      "zone": "messenger",
-      "width": 0,
-      "height": 24.4,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-reply-preview-close",
-      "className": "messenger-reply-preview-close",
-      "zone": "messenger",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-confirm-cancel,\n.messenger-confirm-delete",
-      "className": "messenger-confirm-cancel",
-      "zone": "messenger",
-      "width": 0,
-      "height": 40,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-inapp-toast__later,\n.messenger-inapp-toast__read",
-      "className": "messenger-inapp-toast__later",
-      "zone": "messenger",
-      "width": 0,
-      "height": 36,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-food-hint__pill",
-      "className": "messenger-food-hint__pill",
-      "zone": "messenger",
-      "width": 0,
-      "height": 21.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-food-hint__hide",
-      "className": "messenger-food-hint__hide",
-      "zone": "messenger",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-apply__add",
-      "className": "messenger-apply__add",
-      "zone": "messenger",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-apply__cancel,\n.messenger-apply__submit",
-      "className": "messenger-apply__cancel",
-      "zone": "messenger",
-      "width": 0,
-      "height": 36,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".msg-applied-card__open",
-      "className": "msg-applied-card__open",
-      "zone": "messenger",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-search__filter",
-      "className": "messenger-search__filter",
-      "zone": "messenger",
-      "width": 0,
-      "height": 25.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-search__item",
-      "className": "messenger-search__item",
-      "zone": "messenger",
-      "width": 100,
-      "height": 38.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-offline-bar__retry",
-      "className": "messenger-offline-bar__retry",
-      "zone": "messenger",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-food-hint__step",
-      "className": "messenger-food-hint__step",
-      "zone": "messenger",
-      "width": 30,
-      "height": 30,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-food-hint__done",
-      "className": "messenger-food-hint__done",
-      "zone": "messenger",
-      "width": 0,
-      "height": 30,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-inbox__filter",
-      "className": "messenger-inbox__filter",
-      "zone": "messenger",
-      "width": 0,
-      "height": 25.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
       "file": "200-dark-and-effects.css",
       "selector": ".theme-toggle",
       "className": "theme-toggle",
@@ -2451,119 +2068,11 @@
     },
     {
       "file": "300-modals-and-day.css",
-      "selector": ".sleep-quality-preset",
-      "className": "sleep-quality-preset",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 40.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".day-score-btn",
-      "className": "day-score-btn",
-      "zone": "checkin-morning",
-      "width": 44,
-      "height": 41.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".sleep-quality-btn",
-      "className": "sleep-quality-btn",
-      "zone": "checkin-morning",
-      "width": 44,
-      "height": 37.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".ma-habit-cal-period-nav",
-      "className": "ma-habit-cal-period-nav",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 24.4,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".ma-habit-cal-mode-btn",
-      "className": "ma-habit-cal-mode-btn",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 26,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
       "selector": ".steps-slider",
       "className": "steps-slider",
       "zone": "checkin-morning",
       "width": 0,
       "height": 28,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".time-picker-cancel,\n.time-picker-confirm",
-      "className": "time-picker-cancel",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 36.4,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".quick-chip",
-      "className": "quick-chip",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 28.4,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".mood-preset",
-      "className": "mood-preset",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 30.4,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".mood-journal-btn",
-      "className": "mood-journal-btn",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 27.6,
       "bucket": "violation",
       "exemptionType": null,
       "exemptionReason": null,
@@ -2594,90 +2103,6 @@
       "tricks": []
     },
     {
-      "file": "300-modals-and-day.css",
-      "selector": ".grams-hint",
-      "className": "grams-hint",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 36.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".kcal-calc-toggle",
-      "className": "kcal-calc-toggle",
-      "zone": "checkin-morning",
-      "width": 0,
-      "height": 28.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".grams-portion-btn",
-      "className": "grams-portion-btn",
-      "zone": "checkin-morning",
-      "width": 72,
-      "height": 39.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "300-modals-and-day.css",
-      "selector": ".grams-preset",
-      "className": "grams-preset",
-      "zone": "checkin-morning",
-      "width": 60,
-      "height": 42,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".water-review__fact",
-      "className": "water-review__fact",
-      "zone": "water-add",
-      "width": 44,
-      "height": 28.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".water-review__chip",
-      "className": "water-review__chip",
-      "zone": "water-add",
-      "width": 0,
-      "height": 2.75,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".water-review__norm-link",
-      "className": "water-review__norm-link",
-      "zone": "water-add",
-      "width": 0,
-      "height": 20.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
       "file": "400-water-and-hydration.css",
       "selector": ".advice-list-header-link",
       "className": "advice-list-header-link",
@@ -2687,7 +2112,7 @@
       "bucket": "violation",
       "exemptionType": null,
       "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
+      "tricks": []
     },
     {
       "file": "400-water-and-hydration.css",
@@ -2715,42 +2140,6 @@
     },
     {
       "file": "400-water-and-hydration.css",
-      "selector": ".advice-list-dismiss-all",
-      "className": "advice-list-dismiss-all",
-      "zone": "water-add",
-      "width": 0,
-      "height": 36,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".advice-list-close",
-      "className": "advice-list-close",
-      "zone": "water-add",
-      "width": 32,
-      "height": 32,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".advice-card-footnote-link",
-      "className": "advice-card-footnote-link",
-      "zone": "water-add",
-      "width": 0,
-      "height": 24,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
       "selector": ".data-overview-table tbody tr",
       "className": "data-overview-table",
       "zone": "water-add",
@@ -2763,59 +2152,11 @@
     },
     {
       "file": "400-water-and-hydration.css",
-      "selector": ".advice-v4-hide-return",
-      "className": "advice-v4-hide-return",
-      "zone": "water-add",
-      "width": 0,
-      "height": 33.5,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".advice-service-back",
-      "className": "advice-service-back",
-      "zone": "water-add",
-      "width": 0,
-      "height": 27.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".advice-v4-detail__close",
-      "className": "advice-v4-detail__close",
-      "zone": "water-add",
-      "width": 30,
-      "height": 30,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "400-water-and-hydration.css",
       "selector": ".advice-v4-detail__tech-link",
       "className": "advice-v4-detail__tech-link",
       "zone": "water-add",
       "width": 0,
       "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".advice-v4-detail__primary",
-      "className": "advice-v4-detail__primary",
-      "zone": "water-add",
-      "width": 100,
-      "height": 43,
       "bucket": "violation",
       "exemptionType": null,
       "exemptionReason": null,
@@ -2835,18 +2176,6 @@
     },
     {
       "file": "400-water-and-hydration.css",
-      "selector": ".advice-v4-disclaimer-card__primary",
-      "className": "advice-v4-disclaimer-card__primary",
-      "zone": "water-add",
-      "width": 100,
-      "height": 43,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
       "selector": ".advice-v4-settings__back",
       "className": "advice-v4-settings__back",
       "zone": "water-add",
@@ -2859,59 +2188,11 @@
     },
     {
       "file": "400-water-and-hydration.css",
-      "selector": ".advice-v4-settings__toggle",
-      "className": "advice-v4-settings__toggle",
-      "zone": "water-add",
-      "width": 40,
-      "height": 24,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".advice-v4-science__close",
-      "className": "advice-v4-science__close",
-      "zone": "water-add",
-      "width": 30,
-      "height": 30,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".advice-v4-science__primary",
-      "className": "advice-v4-science__primary",
-      "zone": "water-add",
-      "width": 100,
-      "height": 43,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "400-water-and-hydration.css",
       "selector": ".advice-v4-toast-card__close",
       "className": "advice-v4-toast-card__close",
       "zone": "water-add",
       "width": 26,
       "height": 26,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "400-water-and-hydration.css",
-      "selector": ".advice-v4-toast-card__secondary,\n.advice-v4-toast-card__primary",
-      "className": "advice-v4-toast-card__secondary",
-      "zone": "water-add",
-      "width": 0,
-      "height": 33.5,
       "bucket": "violation",
       "exemptionType": null,
       "exemptionReason": null,
@@ -5247,18 +4528,6 @@
     },
     {
       "file": "732-ui-v4-nutrition.css",
-      "selector": ".nutrition-v4-mini",
-      "className": "nutrition-v4-mini",
-      "zone": "nutrition-tab",
-      "width": 0,
-      "height": 43.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "732-ui-v4-nutrition.css",
       "selector": ".nutrition-v4-sheet__row",
       "className": "nutrition-v4-sheet__row",
       "zone": "nutrition-tab",
@@ -5280,18 +4549,6 @@
       "exemptionType": null,
       "exemptionReason": null,
       "tricks": []
-    },
-    {
-      "file": "732-ui-v4-nutrition.css",
-      "selector": ".nutrition-v4-sheet__row-remove",
-      "className": "nutrition-v4-sheet__row-remove",
-      "zone": "nutrition-tab",
-      "width": 44,
-      "height": 44,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["negative-margin-expander"]
     },
     {
       "file": "732-ui-v4-nutrition.css",
@@ -5330,114 +4587,6 @@
       "tricks": []
     },
     {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".heys-auth-support-link,\n.heys-auth-link-btn,\n.heys-auth-support-link:hover,\n.heys-auth-support-link:focus,\n.heys-auth-support-link:visited,\n.heys-auth-link-btn:hover,\n.heys-auth-link-btn:focus,\n.heys-auth-link-btn:visited",
-      "className": "heys-auth-support-link",
-      "zone": "login",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".heys-auth-support-close",
-      "className": "heys-auth-support-close",
-      "zone": "login",
-      "width": 32,
-      "height": 32,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".heys-login-theme__done",
-      "className": "heys-login-theme__done",
-      "zone": "login",
-      "width": 0,
-      "height": 28,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".heys-login-theme__collapse",
-      "className": "heys-login-theme__collapse",
-      "zone": "login",
-      "width": 28,
-      "height": 28,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".heys-login-theme__chip",
-      "className": "heys-login-theme__chip",
-      "zone": "login",
-      "width": 0,
-      "height": 38,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".heys-auth-card--pep .heys-auth-change-code",
-      "className": "heys-auth-change-code",
-      "zone": "login",
-      "width": 100,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".heys-consent-sign-sheet__doc-link",
-      "className": "heys-consent-sign-sheet__doc-link",
-      "zone": "login",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".consent-fulltext__close",
-      "className": "consent-fulltext__close",
-      "zone": "login",
-      "width": 34,
-      "height": 34,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-login-theme.css",
-      "selector": ".consent-fulltext__retry",
-      "className": "consent-fulltext__retry",
-      "zone": "login",
-      "width": 0,
-      "height": 20.6,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
       "file": "733-ui-v4-reports.css",
       "selector": ".reports-v4-period-pill",
       "className": "reports-v4-period-pill",
@@ -5448,30 +4597,6 @@
       "exemptionType": null,
       "exemptionReason": null,
       "tricks": ["negative-margin-expander"]
-    },
-    {
-      "file": "733-ui-v4-reports.css",
-      "selector": ".reports-v4-hero__footer",
-      "className": "reports-v4-hero__footer",
-      "zone": "cycle",
-      "width": 100,
-      "height": 34,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "733-ui-v4-reports.css",
-      "selector": ".heys-score-screen__back",
-      "className": "heys-score-screen__back",
-      "zone": "cycle",
-      "width": 40,
-      "height": 40,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
     },
     {
       "file": "733-ui-v4-reports.css",
@@ -5666,18 +4791,6 @@
       "tricks": []
     },
     {
-      "file": "735-ui-v4-subscription.css",
-      "selector": ".readonly-toast-action",
-      "className": "readonly-toast-action",
-      "zone": "subscription",
-      "width": 0,
-      "height": 26.4,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
       "file": "740-cascade-card.css",
       "selector": ".cascade-card__header",
       "className": "cascade-card__header",
@@ -5852,18 +4965,6 @@
       "zone": "strength-builder",
       "width": 100,
       "height": 31,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "750-strength-builder.css",
-      "selector": ".sb-catalog-screen .sb-star",
-      "className": "sb-star",
-      "zone": "strength-builder",
-      "width": 0,
-      "height": 0,
       "bucket": "violation",
       "exemptionType": null,
       "exemptionReason": null,
@@ -8053,7 +7154,7 @@
       "bucket": "named-exception",
       "exemptionType": "named-exception",
       "exemptionReason": "date-remainders: ячейка календаря — сетка дней, не кнопка 44×44",
-      "tricks": ["negative-margin-expander"]
+      "tricks": []
     },
     {
       "file": "000-base-and-gamification.css",
@@ -8521,6 +7622,13 @@
       "height": 51.2
     },
     {
+      "file": "1000-messenger.css",
+      "selector": ".msg-audio-wave",
+      "className": "msg-audio-wave",
+      "zone": "messenger",
+      "height": 44
+    },
+    {
       "file": "200-dark-and-effects.css",
       "selector": ".sleep-quality-display",
       "className": "sleep-quality-display",
@@ -8533,6 +7641,20 @@
       "className": "day-score-display clickable",
       "zone": null,
       "height": 47.2
+    },
+    {
+      "file": "300-modals-and-day.css",
+      "selector": ".day-score-btn",
+      "className": "day-score-btn",
+      "zone": "checkin-morning",
+      "height": 44
+    },
+    {
+      "file": "300-modals-and-day.css",
+      "selector": ".sleep-quality-btn",
+      "className": "sleep-quality-btn",
+      "zone": "checkin-morning",
+      "height": 44
     },
     {
       "file": "300-modals-and-day.css",
@@ -8550,9 +7672,23 @@
     },
     {
       "file": "300-modals-and-day.css",
+      "selector": ".mood-preset",
+      "className": "mood-preset",
+      "zone": "checkin-morning",
+      "height": 44
+    },
+    {
+      "file": "300-modals-and-day.css",
       "selector": ".grams-slider",
       "className": "grams-slider",
       "zone": "checkin-morning",
+      "height": 44
+    },
+    {
+      "file": "400-water-and-hydration.css",
+      "selector": ".water-review__fact",
+      "className": "water-review__fact",
+      "zone": "water-add",
       "height": 44
     },
     {
@@ -8848,6 +7984,20 @@
       "className": "readonly-banner",
       "zone": "subscription",
       "height": 47.2
+    },
+    {
+      "file": "735-ui-v4-subscription.css",
+      "selector": ".readonly-banner-pill",
+      "className": "readonly-banner-pill",
+      "zone": "subscription",
+      "height": 44
+    },
+    {
+      "file": "735-ui-v4-subscription.css",
+      "selector": ".readonly-toast",
+      "className": "readonly-toast",
+      "zone": "subscription",
+      "height": 44
     },
     {
       "file": "750-strength-builder.css",

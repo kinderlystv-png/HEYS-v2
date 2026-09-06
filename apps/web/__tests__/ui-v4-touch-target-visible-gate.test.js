@@ -14,6 +14,8 @@ import {
   measureElement,
   parseCssRules,
   parsePx,
+  resolveTouchZone,
+  spansContainerWidth,
   visibleAxis,
 } from '../../../scripts/ui-v4-check-touch-target-visible.mjs';
 
@@ -142,10 +144,36 @@ describe('ui-v4 touch-target visible gate', () => {
   it('compareRatchet · замороженный остаток зелёный', () => {
     const inventory = {
       counts: { violations: 3 },
+      scope: { unknownViolations: 2 },
       violations: [{ file: 'a.css', selector: '.y' }],
     };
-    const baseline = { totalViolations: 3, violationKeys: ['a.css::.y'] };
+    const baseline = { totalViolations: 3, unknownViolations: 2, violationKeys: ['a.css::.y'] };
     expect(compareRatchet(inventory, baseline).fail).toBe(false);
+  });
+
+  it('resolveTouchZone · FAB не попадает в login', () => {
+    expect(resolveTouchZone('730-widgets-dashboard.css', '.widgets-fab-global', 'widgets-fab-global')).toBe(
+      'home-widgets',
+    );
+    expect(resolveTouchZone('733-ui-v4-login-theme.css', '.heys-login-theme__done', 'heys-login-theme__done')).toBe(
+      'login',
+    );
+    expect(resolveTouchZone('000-base-and-gamification.css', '.btn', 'btn')).toBeNull();
+  });
+
+  it('resolveTouchZone · cycle-календарь из 500-pwa в cycle', () => {
+    expect(
+      resolveTouchZone('500-pwa-and-offline.css', '.cycle-date-picker-cell', 'cycle-date-picker-cell'),
+    ).toBe('cycle');
+  });
+
+  it('spansContainerWidth · calc(100% - N) — полная ширина', () => {
+    expect(spansContainerWidth({ display: 'flex', width: 'calc(100% - 36px)' })).toBe(true);
+  });
+
+  it('matchesExemption · ios-toggle и mood-slider', () => {
+    expect(matchesExemption('.ios-toggle')?.type).toBe('toggle-knob');
+    expect(matchesExemption('.mood-slider')?.type).toBe('range-slider');
   });
 
   it('EXEMPTION_REGISTRY · каждая запись именует тип и причину', () => {

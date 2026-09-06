@@ -22,7 +22,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const MODULES = path.join(ROOT, 'apps/web/styles/modules');
 const STYLES = path.join(ROOT, 'apps/web/styles');
-const VERDICTS_DIR = path.join(ROOT, 'docs/ui/verdicts');
 const INVENTORY_PATH = path.join(ROOT, 'scripts/.polosa4-task69-touch-target-inventory.json');
 const BASELINE_PATH = path.join(ROOT, 'scripts/.polosa4-task69-touch-target-baseline.json');
 
@@ -52,6 +51,19 @@ export const EXEMPTION_REGISTRY = [
     type: 'slider-node',
     match: (sel) => /(?:thumb|slider-handle|range-thumb|ma-habit-cal-thumb)/i.test(sel),
     reason: 'узел ползунка — отдельный контракт геометрии',
+  },
+  {
+    type: 'range-slider',
+    match: (sel) =>
+      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|aps-grams-slider|meal-mood-scale__slider)/i.test(
+        sel,
+      ),
+    reason: 'ползунок диапазона — не полноразмерная кнопка, контракт отдельной геометрии',
+  },
+  {
+    type: 'wheel-picker',
+    match: (sel) => /(?:wheel-item|mc-wheel-item|mc-wheel-btn|mc-wheel-value)\b/i.test(sel),
+    reason: 'элемент колеса выбора — не полноразмерная кнопка',
   },
   {
     type: 'bar',
@@ -101,24 +113,118 @@ export const EXEMPTION_REGISTRY = [
     selector: '.widget-drag-handle',
     reason: 'home-widgets: ручка перетаскивания — не тач-CTA',
   },
+  {
+    type: 'toggle-knob',
+    match: (sel) => /(?:^|\s)\.ios-toggle(?:\b|-)/i.test(sel) && !/ios-toggle-label/i.test(sel),
+    reason: 'тумблер — нажимается вся строка 44, узел 26 только показывает состояние (cycle/water контракт)',
+  },
+  {
+    type: 'toggle-row',
+    match: (sel) => /\.ios-toggle-label\b/i.test(sel),
+    reason: 'строка тумблера — цель вся строка, не узел 26px',
+  },
 ];
 
-const FILE_ZONE_HINTS = {
+/**
+ * Файлы, где почти все интерактивные правила принадлежат одной зоне.
+ * Общие файлы (000-base, heys-components, 500-pwa) сюда не входят — у них
+ * владелец по префиксу класса/селектора, иначе cycle получал 111 ложных
+ * нарушений из .btn, упомянутого в вердикте, а не в UI цикла.
+ */
+export const FILE_ZONE_EXCLUSIVE = {
+  '300-modals-and-day.css': 'checkin-morning',
+  '400-water-and-hydration.css': 'water-add',
   '600-steps-and-aps.css': 'food-meal',
   '610-aps-meal-flow.css': 'food-meal',
   '611-aps-product-card.css': 'product-card',
-  '732-ui-v4-nutrition.css': 'nutrition-tab',
+  '613-cycle-ui.css': 'cycle',
+  '715-yesterday-verify.css': 'checkin-morning',
   '730-widgets-dashboard.css': 'home-widgets',
   '731-ui-v4-activity.css': 'tab-activity',
+  '732-ui-v4-nutrition.css': 'nutrition-tab',
   '733-ui-v4-login-theme.css': 'login',
+  '733-ui-v4-reports.css': 'reports-insights',
   '734-ui-v4-curator-panel.css': 'service-curator',
   '734-ui-v4-insights.css': 'reports-insights',
+  '735-ui-v4-subscription.css': 'subscription',
   '740-cascade-card.css': 'reports-insights',
   '750-strength-builder.css': 'strength-builder',
-  '300-modals-and-day.css': 'checkin-morning',
-  '400-water-and-hydration.css': 'water-add',
-  '500-pwa-and-offline.css': 'pwa-update',
+  '800-meal-optimizer.css': 'food-meal',
+  '1000-messenger.css': 'messenger',
 };
+
+/** @type {{ test: (selector: string) => boolean, zone: string }[]} */
+export const SELECTOR_ZONE_RULES = [
+  { test: (s) => /\.cycle-card-v4|\.cycle-date-picker|\.cycle-v4-dialog|\.mc-rest-cycle|\.mc-cycle-/.test(s), zone: 'cycle' },
+  {
+    test: (s) =>
+      /\.mc-supp-flow|\.mc-rest-step|\.mc-wheel|\.mc-steps-|\.mc-quality|\.mc-header-btn|\.mc-close-btn|\.mc-skip-btn|\.mc-dev-btn|\.mc-btn-|\.mc-rest-measure|\.mc-rest-supp|\.deficit-btn|\.deficit-preset|\.household-inc|\.household-slider|\.household-preset|\.household-example|\.household-time/.test(
+        s,
+      ),
+    zone: 'checkin-morning',
+  },
+  { test: (s) => /\.hdr-settings-sheet|\.tab-settings-menu|\.notify-detail__/.test(s), zone: 'settings-system' },
+  { test: (s) => /\.profile-v4-toggle|\.pwa-banner|\.update-toast|\.ca-banner|\.ca-modal|\.wn-/.test(s), zone: 'pwa-update' },
+];
+
+/** @type {{ re: RegExp, zone: string }[]} */
+export const CLASS_ZONE_RULES = [
+  { re: /^heys-login-/, zone: 'login' },
+  { re: /^nutrition-v4-/, zone: 'nutrition-tab' },
+  { re: /^water-|^advice-v4-|^advice-list-|^advice-toggle|^macro-toast/, zone: 'water-add' },
+  { re: /^ios-toggle/, zone: 'water-add' },
+  { re: /^cycle-|^mc-rest-cycle|^mc-cycle-/, zone: 'cycle' },
+  { re: /^yv-/, zone: 'checkin-morning' },
+  {
+    re: /^mc-wheel|^mc-steps|^mc-quality|^mc-supp|^mc-header|^mc-close|^mc-skip|^mc-dev|^mc-btn|^mc-rest-measure|^mc-rest-supp/,
+    zone: 'checkin-morning',
+  },
+  { re: /^mood-|^steps-slider|^wheel-item|^quick-chip|^sleep-/, zone: 'checkin-morning' },
+  { re: /^widgets-|^widget-/, zone: 'home-widgets' },
+  { re: /^hdr-settings-|^tab-settings-|^notify-detail/, zone: 'settings-system' },
+  { re: /^messenger-|^msg-/, zone: 'messenger' },
+  { re: /^sb-|^ct-wb-/, zone: 'strength-builder' },
+  { re: /^aps-|^meal-|^mpc-|^mpr-|^flow-selection/, zone: 'food-meal' },
+  { re: /^pe-|^aps-create|^aps-barcode/, zone: 'product-card' },
+  { re: /^cur-cab|^cur-chip|^cur-fine|^cur-row|^cdo-/, zone: 'service-curator' },
+  { re: /^insights-|^reports-v4|^heys-score-insights|^meal-rec-v4|^cascade-card|^phenotype-|^early-warning|^pattern-debug|^weekly-wrap|^whatif-|^adv-analytics|^feedback-|^predictive-dashboard|^dual-risk|^reason-card/, zone: 'reports-insights' },
+  { re: /^activity-v4-|^ma-habit-cal/, zone: 'tab-activity' },
+  { re: /^game-|^achievement-|^level-up/, zone: 'gamification' },
+  { re: /^paywall-|^readonly-banner|^readonly-toast/, zone: 'subscription' },
+  { re: /^date-picker/, zone: 'date-remainders' },
+  { re: /^pwa-banner|^update-toast|^ca-banner|^ca-modal|^profile-v4|^wn-/, zone: 'pwa-update' },
+  { re: /^week-heatmap|^macro-|^weight-|^sparkline|^balance-|^debt-science|^goal-bonus|^kcal-period|^household-|^compact-|^training-|^add-training|^zone-clickable|^caloric-balance/, zone: 'home-widgets' },
+  { re: /^planning-|^gantt-|^chrono-|^goal-map/, zone: 'planning' },
+  { re: /^refeed-/, zone: 'food-meal' },
+  { re: /^ts-/, zone: 'tab-activity' },
+  { re: /^onboarding-|^desktop-gate|^copy-logout/, zone: 'first-run' },
+  { re: /^tour-|^heys-undo/, zone: 'undo-bar' },
+];
+
+/**
+ * Честная атрибуция: селектор → класс → эксклюзивный файл. Вердикты в зону
+ * не подмешиваются — иначе login получал FAB из 730-widgets, а cycle — .btn
+ * из 000-base, потому что файл упоминался в факте чужой зоны.
+ * @param {string} fileBase
+ * @param {string} selector
+ * @param {string} className
+ * @returns {string|null}
+ */
+export function resolveTouchZone(fileBase, selector, className) {
+  for (const rule of SELECTOR_ZONE_RULES) {
+    if (rule.test(selector)) return rule.zone;
+  }
+  const classes = String(className || '')
+    .split(/\s+/)
+    .filter(Boolean);
+  for (const cls of classes) {
+    for (const rule of CLASS_ZONE_RULES) {
+      if (rule.re.test(cls)) return rule.zone;
+    }
+  }
+  if (FILE_ZONE_EXCLUSIVE[fileBase]) return FILE_ZONE_EXCLUSIVE[fileBase];
+  return null;
+}
 
 const args = process.argv.slice(2);
 const wantInventory = args.includes('--inventory');
@@ -329,7 +435,10 @@ export function spansContainerWidth(cs) {
   const display = String(cs.display || '');
   if (!/^(block|flex|grid|list-item|table)$/i.test(display)) return false;
   const width = String(cs.width || '').trim();
-  return width === '' || width === 'auto' || width === '100%';
+  if (width === '' || width === 'auto' || width === '100%') return true;
+  // nutrition-v4-sheet__row и аналоги: calc(100% - 36px) — ряд на всю ширину
+  // листа; jsdom не раскладывает calc, rect остаётся 0.
+  return /^calc\(\s*100%/i.test(width);
 }
 
 /**
@@ -454,26 +563,27 @@ export function isVisibleTouchOk(size) {
   return false;
 }
 
-function buildZoneMap() {
-  const map = { ...FILE_ZONE_HINTS };
-  if (!fs.existsSync(VERDICTS_DIR)) return map;
-  for (const entry of fs.readdirSync(VERDICTS_DIR)) {
-    if (!entry.endsWith('.json')) continue;
-    const zone = entry.replace(/\.json$/, '');
-    let data;
-    try {
-      data = JSON.parse(fs.readFileSync(path.join(VERDICTS_DIR, entry), 'utf8'));
-    } catch {
-      continue;
-    }
-    for (const row of Object.values(data.rows || {})) {
-      for (const match of String(row?.f || '').matchAll(/([0-9a-zA-Z_.-]+\.css)/g)) {
-        const file = match[1].replace(/^.*\//, '');
-        if (!map[file]) map[file] = zone;
-      }
-    }
+/**
+ * @param {object} inventory
+ */
+function buildAttributionScope(inventory) {
+  const attributed = {};
+  const unknownViolations = [];
+  for (const e of inventory.violations) {
+    const z = e.zone || '(unknown)';
+    attributed[z] = (attributed[z] || 0) + 1;
+    if (!e.zone) unknownViolations.push(e);
   }
-  return map;
+  return {
+    zonesCovered: Object.keys(attributed).filter((z) => z !== '(unknown)').length,
+    unknownViolations: unknownViolations.length,
+    unknownViolationKeys: unknownViolations.map((e) => `${e.file}::${e.selector}`),
+    widthAssumed: inventory.counts.widthAssumed,
+    blindSpots: [
+      'ширина принята без замера — full-width/calc(100%) ряды jsdom не раскладывает',
+      'класс без CSS-правил в product styles — гейт не видит (пример: subscription banner pill до появления .readonly-banner-pill)',
+    ],
+  };
 }
 
 function loadCssBundleForFile(filePath) {
@@ -506,16 +616,15 @@ function createMeasureWindow(cssText) {
  */
 export async function collectInventory(opts = {}) {
   const files = opts.files || listProductCssFiles();
-  const zoneMap = buildZoneMap();
   const cssByFile = new Map(files.map((f) => [f, fs.readFileSync(f, 'utf8')]));
 
   const seen = new Set();
   const entries = [];
   const widthAssumed = [];
+  const attribution = { bySelector: 0, byClass: 0, byFile: 0, unattributed: 0 };
 
   for (const file of files) {
     const base = path.basename(file);
-    const zone = zoneMap[base] || null;
     const cssText = cssByFile.get(file);
     const rules = parseCssRules(cssText);
     const window = createMeasureWindow(loadCssBundleForFile(file));
@@ -529,6 +638,23 @@ export async function collectInventory(opts = {}) {
       const key = `${base}::${selector}`;
       if (seen.has(key)) continue;
       seen.add(key);
+
+      let zone = resolveTouchZone(base, selector, className);
+      if (!zone) {
+        attribution.unattributed += 1;
+        zone = null;
+      } else if (SELECTOR_ZONE_RULES.some((r) => r.test(selector))) {
+        attribution.bySelector += 1;
+      } else if (
+        className &&
+        CLASS_ZONE_RULES.some((r) =>
+          className.split(/\s+/).some((cls) => r.re.test(cls)),
+        )
+      ) {
+        attribution.byClass += 1;
+      } else if (FILE_ZONE_EXCLUSIVE[base]) {
+        attribution.byFile += 1;
+      }
 
       const exemption = matchesExemption(selector);
       const pseudoExpander = findPseudoExpander(cssText, selector);
@@ -590,7 +716,7 @@ export async function collectInventory(opts = {}) {
     byFile[v.file] = (byFile[v.file] || 0) + 1;
   }
 
-  return {
+  const inventory = {
     captured: new Date().toISOString().slice(0, 10),
     minTouchPx: MIN_TOUCH_PX,
     scannedFiles: files.map((f) => path.basename(f)),
@@ -600,12 +726,15 @@ export async function collectInventory(opts = {}) {
       widthAssumed: widthAssumed.length,
       interactiveRules: seen.size,
     },
+    attribution,
+    scope: buildAttributionScope({ violations, counts: { widthAssumed: widthAssumed.length } }),
     byZone,
     byFile,
     violations,
     exceptions,
     widthAssumed,
   };
+  return inventory;
 }
 
 /**
@@ -615,6 +744,8 @@ export async function collectInventory(opts = {}) {
 export function compareRatchet(inventory, baseline) {
   const current = inventory.counts.violations;
   const frozen = baseline?.totalViolations ?? 0;
+  const frozenUnknown = baseline?.unknownViolations ?? 0;
+  const currentUnknown = inventory.scope?.unknownViolations ?? 0;
   const newKeys = [];
   const baselineKeys = new Set(baseline?.violationKeys || []);
   for (const v of inventory.violations) {
@@ -631,9 +762,12 @@ export function compareRatchet(inventory, baseline) {
     current,
     baseline: frozen,
     delta: current - frozen,
+    unknownCurrent: currentUnknown,
+    unknownBaseline: frozenUnknown,
+    unknownDelta: currentUnknown - frozenUnknown,
     newKeys,
     fixed,
-    fail: current > frozen || newKeys.length > 0,
+    fail: current > frozen || newKeys.length > 0 || currentUnknown > frozenUnknown,
   };
 }
 
@@ -652,6 +786,14 @@ function printSummary(inventory) {
       `${inventory.counts.widthAssumed} с непроверенной шириной, ` +
       `${inventory.scannedFiles.length} CSS files.`,
   );
+  const scope = inventory.scope;
+  console.log(
+    `Атрибуция: селектор ${inventory.attribution.bySelector}, класс ${inventory.attribution.byClass}, ` +
+      `файл ${inventory.attribution.byFile}, без зоны ${inventory.attribution.unattributed}. ` +
+      `Зон с нарушениями: ${scope.zonesCovered}, неприписанных нарушений: ${scope.unknownViolations}.`,
+  );
+  console.log(`Остаток непроверенного: «ширина принята без замера» — ${scope.widthAssumed}.`);
+  for (const note of scope.blindSpots) console.log(`  · ${note}`);
   const zones = Object.entries(inventory.byZone).sort((a, b) => b[1].violations - a[1].violations);
   console.log('By zone (violations / exceptions):');
   for (const [zone, c] of zones.slice(0, 15)) {
@@ -677,6 +819,7 @@ async function main() {
     const baseline = {
       captured: inventory.captured,
       totalViolations: inventory.counts.violations,
+      unknownViolations: inventory.scope.unknownViolations,
       byFile: inventory.byFile,
       violationKeys: violationKeys(inventory),
     };
@@ -705,6 +848,18 @@ async function main() {
       console.log(
         `Ширина принята без замера (ряд во всю ширину): ${inventory.counts.widthAssumed}`,
       );
+      console.log(
+        `Неприписанные нарушения (атрибуция): ${inventory.scope.unknownViolations} ` +
+          `(baseline ${ratchet.unknownBaseline}, Δ ${ratchet.unknownDelta >= 0 ? '+' : ''}${ratchet.unknownDelta}).`,
+      );
+      if (inventory.scope.unknownViolations) {
+        for (const k of inventory.scope.unknownViolationKeys.slice(0, 15)) {
+          console.error(`  ? ${k}`);
+        }
+        if (inventory.scope.unknownViolationKeys.length > 15) {
+          console.error(`  … +${inventory.scope.unknownViolationKeys.length - 15}`);
+        }
+      }
       if (ratchet.newKeys.length) {
         console.error(`❌ Новые нарушения (${ratchet.newKeys.length}):`);
         for (const k of ratchet.newKeys.slice(0, 20)) console.error(`  ${k}`);
