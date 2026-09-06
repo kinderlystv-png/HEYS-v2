@@ -342,8 +342,8 @@
     },
     "Подписка · экран · пробный период · 11": {
       "v": "=",
-      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
-      "h": "9453360f4ae8"
+      "f": "Сноска «Оплата и продление…» — .sub-screen__footnote-text margin-top 5px 500 11.5px/1.45 color var(--v4-ink-2) (735-ui-v4-subscription.css:734-738; heys_subscriptions_v1.js footnote).",
+      "h": "0f267cf3996e"
     },
     "Подписка · экран · пробный период · 12": {
       "v": "=",
@@ -392,8 +392,8 @@
     },
     "Подписка · баннер сверху · 03": {
       "v": "=",
-      "f": "«Чтобы записывать — напишите в поддержку» — .readonly-banner-text в .readonly-banner--sticky (heys_paywall_v1.js:504-506; 735-ui-v4-subscription.css:533-541): замер chromium 500 11px/15.4px (=1.4), цвет var(--v4-ink-prose) = rgba(ink,.62) — rgba(0,0,0,0.62) / rgba(16,24,38,0.62), margin-top 2px.",
-      "h": "55686f7baee9"
+      "f": "«Чтобы записывать…» — .readonly-banner--sticky .readonly-banner-text margin-top 2px 500 11px/1.4 color var(--v4-ink-2) (735-ui-v4-subscription.css:533-538; heys_paywall_v1.js:504-506).",
+      "h": "75273c1b606f"
     },
     "Подписка · баннер сверху · 04": {
       "v": "=",
@@ -418,8 +418,8 @@
     },
     "Подписка · тост на действии · 03": {
       "v": "=",
-      "f": "Подстрока полосы в кадре тоста: .readonly-banner-text 500 11px/15.4px тоном var(--v4-ink-prose) = чернила 62 %, margin-top 2px, замер chromium обеих палитр (heys_paywall_v1.js:504-506; 735-ui-v4-subscription.css:533-541).",
-      "h": "55686f7baee9"
+      "f": "Подстрока полосы в кадре тоста — .readonly-banner-text 500 11px/1.4 margin-top 2px color var(--v4-ink-2) (735-ui-v4-subscription.css:533-538; heys_paywall_v1.js:504-506).",
+      "h": "75273c1b606f"
     },
     "Подписка · тост на действии · 04": {
       "v": "=",
@@ -711,11 +711,9 @@
       "h": "78fabf7bf8c3"
     },
     "Подписка · проверьте заказ · 08": {
-      "v": "≠",
-      "f": "«до 5 октября» — .paywall-order-period font 500 11px/1 и margin-top 4px совпали (735-ui-v4-subscription.css:297-302; замер chromium 500, 11px, line-height 11px, mt 4px, text-align right). Цвет расходится: контракт просит rgba(var(--ink),.5), продукт красит var(--v4-ink-2), замер даёт rgba(0,0,0,.55) и в песочном, и в синем. Ступени 50 % у лестницы чернил набора нет (002-ui-v4-palette-roles.css:59-63,179-183,486-489): есть 62/56/55/45/38/30, элемент получает ближайшую, а красить литералом мимо палитры запрещено.",
-      "h": "5a0b7ccb4f81",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_OWNER_DECISIONS.md:177"
+      "v": "=",
+      "f": "«до 5 октября» — .paywall-order-period 500 11px/1 margin-top 4px color var(--v4-ink-2) (735-ui-v4-subscription.css:301-306); пакет 43 перевёл контракт с 50 % на --ink-2, продукт уже на роли.",
+      "h": "91e70b034a01"
     },
     "Подписка · проверьте заказ · 09": {
       "v": "=",
@@ -825,8 +823,8 @@
     },
     "Подписка · экран · активна · 10": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:686-689: .sub-screen__footnote-text margin-top 5px font 500 11.5px/1.45 color var(--v4-ink-2)",
-      "h": "9453360f4ae8"
+      "f": "Сноска активной подписки — .sub-screen__footnote-text 500 11.5px/1.45 color var(--v4-ink-2) (735-ui-v4-subscription.css:734-738).",
+      "h": "0f267cf3996e"
     },
     "Подписка · экран · активна · 11": {
       "v": "=",
@@ -865,8 +863,8 @@
     },
     "Подписка · экран · только чтение · 05": {
       "v": "=",
-      "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background roles",
-      "h": "0d66e6af4b1e"
+      "f": "«День и история открыты…» — .sub-screen__readonly-copy margin-top 6px 500 12.5px/1.5 color var(--v4-ink-2) (735-ui-v4-subscription.css:669-673).",
+      "h": "c1a0a7a8b76e"
     },
     "Подписка · экран · только чтение · 06": {
       "v": "=",
@@ -890,8 +888,8 @@
     },
     "Подписка · экран · только чтение · 10": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:686-689: .sub-screen__footnote-text margin-top 5px font 500 11.5px/1.45",
-      "h": "9453360f4ae8"
+      "f": "Сноска экрана только чтения — .sub-screen__footnote-text 500 11.5px/1.45 color var(--v4-ink-2) (735-ui-v4-subscription.css:734-738).",
+      "h": "0f267cf3996e"
     },
     "Подписка · экран · только чтение · 11": {
       "v": "=",

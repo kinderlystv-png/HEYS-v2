@@ -6,6 +6,10 @@ import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render } from '@testing-library/react';
+import {
+  substituteV4InkRolesAfterInk,
+  substituteV4InkRolesBeforeInk,
+} from './helpers/strength-canvas-contract-harness.js';
 
 // Кадр называет время старта литералом «начата в 18:40», а экран печатает его
 // в поясе машины: на московской это 18:40, на раннере CI в UTC — 15:40, и тест
@@ -40,7 +44,13 @@ const CANVAS = Object.freeze({
   ink58: 'rgba(0, 0, 0, .58)', ink62: 'rgba(0, 0, 0, .62)'
 });
 
-const COMPUTED_CSS = CSS
+const INK_ROLES = Object.freeze({
+  ink55: CANVAS.ink55,
+  ink30: CANVAS.ink30,
+});
+
+const COMPUTED_CSS = substituteV4InkRolesAfterInk(
+  substituteV4InkRolesBeforeInk(CSS, INK_ROLES)
   // jsdom does not reliably resolve nested product custom properties. Compile
   // only the canonical sand palette for this computed-style regression; the
   // production stylesheet remains untouched. Base CSS is still loaded first,
@@ -76,7 +86,9 @@ const COMPUTED_CSS = CSS
   .replaceAll('var(--gr-bg)', CANVAS.grBg)
   .replaceAll('var(--ink, 0, 0, 0)', '0, 0, 0')
   .replaceAll('var(--ink)', '0, 0, 0')
-  .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
+  .replaceAll('env(safe-area-inset-bottom, 0px)', '0px'),
+  INK_ROLES,
+);
 
 function loadBuilder() {
   if (!globalThis.window) globalThis.window = globalThis;
@@ -165,11 +177,10 @@ const CANVAS_CONFLICTS = Object.freeze({
     '28': 'Г4: .is-weight-entry.is-exercise-open .sb-aps-head padding 0 — класс вешается на любое весовое (builder_ui:1886)',
     '30': 'Г4: .is-weight-entry .sb-aps-head > span:last-child цвет --gr против ink .56',
     '31': 'Г4: .is-weight-entry.is-exercise-open .sb-aps gap 0 против 6px',
-    '33': 'Г4: .is-weight-entry .sb-ap.is-done .sb-ap-num цвет --gr против ink .62',
+    '33': 'Г4: .is-weight-entry .sb-ap.is-done .sb-ap-num цвет --gr против ink-2',
     '35': 'Г4: .is-weight-entry .sb-ap.is-current .sb-ap-num --acs против bg',
     '36': 'Г4: кольцо активного поля 1.5px против 2px',
     '14': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — свёрнутая завершённая карточка',
-    '44': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — ожидающая карточка',
     'текст 1/2': 'составная строка несёт шапку из строк 04/05',
   }),
   'А2': Object.freeze({
@@ -275,7 +286,7 @@ describe('А1б · rendered Canvas contract', { timeout: 45_000 }, () => {
         }],
         // 11 is deliberately unsupported: the Canvas requires a drag handle,
         // while А2 omits it and product has no reorder owner/persistence flow.
-        ['12', '.sb-list > .sb-ex.is-complete:first-child .sb-ex-num', '1', { color: CANVAS.ink62 }],
+        ['12', '.sb-list > .sb-ex.is-complete:first-child .sb-ex-num', '1', { color: CANVAS.ink55 }],
         ['13', '.sb-list > .sb-ex.is-complete:first-child .sb-ex-title', null, {
           display: 'flex', flexGrow: '1', minWidth: '0', flexDirection: 'column', gap: '2px'
         }],
@@ -300,7 +311,7 @@ describe('А1б · rendered Canvas contract', { timeout: 45_000 }, () => {
         }],
         ['20', '.sb-list > .sb-ex.is-open .sb-ex-num', '3', {
           width: '26px', height: '26px', backgroundColor: CANVAS.bg,
-          boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, .1)', color: CANVAS.ink62
+          boxShadow: 'inset 0 0 0 1px rgba(0, 0, 0, .1)', color: CANVAS.ink55
         }],
         ['21', '.sb-list > .sb-ex.is-open .sb-ex-title > b', 'Жим гантелей сидя', {
           color: CANVAS.tx, fontSize: '14px', fontWeight: '700', lineHeight: '1.2'
@@ -315,7 +326,7 @@ describe('А1б · rendered Canvas contract', { timeout: 45_000 }, () => {
         ['24', '.sb-list > .sb-ex.is-open .sb-ex-toggle', '✕', {
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: '36px', height: '36px', borderRadius: '999px', backgroundColor: CANVAS.bg,
-          color: CANVAS.ink50, fontSize: '13px', fontWeight: '600', lineHeight: '1'
+          color: CANVAS.ink55, fontSize: '13px', fontWeight: '600', lineHeight: '1'
         }],
         ['25', '.sb-list > .sb-ex.is-open .sb-hist', null, {
           display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '9px'

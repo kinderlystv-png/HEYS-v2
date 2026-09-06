@@ -4,6 +4,10 @@ import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
+import {
+  substituteV4InkRolesAfterInk,
+  substituteV4InkRolesBeforeInk,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,10 +22,13 @@ const CANVAS = Object.freeze({
   ac: '#8a4a20', acs: '#c67139', onAcs: '#2b1608', gr: '#5c6a45', grBg: '#eaefe0',
   valBad: '#a83c22',
   ink06: 'rgba(0, 0, 0, 0.06)', ink12: 'rgba(0, 0, 0, 0.12)',
-  ink24: 'rgba(0, 0, 0, 0.24)', ink50: 'rgba(0, 0, 0, 0.5)'
+  ink30: 'rgba(0, 0, 0, 0.3)', ink55: 'rgba(0, 0, 0, 0.55)'
 });
 
-const COMPUTED_CSS = CSS
+const INK_ROLES = Object.freeze({ ink55: CANVAS.ink55, ink30: CANVAS.ink30 });
+
+const COMPUTED_CSS = substituteV4InkRolesAfterInk(
+  substituteV4InkRolesBeforeInk(CSS, INK_ROLES)
   .replaceAll('var(--sb-card)', CANVAS.c1)
   .replaceAll('var(--sb-bg)', CANVAS.bg)
   .replaceAll('var(--sb-tx)', CANVAS.tx)
@@ -45,7 +52,9 @@ const COMPUTED_CSS = CSS
   .replaceAll('var(--gr)', CANVAS.gr)
   .replaceAll('var(--gr-bg)', CANVAS.grBg)
   .replaceAll('var(--ink)', '0, 0, 0')
-  .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
+  .replaceAll('env(safe-area-inset-bottom, 0px)', '0px'),
+  INK_ROLES,
+);
 
 function lastRule(selector) {
   const re = new RegExp(`(${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^{]*\\{[^}]*\\})`, 'g');
@@ -95,7 +104,7 @@ describe('Е2 · галочка и пустые поля · canvas contract', ()
     expect(SUPERSET).toContain('ownWeightLabel');
     expect(SUPERSET).toContain('свой вес');
     expect(CSS).toMatch(/\.sb-ap-field\.is-reps-missing[\s\S]*1\.5px var\(--val-bad/);
-    expect(CSS).toMatch(/\.sb-ap-check\.is-blocked:not\(\.is-done\)[\s\S]*0\.24/);
+    expect(CSS).toMatch(/\.sb-ap-check\.is-blocked:not\(\.is-done\)[\s\S]*v4-ink-30/);
     expect(CSS).toMatch(/\.sb-ap-value\.is-bw[\s\S]*12px\/1 Figtree/);
   });
 
@@ -149,12 +158,12 @@ describe('Е2 · галочка и пустые поля · canvas contract', ()
         }],
         ['13', '.sb-aps > .sb-ap.is-current .sb-ap-check.is-blocked', '○', {
           backgroundColor: CANVAS.ink06,
-          color: CANVAS.ink24
+          color: CANVAS.ink30
         }],
         ['16', '.sb-aps .sb-ap-value.is-bw', 'свой вес', {
           fontSize: '12px',
           fontWeight: '600',
-          color: CANVAS.ink50
+          color: CANVAS.ink55
         }]
       ];
 

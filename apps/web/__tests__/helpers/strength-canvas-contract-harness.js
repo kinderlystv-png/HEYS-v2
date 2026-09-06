@@ -85,3 +85,53 @@ export function createStyleHost() {
     remove() { el.remove(); },
   };
 }
+
+/** @typedef {{ ink55?: string, ink30?: string, ink38?: string, ink55Blue?: string }} StrengthInkRoles */
+
+const V4_INK_BEFORE_INK = Object.freeze([
+  ['var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.55))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--ink, 0, 0, 0), 0.55))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--ink, 15, 23, 42), 0.55))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--ink), 0.55))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--ink), .55))', 'ink55'],
+  ['var(--v4-ink-30, rgba(var(--ink, 0, 0, 0), 0.3))', 'ink30'],
+  ['var(--v4-ink-30, rgba(var(--ink), 0.3))', 'ink30'],
+  ['var(--v4-ink-4, rgba(var(--ink), .38))', 'ink38'],
+  ['var(--v4-ink-4, rgba(var(--ink), 0.38))', 'ink38'],
+]);
+
+const V4_INK_AFTER_INK = Object.freeze([
+  ['var(--v4-ink-2, rgba(0, 0, 0, 0.55))', 'ink55'],
+  ['var(--v4-ink-2, rgba(0, 0, 0, .55))', 'ink55'],
+  ['var(--v4-ink-2, rgba(15, 23, 42, 0.55))', 'ink55Blue'],
+  ['var(--v4-ink-30, rgba(0, 0, 0, 0.3))', 'ink30'],
+  ['var(--v4-ink-30, rgba(0, 0, 0, .3))', 'ink30'],
+  ['var(--v4-ink-4, rgba(0, 0, 0, .38))', 'ink38'],
+  ['var(--v4-ink-4, rgba(0, 0, 0, 0.38))', 'ink38'],
+]);
+
+const DEFAULT_INK_ROLES = Object.freeze({
+  ink55: 'rgba(0, 0, 0, .55)',
+  ink30: 'rgba(0, 0, 0, .3)',
+  ink38: 'rgba(0, 0, 0, .38)',
+  ink55Blue: 'rgba(16, 24, 38, .55)',
+});
+
+function applyInkRoleMap(css, map, roles) {
+  let out = css;
+  for (const [from, roleKey] of map) {
+    const value = roles[roleKey] ?? DEFAULT_INK_ROLES[roleKey];
+    if (value) out = out.replaceAll(from, value);
+  }
+  return out;
+}
+
+/** Flatten package-43 ink roles for jsdom. Run before var(--ink) → rgb triplet. */
+export function substituteV4InkRolesBeforeInk(css, roles = {}) {
+  return applyInkRoleMap(css, V4_INK_BEFORE_INK, { ...DEFAULT_INK_ROLES, ...roles });
+}
+
+/** Catch fallbacks left after var(--ink) was inlined. Run after ink rgb substitution. */
+export function substituteV4InkRolesAfterInk(css, roles = {}) {
+  return applyInkRoleMap(css, V4_INK_AFTER_INK, { ...DEFAULT_INK_ROLES, ...roles });
+}

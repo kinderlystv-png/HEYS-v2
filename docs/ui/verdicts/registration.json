@@ -400,23 +400,25 @@
     },
     "Регистрация · согласия · 16": {
       "v": "=",
-      "f": "подвал — направление column, зазор 4, поля 10/18/14 (heys_consents_v1.js:1855)",
-      "h": "0135401bdf46"
+      "f": "personal_data screenSummary — 500 12.5/1.5 INK_2 margin-top 4 в disclosure, heys_consents_v1.js:2118-2125 (LEGAL_DISCLOSURE_TYPES)",
+      "h": "347640b48e53"
     },
     "Регистрация · согласия · 17": {
-      "v": "≠",
-      "f": "причина над кнопкой набрана 500 тоном чернил 55 % по общей строке «неактивная кнопка» этой зоны. Обновлённый кадр рисует 600 и 56 %; это внутренний конфликт канваса, поэтому продукт сохраняет именованное правило доступности (heys_consents_v1.js, requiredConsentReason)",
-      "h": "1df1c213e372"
+      "v": "=",
+      "f": "подвал — flex column gap 4 padding 10/18/14, heys_consents_v1.js:1875-1882",
+      "h": "0135401bdf46"
     },
     "Регистрация · согласия · 18": {
       "v": "=",
-      "f": "«Подписать оба» — главная кнопка, в неактивном виде гаснет до 45 % по строке «неактивная кнопка» (heys_consents_v1.js:1871)",
-      "h": "aead4b620b63"
+      "f": "requiredConsentReason — 500 11.5/1.45 center rgba(0,0,0,.55), heys_consents_v1.js:1889-1895",
+      "h": "f0e5749f1fd7"
     },
     "Регистрация · согласия · 19": {
       "v": "≠",
-      "f": "«Выйти без регистрации» — 700 12/1 тоном чернил 50 % совпадает, высота 44 против 40 кадра по строке «цель касания» (heys_consents_v1.js:1905)",
-      "h": "7f6f81bc034c"
+      "f": "«Подписать оба» — продукт заливает var(--v4-act) и var(--v4-btn-on-act), кадр просит var(--c1)/var(--ink-30); строка «неактивная кнопка» старше кадра главной кнопки (heys_consents_v1.js:1913-1914)",
+      "h": "050055969aea",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "apps/web/heys_consents_v1.js:1907"
     },
     "Документ · начало · 01": {
       "v": "=",
@@ -485,8 +487,8 @@
     },
     "Документ · начало · 14": {
       "v": "=",
-      "f": ".consent-doc-body + .consent-doc-p — 500 12,5/1,65, чернила 72 %, отступ 9 (733-ui-v4-login-theme:2224, 2259)",
-      "h": "8ef226f7e945"
+      "f": ".consent-doc-body — 500 12.5/1.65 var(--v4-ink-2), margin 9 на .consent-doc-p (733-ui-v4-login-theme.css:2488-2518)",
+      "h": "db44ee7b0eaa"
     },
     "Документ · начало · 15": {
       "v": "=",
@@ -500,8 +502,8 @@
     },
     "Документ · начало · 17": {
       "v": "=",
-      "f": ".consent-doc-li — 500 12,5/1,6, чернила 72 % (733-ui-v4-login-theme:2270)",
-      "h": "f51cd4588bd2"
+      "f": ".consent-doc-li — 500 12.5/1.6, цвет наследует --v4-ink-2 от .consent-doc-body (733-ui-v4-login-theme.css:2527-2533)",
+      "h": "f72c0de6935f"
     },
     "Документ · начало · 18": {
       "v": "=",
@@ -515,8 +517,10 @@
     },
     "Документ · начало · 20": {
       "v": "≠",
-      "f": "абзац после списка — 500 12,5/1,65 чернилами 72 % совпадает, отступ 9, а кадр даёт 13. Правила «абзац после списка» в коде нет вовсе, и заводить его ради 4 px значит завести ещё один способ отбивки; именованной строки об этом в зоне нет (733-ui-v4-login-theme:2259)",
-      "h": "3a09e1ea5ffc"
+      "f": "абзац .consent-doc-p — отступ 9px, кадр даёт 13; отдельного правила «после списка» нет (733-ui-v4-login-theme.css:2516-2518)",
+      "h": "8a1418b27f82",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/verdicts/registration.json:516"
     },
     "Документ · начало · 21": {
       "v": "=",
@@ -575,8 +579,8 @@
     },
     "Документ · конец · 09": {
       "v": "=",
-      "f": ".consent-doc-p — 500 12,5/1,65, чернила 72 %, отступ 9 (733-ui-v4-login-theme:2259)",
-      "h": "b5fdc47d6ef2"
+      "f": ".consent-doc-body на абзаце — var(--v4-ink-2) (733-ui-v4-login-theme.css:2488-2493)",
+      "h": "a9ab158536d4"
     },
     "Документ · конец · 10": {
       "v": "=",
@@ -595,8 +599,8 @@
     },
     "Документ · конец · 13": {
       "v": "=",
-      "f": "имя поля — strong внутри пары, 600 чернилами 50 % (733-ui-v4-login-theme:2341)",
-      "h": "633fcc44b8fc"
+      "f": "«Почта» strong в .consent-doc-contact-list — 600 12/1.4, наследует --v4-ink-2 (733-ui-v4-login-theme.css:2598-2600)",
+      "h": "aa3e9e20356f"
     },
     "Документ · конец · 14": {
       "v": "=",
@@ -630,8 +634,8 @@
     },
     "Документ · конец · 20": {
       "v": "=",
-      "f": "«Закрыть без принятия» — 700 12/1 тоном чернил 50 %; высота поднята с 40 до 44 по строке «цель касания», кадр рисовал 40 (733-ui-v4-login-theme:2392)",
-      "h": "962c3fd553e3"
+      "f": ".consent-fulltext__decline — min-height 44, 700 12/1 var(--v4-ink-2) (733-ui-v4-login-theme.css:2649-2660)",
+      "h": "ceadda6c0f1f"
     },
     "Регистрация · необязательные согласия · 01": {
       "v": "=",
@@ -695,18 +699,18 @@
     },
     "Регистрация · необязательные согласия · 13": {
       "v": "=",
-      "f": "сноска «Необязательное отмечается тапом» — 500 11/1,5 ролью --v4-ink-data (56 %), отступ 12 (heys_consents_v1.js)",
-      "h": "4bd2eca6010e"
+      "f": "marketing screenHint — LEGAL_DISCLOSURE_FONT + INK_2, heys_consents_v1.js:2131-2135",
+      "h": "90c2ffefc3eb"
     },
     "Регистрация · необязательные согласия · 14": {
       "v": "=",
-      "f": "подвал — общий для экрана согласий (heys_consents_v1.js:1855)",
-      "h": "1df511bb5a89"
+      "f": "пояснение необязательных — LEGAL_DISCLOSURE_FONT + INK_2 margin-top 12, heys_consents_v1.js:1712-1719",
+      "h": "e966ac68fd50"
     },
     "Регистрация · необязательные согласия · 15": {
       "v": "=",
-      "f": "«Подписать» — главная кнопка: обязательные приняты, надпись меняется с «Подписать оба» (heys_consents_v1.js:1895)",
-      "h": "d3da394c967e"
+      "f": "подвал consents — тот же блок footer, heys_consents_v1.js:1875-1882",
+      "h": "1df511bb5a89"
     },
     "Регистрация · подпись кодом · 01": {
       "v": "=",
@@ -745,8 +749,8 @@
     },
     "Регистрация · подпись кодом · 08": {
       "v": "=",
-      "f": "проза про код вместо подписи теперь живёт в реальной шторке ввода: 500 11,5/1,5 ролью --v4-ink-data (56 %), отступ 7, по центру (heys_consents_v1.js, access_code_sign)",
-      "h": "ddecd35f31ed"
+      "f": "подзаголовок шага — LEGAL_DISCLOSURE_FONT + INK_2 margin-top 8, heys_consents_v1.js:1565-1573",
+      "h": "7547bb32ae30"
     },
     "Регистрация · подпись кодом · 09": {
       "v": "=",
@@ -779,9 +783,9 @@
       "h": "66b7032b4cba"
     },
     "Регистрация · подпись кодом · 15": {
-      "v": "≠",
-      "f": "клавиатура — общий компонент входа зоны login (.heys-auth-keypad, 733:582); сверяется её кадрами",
-      "h": "22ddac3f50f9"
+      "v": "=",
+      "f": ".heys-consent-sign-sheet--sign .heys-auth-key--muted — transparent, 600 13/1 var(--v4-ink-2) (733-ui-v4-login-theme.css:1954-1960)",
+      "h": "40d8cf3197c8"
     },
     "Регистрация · подписано · 01": {
       "v": "=",
@@ -795,8 +799,8 @@
     },
     "Регистрация · подписано · 03": {
       "v": "=",
-      "f": "проза под заголовком — 500 12/1,5, отступ 8 (heys_consents_v1.js:1573)",
-      "h": "9c79cdd0ce83"
+      "f": "«Два документа обязательны.» — 500 12/1.5 rgba(0,0,0,.55) margin-top 8, heys_consents_v1.js:1565-1573",
+      "h": "3fa17cafeead"
     },
     "Регистрация · подписано · 04": {
       "v": "=",
@@ -860,8 +864,8 @@
     },
     "Регистрация · подписано · 16": {
       "v": "=",
-      "f": "точная копия «Копия подписи хранится в профиле — её видно в настройках»; 500 11/1,5 ролью --v4-ink-data (56 %), отступ 10, по центру (heys_consents_v1.js)",
-      "h": "c6f0c0455875"
+      "f": ".heys-consent-sign-sheet__done-note — 500 12.5/1.5 var(--v4-ink-2) (733-ui-v4-login-theme.css:2043-2048)",
+      "h": "ad54619a77c5"
     },
     "Регистрация · подписано · 17": {
       "v": "=",
@@ -1080,8 +1084,8 @@
     },
     "Регистрация · рост и вес · 13": {
       "v": "=",
-      "f": "рост · текущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347; profile-body max-width 140 — 500-pwa-and-offline.css:5508-5512",
-      "h": "ff20b8c8069f"
+      "f": "mono «167» — .mc-wheel-value--current 700 15.5/2 var(--v4-ink) на profile-body (500-pwa-and-offline.css:5480-5484)",
+      "h": "af1124188c9e"
     },
     "Регистрация · рост и вес · 14": {
       "v": "=",
@@ -1450,8 +1454,8 @@
     },
     "Регистрация · ожидание куратора · 13": {
       "v": "=",
-      "f": "«Написать куратору» — вторичная кнопка, показывается при назначенном кураторе (heys_profile_step_v1.js:1856)",
-      "h": "2da31737ef5c"
+      "f": "кнопка «Написать куратору» — min-height 44, 700 12/1 INK_2 в profile cardShell (heys_profile_step_v1.js, registration-v4-contract-geometry.test.js:57)",
+      "h": "aa17cbcefbc6"
     },
     "Регистрация · ожидание куратора · 14": {
       "v": "=",
@@ -1525,8 +1529,8 @@
     },
     "Регистрация · неделя начнётся позже · 14": {
       "v": "=",
-      "f": "«Написать куратору» — вторичная кнопка (heys_profile_step_v1.js)",
-      "h": "2da31737ef5c"
+      "f": "та же кнопка «Написать куратору» в cardShell второго конца (heys_profile_step_v1.js)",
+      "h": "aa17cbcefbc6"
     },
     "Регистрация · неделя начнётся позже · 15": {
       "v": "=",
@@ -1770,8 +1774,8 @@
     },
     "Регистрация · возраст меньше 18 · 22": {
       "v": "=",
-      "f": "объяснение — 500 11,5/1,55 ролью --v4-ink-data (56 %), отступ 5 (heys_profile_step_v1.js)",
-      "h": "b68e40c9ddeb"
+      "f": "пояснение under18 — 500 12.5/1.55 var(--v4-ink-2) margin-top 5, heys_profile_step_v1.js:754",
+      "h": "773da38eefc7"
     },
     "Регистрация · возраст меньше 18 · 23": {
       "v": "=",
@@ -1840,8 +1844,8 @@
     },
     "Регистрация · ниже нормы имт · 12": {
       "v": "=",
-      "f": "рост · текущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
-      "h": "ff20b8c8069f"
+      "f": "mono weight — .mc-wheel-value--current на profile-body (500-pwa-and-offline.css:5480-5484)",
+      "h": "af1124188c9e"
     },
     "Регистрация · ниже нормы имт · 13": {
       "v": "=",
@@ -1989,9 +1993,11 @@
       "h": "8a940302fc1e"
     },
     "Регистрация · сохранение · 04": {
-      "v": "—",
-      "f": "общий индикатор ожидания — .heys-wait-mark-overlay и .heys-boot-mark__sign из apps/web/styles/heys-boot-mark.css. Экран сохранения профиля показывает его целиком (heys_step_modal_v1.js:1620); свой канвас у него есть — spinners и app-splash, там его и сводят",
-      "h": "dd86fcc07083"
+      "v": "≠",
+      "f": "«Пара секунд.» — .heys-wait-mark__text 500 12/1.5 margin-top 7, color --boot-ink-50 (50 %), кадр var(--ink-2) 55 % (heys-boot-mark.css:453-458; heys_step_modal_v1.js:1634)",
+      "h": "759b7e6b5fb6",
+      "reasonCode": "logic-invariant",
+      "decisionRef": "apps/web/styles/heys-boot-mark.css:41"
     },
     "Регистрация · сохранение · 05": {
       "v": "=",
@@ -2367,22 +2373,17 @@
     },
     "Профиль · отзыв согласия на добавки · 14": {
       "v": "=",
-      "f": "вторичная строка цены — .heys-supp-revoke-sheet__impact-secondary 500 --v4-ink-2 (50 %); текст из getRevokeImpactStats().marksLine по heys_dayv2_* и supplementHistory, не константа (heys_supplements_v1.js:1361-1415; registration-consent-revoke-sheet.test.js)",
-      "h": "a246691446f7"
+      "f": ".heys-supp-revoke-sheet__actions — column gap 9 margin-top 15 (733-ui-v4-login-theme.css:2263-2267)",
+      "h": "6af27462f1b2"
     },
     "Профиль · отзыв согласия на добавки · 15": {
       "v": "=",
-      "f": "блок кнопок — .heys-supp-revoke-sheet__actions flex-direction column, gap 9px, margin-top 15px — 733:2263-2267",
-      "h": "6af27462f1b2"
+      "f": ".heys-supp-revoke-sheet__confirm — min-height 48, radius 999, bg var(--v4-bad-text) (733-ui-v4-login-theme.css:2270-2286)",
+      "h": "93fb959c334b"
     },
     "Профиль · отзыв согласия на добавки · 16": {
       "v": "=",
-      "f": "«Отозвать и удалить» — .heys-supp-revoke-sheet__confirm min-height 48px, radius 999px, 700 13px/1, фон transparent, цвет --v4-bad-text: песок rgb(168,60,34), синий rgb(176,58,36); контраст на --v4-sand-surface-soft (#fffaf1) 6,06 / 5,81 — registration-consent-revoke-colors.test.js, 733:2270-2287. Решение владельца (полоса 4 · task 121, c21c1652f): destructive = красный текст без заливки, не кадровый --red/#fffaf1",
-      "h": "93fb959c334b"
-    },
-    "Профиль · отзыв согласия на добавки · 17": {
-      "v": "=",
-      "f": "«Оставить как есть» — .heys-supp-revoke-sheet__cancel вторичная: min-height 44px, radius 999px, прозрачный фон, 600 13px/1 --v4-ink-2; heys_user_tab_impl_v1.js:2873-2878 — 733:2294-2309",
+      "f": ".heys-supp-revoke-sheet__cancel — вторичная 600 13/1 var(--v4-ink-2) (733-ui-v4-login-theme.css:2294-2308)",
       "h": "e50439956fd4"
     },
     "как читать графику": {
@@ -2819,6 +2820,23 @@
       "v": "=",
       "f": "общий слой сведён по docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/registration.v4.dc.html:57; тело 22/700 --v4-act-text, дата 15.5/700 --v4-ink; registration-wheel-v4-palette.test.js sand+blue",
       "h": "df575f079c1e"
+    },
+    "кегль юридического текста": {
+      "v": "=",
+      "f": "решение 6 сентября в registration.v4.dc.html; код: LEGAL_DISCLOSURE_FONT/INK_2 в heys_consents_v1.js:11-14,2118-2125; heys_profile_step_v1.js:754; 733-ui-v4-login-theme.css:2043-2048",
+      "h": "6dc70d425b92"
+    },
+    "Регистрация · согласия · 20": {
+      "v": "≠",
+      "f": "«Выйти без регистрации» — min-height 44 по строке «цель касания», кадр рисует 40 (heys_consents_v1.js:1928-1929)",
+      "h": "77af1c6e4bdb",
+      "reasonCode": "accessibility",
+      "decisionRef": "apps/web/__tests__/registration-v4-contract-geometry.test.js:57"
+    },
+    "Регистрация · необязательные согласия · 16": {
+      "v": "=",
+      "f": "главная кнопка «Подписать» — тот же primary footer, heys_consents_v1.js:1896-1922",
+      "h": "d3da394c967e"
     }
   },
   "frames": {

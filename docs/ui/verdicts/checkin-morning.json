@@ -1449,8 +1449,8 @@
     },
     "Чек-ин · вес · 19": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:7236 .mc-wheel-value--prev — font 600 16px/1.45, color rgba(0,0,0,0.24) sand/blue",
-      "h": "e239dd3b88bd"
+      "f": "500-pwa-and-offline.css:7369-7372 .mc-weight-kilo-card .mc-wheel-value--prev/next — 600 16px/1.45, color var(--v4-ink-30)",
+      "h": "31c13142c893"
     },
     "Чек-ин · вес · 20": {
       "v": "=",
@@ -1554,8 +1554,8 @@
     },
     "Чек-ин · первый вес · 16": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1110 .mc-kilo-label — align center, justify center, margin-top 8px; подпись капсулы колёс",
-      "h": "046b0fd82734"
+      "f": "500-pwa-and-offline.css:7369-7372 — соседнее значение колеса веса, тот же класс и роль --v4-ink-30",
+      "h": "b9fb9b620fb7"
     },
     "Чек-ин · первый вес · 17": {
       "v": "=",
@@ -1864,8 +1864,8 @@
     },
     "Чек-ин · сон · 25": {
       "v": "=",
-      "f": "Колесо времени сна приведено к крупному размеру этой задачей: 36/16/32 при разделителе с полями 0 2px (.mc-modal--daily .mc-sleep-combined, 500-pwa-and-offline.css). Код стоял на 32/13/28 — ни на прежнем ряду 24/12/20, ни на крупном; проверка гейта при этом сторожила ряд и падала на новом кадре. Строка «колесо — общий кадр» называет для времени сна именно крупное: у шага «Сон» это единственный ввод. Тона на месте: выбранное и разделитель --v4-sand-act-text (--ac), соседние — чернила 24 %.",
-      "h": "b853b60a5a76"
+      "f": "500-pwa-and-offline.css:7240-7243 .mc-sleep-combined .mc-wheel-value--prev/next — 600 16px/1.45 var(--v4-ink-30)",
+      "h": "d7998cb0c0ca"
     },
     "Чек-ин · сон · 26": {
       "v": "=",
@@ -2104,8 +2104,8 @@
     },
     "Чек-ин · цель по шагам · 24": {
       "v": "=",
-      "f": "500-pwa-and-offline.css .mc-pill min-height 44px (контракт); кадр 38px. Computed sand+blue 44px — exception-geometry test.",
-      "h": "489d07dea320"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice — 700 11.5px/1, color var(--v4-ink-2)",
+      "h": "db36a5cf36a0"
     },
     "Чек-ин · цель по шагам · 25": {
       "v": "=",
@@ -2179,8 +2179,8 @@
     },
     "Чек-ин · остальное · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1229 .mc-pill--choice — min-height 44px, radius 999px, font 700 12.5px/1, color --v4-mark-1 (62% чернил)",
-      "h": "7b36b0a14c13"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» — min-height 44px, color var(--v4-ink-2)",
+      "h": "5f72bea6608c"
     },
     "Чек-ин · остальное · 12": {
       "v": "=",
@@ -2209,8 +2209,8 @@
     },
     "Чек-ин · остальное · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1444 .mc-rest-coffee-actions .mc-pill — flex 1, min-width 64px, min-height 44px, radius 999px, font 700 12.5px/1",
-      "h": "8426cba8d407"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «до 12:00» — min-height 44px, color var(--v4-ink-2)",
+      "h": "c8022eb9749d"
     },
     "Чек-ин · остальное · 18": {
       "v": "=",
@@ -2279,8 +2279,8 @@
     },
     "Чек-ин · остальное · 31": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1470 .mc-rest-routine-actions .mc-pill — flex 1, min-height 44px, radius 999px, font 700 12.5px/1",
-      "h": "da459a7d4e97"
+      "f": "500-pwa-and-offline.css:1962-1964 .mc-rest-row-actions .mc-pill — font-size 11.5px на пилюле «Сделал», color var(--v4-ink-2) у .mc-pill--choice",
+      "h": "19dcf9ec0f4a"
     },
     "Чек-ин · остальное · 32": {
       "v": "=",
@@ -2359,8 +2359,8 @@
     },
     "Чек-ин · замеры просрочены · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1229 .mc-pill--choice — min-height 44px, radius 999px, font 700 12.5px/1, color --v4-mark-1 (62% чернил)",
-      "h": "7b36b0a14c13"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice в строке просроченных замеров — color var(--v4-ink-2)",
+      "h": "5f72bea6608c"
     },
     "Чек-ин · замеры просрочены · 12": {
       "v": "=",
@@ -2389,8 +2389,8 @@
     },
     "Чек-ин · замеры просрочены · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1444 .mc-rest-coffee-actions .mc-pill — flex 1, min-width 64px, min-height 44px, radius 999px, font 700 12.5px/1",
-      "h": "8426cba8d407"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «до 12:00» в кадре просрочки — color var(--v4-ink-2)",
+      "h": "c8022eb9749d"
     },
     "Чек-ин · замеры просрочены · 18": {
       "v": "=",
@@ -2459,8 +2459,8 @@
     },
     "Чек-ин · замеры просрочены · 31": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1470 .mc-rest-routine-actions .mc-pill — flex 1, min-height 44px, radius 999px, font 700 12.5px/1",
-      "h": "da459a7d4e97"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделал» в кадре просрочки — color var(--v4-ink-2)",
+      "h": "19dcf9ec0f4a"
     },
     "Чек-ин · замеры просрочены · 32": {
       "v": "=",
@@ -2604,8 +2604,8 @@
     },
     "Чек-ин · холод тип · 20": {
       "v": "=",
-      "f": "Время холода — рядовое колесо: выбранное 27px/700 (.mc-modal--daily .mc-wheel-value--current), соседние 12px чернил 24 %, двоеточие 20px при полях 0 1px тоном --v4-sand-act-text (--ac). ПОПРАВКА К СОБСТВЕННОМУ ВЕРДИКТУ: вчера я закрыл эту пару, написав «24/12/20», и не замерил само правило — .mc-rest-cold-time .mc-time-sep стояло на 24px, размере, которого не называет ни один кадр. Приведено к 20px этой задачей. Ошибка того же рода, про который есть правило: своя проверка не ощущается отрицательным выводом, и размер был выведен из соседней строки, а не измерен.",
-      "h": "3618433f76ab"
+      "f": "500-pwa-and-offline.css:2555-2559 .mc-rest-cold-time .mc-wheel-value--prev/next — 600 12px/1.5 var(--v4-ink-30)",
+      "h": "67ae11eed5e1"
     },
     "Чек-ин · холод тип · 21": {
       "v": "=",
@@ -2624,8 +2624,8 @@
     },
     "Чек-ин · холод тип · 24": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2699 .mc-rest-supp-name — font 500 12px/1.3, color sand #201e1d / blue #101826 (002-ui-v4-palette-roles.css:60,177)",
-      "h": "b1bda3113c37"
+      "f": "500-pwa-and-offline.css:2573-2580 .mc-rest-cold-clear — font 700 12px/1 var(--v4-ink-2)",
+      "h": "53fde5b50148"
     },
     "Чек-ин · холод тип · 25": {
       "v": "=",
@@ -2729,8 +2729,8 @@
     },
     "Чек-ин · замеры · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2569 .mc-rest-clear-mark — min-height 44px, font 600 12px/1, color sand rgba(0,0,0,0.56) / blue rgba(16,24,38,0.56) (002-ui-v4-palette-roles.css:60,481)",
-      "h": "29b2c6b3c1ae"
+      "f": "500-pwa-and-offline.css:1259-1266 .mc-pill--quiet «Не сейчас» — font 600 12px/1; тон приведён к --v4-ink-2 в пакете 43",
+      "h": "de63ec5c9301"
     },
     "Чек-ин · замеры · 19": {
       "v": "=",
@@ -2799,8 +2799,8 @@
     },
     "Чек-ин · остальное минимум · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1229 .mc-pill--choice — min-height 44px, radius 999px, font 700 12.5px/1, color --v4-mark-1 (62% чернил)",
-      "h": "7b36b0a14c13"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» минимум — color var(--v4-ink-2)",
+      "h": "5f72bea6608c"
     },
     "Чек-ин · остальное минимум · 12": {
       "v": "=",
@@ -2829,8 +2829,8 @@
     },
     "Чек-ин · остальное минимум · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1444 .mc-rest-coffee-actions .mc-pill — flex 1, min-width 64px, min-height 44px, radius 999px, font 700 12.5px/1",
-      "h": "951eafed4c58"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» минимум — color var(--v4-ink-2)",
+      "h": "76104603973e"
     },
     "Чек-ин · остальное минимум · 18": {
       "v": "=",
@@ -2899,8 +2899,8 @@
     },
     "Чек-ин · остальное со строкой периода · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1229 .mc-pill--choice — min-height 44px, radius 999px, font 700 12.5px/1, color --v4-mark-1 (62% чернил)",
-      "h": "7b36b0a14c13"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» со строкой периода — color var(--v4-ink-2)",
+      "h": "5f72bea6608c"
     },
     "Чек-ин · остальное со строкой периода · 12": {
       "v": "=",
@@ -2924,8 +2924,8 @@
     },
     "Чек-ин · остальное со строкой периода · 16": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1470 .mc-rest-routine-actions .mc-pill — flex 1, min-height 44px, radius 999px, font 700 12.5px/1",
-      "h": "da459a7d4e97"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделал» со строкой периода — color var(--v4-ink-2)",
+      "h": "19dcf9ec0f4a"
     },
     "Чек-ин · остальное со строкой периода · 17": {
       "v": "=",
@@ -3029,8 +3029,8 @@
     },
     "Чек-ин · остальное на неделе периода · 14": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1427 .mc-rest-coffee-note — font 600 13px/1, color sand #201e1d / blue #101826 (002-ui-v4-palette-roles.css:60,177); nowrap flex none",
-      "h": "450c0ef6728a"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Закончились» — color var(--v4-ink-2)",
+      "h": "7d33a09229da"
     },
     "Чек-ин · остальное на неделе периода · 15": {
       "v": "=",
@@ -3064,8 +3064,8 @@
     },
     "Чек-ин · остальное на неделе периода · 21": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2650 .mc-rest-supp-head — align center, justify space-between, gap 10px",
-      "h": "5cb76bd57f1b"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» на неделе периода — color var(--v4-ink-2)",
+      "h": "f238c442493d"
     },
     "Чек-ин · остальное на неделе периода · 22": {
       "v": "=",
@@ -3073,9 +3073,9 @@
       "h": "8b7cfbff70c6"
     },
     "Чек-ин · остальное на неделе периода · 23": {
-      "v": "≠",
-      "f": "500-pwa-and-offline.css:1653-1654 .mc-rest-card-title font:700 16px/1.25; кадр «23» «Замеры отложены» 600 13px/1",
-      "h": "f70322e06a0b"
+      "v": "=",
+      "f": "500-pwa-and-offline.css:1947-1951 .mc-rest-row--measurements-deferred .mc-rest-card-title — 600 13px/1 var(--v4-ink-2)",
+      "h": "541da5308816"
     },
     "Чек-ин · остальное на неделе периода · 24": {
       "v": "≠",
@@ -3159,8 +3159,8 @@
     },
     "Чек-ин · курс добавок пуст · 13": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2786 .mc-supp-flow-foot — display flex, gap 8px, margin-top 16px",
-      "h": "3aa76bf4833f"
+      "f": "500-pwa-and-offline.css:1259-1266 .mc-pill--quiet «Позже» — font 600 12px/1 var(--v4-ink-2)",
+      "h": "05ca3420abd0"
     },
     "Добавки · курс · 01": {
       "v": "—",
@@ -3284,8 +3284,8 @@
     },
     "Добавки · добавление · 11": {
       "v": "≠",
-      "f": "Выключенный чип отличается намеренно и по причине доступности. Кадр просит заливку var(--c1) с чернилами 62 %; код даёт прозрачный фон с обводкой 2 px акцентом — 732-ui-v4-nutrition.css:1085 .nutrition-v4-chip.is-off. Причина записана рядом в файле (:1060): чип обязан отличаться от подложки не менее чем на 3:1, и это про сам чип, а не про текст в нём; на 1,5 px в альфе .16 обводка давала 1,45:1 и состояние пропадало. Заливка --c1 на песочном грунте даёт тот же класс проблемы. Геометрия и кегль при этом сведены.",
-      "h": "2057f38e5dff",
+      "f": "Выключенный чип намеренно без заливки --c1: обводка 2px акцентом — 732-ui-v4-nutrition.css:1085 .nutrition-v4-chip.is-off; decisionRef :1060 (контраст чипа ≥3:1)",
+      "h": "05b6ec0cc71b",
       "reasonCode": "accessibility",
       "decisionRef": "apps/web/styles/modules/732-ui-v4-nutrition.css:1060"
     },
@@ -3301,8 +3301,8 @@
     },
     "Добавки · добавление · 14": {
       "v": "=",
-      "f": "сведено парами, гейт apps/web/__tests__/checkin-v4-canvas-razbor.test.js",
-      "h": "97fdf2d39f6b"
+      "f": "732-ui-v4-nutrition.css:1093 .nutrition-v4-chip__label «Выбрано» — 700 12px/1.3 var(--v4-ink-2)",
+      "h": "a5473f34ab36"
     },
     "Добавки · добавление · 15": {
       "v": "—",
@@ -3446,8 +3446,8 @@
     },
     "Чек-ин · согласие не подписано · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1229 .mc-pill--choice — min-height 44px, radius 999px, font 700 12.5px/1, color --v4-mark-1 (62% чернил)",
-      "h": "7b36b0a14c13"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» согласие — color var(--v4-ink-2)",
+      "h": "5f72bea6608c"
     },
     "Чек-ин · согласие не подписано · 12": {
       "v": "=",
@@ -3476,8 +3476,8 @@
     },
     "Чек-ин · согласие не подписано · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1444 .mc-rest-coffee-actions .mc-pill — flex 1, min-width 64px, min-height 44px, radius 999px, font 700 12.5px/1",
-      "h": "951eafed4c58"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» согласие — color var(--v4-ink-2)",
+      "h": "76104603973e"
     },
     "Чек-ин · согласие не подписано · 18": {
       "v": "=",
@@ -3501,8 +3501,8 @@
     },
     "Чек-ин · согласие не подписано · 22": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1527 .mc-rest-consent-copy — font 500 11.5px/1.45, color rgba(32,30,29,.78)",
-      "h": "8680decd5603"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Не сейчас» согласие — color var(--v4-ink-2)",
+      "h": "97dfef0e11de"
     },
     "Чек-ин · согласие не подписано · 23": {
       "v": "=",
@@ -4201,8 +4201,8 @@
     },
     "Чек-ин · записано · 07": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:779 .mc-recorded-sub — font 500 12px/1.5, color rgba(0,0,0,.5)",
-      "h": "04c6c4c4d5a8"
+      "f": "500-pwa-and-offline.css:1677-1682 .mc-recorded-sub — 500 12px/1.5 var(--v4-ink-2), margin-top 7px",
+      "h": "cdfd0c049830"
     },
     "Чек-ин · записано · 08": {
       "v": "=",
@@ -4281,8 +4281,8 @@
     },
     "Чек-ин · записано с расчётным весом · 07": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:779 .mc-recorded-sub — font 500 12px/1.5, color rgba(0,0,0,.5)",
-      "h": "c73dd5b3250c"
+      "f": "500-pwa-and-offline.css:1677-1682 .mc-recorded-sub — та же строка серии, color var(--v4-ink-2)",
+      "h": "ee9a1a5f2453"
     },
     "Чек-ин · записано с расчётным весом · 08": {
       "v": "=",
@@ -5063,8 +5063,8 @@
     },
     "Рутина · резервный вопрос после еды · 10": {
       "v": "—",
-      "f": "Экран «Питания» под шторкой, нарисованный приглушённым, чтобы был виден контекст. Строка «вид · резервный вопрос после еды» проводит границу прямо: «границы — сам слой, его выезд и затемнение фона — продукта, моё — содержимое листа». Тона .42/.32/.26/.24 — это затемнение канваса, а не правило продукта: сам экран сведён в зоне nutrition-tab своими строками.",
-      "h": "abec864b857d",
+      "f": "Приглушённый экран «Питания» под шторкой — foreign-zone по строке «вид · резервный вопрос после еды»; тон var(--ink-30) — затемнение канваса, не правило продукта",
+      "h": "82321e880479",
       "naKind": "foreign-zone"
     },
     "Рутина · резервный вопрос после еды · 11": {
@@ -5331,8 +5331,8 @@
     },
     "Рутина · резервный вопрос после еды · 38": {
       "v": "=",
-      "f": "300-modals-and-day.css:1928-1942 .ma-followup-answer flex:1 min-height:44px border-radius:999px background:var(--v4-bg) box-shadow inset 0 0 0 1.5px rgba(var(--v4-ink-rgb),.16) color:var(--v4-ink-prose)",
-      "h": "6fa988c7c3fc"
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» резервный вопрос — color var(--v4-ink-2)",
+      "h": "677e97666e0f"
     },
     "Рутина · резервный вопрос после еды · 39": {
       "v": "=",

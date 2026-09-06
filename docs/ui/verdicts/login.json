@@ -169,9 +169,11 @@
       "h": "c0d8a0de42f2"
     },
     "вид полки с кнопкой": {
-      "v": "=",
-      "f": "733:1704 — полка не уезжает, строка 11/500 через 10 над кнопкой, кнопка 48 радиусом 999",
-      "h": "b989af30e8e7"
+      "v": "≠",
+      "f": "733-ui-v4-login-theme.css:206 .heys-auth-pep-dock .heys-auth-meta — строка полки 12,5/1,45 по «кегль юридического текста»; data-v этой строки ещё «11 px/500»",
+      "h": "b989af30e8e7",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
     },
     "после подписи": {
       "v": "=",
@@ -1150,8 +1152,10 @@
     },
     "Свой код · первый вход · 13": {
       "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:502-511 .heys-auth-reset-note — обе фразы одним блоком margin-top 16 padding 15/17 radius 20; кадр ·13 — отдельная строка margin-top 8",
-      "h": "b787bd9afd7e"
+      "f": "733-ui-v4-login-theme.css:1596-1605 .heys-auth-reset-note 12,5/1,45 — «Код доступа заменяет…»; кадр ·13 data-v 11,5/1,55",
+      "h": "b787bd9afd7e",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
     },
     "Свой код · первый вход · 14": {
       "v": "≠",
@@ -1169,9 +1173,11 @@
       "h": "d5272eb83431"
     },
     "Свой код · первый вход · 17": {
-      "v": "=",
-      "f": "heys_client_access_code_setup_v1.js:547 — «Я принимаю » и ссылка на соглашение, 600 11,5px",
-      "h": "e359aa5c5ab2"
+      "v": "≠",
+      "f": "733-ui-v4-login-theme.css:1666-1677 .heys-auth-pep-agree 12,5/600/1,45 — «Я принимаю Соглашение…»; кадр ·17 data-v 11,5/1,45",
+      "h": "e359aa5c5ab2",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
     },
     "Свой код · первый вход · 18": {
       "v": "=",
@@ -1184,9 +1190,11 @@
       "h": "d06c9fae16fe"
     },
     "Свой код · первый вход · 20": {
-      "v": "=",
-      "f": "heys_client_access_code_setup_v1.js:594 — «Нажимая «Продолжить», вы заключаете соглашение и создаёте код доступа» 500 10,5px/1.5",
-      "h": "21ab206d6352"
+      "v": "≠",
+      "f": "733-ui-v4-login-theme.css:206 + .heys-auth-pep-dock .heys-auth-meta — «Нажимая «Продолжить»…» 12,5/1,45; кадр ·20 data-v 10,5/1,5",
+      "h": "21ab206d6352",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
     },
     "Свой код · подтверждение · 01": {
       "v": "=",
@@ -1249,9 +1257,11 @@
       "h": "21dd598f9156"
     },
     "Свой код · подтверждение · 13": {
-      "v": "=",
-      "f": "heys_client_access_code_setup_v1.js: согласие и обязательная строка перенесены на первый шаг, под подтверждением стоит «Соглашение вы приняли на прошлом шаге»",
-      "h": "fbe1c1f8b320"
+      "v": "≠",
+      "f": "heys_client_access_code_setup_v1.js:617-620 .heys-auth-meta «Соглашение вы приняли…» 12,5/1,45; кадр ·13 data-v 10,5/1,5",
+      "h": "fbe1c1f8b320",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
     },
     "Вход с нового устройства · 01": {
       "v": "=",
@@ -1444,9 +1454,11 @@
       "h": "21dd598f9156"
     },
     "Коды не совпали · 12": {
-      "v": "=",
-      "f": "heys_client_access_code_setup_v1.js entryIssue=mismatch: сбрасывает оба ввода на первый шаг и показывает сноску «Начнём сначала: придумайте код и повторите его»",
-      "h": "40d11f429c84"
+      "v": "≠",
+      "f": "heys_client_access_code_setup_v1.js:628-629 .heys-auth-meta «Начнём сначала…» 12,5/1,45; кадр ·12 data-v 10,5/1,5",
+      "h": "40d11f429c84",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
     },
     "Код слишком простой · 01": {
       "v": "=",
@@ -1509,9 +1521,11 @@
       "h": "21dd598f9156"
     },
     "Код слишком простой · 13": {
-      "v": "=",
-      "f": "heys_client_access_code_setup_v1.js entryIssue=weak: локальная проверка выводит сноску «Проверка идёт на устройстве, код никуда не отправляется»",
-      "h": "691fa5f84105"
+      "v": "≠",
+      "f": "heys_client_access_code_setup_v1.js:625-626 .heys-auth-meta «Проверка идёт на устройстве…» 12,5/1,45; кадр ·13 data-v 10,5/1,5",
+      "h": "691fa5f84105",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
     },
     "Подпись документа · 01": {
       "v": "—",
@@ -3948,6 +3962,11 @@
       "v": "?",
       "f": "Строка говорит про стопку у плавающей кнопки, и там долг живой: в продукте .widgets-fab-left 40×40 (730-widgets-dashboard.css:2653) и .widgets-fab-global 36×36 (:3530) — обе ниже 44 видимым размером, и гейт считает их в зоне home-widgets, а не здесь. По самой login инвентарь 6 сентября даёт 9 нарушений и 2 строки «ширина принята без замера» (.heys-login-theme__soft-card высотой 52, .heys-supp-revoke-backdrop высотой 44). Худшие: .consent-fulltext__retry 20,6, .heys-login-theme__done 28, .heys-login-theme__collapse 28×28 (733-ui-v4-login-theme.css:1244), .heys-auth-support-close 32×32. Строка закроется, когда стопка получит видимые 44 в 730-widgets-dashboard.css и инвентарь по login даст ноль.",
       "h": "8d324ad2c8cd"
+    },
+    "кегль юридического текста": {
+      "v": "=",
+      "f": "РЕШЕНИЕ 6 сент (login.v4:106): юридический текст и согласия ≥12,5 px, line-height ≥1,45. 733-ui-v4-login-theme.css:206 .heys-auth-meta 12,5/1,45; :1596-1605 .heys-auth-reset-note; :1666-1677 .heys-auth-pep-agree 600; :1892-1897 .heys-consent-sign-sheet__hint; :1999-2004 .heys-consent-sign-sheet__done-meta; heys_consents_v1.js:1414-1422 подпись «Введите код…»; heys_client_access_code_setup_v1.js:617-629 .heys-auth-meta",
+      "h": "e6dea339d6d0"
     }
   },
   "frames": {

@@ -4,6 +4,10 @@ import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  substituteV4InkRolesAfterInk,
+  substituteV4InkRolesBeforeInk,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
@@ -14,20 +18,19 @@ const PALETTES = Object.freeze({
   sand: {
     bg: '#fffaf1', c1: '#f7efe2', c2: '#efe3cf', tx: '#201e1d',
     ac: '#8a4a20', acs: '#c67139', onAcs: '#2b1608',
-    ink56: 'rgba(0, 0, 0, 0.56)', ink62: 'rgba(0, 0, 0, 0.62)',
-    br: 'rgba(0, 0, 0, 0.1)',
+    ink55: 'rgba(0, 0, 0, 0.55)', ink56: 'rgba(0, 0, 0, 0.56)', br: 'rgba(0, 0, 0, 0.1)',
   },
   blue: {
     bg: '#ffffff', c1: '#eef3f9', c2: '#e2ecf6', tx: '#101826',
     ac: '#1d5e96', acs: '#2e7cc0', onAcs: '#ffffff',
-    ink56: 'rgba(16, 24, 38, 0.64)', ink62: 'rgba(16, 24, 38, 0.62)',
-    br: 'rgba(16, 24, 38, 0.1)',
+    ink55: 'rgba(16, 24, 38, 0.55)', ink56: 'rgba(16, 24, 38, 0.64)', br: 'rgba(16, 24, 38, 0.1)',
   },
 });
 
 function compileCss(palette, paletteName) {
   const inkRgb = paletteName === 'blue' ? '16, 24, 38' : '0, 0, 0';
-  return `:root{--v4-ink-prose:${palette.ink62};--v4-ink-rgb:${inkRgb};}\n${RAW_CSS
+  const roles = { ink55: palette.ink55, ink55Blue: PALETTES.blue.ink55 };
+  const body = substituteV4InkRolesAfterInk(substituteV4InkRolesBeforeInk(RAW_CSS, roles)
     .replaceAll('var(--sb-card)', palette.c1)
     .replaceAll('var(--sb-bg)', palette.bg)
     .replaceAll('var(--sb-tx)', palette.tx)
@@ -46,10 +49,10 @@ function compileCss(palette, paletteName) {
     .replaceAll('var(--v4-act-text, #8a4a20)', palette.ac)
     .replaceAll('var(--v4-act, #c67139)', palette.acs)
     .replaceAll('var(--v4-ink-data, rgba(32, 30, 29, 0.56))', palette.ink56)
-    .replaceAll('var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62))', palette.ink62)
     .replaceAll('var(--ink, 35, 31, 26)', '0, 0, 0')
     .replaceAll('var(--ink)', '0, 0, 0')
-    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px')}`;
+    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px'), roles);
+  return `:root{--v4-ink-rgb:${inkRgb};}\n${body}`;
 }
 
 function loadCatalog() {
@@ -193,7 +196,7 @@ describe('strength builder · З1 superset create v4 canvas contract', () => {
       borderRadius: '20px', backgroundColor: palette.c1,
     }, '07');
     expectStyle(radios[0], { display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '13.5px', paddingBottom: '13.5px' }, '08');
-    expectStyle(idleNum, { color: palette.ink62 }, '10');
+    expectStyle(idleNum, { color: palette.ink55 }, '10');
     expectStyle(radios[0].querySelector('.sb-cat-title b'), { color: palette.tx }, '11');
     expectStyle(radios[0].querySelector('.sb-cat-title span'), {
       fontSize: '11px', fontWeight: '500', lineHeight: '1.3', color: palette.ink56,
@@ -238,7 +241,7 @@ describe('strength builder · З1 superset create v4 canvas contract', () => {
     const check = document.querySelector('.sb-radio-check');
     const rest = document.querySelector('.sb-rest-preview');
 
-    expectStyle(idleNum, { color: palette.ink62 }, '10 blue');
+    expectStyle(idleNum, { color: palette.ink55 }, '10 blue');
     expectStyle(document.querySelector('.sb-superset-create-screen .sb-radio .sb-cat-title b'), { color: palette.tx }, '11 blue');
     expectStyle(document.querySelector('.sb-superset-create-screen .sb-radio:not(.is-on) .sb-cat-title span'), { color: palette.ink56 }, '12 blue');
     expectStyle(document.querySelector('.sb-superset-create-screen .sb-radio.is-on .sb-ex-num'), { backgroundColor: palette.acs, color: palette.onAcs }, '14 blue');

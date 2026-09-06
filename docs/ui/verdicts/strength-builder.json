@@ -1418,8 +1418,8 @@
     },
     "Конструктор · каталог · 02": {
       "v": "=",
-      "f": "Кнопка ‹ .sb-icon-btn 36×36 radius 999 — heys_strength_catalog_ui_v1.js:127–129; CSS :4746–4755 color rgba(var(--v4-ink-rgb),.5).",
-      "h": "336d7816faea"
+      "f": "Пакет 43 ink ladder: .sb-catalog-screen .sb-icon-btn var(--v4-ink-2) (750-strength-builder.css:5957-5965).",
+      "h": "1d160e52c5ae"
     },
     "Конструктор · каталог · 03": {
       "v": "=",
@@ -1463,8 +1463,8 @@
     },
     "Конструктор · каталог · 11": {
       "v": "=",
-      "f": "Неактивная пилюля «Все» — .sb-chip без is-on; после bridge --sb-soft=var(--v4-hero) ≈ --c2 контракта; CSS :4832–4843 ink 62%.",
-      "h": "39786f5c4be0"
+      "f": "Пакет 43 ink ladder: .sb-catalog-screen .sb-chip var(--v4-ink-2) (750-strength-builder.css:6043-6053).",
+      "h": "00c7a7e3c2a7"
     },
     "Конструктор · каталог · 12": {
       "v": "=",
@@ -1503,8 +1503,8 @@
     },
     "Конструктор · каталог · 19": {
       "v": "=",
-      "f": "Пустая ★ .sb-star без is-on — :175; CSS :4883–4894 ink 18%.",
-      "h": "3e4425ac13ab"
+      "f": "Пакет 43 ink ladder: .sb-catalog-screen .sb-star off var(--v4-ink-30) (750-strength-builder.css:6097-6110).",
+      "h": "95b61fbbf10b"
     },
     "Конструктор · каталог · 20": {
       "v": "=",
@@ -1663,175 +1663,170 @@
     },
     "Конструктор · итоги · 26": {
       "v": "=",
-      "h": "8bb5e99afca6",
-      "f": "«1 упр.»: .sb-finish-row--reason > b.is-quiet { font:600 12.5px/1; font-variant-numeric:tabular-nums; color:rgba(var(--ink),.56) } — 750:1887-1889; missing.length finish_ui:340."
+      "h": "aea9de12e541",
+      "f": "Геометрия/акцент сведены: .sb-finish-tier (heys_strength_finish_ui_v1.js:351)."
     },
     "Конструктор · итоги · 27": {
       "v": "=",
-      "h": "aea9de12e541",
-      "f": "Ярус «Как оно прошло»: .sb-finish-tier { margin:20px 0 10px; font:700 10px/1; letter-spacing:.16em; text-transform:uppercase; color:var(--ac) } — 750:1891-1897; finish_ui:351."
+      "h": "54643961e08d",
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback-card (750-strength-builder.css:2288-2294)."
     },
     "Конструктор · итоги · 28": {
       "v": "=",
-      "h": "54643961e08d",
-      "f": "Карточка feedback: .sb-finish-feedback-card { padding:16px; border-radius:20px; background:var(--c1) } — 750:1757-1763."
+      "h": "3ad04027bbc9",
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback-grid gap 7 (750-strength-builder.css:2296-2300)."
     },
     "Конструктор · итоги · 29": {
       "v": "=",
-      "h": "3ad04027bbc9",
-      "f": "Ряд плиток: .sb-finish-feedback-grid { display:flex; gap:7px } — 750:1895-1898."
+      "h": "e2912dc83a59",
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-mood tile (750-strength-builder.css:2302-2314)."
     },
     "Конструктор · итоги · 30": {
       "v": "=",
-      "h": "e2912dc83a59",
-      "f": "Плитка настроения: .sb-finish-feedback.is-mood { flex:1; min-height:52px; justify-content:center; background:var(--gr-bg); border-radius:12px } — 750:1900-1915."
+      "h": "e287269cab62",
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-mood input --gr (750-strength-builder.css:2312-2314)."
     },
     "Конструктор · итоги · 31": {
       "v": "=",
-      "h": "e287269cab62",
-      "f": "«7» настроение: .sb-finish-feedback.is-mood input { font:700 14px/1; color:var(--gr); font-variant-numeric:tabular-nums } — 750:1945-1947; feedback.mood finish_ui:354."
+      "h": "c7c775596dea",
+      "f": "Пакет 43 ink ladder: .sb-finish-feedback span var(--v4-ink-2) (750-strength-builder.css:2320-2323)."
     },
     "Конструктор · итоги · 32": {
       "v": "=",
-      "h": "34e58040aab6",
-      "f": "Подпись «настроение»: .sb-finish-feedback span { font:600 9.5px/1; color:rgba(var(--ink),.56) } — 750:1953-1956."
+      "h": "694255fee8b1",
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-wellbeing tile --c2 (750-strength-builder.css:2302-2314)."
     },
     "Конструктор · итоги · 33": {
       "v": "=",
-      "h": "694255fee8b1",
-      "f": "Плитка самочувствия: .sb-finish-feedback.is-wellbeing { min-height:52px; background:var(--c2); border-radius:12px } — 750:1917-1919."
+      "h": "a7f3763d1429",
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-wellbeing input --ac (750-strength-builder.css:2316-2318)."
     },
     "Конструктор · итоги · 34": {
       "v": "=",
-      "h": "a7f3763d1429",
-      "f": "«8» самочувствие: .sb-finish-feedback.is-wellbeing input { color:var(--ac); font:700 14px/1 } — 750:1925-1937; feedback.wellbeing."
+      "h": "fd18bd090aca",
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-stress tile --tint (750-strength-builder.css:2302-2314)."
     },
     "Конструктор · итоги · 35": {
       "v": "=",
-      "h": "fd18bd090aca",
-      "f": "Плитка стресса: .sb-finish-feedback.is-stress { min-height:52px; background:var(--tint); border-radius:12px } — 750:1921-1923."
+      "h": "4fdb2c243d2f",
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-stress input --ac2 (750-strength-builder.css:2316-2318)."
     },
     "Конструктор · итоги · 36": {
       "v": "=",
-      "h": "4fdb2c243d2f",
-      "f": "«5» стресс: .sb-finish-feedback.is-stress input { color:var(--ac2); font:700 14px/1 } — 750:1949-1951; feedback.stress."
+      "h": "000379790468",
+      "f": "Геометрия/акцент сведены: .sb-finish-note placeholder var(--v4-ink-4) (750-strength-builder.css:2339-2341)."
     },
     "Конструктор · итоги · 37": {
       "v": "=",
-      "h": "34b181335f8a",
-      "f": "Поле заметки: .sb-finish-note { min-height:44px; margin-top:9px; padding:0 14px; border-radius:14px; background:var(--bg); box-shadow:inset 0 0 0 1px rgba(var(--ink),.1); font:500 12.5px/1; placeholder rgba(var(--ink),.38) } — 750:1958-1974."
+      "h": "c46890146dce",
+      "f": "Геометрия/акцент сведены: .sb-finish-chart-head baseline gap 8 (750-strength-builder.css:2343-2347)."
     },
     "Конструктор · итоги · 38": {
       "v": "=",
-      "h": "c46890146dce",
-      "f": "Шапка графика: .sb-finish-chart-head { display:flex; align-items:baseline; gap:8px } — 750:1976-1980."
+      "h": "28ae4706bcf3",
+      "f": "Пакет 43 ink ladder: .sb-finish-chart-head span var(--v4-ink-2) (750-strength-builder.css:2349-2353)."
     },
     "Конструктор · итоги · 39": {
       "v": "=",
-      "h": "7df7dd449515",
-      "f": "«по весу и повторам каждой тренировки»: .sb-finish-chart-head span { flex:1; font:600 11.5px/1.3; color:rgba(var(--ink),.56) } — 750:1982-1986; finish_ui:370."
+      "h": "4eb89dd57364",
+      "f": "Геометрия/акцент сведены: .sb-finish-chart h112 gap 6 mt 12 (750-strength-builder.css:2361-2368)."
     },
     "Конструктор · итоги · 40": {
       "v": "=",
-      "h": "4eb89dd57364",
-      "f": "Поле столбиков: .sb-finish-chart { display:flex; align-items:flex-end; gap:6px; height:112px; margin-top:12px } — 750:1994-2001."
+      "h": "23da33de2767",
+      "f": "Геометрия/акцент сведены: .sb-finish-chart-column flex col gap 5 (750-strength-builder.css:2370-2378)."
     },
     "Конструктор · итоги · 41": {
       "v": "=",
-      "h": "23da33de2767",
-      "f": "Колонка графика: .sb-finish-chart-column { flex:1; flex-direction:column; align-items:center; gap:5px } — 750:2003-2011."
+      "h": "3dceb60187ed",
+      "f": "Пакет 43 ink ladder: .sb-finish-chart-column b var(--v4-ink-2) (750-strength-builder.css:2380-2385)."
     },
     "Конструктор · итоги · 42": {
       "v": "=",
-      "h": "946b09c6ac0d",
-      "f": "«88» над столбиком: .sb-finish-chart-column b { font:700 9.5px/1; font-variant-numeric:tabular-nums; color:rgba(var(--ink),.56) } — 750:2013-2018."
+      "h": "30e35c4d13f9",
+      "f": "Геометрия/акцент сведены: .sb-finish-chart-column:nth-child(1) > i h41 --c2 (750-strength-builder.css:2392-2396)."
     },
     "Конструктор · итоги · 43": {
       "v": "=",
-      "h": "30e35c4d13f9",
-      "f": "Столбик н1 высота 41px: .sb-finish-chart-column i { width:100%; border-radius:7px 7px 0 0; background:var(--c2) } — 750:2025-2029; chartHeight() finish_ui:293-298."
+      "h": "f11ffc03ce94",
+      "f": "Пакет 43 ink ladder: .sb-finish-chart-column small var(--v4-ink-2) (750-strength-builder.css:2380-2385)."
     },
     "Конструктор · итоги · 44": {
       "v": "=",
-      "h": "3ad83eaddc2e",
-      "f": "«н1»: .sb-finish-chart-column small { font:600 9px/1; color:rgba(var(--ink),.56) } — 750:2020-2023; finish_ui:378."
+      "h": "fb3e7f3476e1",
+      "f": "Геометрия/акцент сведены: chart bar h51 (750-strength-builder.css:2392-2396)."
     },
     "Конструктор · итоги · 45": {
       "v": "=",
-      "h": "fb3e7f3476e1",
-      "f": "Столбик н2 высота 51px: nth-child(2) > i height 51px — тест row 45; chartHeight по series[1]."
+      "h": "e1e16f158dd2",
+      "f": "Геометрия/акцент сведены: chart bar h46 (750-strength-builder.css:2392-2396)."
     },
     "Конструктор · итоги · 46": {
       "v": "=",
-      "h": "e1e16f158dd2",
-      "f": "Столбик н3 высота 46px: nth-child(3) > i — тест row 46."
+      "h": "e302148fd136",
+      "f": "Геометрия/акцент сведены: chart bar h67."
     },
     "Конструктор · итоги · 47": {
       "v": "=",
-      "h": "e302148fd136",
-      "f": "Столбик н4 высота 67px: nth-child(4) > i — тест row 47."
+      "h": "c50e1b3ae5f3",
+      "f": "Геометрия/акцент сведены: chart bar h62."
     },
     "Конструктор · итоги · 48": {
       "v": "=",
-      "h": "c50e1b3ae5f3",
-      "f": "Столбик н5 высота 62px: nth-child(5) > i — тест row 48."
+      "h": "599205dd752d",
+      "f": "Геометрия/акцент сведены: .sb-finish-chart-column.is-latest > b --ac (750-strength-builder.css:2398-2401)."
     },
     "Конструктор · итоги · 49": {
       "v": "=",
-      "h": "599205dd752d",
-      "f": "«95» последний столбик: .sb-finish-chart-column.is-latest b { color:var(--ac) } — 750:2031-2034; Math.round(best.oneRm)."
+      "h": "506d4b5e2301",
+      "f": "Геометрия/акцент сведены: .sb-finish-chart-column.is-latest > i h78 --acs (750-strength-builder.css:2403-2405)."
     },
     "Конструктор · итоги · 50": {
       "v": "=",
-      "h": "506d4b5e2301",
-      "f": "Столбик н6 78px на --acs: .sb-finish-chart-column.is-latest i { background:var(--acs); height 78px в кадре } — 750:2036-2038."
+      "h": "48a631dc319a",
+      "f": "Геометрия/акцент сведены: .sb-finish-chart-column.is-latest > small --ac (750-strength-builder.css:2398-2401)."
     },
     "Конструктор · итоги · 51": {
       "v": "=",
-      "h": "48a631dc319a",
-      "f": "«н6» акцент: .sb-finish-chart-column.is-latest small { color:var(--ac); font:600 9px/1 } — 750:2031-2034."
+      "h": "aee288085aea",
+      "f": "Геометрия/акцент сведены: .sb-finish-chart-card > p footnote mt 10 (750-strength-builder.css:2410-2416)."
     },
     "Конструктор · итоги · 52": {
       "v": "=",
-      "h": "aee288085aea",
-      "f": "Сноска под графиком: .sb-finish-chart-card p { margin-top:10px; font:500 11px/1.55; color:rgba(var(--ink),.56) } — 750:2040-2044; текст finish_ui:382."
+      "h": "0aa733f23349",
+      "f": "Геометрия/акцент сведены: .sb-finish-day-total b --tx (750-strength-builder.css:2215-2221)."
     },
     "Конструктор · итоги · 53": {
       "v": "=",
-      "h": "0aa733f23349",
-      "f": "«14,2 т» день: .sb-finish-day-total .sb-finish-row b { font-weight:700; font:700 12.5px/1 tabular-nums var(--tx) } — 750:2056-2058; fmtTonnage(dayTonnageKg) finish_ui:389."
+      "h": "d9a337aab838",
+      "f": "Геометрия/акцент сведены: .sb-finish-other list --c1 (750-strength-builder.css:2420-2426)."
     },
     "Конструктор · итоги · 54": {
       "v": "=",
-      "h": "d9a337aab838",
-      "f": "Список other: section.sb-finish-detail.sb-finish-other { padding:2px 16px; border-radius:20px; background:var(--c1) } — 750:1830-1835; otherRows finish_ui:392-400."
+      "h": "9c00ce7b3f26",
+      "f": "Пакет 43 ink ladder: .sb-finish-row b.is-quiet var(--v4-ink-2) (750-strength-builder.css:2223-2225)."
     },
     "Конструктор · итоги · 55": {
       "v": "=",
-      "h": "5770d2c092aa",
-      "f": "«3:00 под нагрузкой»: .sb-finish-other .sb-finish-row b { font:700 12px/1; color:rgba(var(--ink),.55) } — 750:2060-2063; unit time otherVolumeRows finish_ui:220."
+      "h": "efb9ecff5e94",
+      "f": "Геометрия/акцент сведены: .sb-finish-other b --tx (750-strength-builder.css:2215-2221)."
     },
     "Конструктор · итоги · 56": {
       "v": "=",
-      "h": "efb9ecff5e94",
-      "f": "«2 028 кг в тоннаже»: .sb-finish-other b без .is-quiet { font:700 12px/1; color:var(--tx) } — finish_ui:222; fmtExactKg bodyweight row."
+      "h": "79640b84d0fc",
+      "f": "Геометрия/акцент сведены: .sb-finish-other + .sb-finish-footnote (750-strength-builder.css:2428-2434)."
     },
     "Конструктор · итоги · 57": {
-      "v": "=",
-      "h": "79640b84d0fc",
-      "f": "Сноска other: .sb-finish-footnote после .sb-finish-other { margin-top:12px; font:500 11px/1.55 rgba(var(--ink),.56) } — 750:2046-2050; finish_ui:401."
-    },
-    "Конструктор · итоги · 58": {
       "v": "≠",
       "h": "08f3b8ef67d3",
-      "f": "«В шаблоны» в FinishScreen нет; save-flow снят (UI_V4 § Б3). finish-v4-canvas-contract.test.js row 58 исключён.",
+      "f": "Кнопка «В шаблоны» в FinishScreen отсутствует — только .sb-finish-done «Готово» (heys_strength_finish_ui_v1.js:405-420; finish-v4-canvas row 57).",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2728"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2749"
     },
-    "Конструктор · итоги · 59": {
+    "Конструктор · итоги · 58": {
       "v": "=",
       "h": "3abe656a79aa",
-      "f": "«Готово»: .sb-finish-done { width:100%; min-height:48px; margin-top:9px; border-radius:999px; background:var(--acs); color:var(--on-acs); font:700 13px/1 } — 750:2065-2078; finish_ui:404-407."
+      "f": "Геометрия/акцент сведены: .sb-finish-done mt 9 h48 --acs (750-strength-builder.css:2497-2509; finish-v4-canvas :58)."
     },
     "Связка · раунды · 01": {
       "v": "=",
@@ -1980,8 +1975,8 @@
     },
     "Связка · старая, без раундов · 05": {
       "v": "=",
-      "f": "Пилюля «история»: span.sb-ss-badge.sb-ss-badge--history { background:transparent; font:700 9px/1 ui-monospace; color:rgba(var(--ink),.62) } — 750:703-710; superset_ui:139-140.",
-      "h": "8e3b4d3662ca"
+      "f": "Пакет 43 ink ladder: .sb-ss-badge--history var(--v4-ink-2) (750-strength-builder.css:754-759).",
+      "h": "620cab459aed"
     },
     "Связка · старая, без раундов · 06": {
       "v": "=",
@@ -2090,8 +2085,8 @@
     },
     "Своё упражнение · 12": {
       "v": "=",
-      "f": "Неактивная .sb-ex-unit-badge color rgba(var(--ink),0.62) — 750:1277; sand rgba(0,0,0,0.62) · blue rgba(16,24,38,0.62).",
-      "h": "f98a6986f686"
+      "f": "Пакет 43 ink ladder: .sb-ex-unit-badge var(--v4-ink-2) (750-strength-builder.css:1318-1328).",
+      "h": "80ea5bd13a14"
     },
     "Своё упражнение · 13": {
       "v": "=",
@@ -3552,8 +3547,8 @@
     },
     "Таблица · галочка не ставится · 13": {
       "v": "=",
-      "f": "Галочка .sb-ap-check.is-blocked: bg ink 6%, glyph ○ ink 24%, inset 1px ink 12% — строка 13 — strength-builder-validation-v4-canvas-contract.test.js.",
-      "h": "f5eb6b4713c0"
+      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:378-382).",
+      "h": "45fc669e1045"
     },
     "Таблица · галочка не ставится · 14": {
       "v": "=",
@@ -3567,8 +3562,8 @@
     },
     "Таблица · галочка не ставится · 16": {
       "v": "=",
-      "f": "Пустой вес закрытого: .sb-ap-value.is-bw «свой вес» 12px/600 ink 50% — строка 16 — strength-builder-validation-v4-canvas-contract.test.js.",
-      "h": "9f655fe84df1"
+      "f": "Пакет 43 ink ladder: .sb-ap-value.is-bw var(--v4-ink-2) (750-strength-builder.css:385-388).",
+      "h": "df908a5793f6"
     },
     "Таблица · галочка не ставится · 17": {
       "v": "=",
@@ -3922,8 +3917,8 @@
     },
     "Перенумерация · 15": {
       "v": "=",
-      "f": "«Р» warmup badge ink 06/62% — .sb-renumber-num.is-warmup 2822-2825.",
-      "h": "014273a22e18"
+      "f": "Пакет 43 ink ladder: .sb-renumber-num.is-warmup var(--v4-ink-2) (750-strength-builder.css:3241-3244).",
+      "h": "f11d387de885"
     },
     "Перенумерация · 16": {
       "v": "=",
@@ -3997,8 +3992,8 @@
     },
     "Порядок · режим перестановки · 10": {
       "v": "=",
-      "f": "Номер строки ink 62% 26×26 — .sb-order-row .sb-ex-num 2508-2516.",
-      "h": "50cb53e25c6d"
+      "f": "Пакет 43 ink ladder: .sb-order-row .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:2717-2725).",
+      "h": "6180dba45ed5"
     },
     "Порядок · режим перестановки · 11": {
       "v": "=",
@@ -4357,8 +4352,8 @@
     },
     "Дроп-сет · свой экран · 25": {
       "v": "=",
-      "f": "7 правил DROP_SET_RULES[0] текст — apps/web/strength/heys_strength_superset_ui_v1.js:1269-1273; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js rules count 7.",
-      "h": "e52d8424b5e4"
+      "f": "Пакет 43 ink ladder: .sb-ds-rule var(--v4-ink-2) lh 1.5 (750-strength-builder.css:6648-6654).",
+      "h": "421c4c59b72f"
     },
     "Дроп-сет · свой экран · 26": {
       "v": "=",
@@ -4422,8 +4417,8 @@
     },
     "Связка · создание · 10": {
       "v": "=",
-      "f": "Цифра «2» в покое: .sb-radio .sb-ex-num { color:var(--v4-ink-prose) } — apps/web/styles/modules/750-strength-builder.css:3359-3365; песок rgba(0,0,0,.62), синий rgba(16,24,38,.62) — apps/web/__tests__/strength-superset-create-v4-canvas-contract.test.js rows 10/10 blue.",
-      "h": "5c6c1c3e858a"
+      "f": "Пакет 43 ink ladder: .sb-radio .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:4038-4044).",
+      "h": "03032b1edaa2"
     },
     "Связка · создание · 11": {
       "v": "=",
@@ -4677,17 +4672,12 @@
     },
     "Трисет в работе · 29": {
       "v": "=",
-      "f": "«20 × 10» будущая: .sb-tw-cell.is-pending { flex:1; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5753-5755; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 29.",
-      "h": "dcc28dde1e31"
+      "f": "Геометрия/акцент сведены: .sb-tw-pill.is-accent bg --v4-tint --ac (750-strength-builder.css:6875-6878).",
+      "h": "d3c56028c68d"
     },
     "Трисет в работе · 30": {
       "v": "=",
-      "f": "«+ Раунд · добавит 3 подхода»: .sb-tw-add-round { margin-top 10px; bg var(--sb-accbg); color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5773-5776; apps/web/strength/heys_strength_superset_ui_v1.js:1397-1398,1486-1491; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 30.",
-      "h": "d3c56028c68d"
-    },
-    "Трисет в работе · 31": {
-      "v": "=",
-      "f": "Сноска: .sb-tw-footnote { margin-top 12px; font 500 11px/1.55 } — apps/web/styles/modules/750-strength-builder.css:5778-5782; текст apps/web/strength/heys_strength_superset_ui_v1.js:1492-1496.",
+      "f": "Геометрия/акцент сведены: .sb-tw-footnote (750-strength-builder.css:7023-7027).",
       "h": "c54736e577d3"
     },
     "Куратор и зал · 01": {
@@ -4777,9 +4767,9 @@
       "f": "Карточка комментария: .sb-cur-comment.sb-grp — 750:5610-5614; superset_ui ExerciseCard:1639-1662."
     },
     "Куратор и зал · 17": {
-      "h": "5c6c1c3e858a",
+      "h": "03032b1edaa2",
       "v": "=",
-      "f": "Номер упражнения: .sb-ex-num color rgba via --sb-mut/ink — 750 .sb-builder-screen .sb-ex-num; ExerciseCard:1580."
+      "f": "Пакет 43 ink ladder: --sb-mut var(--v4-ink-2) на .sb-ex-num (750-strength-builder.css:3328,3472-3478)."
     },
     "Куратор и зал · 18": {
       "h": "56118530aa17",
@@ -4866,9 +4856,9 @@
       "f": "Галочка ✓: .sb-cur-sync-ok color var(--sb-okTx) — 750:5708-5711; status ok SyncQueuePanel:2099."
     },
     "Куратор и зал · 34": {
-      "h": "e7f3053afdfd",
+      "h": "5eb306b36802",
       "v": "=",
-      "f": "Пилюля «офлайн»: .sb-cur-sync-offline color var(--sb-sync-muted)/--v4-ink-prose — 750:5712-5720; curator-gym test sand."
+      "f": "Пакет 43 ink ladder: --sb-sync-muted var(--v4-ink-2) .sb-cur-sync-offline (750-strength-builder.css:52,7198-7202)."
     },
     "Куратор и зал · 35": {
       "h": "6b286135ed76",
@@ -5450,13 +5440,13 @@
     },
     "Спорное · подход добавлен к закрытому · 16": {
       "v": "=",
-      "f": ".sb-ap-num pending — bg rgba(var(--ink),.06) color rgba(var(--ink),.62).",
-      "h": "8043a0981952"
+      "f": "Пакет 43 ink ladder: .is-exercise-open .sb-ap-num var(--v4-ink-2) (750-strength-builder.css:3734-3742).",
+      "h": "7ed7efcaf864"
     },
     "Спорное · подход добавлен к закрытому · 17": {
       "v": "=",
-      "f": ".sb-ap-check empty — bg rgba(.06) color rgba(.24) inset border.",
-      "h": "f5eb6b4713c0"
+      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778).",
+      "h": "45fc669e1045"
     },
     "Спорное · подход добавлен к закрытому · 18": {
       "v": "=",
@@ -5738,8 +5728,8 @@
     },
     "Спорное · галочка при пустых полях · 10": {
       "v": "=",
-      "f": ".sb-ap-check.is-blocked — rgba(.24) disabled; no modal.",
-      "h": "f5eb6b4713c0"
+      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778).",
+      "h": "45fc669e1045"
     },
     "Спорное · галочка при пустых полях · 11": {
       "v": "=",
@@ -6450,8 +6440,8 @@
     },
     "Правка · клиент уже начал · 27": {
       "v": "=",
-      "f": ".sb-proposal-started-card.is-plain .sb-proposal-started-num — inset rgba(var(--ink),.1), color rgba(var(--ink),.62); 750.",
-      "h": "d3feda590f16"
+      "f": "Пакет 43 ink ladder: .sb-proposal-started-num var(--v4-ink-2) (750-strength-builder.css:4954-4957).",
+      "h": "a52bd48d09a8"
     },
     "Правка · клиент уже начал · 28": {
       "v": "=",
@@ -6525,8 +6515,8 @@
     },
     "Правка · граница защиты · 11": {
       "v": "=",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "ded8e5163069"
+      "f": "Пакет 43 ink ladder: .is-exercise-open .sb-ap-num var(--v4-ink-2) (750-strength-builder.css:3734-3742).",
+      "h": "8d2ed73604db"
     },
     "Правка · граница защиты · 12": {
       "v": "=",
@@ -6535,8 +6525,8 @@
     },
     "Правка · граница защиты · 13": {
       "v": "=",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "f5eb6b4713c0"
+      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778).",
+      "h": "45fc669e1045"
     },
     "Правка · граница защиты · 14": {
       "v": "=",
@@ -6604,9 +6594,9 @@
       "h": "af81bb6e54c6"
     },
     "Правка · одно живое предложение · 08": {
-      "v": "=",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "055d01766190"
+      "v": "?",
+      "f": "Кадр Л4 «Правка от 09:14» ink-2 — полноэкран Л4 не монтируется; живой flow — ProposalCard/Review без этой строки (heys_strength_proposal_ui_v1.js:186-335).",
+      "h": "727f0b6e8693"
     },
     "Правка · одно живое предложение · 09": {
       "v": "=",
@@ -6780,8 +6770,8 @@
     },
     "Правка · пропущен раньше · 08": {
       "v": "=",
-      "f": "fmtMissedEarlierShortDate → .sb-missed-earlier-skipped-pill «пропущено 4 авг» color var(--v4-mark-1); contract test row 08.",
-      "h": "be2910b42441"
+      "f": "Пакет 43 ink ladder: .sb-missed-earlier-skipped-pill var(--v4-ink-2) (heys_strength_proposal_ui_v1.js:907-910).",
+      "h": "5c93c1c9e0fd"
     },
     "Правка · пропущен раньше · 09": {
       "v": "=",
@@ -7145,8 +7135,9 @@
     },
     "Принятие · ветка чата · 05": {
       "v": "—",
-      "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант",
-      "h": "62671a577c4f"
+      "f": "Кадр Л7 data-demo=protocol «Принятие · ветка чата — снята» — не монтируется (strength-builder.v4.dc.html:1850-1851).",
+      "h": "527109c5c3ab",
+      "naKind": "demo-only"
     },
     "Принятие · ветка чата · 06": {
       "v": "—",
@@ -7863,8 +7854,8 @@
     },
     "Ввод · время под нагрузкой · 14": {
       "v": "=",
-      "f": ".is-exercise-open .sb-ap-check.is-blocked — rgba ink .06/.24 inset 1px; 750-strength-builder.css:3653.",
-      "h": "f5eb6b4713c0"
+      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778).",
+      "h": "45fc669e1045"
     },
     "Ввод · время под нагрузкой · 15": {
       "v": "=",
@@ -8807,8 +8798,9 @@
     },
     "Конструктор · тренировка идёт · снято · 25": {
       "v": "—",
-      "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "1fa9003a3cf7"
+      "f": "Кадр А1 data-demo=protocol «снято» — демо-стоп, не BuilderScreen (strength-builder.v4.dc.html:104).",
+      "h": "b805c2ad0650",
+      "naKind": "demo-only"
     },
     "Конструктор · тренировка идёт · снято · 26": {
       "v": "—",
@@ -9041,8 +9033,8 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 12": {
       "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 12.",
-      "h": "50cb53e25c6d",
+      "f": "Пакет 43 ink ladder: .is-exercise-open .sb-ex.is-complete .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:3626-3628); calm-canvas sand.",
+      "h": "6180dba45ed5",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9115,8 +9107,8 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 20": {
       "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 20.",
-      "h": "58b219c001eb",
+      "f": "Пакет 43 ink ladder: .is-open .sb-ex-num bg --sb-bg inset .1 var(--v4-ink-2) (750-strength-builder.css:3652-3656).",
+      "h": "ff8b3b70f5a6",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9151,8 +9143,8 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 24": {
       "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 24.",
-      "h": "1fa9003a3cf7",
+      "f": "Пакет 43 ink ladder: .sb-ex-toggle 36×36 --bg var(--v4-ink-2) (750-strength-builder.css:3640-3649).",
+      "h": "b805c2ad0650",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9238,8 +9230,8 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 33": {
       "v": "≠",
-      "f": "А1б ·33: .sb-ap.is-done .sb-ap-num --gr vs ink .62. calm-canvas-contract sand+blue CANVAS_CONFLICTS А1б:33.",
-      "h": "1e7e3b679417",
+      "f": "Г4 .is-weight-entry .sb-ap.is-done .sb-ap-num --gr vs ink-2 (750-strength-builder.css:3791-3794); CANVAS_CONFLICTS А1б:33.",
+      "h": "c949d97f6e9e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9258,8 +9250,8 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 35": {
       "v": "≠",
-      "f": "А1б ·35: .sb-ap.is-current .sb-ap-num --acs (#c67139 sand) vs bg #fffaf1. calm-canvas-contract sand+blue CANVAS_CONFLICTS А1б:35.",
-      "h": "8dda7bd28843",
+      "f": "Г4 .is-current .sb-ap-num --acs/on-acs vs bg+ink-2 (750-strength-builder.css:3796-3798); CANVAS_CONFLICTS А1б:35.",
+      "h": "2e09eff5c9ad",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9334,28 +9326,26 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 43": {
       "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 43.",
-      "h": "bc025e8f605f",
+      "f": "Геометрия/акцент сведены: .sb-ex.is-pending .sb-ex-title b 13px (750-strength-builder.css:3491-3508); calm-canvas.",
+      "h": "f02599786a2a",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ]
     },
     "Конструктор · тренировка идёт · спокойнее · 44": {
-      "v": "≠",
-      "f": "А1б ·44: .sb-ex--collapsed .sb-ex-title b 12.5px pending card (750:3391) vs 13px. calm-canvas-contract CANVAS_CONFLICTS А1б:44.",
-      "h": "c4dc01779567",
+      "v": "=",
+      "f": "Геометрия/акцент сведены: .is-exercise-open .sb-panel gap 8 pt/border (750-strength-builder.css:3912-3919).",
+      "h": "f1e39e1f9f34",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
-      ],
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62"
+      ]
     },
     "Конструктор · тренировка идёт · спокойнее · 45": {
       "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 45.",
-      "h": "f1e39e1f9f34",
+      "f": "Геометрия/акцент сведены: .sb-panel-add (750-strength-builder.css:3922-3935).",
+      "h": "7bc2baeea572",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9363,8 +9353,8 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 46": {
       "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 46.",
-      "h": "7bc2baeea572",
+      "f": "Геометрия/акцент сведены: .sb-finish secondary (750-strength-builder.css:3937-3944).",
+      "h": "47e60c36439c",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9372,16 +9362,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 47": {
       "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 47.",
-      "h": "47e60c36439c",
-      "evidence": [
-        "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
-        "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
-      ]
-    },
-    "Конструктор · тренировка идёт · спокойнее · 48": {
-      "v": "=",
-      "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 48.",
+      "f": "Геометрия/акцент сведены: .sb-builder-note (750-strength-builder.css:3950-3956).",
       "h": "86f6da9b7550",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",

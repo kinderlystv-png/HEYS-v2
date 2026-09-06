@@ -522,8 +522,8 @@
     },
     "Добавление · время и тип · 09": {
       "v": "=",
-      "f": ".meal-time-hero .mc-wheel-value--prev — 600 16px/1, tracking -.02em, ink 24 %: песок/синий color-mix одинаковый; food-meal-v4-canvas-geometry.test.js строка 09.",
-      "h": "3a3fa6d6db25"
+      "f": "«10» у prev-колеса — .meal-time-hero .mc-wheel-value--prev 600 16px/1 tracking -.02em color var(--v4-ink-30) (610-aps-meal-flow.css:162-167; food-meal-v4-canvas-geometry.test.js строка 09).",
+      "h": "ce8e8f364e1a"
     },
     "Добавление · время и тип · 10": {
       "v": "=",
@@ -537,8 +537,8 @@
     },
     "Добавление · время и тип · 12": {
       "v": "=",
-      "f": ".meal-time-hero .mc-wheel-value--next — 600 16px/1, ink 24 %; гейт 12.",
-      "h": "a95dc6520d85"
+      "f": "«45» у next-колеса — .meal-time-hero .mc-wheel-value--next 600 16px/1 tracking -.02em color var(--v4-ink-30) (610-aps-meal-flow.css:162-167; food-meal-v4-canvas-geometry.test.js строка 12).",
+      "h": "1ccc83dad01b"
     },
     "Добавление · время и тип · 13": {
       "v": "=",
@@ -1210,8 +1210,8 @@
     },
     "Добавление · порция · 18": {
       "v": "=",
-      "f": ".aps-v4-grams-hero__step height 44px, font-size 16px (было 24) — 610; handoff; computed grams-step 44.",
-      "h": "9c77f95334fc"
+      "f": "«Ккал» неактивная — .aps-v4-grams-unit min-height 44 padding 0 16 color var(--v4-ink-2) (610-aps-meal-flow.css:3601-3613).",
+      "h": "ec09691662b7"
     },
     "Добавление · порция · 19": {
       "v": "=",
@@ -1344,8 +1344,8 @@
     },
     "Порция · ввод в калориях · 16": {
       "v": "=",
-      "f": "Порция · ввод в калориях · 16 — видимый габарит ≥44 px без невидимых expanders; apps/web/__tests__/polosa4-task63-food-meal-touch-44px.test.js TOUCH_CONTRACT_LINES + computed sand=blue 44px.",
-      "h": "d768c03d7dc6"
+      "f": "«Граммы» активная — .aps-v4-grams-unit.is-active min-height 44 bg --v4-bg color --v4-sand-act-deep; неактивная «Ккал» соседом color var(--v4-ink-2) (610-aps-meal-flow.css:3601-3619).",
+      "h": "0ee58904d2c9"
     },
     "Порция · ввод в калориях · 17": {
       "v": "=",
@@ -1498,8 +1498,8 @@
     },
     "Порция · продукт уже в приёме · 18": {
       "v": "=",
-      "f": "Порция · продукт уже в приёме · 18 — видимый габарит ≥44 px без невидимых expanders; apps/web/__tests__/polosa4-task63-food-meal-touch-44px.test.js TOUCH_CONTRACT_LINES + computed sand=blue 44px.",
-      "h": "9c77f95334fc"
+      "f": "«Ккал» на кадре дубля — тот же .aps-v4-grams-unit color var(--v4-ink-2) min-height 44 (610-aps-meal-flow.css:3601-3613).",
+      "h": "ec09691662b7"
     },
     "Порция · продукт уже в приёме · 19": {
       "v": "=",
@@ -1652,8 +1652,8 @@
     },
     "Порция · перебор нормы · 18": {
       "v": "=",
-      "f": "Порция · перебор нормы · 18 — видимый габарит ≥44 px без невидимых expanders; apps/web/__tests__/polosa4-task63-food-meal-touch-44px.test.js TOUCH_CONTRACT_LINES + computed sand=blue 44px.",
-      "h": "9c77f95334fc"
+      "f": "«Ккал» на кадре перебора — .aps-v4-grams-unit color var(--v4-ink-2) (610-aps-meal-flow.css:3601-3613).",
+      "h": "ec09691662b7"
     },
     "Порция · перебор нормы · 19": {
       "v": "=",
@@ -1907,8 +1907,8 @@
     },
     "Приёмы дня · список · 18": {
       "v": "=",
-      "f": ".nutrition-v4-meal-row--empty .nutrition-v4-meal-row__title — чернила 50 %; заодно прочерк вместо калорийности приглушён тем же тоном",
-      "h": "d0ab6e4eda1a"
+      "f": "«22:00 · Перекус» пустого приёма — .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__title 700 12.5px/1 color var(--v4-ink-2) (732-ui-v4-nutrition.css:424-427).",
+      "h": "45d1fdd66762"
     },
     "Приёмы дня · список · 19": {
       "v": "=",
@@ -2122,8 +2122,8 @@
     },
     "Приём · время и тип · 10": {
       "v": "=",
-      "f": ".meal-time-step--sheet .mc-wheel-value--prev/next рядовые 12px ink 24 %; лист 120px/3 ряда — 610:4224–4232; гейт листа 10.",
-      "h": "abaf6853c213"
+      "f": "«11» prev в листе — .meal-time-step--sheet .mc-wheel-value--prev 600 12px/1 color var(--v4-ink-30) (610-aps-meal-flow.css:4211-4215).",
+      "h": "8cddd7ffd314"
     },
     "Приём · время и тип · 11": {
       "v": "=",
@@ -2137,8 +2137,8 @@
     },
     "Приём · время и тип · 13": {
       "v": "=",
-      "f": ".meal-time-step--sheet .mc-wheel-value--next — 600 12px/1 ink 24 %; гейт 13.",
-      "h": "2343484b6e1d"
+      "f": "«55» next в листе — .meal-time-step--sheet .mc-wheel-value--next 600 12px/1 color var(--v4-ink-30) (610-aps-meal-flow.css:4211-4215).",
+      "h": "d6982cae7b78"
     },
     "Приём · время и тип · 14": {
       "v": "=",

@@ -2994,8 +2994,8 @@
     },
     "Питание · перенос приёма · 27": {
       "v": "=",
-      "f": "meal-transfer-v4 — heys_move_modal_v1.js / 610-aps-meal-flow.css; food-meal-transfer-v4.test.js; разбор: «Отмена» — флекс 1, высота от 48px, выравнивание center, распределение center, р",
-      "h": "2d4054569114"
+      "f": "«Отмена» — .meal-transfer-v4__button--cancel 700 12.5px/1 color var(--v4-ink-2) min-height 44 — apps/web/styles/modules/610-aps-meal-flow.css:4799-4805.",
+      "h": "f20541e11efa"
     },
     "Питание · перенос приёма · 28": {
       "v": "=",
@@ -3140,8 +3140,8 @@
     },
     "Питание · копирование продукта · 28": {
       "v": "=",
-      "f": "meal-transfer-v4 — heys_move_modal_v1.js / 610-aps-meal-flow.css; food-meal-transfer-v4.test.js; разбор: «Отмена» — флекс 1, высота от 48px, выравнивание center, распределение center, р",
-      "h": "2d4054569114"
+      "f": "Копирование использует тот же .meal-transfer-v4__button--cancel color var(--v4-ink-2) — 610-aps-meal-flow.css:4799-4805.",
+      "h": "f20541e11efa"
     },
     "Питание · копирование продукта · 29": {
       "v": "=",

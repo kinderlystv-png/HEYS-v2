@@ -4,6 +4,10 @@ import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  substituteV4InkRolesAfterInk,
+  substituteV4InkRolesBeforeInk,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,7 +27,12 @@ const BLUE_COLORS = Object.freeze({
 function historyPaletteCss(paletteName) {
   const palette = paletteName === 'blue' ? BLUE_COLORS : CANVAS_COLORS;
   const inkRgb = paletteName === 'blue' ? '16, 24, 38' : '0, 0, 0';
-  return fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8')
+  const roles = { ink55: palette.ink55, ink55Blue: BLUE_COLORS.ink55 };
+  return substituteV4InkRolesAfterInk(
+    substituteV4InkRolesBeforeInk(
+      fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8'),
+      roles,
+    )
     .replaceAll('var(--bg)', palette.bg)
     .replaceAll('var(--c1)', palette.c1)
     .replaceAll('var(--c2)', palette.c2)
@@ -36,7 +45,9 @@ function historyPaletteCss(paletteName) {
     .replaceAll('var(--on-acs)', palette.onAcs)
     .replaceAll('var(--gr)', palette.gr)
     .replaceAll('var(--gr-bg)', palette.grBg)
-    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
+    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px'),
+    roles,
+  );
 }
 
 const FINISH_CSS = historyPaletteCss('sand');
@@ -193,7 +204,7 @@ function historyContractRows(colors) {
       alignItems: 'baseline', gap: '8px'
     }],
     ['34', '.sb-history-chart .sb-finish-chart-head span', 'шесть последних недель', {
-      flexGrow: '1', color: colors.ink56, fontSize: '11.5px', fontWeight: '600', lineHeight: '1.3'
+      flexGrow: '1', color: colors.ink55, fontSize: '11.5px', fontWeight: '600', lineHeight: '1.3'
     }],
     ['35', '.sb-history-chart .sb-finish-chart-head b', null, {
       color: colors.tx, fontSize: '17px', fontWeight: '800'
@@ -205,13 +216,13 @@ function historyContractRows(colors) {
       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px'
     }],
     ['38', '.sb-history-chart .sb-finish-chart-column:first-child b', null, {
-      color: colors.ink56, fontSize: '9.5px', fontWeight: '700', fontVariantNumeric: 'tabular-nums'
+      color: colors.ink55, fontSize: '9.5px', fontWeight: '700', fontVariantNumeric: 'tabular-nums'
     }],
     ['39', '.sb-history-chart .sb-finish-chart-column:first-child i', null, {
       width: '100%', borderRadius: '7px 7px 0px 0px', backgroundColor: colors.c2
     }],
     ['40', '.sb-history-chart .sb-finish-chart-column:first-child small', 'н1', {
-      color: colors.ink56, fontSize: '9px', fontWeight: '600'
+      color: colors.ink55, fontSize: '9px', fontWeight: '600'
     }],
     ['45', '.sb-history-chart .sb-finish-chart-column.is-latest b', null, {
       color: colors.ac, fontSize: '9.5px', fontWeight: '700'

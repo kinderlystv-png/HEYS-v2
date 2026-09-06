@@ -4,6 +4,10 @@ import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import {
+  substituteV4InkRolesAfterInk,
+  substituteV4InkRolesBeforeInk,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8');
@@ -14,21 +18,20 @@ const PALETTES = Object.freeze({
   sand: {
     bg: '#fffaf1', c1: '#f7efe2', c2: '#efe3cf', tx: '#201e1d',
     ac: '#8a4a20', acs: '#c67139', onAcs: '#2b1608',
-    ink56: 'rgba(0, 0, 0, .56)', ink62: 'rgba(0, 0, 0, .62)',
-    br: 'rgba(0, 0, 0, 0.1)',
+    ink55: 'rgba(0, 0, 0, .55)', ink56: 'rgba(0, 0, 0, .56)', br: 'rgba(0, 0, 0, 0.1)',
   },
   blue: {
     bg: '#ffffff', c1: '#eef3f9', c2: '#e2ecf6', tx: '#101826',
     ac: '#1d5e96', acs: '#2e7cc0', onAcs: '#ffffff',
-    ink56: 'rgba(16, 24, 38, .56)', ink62: 'rgba(16, 24, 38, .62)',
-    br: 'rgba(16, 24, 38, 0.1)',
+    ink55: 'rgba(16, 24, 38, .55)', ink56: 'rgba(16, 24, 38, .56)', br: 'rgba(16, 24, 38, 0.1)',
   },
 });
 
 function compileCss(paletteName) {
   const palette = PALETTES[paletteName];
   const inkRgb = paletteName === 'blue' ? '16, 24, 38' : '0, 0, 0';
-  return `:root{--v4-ink-rgb:${inkRgb};}\n${CSS
+  const roles = { ink55: palette.ink55, ink55Blue: PALETTES.blue.ink55 };
+  const body = substituteV4InkRolesAfterInk(substituteV4InkRolesBeforeInk(CSS, roles)
     .replaceAll('var(--sb-card)', palette.c1)
     .replaceAll('var(--sb-bg)', palette.bg)
     .replaceAll('var(--sb-tx)', palette.tx)
@@ -53,7 +56,8 @@ function compileCss(paletteName) {
     .replaceAll('var(--on-acs)', palette.onAcs)
     .replaceAll('var(--ink, 0, 0, 0)', inkRgb)
     .replaceAll('var(--ink)', inkRgb)
-    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px')}`;
+    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px'), roles);
+  return `:root{--v4-ink-rgb:${inkRgb};}\n${body}`;
 }
 
 const COMPILED_CSS = Object.freeze({
@@ -193,7 +197,7 @@ describe('strength builder · В2 superset flat v4 canvas contract', () => {
     expectStyle(titleCol, { display: 'flex', flexDirection: 'column', gap: '3px' }, '02');
     expectStyle(badge, {
       backgroundColor: 'transparent', fontSize: '9px', fontWeight: '700',
-      color: palette.ink62,
+      color: palette.ink55,
     }, '05');
     expectStyle(scroll, {
       display: 'flex', flexDirection: 'column',
@@ -223,6 +227,6 @@ describe('strength builder · В2 superset flat v4 canvas contract', () => {
     expectStyle(document.querySelector('.sb-ss-flat-name'), { color: palette.tx }, '10 blue');
     expectStyle(document.querySelector('.sb-ss-flat-count'), { color: palette.ink56 }, '11 blue');
     expectStyle(document.querySelector('.sb-ss-flat-chip'), { backgroundColor: palette.bg, color: palette.tx }, '13 blue');
-    expectStyle(document.querySelector('.sb-ss-badge--history'), { color: palette.ink62 }, '05 blue');
+    expectStyle(document.querySelector('.sb-ss-badge--history'), { color: palette.ink55 }, '05 blue');
   });
 });

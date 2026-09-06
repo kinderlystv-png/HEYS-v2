@@ -4,6 +4,10 @@ import React from 'react';
 import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import {
+  substituteV4InkRolesAfterInk,
+  substituteV4InkRolesBeforeInk,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = fs.readFileSync(path.join(WEB_DIR, 'strength/heys_strength_proposal_ui_v1.js'), 'utf8');
@@ -12,11 +16,11 @@ const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and
 
 const SAND = Object.freeze({
   c1: '#f7efe2', c2: '#efe3cf', tx: '#201e1d', gr: '#5c6a45', ac2: '#a1471c',
-  acs: '#c67139', onAcs: '#2b1608', ink56: 'rgba(0, 0, 0, .56)', ink62: 'rgba(0, 0, 0, .62)',
+  acs: '#c67139', onAcs: '#2b1608', ink55: 'rgba(0, 0, 0, .55)', ink56: 'rgba(0, 0, 0, .56)',
 });
 const BLUE = Object.freeze({
   c1: '#eef3f9', c2: '#e3ebf4', tx: '#101826', gr: '#5c6a45', ac2: '#1d5e96',
-  acs: '#3d7cc9', onAcs: '#f5f8fc', ink56: 'rgba(16, 24, 38, 0.64)', ink62: 'rgba(16, 24, 38, 0.64)',
+  acs: '#3d7cc9', onAcs: '#f5f8fc', ink55: 'rgba(16, 24, 38, 0.55)', ink56: 'rgba(16, 24, 38, 0.64)',
 });
 
 // Короткие роли канваса объявлены в продукте на корне зоны .sb-root
@@ -34,7 +38,8 @@ const ZONE_ROLE_DECL =
 function paletteCss(name) {
   const p = name === 'blue' ? BLUE : SAND;
   const inkRgb = name === 'blue' ? '16, 24, 38' : '0, 0, 0';
-  return `${BASE_CSS}\n${CSS}`
+  const roles = { ink55: p.ink55, ink55Blue: BLUE.ink55 };
+  return `${BASE_CSS}\n${substituteV4InkRolesAfterInk(substituteV4InkRolesBeforeInk(CSS, roles)
     .replace(ZONE_ROLE_DECL, '')
     .replaceAll('var(--c1)', p.c1)
     .replaceAll('var(--c2)', p.c2)
@@ -43,7 +48,7 @@ function paletteCss(name) {
     .replaceAll('var(--ac2)', p.ac2)
     .replaceAll('var(--acs)', p.acs)
     .replaceAll('var(--on-acs)', p.onAcs)
-    .replaceAll('var(--ink)', inkRgb);
+    .replaceAll('var(--ink)', inkRgb), roles)}`;
 }
 
 function loadParts() {
@@ -100,8 +105,8 @@ function applyPaletteVars(paletteName) {
   root.style.setProperty('--c1', p.c1);
   root.style.setProperty('--ink', inkRgb);
   root.style.setProperty('--ink56', p.ink56);
-  root.style.setProperty('--ink62', p.ink62);
-  root.style.setProperty('--v4-mark-1', p.ink62);
+  root.style.setProperty('--v4-ink-2', p.ink55);
+  root.style.setProperty('--v4-mark-1', p.ink55);
 }
 
 describe('strength builder · Правка · пропущен раньше (кадр Л6)', () => {
@@ -155,7 +160,7 @@ describe('strength builder · Правка · пропущен раньше (к�
     ['05', '.sb-missed-earlier-scroll', null, { overflowY: 'auto' }],
     ['06', '.sb-missed-earlier-card', null, { marginTop: '12px' }],
     ['07', '.sb-missed-earlier-timeline', null, { display: 'flex', alignItems: 'center', gap: '9px' }],
-    ['08', '.sb-missed-earlier-skipped-pill', 'пропущено 4 авг', { color: SAND.ink62 }],
+    ['08', '.sb-missed-earlier-skipped-pill', 'пропущено 4 авг', { color: SAND.ink55 }],
     ['09', '.sb-missed-earlier-replacement-line', 'замена сегодня, 10 авг', { fontSize: '12.5px', color: SAND.tx }],
     ['10', '.sb-missed-earlier-prose', null, { fontSize: '12px', lineHeight: '1.5', color: SAND.tx }],
     ['11', '.sb-missed-earlier-review', 'Посмотреть, что предлагает', { marginTop: '12px' }],

@@ -4,6 +4,10 @@ import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  substituteV4InkRolesAfterInk,
+  substituteV4InkRolesBeforeInk,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,10 +27,15 @@ const BLUE_COLORS = Object.freeze({
 function finishPaletteCss(paletteName) {
   const palette = paletteName === 'blue' ? BLUE_COLORS : CANVAS_COLORS;
   const inkRgb = paletteName === 'blue' ? '16, 24, 38' : '0, 0, 0';
+  const roles = { ink55: palette.ink55, ink55Blue: BLUE_COLORS.ink55 };
   // jsdom does not resolve nested custom properties inside rgba() and rejects
   // env() in shorthand. Compile only the canonical Canvas palette for this
   // computed-style regression; the production stylesheet remains untouched.
-  return fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8')
+  return substituteV4InkRolesAfterInk(
+    substituteV4InkRolesBeforeInk(
+      fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8'),
+      roles,
+    )
     .replaceAll('var(--bg)', palette.bg)
     .replaceAll('var(--c1)', palette.c1)
     .replaceAll('var(--c2)', palette.c2)
@@ -39,7 +48,9 @@ function finishPaletteCss(paletteName) {
     .replaceAll('var(--on-acs)', palette.onAcs)
     .replaceAll('var(--gr)', palette.gr)
     .replaceAll('var(--gr-bg)', palette.grBg)
-    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
+    .replaceAll('env(safe-area-inset-bottom, 0px)', '0px'),
+    roles,
+  );
 }
 
 const FINISH_CSS = finishPaletteCss('sand');
@@ -332,7 +343,7 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
         fontSize: '14px', fontWeight: '700', lineHeight: '1', fontVariantNumeric: 'tabular-nums'
       }, { value: '7' }],
       ['32', '.sb-finish-feedback.is-mood span', 'настроение', {
-        color: CANVAS_COLORS.ink56, fontSize: '9.5px', fontWeight: '600', lineHeight: '1'
+        color: CANVAS_COLORS.ink55, fontSize: '9.5px', fontWeight: '600', lineHeight: '1'
       }],
       ['33', '.sb-finish-feedback.is-wellbeing', null, {
         display: 'flex', flexGrow: '1', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -357,7 +368,7 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
       }, { placeholder: 'Заметка к тренировке' }],
       ['38', '.sb-finish-chart-head', null, { display: 'flex', alignItems: 'baseline', gap: '8px' }],
       ['39', '.sb-finish-chart-head > span', 'по весу и повторам каждой тренировки', {
-        flexGrow: '1', color: CANVAS_COLORS.ink56, fontSize: '11.5px', fontWeight: '600', lineHeight: '1.3'
+        flexGrow: '1', color: CANVAS_COLORS.ink55, fontSize: '11.5px', fontWeight: '600', lineHeight: '1.3'
       }],
       ['40', '.sb-finish-chart', null, {
         display: 'flex', alignItems: 'flex-end', gap: '6px', height: '112px', marginTop: '12px'
@@ -366,10 +377,10 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
         display: 'flex', flexGrow: '1', flexDirection: 'column', alignItems: 'center', gap: '5px'
       }],
       ['42', '.sb-finish-chart-column:first-child > b', '88', {
-        color: CANVAS_COLORS.ink56, fontSize: '9.5px', fontWeight: '700', lineHeight: '1', fontVariantNumeric: 'tabular-nums'
+        color: CANVAS_COLORS.ink55, fontSize: '9.5px', fontWeight: '700', lineHeight: '1', fontVariantNumeric: 'tabular-nums'
       }],
       ['43', '.sb-finish-chart-column:nth-child(1) > i', null, { width: '100%', height: '41px', borderRadius: '7px 7px 0px 0px', backgroundColor: CANVAS_COLORS.c2 }],
-      ['44', '.sb-finish-chart-column:nth-child(1) > small', 'н1', { color: CANVAS_COLORS.ink56, fontSize: '9px', fontWeight: '600', lineHeight: '1' }],
+      ['44', '.sb-finish-chart-column:nth-child(1) > small', 'н1', { color: CANVAS_COLORS.ink55, fontSize: '9px', fontWeight: '600', lineHeight: '1' }],
       ['45', '.sb-finish-chart-column:nth-child(2) > i', null, { width: '100%', height: '51px', borderRadius: '7px 7px 0px 0px', backgroundColor: CANVAS_COLORS.c2 }],
       ['46', '.sb-finish-chart-column:nth-child(3) > i', null, { width: '100%', height: '46px', borderRadius: '7px 7px 0px 0px', backgroundColor: CANVAS_COLORS.c2 }],
       ['47', '.sb-finish-chart-column:nth-child(4) > i', null, { width: '100%', height: '67px', borderRadius: '7px 7px 0px 0px', backgroundColor: CANVAS_COLORS.c2 }],

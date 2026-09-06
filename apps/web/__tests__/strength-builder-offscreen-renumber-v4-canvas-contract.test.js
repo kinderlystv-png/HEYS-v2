@@ -4,6 +4,10 @@ import React from 'react';
 import { fileURLToPath } from 'url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  substituteV4InkRolesAfterInk,
+  substituteV4InkRolesBeforeInk,
+} from './helpers/strength-canvas-contract-harness.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,10 +22,13 @@ const CANVAS = Object.freeze({
   ac: '#8a4a20', acs: '#c67139', onAcs: '#2b1608', ac2: '#b4442a',
   gr: '#5c6a45', grBg: '#eaefe0',
   ink06: 'rgba(0, 0, 0, 0.06)', ink42: 'rgba(0, 0, 0, 0.42)',
-  ink56: 'rgba(0, 0, 0, 0.56)', ink62: 'rgba(0, 0, 0, 0.62)'
+  ink56: 'rgba(0, 0, 0, 0.56)', ink55: 'rgba(0, 0, 0, 0.55)'
 });
 
-const COMPUTED_CSS = CSS
+const INK_ROLES = Object.freeze({ ink55: CANVAS.ink55 });
+
+const COMPUTED_CSS = substituteV4InkRolesAfterInk(
+  substituteV4InkRolesBeforeInk(CSS, INK_ROLES)
   .replaceAll('var(--sb-card)', CANVAS.c1)
   .replaceAll('var(--sb-bg)', CANVAS.bg)
   .replaceAll('var(--sb-tx)', CANVAS.tx)
@@ -45,7 +52,9 @@ const COMPUTED_CSS = CSS
   .replaceAll('var(--gr-bg)', CANVAS.grBg)
   .replaceAll('var(--ink, 15, 23, 42)', '0, 0, 0')
   .replaceAll('var(--ink)', '0, 0, 0')
-  .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
+  .replaceAll('env(safe-area-inset-bottom, 0px)', '0px'),
+  INK_ROLES,
+);
 
 function lastRule(selector) {
   const re = new RegExp(`(${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^{]*\\{[^}]*\\})`, 'g');
@@ -264,7 +273,7 @@ describe('Е5 · перенумерация · canvas contract', () => {
       const workBg = getComputedStyle(workBadge).backgroundColor;
       expect(workBg === 'rgb(234, 239, 224)' || workBg === CANVAS.grBg).toBe(true);
       const warmupColor = getComputedStyle(warmupBadge).color;
-      expect(warmupColor === 'rgba(0, 0, 0, 0.62)' || warmupColor === CANVAS.ink62).toBe(true);
+      expect(warmupColor === 'rgba(0, 0, 0, 0.55)' || warmupColor === CANVAS.ink55).toBe(true);
 
       const delta = document.querySelector('.sb-renumber-delta');
       const deltaColor = getComputedStyle(delta).color;
