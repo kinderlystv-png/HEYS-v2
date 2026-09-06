@@ -96,7 +96,7 @@ describe('офлайн-очередь и черновик', () => {
       viewerRole: 'client',
     }));
     expect(container.querySelector('.msg-bubble-queued')).toBeTruthy();
-    expect(container.querySelector('.msg-meta').textContent).toBe('В очереди…');
+    expect(container.querySelector('.msg-meta').textContent).toBe('Ожидает сети');
     // У неотправленного сообщения нечего редактировать и не на что отвечать.
     expect(container.querySelectorAll('.msg-action')).toHaveLength(0);
   });

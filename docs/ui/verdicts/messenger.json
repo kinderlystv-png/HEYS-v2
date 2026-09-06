@@ -130,28 +130,28 @@
       "h": "396a83c9049b"
     },
     "вид · меню «Ещё»": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё» data-vid «вид · меню «Ещё»»: контракт «карточка 232 px под кнопкой, справа 12, фон --md, радиус 18, поля 6, тень 0 14px 40px т…». Закроет CSS-сверка блока с stop-кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:231-272 .messenger-header-menu 232px right 12 radius 18 shadow 24% items 44px; label 13px hint 11px",
       "h": "3ef820184d51"
     },
     "вид · лист действий": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий» data-vid «вид · лист действий»: контракт «снизу, поля 14/10/18, фон --md, радиус 26 сверху, тень 0 -12px 40px тени 20 %, под ним …». Закроет CSS-сверка блока с stop-кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:2926-2983 .messenger-action-sheet* + backdrop --scrim blur(2.5px); heys_messenger_v1.js MessageActionSheet long-press",
       "h": "3cb970bbbbe3"
     },
     "вид · удаление": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения» data-vid «вид · удаление»: контракт «центральная модалка: «Удалить сообщение?» 18 px/700, текст «У куратора оно тоже исчезне…». Закроет CSS-сверка блока с stop-кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1243-1345 .messenger-confirm-* column actions gap 8; heys_messenger_v1.js:1185-1246 DeleteConfirmDialog без preview/icon; messenger-deletion-confirm.test.js",
       "h": "a75fb6a127ef"
     },
     "вид · поиск": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск» data-vid «вид · поиск»: контракт «поле 44 px на --c1 радиус 22, поля 0/14, лупа 16 px чернил 55 %; чипы фильтра 34 px по …». Закроет CSS-сверка блока с stop-кадром (CSS lane).",
+      "f": "поле/результаты сведены (1000-messenger.css .messenger-search*; SearchPanel); чипы min-height 34px без изменений — конфликт 44pt, docs/ui/UI_V4_FINDINGS.md#две-цели-messenger-контракт-зоны-просит-36-и-34-px-против-решения-о-44",
       "h": "54e0abb5aa17"
     },
     "вид · согласие": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку» data-vid «вид · согласие»: контракт «центральная модалка радиус 26, поля 22/18/18: заголовок 18 px/700, текст 12,5 px/500 че…». Закроет CSS-сверка блока с stop-кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1243-1345 .messenger-consent-* radius 26 padding 22/18/18 scrim blur(2.5px); heys_messenger_v1.js:4785-4816 consent prompt + consent-doc-body; messenger-transcription-revoke-sheet.test.js",
       "h": "b62f79fbdc7a"
     },
     "отправка": {
@@ -260,528 +260,540 @@
       "h": "3383fdae227a"
     },
     "Мессенджер · пустой тред · 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт ««Отправьте фото еды, вопрос или как себя чувствуете» — шрифт 500 12.5px/1.5 Figtree, цв…». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .messenger-empty__text + heys_messenger_v1.js EmptyThread copy — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "8b3c2896639f"
     },
     "Мессенджер · пустой тред · 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «направление column, зазор 8px, отступ сверху 20px, ширина 100%». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .messenger-empty__prompts column gap 8px mt 20px — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "254a66b35ed9"
     },
     "Мессенджер · пустой тред · 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт ««Фото завтрака» — распределение center». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .messenger-empty__prompt justify-content center — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "e0ea07dcc9b4"
     },
     "Мессенджер · тред с карточкой дня · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .messenger-avatar initials — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "22e2a61fb245"
     },
     "Мессенджер · тред с карточкой дня · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .messenger-title-stack flex 1 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "55bfcd532bba"
     },
     "Мессенджер · тред с карточкой дня · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «точка». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .messenger-subtitle__dot — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "09ccbaca32ae"
     },
     "Мессенджер · тред с карточкой дня · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «распределение center». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .messenger-show-older align-self center — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "03dc46cd7bc6"
     },
     "Мессенджер · тред с карточкой дня · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««Показать ранее · 14» — высота от 36px, поля 0 14px, радиус 999px, фон var(--c1), шрифт…». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .messenger-show-older 36px/0 14px/999px/--v4-c1 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "d746e6e19cb9"
     },
     "Мессенджер · тред с карточкой дня · 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «поля 6px 6px 8px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-bubble:has(.msg-attachments-count-1) padding 6/6/8 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "5b6ebe00a10d"
     },
     "Мессенджер · тред с карточкой дня · 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««фото обеда» — ширина 170px, высота 118px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-attachment-item 170x118 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "408d7e66f25e"
     },
     "Мессенджер · тред с карточкой дня · 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««13:31» — выключка left». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-row-theirs .msg-meta-row flex-start — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "bc41ea7a7b39"
     },
     "Мессенджер · тред с карточкой дня · 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «выравнивание center, зазор 7px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__head gap 7px — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "e7e38fcb6a6f"
     },
     "Мессенджер · тред с карточкой дня · 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««Внесено в дневник» — флекс 1, шрифт 700 12.5px/1 Figtree, цвет var(--tx)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__title flex 1 12.5px/700 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "7305b55804d7"
     },
     "Мессенджер · тред с карточкой дня · 11": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««Обед · 13:05» — шрифт 500 11px/1 Figtree, цвет var(--ink-2)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__meta 11px/500 --v4-ink-data — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "e3bc42508305"
     },
     "Мессенджер · тред с карточкой дня · 12": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «направление column, зазор 5px, отступ сверху 9px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__items gap 5px mt 9px — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "c392c8fd31c9"
     },
     "Мессенджер · тред с карточкой дня · 13": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «зазор 8px, шрифт 500 12px/1.3 Figtree, цвет var(--tx)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__item gap 8px 12px/1.3 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "90ec6f61c6ee"
     },
     "Мессенджер · тред с карточкой дня · 14": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««180 г» — моноцифры: цвет var(--ink-2)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__grams --v4-ink-data — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "1da9a6275161"
     },
     "Мессенджер · тред с карточкой дня · 15": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««210 ккал» — моноцифры: цвет var(--ink-2), ширина 56px, выключка right». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__kcal 56px right --v4-ink-data — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "166a22a2748c"
     },
     "Мессенджер · тред с карточкой дня · 16": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «выравнивание center, распределение space-between, отступ сверху 10px, разделитель сверх…». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__foot border-top mt 10 pt 9 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "bc9b092ecb38"
     },
     "Мессенджер · тред с карточкой дня · 17": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««Итого 540 ккал» — моноцифры: шрифт 700 11.5px/1 Figtree, цвет var(--tx)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__total 11.5px/700 --v4-ink — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "9db5a6e50cf8"
     },
     "Мессенджер · тред с карточкой дня · 18": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт ««Открыть день» — шрифт 700 11.5px/1 Figtree, цвет var(--ac)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css .msg-applied-card__open 11.5px/700 --v4-act — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
       "h": "17e2d0a51910"
     },
     "Мессенджер · Ждём и подсказка · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-avatar 38×38 — messenger-header-redesign.test.js + razbor шапка (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "22e2a61fb245"
     },
     "Мессенджер · Ждём и подсказка · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-title-stack flex:1 — 1000-messenger.css:191-197 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "55bfcd532bba"
     },
     "Мессенджер · Ждём и подсказка · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «точка». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-subtitle__dot 6×6 — 1000-messenger.css:215-221 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "09ccbaca32ae"
     },
     "Мессенджер · Ждём и подсказка · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт ««8:40» — выключка left». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-row-theirs .msg-meta-row justify-content:flex-start — 1000-messenger.css:608-610 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "114094db1c1a"
     },
     "Мессенджер · Ждём и подсказка · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «выравнивание flex-start, зазор 9px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-food-hint align flex-start gap 9px — 1000-messenger.css:1845-1855 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "e02547605b94"
     },
     "Мессенджер · Ждём и подсказка · 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «флекс 1, шрифт 500 12px/1.45 Figtree, цвет var(--tx)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-food-hint__text 500 12px/1.45 var(--v4-ink); body flex:1 — composer-redesign + razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "5cb6d28abb1d"
     },
     "Мессенджер · Ждём и подсказка · 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт ««Скрыть» — шрифт 600 11.5px/1 Figtree, цвет var(--ink-2), флекс none». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-food-hint__hide 600 11.5px/1 var(--v4-ink-2) flex:none — 1000-messenger.css:1903-1917 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "1220c0faa312"
     },
     "Мессенджер · Ждём и подсказка · 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «зазор 6px, отступ сверху 10px, обрез hidden». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-food-hint__actions gap 6px margin-top 10px overflow hidden — 1000-messenger.css:1882-1888 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "390bb5964d74"
     },
     "Мессенджер · Ждём и подсказка · 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт ««Ужин в 19:20,» — цвет var(--tx)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-input color var(--v4-ink) — 1000-messenger.css:1961 + razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "627a347cc8dc"
     },
     "Мессенджер · запись голосового · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-avatar 38×38 — messenger-header-redesign.test.js + razbor шапка (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "22e2a61fb245"
     },
     "Мессенджер · запись голосового · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-title-stack flex:1 — 1000-messenger.css:191-197 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "55bfcd532bba"
     },
     "Мессенджер · запись голосового · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «точка». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".messenger-subtitle__dot 6×6 — 1000-messenger.css:215-221 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "09ccbaca32ae"
     },
     "Мессенджер · запись голосового · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «поля 9px 11px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-bubble:has(.msg-intent) padding 9px 11px — 1000-messenger.css (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "2f4229d1b2fa"
     },
     "Мессенджер · запись голосового · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «радиус 12px, фон var(--bg), поля 9px 11px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-intent radius 12px bg var(--v4-bg) padding 9px 11px — razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "23f928b2c86d"
     },
     "Мессенджер · запись голосового · 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт ««71,4 кг» — моноцифры: шрифт 800 20px/1 Figtree, цвет var(--tx), отступ сверху 6px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-intent__value 800 20px/1 var(--v4-ink) margin-top 6px — states-redesign + razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "388b729a566e"
     },
     "Мессенджер · запись голосового · 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт ««натощак · минус 200 г за сутки» — моноцифры: шрифт 500 11.5px/1.3 Figtree, цвет var(--…». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-intent__details 500 11.5px/1.3 var(--v4-ink-2) — razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "6a51267d4a9a"
     },
     "Мессенджер · запись голосового · 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «выравнивание center, зазор 8px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-audio align center gap 8px — 1000-messenger.css:791-798 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "b5aac2f109ce"
     },
     "Мессенджер · запись голосового · 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «ширина 30px, высота 30px, радиус 999px, фон var(--bg), выравнивание center, распределен…». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "5085f47d4f9c"
+      "v": "≠",
+      "f": "кадр 30×30 play; продукт .msg-audio-play 44×44 — accessibility, тач-цели 6 сентября (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "5085f47d4f9c",
+      "reasonCode": "accessibility",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#две-цели-messenger-контракт-зоны-просит-36-и-34-px-против-решения-о-44"
     },
     "Мессенджер · запись голосового · 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, выравнивание center, зазор 2px, высота 22px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-audio-wave align center gap 2px height 22px — 1000-messenger.css:844-853 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "b1bbe21078a4"
     },
     "Мессенджер · запись голосового · 11": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 7px, радиус 2px, фон rgba(var(--ink),.2)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "b315c80229a1"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "b315c80229a1",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 12": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 15px, радиус 2px, фон rgba(var(--ink),.28)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "4598300e6669"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "4598300e6669",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 13": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 22px, радиус 2px, фон rgba(var(--ink),.28)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "e5ad1a60395d"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "e5ad1a60395d",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 14": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 11px, радиус 2px, фон rgba(var(--ink),.2)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "ef91d1d5dee9"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "ef91d1d5dee9",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 15": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 18px, радиус 2px, фон rgba(var(--ink),.28)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "1cb8a314f539"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "1cb8a314f539",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 16": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 8px, радиус 2px, фон rgba(var(--ink),.2)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "ffa2cf273b97"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "ffa2cf273b97",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 17": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 14px, радиус 2px, фон rgba(var(--ink),.24)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "597f4d2ace1b"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "597f4d2ace1b",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 18": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 20px, радиус 2px, фон rgba(var(--ink),.28)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "b99e8130de51"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "b99e8130de51",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 19": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 9px, радиус 2px, фон rgba(var(--ink),.2)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "40f91bc47833"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "40f91bc47833",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 20": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 16px, радиус 2px, фон rgba(var(--ink),.24)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
-      "h": "40c7b1eb2b6c"
+      "v": "—",
+      "f": "высота столбика из данных вложения (inline height), кадр — стоп-кадр waveform (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "40c7b1eb2b6c",
+      "naKind": "demo-only"
     },
     "Мессенджер · запись голосового · 21": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт ««0:32» — моноцифры: шрифт 600 11px/1 Figtree, цвет var(--ink-2), флекс none». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-audio-meta 600 11px var(--v4-ink-2) — 1000-messenger.css:891-900 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "85c4c09704f3"
     },
     "Мессенджер · запись голосового · 22": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт ««Хорошо идёте. На ужин добавьте белок — грудку или» — шрифт 500 12.5px/1.45 Figtree, цв…». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": ".msg-audio-transcript 500 12.5px/1.45 margin-top 9px var(--v4-ink) — razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "90eb494b5965"
     },
     "Мессенджер · запись голосового · 23": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт ««9:02» — выключка left». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "theirs meta left — .msg-row-theirs .msg-meta-row flex-start (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "d9d98437fb72"
     },
     "Мессенджер · запись голосового · 24": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота от 44px, радиус 22px, фон var(--tint), выравнивание center, зазор 10px,…». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "b3938d3c0473"
     },
     "Мессенджер · запись голосового · 25": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «ширина 8px, высота 8px, радиус 999px, фон var(--red), флекс none». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "fb1bd4fc795d"
     },
     "Мессенджер · запись голосового · 26": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт ««0:14» — моноцифры: шрифт 700 13px/1 Figtree, цвет var(--tx)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "25e363cec4d9"
     },
     "Мессенджер · запись голосового · 27": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, выравнивание center, зазор 2px, высота 16px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "e504378cffa1"
     },
     "Мессенджер · запись голосового · 28": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 5px, радиус 2px, фон rgba(var(--ink),.22)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "b78b22d51003"
     },
     "Мессенджер · запись голосового · 29": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 11px, радиус 2px, фон rgba(var(--ink),.28)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "5e2f53b45830"
     },
     "Мессенджер · запись голосового · 30": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 16px, радиус 2px, фон rgba(var(--ink),.3)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "99cf20a9fd95"
     },
     "Мессенджер · запись голосового · 31": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 8px, радиус 2px, фон rgba(var(--ink),.22)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "c6fb9db54f96"
     },
     "Мессенджер · запись голосового · 32": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 13px, радиус 2px, фон rgba(var(--ink),.28)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "f79ddc9cbf65"
     },
     "Мессенджер · запись голосового · 33": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «флекс 1, высота 6px, радиус 2px, фон rgba(var(--ink),.2)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "e1020eb671e9"
     },
     "Мессенджер · запись голосового · 34": {
       "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт ««Стоп» — шрифт 700 11.5px/1 Figtree, цвет var(--ac), флекс none». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "f3c881391720"
     },
     "Мессенджер · лист действий · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:164-176 .messenger-avatar 38px initials — кадр шапки под листом",
       "h": "22e2a61fb245"
     },
     "Мессенджер · лист действий · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:191-197 .messenger-title-stack flex:1",
       "h": "55bfcd532bba"
     },
     "Мессенджер · лист действий · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «точка». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:215-221 .messenger-subtitle__dot 6px",
       "h": "09ccbaca32ae"
     },
     "Мессенджер · лист действий · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт ««13:31» — выключка left». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1041+ .msg-meta-row .msg-meta left-aligned time under bubble",
       "h": "bc41ea7a7b39"
     },
     "Мессенджер · лист действий · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:2926-2933 .messenger-action-sheet-backdrop absolute inset 0 --scrim blur(2.5px)",
       "h": "3f52b0853401"
     },
     "Мессенджер · лист действий · 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт ««Обед в 13:05, гречка 180 г, грудка 120 г» — шрифт 500 12px/1.4 Figtree, цвет var(--ink…». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:2947-2956 .messenger-action-sheet__quote 12px/500 --v4-ink-data ellipsis",
       "h": "898623eb818e"
     },
     "Мессенджер · лист действий · 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «цвет var(--red)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:2981-2983 .messenger-action-sheet__item--danger --v4-bad-text",
       "h": "ec306ca64254"
     },
     "Мессенджер · меню Ещё · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:164-176 .messenger-avatar в шапке кадра",
       "h": "22e2a61fb245"
     },
     "Мессенджер · меню Ещё · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:191-197 .messenger-title-stack flex:1",
       "h": "55bfcd532bba"
     },
     "Мессенджер · меню Ещё · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «точка». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:215-221 .messenger-subtitle__dot",
       "h": "09ccbaca32ae"
     },
     "Мессенджер · меню Ещё · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «фон var(--c1)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:286-288 .messenger-header-button.is-open background --v4-c1",
       "h": "5edecf6fdc97"
     },
     "Мессенджер · меню Ещё · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт ««13:31» — выключка left». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1041+ .msg-meta time left under theirs bubble in кадре",
       "h": "bc41ea7a7b39"
     },
     "Мессенджер · поиск · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "MessengerHeader searchMode сохраняет .messenger-avatar клиента",
       "h": "22e2a61fb245"
     },
     "Мессенджер · поиск · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:191-197 .messenger-title-stack flex:1 в searchMode",
       "h": "55bfcd532bba"
     },
     "Мессенджер · поиск · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт ««18 сообщений найдено» — цвет var(--ink-2)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:211-213 .messenger-subtitle--search-count --v4-ink-2; SearchPanel onSummaryChange formatSearchCount",
       "h": "215e64fda25d"
     },
     "Мессенджер · поиск · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «зазор 7px, поля 10px 14px 8px, обрез hidden». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:3074-3080 .messenger-search__filters gap 7px padding 10/14/8 overflow hidden",
       "h": "a93c02b7f852"
     },
     "Мессенджер · поиск · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «флекс 1, обрез hidden». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:3108-3129 .messenger-search__results + __scroll flex 1 overflow-y auto",
       "h": "2994d88978f7"
     },
     "Мессенджер · без сети · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:164-176 .messenger-avatar 38px/12.5px/700 на --v4-hero; heys_messenger_v1.js MessengerHeader",
       "h": "22e2a61fb245"
     },
     "Мессенджер · без сети · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:191-195 .messenger-title-stack flex:1; heys_messenger_v1.js:1567",
       "h": "55bfcd532bba"
     },
     "Мессенджер · без сети · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «точка: фон var(--red)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:3220-3222 .messenger-subtitle__dot.is-offline background var(--v4-bad-text); heys_messenger_v1.js:4375 offline prop",
       "h": "f75e427d66d9"
     },
     "Мессенджер · без сети · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт ««18:30» — выключка left». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:608-610 .msg-row-theirs .msg-meta-row justify-content:flex-start; msg-meta 10.5px",
       "h": "56c0129e857f"
     },
     "Мессенджер · без сети · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт ««Ужин в 19:20, творог 200 г» — прозрачность .6». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:3212-3214 .msg-bubble-queued opacity:0.6",
       "h": "76a4b170e84e"
     },
     "Мессенджер · без сети · 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «прозрачность .6, поля 6px 6px 8px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:3216-3218 .msg-bubble-queued:has(.msg-attachments) padding 6px 6px 8px",
       "h": "a11fe1d31b25"
     },
     "Мессенджер · без сети · 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт ««фото ужина» — ширина 170px, высота 118px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:977-982 .msg-attachments-count-1 .msg-attachment-item 170×118",
       "h": "c58abcaeccef"
     },
     "Мессенджер · без сети · 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт ««Повторить» — шрифт 700 11.5px/1 Figtree, цвет var(--ac), флекс none». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:3188-3203 .messenger-offline-bar__retry 700 11.5px var(--v4-act)",
       "h": "426546800323"
     },
     "Мессенджер · без сети · 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт ««Спрошу завтра про пере» — цвет var(--tx)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:612-617 .msg-meta color var(--v4-ink-data); heys_messenger_v1.js queued thread",
       "h": "a4882b2b8365"
     },
     "Мессенджер · согласие на расшифровку · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:164-176 .messenger-avatar 38px; фон кадра — тред за модалкой",
       "h": "22e2a61fb245"
     },
     "Мессенджер · согласие на расшифровку · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:191-195 .messenger-title-stack flex:1",
       "h": "55bfcd532bba"
     },
     "Мессенджер · согласие на расшифровку · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «точка». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:248-256 .messenger-subtitle__dot 7px --v4-ok-text online",
       "h": "09ccbaca32ae"
     },
     "Мессенджер · согласие на расшифровку · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт ««18:30» — выключка left». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:608-610 .msg-row-theirs .msg-meta-row justify-content:flex-start",
       "h": "56c0129e857f"
     },
     "Мессенджер · согласие на расшифровку · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1243-1254 .messenger-consent-backdrop absolute inset 0 var(--scrim) blur(2.5px)",
       "h": "3f52b0853401"
     },
     "Мессенджер · согласие на расшифровку · 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт ««Подробнее о данных» — шрифт 600 12px/1 Figtree, цвет var(--ac), отступ сверху 12px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1282-1291 .messenger-consent-link 12px/600 var(--v4-act) margin-top 12px; heys_messenger_v1.js:4799",
       "h": "ce332d1ef053"
     },
     "Мессенджер · согласие на расшифровку · 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «направление column, зазор 8px, отступ сверху 18px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1293-1299 .messenger-consent-actions flex-direction column gap 8 margin-top 18px",
       "h": "9412246a29dc"
     },
     "Мессенджер · согласие на расшифровку · 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт ««Расшифровывать» — главная кнопка». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1321-1325 .messenger-consent-primary min-height 48 var(--v4-act); heys_messenger_v1.js:4809 «Расшифровывать»",
       "h": "c475f14e0d5b"
     },
     "Мессенджер · удаление сообщения · 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт ««ОЛ» — аватар». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:164-176 .messenger-avatar 38px",
       "h": "22e2a61fb245"
     },
     "Мессенджер · удаление сообщения · 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «флекс 1». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:191-195 .messenger-title-stack flex:1",
       "h": "55bfcd532bba"
     },
     "Мессенджер · удаление сообщения · 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «точка». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:248-256 .messenger-subtitle__dot 7px online",
       "h": "09ccbaca32ae"
     },
     "Мессенджер · удаление сообщения · 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт ««13:31» — выключка left». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:604-606 .msg-row-mine .msg-meta-row justify-content:flex-end; кадр 13:31",
       "h": "bc41ea7a7b39"
     },
     "Мессенджер · удаление сообщения · 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1243-1254 .messenger-confirm-backdrop absolute var(--scrim) blur(2.5px)",
       "h": "3f52b0853401"
     },
     "Мессенджер · удаление сообщения · 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «направление column, зазор 8px, отступ сверху 20px». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1301-1303 .messenger-confirm-actions column gap 8 margin-top 20px",
       "h": "c75d70d2f59c"
     },
     "Мессенджер · удаление сообщения · 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт ««Удалить» — цвет var(--red)». Закроет geometry/CSS-сверка элемента разбора с кадром (CSS lane).",
+      "v": "=",
+      "f": "1000-messenger.css:1335-1337 .messenger-confirm-delete color var(--v4-bad-text) background var(--v4-c1)",
       "h": "302c88280412"
     },
     "как читать графику": {
@@ -791,553 +803,555 @@
       "naKind": "demo-only"
     },
     "Мессенджер · пустой тред · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 01)",
       "h": "6c769f161d19"
     },
     "Мессенджер · пустой тред · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 02)",
       "h": "46ca71899b7c"
     },
     "Мессенджер · пустой тред · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 03)",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · пустой тред · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 04)",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · пустой тред · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 05)",
       "h": "099c32fbc998"
     },
     "Мессенджер · пустой тред · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 06)",
       "h": "49950e24d175"
     },
     "Мессенджер · пустой тред · рисунок 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «поле рисунка 26×26 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 07)",
       "h": "c9e176031528"
     },
     "Мессенджер · пустой тред · рисунок 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «кривая, точки M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4-.8L3 21l1.9-4.5A8.4 8.4 0 0 …». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 08)",
       "h": "5f4067ffaeb7"
     },
     "Мессенджер · пустой тред · рисунок 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «поле рисунка 20×20 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 09)",
       "h": "c3a7fc884572"
     },
     "Мессенджер · пустой тред · рисунок 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 …». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 10)",
       "h": "07c8a3766bf2"
     },
     "Мессенджер · пустой тред · рисунок 11": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «точка r 4 в (12,13)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 11)",
       "h": "b2af0cda4915"
     },
     "Мессенджер · пустой тред · рисунок 12": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 12)",
       "h": "099fc8c7a53e"
     },
     "Мессенджер · пустой тред · рисунок 13": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 13)",
       "h": "1007ea53cad8"
     },
     "Мессенджер · пустой тред · рисунок 14": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · пустой тред»: контракт «кривая, точки M12 19V5M5 12l7-7 7 7». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · пустой тред · рисунок 14)",
       "h": "241c8717ac09"
     },
     "Мессенджер · тред с карточкой дня · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 01)",
       "h": "6c769f161d19"
     },
     "Мессенджер · тред с карточкой дня · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 02)",
       "h": "46ca71899b7c"
     },
     "Мессенджер · тред с карточкой дня · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 03)",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · тред с карточкой дня · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 04)",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · тред с карточкой дня · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 05)",
       "h": "099c32fbc998"
     },
     "Мессенджер · тред с карточкой дня · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 06)",
       "h": "49950e24d175"
     },
     "Мессенджер · тред с карточкой дня · рисунок 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «поле рисунка 11×11 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 07)",
       "h": "56fd9b649297"
     },
     "Мессенджер · тред с карточкой дня · рисунок 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «кривая, точки M20 6L9 17l-5-5». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 08)",
       "h": "2f2b6477120d"
     },
     "Мессенджер · тред с карточкой дня · рисунок 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «поле рисунка 20×20 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 09)",
       "h": "c3a7fc884572"
     },
     "Мессенджер · тред с карточкой дня · рисунок 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 …». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 10)",
       "h": "07c8a3766bf2"
     },
     "Мессенджер · тред с карточкой дня · рисунок 11": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «точка r 4 в (12,13)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 11)",
       "h": "b2af0cda4915"
     },
     "Мессенджер · тред с карточкой дня · рисунок 12": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 12)",
       "h": "099fc8c7a53e"
     },
     "Мессенджер · тред с карточкой дня · рисунок 13": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 13)",
       "h": "1007ea53cad8"
     },
     "Мессенджер · тред с карточкой дня · рисунок 14": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · тред с карточкой дня»: контракт «кривая, точки M12 19V5M5 12l7-7 7 7». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js ICON_DEFS viewBox 0 0 24 24 — paths/circles match canvas рисунок rows (Мессенджер · тред с карточкой дня · рисунок 14)",
       "h": "241c8717ac09"
     },
     "Мессенджер · Ждём и подсказка · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.more 19×19 viewBox 0 0 24 24 — heys_messenger_v1.js (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "6c769f161d19"
     },
     "Мессенджер · Ждём и подсказка · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "more circle cx 5 cy 12 r 1.4 fill currentColor — ICON_DEFS (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "46ca71899b7c"
     },
     "Мессенджер · Ждём и подсказка · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "more circle cx 12 cy 12 r 1.4 — ICON_DEFS (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · Ждём и подсказка · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "more circle cx 19 cy 12 r 1.4 — ICON_DEFS (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · Ждём и подсказка · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "close 18×18 M18 6L6 18M6 6l12 12 — ICON_DEFS + header (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "099c32fbc998"
     },
     "Мессенджер · Ждём и подсказка · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "close path M18 6L6 18M6 6l12 12 — ICON_DEFS (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "49950e24d175"
     },
     "Мессенджер · Ждём и подсказка · рисунок 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «поле рисунка 11×11 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "check 11×11 M20 6L9 17l-5-5 — ICON_DEFS.check + day-checklist tick (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "56fd9b649297"
     },
     "Мессенджер · Ждём и подсказка · рисунок 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «кривая, точки M20 6L9 17l-5-5». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "check path M20 6L9 17l-5-5 — ICON_DEFS.check (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "2f2b6477120d"
     },
     "Мессенджер · Ждём и подсказка · рисунок 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «поле рисунка 16×16 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "clock 16×16 — FoodHintCard Icon clock size 16 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "ddf4bd54ba6a"
     },
     "Мессенджер · Ждём и подсказка · рисунок 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «точка r 9 в (12,12)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "clock circle r 9 at 12,12 — ICON_DEFS.clock paths (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "7f48d89037c0"
     },
     "Мессенджер · Ждём и подсказка · рисунок 11": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «кривая, точки M12 7v5l3.5 2». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "clock path M12 5.5V12l2.8 1.6 — ICON_DEFS.clock (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "501b7739af8d"
     },
     "Мессенджер · Ждём и подсказка · рисунок 12": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «поле рисунка 20×20 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "camera 20×20 viewBox — composer Icon camera size 19 (attach 44 target) (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "c3a7fc884572"
     },
     "Мессенджер · Ждём и подсказка · рисунок 13": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 …». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "camera path M23 19a2… — ICON_DEFS.camera (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "07c8a3766bf2"
     },
     "Мессенджер · Ждём и подсказка · рисунок 14": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «точка r 4 в (12,13)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "camera circle cx 12 cy 13 r 4 — ICON_DEFS.camera (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "b2af0cda4915"
     },
     "Мессенджер · Ждём и подсказка · рисунок 15": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "mic path M12 1a3… — ICON_DEFS.mic (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "099fc8c7a53e"
     },
     "Мессенджер · Ждём и подсказка · рисунок 16": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "mic path M19 10v1… — ICON_DEFS.mic (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "1007ea53cad8"
     },
     "Мессенджер · Ждём и подсказка · рисунок 17": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · Ждём и подсказка»: контракт «кривая, точки M12 19V5M5 12l7-7 7 7». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "send M12 19V5M5 12l7-7 7 7 — ICON_DEFS.send size 20 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "241c8717ac09"
     },
     "Мессенджер · запись голосового · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.more 19×19 viewBox 0 0 24 24 — heys_messenger_v1.js (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "6c769f161d19"
     },
     "Мессенджер · запись голосового · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "more circle cx 5 cy 12 r 1.4 fill currentColor — ICON_DEFS (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "46ca71899b7c"
     },
     "Мессенджер · запись голосового · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "more circle cx 12 cy 12 r 1.4 — ICON_DEFS (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · запись голосового · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "more circle cx 19 cy 12 r 1.4 — ICON_DEFS (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · запись голосового · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "close 18×18 M18 6L6 18M6 6l12 12 — ICON_DEFS + header (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "099c32fbc998"
     },
     "Мессенджер · запись голосового · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "close path M18 6L6 18M6 6l12 12 — ICON_DEFS (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "49950e24d175"
     },
     "Мессенджер · запись голосового · рисунок 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «поле рисунка 13×13 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
-      "h": "c2b4d247a149"
+      "v": "≠",
+      "f": "кадр play SVG 13×13 M8 5v14l11-7z; продукт .msg-audio-play — glyph ▶ 44px — canvas-conflict до SVG play (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "h": "c2b4d247a149",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:512"
     },
     "Мессенджер · запись голосового · рисунок 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «кривая, точки M8 5v14l11-7z». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "send path — ICON_DEFS.send (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "ce2423b805bf"
     },
     "Мессенджер · запись голосового · рисунок 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «поле рисунка 20×20 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "camera 20×20 viewBox — composer Icon camera size 19 (attach 44 target) (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "c3a7fc884572"
     },
     "Мессенджер · запись голосового · рисунок 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового»: контракт «кривая, точки M12 19V5M5 12l7-7 7 7». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "send M12 19V5M5 12l7-7 7 7 — ICON_DEFS.send size 20 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "241c8717ac09"
     },
     "Мессенджер · лист действий · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1596 Icon more size 19 viewBox 0 0 24 24",
       "h": "6c769f161d19"
     },
     "Мессенджер · лист действий · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.more circle cx 5 cy 12 r 1.4 fill currentColor",
       "h": "46ca71899b7c"
     },
     "Мессенджер · лист действий · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.more circle cx 12 cy 12 r 1.4",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · лист действий · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.more circle cx 19 cy 12 r 1.4",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · лист действий · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "MessengerHeader close Icon size 18 viewBox 0 0 24 24",
       "h": "099c32fbc998"
     },
     "Мессенджер · лист действий · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.close paths M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Мессенджер · лист действий · рисунок 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «кривая, точки M4 14h9a4 4 0 0 0 0-8H4». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.reply path M4 14h9a4 4 0 0 0 0-8H4 — action sheet «Изменить»",
       "h": "e5f93227aa9f"
     },
     "Мессенджер · лист действий · рисунок 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «кривая, точки M8 10L4 6l4-4». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.reply path M8 10L4 6l4-4",
       "h": "9e3b8850fd8c"
     },
     "Мессенджер · лист действий · рисунок 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «прямоугольник 12×12, радиус 2». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.copy rect path 12×12 rx 2 via M9 9h12v12…",
       "h": "a233dd2c2585"
     },
     "Мессенджер · лист действий · рисунок 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «кривая, точки M5 15V5a2 2 0 0 1 2-2h8». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.copy path M5 15V5a2 2 0 0 1 2-2h8",
       "h": "08ec9f0ede18"
     },
     "Мессенджер · лист действий · рисунок 11": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · лист действий»: контракт «кривая, точки M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.trash paths M3 6h18 / M8 6V4h8v2 / M6 6l1 14h10l1-14",
       "h": "0a698ca21533"
     },
     "Мессенджер · меню Ещё · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "MessengerHeader more Icon 19×19 viewBox 0 0 24 24 is-open",
       "h": "6c769f161d19"
     },
     "Мессенджер · меню Ещё · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.more r 1.4 (5,12)",
       "h": "46ca71899b7c"
     },
     "Мессенджер · меню Ещё · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.more r 1.4 (12,12)",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · меню Ещё · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.more r 1.4 (19,12)",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · меню Ещё · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "MessengerHeader close 18×18 stroke 2.75",
       "h": "099c32fbc998"
     },
     "Мессенджер · меню Ещё · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.close M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Мессенджер · меню Ещё · рисунок 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «поле рисунка 11×11 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "msg-status Icon check size 11 stroke 1.8 — кадр «Обработано»",
       "h": "56fd9b649297"
     },
     "Мессенджер · меню Ещё · рисунок 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «кривая, точки M20 6L9 17l-5-5». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.check M20 6L9 17l-5-5",
       "h": "2f2b6477120d"
     },
     "Мессенджер · меню Ещё · рисунок 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «поле рисунка 20×20 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "composer Icon camera size 19 (canvas 20) viewBox 0 0 24 24",
       "h": "c3a7fc884572"
     },
     "Мессенджер · меню Ещё · рисунок 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 …». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.camera paths + circle r 4 (12,13)",
       "h": "07c8a3766bf2"
     },
     "Мессенджер · меню Ещё · рисунок 11": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «точка r 4 в (12,13)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.camera circle cx 12 cy 13 r 4",
       "h": "b2af0cda4915"
     },
     "Мессенджер · меню Ещё · рисунок 12": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.mic path M12 1a3 3…",
       "h": "099fc8c7a53e"
     },
     "Мессенджер · меню Ещё · рисунок 13": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.mic paths M19 10v1… M12 18v4 M8 22h8",
       "h": "1007ea53cad8"
     },
     "Мессенджер · меню Ещё · рисунок 14": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · меню Ещё»: контракт «кривая, точки M12 19V5M5 12l7-7 7 7». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.send M12 19V5M5 12l7-7 7 7; composer size 19",
       "h": "241c8717ac09"
     },
     "Мессенджер · поиск · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "SearchPanel header close Icon 18×18 stroke 2.75",
       "h": "099c32fbc998"
     },
     "Мессенджер · поиск · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.close paths in header close",
       "h": "49950e24d175"
     },
     "Мессенджер · поиск · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «поле рисунка 16×16 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "SearchPanel field Icon search size 16 viewBox 0 0 24 24",
       "h": "ddf4bd54ba6a"
     },
     "Мессенджер · поиск · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «точка r 7 в (11,11)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.search circle cx 11 cy 11 r 7 stroke currentColor",
       "h": "393a5cac49f1"
     },
     "Мессенджер · поиск · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «кривая, точки M20 20l-4.3-4.3». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "ICON_DEFS.search path M20 20l-4.3-4.3",
       "h": "d19ccbd2afb2"
     },
     "Мессенджер · поиск · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · поиск»: контракт «поле рисунка 15×15 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "SearchPanel clear Icon close size 15 stroke 2.75",
       "h": "7d9d1119f1bb"
     },
     "Мессенджер · без сети · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1604 Icon more size 19 viewBox 0 0 24 24",
       "h": "6c769f161d19"
     },
     "Мессенджер · без сети · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 cx 5 cy 12",
       "h": "46ca71899b7c"
     },
     "Мессенджер · без сети · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 cx 12 cy 12",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · без сети · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 cx 19 cy 12",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · без сети · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1614 Icon close size 18 viewBox 0 0 24 24",
       "h": "099c32fbc998"
     },
     "Мессенджер · без сети · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1436 ICON_DEFS.close paths M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Мессенджер · без сети · рисунок 07": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «поле рисунка 20×20 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js messenger-attach Icon camera size 20 (composer)",
       "h": "c3a7fc884572"
     },
     "Мессенджер · без сети · рисунок 08": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «кривая, точки M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 …». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1455-1457 ICON_DEFS.camera paths M23 19a2…",
       "h": "07c8a3766bf2"
     },
     "Мессенджер · без сети · рисунок 09": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «точка r 4 в (12,13)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1457 ICON_DEFS.camera circle r 4 cx 12 cy 13",
       "h": "b2af0cda4915"
     },
     "Мессенджер · без сети · рисунок 10": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «кривая, точки M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1459-1463 ICON_DEFS.mic paths M12 1a3…",
       "h": "099fc8c7a53e"
     },
     "Мессенджер · без сети · рисунок 11": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «кривая, точки M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1462 ICON_DEFS.mic paths M19 10v1a7…",
       "h": "1007ea53cad8"
     },
     "Мессенджер · без сети · рисунок 12": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · без сети»: контракт «кривая, точки M12 19V5M5 12l7-7 7 7». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1465 ICON_DEFS.send paths M12 19V5M5 12l7-7 7 7",
       "h": "241c8717ac09"
     },
     "Мессенджер · согласие на расшифровку · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1604 Icon more size 19",
       "h": "6c769f161d19"
     },
     "Мессенджер · согласие на расшифровку · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 (5,12)",
       "h": "46ca71899b7c"
     },
     "Мессенджер · согласие на расшифровку · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 (12,12)",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · согласие на расшифровку · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 (19,12)",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · согласие на расшифровку · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1614 Icon close size 18",
       "h": "099c32fbc998"
     },
     "Мессенджер · согласие на расшифровку · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · согласие на расшифровку»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1436 ICON_DEFS.close paths M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Мессенджер · удаление сообщения · рисунок 01": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «поле рисунка 19×19 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1604 Icon more size 19",
       "h": "6c769f161d19"
     },
     "Мессенджер · удаление сообщения · рисунок 02": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «точка r 1.4 в (5,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 (5,12)",
       "h": "46ca71899b7c"
     },
     "Мессенджер · удаление сообщения · рисунок 03": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «точка r 1.4 в (12,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 (12,12)",
       "h": "d4efabaf4f12"
     },
     "Мессенджер · удаление сообщения · рисунок 04": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «точка r 1.4 в (19,12), заливка currentColor, обводка none». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1438-1441 ICON_DEFS.more circle r 1.4 (19,12)",
       "h": "4edfa6fa37b7"
     },
     "Мессенджер · удаление сообщения · рисунок 05": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «поле рисунка 18×18 (viewBox 0 0 24 24)». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1614 Icon close size 18",
       "h": "099c32fbc998"
     },
     "Мессенджер · удаление сообщения · рисунок 06": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · удаление сообщения»: контракт «кривая, точки M18 6L6 18M6 6l12 12». Закроет сверка SVG Lucide продукта с разбором графики кадра (CSS lane).",
+      "v": "=",
+      "f": "heys_messenger_v1.js:1436 ICON_DEFS.close paths M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "как читать текст": {

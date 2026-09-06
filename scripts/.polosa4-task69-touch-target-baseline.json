@@ -1,6 +1,6 @@
 {
   "captured": "2026-09-06",
-  "totalViolations": 513,
+  "totalViolations": 514,
   "unknownViolations": 0,
   "byZone": {
     "shared": 18,
@@ -14,7 +14,7 @@
     "date-remainders": 13,
     "settings-system": 17,
     "food-meal": 82,
-    "messenger": 2,
+    "messenger": 3,
     "service-curator": 11,
     "planning": 130,
     "product-card": 3,
@@ -26,7 +26,7 @@
   "byFile": {
     "000-base-and-gamification.css": 109,
     "100-metrics-and-graphs.css": 34,
-    "1000-messenger.css": 2,
+    "1000-messenger.css": 3,
     "200-dark-and-effects.css": 6,
     "500-pwa-and-offline.css": 11,
     "600-steps-and-aps.css": 19,
@@ -196,6 +196,7 @@
     "100-metrics-and-graphs.css::.zone-formula-edit-btn",
     "1000-messenger.css::.messenger-search__filter",
     "1000-messenger.css::.messenger-show-older",
+    "1000-messenger.css::.msg-audio-wave",
     "200-dark-and-effects.css::.day-score-manual-hint",
     "200-dark-and-effects.css::.day-score-preset",
     "200-dark-and-effects.css::.day-subtab",

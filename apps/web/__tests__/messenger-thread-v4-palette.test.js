@@ -93,7 +93,7 @@ async function measureChromium(themeId) {
   <div class="msg-quote">quote</div>
   <div class="msg-applied-card"><span class="msg-applied-card__title">Внесено</span><button class="msg-applied-card__open">open</button></div>
   <div class="msg-intent"><div class="msg-intent__kicker">вес</div><div class="msg-intent__value">71,4 кг</div></div>
-  <input class="messenger-search__input" value="q" />
+  <div class="messenger-search__field"><input class="messenger-search__input" value="q" /></div>
   <div class="messenger-search__snippet"><mark>hit</mark></div>
   <span class="msg-status msg-status--seen"><span class="msg-status__dot"></span>seen</span>
 </body></html>`, { waitUntil: 'domcontentloaded' });
@@ -109,7 +109,7 @@ async function measureChromium(themeId) {
       appliedBg: read('.msg-applied-card', 'backgroundColor'),
       appliedOpen: read('.msg-applied-card__open', 'color'),
       intentKicker: read('.msg-intent__kicker', 'color'),
-      searchInputBg: read('.messenger-search__input', 'backgroundColor'),
+      searchInputBg: read('.messenger-search__field', 'backgroundColor'),
       searchMark: read('.messenger-search__snippet mark', 'color'),
       seenDot: read('.msg-status__dot', 'backgroundColor'),
     };

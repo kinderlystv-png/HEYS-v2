@@ -43,7 +43,7 @@
 .metrics-card {
   position: relative;
   min-width: 0;
-  background: var(--v4-hero, #f8fafc);
+  background: var(--v4-hero, #efe3cf);
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 10px;
   padding: 8px 4px;
@@ -361,7 +361,7 @@
   border-radius: 999px;
   padding: 10px 14px;
   font: 700 13px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-btn-on-act, #fff5ef);
+  color: var(--v4-btn-on-act, #2b1608);
   background: var(--v4-act, #c67139);
   box-shadow: none;
   cursor: pointer;
@@ -440,7 +440,7 @@
 
 .sparkline-line {
   fill: none;
-  stroke: var(--v4-ok-fill, #22c55e);
+  stroke: var(--v4-ok-fill, #7a8a5e);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -622,7 +622,7 @@
 }
 
 .sparkline-dot-ok {
-  fill: var(--v4-ok-fill, #22c55e);
+  fill: var(--v4-ok-fill, #7a8a5e);
   /* зелёный — в норме */
 }
 
@@ -698,7 +698,7 @@
 }
 
 .sparkline-day-today {
-  fill: var(--v4-ok-fill, #22c55e);
+  fill: var(--v4-ok-fill, #7a8a5e);
   font-weight: 600;
 }
 
@@ -818,7 +818,7 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-compare.up {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--v4-ok-text, #5c6a45);
 }
 
@@ -858,13 +858,13 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--success-dark);
 }
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
   background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 .sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
@@ -974,7 +974,7 @@
 
 /* === 05a. TDEE POPUP (расшифровка затрат) === */
 .tdee-popup {
-  background: var(--v4-bg, #fff);
+  background: var(--v4-bg, #fffaf1);
 }
 
 .tdee-bar-container {
@@ -1003,7 +1003,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .tdee-details {
@@ -1017,7 +1017,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  background: var(--v4-hero, #f8fafc);
+  background: var(--v4-hero, #efe3cf);
   border-radius: 8px;
   font-size: 13px;
 }
@@ -1056,19 +1056,19 @@
 }
 
 .tdee-positive {
-  color: var(--v4-ok-text, #16a34a) !important;
+  color: var(--v4-ok-text, #5c6a45) !important;
 }
 
 .tdee-row-hint {
   font-size: 10px;
-  color: var(--v4-ink-3, #94a3b8);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   padding-left: 40px;
   margin-top: -4px;
 }
 
 .tdee-divider {
   height: 1px;
-  background: var(--v4-accent-bg, #e2e8f0);
+  background: var(--v4-accent-bg, #f0dcc6);
   margin: 4px 0;
 }
 
@@ -1115,7 +1115,7 @@
 }
 
 .sparkline-popup-header .popup-pct.good {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--success-dark);
 }
 
@@ -1126,7 +1126,7 @@
 
 .sparkline-popup-header .popup-pct.bad {
   background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 /* Главная строка — калории */
@@ -1172,7 +1172,7 @@
 }
 
 .sparkline-popup-tag.good {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--success-dark);
 }
 
@@ -1183,7 +1183,7 @@
 
 .sparkline-popup-tag.bad {
   background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 /* Золотой стиль для идеальных дней */
@@ -1217,7 +1217,7 @@
 }
 
 .sparkline-popup-value.good {
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .sparkline-popup-value.warn {
@@ -1297,7 +1297,7 @@
 
 /* Dark mode */
 [data-theme$="dark"] .sparkline-popup {
-  background: var(--v4-hero, #1e293b);
+  background: var(--v4-hero, #2f2820);
   border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
@@ -1330,18 +1330,18 @@
 
 @media (hover: hover) {
   [data-theme$="dark"] .sparkline-popup-btn:hover {
-  background: var(--v4-ink-4, #475569);
+  background: var(--v4-ink-4, rgba(242, 237, 230, 0.46));
 }
 }
 
 /* Dark mode: sparkline-popup-v2 */
 [data-theme$="dark"] .sparkline-popup-v2 {
-  background: var(--v4-hero, #1e293b);
+  background: var(--v4-hero, #2f2820);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-swipe {
-  background: var(--v4-ink-4, #475569);
+  background: var(--v4-ink-4, rgba(242, 237, 230, 0.46));
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-date {
@@ -1362,8 +1362,8 @@
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-compare.up {
-  background: var(--v4-ok-bg, #14532d);
-  color: var(--v4-ok-text, #4ade80);
+  background: var(--v4-ok-bg, #242c20);
+  color: var(--v4-ok-text, #9fb981);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-compare.down {
@@ -1377,8 +1377,8 @@
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.good {
-  background: var(--v4-ok-bg, #14532d);
-  color: var(--v4-ok-text, #4ade80);
+  background: var(--v4-ok-bg, #242c20);
+  color: var(--v4-ok-text, #9fb981);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.bad {
@@ -1389,7 +1389,7 @@
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-tag-v2.perfect {
   background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 85%, #000);
   border-color: var(--v4-warn-text, #a1471c);
-  color: var(--v4-warn-soft, #fbbf24);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2 {
@@ -1399,14 +1399,14 @@
 
 @media (hover: hover) {
   [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2:hover {
-  background: var(--v4-ink-4, #475569);
+  background: var(--v4-ink-4, rgba(242, 237, 230, 0.46));
 }
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-btn-v2.perfect {
   background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 85%, #000);
   border-color: var(--v4-warn-text, #a1471c);
-  color: var(--v4-warn-soft, #fbbf24);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-close {
@@ -1422,7 +1422,7 @@
 }
 
 [data-theme$="dark"] .sparkline-popup-v2 .sparkline-popup-arrow {
-  border-bottom-color: var(--v4-hero, #1e293b);
+  border-bottom-color: var(--v4-hero, #2f2820);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 {
@@ -1435,13 +1435,13 @@
 }
 
 [data-theme$="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-perfect-title {
-  color: var(--v4-warn-soft, #fbbf24);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-motivation-v2 {
   background: color-mix(in srgb, var(--v4-warn-3, #a1471c) 90%, #000);
   border-color: var(--v4-warn-text, #a1471c);
-  color: var(--v4-warn-soft, #fbbf24);
+  color: var(--v4-warn-soft, #e2b264);
 }
 
 [data-theme$="dark"] .sparkline-popup-v2.sparkline-popup-perfect-v2 .sparkline-popup-progress {
@@ -1489,7 +1489,7 @@
 
 /* 80-95% */
 .sparkline-heatmap-day.level-3 {
-  background: var(--v4-ok-fill, #22c55e);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 /* 95-105% - идеал */
@@ -1620,7 +1620,7 @@
 
 /* === 08. Slider Elements === */
 .sparkline-slider-line {
-  stroke: var(--v4-act, #2563eb);
+  stroke: var(--v4-act, #c67139);
   stroke-width: 1.5;
   stroke-dasharray: 4 2;
   opacity: 0.8;
@@ -1628,7 +1628,7 @@
 }
 
 .sparkline-slider-point {
-  fill: var(--v4-act, #2563eb);
+  fill: var(--v4-act, #c67139);
   stroke: white;
   stroke-width: 2;
   pointer-events: none;
@@ -1724,7 +1724,7 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--v4-act-text, #1d4ed8);
+  color: var(--v4-act-text, #8a4a20);
   animation: sparkline-brush-stats-appear 0.2s ease-out;
   z-index: 5;
   cursor: pointer;
@@ -1857,7 +1857,7 @@
 }
 
 .sparkline-slider-tooltip-ratio.ratio-ok {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--success-dark);
 }
 
@@ -1868,7 +1868,7 @@
 
 .sparkline-slider-tooltip-ratio.ratio-over {
   background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 /* Main row: калории */
@@ -1906,7 +1906,7 @@
 }
 
 .sparkline-slider-tooltip-tag.good {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--success-dark);
 }
 
@@ -1917,7 +1917,7 @@
 
 .sparkline-slider-tooltip-tag.bad {
   background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 /* Weekly Rhythm — вертикальные сепараторы недель */
@@ -1974,7 +1974,7 @@
 
 .sparkline-annotation-training {
   font-size: 10px;
-  fill: var(--v4-water, #3b82f6);
+  fill: var(--v4-water, #7d98a6);
   /* фиолетовый для тренировок */
   opacity: 0;
   animation: fadeInSimple 0.3s ease-out forwards;
@@ -2198,7 +2198,7 @@
 }
 
 .sparkline-max-label {
-  fill: var(--v4-ok-fill, #22c55e);
+  fill: var(--v4-ok-fill, #7a8a5e);
 }
 
 /* Золотые пульсирующие точки для идеальных дней */
@@ -2490,14 +2490,14 @@
 .week-heatmap-action-label {
   font-size: 11px;
   font-weight: 700;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   letter-spacing: 0.01em;
 }
 
 @media (hover: hover) {
   .week-heatmap-action-wrap:hover .week-heatmap-action-label {
-  color: var(--v4-wgt-link, #2563eb);
+  color: var(--v4-wgt-link, #c67139);
 }
 }
 
@@ -2507,7 +2507,7 @@
   border-radius: 8px;
   border: 1px solid rgba(191, 219, 254, 0.82);
   background: linear-gradient(180deg, #ffffff, #eff6ff);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-size: 12px;
   line-height: 1;
   display: flex;
@@ -2521,7 +2521,7 @@
   .week-heatmap-action:hover {
   background: rgba(59, 130, 246, 0.08);
   border-color: rgba(59, 130, 246, 0.3);
-  color: var(--v4-wgt-link, #2563eb);
+  color: var(--v4-wgt-link, #c67139);
 }
 }
 
@@ -2591,7 +2591,7 @@
 
 .week-heatmap-norm {
   font-size: 11px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   padding: 6px 10px;
   border-radius: 999px;
@@ -2604,7 +2604,7 @@
 @media (hover: hover) {
   .week-heatmap-norm:hover {
   background: rgba(59, 130, 246, 0.1);
-  color: var(--v4-wgt-link, #2563eb);
+  color: var(--v4-wgt-link, #c67139);
 }
 }
 
@@ -2616,7 +2616,7 @@
 }
 
 .week-heatmap-stat.deficit-good {
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: 600;
 }
 
@@ -2626,7 +2626,7 @@
 }
 
 .week-heatmap-stat.deficit-bad {
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
   font-weight: 600;
 }
 
@@ -2667,7 +2667,7 @@
 /* Выходные: красный текст + розовая рамка */
 .week-heatmap-day.weekend .week-heatmap-date,
 .week-heatmap-day.weekend .week-heatmap-name {
-  color: var(--v4-warn-1, #ef4444);
+  color: var(--v4-warn-1, #d99a63);
 }
 
 .week-heatmap-day.weekend .week-heatmap-date {
@@ -2683,7 +2683,7 @@
 }
 
 .week-heatmap-day.today .week-heatmap-date {
-  background: var(--v4-act, #2563eb);
+  background: var(--v4-act, #c67139);
   color: white;
   padding: 2px 5px;
   border-radius: 6px;
@@ -2695,7 +2695,7 @@
 }
 
 .week-heatmap-day.today .week-heatmap-name {
-  color: var(--v4-wgt-link, #2563eb);
+  color: var(--v4-wgt-link, #c67139);
   font-weight: 700;
 }
 
@@ -2718,12 +2718,12 @@
 
 /* Статусы — fallback если нет inline градиента */
 .week-heatmap-day.low .week-heatmap-cell:not([style*="background"]) {
-  background: var(--v4-warn-soft, #eab308);
+  background: var(--v4-warn-soft, #c9922e);
   /* жёлтый для low */
 }
 
 .week-heatmap-day.green .week-heatmap-cell:not([style*="background"]) {
-  background: var(--v4-ok-fill, #22c55e);
+  background: var(--v4-ok-fill, #7a8a5e);
 }
 
 .week-heatmap-day.perfect .week-heatmap-cell:not([style*="background"]) {
@@ -2731,7 +2731,7 @@
 }
 
 .week-heatmap-day.yellow .week-heatmap-cell:not([style*="background"]) {
-  background: var(--v4-warn-soft, #eab308);
+  background: var(--v4-warn-soft, #c9922e);
 }
 
 .week-heatmap-day.red .week-heatmap-cell:not([style*="background"]) {
@@ -2766,7 +2766,7 @@
 
 /* Today ring — статичный акцент без свечения и пульса */
 .week-heatmap-day.today .week-heatmap-cell {
-  box-shadow: 0 0 0 2px var(--v4-act, #2563eb);
+  box-shadow: 0 0 0 2px var(--v4-act, #c67139);
   z-index: 1;
   /* чтобы свечение было поверх соседей */
 }
@@ -2822,7 +2822,7 @@
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: var(--v4-ink-3, #94a3b8);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   margin-top: 4px;
 }
 
@@ -2837,7 +2837,7 @@
   right: 10px;
   font-size: 10px;
   font-weight: 600;
-  color: var(--v4-warn-soft, #eab308);
+  color: var(--v4-warn-soft, #c9922e);
   background: var(--v4-accent-bg, #f0dcc6);
   border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 20%, transparent);
   padding: 2px 6px;
@@ -2921,7 +2921,7 @@
 }
 
 [data-theme$="dark"] .week-heatmap-title {
-  color: var(--v4-ink, #f8fafc);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .week-heatmap-action-wrap,
@@ -2934,7 +2934,7 @@
 [data-theme$="dark"] .week-heatmap-norm,
 [data-theme$="dark"] .week-heatmap-name,
 [data-theme$="dark"] .week-heatmap-deficit-target-line {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .week-heatmap-action {
@@ -3057,7 +3057,7 @@
   background: rgba(239, 68, 68, 0.1);
   border-radius: 6px;
   font-size: 12px;
-  color: var(--v4-warn-1, #ef4444);
+  color: var(--v4-warn-1, #d99a63);
 }
 
 /* === CALORIC BALANCE CARD — Раскрывающаяся карточка баланса === */
@@ -3120,7 +3120,7 @@
 .caloric-balance-boost {
   font-size: 11px;
   font-weight: 500;
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .caloric-balance-rec-short {
@@ -3169,7 +3169,7 @@
 .caloric-balance-badge {
   font-size: 12px;
   font-weight: 700;
-  color: var(--v4-bg, #fff);
+  color: var(--v4-bg, #fffaf1);
   padding: 3px 8px;
   border-radius: 10px;
   white-space: nowrap;
@@ -3316,7 +3316,7 @@
 .caloric-debt-badge {
   font-size: 11px;
   font-weight: 700;
-  color: var(--v4-bg, #fff);
+  color: var(--v4-bg, #fffaf1);
   padding: 3px 8px;
   border-radius: 10px;
   white-space: nowrap;
@@ -3381,7 +3381,7 @@
   top: -6px;
   right: -4px;
   font-size: 12px;
-  background: var(--v4-bg, #fff);
+  background: var(--v4-bg, #fffaf1);
   border-radius: 50%;
   padding: 1px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
@@ -3415,7 +3415,7 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
   padding: 6px 10px;
   background: rgba(239, 68, 68, 0.08);
   border-radius: 8px;
@@ -3487,7 +3487,7 @@
 .debt-card-boost {
   font-size: 12px;
   font-weight: 500;
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
   background: rgba(34, 197, 94, 0.1);
   padding: 2px 8px;
   border-radius: 12px;
@@ -3506,7 +3506,7 @@
   border-radius: 50%;
   border: 1.5px solid rgba(59, 130, 246, 0.3);
   background: rgba(59, 130, 246, 0.05);
-  color: var(--v4-water, #3b82f6);
+  color: var(--v4-water, #7d98a6);
   font-size: 11px;
   font-weight: 700;
   display: flex;
@@ -3531,7 +3531,7 @@
 }
 
 .debt-card.expanded .debt-card-chevron {
-  color: var(--v4-water, #3b82f6);
+  color: var(--v4-water, #7d98a6);
 }
 
 /* Expanded view */
@@ -3642,7 +3642,7 @@
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
   padding: 8px 12px;
   background: rgba(34, 197, 94, 0.06);
   border-radius: 8px;
@@ -3663,7 +3663,7 @@
 .debt-plan-header {
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-water, #3b82f6);
+  color: var(--v4-water, #7d98a6);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -3682,7 +3682,7 @@
 }
 
 .debt-plan-result {
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
   font-size: 15px;
 }
 
@@ -3820,7 +3820,7 @@
 }
 
 [data-theme$="dark"] .debt-summary-row strong {
-  color: var(--v4-ink, #f1f5f9);
+  color: var(--v4-ink, #f2ede6);
 }
 
 [data-theme$="dark"] .debt-day-bar-wrap {
@@ -3905,7 +3905,7 @@
 .caloric-excess-success .caloric-excess-rec-text {
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* Cardio recommendation */
@@ -4010,7 +4010,7 @@
 .caloric-insights-badge {
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-bg, #fff);
+  color: var(--v4-bg, #fffaf1);
   background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
   padding: 3px 8px;
   border-radius: 10px;
@@ -4149,7 +4149,7 @@
 
 /* Severity colors (border-left-color) */
 .caloric-insight-item-v2.severity-critical {
-  border-left-color: var(--v4-warn-1, #ef4444);
+  border-left-color: var(--v4-warn-1, #d99a63);
   background: rgba(239, 68, 68, 0.06);
 }
 
@@ -4159,12 +4159,12 @@
 }
 
 .caloric-insight-item-v2.severity-positive {
-  border-left-color: var(--v4-ok-fill, #22c55e);
+  border-left-color: var(--v4-ok-fill, #7a8a5e);
   background: rgba(34, 197, 94, 0.05);
 }
 
 .caloric-insight-item-v2.severity-info {
-  border-left-color: var(--v4-water, #3b82f6);
+  border-left-color: var(--v4-water, #7d98a6);
   background: rgba(59, 130, 246, 0.05);
 }
 
@@ -4349,7 +4349,7 @@
 .weight-single-hint {
   margin-top: 8px;
   font-size: 12px;
-  color: var(--v4-water, #3b82f6);
+  color: var(--v4-water, #7d98a6);
   opacity: 0.8;
 }
 
@@ -4381,7 +4381,7 @@
 
 .weight-trend-badge.up {
   background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 .weight-trend-badge.same {
@@ -4405,7 +4405,7 @@
 }
 
 .weight-forecast-badge.down {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--v4-wgt-ok-deep, #5c6a45);
 }
 
@@ -4484,14 +4484,14 @@
 /* Персональный инсайт */
 .weight-retention-insight {
   font-size: 11px;
-  color: var(--v4-ink-2, #6b7280);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-style: italic;
 }
 
 /* Статистика по циклам */
 .weight-retention-stats {
   font-size: 10px;
-  color: var(--v4-ink-4, #9ca3af);
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   margin-top: 2px;
   padding-top: 4px;
   border-top: 1px dashed rgba(236, 72, 153, 0.2);
@@ -4852,7 +4852,7 @@
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.3px;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .goal-progress-title-group {
@@ -4969,7 +4969,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  background: var(--v4-bg, #fff);
+  background: var(--v4-bg, #fffaf1);
 }
 
 .goal-unit {
@@ -5139,7 +5139,7 @@
 .goal-current-pct {
   display: inline-block;
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-  color: var(--v4-bg, #fff);
+  color: var(--v4-bg, #fffaf1);
   font-size: 11px;
   font-weight: 700;
   padding: 3px 8px;
@@ -5217,7 +5217,7 @@
 
 /* Circadian badge — time-based urgency */
 .context-badge-circadian {
-  background: var(--v4-accent-bg, #dbeafe);
+  background: var(--v4-accent-bg, #f0dcc6);
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -5228,12 +5228,12 @@
 
 /* Training badge — nutrition priority */
 .context-badge-training {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--v4-ok-text, #5c6a45);
 }
 
 .context-badge-training.strength {
-  background: var(--v4-accent-bg, #e0e7ff);
+  background: var(--v4-accent-bg, #f0dcc6);
   color: var(--v4-wgt-indigo, #a68b7a);
 }
 
@@ -5296,7 +5296,7 @@
 }
 
 .goal-remaining b {
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: 700;
   font-size: 16px;
 }
@@ -5433,7 +5433,7 @@
 
 .macro-ring-fill--over {
   fill: none;
-  stroke: var(--v4-warn-1, #ef4444);
+  stroke: var(--v4-warn-1, #d99a63);
   /* Ярко-красный для перебора */
   stroke-width: 5;
   stroke-linecap: round;
@@ -5481,7 +5481,7 @@
 
 /* Цвета - делаем чуть насыщеннее */
 .macro-ring.protein {
-  --macro-ring-color: var(--v4-warn-1, #ef4444);
+  --macro-ring-color: var(--v4-warn-1, #d99a63);
   /* Red-500 */
   --macro-ring-over: #b91c1c;
   /* Red-700 */
@@ -5497,7 +5497,7 @@
 
 
 .macro-ring.carbs {
-  --macro-ring-color: var(--v4-ok-fill, #22c55e);
+  --macro-ring-color: var(--v4-ok-fill, #7a8a5e);
   /* Green-500 */
   --macro-ring-over: #15803d;
   /* Green-700 */
@@ -5528,7 +5528,7 @@
 .macro-ring-target {
   font-size: 11px;
   font-weight: 500;
-  color: var(--v4-ink-3, #94a3b8);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   /* Slate-400 */
 }
 
@@ -5680,7 +5680,7 @@
   gap: 6px;
   margin-bottom: 8px;
   padding: 6px 8px;
-  background: var(--v4-hero, #f8fafc);
+  background: var(--v4-hero, #efe3cf);
   border-radius: 6px;
 }
 
@@ -5781,7 +5781,7 @@
 }
 
 .macro-badge-popup-compare.up {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--v4-ok-text, #5c6a45);
 }
 
@@ -5983,7 +5983,7 @@
 }
 
 .metric-popup-compare.up {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--v4-ok-text, #5c6a45);
 }
 
@@ -6308,7 +6308,7 @@
   .dev-clear-weight-mini:hover {
   opacity: 1;
   background: rgba(220, 38, 38, 0.2);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 }
 
@@ -6319,7 +6319,7 @@
   border: none;
   border-radius: 50%;
   background: rgba(220, 38, 38, 0.15);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
@@ -6346,7 +6346,7 @@
 }
 
 .weight-card-trend.trend-up {
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 .weight-card-trend.trend-same {
@@ -6533,17 +6533,17 @@
 
 .activity-charge-card-status--missed {
   background: rgba(248, 113, 113, 0.14);
-  color: var(--v4-warn-1, #ef4444);
+  color: var(--v4-warn-1, #d99a63);
 }
 
 .activity-charge-card-status--done {
   background: rgba(34, 197, 94, 0.14);
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .activity-charge-card-status--replacement {
   background: rgba(59, 130, 246, 0.14);
-  color: var(--v4-act, #2563eb);
+  color: var(--v4-act, #c67139);
 }
 
 .activity-charge-card .compact-trainings {
@@ -6601,7 +6601,7 @@
 
 .ma-skip-notice-sub {
   margin-top: 2px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
@@ -6634,7 +6634,7 @@
 }
 
 .ma-done-notice-card--replacement .ma-done-notice-text {
-  color: var(--v4-act-text, #1d4ed8);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Правая колонка: быт + кнопка */
@@ -6648,7 +6648,7 @@
 .household-activity-card {
   flex: 1;
   background: var(--color-white);
-  border: 1px solid var(--v4-line, #e5e7eb);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 12px;
   padding: 12px var(--heys-diary-card-padding-x, 16px);
   cursor: pointer;
@@ -6661,7 +6661,7 @@
 
 @media (hover: hover) {
   .household-activity-card:hover {
-  border-color: var(--v4-ok-fill, #22c55e);
+  border-color: var(--v4-ok-fill, #7a8a5e);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15);
 }
@@ -6719,7 +6719,7 @@
 
 .household-value-kcal {
   font-size: 12px;
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
   font-weight: 500;
   margin-top: 2px;
 }
@@ -6760,9 +6760,9 @@
   width: 100%;
   margin-top: 8px;
   padding: 10px 12px;
-  border: 1px dashed var(--v4-ok-fill, #22c55e);
+  border: 1px dashed var(--v4-ok-fill, #7a8a5e);
   background: rgba(34, 197, 94, 0.08);
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 500;
@@ -6772,7 +6772,7 @@
 
 @media (hover: hover) {
   .household-add-btn:hover {
-  border-color: var(--v4-ok-text, #16a34a);
+  border-color: var(--v4-ok-text, #5c6a45);
   background: rgba(34, 197, 94, 0.15);
 }
 }
@@ -6885,7 +6885,7 @@
 
 .household-value-kcal {
   font-size: 12px;
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
   margin-left: 8px;
   font-weight: 500;
 }
@@ -6894,7 +6894,7 @@
 .formula-card {
   flex: 1;
   background: var(--color-white);
-  border: 1px solid var(--v4-line, #e5e7eb);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 12px;
   padding: 12px var(--heys-diary-card-padding-x, 16px);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -6943,7 +6943,7 @@
 .formula-row.formula-total {
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px solid var(--v4-line, #e5e7eb);
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .formula-row.formula-total .formula-label {
@@ -6960,7 +6960,7 @@
 .formula-row.formula-subtotal {
   margin-top: 4px;
   padding-top: 4px;
-  border-top: 1px dashed var(--v4-line, #e5e7eb);
+  border-top: 1px dashed var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 /* 🔥 NDTE — эффект вчерашней тренировки */
@@ -6992,11 +6992,11 @@
 }
 
 .formula-row.deficit .formula-label {
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 .formula-row.deficit .formula-value {
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
   font-weight: 600;
 }
 
@@ -7330,12 +7330,12 @@
 }
 
 .training-zone-header.zone-color-1 {
-  background: var(--v4-accent-bg, #dbeafe);
-  color: var(--v4-act, #2563eb);
+  background: var(--v4-accent-bg, #f0dcc6);
+  color: var(--v4-act, #c67139);
 }
 
 .training-zone-header.zone-color-2 {
-  background: var(--v4-ok-bg, #dcfce7);
+  background: var(--v4-ok-bg, #eaefe0);
   color: var(--success-dark);
 }
 
@@ -7346,7 +7346,7 @@
 
 .training-zone-header.zone-color-4 {
   background: color-mix(in srgb, var(--v4-val-bad, #a8382b) 12%, transparent);
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 .training-zone-column .wheel-column {
@@ -7376,7 +7376,7 @@
 .training-zones-time {
   font-size: 16px;
   font-weight: 600;
-  color: var(--v4-act-text, #1d4ed8);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .training-zones-stats .training-zones-kcal {
@@ -7386,7 +7386,7 @@
 /* Training presets */
 .training-presets-section {
   padding: 8px 16px 12px;
-  border-top: 1px solid var(--v4-line, #e5e7eb);
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .training-presets-label {
@@ -7408,7 +7408,7 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
-  background: var(--v4-hero, #f8fafc);
+  background: var(--v4-hero, #efe3cf);
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 10px;
   cursor: pointer;
@@ -7538,7 +7538,7 @@
 }
 
 .training-comment-prompt.negative .training-comment-text {
-  color: var(--v4-warn-2, #dc2626);
+  color: var(--v4-warn-2, #c67139);
 }
 
 .training-comment-input {
@@ -7583,7 +7583,7 @@
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .training-card-duration-icon {
@@ -7655,7 +7655,7 @@
 }
 
 .training-card-rating.mood .training-card-rating-value {
-  color: var(--v4-ok-text, #16a34a);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* Stress (усталость) - синий */
@@ -7665,7 +7665,7 @@
 }
 
 .training-card-rating.stress .training-card-rating-value {
-  color: var(--v4-act, #2563eb);
+  color: var(--v4-act, #c67139);
 }
 
 .training-card-rating-emoji {
@@ -7783,7 +7783,7 @@
   justify-content: center;
   gap: 8px;
   padding: 12px 0 8px;
-  border-bottom: 1px solid var(--v4-line, #e5e7eb);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .picker-step-dot {
@@ -7795,7 +7795,7 @@
 }
 
 .picker-step-dot.active {
-  background: var(--v4-water, #3b82f6);
+  background: var(--v4-water, #7d98a6);
 }
 
 /* DEV: Clear weight button */
@@ -7837,7 +7837,7 @@
   line-height: 14px;
   color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
   background: transparent;
-  border: 1px solid var(--v4-line, #e5e7eb);
+  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -7861,7 +7861,7 @@
 
 .weight-picker-section {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--v4-line, #e5e7eb);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .weight-picker-section:last-child {
@@ -7929,9 +7929,9 @@
   font-size: 18px;
   font-weight: 600;
   text-align: center;
-  border: 2px solid var(--v4-line, #e5e7eb);
+  border: 2px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 8px;
-  background: var(--v4-hero, #f8fafc);
+  background: var(--v4-hero, #efe3cf);
   color: var(--success-dark);
 }
 
@@ -7984,7 +7984,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--v4-act, #2563eb) 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--v4-act, #c67139) 0%, #2563eb 100%);
   color: white;
   font-size: 36px;
   font-weight: 300;
@@ -8090,7 +8090,7 @@
 }
 
 .macro-toast-carbs {
-  border-left: 4px solid var(--v4-act, #2563eb);
+  border-left: 4px solid var(--v4-act, #c67139);
 }
 
 /* === Toast Gradient Borders + Pastel Backgrounds по типам === */
@@ -8152,7 +8152,7 @@
 /* Nutrition - зеленоватый */
 .macro-toast-nutrition {
   --toast-gradient: linear-gradient(135deg, #86efac 0%, #22c55e 100%);
-  --toast-bg: var(--v4-ok-bg, #f0fdf4);
+  --toast-bg: var(--v4-ok-bg, #eaefe0);
   /* green-50 */
 }
 
@@ -8911,7 +8911,7 @@
   margin-bottom: 20px;
   font-size: 17px;
   font-weight: 700;
-  color: var(--v4-bg, #fff);
+  color: var(--v4-bg, #fffaf1);
   background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   border: none;
   border-radius: 16px;

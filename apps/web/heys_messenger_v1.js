@@ -819,6 +819,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     onDelete,
     onReply,
     onEdit,
+    onActionSheet,
+    editRequestId,
+    onEditRequestConsumed,
     onPhotoClick,
     onOpenDay,
     onApplyRequest,
@@ -923,6 +926,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     // Свои действия («Изменить», «Удалить») не висят на экране постоянно:
     // на десктопе их открывает hover через CSS, на тач-устройствах —
     // долгое нажатие, потому что hover там не существует.
+    const canCopy = !!(parsed.reply || searchableText(message));
     const [touchActionsOpen, setTouchActionsOpen] = useState(false);
     const longPressTimerRef = useRef(null);
 
@@ -934,12 +938,30 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     };
 
     const handleTouchStart = () => {
-      if (!canDelete && !canEdit) return;
+      if (!onActionSheet) {
+        if (!canDelete && !canEdit) return;
+        cancelLongPress();
+        longPressTimerRef.current = setTimeout(
+          () => setTouchActionsOpen(true),
+          HEYS.longPress?.MS ?? 350,
+        );
+        return;
+      }
+      if (!canDelete && !canEdit && !canCopy) return;
       cancelLongPress();
-      longPressTimerRef.current = setTimeout(() => setTouchActionsOpen(true), HEYS.longPress?.MS ?? 350);
+      longPressTimerRef.current = setTimeout(
+        () => onActionSheet(message),
+        HEYS.longPress?.MS ?? 350,
+      );
     };
 
     useEffect(() => cancelLongPress, []);
+
+    useEffect(() => {
+      if (!editRequestId || editRequestId !== message.id || editing || !canEdit) return;
+      handleEditStart();
+      onEditRequestConsumed?.();
+    }, [editRequestId, message.id, editing, canEdit, onEditRequestConsumed]);
 
     const ackAction = canMarkAck
       ? React.createElement('button', {
@@ -1022,7 +1044,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         React.createElement(
           'div',
           { className: 'msg-meta-row' },
-          React.createElement('span', { className: 'msg-meta' }, 'В очереди…'),
+          React.createElement('span', { className: 'msg-meta' }, 'Ожидает сети'),
         ),
       );
     }
@@ -1182,11 +1204,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return '...';
   }
 
-  function DeleteConfirmDialog({ message, busy, onCancel, onConfirm }) {
-    const cancelRef = useRef(null);
+  function DeleteConfirmDialog({ busy, onCancel, onConfirm }) {
+    const keepRef = useRef(null);
     useEffect(() => {
       const prevActive = document.activeElement;
-      setTimeout(() => cancelRef.current?.focus(), 30);
+      setTimeout(() => keepRef.current?.focus(), 30);
       const onKeyDown = (e) => {
         if (e.key === 'Escape' && !busy) {
           e.preventDefault();
@@ -1201,8 +1223,6 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }
       };
     }, [busy, onCancel]);
-
-    const preview = messagePreview(message);
 
     return React.createElement(
       'div',
@@ -1221,35 +1241,112 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           'aria-labelledby': 'messenger-delete-title',
           'aria-describedby': 'messenger-delete-desc',
         },
-        React.createElement(
-          'div',
-          { className: 'messenger-confirm-icon', 'aria-hidden': 'true' },
-          React.createElement(Icon, { name: 'trash', size: 18 }),
-        ),
         React.createElement('h3', { id: 'messenger-delete-title', className: 'messenger-confirm-title' }, 'Удалить сообщение?'),
         React.createElement(
           'p',
-          { id: 'messenger-delete-desc', className: 'messenger-confirm-text' },
-          'Куратор больше его не увидит. Если оно уже внесено в день, запись в дневнике останется.',
+          { id: 'messenger-delete-desc', className: 'messenger-confirm-text consent-doc-body' },
+          'У куратора оно тоже исчезнет. Если оно уже внесено в день — запись в дневнике останется.',
         ),
-        preview && preview !== '...' &&
-          React.createElement('div', { className: 'messenger-confirm-preview' }, preview),
         React.createElement(
           'div',
           { className: 'messenger-confirm-actions' },
           React.createElement('button', {
             type: 'button',
-            ref: cancelRef,
-            className: 'messenger-confirm-cancel',
-            onClick: onCancel,
-            disabled: busy,
-          }, 'Отмена'),
-          React.createElement('button', {
-            type: 'button',
             className: 'messenger-confirm-delete',
             onClick: onConfirm,
             disabled: busy,
-          }, busy ? 'Удаляю...' : 'Удалить'),
+          }, busy ? 'Удаляю…' : 'Удалить'),
+          React.createElement('button', {
+            type: 'button',
+            ref: keepRef,
+            className: 'messenger-confirm-cancel',
+            onClick: onCancel,
+            disabled: busy,
+          }, 'Оставить'),
+        ),
+      ),
+    );
+  }
+
+  function countThreadAudioAttachments(messages) {
+    let audioCount = 0;
+    let transcribedCount = 0;
+    (messages || []).forEach((message) => {
+      (message?.attachments || []).forEach((attachment) => {
+        if (!isAudioAttachment(attachment)) return;
+        audioCount += 1;
+        if (attachment.transcript_status === 'ready' && attachment.transcript_text) {
+          transcribedCount += 1;
+        }
+      });
+    });
+    return { audioCount, transcribedCount, hasData: audioCount > 0 };
+  }
+
+  function TranscriptionRevokeSheet({ open, stats, busy, onConfirm, onCancel }) {
+    if (!open) return null;
+    const audioWord = stats.audioCount === 1 ? 'голосовое' : 'голосовых';
+    return React.createElement(
+      'div',
+      {
+        className: 'heys-supp-revoke-root',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-labelledby': 'messenger-transcription-revoke-title',
+      },
+      React.createElement('button', {
+        type: 'button',
+        className: 'heys-supp-revoke-backdrop',
+        'aria-label': 'Закрыть',
+        disabled: !!busy,
+        onClick: () => { if (!busy) onCancel?.(); },
+      }),
+      React.createElement(
+        'div',
+        { className: 'heys-supp-revoke-frame' },
+        React.createElement(
+          'div',
+          { className: 'heys-supp-revoke-sheet' },
+          React.createElement(
+            'h2',
+            { id: 'messenger-transcription-revoke-title', className: 'heys-supp-revoke-sheet__title' },
+            'Отозвать согласие на расшифровку?',
+          ),
+          React.createElement(
+            'p',
+            { className: 'heys-supp-revoke-sheet__lead consent-doc-body' },
+            'Новые голосовые отправятся без текста. Уже готовые расшифровки в чате останутся.',
+          ),
+          stats.hasData && React.createElement(
+            'div',
+            { className: 'heys-supp-revoke-sheet__impact' },
+            React.createElement(
+              'span',
+              { className: 'heys-supp-revoke-sheet__impact-primary' },
+              `${stats.audioCount} ${audioWord} в переписке`,
+            ),
+            stats.transcribedCount > 0 && React.createElement(
+              'span',
+              { className: 'heys-supp-revoke-sheet__impact-secondary' },
+              `${stats.transcribedCount} с готовым текстом`,
+            ),
+          ),
+          React.createElement(
+            'div',
+            { className: 'heys-supp-revoke-sheet__actions' },
+            React.createElement('button', {
+              type: 'button',
+              className: 'heys-supp-revoke-sheet__confirm',
+              disabled: !!busy,
+              onClick: onConfirm,
+            }, busy ? 'Сохраняю…' : 'Отозвать'),
+            React.createElement('button', {
+              type: 'button',
+              className: 'heys-supp-revoke-sheet__cancel',
+              disabled: !!busy,
+              onClick: onCancel,
+            }, 'Оставить включённой'),
+          ),
         ),
       ),
     );
@@ -1335,28 +1432,73 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   // выглядят на разных платформах и не подчиняются цвету темы. Вместо них —
   // один stroke-набор 1.5px, который наследует currentColor.
 
-  const ICON_PATHS = {
-    close: 'M5 5l10 10M15 5L5 15',
-    more: 'M10 5.4v.01M10 10v.01M10 14.6v.01',
-    camera: 'M3 7.5A1.5 1.5 0 014.5 6h1.8l1-1.7h3.4l1 1.7h1.8A1.5 1.5 0 0115 6.5v7A1.5 1.5 0 0113.5 15h-9A1.5 1.5 0 013 13.5v-6zM9 12.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5z',
-    mic: 'M10 3.5a2 2 0 012 2v4.5a2 2 0 11-4 0V5.5a2 2 0 012-2zM5.5 9.5a4.5 4.5 0 009 0M10 14.5V17',
-    send: 'M10 16V4M10 4L5 9M10 4l5 5',
-    check: 'M4 10.5l3.5 3.5L16 5.5',
-    clock: 'M10 5.5V10l2.8 1.6M10 17a7 7 0 110-14 7 7 0 010 14z',
-    chat: 'M17 9.5c0 3.3-3.1 6-7 6-.8 0-1.6-.1-2.3-.3L3.5 16.5l1.2-3.1A5.7 5.7 0 013 9.5c0-3.3 3.1-6 7-6s7 2.7 7 6z',
-    trash: 'M4 6h12M8.5 6V4.5h3V6M6 6l.7 9.2a1.3 1.3 0 001.3 1.3h4a1.3 1.3 0 001.3-1.3L14 6M8.5 9v4.5M11.5 9v4.5',
+  const ICON_DEFS = {
+    close: { paths: ['M18 6L6 18M6 6l12 12'] },
+    more: {
+      circles: [
+        { cx: 5, cy: 12, r: 1.4 },
+        { cx: 12, cy: 12, r: 1.4 },
+        { cx: 19, cy: 12, r: 1.4 },
+      ],
+    },
+    search: {
+      circles: [{ cx: 11, cy: 11, r: 7, fill: 'none', stroke: 'currentColor' }],
+      paths: ['M20 20l-4.3-4.3'],
+    },
+    reply: { paths: ['M4 14h9a4 4 0 0 0 0-8H4', 'M8 10L4 6l4-4'] },
+    copy: {
+      paths: [
+        'M5 15V5a2 2 0 0 1 2-2h8',
+        'M9 9h12v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V11a2 2 0 0 1 2-2z',
+      ],
+    },
+    camera: {
+      paths: ['M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'],
+      circles: [{ cx: 12, cy: 13, r: 4 }],
+    },
+    mic: {
+      paths: [
+        'M12 1a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z',
+        'M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8',
+      ],
+    },
+    send: { paths: ['M12 19V5M5 12l7-7 7 7'] },
+    check: { paths: ['M20 6L9 17l-5-5'] },
+    chat: { paths: ['M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-4-.8L3 21l1.9-4.5A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z'] },
+    clock: { paths: ['M12 5.5V12l2.8 1.6M12 21a9 9 0 110-18 9 9 0 010 18z'] },
+    trash: {
+      paths: [
+        'M3 6h18',
+        'M8 6V4h8v2',
+        'M6 6l1 14h10l1-14',
+      ],
+    },
   };
 
   function Icon({ name, size = 18, className = '', strokeWidth = 1.5 }) {
-    const d = ICON_PATHS[name];
-    if (!d) return null;
+    const def = ICON_DEFS[name];
+    if (!def) return null;
+    const children = [];
+    (def.paths || []).forEach((d, index) => {
+      children.push(React.createElement('path', { key: `p-${index}`, d }));
+    });
+    (def.circles || []).forEach((circle, index) => {
+      children.push(React.createElement('circle', {
+        key: `c-${index}`,
+        cx: circle.cx,
+        cy: circle.cy,
+        r: circle.r,
+        fill: circle.fill || 'currentColor',
+        stroke: circle.stroke || 'none',
+      }));
+    });
     return React.createElement(
       'svg',
       {
         className: ['messenger-icon', className].filter(Boolean).join(' '),
         width: size,
         height: size,
-        viewBox: '0 0 20 20',
+        viewBox: '0 0 24 24',
         fill: 'none',
         stroke: 'currentColor',
         strokeWidth,
@@ -1365,7 +1507,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         'aria-hidden': 'true',
         focusable: 'false',
       },
-      React.createElement('path', { d }),
+      children,
     );
   }
 
@@ -1385,11 +1527,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return (parts[0].slice(0, 1) + parts[1].slice(0, 1)).toUpperCase();
   }
 
-  function MessengerHeader({ isCurator, subtitle, menuItems, offline, onClose }) {
+  function MessengerHeader({
+    isCurator,
+    subtitle,
+    menuItems,
+    offline,
+    onClose,
+    searchMode = false,
+    searchSubtitle = '',
+    onSearchClose,
+  }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef(null);
-    const title = isCurator ? 'Сообщения с клиентом' : `Куратор ${resolveCuratorName()}`;
+    const title = searchMode
+      ? 'Поиск по переписке'
+      : (isCurator ? 'Сообщения с клиентом' : `Куратор ${resolveCuratorName()}`);
     const items = (menuItems || []).filter(Boolean);
+    const displaySubtitle = searchMode ? searchSubtitle : subtitle;
+    const handleClose = searchMode ? onSearchClose : onClose;
 
     useEffect(() => {
       if (!menuOpen) return undefined;
@@ -1419,20 +1574,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         'div',
         { className: 'messenger-title-stack' },
         React.createElement('div', { className: 'messenger-title' }, title),
-        React.createElement(
+        displaySubtitle && React.createElement(
           'div',
-          { className: 'messenger-subtitle' },
-          React.createElement('span', {
+          {
+            className: [
+              'messenger-subtitle',
+              searchMode ? 'messenger-subtitle--search-count' : '',
+            ].filter(Boolean).join(' '),
+          },
+          !searchMode && React.createElement('span', {
             className: `messenger-subtitle__dot${offline ? ' is-offline' : ''}`,
             'aria-hidden': 'true',
           }),
-          subtitle,
+          displaySubtitle,
         ),
       ),
       React.createElement(
         'div',
         { className: 'messenger-header-actions', ref: menuRef },
-        items.length > 0 && React.createElement(
+        !searchMode && items.length > 0 && React.createElement(
           'button',
           {
             type: 'button',
@@ -1441,12 +1601,17 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             'aria-expanded': menuOpen ? 'true' : 'false',
             onClick: () => setMenuOpen((open) => !open),
           },
-          React.createElement(Icon, { name: 'more', strokeWidth: 2.4 }),
+          React.createElement(Icon, { name: 'more', size: 19, strokeWidth: 2.75 }),
         ),
         React.createElement(
           'button',
-          { type: 'button', className: 'messenger-header-button messenger-close', onClick: onClose, 'aria-label': 'Закрыть' },
-          React.createElement(Icon, { name: 'close' }),
+          {
+            type: 'button',
+            className: 'messenger-header-button messenger-close',
+            onClick: handleClose,
+            'aria-label': searchMode ? 'Закрыть поиск' : 'Закрыть',
+          },
+          React.createElement(Icon, { name: 'close', size: 18, strokeWidth: 2.75 }),
         ),
         menuOpen && React.createElement(
           'div',
@@ -1467,6 +1632,98 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             React.createElement('span', { className: 'messenger-header-menu__label' }, item.label),
             item.hint && React.createElement('span', { className: 'messenger-header-menu__hint' }, item.hint),
           )),
+        ),
+      ),
+    );
+  }
+
+  function actionSheetQuoteText(message) {
+    if (!message) return '';
+    const parsed = message.body ? parseQuotedBody(message.body) : { quote: null, reply: '' };
+    return (parsed.reply || searchableText(message) || '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  async function copyMessageText(message) {
+    const text = actionSheetQuoteText(message);
+    if (!text) return false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch { /* fallback below */ }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function MessageActionSheet({
+    message,
+    canEdit,
+    canDelete,
+    canCopy,
+    onClose,
+    onEdit,
+    onDelete,
+  }) {
+    if (!message) return null;
+    const quote = actionSheetQuoteText(message);
+    return React.createElement(
+      React.Fragment,
+      null,
+      React.createElement('button', {
+        type: 'button',
+        className: 'messenger-action-sheet-backdrop',
+        onClick: onClose,
+        'aria-label': 'Закрыть',
+      }),
+      React.createElement(
+        'div',
+        { className: 'messenger-action-sheet', role: 'menu' },
+        quote && React.createElement(
+          'div',
+          { className: 'messenger-action-sheet__quote' },
+          quote,
+        ),
+        canEdit && React.createElement('button', {
+          type: 'button',
+          role: 'menuitem',
+          className: 'messenger-action-sheet__item',
+          onClick: () => { onClose(); onEdit?.(); },
+        },
+          React.createElement(Icon, { name: 'reply', size: 18, strokeWidth: 2.5 }),
+          'Изменить',
+        ),
+        canCopy && React.createElement('button', {
+          type: 'button',
+          role: 'menuitem',
+          className: 'messenger-action-sheet__item',
+          onClick: () => { void copyMessageText(message); onClose(); },
+        },
+          React.createElement(Icon, { name: 'copy', size: 18, strokeWidth: 2.5 }),
+          'Скопировать текст',
+        ),
+        canDelete && React.createElement('button', {
+          type: 'button',
+          role: 'menuitem',
+          className: 'messenger-action-sheet__item messenger-action-sheet__item--danger',
+          onClick: () => { onClose(); onDelete?.(); },
+        },
+          React.createElement(Icon, { name: 'trash', size: 18, strokeWidth: 2.5 }),
+          'Удалить',
         ),
       ),
     );
@@ -1797,6 +2054,25 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return transcript || '';
   }
 
+  function formatSearchCount(count) {
+    const n = Number(count) || 0;
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    let word = 'сообщений';
+    if (mod10 === 1 && mod100 !== 11) word = 'сообщение';
+    else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) word = 'сообщения';
+    return `${n} ${word} найдено`;
+  }
+
+  function formatSearchResultMeta(message) {
+    const day = formatDayLabel(message.created_at);
+    const time = formatTime(message.created_at);
+    const hasAudio = (message.attachments || []).some(isAudioAttachment);
+    const parts = [`${day} · ${time}`];
+    if (hasAudio && !message.body) parts.push('голосовое');
+    return parts.join(' · ');
+  }
+
   /** Кусок текста вокруг совпадения — целую простыню в строку результата не влезет. */
   function buildSnippet(text, query, radius = 40) {
     const source = String(text || '');
@@ -1827,7 +2103,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return parts;
   }
 
-  function SearchPanel({ isCurator, curatorViewClientId, onClose, onJump }) {
+  function SearchPanel({ isCurator, curatorViewClientId, onSummaryChange, onJump }) {
     const [query, setQuery] = useState('');
     const [type, setType] = useState(null);
     const [results, setResults] = useState([]);
@@ -1863,6 +2139,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       return () => { cancelled = true; clearTimeout(timer); };
     }, [query, type, isCurator, curatorViewClientId]);
 
+    useEffect(() => {
+      if (!onSummaryChange) return;
+      const trimmed = query.trim();
+      if (trimmed.length < SEARCH_MIN_QUERY) {
+        onSummaryChange('');
+        return;
+      }
+      if (state === 'loading') {
+        onSummaryChange('Ищу…');
+        return;
+      }
+      if (state === 'ready') {
+        onSummaryChange(formatSearchCount(results.length));
+        return;
+      }
+      onSummaryChange('');
+    }, [onSummaryChange, query, state, results.length]);
+
     const groups = [];
     for (const message of results) {
       const label = formatDayLabel(message.created_at);
@@ -1871,26 +2165,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       else groups.push({ label, items: [message] });
     }
 
+    const trimmedQuery = query.trim();
+
     return React.createElement(
       'div',
       { className: 'messenger-search' },
       React.createElement(
         'div',
         { className: 'messenger-search__bar' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'messenger-header-button',
-          onClick: onClose,
-          'aria-label': 'Закрыть поиск',
-        }, React.createElement(Icon, { name: 'close', size: 18 })),
-        React.createElement('input', {
-          ref: inputRef,
-          className: 'messenger-search__input',
-          value: query,
-          placeholder: 'Поиск по переписке',
-          'aria-label': 'Поиск по переписке',
-          onChange: (e) => setQuery(e.target.value),
-        }),
+        React.createElement(
+          'div',
+          { className: 'messenger-search__field' },
+          React.createElement(Icon, { name: 'search', size: 16, strokeWidth: 2.75, className: 'messenger-search__icon' }),
+          React.createElement('input', {
+            ref: inputRef,
+            className: 'messenger-search__input',
+            value: query,
+            placeholder: 'Поиск по переписке',
+            'aria-label': 'Поиск по переписке',
+            onChange: (e) => setQuery(e.target.value),
+          }),
+          trimmedQuery && React.createElement('button', {
+            type: 'button',
+            className: 'messenger-search__clear',
+            onClick: () => setQuery(''),
+            'aria-label': 'Очистить поиск',
+          }, React.createElement(Icon, { name: 'close', size: 15, strokeWidth: 2.75 })),
+        ),
       ),
       React.createElement(
         'div',
@@ -1905,7 +2206,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       React.createElement(
         'div',
         { className: 'messenger-search__results' },
-        state === 'idle' && query.trim().length < SEARCH_MIN_QUERY && React.createElement(
+        state === 'idle' && trimmedQuery.length < SEARCH_MIN_QUERY && React.createElement(
           'div',
           { className: 'messenger-search__hint' },
           'Введите хотя бы два символа. Голосовые ищутся по расшифровке.',
@@ -1917,35 +2218,36 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           { className: 'messenger-search__hint' },
           'Ничего не нашлось. Попробуйте другое слово.',
         ),
-        groups.map((group) => React.createElement(
+        (state === 'ready' && results.length > 0) && React.createElement(
           'div',
-          { key: group.label, className: 'messenger-search__group' },
-          React.createElement('div', { className: 'messenger-search__day' }, group.label),
-          group.items.map((message) => React.createElement(
-            onJump ? 'button' : 'div',
-            {
-              key: message.id,
-              className: 'messenger-search__item',
-              ...(onJump ? { type: 'button', onClick: () => onJump(message) } : {}),
-            },
-            React.createElement(
-              'div',
-              { className: 'messenger-search__meta' },
-              React.createElement('span', { className: 'messenger-search__author' },
-                message.sender_role === 'curator' ? 'Куратор' : 'Клиент'),
-              React.createElement('span', { className: 'messenger-search__time' }, formatTime(message.created_at)),
-              message.applied_at && React.createElement('span', { className: 'msg-applied' }, 'Внесено в день'),
-            ),
-            React.createElement(
-              'div',
-              { className: 'messenger-search__snippet' },
-              splitByMatch(buildSnippet(searchableText(message), query.trim()), query.trim())
-                .map((part, index) => (part.match
-                  ? React.createElement('mark', { key: index }, part.text)
-                  : React.createElement('span', { key: index }, part.text))),
-            ),
+          { className: 'messenger-search__scroll' },
+          groups.map((group) => React.createElement(
+            'div',
+            { key: group.label, className: 'messenger-search__group' },
+            React.createElement('div', { className: 'messenger-search__day' }, group.label),
+            group.items.map((message) => React.createElement(
+              onJump ? 'button' : 'div',
+              {
+                key: message.id,
+                className: 'messenger-search__item',
+                ...(onJump ? { type: 'button', onClick: () => onJump(message) } : {}),
+              },
+              React.createElement(
+                'div',
+                { className: 'messenger-search__meta' },
+                formatSearchResultMeta(message),
+              ),
+              React.createElement(
+                'div',
+                { className: 'messenger-search__snippet' },
+                splitByMatch(buildSnippet(searchableText(message), trimmedQuery), trimmedQuery)
+                  .map((part, index) => (part.match
+                    ? React.createElement('mark', { key: index }, part.text)
+                    : React.createElement('span', { key: index }, part.text))),
+              ),
+            )),
           )),
-        )),
+        ),
       ),
     );
   }
@@ -2320,7 +2622,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       React.createElement(
         'div',
         { className: 'messenger-empty__text' },
-        'Отправьте фото еды, вопрос или контекст по самочувствию — куратор ответит и соберёт день.',
+        'Отправьте фото еды, вопрос или как себя чувствуете — куратор ответит и соберёт день.',
       ),
       React.createElement(
         'div',
@@ -2595,10 +2897,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const [recordingMs, setRecordingMs] = useState(0);
     const [transcriptionConsent, setTranscriptionConsent] = useState(null); // {granted, decided, created_at, revoked_at, version}
     const [transcriptionPromptOpen, setTranscriptionPromptOpen] = useState(false);
+    const [transcriptionRevokeOpen, setTranscriptionRevokeOpen] = useState(false);
     const [savingTranscriptionConsent, setSavingTranscriptionConsent] = useState(false);
     const [lightbox, setLightbox] = useState(null); // {attachments, index} | null
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [searchOpen, setSearchOpen] = useState(false);
+    const [searchSubtitle, setSearchSubtitle] = useState('');
+    const [actionSheetMessage, setActionSheetMessage] = useState(null);
+    const [editRequestMessageId, setEditRequestMessageId] = useState(null);
     const [highlightedId, setHighlightedId] = useState(null);
     const [outbox, setOutbox] = useState([]);
     const [flushing, setFlushing] = useState(false);
@@ -4026,10 +4332,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
     const handleTranscriptionSettingsToggle = async () => {
       const currentlyGranted = !!(transcriptionConsentRef.current || transcriptionConsent)?.granted;
-      if (currentlyGranted && !window.confirm('Отозвать согласие на расшифровку новых голосовых сообщений?')) return;
+      if (currentlyGranted) {
+        setTranscriptionRevokeOpen(true);
+        return;
+      }
       setSavingTranscriptionConsent(true);
       setError(null);
-      const res = await HEYS.MessengerAPI?.setTranscriptionConsent?.(!currentlyGranted);
+      const res = await HEYS.MessengerAPI?.setTranscriptionConsent?.(true);
       setSavingTranscriptionConsent(false);
       if (!res?.success) {
         setError(res?.error || 'transcription_consent_failed');
@@ -4044,6 +4353,27 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       };
       transcriptionConsentRef.current = next;
       setTranscriptionConsent(next);
+    };
+
+    const confirmTranscriptionRevoke = async () => {
+      setSavingTranscriptionConsent(true);
+      setError(null);
+      const res = await HEYS.MessengerAPI?.setTranscriptionConsent?.(false);
+      setSavingTranscriptionConsent(false);
+      if (!res?.success) {
+        setError(res?.error || 'transcription_consent_failed');
+        return;
+      }
+      const next = {
+        granted: !!res.granted,
+        decided: !!res.decided,
+        created_at: res.created_at || null,
+        revoked_at: res.revoked_at || null,
+        version: res.version || '1.1',
+      };
+      transcriptionConsentRef.current = next;
+      setTranscriptionConsent(next);
+      setTranscriptionRevokeOpen(false);
     };
 
     return React.createElement(
@@ -4079,8 +4409,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             : getThreadSubtitle(messages, loading),
           offline: isOffline(),
           onClose,
-          // Постоянная полоса согласия на расшифровку уехала из композера в
-          // это меню: она нужна раз в жизни клиента, а место занимала всегда.
+          searchMode: searchOpen,
+          searchSubtitle,
+          onSearchClose: () => {
+            setSearchOpen(false);
+            setSearchSubtitle('');
+          },
           menuItems: [
             {
               key: 'search',
@@ -4103,8 +4437,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             },
           ],
         }),
-        // Вторая строка шапки: чего ещё ждём в дне
-        React.createElement(DayChecklistRow, {
+        !searchOpen && React.createElement(DayChecklistRow, {
           items: dayChecklist,
           isCurator,
           onPick: (template) => {
@@ -4112,11 +4445,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
             inputRef.current?.focus();
           },
         }),
-        // Поиск занимает место треда: это отдельный режим, а не оверлей.
         searchOpen && React.createElement(SearchPanel, {
           isCurator,
           curatorViewClientId,
-          onClose: () => setSearchOpen(false),
+          onSummaryChange: setSearchSubtitle,
           onJump: jumpToMessage,
         }),
         // Thread
@@ -4204,6 +4536,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         onDelete: requestDeleteMessage,
                         onReply: handleReply,
                         onEdit: handleEditMessage,
+                        onActionSheet: setActionSheetMessage,
+                        editRequestId: editRequestMessageId,
+                        onEditRequestConsumed: () => setEditRequestMessageId(null),
                         onPhotoClick: handlePhotoClick,
                         onApplyRequest: isCurator ? openApplyPanel : undefined,
                         highlighted: m.id === highlightedId,
@@ -4482,7 +4817,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
               React.createElement('div', { className: 'messenger-consent-title' }, 'Расшифровывать голосовые?'),
               React.createElement(
                 'div',
-                { className: 'messenger-consent-text' },
+                { className: 'messenger-consent-text consent-doc-body' },
                 'Передадим выбранное аудио в Yandex SpeechKit и сохраним полученный текст в чате. В записи могут быть сведения о здоровье. Голосовое отправится и без расшифровки.',
               ),
               React.createElement(
@@ -4493,23 +4828,23 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   target: '_blank',
                   rel: 'noopener noreferrer',
                 },
-                'Прочитать полное согласие',
+                'Подробнее о данных',
               ),
               React.createElement(
                 'div',
                 { className: 'messenger-consent-actions' },
                 React.createElement('button', {
                   type: 'button',
-                  className: 'messenger-consent-secondary',
-                  disabled: savingTranscriptionConsent,
-                  onClick: () => handleTranscriptionConsentChoice(false),
-                }, 'Без расшифровки'),
-                React.createElement('button', {
-                  type: 'button',
                   className: 'messenger-consent-primary',
                   disabled: savingTranscriptionConsent,
                   onClick: () => handleTranscriptionConsentChoice(true),
-                }, savingTranscriptionConsent ? 'Сохраняю...' : 'Согласен'),
+                }, savingTranscriptionConsent ? 'Сохраняю…' : 'Расшифровывать'),
+                React.createElement('button', {
+                  type: 'button',
+                  className: 'messenger-consent-secondary',
+                  disabled: savingTranscriptionConsent,
+                  onClick: () => handleTranscriptionConsentChoice(false),
+                }, 'Не сейчас'),
               ),
             ),
           ),
@@ -4522,11 +4857,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         }),
         deleteConfirm &&
           React.createElement(DeleteConfirmDialog, {
-            message: deleteConfirm,
             busy: deletingMessageId === deleteConfirm.id,
             onCancel: cancelDeleteMessage,
             onConfirm: confirmDeleteMessage,
           }),
+        actionSheetMessage && React.createElement(MessageActionSheet, {
+          message: actionSheetMessage,
+          canEdit: actionSheetMessage.sender_role === viewerRole && !actionSheetMessage.intent_type,
+          canDelete: actionSheetMessage.sender_role === viewerRole,
+          canCopy: !!actionSheetQuoteText(actionSheetMessage),
+          onClose: () => setActionSheetMessage(null),
+          onEdit: () => setEditRequestMessageId(actionSheetMessage.id),
+          onDelete: () => requestDeleteMessage(actionSheetMessage),
+        }),
+        React.createElement(TranscriptionRevokeSheet, {
+          open: transcriptionRevokeOpen,
+          stats: countThreadAudioAttachments(messages),
+          busy: savingTranscriptionConsent,
+          onConfirm: confirmTranscriptionRevoke,
+          onCancel: () => { if (!savingTranscriptionConsent) setTranscriptionRevokeOpen(false); },
+        }),
         ),
       ),
     );
@@ -4921,9 +5271,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       isNetworkFailure,
       queuedToOptimistic,
       MessageBubble,
+      DeleteConfirmDialog,
+      TranscriptionRevokeSheet,
+      countThreadAudioAttachments,
       DateSeparator,
       Icon,
-      ICON_PATHS,
+      ICON_DEFS,
       getInitials,
       resolveCuratorName,
     },

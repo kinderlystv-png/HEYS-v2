@@ -213,8 +213,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   // Зона заведена 05.09 вместе с первым разбором messenger.v4.dc.html: 4 typed «≠»
   // — это canvas-conflict по строкам, где продукт ещё не сведён с кадром.
+  // 07.09: voice/wait batch — play 44px (accessibility) + play SVG (canvas-conflict);
+  // typedMismatch 0 → 2.
   messenger: Object.freeze({
-    typedMismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [2, '66cbd39b25e35ee3'],
   }),
   'norm-correction': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
