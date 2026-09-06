@@ -81,11 +81,11 @@ describe('food-meal · лестница чернил для мелких дан�
     const nutrition = readRules(NUTRITION_CSS);
     const productMeta = steps.get('.aps-v4-product-row__meta')?.color;
     expect(productMeta, '.aps-v4-product-row__meta').toBeTruthy();
-    expect(productMeta).toContain('--v4-ink-data');
+    expect(productMeta).toContain('--v4-ink-2');
     for (const selector of NUTRITION_DATA_SELECTORS) {
       const color = nutrition.get(selector)?.color;
       expect(color, selector).toBeTruthy();
-      expect(color, selector).toContain('--v4-ink-data');
+      expect(color, selector).toContain('--v4-ink-2');
     }
   });
 });

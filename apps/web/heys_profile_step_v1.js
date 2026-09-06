@@ -12,7 +12,7 @@
 
   const { WheelPicker, registerStep, utils } = HEYS.StepModal;
   const { lsGet, lsSet, getTodayKey } = utils;
-  const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
+  const INK_DATA = 'var(--v4-ink-2, rgba(0,0,0,.56))';
 
   // ============================================================
   // УТИЛИТЫ

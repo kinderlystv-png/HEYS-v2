@@ -53,7 +53,7 @@ describe('строка приёма дня против кадра food-meal', (
           ['flex', 'width', 'height', 'radius', 'background', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
         [11, '.nutrition-v4-meal-row__title', ['flex', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
         [12, '.nutrition-v4-meal-row__kcal', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-        // Семантическая роль --v4-ink-data раскрывается по теме, поэтому её
+        // Семантическая роль --v4-ink-2 раскрывается по теме, поэтому её
         // точное назначение проверяем ниже, а здесь оставляем числовую типографику.
         [14, '.nutrition-v4-meal-row__items', ['flex', 'fontWeight', 'fontSize', 'lineHeight']],
         [15, '.nutrition-v4-meal-row__add',
@@ -64,7 +64,7 @@ describe('строка приёма дня против кадра food-meal', (
     });
     expect(drift).toEqual([]);
     expect(rules.get('.nutrition-v4-meal-row__items').color)
-      .toBe('var(--v4-ink-data, var(--ink-2))');
+      .toBe('var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56))');
   });
 
   it('числа листа правки совпадают с кадром', () => {

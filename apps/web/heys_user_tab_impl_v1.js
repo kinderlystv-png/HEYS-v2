@@ -4,7 +4,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 (function (global) {
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
-    const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
+    const INK_DATA = 'var(--v4-ink-2, rgba(0,0,0,.56))';
 
     // v4 roles для cycle, registration, settings-system (смысл, не оттенок — UI_V4_BARE_LITERALS_DECISION.md).
     const V4_WARN_TEXT = 'var(--v4-warn-text, #a1471c)';

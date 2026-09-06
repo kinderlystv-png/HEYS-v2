@@ -6846,7 +6846,7 @@ body:has(.page-reports) .hdr::after {
   line-height: 1;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: var(--v4-ink-label, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45));
+  color: var(--v4-ink-3, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45));
   white-space: nowrap;
   cursor: pointer;
 }
@@ -11816,7 +11816,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-macro__fact-sep,
 .widget-v4-macro__fact-tgt {
   font-weight: 600;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .widget-v4-macro__fact--bad .widget-v4-macro__fact-sep,
@@ -12015,13 +12015,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-spark--flat .widget-v4-spark__line,
 .widget-v4-spark--flat polyline,
 .widget-trend-compact__spark.widget-v4-spark--flat polyline {
-  stroke: var(--v4-ink-mark) /* v4-intentional */);
+  stroke: var(--v4-ink-30) /* v4-intentional */);
 }
 
 .widget-v4-spark--flat .widget-v4-spark__dot,
 .widget-v4-spark--flat circle,
 .widget-trend-compact__spark.widget-v4-spark--flat circle {
-  fill: var(--v4-ink-mark) /* v4-intentional */);
+  fill: var(--v4-ink-30) /* v4-intentional */);
 }
 
 /* Кадр «Тренд здоровья · рост»: ломаная 2×1 несёт --gr2 через
@@ -12142,7 +12142,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 7px;
   padding: 0 2px;
   margin: 10px 0 2px;
-  color: var(--v4-ink-label, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45));
+  color: var(--v4-ink-3, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45));
 }
 
 .widget-v4-catalog__grid > .widget-v4-catalog__category:first-child {
@@ -12504,12 +12504,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   cursor: pointer;
 }
 
 .widget-v4-edit-footer__icon.is-off {
-  color: var(--v4-ink-mark, rgba(0, 0, 0, 0.3));
+  color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
   cursor: default;
 }
 
@@ -13650,7 +13650,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   font-size: 13px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 /* Вид «График» 2×2 — кадр «Динамика · E график 2×2».
@@ -14510,7 +14510,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
 }
 
 .widget-trend-compact__spark.widget-v4-spark--flat {
-  color: var(--v4-ink-mark) /* v4-intentional */;
+  color: var(--v4-ink-30) /* v4-intentional */;
 }
 
 .widget-trend-compact__spark.widget-v4-spark--bad {
@@ -14975,7 +14975,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__hero-unit {
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .widget-bd-sheet__insight {
@@ -15347,7 +15347,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__hero-track-name {
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .widget-bd-sheet__hero-track-val {

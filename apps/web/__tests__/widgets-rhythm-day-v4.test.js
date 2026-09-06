@@ -151,7 +151,7 @@ describe('Ритм приёмов · Лента дня — сведённый к
     expect(ink(blue)).toBe('#101826');
     expect(line(sand)).toBe('rgba(0, 0, 0, 0.08)');
     expect(line(blue)).toBe('rgba(0, 0, 0, 0.08)');
-    expect(blue).toContain('--v4-ink-data: rgba(var(--v4-ink-rgb), 0.64)');
-    expect(palette).toContain('--v4-ink-data: rgba(var(--v4-ink-rgb), 0.56)');
+    expect(blue).toContain('--v4-ink-2: rgba(var(--v4-ink-rgb), 0.64)');
+    expect(palette).toContain('--v4-ink-2: rgba(var(--v4-ink-rgb), 0.56)');
   });
 });

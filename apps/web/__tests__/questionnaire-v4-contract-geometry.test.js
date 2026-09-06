@@ -63,7 +63,7 @@ describe('анкета v4: решения контракта', () => {
   // Новая строка безопасных данных не заменяет весь вторичный текст: canvas
   // оставляет обычную прозу на 55 %, а служебные значения поднимает до 56 %.
   it('служебные данные используют отдельную роль 56 %, не глобальную замену', () => {
-    expect(SRC).toContain("const INK_DATA = 'var(--v4-ink-data, rgba(0, 0, 0, 0.56))'");
+    expect(SRC).toContain("const INK_DATA = 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))'");
     expect(SRC).toMatch(/color: INK_DATA[^}]*} },\s*STEP_TIME_LEFT\[step\]/);
     expect(SRC).toMatch(/color: INK_DATA[^}]*} },\s*'Все заполненные ответы/);
     expect(SRC).toContain("hint: 'Например: вес идёт вниз, вечером спокойнее', hintColor: INK_DATA");

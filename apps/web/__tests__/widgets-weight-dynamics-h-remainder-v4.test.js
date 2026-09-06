@@ -140,8 +140,8 @@ describe('Динамика · H сброшено и остаток — свед�
     const role = (block, name) => block.match(new RegExp(`${name}:\\s*([^;]+);`))?.[1]?.trim();
     expect(role(sand, '--v4-line')).toBe('rgba(0, 0, 0, 0.08)');
     expect(role(blue, '--v4-line')).toBe('rgba(0, 0, 0, 0.08)');
-    expect(role(root, '--v4-ink-data')).toBe('rgba(var(--v4-ink-rgb), 0.56)');
-    expect(role(blue, '--v4-ink-data')).toBe('rgba(var(--v4-ink-rgb), 0.64)');
+    expect(role(root, '--v4-ink-2')).toBe('rgba(var(--v4-ink-rgb), 0.56)');
+    expect(role(blue, '--v4-ink-2')).toBe('rgba(var(--v4-ink-rgb), 0.64)');
     expect(role(sand, '--v4-ok-fill')).toBe('#7a8a5e');
     expect(role(blue, '--v4-ok-fill')).toBe('#4f9a78');
     expect(role(sand, '--v4-ok-fill')).not.toBe(role(blue, '--v4-ok-fill'));

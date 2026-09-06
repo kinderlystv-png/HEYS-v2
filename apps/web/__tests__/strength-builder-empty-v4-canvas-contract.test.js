@@ -46,7 +46,7 @@ describe('strength builder · Б1 empty v4 canvas contract', () => {
     expect(css).toMatch(/\.sb-empty-action\s*\{[\s\S]*color: var\(--v4-muted/);
     expect(css).toMatch(/\.sb-empty-options\s*\{[\s\S]*margin-top: 10px;[\s\S]*padding: 2px 16px;[\s\S]*border-radius: 20px;/);
     expect(css).toMatch(/\.sb-empty-note\s*\{[\s\S]*margin: 12px 0 0;[\s\S]*font-size: 11px;[\s\S]*line-height: 1\.55;/);
-    expect(css).toMatch(/\.sb-empty-note\s*\{[\s\S]*color: var\(--v4-ink-data/);
+    expect(css).toMatch(/\.sb-empty-note\s*\{[\s\S]*color: var\(--v4-ink-2/);
   });
 
   it('does not let the OS dark preference override an explicit v4 palette', () => {

@@ -119,8 +119,8 @@ describe('Готовность ко сну · пункт без данных —
   it('чернила строки следуют набору; песок .56 ≠ синий .64', () => {
     const sand = palette.slice(palette.indexOf('[data-theme-id="sand"]'), palette.indexOf('[data-theme-id="sand-dark"]'));
     const blue = palette.slice(palette.indexOf('[data-theme-id="blue"]'), palette.indexOf('[data-theme-id="blue-dark"]'));
-    expect(palette).toContain('--v4-ink-data: rgba(var(--v4-ink-rgb), 0.56)');
-    expect(blue).toContain('--v4-ink-data: rgba(var(--v4-ink-rgb), 0.64)');
+    expect(palette).toContain('--v4-ink-2: rgba(var(--v4-ink-rgb), 0.56)');
+    expect(blue).toContain('--v4-ink-2: rgba(var(--v4-ink-rgb), 0.64)');
     const ink = (block) => block.match(/--v4-ink:\s*([^;]+);/)?.[1]?.trim();
     expect(ink(sand)).toBe('#201e1d');
     expect(ink(blue)).toBe('#101826');

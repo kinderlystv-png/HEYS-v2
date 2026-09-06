@@ -86,9 +86,9 @@ describe('Тренд здоровья · мёртвая зона — сведё�
     expect(spark.flex).toBe('none');
     expect(spark['margin-bottom']).toBe('2px');
     expect(rules.get('.widget-trend-compact__spark.widget-v4-spark--flat').color)
-      .toContain('--v4-ink-mark');
+      .toContain('--v4-ink-30');
     expect(rules.get('.widget-trend-compact__spark.widget-v4-spark--flat polyline').stroke)
-      .toContain('--v4-ink-mark');
+      .toContain('--v4-ink-30');
     expect(rules.get('.widget-trend-compact__spark.widget-v4-spark--ok').color)
       .toContain('--v4-ok-fill');
 
@@ -109,7 +109,7 @@ describe('Тренд здоровья · мёртвая зона — сведё�
     expect(role(sand, '--v4-ink-rgb')).toBe('0, 0, 0');
     expect(role(blue, '--v4-ink-rgb')).toBe('16, 24, 38');
     expect(role(sand, '--v4-ink-rgb')).not.toBe(role(blue, '--v4-ink-rgb'));
-    expect(palette).toContain('--v4-ink-mark: rgba(var(--v4-ink-rgb), 0.3)');
+    expect(palette).toContain('--v4-ink-30: rgba(var(--v4-ink-rgb), 0.3)');
     expect(role(sand, '--v4-ok-text')).toBe('#5c6a45');
     expect(role(blue, '--v4-ok-text')).toBe('#1f6e4d');
   });

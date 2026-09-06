@@ -94,7 +94,7 @@ describe('регистрация v4: решения контракта', () => {
   });
 
   it('обновлённые строки данных используют роль чернил 56 %, не локальные литералы', () => {
-    const role = "const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';";
+    const role = "const INK_DATA = 'var(--v4-ink-2, rgba(0,0,0,.56))';";
     expect(profile).toContain(role);
     expect(consents).toContain(role);
     expect(stepModal).toContain(role);

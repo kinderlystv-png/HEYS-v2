@@ -109,9 +109,9 @@ describe('Окно до сна · Как сейчас — сведённый к�
     expect(okText(blue)).toBe('#1f6e4d');
     expect(okText(sand)).not.toBe(okText(blue));
 
-    const sandData = palette.match(/:root[\s\S]*?--v4-ink-data:\s*([^;]+);/)?.[1]?.trim();
+    const sandData = palette.match(/:root[\s\S]*?--v4-ink-2:\s*([^;]+);/)?.[1]?.trim();
     expect(sandData).toBe('rgba(var(--v4-ink-rgb), 0.56)');
-    expect(blue.match(/--v4-ink-data:\s*([^;]+);/)?.[1]?.trim()).toBe('rgba(var(--v4-ink-rgb), 0.64)');
+    expect(blue.match(/--v4-ink-2:\s*([^;]+);/)?.[1]?.trim()).toBe('rgba(var(--v4-ink-rgb), 0.64)');
 
     expect(Math.floor(160 / 60) + ':' + String(160 % 60).padStart(2, '0')).toBe('2:40');
   });

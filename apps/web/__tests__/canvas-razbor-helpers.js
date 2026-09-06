@@ -360,7 +360,7 @@ function resetCoverage() {
   TOUCHED.clear();
 }
 
-// Пакет 43: канвас пишет --ink-2 (55 %), продукт — --v4-ink-data (56 %).
+// Пакет 43: канвас пишет --ink-2 (55 %), продукт — --v4-ink-2 (56 %).
 // Сверка разворачивает роли в литералы; вердикты зоны стоят «=» на роли.
 function siftInkDataDrift(drift) {
   return drift.filter((line) => {

@@ -303,7 +303,7 @@
 /* Подпись слева остаётся в своём кегле и использует общий data-floor. */
 .yv-slider-label {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .yv-slider-value {
@@ -322,7 +322,7 @@
 /* Кадр «Чек-ин · вчера по ощущениям», элемент 23: data-текст через 12 от дорожки. */
 .yv-slider-note {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 12px;
 }
 
@@ -622,7 +622,7 @@
 }
 
 [data-theme$="dark"] .yv-slider-note {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .yv-preset {
@@ -646,7 +646,7 @@
 }
 
 [data-theme$="dark"] .yv-slider-label {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .yv-slider-value {
@@ -764,7 +764,7 @@
 .yv-pack-note {
   margin-top: 12px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -777,7 +777,7 @@
 }
 
 [data-theme$="dark"] .yv-pack-note {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .yv-pack-secondary {
@@ -868,7 +868,7 @@
 
 .yv-force-kcal {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -919,7 +919,7 @@
 .yv-slider-tick {
   position: absolute;
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }

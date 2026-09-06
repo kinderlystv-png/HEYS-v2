@@ -47,7 +47,7 @@
     '--sb-card': 'var(--v4-c1, #f7efe2)',
     '--sb-bg': 'var(--v4-bg, #fffaf3)',
     '--sb-tx': 'var(--v4-ink, #201e1d)',
-    '--sb-mut': 'var(--v4-ink-data, rgba(32, 30, 29, 0.56))',
+    '--sb-mut': 'var(--v4-ink-2, rgba(32, 30, 29, 0.56))',
     '--sb-soft': 'var(--v4-hero, #efe3cf)',
     '--sb-acc': 'var(--v4-act-text, #8a4a20)',
     '--sb-acc-strong': 'var(--v4-act, #c67139)',

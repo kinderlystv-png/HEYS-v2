@@ -227,7 +227,7 @@ body:has(.activity-v4) .hdr::after {
    ни числу, ни цели нечего выделять. Оценка приглушается иначе (55 %), потому
    что число там настоящее, просто подставленное. */
 .activity-v4-steps__value--zero {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-steps__value--estimated {
@@ -253,11 +253,11 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-steps__kcal {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-steps__kcal--zero {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-steps__note {
@@ -288,6 +288,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-today__row--action {
   cursor: pointer;
+  min-height: 44px;
 }
 
 .activity-v4-today__key {
@@ -342,7 +343,7 @@ body:has(.activity-v4) .hdr::after {
 /* «не отмечено» — не число, поэтому мельче и приглушено. */
 .activity-v4-today__value--muted {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-today__body {
@@ -455,7 +456,7 @@ body:has(.activity-v4) .hdr::after {
      бледнее 56 %. Рядом «251 ккал» уже на нём. */
   flex: none;
   font: 500 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* .btn кадра: текст по центру, минимальная высота 48, радиус 999,
@@ -765,6 +766,8 @@ body:has(.activity-v4) .hdr::after {
   padding: 4px 10px;
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-period-label--month {
@@ -793,6 +796,7 @@ body:has(.activity-v4) .hdr::after {
   background: none;
   cursor: pointer;
   text-align: left;
+  min-height: 44px;
 }
 
 .activity-v4-history__row--last {
@@ -838,7 +842,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-history__delta--muted {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Пункт листа действия: имя и под ним — что именно спросят (контракт строка 22). */
@@ -1371,6 +1375,8 @@ body:has(.activity-v4) .hdr::after {
   text-align: center;
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 /* Карточка силовой: спокойная поверхность для обычного состояния и явный
@@ -1455,14 +1461,14 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4 .sb-card-current {
   margin-top: 6px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
 .activity-v4 .sb-card-note {
   margin-top: 10px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4 .sb-card-cta b {
@@ -1504,7 +1510,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-warning__reason {
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-load-warning__text {
@@ -1527,7 +1533,7 @@ body:has(.activity-v4) .hdr::after {
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
   font: 700 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -1540,7 +1546,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-note {
   margin-top: 10px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-load-evidence,
@@ -1593,7 +1599,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-evidence__rule span:last-child,
 .activity-v4-load-details__note {
   font: 500 11px/1.3 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-load-toggle {
@@ -1638,7 +1644,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-details__value--muted {
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-load-details__value--number {
@@ -1660,7 +1666,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-verdict__next {
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-load-verdict__tiles {
@@ -1680,7 +1686,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-verdict__key {
   display: block;
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-load-verdict__track {

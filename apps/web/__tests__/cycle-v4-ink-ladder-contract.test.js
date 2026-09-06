@@ -35,7 +35,7 @@ describe('cycle v4 · data ink ladder', () => {
     ['.reports-v4-dynamics-card__legend-item', REPORTS_CSS],
     ['.reports-v4-dynamics-card__hint', REPORTS_CSS],
   ])('%s uses the 56%% data role', (selector, css) => {
-    expect(rule(css, selector)).toContain('var(--v4-ink-data');
+    expect(rule(css, selector)).toContain('var(--v4-ink-2');
   });
 
   it('keeps the collapsed cycle hint compact', () => {

@@ -381,11 +381,11 @@ describe('UI v4 chrome paint — рама', () => {
     it('неактивная подпись primary nav — 8,5/600 и светлые чернила 56 %', () => {
         const navRule = [
             ...baseCss.matchAll(/\.tabs--v4-primary \.tab\.tab-primary-nav \{[^}]+\}/g),
-        ].map((match) => match[0]).find((candidate) => candidate.includes('--v4-ink-data')) || '';
+        ].map((match) => match[0]).find((candidate) => candidate.includes('rgba(0, 0, 0, 0.56)')) || '';
         const textRule = baseCss.match(
             /\.tabs--v4-primary \.tab\.tab-primary-nav \.tab-text \{[^}]+\}/,
         )?.[0] || '';
-        expect(navRule).toMatch(/color:\s*var\(--v4-ink-data,\s*rgba\(0,\s*0,\s*0,\s*0\.56\)\)/);
+        expect(navRule).toMatch(/color:\s*var\(--v4-ink-2,\s*rgba\(0,\s*0,\s*0,\s*0\.56\)\)/);
         expect(textRule).toMatch(/font-size:\s*8\.5px/);
         expect(textRule).toMatch(/font-weight:\s*600/);
         expect(textRule).toMatch(/line-height:\s*1/);

@@ -13,7 +13,7 @@ const CSS_611 = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/611-aps
 const CSS_600 = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/600-steps-and-aps.css'), 'utf8');
 const COMPONENTS = fs.readFileSync(path.join(ROOT, 'apps/web/styles/heys-components.css'), 'utf8');
 const INK2_COLOR = 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))';
-const DATA_COLOR = 'var(--v4-ink-data, rgba(0, 0, 0, 0.56))';
+const DATA_COLOR = 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))';
 
 function contractRows() {
   const html = fs.readFileSync(CANVAS, 'utf8');

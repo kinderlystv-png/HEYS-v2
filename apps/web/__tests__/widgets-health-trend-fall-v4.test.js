@@ -92,7 +92,7 @@ describe('Тренд здоровья · падение — сведённый �
     expect(rules.get('.widget-trend-compact__spark.widget-v4-spark--ok').color)
       .toContain('--v4-ok-fill');
     expect(rules.get('.widget-trend-compact__spark.widget-v4-spark--flat').color)
-      .toContain('--v4-ink-mark');
+      .toContain('--v4-ink-30');
 
     expect(rules.get('.widget-v4-sleepready-review .widget-v4-goal-value')['font-size'])
       .toBe('26px');

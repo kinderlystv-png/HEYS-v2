@@ -3,7 +3,7 @@
 (function (global) {
   const HEYS = global.HEYS = global.HEYS || {};
   const { useState, useMemo, useEffect, useCallback, useRef, useContext, createContext } = React;
-  const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
+  const INK_DATA = 'var(--v4-ink-2, rgba(0,0,0,.56))';
 
   // === Контекст для передачи данных между шагами ===
   const StepModalContext = createContext({});

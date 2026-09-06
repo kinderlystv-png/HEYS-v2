@@ -1830,9 +1830,9 @@
                 // Строка контракта «вторичные тоны» (уточнение 2 сентября по
                 // контрасту): строки прошлых взвешиваний стояли на 42–50 %
                 // (контраст 2,98–3,87) и подняты до дна тона — 56 %. Это роль
-                // --v4-ink-data, а не литерал: в тёмных наборах она считается
+                // --v4-ink-2, а не литерал: в тёмных наборах она считается
                 // от чернил набора.
-                style: { display: 'flex', justifyContent: 'space-between', marginTop: 11, fontSize: 12, fontWeight: 600, lineHeight: 1, color: 'var(--v4-ink-data, rgba(0,0,0,.56))' }
+                style: { display: 'flex', justifyContent: 'space-between', marginTop: 11, fontSize: 12, fontWeight: 600, lineHeight: 1, color: 'var(--v4-ink-2, rgba(0,0,0,.56))' }
               },
                 React.createElement('span', null, formatEstimateSampleDate(sample.date)),
                 React.createElement('span', null, `${Number(sample.weight).toFixed(1).replace('.', ',')} кг`)

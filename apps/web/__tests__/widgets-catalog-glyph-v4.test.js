@@ -133,7 +133,7 @@ describe('вид · значок вместо эмодзи — сведённы�
     const category = rules.get('.widget-v4-catalog__category');
     expect(category.gap).toBe('7px');
     expect(category.padding).toBe('0 2px');
-    expect(category.color).toContain('--v4-ink-label');
+    expect(category.color).toContain('--v4-ink-3');
     expect(category.background || 'none').not.toMatch(/#|rgb/i);
 
     const label = rules.get('.widget-v4-catalog__category-label');

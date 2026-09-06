@@ -92,7 +92,7 @@
   // наборах чернила-литерал давали тёмное по тёмному.
   const INK = 'var(--v4-ink, #201e1d)';
   const INK_55 = 'var(--v4-ink-2, rgba(0, 0, 0, 0.55))';   // строка «вторичный текст»
-  const INK_DATA = 'var(--v4-ink-data, rgba(0, 0, 0, 0.56))'; // безопасные данные и служебные подсказки
+  const INK_DATA = 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))'; // безопасные данные и служебные подсказки
   const INK_60 = 'var(--v4-ink-2, rgba(0, 0, 0, 0.6))';
   const INK_40 = 'var(--v4-ink-4, rgba(0, 0, 0, 0.4))';
   const SURFACE_1 = 'var(--v4-card, #f7efe2)';             // --c1

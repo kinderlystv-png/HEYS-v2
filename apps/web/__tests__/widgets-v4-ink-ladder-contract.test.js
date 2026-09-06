@@ -110,10 +110,10 @@ describe('семантическая лестница чернил home-widgets'
   it('строит точные роли от raw ink-rgb каждого набора', () => {
     for (const role of [
       ['prose', '0.62'],
-      ['data', '0.56'],
-      ['label', '0.45'],
-      ['secondary', '0.38'],
-      ['mark', '0.3'],
+      ['2', '0.56'],
+      ['3', '0.45'],
+      ['4', '0.38'],
+      ['30', '0.3'],
     ]) {
       expect(palette).toContain(`--v4-ink-${role[0]}: rgba(var(--v4-ink-rgb), ${role[1]});`);
     }
@@ -137,13 +137,13 @@ describe('семантическая лестница чернил home-widgets'
 
   it('сохраняет смысл ступеней у текста от 12 px и у разметки', () => {
     expect(rules.get('.widget-v4-macro__num')?.fill).toContain('--v4-ink-2');
-    expect(rules.get('.widget-v4-macro__fact-sep')?.color).toContain('--v4-ink-secondary');
-    expect(rules.get('.widget-v4-macro__fact-tgt')?.color).toContain('--v4-ink-secondary');
-    expect(rules.get('.widget-bd-sheet__hero-unit')?.color).toContain('--v4-ink-secondary');
+    expect(rules.get('.widget-v4-macro__fact-sep')?.color).toContain('--v4-ink-4');
+    expect(rules.get('.widget-v4-macro__fact-tgt')?.color).toContain('--v4-ink-4');
+    expect(rules.get('.widget-bd-sheet__hero-unit')?.color).toContain('--v4-ink-4');
     expect(rules.get('.widget-bd-sheet__insight')?.color).toContain('--v4-ink-prose');
-    expect(rules.get('.widget-bd-sheet__hero-track-name')?.color).toContain('--v4-ink-label');
-    expect(rules.get('.widget-v4-edit-footer__icon')?.color).toContain('--v4-ink-label');
-    expect(rules.get('.widget-v4-edit-footer__icon.is-off')?.color).toContain('--v4-ink-mark');
+    expect(rules.get('.widget-bd-sheet__hero-track-name')?.color).toContain('--v4-ink-3');
+    expect(rules.get('.widget-v4-edit-footer__icon')?.color).toContain('--v4-ink-3');
+    expect(rules.get('.widget-v4-edit-footer__icon.is-off')?.color).toContain('--v4-ink-30');
   });
 
   it('не оставляет literal light-ink у нейтрального текста home', () => {

@@ -134,8 +134,8 @@ describe('Шаги · Неделя — сведённый кусок', () => {
 
   it('чернила шапки и --gr2 различают наборы; обычный столбик — один литерал', () => {
     const blueBlock = palette.slice(palette.indexOf('[data-theme-id="blue"]'));
-    const sandData = palette.match(/:root[\s\S]*?--v4-ink-data:\s*rgba\(var\(--v4-ink-rgb\),\s*([0-9.]+)\)/)?.[1];
-    const blueData = blueBlock.match(/--v4-ink-data:\s*rgba\(var\(--v4-ink-rgb\),\s*([0-9.]+)\)/)?.[1];
+    const sandData = palette.match(/:root[\s\S]*?--v4-ink-2:\s*rgba\(var\(--v4-ink-rgb\),\s*([0-9.]+)\)/)?.[1];
+    const blueData = blueBlock.match(/--v4-ink-2:\s*rgba\(var\(--v4-ink-rgb\),\s*([0-9.]+)\)/)?.[1];
     const sandFill = palette.match(/:root[\s\S]*?--v4-ok-fill:\s*(#[0-9a-f]{6})/i)?.[1];
     const blueFill = blueBlock.match(/--v4-ok-fill:\s*(#[0-9a-f]{6})/i)?.[1];
     expect(sandData).toBe('0.56');

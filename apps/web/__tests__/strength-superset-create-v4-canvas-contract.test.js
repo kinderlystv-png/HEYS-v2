@@ -48,7 +48,7 @@ function compileCss(palette, paletteName) {
     .replaceAll('var(--v4-ink, #201e1d)', palette.tx)
     .replaceAll('var(--v4-act-text, #8a4a20)', palette.ac)
     .replaceAll('var(--v4-act, #c67139)', palette.acs)
-    .replaceAll('var(--v4-ink-data, rgba(32, 30, 29, 0.56))', palette.ink56)
+    .replaceAll('var(--v4-ink-2, rgba(32, 30, 29, 0.56))', palette.ink56)
     .replaceAll('var(--ink, 35, 31, 26)', '0, 0, 0')
     .replaceAll('var(--ink)', '0, 0, 0')
     .replaceAll('env(safe-area-inset-bottom, 0px)', '0px'), roles);

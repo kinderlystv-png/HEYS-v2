@@ -16,7 +16,7 @@ describe('Активность v4: актуальные состояния ша�
   it('дорожка и data-состояния используют роли актуального набора', () => {
     expect(CSS).toContain('margin-top: 14px;');
     expect(CSS).toContain('background: var(--v4-track, rgba(0, 0, 0, 0.12));');
-    expect(CSS).toContain('color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));');
+    expect(CSS).toContain('color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));');
     expect(CSS).toContain('background: var(--v4-plan, rgba(0, 0, 0, 0.22));');
   });
 

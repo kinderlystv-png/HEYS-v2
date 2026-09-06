@@ -252,7 +252,7 @@
 }
 
 .nutrition-v4-window__label {
-  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
 /* Шалфей только когда окно действительно открыто: раньше значение было
@@ -368,7 +368,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
 .nutrition-v4-meal-row__chevron {
@@ -418,7 +418,7 @@
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__num {
-  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__title,
@@ -686,7 +686,7 @@
   font: 600 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin: 8px 0 10px;
 }
 
@@ -752,7 +752,7 @@
   font-weight: 700;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }

@@ -49,7 +49,7 @@ describe('поправка на факт · строка в разборе но�
     const state = SRC.slice(at - 280, at);
     expect(state).toContain('fontWeight: 600');
     expect(state).toContain('lineHeight: 1');
-    expect(state).toContain('var(--v4-ink-data, rgba(0, 0, 0, 0.56))');
+    expect(state).toContain('var(--v4-ink-2, rgba(0, 0, 0, 0.56))');
   });
 
   it('в первом слое нет слова «коэффициент»', () => {

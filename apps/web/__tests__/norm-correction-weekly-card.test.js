@@ -210,9 +210,9 @@ describe('поправка на факт · карточка сверки в ш�
 
   it('информационные значения карточки используют единую ступень 56 %', () => {
     expect(SRC).toContain("+ (f.tone ? ' is-' + f.tone : '')");
-    expect(CSS).toMatch(/__fact-hint \{[^}]*--v4-ink-data/);
-    expect(CSS).toMatch(/__fact-value\.is-quiet \{[^}]*--v4-ink-data/);
-    expect(CSS).toMatch(/__legend-item\.is-weight \{[^}]*--v4-ink-data/);
+    expect(CSS).toMatch(/__fact-hint \{[^}]*--v4-ink-2/);
+    expect(CSS).toMatch(/__fact-value\.is-quiet \{[^}]*--v4-ink-2/);
+    expect(CSS).toMatch(/__legend-item\.is-weight \{[^}]*--v4-ink-2/);
   });
 });
 

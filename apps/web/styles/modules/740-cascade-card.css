@@ -103,6 +103,7 @@
   outline: 2px solid var(--v4-water, #3b82f6);
   outline-offset: -2px;
   border-radius: 16px;
+  min-height: 44px;
 }
 
 /* ─────────────────────────────────────────────────────
@@ -237,6 +238,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -1214,6 +1217,7 @@
 [data-theme$="dark"] .heys-score-tile {
   background: var(--card-bg, rgba(15, 23, 42, 0.72));
   border-color: rgba(71, 85, 105, 0.58);
+  min-height: 44px;
 }
 
 [data-theme$="dark"] .heys-score-tile__delta,
@@ -1372,6 +1376,8 @@
   border: none;
   padding: 0;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {

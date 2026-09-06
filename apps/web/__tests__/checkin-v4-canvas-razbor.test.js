@@ -691,7 +691,7 @@ describe('«Утренний чек-ин» · разбор кадров канв
     expect(STEPS_SRC).toContain("{ id: 'coldShower'");
     expect(STEPS_SRC).toContain("{ id: 'coldBath'");
     expect(STEPS_SRC).toContain("{ id: 'coldSwim'");
-    const inkData = 'var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56))';
+    const inkData = 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))';
     expect(rules.get('.mc-rest-type.is-on .mc-rest-wave').color).toBe(inkData);
   });
 
@@ -768,7 +768,7 @@ describe('«Утренний чек-ин» · разбор кадров канв
     // литерал: в песочном наборе у неё то же значение, но в тёмных она
     // считается от чернил набора, а литерал остался бы чёрным.
     expect(block).toMatch(
-      /fontWeight: 600, lineHeight: 1, color: 'var\(--v4-ink-data, rgba\(0,0,0,\.56\)\)'/,
+      /fontWeight: 600, lineHeight: 1, color: 'var\(--v4-ink-2, rgba\(0,0,0,\.56\)\)'/,
     );
   });
 
@@ -808,7 +808,7 @@ describe('«Утренний чек-ин» · разбор кадров канв
     const why = rules.get('.mc-rest-coffee-why');
     expect(why['font-size']).toBe('11px');
     expect(why['line-height']).toBe('1.45');
-    expect(why.color).toBe('var(--v4-ink-data, rgba(0, 0, 0, 0.56))');
+    expect(why.color).toBe('var(--v4-ink-2, rgba(0, 0, 0, 0.56))');
   });
 
   // Подпись «Легли»/«Встали» перебивалась старым правилом той же силы ниже по
@@ -817,7 +817,7 @@ describe('«Утренний чек-ин» · разбор кадров канв
     const label = rules.get('.mc-modal--daily .mc-sleep-label');
     expect(label['font-size']).toBe('10px');
     expect(label['text-transform']).toBe('uppercase');
-    expect(label.color).toBe('var(--v4-ink-data, rgba(0, 0, 0, 0.56))');
+    expect(label.color).toBe('var(--v4-ink-2, rgba(0, 0, 0, 0.56))');
   });
 
   // Строка «вид дорожки»: одна дорожка на продукт. Мастер и развилка держат

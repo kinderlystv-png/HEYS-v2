@@ -85,6 +85,8 @@
   border-radius: 999px;
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .pwa-banner-install:active {
@@ -102,6 +104,8 @@
   font-weight: 600;
   text-align: center;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .pwa-banner-later:active {
@@ -574,6 +578,8 @@
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .update-toast-update:active {
@@ -582,8 +588,8 @@
 }
 
 .update-toast-dismiss {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -594,6 +600,7 @@
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
 }
 
 .update-toast-dismiss:active {
@@ -2030,6 +2037,8 @@
 
 .profile-v4-toggle.is-on {
   background: var(--v4-act, #c67139);
+  min-height: 44px;
+  min-width: 44px;
 }
 
 .profile-v4-toggle__thumb {
@@ -3504,7 +3513,7 @@
 
 .mc-picker-group label {
   font-size: 11px;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -3512,7 +3521,7 @@
 .mc-picker-separator {
   font-size: 48px;
   font-weight: 300;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   margin: 20px 0 0;
 }
 
@@ -3633,7 +3642,7 @@
 .mc-time-sep {
   font-size: 28px;
   font-weight: 300;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   margin-top: 16px;
 }
 
@@ -3690,7 +3699,7 @@
 
 .mc-steps-hint {
   font-size: 12px;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   text-align: center;
 }
 
@@ -3798,7 +3807,7 @@
 
 .deficit-hint {
   font-size: 12px;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   text-align: center;
   line-height: 1.5;
 }
@@ -4198,7 +4207,7 @@
 .household-time-separator {
   font-size: 24px;
   font-weight: 700;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   padding: 0 4px;
 }
 
@@ -4425,7 +4434,7 @@
 
 .household-time-or {
   font-size: 12px;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   font-weight: 500;
 }
 
@@ -4551,7 +4560,7 @@
 .mc-quality-max {
   font-size: 20px;
   font-weight: 500;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .mc-quality-label {
@@ -4771,7 +4780,7 @@
 .mc-footer {
   padding: 12px 24px 20px;
   font-size: 12px;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   text-align: center;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
@@ -4925,7 +4934,7 @@
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   background: transparent;
   border: none;
   border-radius: 8px;
@@ -5264,7 +5273,7 @@
 .mc-weight-dot {
   font-size: 48px;
   font-weight: 300;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   margin: 0 4px;
 }
 
@@ -5278,7 +5287,7 @@
 
 .mc-wheel-label {
   font-size: 11px;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -5373,7 +5382,7 @@
 .mc-wheel-suffix {
   font-size: 16px;
   font-weight: 500;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   margin-left: 4px;
   opacity: 0.8;
 }
@@ -5981,8 +5990,8 @@
 }
 
 .wn-close {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5994,6 +6003,7 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
+  min-height: 44px;
 }
 
 .wn-close:active {
@@ -6029,13 +6039,13 @@
 .wn-release-version {
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   letter-spacing: 0.02em;
 }
 
 .wn-release-date {
   font-size: 12px;
-  color: var(--v4-ink-secondary, rgba(0, 0, 0, 0.38));
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
 .wn-release-title {
@@ -6165,6 +6175,8 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s, opacity 0.15s;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .wn-got-it:active {
@@ -6295,8 +6307,8 @@
 }
 
 .ca-banner__dismiss {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -6308,6 +6320,7 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
 }
 
 .ca-banner__dismiss:active {
@@ -6429,7 +6442,7 @@
 .ca-modal__close {
   width: 44px;
   height: 44px;
-  margin: -12px -12px 0 0;
+  
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6439,6 +6452,7 @@
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 28%, transparent);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
 }
 .ca-modal__close-svg {
   width: 17px;
@@ -6631,6 +6645,8 @@
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   text-align: left;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .ca-modal__repeat-group {
@@ -6886,6 +6902,7 @@
 [data-theme$="dark"] .ca-banner {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
   border-color: rgba(99, 102, 241, 0.3);
+  min-height: 44px;
 }
 [data-theme$="dark"] .ca-banner__title { color: var(--v4-ink, #f2ede6); }
 [data-theme$="dark"] .ca-banner__summary { color: var(--v4-ink, #f2ede6); }

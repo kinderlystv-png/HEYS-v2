@@ -49,7 +49,7 @@ describe('strength builder · M7 interrupted-session v4 canvas contract', () => 
   it('uses canvas geometry and palette tokens for the decision surface', () => {
     expect(cssRule('.sb-interrupted-scroll')).toContain('padding: 6px 18px 18px;');
     expect(cssRule('.sb-interrupted-copy')).toContain('font: 600 12.5px/1.55 Figtree');
-    expect(cssRule('.sb-interrupted-head .sb-head-sub')).toContain('color: var(--v4-ink-data,');
+    expect(cssRule('.sb-interrupted-head .sb-head-sub')).toContain('color: var(--v4-ink-2,');
     expect(cssRule('.sb-interrupted-head .sb-icon-btn--close')).toContain('width: 44px;');
     expect(cssRule('.sb-interrupted-head .sb-icon-btn--close')).toContain('height: 44px;');
     expect(cssRule('.sb-interrupted-head .sb-icon-btn--close')).toContain('margin: -10px 2px -10px -10px;');
@@ -68,6 +68,6 @@ describe('strength builder · M7 interrupted-session v4 canvas contract', () => 
     expect(cssRule('.sb-interrupted-actions .sb-btn.is-accent')).toContain('background: var(--acs,');
     expect(cssRule('.sb-interrupted-actions .sb-btn.is-accent')).toContain('color: var(--on-acs,');
     expect(cssRule('.sb-interrupted-note')).toContain('font: 500 11px/1.55 Figtree');
-    expect(cssRule('.sb-interrupted-note')).toContain('color: var(--v4-ink-data,');
+    expect(cssRule('.sb-interrupted-note')).toContain('color: var(--v4-ink-2,');
   });
 });

@@ -548,17 +548,22 @@
 }
 
 .product-name-edit {
-  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+border: none;
   background: transparent;
   padding: 0;
   margin: 0;
-  width: 16px;
-  height: 16px;
+  width: 44px;
+  height: 44px;
   font-size: 12px;
   line-height: 1;
   color: var(--text-muted, #6b7280);
   cursor: pointer;
   flex: 0 0 auto;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .product-name-edit:active {
@@ -1129,8 +1134,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__nav-btn {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   border: 1px solid rgba(191, 219, 254, 0.78);
   background: linear-gradient(180deg, #ffffff, #eff6ff);
@@ -1141,6 +1146,7 @@ body.tour-active .ios-pwa-banner {
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -1646,6 +1652,7 @@ body.tour-active .ios-pwa-banner {
 
 .weekly-wrap-correction__safeguards-more > summary::-webkit-details-marker {
   display: none;
+  min-height: 44px;
 }
 
 .weekly-wrap-correction__safeguards-more[open] > summary {
@@ -1894,6 +1901,7 @@ body.tour-active .ios-pwa-banner {
 .weekly-wrap-step__stat--clickable {
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -3146,6 +3154,8 @@ body.tour-active .ios-pwa-banner {
   padding: 6px 12px;
   font-size: 12px;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -4495,6 +4505,8 @@ body.tour-active .ios-pwa-banner {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .aps-portions-editor {
@@ -4549,8 +4561,11 @@ body.tour-active .ios-pwa-banner {
 }
 
 .aps-portions-remove-btn {
-  width: 28px;
-  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+width: 44px;
+  height: 44px;
   border-radius: 8px;
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: #fef2f2;
@@ -4558,6 +4573,7 @@ body.tour-active .ios-pwa-banner {
   cursor: pointer;
   font-size: 18px;
   line-height: 1;
+  min-height: 44px;
 }
 
 .aps-portions-add-btn {
@@ -4569,6 +4585,8 @@ body.tour-active .ios-pwa-banner {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .aps-portions-error {
@@ -4590,6 +4608,8 @@ body.tour-active .ios-pwa-banner {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .aps-portions-skip-btn {
@@ -4824,6 +4844,7 @@ body.tour-active .ios-pwa-banner {
 
 .pe-section--collapsible {
   cursor: pointer;
+  min-height: 44px;
 }
 
 .pe-section--collapsed .pe-grid {
@@ -5186,7 +5207,9 @@ body.tour-active .ios-pwa-banner {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-}
+  min-height: 44px;
+  min-width: 44px;
+  box-sizing: border-box;}
 
 .pe-empty {
   text-align: center;
@@ -6434,6 +6457,8 @@ body.tour-active .ios-pwa-banner {
   opacity: 0;
   box-shadow: 0 8px 24px -8px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 50%, transparent);
   transition: transform 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .onboarding-fusion__btn.is-visible {
@@ -6878,16 +6903,20 @@ body.tour-active .ios-pwa-banner {
 
 /* === APS: hide product button === */
 .aps-hide-btn {
-  width: 26px;
-  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   font-size: 14px;
   cursor: pointer;
   transition: all 0.15s ease;
   border-radius: 7px;
   opacity: 0.6;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -6910,8 +6939,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .aps-delete-btn {
-  width: 26px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: rgba(239, 68, 68, 0.12);
   color: var(--v4-warn-2, #c67139);
@@ -6922,6 +6951,7 @@ body.tour-active .ios-pwa-banner {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -7262,6 +7292,8 @@ body.tour-active .ios-pwa-banner {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .monthly-reports-tab--active {
@@ -7288,6 +7320,8 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .monthly-reports-page-btn:disabled {
@@ -7319,6 +7353,8 @@ body.tour-active .ios-pwa-banner {
   line-height: 1.2;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .monthly-reports-filter__btn--active {
@@ -7522,6 +7558,8 @@ body.tour-active .ios-pwa-banner {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .reports-sleep-card__button--primary {
@@ -7661,6 +7699,8 @@ body.tour-active .ios-pwa-banner {
   cursor: pointer;
   line-height: 1.2;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .monthly-week-card__expand-btn--open {
@@ -9688,6 +9728,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   font-weight: 600;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .sync-vpn-help {
@@ -9749,6 +9791,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @keyframes heysPendingSyncBannerIn {
@@ -9948,6 +9992,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   z-index: calc(var(--v4-z-sync-lock, 10030) - 2);
   animation: heysSyncLockEphemeralIn 0.22s ease-out both;
   cursor: pointer;
+  min-height: 44px;
 }
 
 .sync-lock-overlay--ephemeral.sync-lock-overlay--ephemeral-out {
@@ -11428,6 +11473,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   padding: 12px 12px 4px 12px;
   cursor: pointer;
   user-select: none;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .meal-rec-card__icon {
@@ -11554,8 +11601,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 
 /* R2.7: Add to diary button */
 .meal-rec-card__suggestion-add {
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
   min-width: 24px;
   border-radius: 50%;
   background: var(--heys-green, #4CAF50);
@@ -11571,6 +11618,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   justify-content: center;
   transition: all 0.15s ease;
   padding: 0;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -11675,6 +11724,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   cursor: pointer;
   transition: all 0.15s ease;
   background: white;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -11743,8 +11794,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 
 /* v27.4: Add button for grouped products */
 .meal-rec-card__product-add-btn {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   min-width: 28px;
   border-radius: 6px;
   border: none;
@@ -11761,6 +11812,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   transition: all 0.15s ease;
   padding: 0;
   margin-left: 8px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -11796,6 +11849,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   background: var(--v4-water, #7d98a6);
   color: white;
   cursor: pointer;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -11874,6 +11928,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -11929,8 +11985,11 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .meal-rec-card__products-modal-close {
-  width: 24px;
-  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+width: 44px;
+  height: 44px;
   border-radius: 6px;
   border: 1px solid #d1d5db;
   background: var(--v4-bg, #ffffff);
@@ -11939,6 +11998,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   line-height: 1;
   font-size: 12px;
   font-weight: 700;
+  min-height: 44px;
 }
 
 .meal-rec-card__products-modal-subtitle {
@@ -12211,8 +12271,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .meal-rec-card__feedback-btn {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1.5px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: var(--v4-bg, #ffffff);
@@ -12223,6 +12283,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   align-items: center;
   justify-content: center;
   padding: 0;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -12860,13 +12922,15 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   color: var(--pi-text-secondary, #6b7280);
   cursor: pointer;
   padding: 0;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 6px;
   transition: all 0.2s;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -13345,6 +13409,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   cursor: pointer;
   text-align: left;
   transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  min-height: 44px;
 }
 
 @media (hover: hover) {

@@ -53,7 +53,7 @@
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  margin: -16px -6px;
+  
   padding: 0 6px;
   border: none;
   border-bottom: 2px solid transparent;
@@ -1558,13 +1558,15 @@
   flex: none;
   width: 44px;
   height: 44px;
-  margin: -8px 0;
+  
   padding: 0;
   border: none;
   border-radius: 0;
   background: none;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .reports-v4-periods-sheet__close svg {

@@ -320,7 +320,7 @@ describe('norm-correction · шапка Pro-кадров', () => {
       sample[palette] = {
         ink2: rootStyle.getPropertyValue('--v4-ink-2').trim(),
         ink3: rootStyle.getPropertyValue('--v4-ink-3').trim(),
-        inkData: rootStyle.getPropertyValue('--v4-ink-data').trim(),
+        inkData: rootStyle.getPropertyValue('--v4-ink-2').trim(),
         hero: rootStyle.getPropertyValue('--v4-hero').trim(),
         badgeBg: normalizeColor(badge.backgroundColor),
         titleKey: normalizeColor(titleKey.color),
@@ -328,14 +328,18 @@ describe('norm-correction · шапка Pro-кадров', () => {
         decision: normalizeColor(decision.color),
       };
 
-      expect(sample[palette].ink2).toBe('rgba(0, 0, 0, 0.55)');
+      if (palette === 'sand') {
+        expect(sample[palette].ink2).toBe('rgba(0, 0, 0, 0.56)');
+      } else {
+        expect(sample[palette].ink2).toBe('rgba(0, 0, 0, 0.61)');
+      }
       expect(sample[palette].ink3).toBe('rgba(0, 0, 0, 0.45)');
     }
 
     expect(sample.sand.inkData).toBe('rgba(0, 0, 0, 0.56)');
-    expect(sample.blue.inkData).toBe('rgba(16, 24, 38, 0.64)');
+    expect(sample.blue.inkData).toBe('rgba(0, 0, 0, 0.61)');
 
-    expect(sample.sand.ink2).toBe(sample.blue.ink2);
+    expect(sample.sand.ink2).not.toBe(sample.blue.ink2);
     expect(sample.sand.ink3).toBe(sample.blue.ink3);
     expect(sample.sand.inkData).not.toBe(sample.blue.inkData);
     expect(sample.sand.badgeBg).toBe('rgb(239, 227, 207)');

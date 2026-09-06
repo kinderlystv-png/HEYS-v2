@@ -91,6 +91,8 @@
   /* Скролл-лист: пропускаем layout/paint вне экрана (лёгкий аналог windowing при длинных списках) */
   content-visibility: auto;
   contain-intrinsic-size: auto 52px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -232,8 +234,11 @@
 }
 
 .aps-barcode-btn {
-  width: 26px;
-  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   color: var(--v4-ink-3, #94a3b8);
@@ -241,6 +246,7 @@
   cursor: pointer;
   transition: all 0.15s;
   border-radius: 7px;
+  min-height: 44px;
 }
 
 /* Иконка штрихкода в строке: по контракту «вид · строка поиска» она тоном
@@ -336,13 +342,14 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  margin: -6px -6px -6px 0;
+  
   border: none;
   border-radius: 999px;
   background: none;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
   cursor: pointer;
-}
+  min-height: 44px;
+  min-width: 44px;}
 
 .aps-barcode-camera {
   position: relative;
@@ -505,6 +512,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  min-height: 44px;
 }
 
 .aps-barcode-manager-add {
@@ -1361,6 +1369,8 @@
   color: var(--v4-sand-act-deep, #8a4a20);
   cursor: pointer;
   text-align: left;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .aps-v4-create-advanced-grid {
@@ -1705,7 +1715,7 @@
 }
 
 [data-theme$='dark'] .aps-create-prompt-note {
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .aps-create-textarea {
@@ -1732,7 +1742,7 @@
 }
 
 .aps-create-textarea::placeholder {
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   font-size: 12px;
 }
 
@@ -1809,7 +1819,7 @@
 }
 
 [data-theme$='dark'] .aps-create-example-note {
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 /* Блок «Распознано» по кадру: тинт «идёт хорошо» радиусом 16 полями 12/14, без
@@ -1859,12 +1869,12 @@
 
 [data-theme$='dark'] .aps-create-btn {
   background: #374151;
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .aps-create-tip {
   font-size: 12px;
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   text-align: center;
   padding: 8px;
   background: var(--v4-hero, #f9fafb);
@@ -1873,7 +1883,7 @@
 
 [data-theme$='dark'] .aps-create-tip {
   background: var(--v4-surface, #1f2937);
-  color: var(--v4-ink-label, rgba(0, 0, 0, 0.45));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 /* Подсказка о поисковом запросе */
@@ -1926,11 +1936,14 @@
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   text-align: center;
-}
+  min-height: 44px;
+  min-width: 44px;
+  box-sizing: border-box;}
 
 .aps-create-mode-btn:active {
   opacity: 0.7;
   transition: opacity 120ms ease;
+  min-height: 44px;
 }
 
 .aps-create-mode-icon {

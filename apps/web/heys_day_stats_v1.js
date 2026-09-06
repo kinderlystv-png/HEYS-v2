@@ -3552,7 +3552,7 @@
                     React.createElement('span', {
                       style: {
                         fontSize: 11, fontWeight: 600, lineHeight: 1,
-                        color: 'var(--v4-ink-data, rgba(0, 0, 0, 0.56))'
+                        color: 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))'
                       }
                     }, 'пока нет')
                   ),

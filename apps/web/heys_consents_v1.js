@@ -8,7 +8,7 @@
   const HEYS = global.HEYS = global.HEYS || {};
   const React = global.React;
   const { useState, useEffect, useCallback, useRef, useMemo } = React || {};
-  const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
+  const INK_DATA = 'var(--v4-ink-2, rgba(0,0,0,.56))';
   const INK_2 = 'var(--v4-ink-2, rgba(0,0,0,.55))';
   const LEGAL_DISCLOSURE_FONT = '500 12.5px/1.55 Figtree, system-ui, sans-serif';
   const LEGAL_DISCLOSURE_TYPES = new Set(['personal_data']);
