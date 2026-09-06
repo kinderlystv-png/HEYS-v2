@@ -343,6 +343,13 @@ describe('контраст и узкий экран', () => {
     const narrow = cssSource.match(/@media \(max-width: 359px\) \{[\s\S]*?\n\}/)[0];
     expect(narrow).toMatch(/\.messenger-avatar \{\s*width: 36px/);
     expect(narrow).toMatch(/\.messenger-send \{\s*width: 42px/);
-    expect(narrow).toMatch(/max-width: 88%/);
+    // Прежде здесь ждали max-width: 88% — сужение пузыря на узком экране.
+    // Оно стало лишним: базовая ширина пузыря приведена к строке контракта
+    // «ширина до 79 % экрана», а 79 уже уже, чем 88, и переопределение
+    // под 320 px убрано как ничего не менявшее. Сторожим сам предел, а не
+    // копию правила внутри медиазапроса.
+    expect(cssSource).toMatch(/\.msg-bubble-mine \{[^}]*max-width: 79%/);
+    expect(cssSource).toMatch(/\.msg-bubble-theirs \{[^}]*max-width: 79%/);
+    expect(narrow).not.toMatch(/max-width: 8[0-9]%/);
   });
 });
