@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -95,8 +95,11 @@ describe('strength builder · Правка · пропущен раньше (к�
   let Parts;
   let styleEl;
 
-  beforeEach(() => {
+  beforeAll(() => {
     Parts = loadParts();
+  });
+
+  beforeEach(() => {
     styleEl = document.createElement('style');
     styleEl.textContent = paletteCss('sand');
     document.head.appendChild(styleEl);
@@ -107,6 +110,9 @@ describe('strength builder · Правка · пропущен раньше (к�
     cleanup();
     styleEl.remove();
     document.documentElement.removeAttribute('style');
+  });
+
+  afterAll(() => {
     delete window.HEYS;
   });
 

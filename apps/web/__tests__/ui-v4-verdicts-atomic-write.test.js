@@ -20,9 +20,8 @@ const KEY_A = 'writer-a · key';
 const KEY_B = 'writer-b · key';
 const SET_VERDICT = path.join(ROOT, 'scripts/ui-v4-set-verdict.mjs');
 const RMW_DELAY_MS = 25;
-const RACE_ITERATIONS = 20;
-const LOCKED_RACE_ITERATIONS = 12;
-const RACE_MIN_COMPLETED = 5;
+const RACE_ITERATIONS = 30;
+const LOCKED_RACE_ITERATIONS = 15;
 
 function fixtureZone() {
   return {
@@ -137,12 +136,11 @@ describe('ui-v4 verdict zone atomic write', () => {
       if (!result.completed) continue;
       completedCount += 1;
       if (!bothWritersApplied(result.zone)) lossCount += 1;
-      if (lossCount > 0 && completedCount >= RACE_MIN_COMPLETED) break;
     }
 
-    expect(completedCount).toBeGreaterThan(RACE_MIN_COMPLETED - 1);
+    expect(completedCount).toBeGreaterThan(5);
     expect(lossCount).toBeGreaterThan(0);
-  }, 45_000);
+  }, 30_000);
 
   it('with zone lock, repeated parallel writers always keep both keys', async () => {
     sandbox = createVerdictGuardSandbox(ROOT, { [ZONE_ID]: fixtureZone() });
@@ -155,5 +153,5 @@ describe('ui-v4 verdict zone atomic write', () => {
       expect(completed, `iteration ${i}`).toBe(true);
       expect(bothWritersApplied(zone), `iteration ${i}`).toBe(true);
     }
-  }, 45_000);
+  }, 30_000);
 });

@@ -1,15 +1,15 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import React from 'react';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { loadStrengthModuleSet, readWebFile } from './helpers/strength-canvas-contract-harness.js';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = fs.readFileSync(path.join(WEB_DIR, 'strength/heys_strength_proposal_ui_v1.js'), 'utf8');
-const CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8');
-const ACTIVITY_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/731-ui-v4-activity.css'), 'utf8');
-const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
+const SRC = readWebFile(WEB_DIR, 'strength/heys_strength_proposal_ui_v1.js');
+const CSS = readWebFile(WEB_DIR, 'styles/modules/750-strength-builder.css');
+const ACTIVITY_CSS = readWebFile(WEB_DIR, 'styles/modules/731-ui-v4-activity.css');
+const BASE_CSS = readWebFile(WEB_DIR, 'styles/modules/000-base-and-gamification.css');
 
 const SAND = Object.freeze({
   bg: '#fffaf1', tint: '#f6e6dd', tx: '#201e1d', ac: '#8a4a20', ac2: '#a1471c', gr: '#5c6a45',
@@ -52,17 +52,13 @@ function srcBlock(name) {
   return SRC.slice(start, next > start ? next : start + 4000);
 }
 
-function loadParts() {
-  window.HEYS = {};
-  window.React = React;
-  const ev = (rel) => {
-    // eslint-disable-next-line no-eval
-    eval(fs.readFileSync(path.join(WEB_DIR, rel), 'utf8'));
-  };
-  ev('_kernel/heys_kernel_strength_v1.js');
-  ev('strength/heys_strength_superset_ui_v1.js');
-  ev('strength/heys_strength_proposal_ui_v1.js');
-  return window.HEYS.StrengthBuilderParts;
+let sharedParts;
+
+function loadPartsOnce() {
+  if (!sharedParts) {
+    sharedParts = loadStrengthModuleSet(WEB_DIR, 'proposal', React).StrengthBuilderParts;
+  }
+  return sharedParts;
 }
 
 const ap = (id, w, r, done) => ({ id, weightKg: String(w), reps: r, done: !!done });
@@ -86,8 +82,9 @@ function startedTraining(proposalExercises) {
 describe('strength proposal · canvas contract (proposal UI)', () => {
   let Parts;
 
-  beforeEach(() => { Parts = loadParts(); });
-  afterEach(() => { cleanup(); delete window.HEYS; });
+  beforeAll(() => { Parts = loadPartsOnce(); });
+  afterEach(() => { cleanup(); });
+  afterAll(() => { delete window.HEYS; });
 
   it('ProposalCard: signs 22×7 and outcome labels on the right', () => {
     const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 60, 8, false)])]);
@@ -347,8 +344,9 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
 describe('Л10–Л12 · исходы предложения · canvas contract', () => {
   let Parts;
 
-  beforeEach(() => { Parts = loadParts(); });
-  afterEach(() => { cleanup(); delete window.HEYS; });
+  beforeAll(() => { Parts = loadPartsOnce(); });
+  afterEach(() => { cleanup(); });
+  afterAll(() => { delete window.HEYS; });
 
   it('держит ProposalOutcomeScreen и CSS кадров Л10–Л12', () => {
     expect(SRC).toContain('function ProposalOutcomeScreen');

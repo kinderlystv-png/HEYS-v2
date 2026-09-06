@@ -3333,6 +3333,17 @@
   background: var(--sb-bg);
   font-family: Figtree, sans-serif;
   -webkit-font-smoothing: antialiased;
+  contain: layout style paint;
+}
+
+/* A1б/А2 active list: contain for canvas-contract harness (tasks 141/156/172/187). */
+.sb-builder-screen .sb-head,
+.sb-builder-screen .sb-list,
+.sb-builder-screen .sb-stats,
+.sb-builder-screen .sb-ex,
+.sb-builder-screen .sb-ex-body,
+.sb-builder-screen .sb-panel {
+  contain: layout style;
 }
 
 .sb-builder-screen .sb-head,
@@ -4279,6 +4290,30 @@
   --sb-okTx: var(--gr);
   background: var(--sb-bg);
   font-family: Figtree, sans-serif;
+}
+
+/* L6/Г2/Г5/Г6/Л10–Л12 proposal frames: contain for canvas-contract harness (task 187). */
+.sb-missed-earlier,
+.sb-proposal-review,
+.sb-proposal-resolution,
+.sb-proposal-outcome,
+.sb-root.program-done,
+.sb-cycle-report,
+.sb-period-report {
+  contain: layout style paint;
+}
+
+.sb-missed-earlier-head,
+.sb-missed-earlier-scroll,
+.sb-missed-earlier-card,
+.sb-missed-earlier-rules,
+.sb-proposal-review .sb-list,
+.sb-proposal-resolution .sb-finish-list,
+.sb-proposal-outcome-list,
+.sb-cycle-report .sb-plan-vs-scroll,
+.sb-period-report .sb-period-scroll,
+.sb-root.program-done .sb-list {
+  contain: layout style;
 }
 
 .sb-proposal-review .sb-head,

@@ -272,12 +272,12 @@
             type: 'button',
             className: 'sb-cell'
               + (done && !blank ? ' is-done' : '')
-              + (blank ? ' is-blank dash' : '')
+              + (blank ? ' is-blank' : '')
               + (isActive ? ' is-current' : ''),
             disabled: blank,
             onClick: function () { onToggleCell(c.exerciseIndex, c.approachIndex); },
             title: blank ? 'Участник добавлен по ходу — в этом раунде его не было' : ''
-          }, blank ? '—' : roundCellLabel(ex, a));
+          }, blank ? h('span', { className: 'dash' }, '—') : roundCellLabel(ex, a));
         })
       );
     });
@@ -1668,14 +1668,13 @@
             type: 'button',
             className: 'sb-tw-cell n'
               + (done ? ' is-done' : '')
-              + (blank ? ' is-blank dash' : '')
               + (isCurrent && !done && !blank ? ' is-active' : '')
               + (!isCurrent && !done ? ' is-pending' : ''),
             disabled: readOnly || blank,
             onClick: function () {
               if (!readOnly && onToggleCell) onToggleCell(cell.exerciseIndex, cell.approachIndex);
             }
-          }, blank ? '—' : roundCellDisplay(ex, approach, SK));
+          }, blank ? h('span', { className: 'dash' }, '—') : roundCellDisplay(ex, approach, SK));
         })
       ));
       if (complete && ri < rounds.length - 1) {
