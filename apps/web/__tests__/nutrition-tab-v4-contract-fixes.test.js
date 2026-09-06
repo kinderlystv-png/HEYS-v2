@@ -159,6 +159,37 @@ describe('лист правки: разбор приёма', () => {
     expect(document.querySelector('.nutrition-v4-sheet')).toBeTruthy();
     expect(document.querySelector('.nutrition-v4-sheet__why')).toBeNull();
   });
+
+  it('чипы контекста — категории без emoji', () => {
+    window.HEYS.InsulinWave = {
+      calculateActivityContext: vi.fn(() => ({
+        type: 'post',
+        allContexts: [
+          { type: 'household', priority: 1 },
+          { type: 'post', priority: 2 }
+        ]
+      }))
+    };
+    const { container } = renderTab(renderFn, {
+      ctx: {
+        insulinWaveData: MEAL_WAVE,
+        day: {
+          date: '2026-08-20',
+          meals: MEALS,
+          trainings: [{ time: '07:00', type: 'strength', z: [0, 0, 30, 0] }],
+          householdMin: 45,
+          steps: 12000
+        }
+      }
+    });
+    openSheet(container);
+    const chips = document.querySelector('.nutrition-v4-sheet__context-chips');
+    expect(chips).toBeTruthy();
+    expect(chips.textContent).toContain('Бытовая активность');
+    expect(chips.textContent).toContain('После тренировки');
+    expect(chips.textContent).not.toMatch(/🏠|🚶|🔄/);
+    expect(NUTRITION_CSS).toContain('.nutrition-v4-sheet__context-chip');
+  });
 });
 
 describe('nutrition-tab · правки зоны', () => {

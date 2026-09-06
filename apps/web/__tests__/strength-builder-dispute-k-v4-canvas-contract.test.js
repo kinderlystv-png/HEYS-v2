@@ -327,6 +327,7 @@ describe('K · спорные состояния · canvas contract', { timeout:
     const dash = screen.getByText('—');
     const btn = dash.closest('button') || dash;
     expect(btn.disabled || btn.getAttribute('aria-disabled') === 'true').toBeTruthy();
+    expect(dash.classList.contains('dash')).toBe(true);
     expect(getComputedStyle(dash.closest('.sb-cell.is-blank') || dash).borderTopStyle).toBe('dashed');
     teardown();
   });

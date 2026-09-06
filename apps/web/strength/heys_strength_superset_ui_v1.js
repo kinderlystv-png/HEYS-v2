@@ -277,7 +277,7 @@
             disabled: blank,
             onClick: function () { onToggleCell(c.exerciseIndex, c.approachIndex); },
             title: blank ? 'Участник добавлен по ходу — в этом раунде его не было' : ''
-          }, blank ? '—' : roundCellLabel(ex, a));
+          }, blank ? h('span', { className: 'dash' }, '—') : roundCellLabel(ex, a));
         })
       );
     });
@@ -1674,7 +1674,7 @@
             onClick: function () {
               if (!readOnly && onToggleCell) onToggleCell(cell.exerciseIndex, cell.approachIndex);
             }
-          }, blank ? '—' : roundCellDisplay(ex, approach, SK));
+          }, blank ? h('span', { className: 'dash' }, '—') : roundCellDisplay(ex, approach, SK));
         })
       ));
       if (complete && ri < rounds.length - 1) {

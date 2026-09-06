@@ -835,54 +835,6 @@
     }, h('path', { d: 'M18 6L6 18M6 6l12 12' }));
   }
 
-  function paywallLockIconMarkup(size = 22) {
-    return h('svg', {
-      width: size,
-      height: size,
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      strokeWidth: 2.75,
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-      'aria-hidden': 'true',
-    },
-      h('rect', { x: 3, y: 11, width: 18, height: 11, rx: 2 }),
-      h('path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' })
-    );
-  }
-
-  function paywallExternalLinkIcon() {
-    return h('svg', {
-      width: 15,
-      height: 15,
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      strokeWidth: 2.75,
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-      'aria-hidden': 'true',
-    }, h('path', { d: 'M7 17L17 7M7 7h10v10' }));
-  }
-
-  function paywallSendIcon() {
-    return h('svg', {
-      width: 16,
-      height: 16,
-      viewBox: '0 0 24 24',
-      fill: 'none',
-      stroke: 'currentColor',
-      strokeWidth: 2.75,
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-      'aria-hidden': 'true',
-    },
-      h('path', { d: 'M22 2L11 13' }),
-      h('path', { d: 'M22 2l-7 20-4-9-9-4 20-7z' })
-    );
-  }
-
   /**
    * Экран «Проверьте заказ»
    */
@@ -1008,8 +960,11 @@
     const selectedInfo = getPlan(selectedPlan);
     const planName = selectedInfo?.name || 'Pro';
     const planDesc = selectedPlan === 'pro'
-      ? 'Куратор ведёт дневник, чат, созвон раз в неделю'
+      ? 'Куратор ведёт дневник, чат, недельный чек-ин'
       : (selectedInfo?.features?.[0] || '');
+    const billingEnd = new Date();
+    billingEnd.setDate(billingEnd.getDate() + 30);
+    const periodLabel = formatSubscriptionHeadlineDate(billingEnd);
     const payLabel = `Оплатить ${formatPrice(selectedInfo?.price || 0)}`;
 
     const body = h('div', null,
@@ -1023,13 +978,13 @@
       h('h1', { className: 'paywall-title', style: embedded ? { paddingRight: 40 } : undefined }, 'Проверьте заказ'),
 
       h('div', { className: 'paywall-order-card' },
-        h('div', null,
+        h('div', { className: 'paywall-order-main' },
           h('div', { className: 'paywall-order-name' }, planName),
           h('div', { className: 'paywall-plan-desc' }, planDesc)
         ),
-        h('div', null,
+        h('div', { className: 'paywall-order-aside' },
           h('div', { className: 'paywall-order-price n' }, formatPrice(selectedInfo?.price || 0)),
-          h('div', { className: 'paywall-order-period' }, 'за 30 дней')
+          h('div', { className: 'paywall-order-period' }, periodLabel)
         )
       ),
 
@@ -1334,62 +1289,91 @@
     HEYS.config.curatorContactUrl = (HEYS.support && HEYS.support.telegramUrl) || 'https://t.me/heyslab_support_bot';
   }
 
+  function contactSupportLockIcon() {
+    return h('svg', {
+      width: 22,
+      height: 22,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    },
+      h('rect', { x: 3, y: 11, width: 18, height: 11, rx: 2 }),
+      h('path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' })
+    );
+  }
+
+  function contactSupportTelegramIcon() {
+    return h('svg', {
+      width: 16,
+      height: 16,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    },
+      h('path', { d: 'M22 2L11 13' }),
+      h('path', { d: 'M22 2l-7 20-4-9-9-4 20-7z' })
+    );
+  }
+
+  function contactSupportExternalIcon() {
+    return h('svg', {
+      width: 15,
+      height: 15,
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2.75,
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+    },
+      h('path', { d: 'M7 17L17 7M7 7h10v10' })
+    );
+  }
+
   /**
    * Экран «свяжитесь с куратором» — показывается во всех точках, где раньше
    * вёл pay-wall с ЮKassa. После Phase 2 заменится на реальный PaymentScreen
    * через HEYS.config.paymentsEnabled = true.
    */
-  function ContactCuratorScreen({ onClose, isReadOnly, embedded = false }) {
+  function ContactCuratorScreen({ onClose, isReadOnly }) {
     const contactUrl = HEYS.config.curatorContactUrl || (HEYS.support && HEYS.support.telegramUrl);
-    const contactHandle = HEYS.support?.telegramHandle || '@heys_support';
+    const contactHandle = (HEYS.support && HEYS.support.telegramHandle) || '@heyslab_support_bot';
+    const title = isReadOnly ? 'Пробный период закончился' : 'Оформление подписки';
+    const copy = isReadOnly
+      ? 'Куратор подберёт тариф и оформит оплату. День и история остаются открытыми для чтения'
+      : 'Куратор подберёт тариф и оформит оплату.';
 
-    const body = h('div', { className: 'sub-contact-modal' },
-      h('div', { className: 'sub-contact-lock' }, paywallLockIconMarkup(22)),
-      h('h2', { className: 'paywall-title', style: { marginTop: 14 } },
-        isReadOnly ? 'Пробный период закончился' : 'Оформление подписки'
-      ),
-      h('p', { className: 'paywall-subtitle' },
-        'Поддержка подберёт тариф и оформит оплату. День и история остаются открытыми для чтения.'
-      ),
-      h('div', { className: 'sub-contact-rows' },
-        h('a', {
-          className: 'sub-contact-row',
-          href: contactUrl,
-          target: '_blank',
-          rel: 'noopener noreferrer',
-        },
-          h('span', { className: 'sub-contact-row__icon' }, paywallSendIcon()),
-          h('span', { className: 'sub-contact-row__text' },
-            h('b', null, 'Поддержка HEYS'),
-            h('small', null, `${contactHandle} · отвечаем в рабочее время`)
-          ),
-          h('span', { className: 'sub-contact-row__ext' }, paywallExternalLinkIcon())
-        )
-      )
-    );
-
-    if (embedded) return body;
-
-    return h('div', {
-      className: 'paywall-overlay',
-      onClick: (event) => {
-        if (event.target === event.currentTarget) onClose?.();
+    return h('div', { className: 'sub-contact' },
+      onClose && h('button', {
+        type: 'button',
+        className: 'sub-contact__close',
+        onClick: onClose,
+        'aria-label': 'Закрыть',
+      }, paywallCloseIconMarkup()),
+      h('div', { className: 'sub-contact__lock', 'aria-hidden': 'true' }, contactSupportLockIcon()),
+      h('h2', { className: 'sub-contact__title' }, title),
+      h('p', { className: 'sub-contact__copy' }, copy),
+      h('a', {
+        className: 'sub-contact__row',
+        href: contactUrl,
+        target: '_blank',
+        rel: 'noopener noreferrer',
       },
-      role: 'dialog',
-      'aria-modal': 'true',
-    },
-      h('div', {
-        className: 'paywall-modal',
-        style: { position: 'relative' },
-        onClick: (event) => event.stopPropagation(),
-      },
-        onClose && h('button', {
-          type: 'button',
-          className: 'paywall-close',
-          onClick: onClose,
-          'aria-label': 'Закрыть',
-        }, paywallCloseIconMarkup()),
-        body
+        h('span', { className: 'sub-contact__row-icon' }, contactSupportTelegramIcon()),
+        h('span', { className: 'sub-contact__row-text' },
+          h('b', null, 'Поддержка HEYS'),
+          h('small', null, contactHandle + ' · отвечаем в рабочее время')
+        ),
+        h('span', { className: 'sub-contact__row-external' }, contactSupportExternalIcon())
       )
     );
   }
@@ -1421,7 +1405,7 @@
    * срок доступен в настройках подписки. Баннер остаётся только для явно
    * завершившегося доступа (read_only либо истёкший trial до refresh статуса).
    */
-  function TrialCountdownBanner({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, onUpgrade }) {
+  function TrialCountdownBanner({ subscriptionStatus, trialEndsAt, subscriptionEndsAt, onUpgrade, onClose }) {
     const status = subscriptionStatus || 'none';
     const endDate = subscriptionEndsAt || trialEndsAt;
     const daysLeft = endDate ? daysUntil(endDate) : null;
@@ -1431,33 +1415,57 @@
       return null;
     }
 
-    if (HEYS.Paywall?.ReadOnlyBanner) {
-      return h(HEYS.Paywall.ReadOnlyBanner, {
-        sticky: true,
-        onClick: onUpgrade,
-      });
-    }
+    const bg = '#fee2e2';
+    const color = '#991b1b';
+    const border = '#fca5a5';
+    const text = '🔒 Доступ ограничен. Чтобы продолжить, оформите подписку.';
+    const ctaText = 'Оформить подписку';
 
     return h('div', {
-      className: 'readonly-banner readonly-banner--sticky',
-      onClick: onUpgrade,
-      role: 'button',
-      tabIndex: 0,
+      style: {
+        position: 'sticky',
+        top: 0,
+        zIndex: 9000,
+        background: bg,
+        color,
+        borderBottom: `1px solid ${border}`,
+        padding: '8px 14px',
+        fontSize: 13,
+        fontWeight: 600,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+      }
     },
-      h('div', { className: 'readonly-banner-content' },
-        h('div', { className: 'readonly-banner-title' }, 'Доступ только для чтения'),
-        h('div', { className: 'readonly-banner-text' },
-          'Чтобы записывать — напишите в поддержку'
-        )
-      ),
-      h('button', {
-        type: 'button',
-        className: 'readonly-banner-pill',
-        onClick: (event) => {
-          event.stopPropagation();
-          onUpgrade?.();
-        },
-      }, 'Подписка')
+      h('span', { style: { flex: 1 } }, text),
+      ctaText && h('button', {
+        onClick: onUpgrade,
+        style: {
+          padding: '6px 12px',
+          borderRadius: 8,
+          border: 'none',
+          background: color,
+          color: '#fff',
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+        }
+      }, ctaText),
+      onClose && h('button', {
+        onClick: onClose,
+        title: 'Закрыть',
+        style: {
+          background: 'transparent',
+          border: 'none',
+          color,
+          fontSize: 18,
+          cursor: 'pointer',
+          padding: '0 4px',
+          lineHeight: 1,
+        }
+      }, '×')
     );
   }
 
@@ -1836,7 +1844,6 @@
           return h(ContactCuratorScreen, {
             onClose: context?.onClose,
             isReadOnly: true,
-            embedded: true,
           });
         }
 

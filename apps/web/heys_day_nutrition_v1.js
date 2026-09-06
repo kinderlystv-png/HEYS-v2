@@ -173,6 +173,36 @@
     return String(Math.round(hours * 10) / 10).replace('.', ',') + ' ч';
   }
 
+  // Кадр food-meal «вид · разбор приёма»: чипы только для категорий с одной
+  // подписью — бытовая активность и «после тренировки» целиком, без emoji.
+  function buildMealContextChipLabels(meal, dayData, pIndex) {
+    const calc = HEYS.InsulinWave?.calculateActivityContext;
+    if (!calc || !meal?.time) return [];
+    const [mealHour, mealMinute] = String(meal.time || '').split(':').map(Number);
+    if (Number.isNaN(mealHour) || Number.isNaN(mealMinute)) return [];
+    const totals = mealTotals(meal, pIndex);
+    const ctx = calc({
+      mealTimeMin: mealHour * 60 + mealMinute,
+      mealKcal: totals.kcal || 0,
+      trainings: dayData?.trainings || [],
+      householdMin: dayData?.householdMin || 0,
+      steps: dayData?.steps || 0,
+      mealNutrients: {
+        prot: totals.prot,
+        fat: totals.fat,
+        carbs: totals.carbs,
+        simple: totals.simple
+      },
+      allMeals: dayData?.meals || []
+    });
+    if (!ctx?.allContexts?.length) return [];
+    const types = new Set(ctx.allContexts.map((entry) => entry.type));
+    const chips = [];
+    if (types.has('household')) chips.push('Бытовая активность');
+    if (types.has('post')) chips.push('После тренировки');
+    return chips;
+  }
+
   function formatDurationShort(totalMinutes) {
     const mins = Math.max(0, Math.round(Number(totalMinutes) || 0));
     const h = Math.floor(mins / 60);
@@ -1365,7 +1395,8 @@
       insulinWaveData,
       prof,
       dayTot,
-      waterMl
+      waterMl,
+      day
     } = props;
     const sheetRef = React.useRef(null);
     const [dragY, setDragY] = React.useState(0);
@@ -1385,6 +1416,10 @@
       return list.find((wave) => (meal?.id ? wave.id === meal.id : wave.time === meal?.time)) || null;
     }, [insulinWaveData, meal?.id, meal?.time]);
     const waveTrace = mealWave ? buildWaveTrace(mealWave) : null;
+    const contextChips = React.useMemo(
+      () => buildMealContextChipLabels(meal, day, pIndex),
+      [meal, day, pIndex]
+    );
 
     const items = Array.isArray(meal?.items) ? meal.items : [];
     const isEmpty = items.length === 0;
@@ -1619,6 +1654,12 @@
               '· волна ' + formatWaveHours(mealWave.duration)),
             chevron(React, 15)
           ),
+          contextChips.length ? React.createElement('div', { className: 'nutrition-v4-sheet__context-chips' },
+            contextChips.map((label) => React.createElement('span', {
+              key: label,
+              className: 'nutrition-v4-sheet__context-chip'
+            }, label))
+          ) : null,
           whyOpen ? renderWaveTrace(React, waveTrace, true, null) : null
         ) : null,
 
@@ -2024,6 +2065,7 @@
         prof,
         dayTot,
         waterMl,
+        day,
         onClose: closeMealSheet
       }) : null,
 

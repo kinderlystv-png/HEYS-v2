@@ -1671,16 +1671,14 @@
   margin-top: 0;
 }
 
-/* Строка «вид «только чтение»»: плашка режима чтения на вкладке «Питание».
-   Липкий баннер сверху — .readonly-banner--sticky в 735-ui-v4-subscription.css. */
-.readonly-banner--in-tab,
-.page-day .readonly-banner {
+/* Строка «вид «только чтение»»: плашка режима чтения. У .readonly-banner не
+   было ни одного правила во всём проекте — блок рендерился голым, без
+   заливки и полей, и причина висела текстом на фоне вкладки. */
+.readonly-banner {
   margin-top: 12px;
   padding: 12px 14px;
   border-radius: 16px;
   background: var(--v4-chip, #efe3cf);
-  position: static;
-  min-height: 0;
 }
 
 .readonly-banner-title {
@@ -1750,4 +1748,23 @@
 
 .nutrition-v4-sheet__why-head.is-open svg {
   transform: rotate(90deg);
+}
+
+.nutrition-v4-sheet__context-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.nutrition-v4-sheet__context-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--v4-ink, #201e1d) 12%, transparent);
+  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  background: transparent;
 }

@@ -267,6 +267,17 @@
   margin-top: 16px;
 }
 
+.paywall-order-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.paywall-order-aside {
+  flex: none;
+  text-align: right;
+  white-space: nowrap;
+}
+
 .paywall-order-name {
   font: 700 15px/1.2 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
@@ -429,180 +440,85 @@
   cursor: not-allowed;
 }
 
-/* Read-only banner — кадр «Подписка · баннер сверху»: липкая полоса --tint
-   с пилюлей «Подписка». Плашка на «Питании» — .readonly-banner--in-tab в
-   732-ui-v4-nutrition.css. */
+/* Read-only banner — кадр «Питание · только чтение»: плашка над
+   содержимым в тонах набора, без эмодзи и без стрелки. */
 .readonly-banner {
+  background: var(--v4-hero, #f8fafc);
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin: 12px 0 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   cursor: pointer;
   text-wrap: pretty;
 }
 
-.readonly-banner--sticky {
-  position: sticky;
-  top: 0;
-  z-index: 9000;
-  margin: 0;
-  padding: 10px 18px;
-  min-height: 44px;
-  border-radius: 0;
-  background: var(--v4-tint, #f6e6dd);
+.readonly-banner-icon {
+  font-size: 24px;
+  flex-shrink: 0;
 }
 
 .readonly-banner-content {
   flex: 1;
-  min-width: 0;
 }
 
 .readonly-banner-title {
-  font: 700 12px/1.3 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #201e1d);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--v4-ink, #111827);
 }
 
 .readonly-banner-text {
-  margin-top: 2px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.62));
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--v4-ink-2, #64748b);
 }
 
-.readonly-banner-pill {
-  flex: none;
-  min-height: 34px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 999px;
-  background: var(--v4-act, #c67139);
-  color: var(--v4-btn-on-act, #2b1608);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  white-space: nowrap;
+.readonly-banner-arrow {
+  font-size: 18px;
+  color: var(--v4-ink-2, #64748b);
 }
 
-/* Toast on blocked write — undo-bar geometry without timer ring */
+/* Toast notification for blocked action */
 .readonly-toast {
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  z-index: var(--v4-z-undo, 1010);
-  max-width: 560px;
-  margin-inline: auto;
-  background: var(--v4-surface, #f7efe2);
-  color: var(--v4-ink, #201e1d);
-  padding: 11px 13px;
-  border-radius: 22px;
-  font-family: Figtree, system-ui, -apple-system, sans-serif;
-  box-shadow: inset 0 0 0 1px var(--v4-line, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.07));
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  z-index: 10000;
+  animation: toastSlideUp 0.3s ease-out;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
-  gap: 11px;
-  animation: toastSlideUp 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+  gap: 8px;
+  max-width: 320px;
 }
 
 @keyframes toastSlideUp {
-  from { transform: translateY(24px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.readonly-toast-icon {
-  flex: none;
-  display: inline-flex;
-  color: var(--v4-bad-text, #a83c22);
-}
-
-.readonly-toast-label {
-  flex: 1;
-  font: 600 12px/1.3 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #201e1d);
-  text-wrap: pretty;
+  from { transform: translate(-50%, 20px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
 }
 
 .readonly-toast-action {
-  flex: none;
+  background: #3b82f6;
   border: none;
-  background: transparent;
-  padding: 0;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-act-text, #8a4a20);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  margin-left: 8px;
   white-space: nowrap;
-}
-
-/* Contact support modal — phase 1 single row */
-.sub-contact-modal {
-  position: relative;
-}
-
-.sub-contact-lock {
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  background: var(--v4-tint, #f6e6dd);
-  color: var(--v4-bad-text, #a83c22);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sub-contact-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 18px;
-}
-
-.sub-contact-row {
-  min-height: 52px;
-  padding: 0 14px;
-  border-radius: 16px;
-  background: var(--v4-surface, #f7efe2);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
-  color: inherit;
-}
-
-.sub-contact-row__icon {
-  flex: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  background: var(--v4-chip, #efe3cf);
-  color: var(--v4-act-text, #8a4a20);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sub-contact-row__text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sub-contact-row__text b {
-  font: 700 13px/1.25 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #201e1d);
-}
-
-.sub-contact-row__text small {
-  font: 500 11px/1.35 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.56));
-}
-
-.sub-contact-row__ext {
-  flex: none;
-  color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.45);
-  display: inline-flex;
 }
 
 .sub-screen {
@@ -755,5 +671,102 @@
 
 .sub-screen__support-chevron {
   color: var(--v4-act-text, #8a4a20);
+  display: inline-flex;
+}
+
+/* Контакт поддержки — фаза 1, центральная модалка (canvas «вид · контакт поддержки») */
+.sub-contact {
+  position: relative;
+  text-align: left;
+}
+
+.sub-contact__close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--v4-surface, #f7efe2);
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sub-contact__lock {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--v4-tint, #f6e6dd);
+  color: var(--v4-bad-text, #a83c22);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sub-contact__title {
+  margin: 14px 0 0;
+  font: 700 19px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+  text-wrap: pretty;
+}
+
+.sub-contact__copy {
+  margin: 8px 0 0;
+  font: 500 12.5px/1.5 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
+  text-wrap: pretty;
+}
+
+.sub-contact__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  margin-top: 18px;
+  padding: 0 14px;
+  border-radius: 16px;
+  background: var(--v4-surface, #f7efe2);
+  text-decoration: none;
+  color: inherit;
+}
+
+.sub-contact__row-icon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--v4-surface-2, #efe4d4);
+  color: var(--v4-act-text, #8a4a20);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sub-contact__row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sub-contact__row-text b {
+  font: 700 13px/1.2 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.sub-contact__row-text small {
+  font: 500 11px/1.35 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+}
+
+.sub-contact__row-external {
+  flex: none;
+  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45);
   display: inline-flex;
 }
