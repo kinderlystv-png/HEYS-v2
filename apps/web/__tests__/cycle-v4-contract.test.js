@@ -92,6 +92,7 @@ describe('cycle v4 · profile disable dialog', () => {
     expect(PROFILE_SRC).toContain('cycle-v4-dialog');
     expect(PROFILE_SRC).toContain('cycleDisableOpen');
     expect(PROFILE_SRC).toContain('Выключить особый период?');
+    expect(PROFILE_SRC).toContain('цель вернётся к базовой');
     expect(PROFILE_SRC).not.toMatch(/window\.confirm\([\s\S]*Особый период/);
   });
 });

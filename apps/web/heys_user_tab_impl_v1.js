@@ -1383,7 +1383,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                                     },
                                         React.createElement('div', { className: 'cycle-v4-dialog__title' }, 'Выключить особый период?'),
                                         React.createElement('div', { className: 'cycle-v4-dialog__text' },
-                                            'С сегодняшнего дня вопрос в чек-ине исчезнет. Прошлые отметки и нормы сохранятся как записаны.'
+                                            'Вопрос в чек-ине исчезнет, а сегодняшняя цель вернётся к базовой. Прожитые дни останутся как записаны — вместе с их нормами и отметками.'
                                         ),
                                         React.createElement('div', { className: 'cycle-v4-btns' },
                                             React.createElement('button', {
