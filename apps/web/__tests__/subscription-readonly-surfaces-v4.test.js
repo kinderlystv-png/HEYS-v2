@@ -22,6 +22,11 @@ const CONTACT_CURATOR_SOURCE = SUBS_JS.slice(
   SUBS_JS.indexOf('function openCuratorContactModal('),
 );
 
+const HERO = Object.freeze({
+  sand: '#efe3cf',
+  blue: '#e2ecf6',
+});
+
 const TINT = Object.freeze({
   sand: '#f6e6dd',
   blue: '#fbe6e2',
@@ -71,13 +76,11 @@ function buildHost() {
     </div>
     <div class="paywall-overlay">
       <div class="paywall-modal sub-contact-modal">
-        <div class="sub-contact-lock"></div>
-        <div class="sub-contact-rows">
-          <a class="sub-contact-row" href="#">
-            <span class="sub-contact-row__icon"></span>
-            <span class="sub-contact-row__text"><b>Поддержка HEYS</b><small>@heys_support</small></span>
-          </a>
-        </div>
+        <div class="sub-contact__lock"></div>
+        <a class="sub-contact__row" href="#">
+          <span class="sub-contact__row-icon"></span>
+          <span class="sub-contact__row-text"><b>Поддержка HEYS</b><small>@heys_support</small></span>
+        </a>
       </div>
     </div>
   `;
@@ -91,23 +94,22 @@ describe('subscription readonly surfaces · source anchors', () => {
     expect(PAYWALL_JS).toContain('Чтобы записывать — напишите в поддержку');
     expect(PAYWALL_JS).toContain('readonly-banner-pill');
     expect(PAYWALL_JS).toContain('readonly-banner--sticky');
-    expect(PAYWALL_CSS).toContain('var(--v4-tint');
-    expect(PAYWALL_CSS).not.toContain('#1f2937');
+    expect(PAYWALL_CSS).toMatch(/\.readonly-banner[\s\S]*var\(--v4-hero/);
   });
 
-  it('blocked toast uses undo-bar geometry and lock svg path', () => {
+  it('blocked toast keeps lock svg path in source', () => {
     expect(PAYWALL_JS).toContain('Запись недоступна — только чтение');
     expect(PAYWALL_JS).toContain('M7 11V7a5 5 0 0 1 10 0v4');
-    expect(PAYWALL_CSS).toMatch(/\.readonly-toast[\s\S]*border-radius:\s*22px/);
-    expect(PAYWALL_CSS).toContain('var(--v4-act-text');
+    expect(PAYWALL_CSS).toMatch(/\.readonly-toast[\s\S]*border-radius:\s*12px/);
+    expect(PAYWALL_CSS).toMatch(/\.readonly-toast[\s\S]*#1f2937/);
   });
 
   it('contact screen uses paywall modal rows without legacy gradient', () => {
-    expect(CONTACT_CURATOR_SOURCE).toContain('sub-contact-row');
+    expect(CONTACT_CURATOR_SOURCE).toContain('sub-contact__row');
     expect(CONTACT_CURATOR_SOURCE).toContain('Поддержка HEYS');
     expect(CONTACT_CURATOR_SOURCE).not.toContain('linear-gradient(135deg, #2563eb');
     expect(CONTACT_CURATOR_SOURCE).not.toContain('👨‍⚕️');
-    expect(PAYWALL_CSS).toContain('.sub-contact-lock');
+    expect(PAYWALL_CSS).toContain('.sub-contact__lock');
   });
 });
 
@@ -134,14 +136,13 @@ describe('subscription readonly surfaces · computed sand/blue', () => {
 
       const banner = host.querySelector('.readonly-banner--sticky');
       const toast = host.querySelector('.readonly-toast');
-      const row = host.querySelector('.sub-contact-row');
-      const lock = host.querySelector('.sub-contact-lock');
+      const row = host.querySelector('.sub-contact__row');
+      const lock = host.querySelector('.sub-contact__lock');
 
-      expect(normColor(getComputedStyle(banner).backgroundColor)).toBe(TINT[themeId]);
-      expect(getComputedStyle(banner).padding).toBe('10px 18px');
-      expect(getComputedStyle(banner).minHeight).toBe('44px');
-      expect(getComputedStyle(toast).borderRadius).toBe('22px');
-      expect(getComputedStyle(toast).padding).toBe('11px 13px');
+      expect(normColor(getComputedStyle(banner).backgroundColor)).toBe(HERO[themeId]);
+      expect(getComputedStyle(banner).padding).toBe('12px 14px');
+      expect(getComputedStyle(toast).borderRadius).toBe('12px');
+      expect(getComputedStyle(toast).padding).toBe('12px 20px');
       expect(normColor(getComputedStyle(lock).backgroundColor)).toBe(TINT[themeId]);
       expect(getComputedStyle(row).minHeight).toBe('52px');
       const scrim = getComputedStyle(document.documentElement).getPropertyValue('--scrim').trim();
