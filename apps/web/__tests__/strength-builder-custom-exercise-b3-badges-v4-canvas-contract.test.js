@@ -12,7 +12,6 @@ import {
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CATALOG = readWebFile(WEB_DIR, 'strength/heys_strength_catalog_ui_v1.js');
 const CSS = readWebFile(WEB_DIR, 'styles/modules/750-strength-builder.css');
-const BASE_CSS = readWebFile(WEB_DIR, 'styles/modules/000-base-and-gamification.css');
 
 const PALETTES = Object.freeze({
   sand: {
@@ -67,8 +66,12 @@ function compileCss(paletteName) {
     .replaceAll('env(safe-area-inset-bottom, 0px)', '0px')}`;
 }
 
-const COMPILED_CSS = { sand: null, blue: null };
-let NewExerciseScreen;
+const COMPILED_CSS = {
+  sand: compileCss('sand'),
+  blue: compileCss('blue'),
+};
+const heysBoot = loadStrengthModuleSet(WEB_DIR, 'catalogNewExercise', React);
+const NewExerciseScreen = heysBoot.StrengthCatalogUI.NewExerciseScreen;
 let styleHost;
 
 function expectStyle(node, expected, label) {
@@ -109,10 +112,6 @@ function renderNewExerciseWithMuscles(paletteName = 'sand') {
 
 describe('strength builder · B3 своё упражнение ·08–12 badge-row v4 canvas contract', () => {
   beforeAll(() => {
-    const heys = loadStrengthModuleSet(WEB_DIR, 'catalogNewExercise', React);
-    NewExerciseScreen = heys.StrengthCatalogUI.NewExerciseScreen;
-    COMPILED_CSS.sand = `${BASE_CSS}\n${compileCss('sand')}`;
-    COMPILED_CSS.blue = `${BASE_CSS}\n${compileCss('blue')}`;
     styleHost = createStyleHost();
     styleHost.set(COMPILED_CSS.sand);
   });

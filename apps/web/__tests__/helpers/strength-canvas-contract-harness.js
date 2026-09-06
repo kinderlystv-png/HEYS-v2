@@ -3,6 +3,8 @@ import path from 'node:path';
 
 /** @typedef {'builder'|'catalogNewExercise'|'proposal'|'supersetOnly'} StrengthModuleSet */
 
+const moduleSourceCache = new Map();
+
 export const STRENGTH_MODULE_SETS = Object.freeze({
   builder: [
     '_kernel/heys_kernel_strength_v1.js',
@@ -27,6 +29,14 @@ export const STRENGTH_MODULE_SETS = Object.freeze({
   ],
 });
 
+export function readWebFile(webDir, rel) {
+  const key = `${webDir}\0${rel}`;
+  if (!moduleSourceCache.has(key)) {
+    moduleSourceCache.set(key, fs.readFileSync(path.join(webDir, rel), 'utf8'));
+  }
+  return moduleSourceCache.get(key);
+}
+
 /**
  * Eval legacy strength modules once per test file. Returns window.HEYS after load.
  * @param {string} webDir
@@ -37,12 +47,9 @@ export function evalStrengthModules(webDir, react, modules) {
   if (!globalThis.window) globalThis.window = globalThis;
   globalThis.window.HEYS = {};
   globalThis.window.React = react;
-  const ev = (rel) => {
-    // eslint-disable-next-line no-eval
-    eval(fs.readFileSync(path.join(webDir, rel), 'utf8'));
-  };
   for (const rel of modules) {
-    ev(rel);
+    // eslint-disable-next-line no-eval
+    eval(readWebFile(webDir, rel));
   }
   return globalThis.window.HEYS;
 }
@@ -77,8 +84,4 @@ export function createStyleHost() {
     set(css) { el.textContent = css; },
     remove() { el.remove(); },
   };
-}
-
-export function readWebFile(webDir, rel) {
-  return fs.readFileSync(path.join(webDir, rel), 'utf8');
 }

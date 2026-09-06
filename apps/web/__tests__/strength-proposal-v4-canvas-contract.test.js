@@ -1,7 +1,7 @@
 import path from 'node:path';
 import React from 'react';
 import { fileURLToPath } from 'node:url';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { loadStrengthModuleSet, readWebFile } from './helpers/strength-canvas-contract-harness.js';
 
@@ -52,10 +52,11 @@ function srcBlock(name) {
   return SRC.slice(start, next > start ? next : start + 4000);
 }
 
-let sharedParts;
+loadStrengthModuleSet(WEB_DIR, 'proposal', React);
+let sharedParts = globalThis.window.HEYS.StrengthBuilderParts;
 
-function loadPartsOnce() {
-  if (!sharedParts || !globalThis.window.HEYS?.TrainingKernel) {
+function getParts() {
+  if (!globalThis.window.HEYS?.TrainingKernel) {
     loadStrengthModuleSet(WEB_DIR, 'proposal', React);
     sharedParts = globalThis.window.HEYS.StrengthBuilderParts;
   }
@@ -83,9 +84,8 @@ function startedTraining(proposalExercises) {
 describe('strength proposal · canvas contract (proposal UI)', () => {
   let Parts;
 
-  beforeAll(() => { Parts = loadPartsOnce(); });
+  beforeAll(() => { Parts = getParts(); });
   afterEach(() => { cleanup(); });
-  afterAll(() => { delete window.HEYS; });
 
   it('ProposalCard: signs 22×7 and outcome labels on the right', () => {
     const training = startedTraining([ex('ex1', 'Жим', [ap('a1', 75, 8, false), ap('a2', 60, 8, false)])]);
@@ -345,9 +345,8 @@ describe('strength proposal · canvas contract (proposal UI)', () => {
 describe('Л10–Л12 · исходы предложения · canvas contract', () => {
   let Parts;
 
-  beforeAll(() => { Parts = loadPartsOnce(); });
+  beforeAll(() => { Parts = getParts(); });
   afterEach(() => { cleanup(); });
-  afterAll(() => { delete window.HEYS; });
 
   it('держит ProposalOutcomeScreen и CSS кадров Л10–Л12', () => {
     expect(SRC).toContain('function ProposalOutcomeScreen');

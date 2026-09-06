@@ -14,7 +14,6 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIR = path.resolve(__dirname, '..');
 const CSS = readWebFile(WEB_DIR, 'styles/modules/750-strength-builder.css');
-const BASE_CSS = readWebFile(WEB_DIR, 'styles/modules/000-base-and-gamification.css');
 
 const CANVAS = Object.freeze({
   bg: '#fffaf1', c1: '#f7efe2', c2: '#efe3cf', tint: '#f6e6dd', tx: '#201e1d',
@@ -63,9 +62,13 @@ function computedCss(palette) {
     .replaceAll('env(safe-area-inset-bottom, 0px)', '0px');
 }
 
-const COMPILED_CSS = { sand: null, blue: null };
-let SB;
-let BuilderParts;
+const COMPILED_CSS = {
+  sand: computedCss(CANVAS),
+  blue: computedCss(BLUE),
+};
+const heysBoot = loadStrengthModuleSet(WEB_DIR, 'builder', React);
+const SB = heysBoot.StrengthBuilder;
+const BuilderParts = heysBoot.StrengthBuilderParts;
 let styleHost;
 
 const work = (weightKg, reps, done, extra) => ({
@@ -99,11 +102,6 @@ function expectColor(node, property, expected) {
 
 describe('K · спорные состояния · canvas contract', { timeout: 45_000 }, () => {
   beforeAll(() => {
-    const heys = loadStrengthModuleSet(WEB_DIR, 'builder', React);
-    SB = heys.StrengthBuilder;
-    BuilderParts = heys.StrengthBuilderParts;
-    COMPILED_CSS.sand = `${BASE_CSS}\n${computedCss(CANVAS)}`;
-    COMPILED_CSS.blue = `${BASE_CSS}\n${computedCss(BLUE)}`;
     styleHost = createStyleHost();
     styleHost.set(COMPILED_CSS.sand);
   });
