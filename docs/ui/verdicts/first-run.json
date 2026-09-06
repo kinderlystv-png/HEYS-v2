@@ -812,8 +812,8 @@
       "naKind": "demo-only"
     },
     "тач-цели": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Пакет 36: .desktop-gate__copy-btn и .desktop-gate__logout-btn min-height 44px видимым — heys_app_gates_v1.js:156-186 + 500-pwa-and-offline.css:7393-7414; polosa4-task104-pkg36-touch-44px.test.js computed 44px sand.",
+      "v": "=",
+      "f": "Ни одной цели ниже 44 в зоне: node scripts/ui-v4-check-touch-target-visible.mjs --inventory на 6 сентября даёт first-run 0 нарушений, при том что в тот же день гейт стал строже к себе — три слепые зоны сняты, остаток непроверенного печатается отдельной строкой.",
       "h": "a50e75408e43"
     }
   },
