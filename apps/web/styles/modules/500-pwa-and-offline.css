@@ -3037,7 +3037,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 13px;
   border: none;
   border-radius: 999px;
@@ -3046,17 +3046,6 @@
   color: rgba(0, 0, 0, 0.62);
   cursor: pointer;
   box-shadow: none;
-}
-
-/* Контракт «минимальная область нажатия»: чипы 36 с прозрачными полями до 44.
-   Видимая высота остаётся 36 («вид чипа добавки»), нажимается 44. */
-.mc-supp-flow-chip::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: -4px;
-  bottom: -4px;
 }
 
 .mc-supp-flow-chip.is-on {

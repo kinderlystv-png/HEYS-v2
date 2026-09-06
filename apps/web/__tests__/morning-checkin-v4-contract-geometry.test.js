@@ -243,10 +243,9 @@ describe('чек-ин v4: геометрия по контракту канва�
     expect(getComputedStyle(document.querySelector('.mc-weight-kilo-card')).marginTop).toBe('36px');
   });
 
-  it('чип добавки: видимые 36, нажимаемые 44; ответы шага — 44', () => {
-    // Контракт «минимальная область нажатия»: чипы 36 с прозрачными полями до
-    // 44, все остальные нажимаемые элементы не ниже 44. Псевдоэлемент в jsdom
-    // не вычисляется, поэтому припуск читается из самого правила.
+  it('чип добавки: видимые 44; ответы шага — 44', () => {
+    // Контракт «Добавки · добавление · 10/11» и «тач-цели»: чипы в
+    // переносимых рядах держат норму видимым размером, без ::after.
     document.body.innerHTML = `
       <div class="mc-modal mc-modal--daily">
         <div class="mc-supp-flow-chips">
@@ -258,15 +257,8 @@ describe('чек-ин v4: геометрия по контракту канва�
       </div>`;
 
     const chip = getComputedStyle(document.querySelector('.mc-supp-flow-chip'));
-    expect(chip.minHeight).toBe('36px');
-    // Припуск можно повесить только на позиционированный чип.
-    expect(chip.position).toBe('relative');
-
-    const after = DAILY_CSS.match(/\.mc-supp-flow-chip::after \{([\s\S]*?)\}/);
-    expect(after).toBeTruthy();
-    const inset = (prop) => Number(after[1].match(new RegExp(`${prop}:\\s*(-?\\d+)px`))[1]);
-    expect(36 - inset('top') - inset('bottom')).toBe(44);
-    expect(after[1]).toContain('position: absolute');
+    expect(chip.minHeight).toBe('44px');
+    expect(DAILY_CSS).not.toMatch(/\.mc-supp-flow-chip::after/);
 
     const pill = getComputedStyle(document.querySelector('.mc-pill--mini'));
     expect(pill.minHeight).toBe('44px');

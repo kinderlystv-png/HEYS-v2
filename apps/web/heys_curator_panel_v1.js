@@ -621,7 +621,7 @@
 
     const fine = byState.get('fine') || [];
 
-    return h('div', { className: 'cur-panel' },
+    return h('div', { className: 'cur-panel' + (sheet ? ' cur-panel--sheet-open' : '') },
       chips.length > 2 ? h('div', { className: 'cur-panel__chips' },
         chips.map((c) => h('button', {
           key: c.state || 'all',
