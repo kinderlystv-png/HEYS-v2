@@ -1418,7 +1418,7 @@
     },
     "Конструктор · каталог · 02": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-catalog-screen .sb-icon-btn var(--v4-ink-2) (750-strength-builder.css:5957-5965).",
+      "f": ".sb-catalog-screen .sb-icon-btn var(--v4-ink-2) (750-strength-builder.css:5963-5971); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "1d160e52c5ae"
     },
     "Конструктор · каталог · 03": {
@@ -1463,7 +1463,7 @@
     },
     "Конструктор · каталог · 11": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-catalog-screen .sb-chip var(--v4-ink-2) (750-strength-builder.css:6043-6053).",
+      "f": ".sb-catalog-screen .sb-chip var(--v4-ink-2) (750-strength-builder.css:6049-6057); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "00c7a7e3c2a7"
     },
     "Конструктор · каталог · 12": {
@@ -1503,7 +1503,7 @@
     },
     "Конструктор · каталог · 19": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-catalog-screen .sb-star off var(--v4-ink-30) (750-strength-builder.css:6097-6110).",
+      "f": ".sb-catalog-screen .sb-star off var(--v4-ink-30) (750-strength-builder.css:6103-6115); computed sand rgba(0, 0, 0, 0.3), blue rgba(0, 0, 0, 0.3) @375px Chromium.",
       "h": "95b61fbbf10b"
     },
     "Конструктор · каталог · 20": {
@@ -1689,7 +1689,7 @@
     "Конструктор · итоги · 31": {
       "v": "=",
       "h": "c7c775596dea",
-      "f": "Пакет 43 ink ladder: .sb-finish-feedback span var(--v4-ink-2) (750-strength-builder.css:2320-2323)."
+      "f": ".sb-finish-feedback span var(--v4-ink-2) (750-strength-builder.css:2320-2323); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 32": {
       "v": "=",
@@ -1714,7 +1714,7 @@
     "Конструктор · итоги · 36": {
       "v": "=",
       "h": "000379790468",
-      "f": "Геометрия/акцент сведены: .sb-finish-note placeholder var(--v4-ink-4) (750-strength-builder.css:2339-2341)."
+      "f": ".sb-finish-note::placeholder var(--v4-ink-4) (750-strength-builder.css:2339-2341); computed sand rgba(0, 0, 0, 0.38), blue rgba(0, 0, 0, 0.38) @375px Chromium."
     },
     "Конструктор · итоги · 37": {
       "v": "=",
@@ -1724,7 +1724,7 @@
     "Конструктор · итоги · 38": {
       "v": "=",
       "h": "28ae4706bcf3",
-      "f": "Пакет 43 ink ladder: .sb-finish-chart-head span var(--v4-ink-2) (750-strength-builder.css:2349-2353)."
+      "f": ".sb-finish-chart-head span var(--v4-ink-2) (750-strength-builder.css:2349-2353); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 39": {
       "v": "=",
@@ -1739,7 +1739,7 @@
     "Конструктор · итоги · 41": {
       "v": "=",
       "h": "3dceb60187ed",
-      "f": "Пакет 43 ink ladder: .sb-finish-chart-column b var(--v4-ink-2) (750-strength-builder.css:2380-2385)."
+      "f": ".sb-finish-chart-column b var(--v4-ink-2) (750-strength-builder.css:2380-2385); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 42": {
       "v": "=",
@@ -1749,7 +1749,7 @@
     "Конструктор · итоги · 43": {
       "v": "=",
       "h": "f11ffc03ce94",
-      "f": "Пакет 43 ink ladder: .sb-finish-chart-column small var(--v4-ink-2) (750-strength-builder.css:2380-2385)."
+      "f": ".sb-finish-chart-column small var(--v4-ink-2) (750-strength-builder.css:2380-2385); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 44": {
       "v": "=",
@@ -1804,7 +1804,7 @@
     "Конструктор · итоги · 54": {
       "v": "=",
       "h": "9c00ce7b3f26",
-      "f": "Пакет 43 ink ladder: .sb-finish-row b.is-quiet var(--v4-ink-2) (750-strength-builder.css:2223-2225)."
+      "f": ".sb-finish-row b.is-quiet var(--v4-ink-2) (750-strength-builder.css:2223-2225); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 55": {
       "v": "=",
@@ -1975,7 +1975,7 @@
     },
     "Связка · старая, без раундов · 05": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ss-badge--history var(--v4-ink-2) (750-strength-builder.css:754-759).",
+      "f": ".sb-ss-badge--history var(--v4-ink-2) (750-strength-builder.css:754-759); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "620cab459aed"
     },
     "Связка · старая, без раундов · 06": {
@@ -2085,7 +2085,7 @@
     },
     "Своё упражнение · 12": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ex-unit-badge var(--v4-ink-2) (750-strength-builder.css:1318-1328).",
+      "f": ".sb-ex-unit-badge var(--v4-ink-2) (750-strength-builder.css:1318-1328); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "80ea5bd13a14"
     },
     "Своё упражнение · 13": {
@@ -3547,7 +3547,7 @@
     },
     "Таблица · галочка не ставится · 13": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:378-382).",
+      "f": ".sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:378-382); computed sand rgba(0, 0, 0, 0.3), blue rgba(0, 0, 0, 0.3) @375px Chromium.",
       "h": "45fc669e1045"
     },
     "Таблица · галочка не ставится · 14": {
@@ -3562,7 +3562,7 @@
     },
     "Таблица · галочка не ставится · 16": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ap-value.is-bw var(--v4-ink-2) (750-strength-builder.css:385-388).",
+      "f": ".sb-ap-value.is-bw var(--v4-ink-2) (750-strength-builder.css:385-388); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "df908a5793f6"
     },
     "Таблица · галочка не ставится · 17": {
@@ -3917,7 +3917,7 @@
     },
     "Перенумерация · 15": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-renumber-num.is-warmup var(--v4-ink-2) (750-strength-builder.css:3241-3244).",
+      "f": ".sb-renumber-num.is-warmup var(--v4-ink-2) (750-strength-builder.css:3241-3244); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "f11d387de885"
     },
     "Перенумерация · 16": {
@@ -3992,7 +3992,7 @@
     },
     "Порядок · режим перестановки · 10": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-order-row .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:2717-2725).",
+      "f": ".sb-order-row .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:2717-2725); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "6180dba45ed5"
     },
     "Порядок · режим перестановки · 11": {
@@ -4352,7 +4352,7 @@
     },
     "Дроп-сет · свой экран · 25": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ds-rule var(--v4-ink-2) lh 1.5 (750-strength-builder.css:6648-6654).",
+      "f": ".sb-ds-rule var(--v4-ink-2) (750-strength-builder.css:6654-6660); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "421c4c59b72f"
     },
     "Дроп-сет · свой экран · 26": {
@@ -4417,7 +4417,7 @@
     },
     "Связка · создание · 10": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-radio .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:4038-4044).",
+      "f": ".sb-radio .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:4039-4046); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "03032b1edaa2"
     },
     "Связка · создание · 11": {
@@ -4769,7 +4769,7 @@
     "Куратор и зал · 17": {
       "h": "03032b1edaa2",
       "v": "=",
-      "f": "Пакет 43 ink ladder: --sb-mut var(--v4-ink-2) на .sb-ex-num (750-strength-builder.css:3328,3472-3478)."
+      "f": "--sb-mut→.sb-ex-num var(--v4-ink-2) (750-strength-builder.css:3328,3472-3478); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Куратор и зал · 18": {
       "h": "56118530aa17",
@@ -4858,7 +4858,7 @@
     "Куратор и зал · 34": {
       "h": "5eb306b36802",
       "v": "=",
-      "f": "Пакет 43 ink ladder: --sb-sync-muted var(--v4-ink-2) .sb-cur-sync-offline (750-strength-builder.css:52,7198-7202)."
+      "f": ".sb-cur-sync-offline var(--sb-sync-muted→--v4-ink-2) (750-strength-builder.css:52,7204-7208); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Куратор и зал · 35": {
       "h": "6b286135ed76",
@@ -5440,12 +5440,12 @@
     },
     "Спорное · подход добавлен к закрытому · 16": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .is-exercise-open .sb-ap-num var(--v4-ink-2) (750-strength-builder.css:3734-3742).",
+      "f": ".is-exercise-open .sb-ap-num var(--v4-ink-2) (750-strength-builder.css:3734-3742); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "7ed7efcaf864"
     },
     "Спорное · подход добавлен к закрытому · 17": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778).",
+      "f": ".sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778); computed sand rgba(0, 0, 0, 0.3), blue rgba(0, 0, 0, 0.3) @375px Chromium.",
       "h": "45fc669e1045"
     },
     "Спорное · подход добавлен к закрытому · 18": {
@@ -5728,7 +5728,7 @@
     },
     "Спорное · галочка при пустых полях · 10": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778).",
+      "f": ".sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778); computed sand rgba(0, 0, 0, 0.3), blue rgba(0, 0, 0, 0.3) @375px Chromium.",
       "h": "45fc669e1045"
     },
     "Спорное · галочка при пустых полях · 11": {
@@ -6440,7 +6440,7 @@
     },
     "Правка · клиент уже начал · 27": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-proposal-started-num var(--v4-ink-2) (750-strength-builder.css:4954-4957).",
+      "f": ".sb-proposal-started-num var(--v4-ink-2) (750-strength-builder.css:4960-4963); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "a52bd48d09a8"
     },
     "Правка · клиент уже начал · 28": {
@@ -6515,7 +6515,7 @@
     },
     "Правка · граница защиты · 11": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .is-exercise-open .sb-ap-num var(--v4-ink-2) (750-strength-builder.css:3734-3742).",
+      "f": ".is-exercise-open .sb-ap-num var(--v4-ink-2) (750-strength-builder.css:3734-3742); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "8d2ed73604db"
     },
     "Правка · граница защиты · 12": {
@@ -6525,7 +6525,7 @@
     },
     "Правка · граница защиты · 13": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778).",
+      "f": ".sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778); computed sand rgba(0, 0, 0, 0.3), blue rgba(0, 0, 0, 0.3) @375px Chromium.",
       "h": "45fc669e1045"
     },
     "Правка · граница защиты · 14": {
@@ -6770,7 +6770,7 @@
     },
     "Правка · пропущен раньше · 08": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-missed-earlier-skipped-pill var(--v4-ink-2) (heys_strength_proposal_ui_v1.js:907-910).",
+      "f": ".sb-missed-earlier-skipped-pill var(--v4-ink-2) (750-strength-builder.css:4324-4327); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "5c93c1c9e0fd"
     },
     "Правка · пропущен раньше · 09": {
@@ -7854,7 +7854,7 @@
     },
     "Ввод · время под нагрузкой · 14": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778).",
+      "f": ".sb-ap-check.is-blocked var(--v4-ink-30) (750-strength-builder.css:3773-3778); computed sand rgba(0, 0, 0, 0.3), blue rgba(0, 0, 0, 0.3) @375px Chromium.",
       "h": "45fc669e1045"
     },
     "Ввод · время под нагрузкой · 15": {
@@ -9033,7 +9033,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 12": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .is-exercise-open .sb-ex.is-complete .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:3626-3628); calm-canvas sand.",
+      "f": ".is-exercise-open .sb-ex.is-complete .sb-ex-num var(--v4-ink-2) (750-strength-builder.css:3626-3628); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "6180dba45ed5",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9107,7 +9107,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 20": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .is-open .sb-ex-num bg --sb-bg inset .1 var(--v4-ink-2) (750-strength-builder.css:3652-3656).",
+      "f": ".is-open .sb-ex-num color var(--v4-ink-2) (750-strength-builder.css:3652-3656); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "ff8b3b70f5a6",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9143,7 +9143,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 24": {
       "v": "=",
-      "f": "Пакет 43 ink ladder: .sb-ex-toggle 36×36 --bg var(--v4-ink-2) (750-strength-builder.css:3640-3649).",
+      "f": ".sb-ex-toggle color var(--v4-ink-2) (750-strength-builder.css:3640-3649); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "b805c2ad0650",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9230,7 +9230,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 33": {
       "v": "≠",
-      "f": "Г4 .is-weight-entry .sb-ap.is-done .sb-ap-num --gr vs ink-2 (750-strength-builder.css:3791-3794); CANVAS_CONFLICTS А1б:33.",
+      "f": "Г4 .is-weight-entry .sb-ap.is-done .sb-ap-num color var(--gr) vs ink-2 (750-strength-builder.css:5197-5200); computed sand rgba(92, 106, 69, 1), blue rgba(92, 106, 69, 1) @375px Chromium. CANVAS_CONFLICTS А1б:33.",
       "h": "c949d97f6e9e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9250,7 +9250,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 35": {
       "v": "≠",
-      "f": "Г4 .is-current .sb-ap-num --acs/on-acs vs bg+ink-2 (750-strength-builder.css:3796-3798); CANVAS_CONFLICTS А1б:35.",
+      "f": "Г4 .is-weight-entry .sb-ap.is-current .sb-ap-num --acs/--on-acs vs bg+ink-2 (750-strength-builder.css:5202-5205); computed sand rgba(43, 22, 8, 1), blue rgba(43, 22, 8, 1) @375px Chromium. CANVAS_CONFLICTS А1б:35.",
       "h": "2e09eff5c9ad",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
