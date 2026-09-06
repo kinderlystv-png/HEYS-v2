@@ -8263,7 +8263,13 @@ body:has(.offline-banner) .wrap {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--v4-act-text);
+  /* Запасное — песочное значение САМОЙ роли (002-ui-v4-palette-roles.css:147),
+     а не соседней поверхности. Прежде голую роль легализовал маркер
+     v4-intentional, но он стоял НАД строкой фона и уехал вместе с ней, когда
+     6 сентября заливку --v4-hero сменили на transparent: маркер относился к
+     цвету, а жил у соседа. Запасное значение честнее маркера — оно называет
+     цвет, который человек увидит, если роль не разрешится. */
+  color: var(--v4-act-text, #8a4a20);
   font-family: inherit;
   font-size: 11px;
   font-weight: 700;

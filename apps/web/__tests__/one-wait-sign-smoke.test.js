@@ -155,7 +155,7 @@ describe('кнопка отправки в чате несёт тот же зн�
 
   it('кнопка сохраняет заливку и гаснет до 60 %, а не сереет как «нечего отправить»', () => {
     expect(messenger).toContain("'messenger-send' + (sending ? ' messenger-send--busy' : '')");
-    expect(css).toMatch(/\.messenger-send--busy:disabled \{[\s\S]*?background: #1d70b7;[\s\S]*?opacity: 0\.6;/);
+    expect(css).toMatch(/\.messenger-send--busy:disabled \{[\s\S]*?background: var\(--v4-act, #c67139\);[\s\S]*?opacity: 0\.6;/);
     // Правило должно стоять ПОСЛЕ :disabled — специфичность равна, побеждает поздний.
     expect(css.indexOf('.messenger-send--busy:disabled')).toBeGreaterThan(css.indexOf('.messenger-send:disabled'));
   });

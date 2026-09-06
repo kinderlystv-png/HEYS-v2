@@ -221,7 +221,15 @@ function scan() {
   }
 
   for (const [rel, src] of sources) {
-    for (const m of src.matchAll(READ_RE)) {
+    // Чтения ищем в тексте БЕЗ комментариев — по той же причине, по которой
+    // без них собираются объявления двадцатью строками выше. Пакет 43 сделал
+    // `var(--ink-N)` канвасной записью тона, и её теперь цитируют в поясняющих
+    // комментариях продуктового CSS: «кадры пилюли-ответа просят var(--ink-2)».
+    // Гейт читал такую прозу как чтение необъявленной переменной и требовал
+    // объявить роль КАНВАСА в палитре продукта — то есть чинить надо было бы
+    // не код, а комментарий, и цитата контракта стала бы запрещённой.
+    const code = stripBlockComments(src);
+    for (const m of code.matchAll(READ_RE)) {
       const name = m[1];
       if (FOREIGN.test(`--${name}`) || OWNED_ELSEWHERE.test(`--${name}`)) continue;
       if (declaredCss.has(name) || declaredJs.has(name)) continue;

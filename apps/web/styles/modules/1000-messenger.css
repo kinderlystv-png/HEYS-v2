@@ -55,14 +55,14 @@
   height: 22px;
   padding: 0 6px;
   border-radius: 11px;
-  background: var(--v4-warn-1, #ef4444);
-  color: var(--v4-bg, #fff);
+  background: var(--v4-warn-1, #d99a63);
+  color: var(--v4-bg, #fffaf1);
   font-size: 12px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--v4-bg, #fff);
+  border: 2px solid var(--v4-bg, #fffaf1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   pointer-events: none;
 }
