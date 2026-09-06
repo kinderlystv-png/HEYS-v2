@@ -147,8 +147,9 @@ describe('registration canvas parity', () => {
       // старше кадра, поэтому ждём гашение и постоянную заливку.
       expect(CONSENTS_SRC).toContain('opacity: loading ? 0.6 : (allRequiredAccepted ? 1 : 0.45)');
       expect(CONSENTS_SRC).not.toContain("color: allRequiredAccepted && !loading ? '#2b1608'");
-      // Причина над кнопкой — 11,5 px/500 тоном чернил 55 % (кадр рисует 600/50 %).
-      expect(CONSENTS_SRC).toContain("font: '500 11.5px/1.45 Figtree, system-ui, sans-serif'");
+      // Причина над кнопкой — 11,5 px/600 тоном --v4-ink-2 (пакет 44, кегль юридического класса).
+      expect(CONSENTS_SRC).toContain("font: '600 11.5px/1.45 Figtree, system-ui, sans-serif'");
+      expect(CONSENTS_SRC).toContain('color: INK_2');
       expect(CONSENTS_SRC).toContain("padding: '16px 18px 0'");
       expect(CONSENTS_SRC).toContain('!allRequiredAccepted && onCancel');
       expect(CONSENTS_SRC).toContain('Необязательное отмечается тапом');

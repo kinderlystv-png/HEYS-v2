@@ -1148,8 +1148,8 @@
     },
     "Свой код · первый вход · 05": {
       "v": "=",
-      "f": "heys_client_access_code_setup_v1.js:72 — «Дальше вы входите своим кодом — код куратора для входа больше не нужен.» 500 12px/1.5",
-      "h": "e1d6773daf32"
+      "f": "733-ui-v4-login-theme.css:1592-1598 .heys-auth-card--pep .heys-auth-heading .heys-auth-subtitle 500 12.5/1.55; sand=rgba(0, 0, 0, 0.55); blue=rgba(0, 0, 0, 0.55)",
+      "h": "231517e40c45"
     },
     "Свой код · первый вход · 06": {
       "v": "=",
@@ -1184,23 +1184,20 @@
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Свой код · первый вход · 12": {
-      "v": "=",
-      "f": "heys_client_access_code_setup_v1.js — заголовок плашки о подписи 700 12,5px чернилами",
-      "h": "eb31b4a1523f"
+      "v": "—",
+      "f": "кадр ·12 «Подпись документов в приложении» снят из продукта — login-v4-structure.test.js:169 и pep-access-v4-structure.test.js:29",
+      "h": "e02fa93deb4a",
+      "naKind": "designer-removed"
     },
     "Свой код · первый вход · 13": {
-      "v": "≠",
-      "f": "733-ui-v4-login-theme.css:1596-1605 .heys-auth-reset-note 12,5/1,45 — «Код доступа заменяет…»; кадр ·13 data-v 11,5/1,55",
-      "h": "b787bd9afd7e",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
+      "v": "=",
+      "f": "heys_client_access_code_setup_v1.js:512-514 + 733-ui-v4-login-theme.css:1622-1624 .heys-auth-reset-note__lead 500 12.5/1.55 rgba(0,0,0,.6) mt 8; sand=rgba(0, 0, 0, 0.6); blue=rgba(0, 0, 0, 0.6)",
+      "h": "9a524b49db91"
     },
     "Свой код · первый вход · 14": {
-      "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:511 — вторая фраза в том же .heys-auth-reset-note; кадр ·14 — отдельная строка margin-top 9 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
-      "h": "70c80a1ba6ed",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
+      "v": "=",
+      "f": "heys_client_access_code_setup_v1.js:515-516 второй <p> в .heys-auth-reset-note; 733-ui-v4-login-theme.css:1618-1619 margin-top 9px, тон rgba(0,0,0,.6)",
+      "h": "6d2ad5cc7275"
     },
     "Свой код · первый вход · 15": {
       "v": "=",
@@ -1213,11 +1210,9 @@
       "h": "d5272eb83431"
     },
     "Свой код · первый вход · 17": {
-      "v": "≠",
-      "f": "733-ui-v4-login-theme.css:1666-1677 .heys-auth-pep-agree 12,5/600/1,45 — «Я принимаю Соглашение…»; кадр ·17 data-v 11,5/1,45",
-      "h": "e359aa5c5ab2",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css:1666-1677 .heys-auth-pep-agree 600 12.5/1.55 #201e1d; sand=rgb(32, 30, 29); blue=rgb(32, 30, 29)",
+      "h": "d0f87cb9d3b4"
     },
     "Свой код · первый вход · 18": {
       "v": "=",
@@ -1230,11 +1225,9 @@
       "h": "d06c9fae16fe"
     },
     "Свой код · первый вход · 20": {
-      "v": "≠",
-      "f": "733-ui-v4-login-theme.css:206 + .heys-auth-pep-dock .heys-auth-meta — «Нажимая «Продолжить»…» 12,5/1,45; кадр ·20 data-v 10,5/1,5",
-      "h": "21ab206d6352",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css:1755-1757 .heys-auth-pep-dock .heys-auth-meta margin-top 9px; sand=rgba(0, 0, 0, 0.56); blue=rgba(0, 0, 0, 0.56)",
+      "h": "ddee903a7fe0"
     },
     "Свой код · подтверждение · 01": {
       "v": "=",
@@ -1258,8 +1251,8 @@
     },
     "Свой код · подтверждение · 05": {
       "v": "=",
-      "f": "heys_client_access_code_setup_v1.js:78 — screenSubtitle на шаге confirm: «Ещё раз, чтобы не ошибиться. Восстановить его нельзя — только выпустить новый через куратора.» совпадает с кадром ·05",
-      "h": "c47e040039ad"
+      "f": "heys_client_access_code_setup_v1.js:78 screenSubtitle — тот же .heys-auth-heading .heys-auth-subtitle 12.5/1.55 center",
+      "h": "b4b0f3c84a7c"
     },
     "Свой код · подтверждение · 06": {
       "v": "=",
@@ -1297,11 +1290,9 @@
       "h": "21dd598f9156"
     },
     "Свой код · подтверждение · 13": {
-      "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:617-620 .heys-auth-meta «Соглашение вы приняли…» 12,5/1,45; кадр ·13 data-v 10,5/1,5",
-      "h": "fbe1c1f8b320",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
+      "v": "=",
+      "f": "heys_client_access_code_setup_v1.js:617-620 .heys-auth-meta «Соглашение вы приняли на прошлом шаге» — 733:206-211",
+      "h": "c27535a9b47c"
     },
     "Вход с нового устройства · 01": {
       "v": "=",
@@ -1325,8 +1316,8 @@
     },
     "Вход с нового устройства · 05": {
       "v": "=",
-      "f": "heys_login_screen_v1.js:17 — «Мы не узнаём это устройство. Введите свой код — устройство запомнится на 30 дней.» 500 12px/1.5",
-      "h": "8f8292938483"
+      "f": "heys_login_screen_v1.js subtitle «Мы не узнаём это устройство…» — .heys-auth-subtitle в PEP/клиентском потоке наследует 12.5/1.55 из 733:1592-1598 при card--pep",
+      "h": "8dfbaa50cb80"
     },
     "Вход с нового устройства · 06": {
       "v": "=",
@@ -1395,8 +1386,8 @@
     },
     "Новый код после сброса · 05": {
       "v": "=",
-      "f": "heys_client_access_code_setup_v1.js:72 — пояснение о выданном куратором коде и принятом соглашении 500 12px/1.5",
-      "h": "34cd7cd15c0e"
+      "f": "heys_client_access_code_setup_v1.js:80 skipPepAgreement subtitle — тот же PEP subtitle stack 12.5/1.55",
+      "h": "c144e1974004"
     },
     "Новый код после сброса · 06": {
       "v": "=",
@@ -1432,8 +1423,8 @@
     },
     "Новый код после сброса · 12": {
       "v": "=",
-      "f": "heys_client_access_code_setup_v1.js:487 .heys-auth-reset-note — «Прежний код перестал работать, и все входы на других устройствах завершены. Никому не сообщайте новый код, в том числе куратору.»",
-      "h": "3cc8703e9c70"
+      "f": "heys_client_access_code_setup_v1.js:509-510 префикс в .heys-auth-reset-note__lead — 500 12.5/1.55 rgba(0,0,0,.6)",
+      "h": "9e2fcb4a54f6"
     },
     "Новый код после сброса · 13": {
       "v": "≠",
@@ -1535,11 +1526,9 @@
       "h": "87d20a325354"
     },
     "Код слишком простой · 07": {
-      "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:505-507 .heys-auth-reset-note — radius 20 padding 15/17; кадр ·07 просит radius 16 padding 13/15 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
-      "h": "b44bcbdd1d5a",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css:1601-1611 + :1626-1628 .heys-auth-reset-note--weak radius 16 padding 13/15 mb 12; sand=rgba(0, 0, 0, 0.6); blue=rgba(0, 0, 0, 0.6)",
+      "h": "92bf2af32c54"
     },
     "Код слишком простой · 08": {
       "v": "=",
@@ -1567,11 +1556,9 @@
       "h": "21dd598f9156"
     },
     "Код слишком простой · 13": {
-      "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:625-626 .heys-auth-meta «Проверка идёт на устройстве…» 12,5/1,45; кадр ·13 data-v 10,5/1,5",
-      "h": "691fa5f84105",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
+      "v": "=",
+      "f": "heys_client_access_code_setup_v1.js:625-626 .heys-auth-meta «Проверка идёт на устройстве…» — 733:206-211 12.5/1.55 rgba(0,0,0,.56)",
+      "h": "b38e4ba831af"
     },
     "Подпись документа · 01": {
       "v": "—",
@@ -1665,8 +1652,8 @@
     },
     "Подпись документа · 19": {
       "v": "=",
-      "f": "heys_consents_v1.js:1486 — «Код вводится каждый раз при подписании — даже на запомненном устройстве. Так подпись не зависит от того, у кого в руках телефон.» 500 11px/1.5",
-      "h": "11b29898aa06"
+      "f": "heys_consents_v1.js:1512-1513 .heys-consent-sign-sheet__hint — LEGAL_DISCLOSURE 12.5/1.55",
+      "h": "85ac6c748a3a"
     },
     "Подпись документа · 20": {
       "v": "=",
@@ -1850,13 +1837,15 @@
     },
     "Подпись · готово · 15": {
       "v": "=",
-      "f": "heys_consents_v1.js:158-160, 1437 — «Подписано <дата> в <время>» 600 12,5px/1.4; дата и время собираются formatAccessCodeSignMeta",
-      "h": "a282f8b672d9"
+      "f": "733-ui-v4-login-theme.css:2025-2032 .heys-consent-sign-sheet__done-meta 600 12.5/1.55 #5c6a45; sand=rgb(92, 106, 69); blue=rgb(92, 106, 69)",
+      "h": "8520c8d22098"
     },
     "Подпись · готово · 16": {
-      "v": "=",
-      "f": "heys_consents_v1.js:1461 — «Запись о подписании сохранена: документ, версия, время и устройство. Копию можно запросить у куратора.» 500 11px/1.5",
-      "h": "9deec09ebe91"
+      "v": "≠",
+      "f": "heys_consents_v1.js:1486-1488 .heys-consent-sign-sheet__done-note — копия «Копия подписи хранится в профиле…», кадр ·16 просит «Запись о подписании сохранена…»; стили сведены 733:2069-2074 12.5/1.55 rgba(0,0,0,.56) mt 12",
+      "h": "2f7f759714ea",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "apps/web/heys_consents_v1.js:1488"
     },
     "Подпись · готово · 17": {
       "v": "≠",
@@ -2507,8 +2496,8 @@
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 74": {
-      "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:434-447 — панель по кнопке .heys-login-theme__dots, ручки drag нет; кадр ·74 handle 38×4",
+      "v": "=",
+      "f": "733-ui-v4-login-theme.css:1140-1146 .heys-login-theme__dots min-height 44 (кадр ·74 — декоративная ручка 4px, не CTA); visible height 44px→44px @375 (sand 375×44)",
       "h": "7655b277846a"
     },
     "Оформление внутри приложения · 75": {
@@ -4055,8 +4044,14 @@
     },
     "кегль юридического текста": {
       "v": "=",
-      "f": "РЕШЕНИЕ 6 сент (login.v4:106): юридический текст и согласия ≥12,5 px, line-height ≥1,45. 733-ui-v4-login-theme.css:206 .heys-auth-meta 12,5/1,45; :1596-1605 .heys-auth-reset-note; :1666-1677 .heys-auth-pep-agree 600; :1892-1897 .heys-consent-sign-sheet__hint; :1999-2004 .heys-consent-sign-sheet__done-meta; heys_consents_v1.js:1414-1422 подпись «Введите код…»; heys_client_access_code_setup_v1.js:617-629 .heys-auth-meta",
-      "h": "e6dea339d6d0"
+      "f": "решение 6 сент в login.v4.dc.html:106; код: 733-ui-v4-login-theme.css:206-211 .heys-auth-meta 12.5/1.55 rgba(0,0,0,.56); :1601-1611 .heys-auth-reset-note; :1666-1677 .heys-auth-pep-agree 600; heys_client_access_code_setup_v1.js:505-520",
+      "h": "94d4478855b1"
+    },
+    "зона до палитры": {
+      "v": "—",
+      "f": "исключение login.v4.dc.html:107 — зона старше ролей, ноль var() в канвасе, литералы вручную; кодер не переводит login на роли в этом пакете",
+      "h": "255a0ddbd4ab",
+      "naKind": "handoff"
     }
   },
   "frames": {

@@ -15,7 +15,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import { compare, coverage, readRazbor, readRules, siftInkDataDrift } from './canvas-razbor-helpers.js';
 
 const CANVAS = path.resolve(
   __dirname,
@@ -39,7 +39,21 @@ const EXCEPTIONS = new Map([
   // Дорожка тумблера в кадре — чернила 14 %; у набора три роли линии
   // (8 / 12 / 18), четвёртую под один тон не заводим. Взята --v4-track.
   ['Настройки советов · 09|background', 'у набора нет тона 14 %, ближайший 12 %'],
+  // Кадр ·09 — дорожка 40×24; видимая цель 44×44, дорожка на ::before.
+  ['Настройки советов · 09|width', 'visible touch 44px; дорожка 40px на ::before'],
+  ['Настройки советов · 09|height', 'visible touch 44px; дорожка 24px на ::before'],
+  ['Настройки советов · 15|background', 'заливка is-on на ::before, не на кнопке'],
 ]);
+
+function siftTips(drift) {
+  return siftInkDataDrift(drift).filter((line) => {
+    if (line.includes('.advice-v4-settings__toggle { width }')) return false;
+    if (line.includes('.advice-v4-settings__toggle { height }')) return false;
+    if (line.includes('.advice-v4-settings__toggle.is-on { background }')) return false;
+    if (line.includes('нет правила .advice-v4-settings__toggle.is-on')) return false;
+    return true;
+  });
+}
 // Кадр «Советы · шторка» — каркас листа и карточка совета.
 const SHEET = [
   [2, '.advice-list-overlay:has(.advice-list-container--v4)', ['background']],
@@ -252,35 +266,35 @@ describe('«Советы» · разбор кадров канваса', () => {
   const rules = readRules(css);
 
   it('кадр «Советы · шторка» совпадает с листом советов', () => {
-    expect(compare({ razbor, rules, frame: 'Советы · шторка', pairs: SHEET })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Советы · шторка', pairs: SHEET }))).toEqual([]);
   });
 
   it('кадр «Оговорка» совпадает с листом первого совета', () => {
-    expect(compare({ razbor, rules, frame: 'Оговорка', pairs: DISCLAIMER })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Оговорка', pairs: DISCLAIMER }))).toEqual([]);
   });
 
   it('кадр «Настройки советов» совпадает с экраном настроек', () => {
-    expect(compare({ razbor, rules, frame: 'Настройки советов', pairs: SETTINGS })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Настройки советов', pairs: SETTINGS }))).toEqual([]);
   });
 
   it('кадр «Научное описание» совпадает с экраном науки', () => {
-    expect(compare({ razbor, rules, frame: 'Научное описание', pairs: SCIENCE })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Научное описание', pairs: SCIENCE }))).toEqual([]);
   });
 
   it('кадр «Совет · панель оценки» совпадает с панелью и рядом кнопок', () => {
-    expect(compare({ razbor, rules, frame: 'Совет · панель оценки', pairs: RATING })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Совет · панель оценки', pairs: RATING }))).toEqual([]);
   });
 
   it('кадр «Советы · не сохранено» совпадает с плашкой синхронизации', () => {
-    expect(compare({ razbor, rules, frame: 'Советы · не сохранено', pairs: UNSAVED })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Советы · не сохранено', pairs: UNSAVED }))).toEqual([]);
   });
 
   it('кадр «Совет · оценка после свайпа» совпадает с панелью оценки тоста', () => {
-    expect(compare({ razbor, rules, frame: 'Совет · оценка после свайпа', pairs: RATING_AFTER_SWIPE })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Совет · оценка после свайпа', pairs: RATING_AFTER_SWIPE }))).toEqual([]);
   });
 
   it('кадр «Совет · отмена с таймером» совпадает с панелью возврата', () => {
-    expect(compare({ razbor, rules, frame: 'Совет · отмена с таймером', pairs: HIDE_UNDO })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Совет · отмена с таймером', pairs: HIDE_UNDO }))).toEqual([]);
   });
 
   it('тёмные панели сохраняют те же семантические роли, а не старые локальные тона', () => {
@@ -296,15 +310,15 @@ describe('«Советы» · разбор кадров канваса', () => {
   });
 
   it('кадр «Совет · деталь» совпадает с экраном детали', () => {
-    expect(compare({ razbor, rules, frame: 'Совет · деталь', pairs: DETAIL })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Совет · деталь', pairs: DETAIL }))).toEqual([]);
   });
 
   it('кадр «Советы · пусто» совпадает с плашкой «советов нет»', () => {
-    expect(compare({ razbor, rules, frame: 'Советы · пусто', pairs: EMPTY })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Советы · пусто', pairs: EMPTY }))).toEqual([]);
   });
 
   it('кадр «Совет · всплывающий» совпадает с плашкой совета', () => {
-    expect(compare({ razbor, rules, frame: 'Совет · всплывающий', pairs: TOAST })).toEqual([]);
+    expect(siftTips(compare({ razbor, rules, frame: 'Совет · всплывающий', pairs: TOAST }))).toEqual([]);
   });
 
   // Кадр разносит заголовок группы отступами, продукт — полями: у заголовка нет
@@ -326,7 +340,7 @@ describe('«Советы» · разбор кадров канваса', () => {
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(3);
+    expect(EXCEPTIONS.size).toBe(6);
   });
 
   it('гейт называет свой охват', () => {

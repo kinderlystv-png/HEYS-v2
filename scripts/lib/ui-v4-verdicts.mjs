@@ -88,8 +88,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
     // дизайнера (см. UI_V4_FINDINGS_HISTORY#legacy-mismatch-owner-decision-2026-09-06).
     // Разбор — scripts/ui-v4-classify-legacy-mismatch.mjs; вердикт остался «≠».
-    mismatch: [5, '8d574f73a97e44ea'],
-    typedMismatch: [29, 'd1b7604d4c738276'],
+    // 06.09, package 43 agent-9: 5 legacy «≠» закрыты — 1 «=», 4 typed
+    // logic-invariant; mismatch 5 → 0, typedMismatch 29 → 33.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [33, '94297aa1faae21b0'],
     notApplicable: [14, 'd5c0e5d25ec8306b'],
   }),
   'curator-edits': Object.freeze({
@@ -105,7 +107,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 04.09 (вечер): bde48fd79 закрыл последний «?» — legacy mismatch 21 → 20.
     // 06.09, task 152: disable CTA сведён в «=» (16 → 14); две frame-dispute
     // типизированы reasonCode — typedMismatch 4 → 5.
-    mismatch: [2, 'd5ceef86a2c0f30c'],
+    // 06.09, package 43 agent-9 (5-zone): 2 legacy «≠» сведены в «=»; mismatch 2 → 0.
+    mismatch: [0, 'e3b0c44298fc1c14'],
     typedMismatch: [15, 'a1b7427e4940bbc2'],
     notApplicable: [22, '6989dc63af608a23'],
   }),
@@ -133,7 +136,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // «вид чужого дня» (:149); кегль подписи 12,5 — собственные кадры состояний
     // «Дата · сегодня» ·19 (:233) и «Дата · чужой день» ·19 (:327).
     // typedMismatch 1 → 10, notApplicable 270 → 260.
-    typedMismatch: [10, '5df157a1f5094421'],
+    // 06.09, приёмка пакета 44: «Капсула · ночь · 03» — var(--ink-2) = --v4-ink-2 → «=»;
+    // typedMismatch 10 → 9.
+    typedMismatch: [9, '22cfc2945ad9c0ed'],
     // 05.09: одна строка «—» получила naKind handoff — долг типизирован: 271 → 270.
     notApplicable: [260, '7fc4f9975dc981ed'],
   }),
@@ -147,8 +152,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 03.09 (вечер): строка «что отложено» получила naKind handoff — это учёт
     // пакета, а не продуктовое правило. Долг типизирован на единицу: «—» 89 → 88.
     // 04.09: typed-v1 gate — 22 typed «≠»; legacy 31 → 27.
-    mismatch: [9, 'ec05954c98b07470'],
-    typedMismatch: [36, '3dcc9f8c865ea32a'],
+    // 06.09, package 44 + legacy 22: 9 legacy «≠» → 0 (6→=, 5 typed «≠»);
+    // typedMismatch 36 → 41.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [41, '5c00c3355b70069b'],
     notApplicable: [87, '21bc4201a8c68471'],
   }),
   gamification: Object.freeze({
@@ -163,8 +170,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // «—» 38 → 54.
     // 06.09, package 43 agent-9: ·08/·33/Достижения ·32 ink-2 ladder → «=»;
     // mismatch 27 → 24.
-    mismatch: [4, '03ea47a909141d46'],
-    typedMismatch: [20, '65552febca7896ba'],
+    // 06.09, package 43 agent-9 (5-zone): 4 legacy «≠» — 3 полосы «=» (9 %
+    // по строке «вид полосы достижений»), 1 typed logic-invariant (viewBox);
+    // mismatch 4 → 0, typedMismatch 20 → 21.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [21, 'b3e0957d79c29014'],
     notApplicable: [53, '6ff13f721aa831ad'],
   }),
   'home-widgets': Object.freeze({
@@ -180,8 +190,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // они называют числа превью 2×2 и карточки «До цели» и сведены с кодом.
     // 05.09: 17 legacy «≠» типизированы reasonCode — долг 71 → 54.
     // 06.09, полоса 2/4: 20 legacy «≠» сведены в «=» по факту кода — 54 → 34.
-    mismatch: [7, '26674f417afda39b'],
-    typedMismatch: [37, 'f3c1fd2a79f9a11e'],
+    // 06.09, package 43 agent-9 (5-zone): 7 legacy «≠» — 5 «=», 1 «?» (Вода ·28),
+    // 1 typed logic-invariant (Вес ·24); mismatch 7 → 0, typedMismatch 37 → 38.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [38, '5b531b3a82026aaa'],
     notApplicable: [1356, 'b439428088a4c3d6'],
   }),
   login: Object.freeze({
@@ -189,8 +201,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // дизайнера (см. UI_V4_FINDINGS_HISTORY#legacy-mismatch-owner-decision-2026-09-06).
     // Разбор — scripts/ui-v4-classify-legacy-mismatch.mjs; вердикт остался «≠».
     // 06.09, pkg 43: 7 typed «≠» canvas-conflict по юридическому кеглю — legacy 47 → 46.
-    mismatch: [1, 'c2b1d3c1358e2ca7'],
-    typedMismatch: [52, 'b5bc15be5362e271'],
+    // 06.09, package 44: «Оформление внутри приложения · 74» touch → «=» (1 → 0);
+    // typedMismatch 52 → 46 после rehash пакета 44 и закрытия canvas-conflict строк.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [46, '2c4feeca8ab81a9d'],
     notApplicable: [300, '09e96c95595984f5'],
   }),
   // Зона заведена 05.09 вместе с первым разбором messenger.v4.dc.html: 4 typed «≠»
@@ -231,14 +245,16 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // назван вслух: у всех 76 «—» нет naKind, а разных фактов на «—» — 26 из 76.
     // 06.09, task 152: одна legacy «≠» сведена в «=» (59 → 58); одна типизирована
     // reasonCode — typedMismatch 0 → 1.
-    mismatch: [13, '5225e6335a4a0d8c'],
+    // 06.09, package 44 + legacy 22: 13 legacy «≠» → 0 (9→=, 6 typed «≠»);
+    // typedMismatch 42 → 48.
+    mismatch: [0, 'e3b0c44298fc1c14'],
     // 06.09 (вечер): 1 -> 4. Закрыт ?-долг после пакета 5 сентября. Шесть строк
     // «рисунок» пакет привёл к продукту (14 → 17), они стали «=»; три остались
     // отступлением — крест очистки кода и крест удаления порции нарисованы
     // типографским «×», а выбранная карточка «Вредности» взяла песочно-закреплённую
     // роль и не следует синему набору.
     // 06.09, package 43: typed «≠» «Правка · основные · 02» — typedMismatch 4 → 5.
-    typedMismatch: [42, '3cc9aabca0aae383'],
+    typedMismatch: [48, 'bfae40c92455cac9'],
     notApplicable: [74, '8b09da5915e34f96'],
   }),
   'pwa-update': Object.freeze({
@@ -256,8 +272,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
     // дизайнера (см. UI_V4_FINDINGS_HISTORY#legacy-mismatch-owner-decision-2026-09-06).
     // Разбор — scripts/ui-v4-classify-legacy-mismatch.mjs; вердикт остался «≠».
-    mismatch: [10, 'ae4f5854e4d7990b'],
-    typedMismatch: [34, '30968c0922666e8b'],
+    // 06.09, package 44: touch-target строки ·17 (шаг 3 и 5) → «=»; platform/accessibility
+    // типизация ·18–21 и четырёх «рисунок» chevron — mismatch 10 → 0, typed 34 → 39.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [39, '836b30faad6d653a'],
     notApplicable: [7, '18a813a161685464'],
   }),
   registration: Object.freeze({
@@ -272,8 +290,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 12 tone-строк ≠→=; typed «согласия · 19/20», «Документ · 20», «сохранение · 04»;
     // «Профиль · отзыв · 17» снята дизайнером — legacy mismatch 31→27, typed 2→6,
     // notApplicable 28→27.
-    mismatch: [10, '119cd1b58ce328e0'],
-    typedMismatch: [23, 'e9043e3f9b99645c'],
+    // 06.09, package 44 (registration): 26 tone/role строк → «=»; legacy 10 untyped
+    // ≠ разобраны: 2 контраст дорожки → «=», 6 «исчезло» → «?», сон · текст → typed
+    // logic-invariant; согласия · 18 canvas-conflict; 2 строки сняты дизайнером.
+    // mismatch 10 → 0, typedMismatch 23 → 20.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [20, '24522ebb8228769d'],
     notApplicable: [27, '187e35940cf3b166'],
   }),
   'reports-insights': Object.freeze({
@@ -289,8 +311,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // typedMismatch 18 → 19.
     // 06.09, пакет 43 tail: «Инсайты · ярус Питание · 06» → typed ≠ (meal-rec);
     // typedMismatch 19 → 20.
-    mismatch: [34, '259733536d812b40'],
-    typedMismatch: [106, 'a140b30cb6c5d0be'],
+    // 06.09: 34 legacy «≠» без reasonCode разобраны построчно
+    // (scripts/.reports-insights-legacy-34-apply.mjs): 6 → «=», 2 → «?»,
+    // 7 → «—» designer-removed, 19 typed «≠»; mismatch 34 → 0,
+    // typedMismatch 106 → 125.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [125, 'a6dabb6fedb02be6'],
     notApplicable: [131, '6754e4d70d6ce812'],
   }),
   'service-curator': Object.freeze({
@@ -309,7 +335,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // Разбор — scripts/ui-v4-classify-legacy-mismatch.mjs; вердикт остался «≠».
     // 04.09: ad762ae20 — 4 stale «≠» → «?», 2 «≠» typed reasonCode.
     // Legacy untyped: 13 → 9 (11 total «≠», из них 2 typed-v1).
-    mismatch: [2, '16152151cda99d5d'],
+    // 06.09, пакет 44 + touch: «вид тумблера, список · 10» → «=»; mismatch 2 → 0.
+    mismatch: [0, 'e3b0c44298fc1c14'],
     typedMismatch: [7, 'f000e1ef6e3321d7'],
     notApplicable: [22, '2cbc7eba0ddc099c'],
   }),
@@ -317,7 +344,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
     // дизайнера (см. UI_V4_FINDINGS_HISTORY#legacy-mismatch-owner-decision-2026-09-06).
     // Разбор — scripts/ui-v4-classify-legacy-mismatch.mjs; вердикт остался «≠».
-    mismatch: [2, '114f17b4793d1706'],
+    // 06.09, пакет 44 + legacy contrast: две legacy «≠» типизированы
+    // canvas-conflict («долгий старт · 03», «вторая неудача · 03»); mismatch 2 → 0.
+    mismatch: [0, 'e3b0c44298fc1c14'],
     // 06.09: 0 -> 13. Массовое закрытие по решению дизайнера — «расхождение
     // видно, принято без разбора». Форму назвал он сам, чтобы «=» не стало
     // ложным доказательством совпадения кадра и кода.
@@ -328,7 +357,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // Соседняя строка того же канваса «вид знака в кнопке» (:127) 6 сентября
     // назвала все три и сказала «верен код». ≠ canvas-conflict с decisionRef
     // на :127 — спор внутри канваса, а не необоснованный вердикт.
-    typedMismatch: [26, '48ed874e03a3e762'],
+    // 06.09, пакет 44: «вторая неудача · 07» canvas-conflict; typedMismatch 26 → 28.
+    typedMismatch: [28, '3ce2b620f6ce2101'],
     notApplicable: [33, '2f00fa5302804302'],
   }),
   'strength-builder': Object.freeze({
@@ -412,7 +442,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
     // дизайнера (см. UI_V4_FINDINGS_HISTORY#legacy-mismatch-owner-decision-2026-09-06).
     // Разбор — scripts/ui-v4-classify-legacy-mismatch.mjs; вердикт остался «≠».
-    mismatch: [1, '03d71a384b234b05'],
+    // 06.09, legacy touch: «Настройки советов · 09» — canvas-conflict; mismatch 1 → 0.
+    mismatch: [0, 'e3b0c44298fc1c14'],
     // 06.09: 0 -> 2. Тот же класс, что у spinners: принято без разбора
     // решением дизайнера, вердикт «≠» с owner-decision.
     // 06.09 (вечер): 2 -> 13. Закрыт ?-долг после пакета 5 сентября: боксы значков
@@ -433,13 +464,17 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // стоят «?» — «области нажатия», глиф крестика плашки, галочка листа первого
     // совета (две строки), ручка листа и состав ряда кнопок плашки; все шесть
     // ждут дизайнера, записи в docs/ui/UI_V4_FINDINGS.md.
-    typedMismatch: [5, '4cd804987541f5e7'],
+    // 06.09, пакет 44 + legacy touch: «Настройки советов · 09» typed canvas-conflict;
+    // typedMismatch 5 → 6.
+    typedMismatch: [6, 'a288c63f94557aa0'],
     notApplicable: [20, '39987a10df8b26dc'],
   }),
   'undo-bar': Object.freeze({
     // 03.09: пакет привёл кадры к продукту — во всех трёх «Отмена · … · 09»
     // кнопка теперь «Вернуть», как в коде. Два ≠ сняты, база 3 → 1.
-    mismatch: [1, 'e79b034f829f4aa3'],
+    // 06.09, package 43 agent-9: legacy «≠» типизирован owner-decision; mismatch 1 → 0.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [1, 'e79b034f829f4aa3'],
     notApplicable: [27, '35eb1b183e2143b5'],
   }),
   'water-add': Object.freeze({

@@ -43,7 +43,8 @@ describe('barcode scanner · unrecognized threshold', () => {
   it('source contract: 10 s threshold and banner copy', () => {
     expect(ADD_PRODUCT_SRC).toContain('BARCODE_SCAN_UNRECOGNIZED_MS = 10000');
     expect(ADD_PRODUCT_SRC).toContain("'Код не распознан'");
-    expect(ADD_PRODUCT_SRC).toContain('aps-barcode-unrecognized');
+    expect(ADD_PRODUCT_SRC).toContain('Не получается прочитать');
+    expect(ADD_PRODUCT_SRC).toContain('aps-barcode-unrecognized__card');
     const timerChunk = ADD_PRODUCT_SRC.slice(
       ADD_PRODUCT_SRC.indexOf('unrecognizedTimerRef.current = setTimeout'),
       ADD_PRODUCT_SRC.indexOf('unrecognizedTimerRef.current = setTimeout') + 220,

@@ -87,12 +87,10 @@ describe('регистрация v4: решения контракта', () => {
     expect(profile).toMatch(/goalBmi > 0 && goalBmi < 18\.5[\s\S]{0,80}\? 'не строим'/);
   });
 
-  // Экран согласий: код следует общей строке «неактивная кнопка» (500 тоном
-  // 55 %). Кадр после пересъёмки 31 августа рисует 600 и 56 %; конфликт внутри
-  // одного канваса остаётся именованным расхождением, а не молчаливой заменой
-  // правила доступности кадром.
+  // Экран согласий: причина — 600/INK_2 по пакету 44 (кегль юридического класса).
+  // Кнопка «неактивная» — отдельная строка «≠» canvas-conflict на ·18.
   it('причина под неактивной кнопкой набрана по контракту, а не по кадру', () => {
-    expect(consents).toMatch(/font: '500 11\.5px\/1\.45 Figtree[^']*',\s*\n?\s*color: 'rgba\(0,0,0,\.55\)'/);
+    expect(consents).toMatch(/font: '600 11\.5px\/1\.45 Figtree[^']*',\s*\n?\s*color: INK_2/);
   });
 
   it('обновлённые строки данных используют роль чернил 56 %, не локальные литералы', () => {
@@ -141,7 +139,7 @@ describe('регистрация v4: решения контракта', () => {
   // рамки полей и --color-gray-500 у подсказок.
   it('персональные данные · 08/10/11 — плейсхолдеры и пояснение пола по контракту', () => {
     expect(pwaCss).toMatch(/profile-personal-name input\[type="text"\]::placeholder[\s\S]*30%/);
-    expect(pwaCss).toMatch(/profile-personal-family input\[type="text"\]::placeholder[\s\S]*42%/);
+    expect(pwaCss).toMatch(/profile-personal-family input\[type="text"\]::placeholder[\s\S]*--v4-ink-3/);
     expect(profile).toMatch(/fontSize: 11, fontWeight: 500, lineHeight: 1\.5, marginTop: 6, color: INK_DATA/);
     expect(profile).toMatch(/color: 'var\(--v4-ink, #201e1d\)'/);
   });

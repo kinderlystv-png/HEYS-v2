@@ -19,8 +19,8 @@ const INTAKE = fs.readFileSync(path.join(WEB, 'heys_trial_intake_v1.js'), 'utf8'
 const PROFILE = fs.readFileSync(path.join(WEB, 'heys_profile_step_v1.js'), 'utf8');
 
 describe('«Анкета» · разбор кадров против исходника', () => {
-  // Строка «вид блока предупреждения»: legal floor 12,5/1,45 (login.v4 «кегль
-  // юридического текста», пакет 43); контрактная строка зоны ещё на 12/1,6.
+  // Строка «вид блока предупреждения»: legal floor 12,5/1,55 (login.v4 «кегль
+  // юридического текста», пакет 44); контрактная строка зоны ещё на 12/1,6.
   it('блок предупреждения — первая поверхность, поля 14/16, кегль не ниже 12,5/1,45', () => {
     const block = INTAKE.slice(INTAKE.indexOf("id: 'intake-warning-text'"));
     const head = block.slice(0, block.indexOf('},'));
@@ -28,8 +28,8 @@ describe('«Анкета» · разбор кадров против исход�
     expect(head).toMatch(/borderRadius: 18/);
     expect(head).toMatch(/background: SURFACE_1/);
     expect(head).toMatch(/legalTextStyle/);
-    expect(INTAKE).toMatch(/legalTextStyle = \{ fontSize: 12\.5, fontWeight: 500, lineHeight: 1\.45 \}/);
-    expect(head).toMatch(/lineHeight: 1\.6/);
+    expect(INTAKE).toMatch(/legalTextStyle = \{ fontSize: 12\.5, fontWeight: 500, lineHeight: 1\.55 \}/);
+    expect(head).toMatch(/\.{3}legalTextStyle/);
     // Своя область прокрутки: без неё четыре абзаца выталкивают отметку с экрана.
     expect(head).toMatch(/maxHeight: 186/);
     expect(head).toMatch(/overflowY: 'auto'/);

@@ -109,7 +109,8 @@ describe('лист правок куратора против разбора к�
     expect(rules.get('.ca-modal__header-subtitle')?.color).toBe(ink(50));
     expect(rules.get('.ca-modal__item-sub')?.color).toBe(ink(50));
     expect(rules.get('.ca-modal__item-sub--nowrap')?.['white-space']).toBe('nowrap');
-    expect(rules.get('.ca-modal__type-more-title')?.color).toBe(ink(50));
+    expect(rules.get('.ca-modal__type-more-title')?.color)
+      .toBe('var(--v4-ink-2, rgba(0, 0, 0, 0.55))');
     expect(rules.get('.ca-modal__close')?.color).toBe(ink(28));
     expect(rules.get('.ca-modal__chevron')?.color).toBe(ink(28));
     expect(rules.get('.ca-modal__date-label')?.color).toBe(ink(40));

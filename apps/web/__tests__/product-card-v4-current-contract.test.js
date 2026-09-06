@@ -70,7 +70,7 @@ describe('product-card current v4 contract', () => {
       expect(rows.has(key), key).toBe(true);
       const row = rows.get(key);
       if (key === 'Штрихкод · наведение · 19') {
-        expect(row, key).toMatch(/rgba\(242,\s*237,\s*230,\s*\.56\)/);
+        expect(row, key).toMatch(/var\(--ink-3\)/);
       } else {
         expect(row, key).toMatch(/var\(--ink-2\)/);
       }
@@ -119,7 +119,7 @@ describe('product-card current v4 contract', () => {
     }
 
     expect(rule(CSS_611, '.aps-barcode-overlay--v4-fullscreen .aps-barcode-finder-hint'))
-      .toContain('color: rgba(242, 237, 230, 0.56)');
+      .toContain('color: var(--v4-ink-3');
   });
 
   it('names formula and imported values by neutral source, not guessed author', () => {

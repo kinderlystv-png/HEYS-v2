@@ -174,7 +174,10 @@ describe('login v4 frame groups', () => {
     // 31 августа тест сторожил здесь ОТСУТСТВИЕ фразы, и она жила только на
     // экране подписания и в плашке после сброса.
     expect(setup).toContain(
-      'Код доступа заменяет собственноручную подпись. Не сообщайте его никому, включая куратора.',
+      'Код доступа заменяет собственноручную подпись.',
+    );
+    expect(setup).toContain(
+      'Не сообщайте его никому, включая куратора.',
     );
     expect(setup).toContain('heys-auth-error-slot');
     expect(css).toMatch(/\.heys-auth-card\s*\{[\s\S]*?max-width:\s*var\(--auth-card-max,\s*339px\)/);

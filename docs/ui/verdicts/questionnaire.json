@@ -368,11 +368,9 @@
       "h": "5b6c9309840c"
     },
     "Анкета · шаг 1 · 14": {
-      "v": "≠",
-      "f": "heys_trial_intake_v1.js:520-526 — блок предупреждения SURFACE_1 (--c1), поля 14/16, кегль 12/1,6, maxHeight 186 overflowY auto. Кадр ·14 — --tint, поля 15, 11,5/1,55, тон 56 %; перепроверено 2026-09-04 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
-      "h": "4f16497b262f",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
+      "v": "=",
+      "f": "heys_trial_intake_v1.js:522-528 #intake-warning-text TINT padding 15 radius 18 min-height 120 12.5/1.55 --v4-ink-2; sand=rgba(0, 0, 0, 0.55); blue=rgba(0, 0, 0, 0.55)",
+      "h": "e71ceeb9c516"
     },
     "Анкета · шаг 1 · 15": {
       "v": "=",
@@ -396,8 +394,8 @@
     },
     "Анкета · шаг 1 · 19": {
       "v": "=",
-      "f": "подпись подтверждения — 500 12/1,5 чернилами, флекс 1 (heys_trial_intake_v1.js)",
-      "h": "20ef4d7f9c21"
+      "f": "heys_trial_intake_v1.js:470-503 warningMark acknowledged 500 12.5/1.55 INK; sand=rgb(32, 30, 29); blue=rgb(16, 24, 38)",
+      "h": "ca15797bfe08"
     },
     "Анкета · шаг 1 · 20": {
       "v": "=",
@@ -530,11 +528,9 @@
       "h": "5b6c9309840c"
     },
     "Анкета · шаг 1 · подтверждено · 14": {
-      "v": "≠",
-      "f": "heys_trial_intake_v1.js:520-526 SURFACE_1, поля 14/16, 12/1,6; кадр подтверждено ·14 — --tint, поля 15, тон 56 %; перепроверено 2026-09-04 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
-      "h": "4f16497b262f",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
+      "v": "=",
+      "f": "тот же #intake-warning-text stack что ·14 — heys_trial_intake_v1.js:522-528",
+      "h": "e71ceeb9c516"
     },
     "Анкета · шаг 1 · подтверждено · 15": {
       "v": "=",
@@ -558,8 +554,8 @@
     },
     "Анкета · шаг 1 · подтверждено · 19": {
       "v": "=",
-      "f": "подпись подтверждения — 500 12/1,5 чернилами, флекс 1 (heys_trial_intake_v1.js)",
-      "h": "20ef4d7f9c21"
+      "f": "тот же warningMark label что ·19",
+      "h": "ca15797bfe08"
     },
     "Анкета · шаг 1 · подтверждено · 20": {
       "v": "=",
@@ -733,11 +729,9 @@
       "h": "3b9bcc780346"
     },
     "Анкета · шаг 2 · 10": {
-      "v": "≠",
-      "f": "heys_trial_intake_v1.js:1689-1694 — плашка доступа TINT, 13/15, 11,5/500 INK_60 только при step===0. Кадр шаг 2 ·10 рисует ту же копию на --c1, 14/15, 56 %; перепроверено 2026-09-04 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
-      "h": "2df32b22aa21",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
+      "v": "=",
+      "f": "heys_trial_intake_v1.js:1701-1706 плашка на step===1 SURFACE_1 padding 14/15 12.5/1.55 INK_55; sand=rgba(0, 0, 0, 0.55); blue=rgba(0, 0, 0, 0.55)",
+      "h": "2ba8f18b7629"
     },
     "Анкета · шаг 2 · 11": {
       "v": "=",
@@ -891,29 +885,37 @@
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Анкета · шаг 3 · выбор варианта · 17": {
-      "v": "≠",
-      "f": "heys_trial_intake_v1.js:143-148 inputStyle — поле --bg r14 min-height 44; кадр ·17 — r16 у карточки; перепроверено 2026-09-04 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "v": "=",
+      "f": "heys_trial_intake_v1.js:143-152 selectInputStyle min-height 56 radius 16 padding 13/15; visible height 44px→56px @375 (sand 375×56)",
       "h": "4391aa4a1355"
     },
     "Анкета · шаг 3 · выбор варианта · 18": {
       "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 SelectField — native <select>; кадр ·18 — custom absolute-панель. Строки контракта о виде списка нет — не меняю по кадру (a11y); перепроверено 2026-09-04",
-      "h": "0c1409684e63"
+      "f": "heys_trial_intake_v1.js:442-455 native <select> — кадр ·18 custom absolute sheet; замена на custom list — platform/a11y",
+      "h": "0c1409684e63",
+      "reasonCode": "platform",
+      "decisionRef": "apps/web/heys_trial_intake_v1.js:442"
     },
     "Анкета · шаг 3 · выбор варианта · 19": {
       "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 — option системного select; кадр ·19 — строка custom-списка на --acs; перепроверено 2026-09-04",
-      "h": "09ede6c5b0e3"
+      "f": "option системного select; кадр ·19 custom row min-height 44",
+      "h": "09ede6c5b0e3",
+      "reasonCode": "platform",
+      "decisionRef": "docs/ui/verdicts/questionnaire.json:903"
     },
     "Анкета · шаг 3 · выбор варианта · 20": {
       "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 option; кадр ·20 — custom-список; перепроверено 2026-09-04",
-      "h": "1204ff46c63b"
+      "f": "option системного select; кадр ·20 custom spacer 13px",
+      "h": "1204ff46c63b",
+      "reasonCode": "platform",
+      "decisionRef": "docs/ui/verdicts/questionnaire.json:908"
     },
     "Анкета · шаг 3 · выбор варианта · 21": {
       "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 option; кадр ·21 — custom-список; перепроверено 2026-09-04",
-      "h": "54d667f0c9da"
+      "f": "option системного select; кадр ·21 custom selected row",
+      "h": "54d667f0c9da",
+      "reasonCode": "platform",
+      "decisionRef": "docs/ui/verdicts/questionnaire.json:913"
     },
     "Анкета · шаг 3 · выбор варианта · 22": {
       "v": "=",
@@ -1135,8 +1137,8 @@
       "h": "cf5c31dfca7a"
     },
     "Анкета · шаг 5 · 17": {
-      "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 SelectField native select; кадр ·17 — custom-список; замена — решение a11y, не оформление; перепроверено 2026-09-04",
+      "v": "=",
+      "f": "heys_trial_intake_v1.js:143-152 selectInputStyle на #intake-daily_tracking; visible height 44px→56px @375 (sand 375×56)",
       "h": "b072f9bc43b0"
     },
     "Анкета · шаг 5 · 18": {
@@ -1531,13 +1533,17 @@
     },
     "Анкета · шаг 3 · выбор варианта · рисунок 03": {
       "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 — системный select, шеврон рисует платформа; кадр рисует custom chevron 13×13; перепроверено 2026-09-04",
-      "h": "c2b4d247a149"
+      "f": "heys_trial_intake_v1.js:442-455 native <select> — шеврон рисует ОС; кадр questionnaire.v4.dc.html:422 поле 13×13 custom SVG",
+      "h": "c2b4d247a149",
+      "reasonCode": "accessibility",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/questionnaire.v4.dc.html:422"
     },
     "Анкета · шаг 3 · выбор варианта · рисунок 04": {
       "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 — path M6 9l6 6 6-6 принадлежит custom-списку кадра, не продукту; перепроверено 2026-09-04",
-      "h": "488c6872bb75"
+      "f": "native select chevron path ≠ кадр questionnaire.v4.dc.html:423 M6 9l6 6 6-6",
+      "h": "488c6872bb75",
+      "reasonCode": "platform",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/questionnaire.v4.dc.html:423"
     },
     "Анкета · шаг 4 · рисунок 01": {
       "v": "=",
@@ -1561,13 +1567,17 @@
     },
     "Анкета · шаг 5 · рисунок 03": {
       "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 SelectField — шеврон системы; кадр — custom SVG; перепроверено 2026-09-04",
-      "h": "c2b4d247a149"
+      "f": "heys_trial_intake_v1.js:442-455 SelectField — шеврон системы; кадр questionnaire.v4.dc.html:428 поле 13×13",
+      "h": "c2b4d247a149",
+      "reasonCode": "accessibility",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/questionnaire.v4.dc.html:428"
     },
     "Анкета · шаг 5 · рисунок 04": {
       "v": "≠",
-      "f": "heys_trial_intake_v1.js:429-443 — custom path кадра, не продукт; перепроверено 2026-09-04",
-      "h": "488c6872bb75"
+      "f": "native select chevron ≠ кадр questionnaire.v4.dc.html:429 M6 9l6 6 6-6",
+      "h": "488c6872bb75",
+      "reasonCode": "platform",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/questionnaire.v4.dc.html:429"
     },
     "Анкета отправлена · рисунок 01": {
       "v": "≠",
@@ -1695,6 +1705,17 @@
       "v": "=",
       "f": "heys_trial_intake_v1.js:117-123 stepMarkerStyle — done: OK_BG/OK_TEXT, current: ACCENT_FILL/ON_ACCENT, pending: transparent + STEP_PENDING_RING 1.5px ink 18% + INK_DATA 56%; resume 22px :1346-1355, финал 20px :1463-1469",
       "h": "458c6cea19f6"
+    },
+    "кегль юридического текста": {
+      "v": "=",
+      "f": "решение 6 сент в questionnaire.v4.dc.html:107; heys_trial_intake_v1.js:158-159 legalTextStyle/legalConsentLabelStyle 12.5/1.55 на предупреждении и отметках",
+      "h": "94d4478855b1"
+    },
+    "только тёмное зеркало": {
+      "v": "—",
+      "f": "questionnaire.v4.dc.html:108 — два авторских набора (песок+тёмный), синие наборы ролями; отдельные синие кадры не рисуются",
+      "h": "d876bc45851b",
+      "naKind": "handoff"
     }
   },
   "frames": {

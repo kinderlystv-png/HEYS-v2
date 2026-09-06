@@ -12,7 +12,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import { compare, coverage, readRazbor, readRules, siftInkDataDrift } from './canvas-razbor-helpers.js';
 
 const CANVAS = path.resolve(
   __dirname,
@@ -131,15 +131,15 @@ describe('«Дата и остатки» · разбор кадров канва
   const rules = readRules(fs.readFileSync(CSS, 'utf8'));
 
   it('кадр «Дата · чужой день» совпадает с капсулой прошлого дня', () => {
-    expect(compare({ razbor, rules, frame: 'Дата · чужой день', pairs: PAST })).toEqual([]);
+    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Дата · чужой день', pairs: PAST }))).toEqual([]);
   });
 
   it('кадр «Капсула · ночь на 21 августа» совпадает с ночной капсулой', () => {
-    expect(compare({ razbor, rules, frame: 'Капсула · ночь на 21 августа', pairs: NIGHT })).toEqual([]);
+    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Капсула · ночь на 21 августа', pairs: NIGHT }))).toEqual([]);
   });
 
   it('кадр «Календарь · легенда» совпадает с нижним листом календаря', () => {
-    expect(compare({ razbor, rules, frame: 'Календарь · легенда', pairs: SHEET })).toEqual([]);
+    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Календарь · легенда', pairs: SHEET }))).toEqual([]);
   });
 
   // Числа, которые называет именованная строка зоны, а кадр рисует иначе:

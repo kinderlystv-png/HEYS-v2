@@ -422,8 +422,8 @@
     },
     "Куратор · свёрнуто по типам · 10": {
       "v": "=",
-      "f": ".ca-modal__type-more-title использует 50%-ный color-mix от палитровой роли --v4-ink; цвет напрямую сверен с кадром в curator-edits-canvas-razbor",
-      "h": "a0a59d45f4a7"
+      "f": ".ca-modal__type-more-title color: var(--v4-ink-2) — пакет 44 перевёл кадр с доли на var(--ink-2); роль совпадает, замер chromium 375 px sand+blue: rgba(0,0,0,.55) на обоих наборах",
+      "h": "bee811b2b48e"
     },
     "Куратор · свёрнуто по типам · 11": {
       "v": "=",
