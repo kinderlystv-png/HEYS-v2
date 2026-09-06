@@ -1,4 +1,6 @@
 import { setVerdictKey } from './lib/ui-v4-verdicts.mjs';
+import { snapshotForeignRowStrings, assertForeignRowsUnchanged } from './lib/handoff-batch-apply.mjs';
+import { readZone } from './lib/ui-v4-verdicts.mjs';
 
 /** Task 146 audit — 14 non-minor rows (task 152). Per-key only. */
 const updates = [
@@ -157,6 +159,22 @@ const updates = [
   },
 ];
 
+
+// Снимок чужих строк до первой записи: всё, чего скрипт не называет своим,
+// обязано остаться байт в байт. Промах в ключе или в фильтре зоны иначе
+// переписал бы чужой вердикт молча и правдоподобно.
+const __ownedByZone = (() => {
+  const m = new Map();
+  for (const r of updates) {
+    if (!m.has(r.zone)) m.set(r.zone, new Set());
+    m.get(r.zone).add(r.key);
+  }
+  return m;
+})();
+const __foreignBefore = new Map();
+for (const [__z, __keys] of __ownedByZone) {
+  __foreignBefore.set(__z, snapshotForeignRowStrings(readZone(__z).rows, __keys));
+}
 for (const row of updates) {
   const { was } = setVerdictKey(row.zone, row.key, {
     verdict: row.verdict,
@@ -167,3 +185,9 @@ for (const row of updates) {
 }
 
 console.log('done', updates.length);
+
+// Сверка после последней записи.
+for (const [__z, __snap] of __foreignBefore) {
+  assertForeignRowsUnchanged(__snap, readZone(__z).rows);
+}
+console.log('чужие строки не тронуты:', [...__foreignBefore.keys()].join(', '));
