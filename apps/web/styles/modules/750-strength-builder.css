@@ -673,7 +673,7 @@
 
 /* Прочерк — не ноль и не пропуск: клетка не закрывается. */
 .dash,
-.sb-cell.is-blank .dash {
+.sb-cell.is-blank {
   color: rgba(var(--ink), .56);
 }
 
