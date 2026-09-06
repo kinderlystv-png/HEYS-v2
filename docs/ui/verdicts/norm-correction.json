@@ -2662,113 +2662,7 @@
     }
   },
   "frames": {
-    "Куратор · поправка предложена": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Куратор · данных не хватает": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Сверка · сошлось": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Сверка · норма выросла": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Сверка · норма снизилась": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction-weekly-card.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/heys_weekly_reports_v2.js",
-        "apps/web/styles/heys-components.css"
-      ]
-    },
-    "Сверка · рекомпозиция": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Замер · запрос в момент неопределённости": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Замер · включение с согласием": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Перестройка · по косвенным": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Сверка · перестройку проверить не удалось": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Цель · строка поправки": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Цель · холодный старт": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Куратор · история поправки": {
-      "evidence": [
-        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
-        "apps/web/__tests__/norm-correction.test.js",
-        "apps/web/heys_norm_correction_v1.js",
-        "apps/web/styles/modules/740-cascade-card.css"
-      ]
-    },
-    "Self · снижение ждёт согласия": {
+    "Pro · куратор решил не менять": {
       "evidence": [
         "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
         "apps/web/__tests__/norm-correction.test.js",
@@ -2800,6 +2694,14 @@
         "apps/web/styles/modules/740-cascade-card.css"
       ]
     },
+    "Self · снижение ждёт согласия": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
     "Self · третий отказ подряд": {
       "evidence": [
         "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
@@ -2808,7 +2710,112 @@
         "apps/web/styles/modules/740-cascade-card.css"
       ]
     },
-    "Pro · куратор решил не менять": {
+    "Замер · включение с согласием": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Замер · запрос в момент неопределённости": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Куратор · данных не хватает": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Куратор · история поправки": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Куратор · поправка предложена": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Перестройка · по косвенным": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · норма выросла": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · норма снизилась": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction-weekly-card.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/heys_weekly_reports_v2.js",
+        "apps/web/styles/heys-components.css"
+      ]
+    },
+    "Сверка · норма снизилась · без обхватов": {
+      "evidence": [
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/styles/heys-components.css"
+      ]
+    },
+    "Сверка · перестройку проверить не удалось": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · рекомпозиция": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Сверка · сошлось": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Цель · строка поправки": {
+      "evidence": [
+        "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
+        "apps/web/__tests__/norm-correction.test.js",
+        "apps/web/heys_norm_correction_v1.js",
+        "apps/web/styles/modules/740-cascade-card.css"
+      ]
+    },
+    "Цель · холодный старт": {
       "evidence": [
         "apps/web/__tests__/norm-correction-canvas-razbor.test.js",
         "apps/web/__tests__/norm-correction.test.js",

@@ -36,7 +36,7 @@ function run() {
       `loop ${frameScope.loop ?? 0} · none ${frameScope.none ?? 0} — всего ${nonProduct}.`,
   );
   console.log(
-    `Дубли меток кадров: ${duplicateTips} (tips baseline ${tipsAllowed}; рост > ${tipsAllowed} — fail в lib).`,
+    `Дубли меток кадров: ${duplicateTips} (tips baseline ${tipsAllowed}; рост > ${tipsAllowed} роняет этот гейт).`,
   );
 
   if (!report.ok) {
