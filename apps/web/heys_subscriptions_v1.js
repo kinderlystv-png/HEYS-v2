@@ -132,7 +132,9 @@
           'Всё из Self',
           'Ведение дневника куратором',
           'Чат с куратором',
-          'Созвон раз в неделю'
+          // То же слово, что в ACTIVE_SCREEN_FEATURES и в тарифах paywall:
+          // у Pro это чек-ин, «созвон» принадлежит Pro Спорт.
+          'Недельный чек-ин с куратором'
         ]
       },
       proplus: {
@@ -688,7 +690,11 @@
     'Всё из Self: дневник, динамика, виджеты, задачи',
     'Куратор ведёт дневник',
     'Чат с куратором',
-    'Созвон раз в неделю',
+    // Канвас, строка «Подписка · экран · активна · текст»: «Недельный чек-ин с
+    // куратором». Тем же словом Pro описан в тарифах (heys_paywall_v1.js:101
+    // «недельный чек-ин»), а «созвон» в каноне оффера принадлежит Pro Спорт
+    // (apps/landing/COPY_VOICE.md:122) — продукт звал одно двумя словами.
+    'Недельный чек-ин с куратором',
   ];
 
   function formatDateSettingsMeta(date) {
@@ -962,9 +968,14 @@
     const planDesc = selectedPlan === 'pro'
       ? 'Куратор ведёт дневник, чат, недельный чек-ин'
       : (selectedInfo?.features?.[0] || '');
-    const billingEnd = new Date();
-    billingEnd.setDate(billingEnd.getDate() + 30);
-    const periodLabel = formatSubscriptionHeadlineDate(billingEnd);
+    // Дату окончания даёт сервер: он считает КАЛЕНДАРНЫЙ месяц
+    // (heys-api-payments/index.js:623-624 — GREATEST(NOW(), subscription_ends_at)
+    // + INTERVAL '1 month'). Прежний «сегодня + 30» обещал больше, чем есть:
+    // с 31 января сервер даёт 28 февраля, а экран рисовал 2 марта. Решение
+    // владельца 5 сентября (канвас, строка «срок подписки»): экран дату НЕ
+    // вычисляет — ни вычитанием, ни прибавлением. Поля с датой в ответе до
+    // оплаты сегодня нет, поэтому строка периода не рисуется вовсе: лучше не
+    // показать дату, чем показать неверную.
     const payLabel = `Оплатить ${formatPrice(selectedInfo?.price || 0)}`;
 
     const body = h('div', null,
@@ -983,8 +994,7 @@
           h('div', { className: 'paywall-plan-desc' }, planDesc)
         ),
         h('div', { className: 'paywall-order-aside' },
-          h('div', { className: 'paywall-order-price n' }, formatPrice(selectedInfo?.price || 0)),
-          h('div', { className: 'paywall-order-period' }, periodLabel)
+          h('div', { className: 'paywall-order-price n' }, formatPrice(selectedInfo?.price || 0))
         )
       ),
 
@@ -1037,7 +1047,7 @@
       'aria-modal': 'true',
       'aria-labelledby': 'payment-screen-title',
     },
-      h('div', { className: 'paywall-modal', style: { position: 'relative' } }, body)
+      h('div', { className: 'paywall-modal' }, body)
     );
   }
 
@@ -1072,7 +1082,7 @@
       'aria-modal': 'true',
       'aria-labelledby': 'payment-screen-title',
     },
-      h('div', { className: 'paywall-modal', style: { position: 'relative' } }, body)
+      h('div', { className: 'paywall-modal' }, body)
     );
   }
 

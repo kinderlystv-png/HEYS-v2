@@ -229,7 +229,11 @@
 }
 
 .paywall-trial-dot--ok {
-  background: var(--v4-ok-fill, #7a8a5e);
+  /* Канвас, строка «вид · блок пробного периода»: «точка 8 px --gr + „Место
+     свободно“ тоном --gr» — одна роль на точку и подпись. --gr — это
+     --v4-ok-text (#5c6a45 / #1f6e4d), а не заливочная --v4-ok-fill
+     (#7a8a5e / #4f9a78): последняя расходится с кадром в обеих палитрах. */
+  background: var(--v4-ok-text, #5c6a45);
 }
 
 .paywall-trial-dot--busy {
@@ -339,7 +343,11 @@
 }
 
 .paywall-consent-link {
-  color: var(--v4-act, #c67139);
+  /* Канвас, строка «Подписка · проверьте заказ · 12»: «публичной оферты» —
+     цвет var(--ac) = --v4-act-text. Заливочная --v4-act (#c67139) в песочном
+     наборе даёт другой тон; в синих обе роли совпадают, поэтому расхождение
+     было видно только на песочном. */
+  color: var(--v4-act-text, #8a4a20);
   text-decoration: underline;
 }
 
@@ -398,7 +406,10 @@
   min-height: 44px;
   margin-top: 6px;
   font: 600 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-act, #c67139);
+  /* Канвас, строка «Подписка · очередь · заявка подана · 13»: «Отменить
+     заявку» — цвет var(--ac) = --v4-act-text, та же подмена роли, что была у
+     ссылок оферты. */
+  color: var(--v4-act-text, #8a4a20);
   background: transparent;
   border: none;
   width: 100%;
@@ -491,41 +502,110 @@
   color: var(--v4-ink-2, #64748b);
 }
 
-/* Toast notification for blocked action */
+/* Липкая полоса сверху — кадр «Подписка · баннер сверху». Базовое правило выше
+   принадлежит ПЛАШКЕ вкладки «Питание» (nutrition-tab.v4.dc.html, строка
+   «вид „только чтение“»: заливка --c2, радиус 16, поля 12/14) и остаётся как
+   есть; полоса — другой объект и переопределяет его целиком.
+   Строки контракта: «вид · баннер сверху» и «Подписка · баннер сверху · 01». */
+.readonly-banner--sticky {
+  position: sticky;
+  /* Врезку системы уже съел `padding-top` у `.page`
+     (000-base-and-gamification.css:11986), поэтому здесь 0. */
+  top: 0;
+  z-index: 5;
+  /* Полоса идёт от края до края, а боковые 18 px вкладки задаёт `.page-day`
+     (730-widgets-dashboard.css:319-320) — гасим их, чтобы 18 px кадра были
+     ВНУТРЕННИМИ полями полосы, а не двойными. */
+  margin: 0 -18px;
+  border-radius: 0;
+  background: var(--v4-tint, #f6e6dd);
+  padding: 10px 18px;
+  min-height: 44px;
+  justify-content: space-between;
+}
+
+.readonly-banner--sticky .readonly-banner-title {
+  /* Кадр: 700 12px/1.3 чернилами. */
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.readonly-banner--sticky .readonly-banner-text {
+  /* Кадр: 500 11px/1.4 чернил 62 %, отступ сверху 2. Ступень 62 % у лестницы
+     набора называется --v4-ink-prose. */
+  margin-top: 2px;
+  line-height: 1.4;
+  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+}
+
+/* Строка «тач-цели»: пилюля «Подписка» 44 px. Правил у неё не было ни одного —
+   браузер рисовал дефолтную кнопку 75 × 21 серым. */
+.readonly-banner-pill {
+  flex: none;
+  min-height: 44px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Тост на заблокированном действии — кадр «Подписка · тост на действии».
+   Решение дизайнера 6 сентября: цель — ВЕСЬ тост 44 px, отдельной кнопки
+   внутри нет. Геометрия по правилам undo-bar (heys-components.css:12258):
+   врезка 12, радиус 22, фон --v4-surface, обводка inset 1 px --v4-line. */
 .readonly-toast {
   position: fixed;
   bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1f2937;
-  color: white;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-size: 14px;
-  z-index: 10000;
+  left: 12px;
+  right: 12px;
+  max-width: 560px;
+  margin-inline: auto;
+  min-height: 44px;
+  background: var(--v4-surface, #f7efe2);
+  color: var(--v4-ink, #201e1d);
+  padding: 11px 13px;
+  border-radius: 22px;
+  /* Слой обычного тоста приложения: выше бара отмены и ниже шторок — решение
+     лестницы в 002-ui-v4-palette-roles.css:80-87. Прежнее голое 10000 стояло
+     выше всех листов, а лестница это как раз отменила. */
+  z-index: var(--v4-z-toast, 1100);
   animation: toastSlideUp 0.3s ease-out;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px var(--v4-line, rgba(0, 0, 0, 0.08));
   display: flex;
   align-items: center;
-  gap: 8px;
-  max-width: 320px;
+  gap: 11px;
+  cursor: pointer;
 }
 
 @keyframes toastSlideUp {
-  from { transform: translate(-50%, 20px); opacity: 0; }
-  to { transform: translate(-50%, 0); opacity: 1; }
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
+.readonly-toast-icon {
+  flex: none;
+  display: inline-flex;
+  color: var(--v4-bad-text, #a83c22);
+}
+
+.readonly-toast-label {
+  flex: 1;
+  font: 600 12px/1.3 Figtree, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+/* Не кнопка, а название того, куда ведёт плашка (решение 6 сентября). */
 .readonly-toast-action {
-  background: #3b82f6;
-  border: none;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  margin-left: 8px;
+  flex: none;
+  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
   white-space: nowrap;
 }
 

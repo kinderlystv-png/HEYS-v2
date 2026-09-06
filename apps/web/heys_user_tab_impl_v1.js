@@ -301,6 +301,26 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         );
     }
 
+    // === Экран подписки в настройках ===
+    // Канвас subscription, строка «точки входа»: «строка „Подписка“ в
+    // настройках → экран подписки». Сам экран (.sub-screen) написан в
+    // heys_subscriptions_v1.js:1127 и до 6 сентября вызывался ТОЛЬКО визуальной
+    // фикстурой (heys_ui_v4_visual_fixture_v1.js:223) — в продукте эта точка
+    // входа открывала легаси-карточку профиля выше. Проверено тремя признаками
+    // разной природы: имя компонента, класс .sub-screen и точка монтирования.
+    // Легаси-карточка остаётся запасным путём, если модуль подписок не
+    // загрузился.
+    function SubscriptionScreenSection() {
+        const Subscriptions = window.HEYS?.Subscriptions;
+        if (typeof Subscriptions?.SubscriptionSection !== 'function') {
+            return React.createElement(SubscriptionStatusSection);
+        }
+        const clientId = window.HEYS?.currentClientId
+            || (localStorage.getItem('heys_client_current') || '').replace(/"/g, '')
+            || null;
+        return React.createElement(Subscriptions.SubscriptionSection, { clientId });
+    }
+
     function profileSvg(name, size) {
         const NavIcon = HEYS.AppNavIcons && HEYS.AppNavIcons.NavIcon;
         if (!NavIcon) return null;
@@ -1623,7 +1643,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                     expanded: expandedSections.subscription,
                     onToggle: () => toggleSection('subscription')
                 },
-                    React.createElement(SubscriptionStatusSection)
+                    React.createElement(SubscriptionScreenSection)
                 ),
 
                 React.createElement(ProfileSection, {

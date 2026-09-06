@@ -182,7 +182,7 @@
           role: 'dialog',
           'aria-modal': 'true',
         },
-          React.createElement('div', { className: 'paywall-modal', style: { position: 'relative' } },
+          React.createElement('div', { className: 'paywall-modal' },
             React.createElement('button', {
               type: 'button',
               className: 'paywall-close',
@@ -214,7 +214,7 @@
       'aria-modal': 'true',
       'aria-labelledby': 'paywall-modal-title',
     },
-      React.createElement('div', { className: 'paywall-modal', style: { position: 'relative' } },
+      React.createElement('div', { className: 'paywall-modal' },
         React.createElement('button', {
           type: 'button',
           className: 'paywall-close',
@@ -599,12 +599,16 @@
     label.className = 'readonly-toast-label';
     label.textContent = message;
 
-    const action = document.createElement('button');
-    action.type = 'button';
+    // Решение дизайнера 6 сентября (канвас, строка «вид · тост на действии»):
+    // цель — ВЕСЬ тост, отдельной кнопки внутри него нет. «Подписка» осталась
+    // названием того, куда ведёт плашка, поэтому это span, а не button:
+    // вложенная кнопка держала бы в плашке две цели, из которых внешняя ничего
+    // не делает.
+    const action = document.createElement('span');
     action.className = 'readonly-toast-action';
     action.textContent = 'Подписка';
-    action.addEventListener('click', (event) => {
-      event.stopPropagation();
+
+    toast.addEventListener('click', () => {
       showPaywall('trial_ended');
     });
 

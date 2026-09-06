@@ -56,3 +56,48 @@ describe('subscription settings status contract', () => {
     expect(source).toContain("(status === 'read_only' || status === 'none')");
   });
 });
+
+// Канвас subscription, строка «точки входа»: строка «Подписка» в настройках
+// ведёт на ЭКРАН подписки (.sub-screen), а не на легаси-карточку профиля.
+// Смоук гоняет обе ветки выбора без живой сессии.
+describe('subscription settings entry mounts the v4 screen', () => {
+  const IMPL = sources[0].source;
+
+  function loadScreenSection() {
+    const start = IMPL.indexOf('function SubscriptionScreenSection()');
+    const end = IMPL.indexOf('function profileSvg(', start);
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    const factory = Function(
+      'React',
+      'window',
+      'SubscriptionStatusSection',
+      `${IMPL.slice(start, end)}; return SubscriptionScreenSection;`,
+    );
+    const React = { createElement: (type, props) => ({ type, props }) };
+    return { factory, React };
+  }
+
+  it('renders HEYS.Subscriptions.SubscriptionSection with the current client id', () => {
+    const { factory, React } = loadScreenSection();
+    const SubscriptionSection = function SubscriptionSection() {};
+    const legacy = function SubscriptionStatusSection() {};
+    const win = { HEYS: { Subscriptions: { SubscriptionSection }, currentClientId: 'client-42' } };
+    const element = factory(React, win, legacy)();
+    expect(element.type).toBe(SubscriptionSection);
+    expect(element.props).toEqual({ clientId: 'client-42' });
+  });
+
+  it('falls back to the legacy card when the subscriptions module is absent', () => {
+    const { factory, React } = loadScreenSection();
+    const legacy = function SubscriptionStatusSection() {};
+    const element = factory(React, { HEYS: {} }, legacy)();
+    expect(element.type).toBe(legacy);
+  });
+
+  it('the settings section renders the screen wrapper, not the legacy card directly', () => {
+    const section = IMPL.slice(IMPL.indexOf("id: 'subscription',"), IMPL.length).slice(0, 600);
+    expect(section).toContain('React.createElement(SubscriptionScreenSection)');
+    expect(section).not.toContain('React.createElement(SubscriptionStatusSection)');
+  });
+});
