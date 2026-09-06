@@ -523,6 +523,18 @@
   border-radius: 20px;
   background: var(--c1);
   overflow: hidden;
+  contain: layout style paint;
+}
+
+.sb-ss-top,
+.sb-ss-title-col,
+.sb-ss-scroll,
+.sb-ss-grp,
+.sb-ss-flat-head,
+.sb-ss-flat-chips,
+.sb-ss-flat-member--spaced,
+.sb-ss-footnote {
+  contain: layout style;
 }
 
 .sb-ss-top {
