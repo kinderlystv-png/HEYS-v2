@@ -114,14 +114,18 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "вид · баннер сверху": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
-      "h": "32d345a4268c"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:503-512 copy/pill OK; apps/web/styles/modules/735-ui-v4-subscription.css:445-455 .readonly-banner --v4-hero pad 12/14 r16 — нет --tint 10/18 min-h 44 и правил .readonly-banner--sticky/.readonly-banner-pill",
+      "h": "32d345a4268c",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:103"
     },
     "вид · тост на действии": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
-      "h": "173a163ccde8"
+      "v": "≠",
+      "f": "apps/web/heys_paywall_v1.js:583-617 copy/4s OK; 735-ui-v4-subscription.css:487-504 .readonly-toast #1f2937 r12 — не undo-bar (--v4-surface, r22, inset 1px, --v4-act-text action)",
+      "h": "173a163ccde8",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:104"
     },
     "плашка на вкладке «Питание»": {
       "v": "=",
@@ -129,8 +133,8 @@
       "h": "aeb4d318b1f0"
     },
     "вид · контакт поддержки": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
+      "v": "=",
+      "f": "apps/web/heys_subscriptions_v1.js:1347-1378 ContactCuratorScreen + 735-ui-v4-subscription.css:678-768 sub-contact lock/title/copy/row 52px; StepModal .mc-backdrop var(--scrim) blur 2.5px",
       "h": "314a9d7f62ee"
     },
     "вид · тарифы": {
@@ -179,8 +183,8 @@
       "h": "ab6dcbe1684a"
     },
     "очередь · отмена заявки": {
-      "v": "?",
-      "f": "apps/web/heys_paywall_v1.js:946: lane 6 deferred — cancel confirm flow not re-verdicted in task 90",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:420-435: in-modal confirm «Отменить заявку на пробный период?» + .btn/.btnq; no window.confirm (subscription-cancel-queue-confirm.test.js)",
       "h": "4be17c90d6ab"
     },
     "очередь · оффер истёк": {
@@ -1383,13 +1387,13 @@
       "h": "ed7dc2c35921"
     },
     "Подписка · очередь · заявка подана · текст": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:778: getPaywallCtaLabel «Оформить Pro · 7 990 ₽» + 1101 «Заявка подана · вы N-й в очереди» — copy chain canvas присутствует",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:258+438-455: «Оформить Pro · 7 990 ₽» + «Заявка подана · вы N-й в очереди» + «Сообщим…» + «Отменить заявку» — copy chain canvas",
       "h": "0314add19307"
     },
     "Подписка · очередь · место освободилось · текст": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:1055-1077: copy chain «Место освободилось · Начать пробный период · на подтверждение» в TrialQueueSection",
+      "v": "=",
+      "f": "apps/web/heys_paywall_v1.js:258+393-416: «Оформить Pro · 7 990 ₽» + «Место освободилось» + таймер + «на подтверждение» + «Начать пробный период» — copy chain canvas",
       "h": "88d83d9b62d0"
     },
     "тач-цели": {
