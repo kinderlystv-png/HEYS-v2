@@ -4128,8 +4128,11 @@
         React.createElement('div', { className: useReportsV4 ? 'reports-v4-dynamics-card__head' : 'weight-sparkline-header' },
           React.createElement('span', {
             className: useReportsV4 ? 'reports-v4-dynamics-card__label' : 'weight-sparkline-title'
-          // Контракт «динамика»: кривая веса на фиксированных 30 днях.
-          }, useReportsV4 ? 'Вес · 30 дней' : '⚖️ Вес'),
+          // Контракт «динамика»: в Отчётах без цикла — «Вес · 30 дней»;
+          // при включённом особом периоде кадр «Цикл · график веса» — «Вес и тренд».
+          }, useReportsV4
+            ? (hasCycleReportContext ? 'Вес и тренд' : 'Вес · 30 дней')
+            : '⚖️ Вес'),
           // Контракт «формат · вес и его подпись»: в карточке три вещи —
           // подпись окна, текущее значение и Δ за период. Значения не было:
           // человек видел кривую и стрелку, а сколько он весит сейчас —
@@ -4215,7 +4218,10 @@
         // дни есть в окне (раньше пряталась за chartPeriod >= 61 и на 7/14/30
         // не показывалась никогда). Подсказка «~кг/мес» снята — прогнозов в
         // Отчётах нет («два запрета»).
-        useReportsV4 && weightSparklineData.some((d) => d.hasWaterRetention) && React.createElement('div', {
+        useReportsV4 && hasCycleReportContext && weightSparklineData.some((d) => d.hasWaterRetention) && React.createElement('div', {
+          className: 'reports-v4-weight-cycle-footnote'
+        }, 'Пустые точки — дни с задержкой воды: вода набирается до периода и уходит с ним. Горб виден, в тренд не входит.'),
+        useReportsV4 && !hasCycleReportContext && weightSparklineData.some((d) => d.hasWaterRetention) && React.createElement('div', {
           className: 'reports-v4-weight-cycle-footnote'
         }, 'дни особого периода в тренд не входят'),
         // Сноска о задержке воды если есть такие дни

@@ -114,8 +114,10 @@ describe('cycle v4 · reports sparkline label', () => {
     expect(POPUPS_SRC).toContain("e.key !== 'Escape'");
   });
 
-  it('long reports window gets footnote under weight sparkline', () => {
+  it('cycle reports weight card uses trend title and water-delay footnote', () => {
+    expect(STATS_SRC).toContain("hasCycleReportContext ? 'Вес и тренд' : 'Вес · 30 дней'");
     expect(STATS_SRC).toContain('reports-v4-weight-cycle-footnote');
+    expect(STATS_SRC).toContain('Пустые точки — дни с задержкой воды');
     expect(STATS_SRC).toContain('дни особого периода в тренд не входят');
   });
 });
