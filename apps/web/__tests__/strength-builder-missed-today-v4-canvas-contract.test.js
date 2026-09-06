@@ -19,10 +19,23 @@ const BLUE = Object.freeze({
   acs: '#3d7cc9', onAcs: '#f5f8fc', ink56: 'rgba(16, 24, 38, 0.64)',
 });
 
+// Короткие роли канваса объявлены в продукте на корне зоны .sb-root
+// (750-strength-builder.css), а этот стенд подаёт набор инъекцией на
+// documentElement — объявление зоны инъекцию перекрывает, потому что стоит
+// ближе к элементу. Снимаем объявления зоны из CSS стенда: иначе стенд мерил
+// бы не тот набор, который сам задал, а вложенный var(--v4-*), который jsdom
+// внутри rgba() не раскрывает вовсе. Это та же слепота, что назвал дизайнер
+// строкой «короткие роли на экранах отчётов»: проверка знает, каким должен
+// быть цвет, и не знает, доходит ли он до элемента. Доставка до элемента в
+// jsdom не проверяется — она меряется в живом браузере.
+const ZONE_ROLE_DECL =
+  /^[ \t]*--(?:on-acs|acs|ac2|ac|c1|c2|tint|tx|ink|gr-bg|gr|val-bad):[^;]*;[ \t]*\r?\n/gm;
+
 function paletteCss(name) {
   const p = name === 'blue' ? BLUE : SAND;
   const inkRgb = name === 'blue' ? '16, 24, 38' : '0, 0, 0';
   return `${BASE_CSS}\n${CSS}`
+    .replace(ZONE_ROLE_DECL, '')
     .replaceAll('var(--c1)', p.c1)
     .replaceAll('var(--c2)', p.c2)
     .replaceAll('var(--tx)', p.tx)

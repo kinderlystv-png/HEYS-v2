@@ -13,11 +13,11 @@ const BASE_CSS = readWebFile(WEB_DIR, 'styles/modules/000-base-and-gamification.
 
 const SAND = Object.freeze({
   bg: '#fffaf1', tint: '#f6e6dd', tx: '#201e1d', ac: '#8a4a20', ac2: '#a1471c', gr: '#5c6a45',
-  grBg: '#eaefe0', ink56: 'rgba(0, 0, 0, 0.56)', bad: '#a83c22',
+  grBg: '#eaefe0', ink56: 'rgba(0, 0, 0, 0.56)', ink45: 'rgba(0, 0, 0, 0.45)', bad: '#a83c22',
 });
 const BLUE = Object.freeze({
   bg: '#eef3fa', tint: '#e2ecf6', tx: '#101826', ac: '#1a6eb2', ac2: '#1d5e96', gr: '#5c6a45',
-  grBg: '#eaefe0', ink56: 'rgba(16, 24, 38, 0.56)', bad: '#a8382b',
+  grBg: '#eaefe0', ink56: 'rgba(16, 24, 38, 0.56)', ink45: 'rgba(16, 24, 38, 0.45)', bad: '#a8382b',
 });
 
 const PALETTE_CSS = {
@@ -517,7 +517,10 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
         const normColor = (value) => String(value).replace(/\s+/g, ' ').trim();
         expect(normColor(getComputedStyle(okVal).color)).toBe(p.gr);
         expect(normColor(getComputedStyle(badVal).color)).toBe(p.bad);
-        expect(normColor(getComputedStyle(detail).color)).toBe(p.ink56);
+        // Строка «вид · отчёт за период»: подробность переноса и пропуска —
+        // чернила 45 %, а не 56 %. Проверка сторожила 56 % и тем закрепляла
+        // отступление кода от контракта: падала бы на починке, а не на поломке.
+        expect(normColor(getComputedStyle(detail).color)).toBe(p.ink45);
         expect(getComputedStyle(debtTitle).color).toBe(p.ac2);
         expect(getComputedStyle(debtCard).backgroundColor).toBe(p.tint);
         expect(getComputedStyle(label).color).toBe(p.tx);

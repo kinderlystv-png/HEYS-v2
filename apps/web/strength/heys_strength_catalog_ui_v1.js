@@ -210,7 +210,20 @@
               const groupName = m && api ? api.groupLabel(m.primaryGroup) : 'своё упражнение';
               const prior = previousResult(r.name);
               const sub = groupName + (prior ? ' · ' + prior : '');
+              // Звезда стоит в конце строки (решение дизайнера 6 сентября):
+              // слева начинается имя упражнения, и цель 44 отжимала бы его —
+              // справа место есть. Рисунок остался 13 px, цель выросла до 44.
               return h('div', { className: 'sb-cat-row', key: r.norm },
+                h('div', { className: 'sb-cat-title' },
+                  h('b', null, r.name),
+                  h('span', null, sub)
+                ),
+                h('button', {
+                  type: 'button',
+                  className: 'sb-cat-add',
+                  onClick: function () { onPick(r.name); },
+                  'aria-label': 'Добавить ' + r.name
+                }, '+'),
                 h('button', {
                   type: 'button',
                   className: 'sb-star' + (r.favorite ? ' is-on' : ''),
@@ -222,17 +235,7 @@
                     }
                   },
                   'aria-label': r.favorite ? 'Убрать из избранного' : 'В избранное'
-                }, '★'),
-                h('div', { className: 'sb-cat-title' },
-                  h('b', null, r.name),
-                  h('span', null, sub)
-                ),
-                h('button', {
-                  type: 'button',
-                  className: 'sb-cat-add',
-                  onClick: function () { onPick(r.name); },
-                  'aria-label': 'Добавить ' + r.name
-                }, '+')
+                }, '★')
               );
             })
           ),
@@ -248,7 +251,7 @@
             )
           ),
           h('p', { className: 'sb-catalog-note' },
-            'Строка создания появляется, когда в поиске набрано то, чего в каталоге нет. Прошлый результат стоит у каждого упражнения — по нему выбирают, а не по названию; у кого его нет, так и написано. Звезда слева — избранное: она же отдельным фильтром в ряду, чтобы свой короткий список открывался одним тапом.')
+            'Строка создания появляется, когда в поиске набрано то, чего в каталоге нет. Прошлый результат стоит у каждого упражнения — по нему выбирают, а не по названию; у кого его нет, так и написано. Звезда в конце строки — избранное: она же отдельным фильтром в ряду, чтобы свой короткий список открывался одним тапом.')
         )
       )
     );
