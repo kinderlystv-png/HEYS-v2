@@ -101,7 +101,9 @@ export default defineConfig({
     // подряд; 6 форков — 707 файлов и 7699 тестов без единой такой ошибки.
     // Тесты при этом не меняются: правится способность стенда доложить
     // результат, а не сам результат.
-    poolOptions: { forks: { maxForks: 6, minForks: 2 } },
+    poolOptions: { forks: { maxForks: 3, minForks: 1 } },
+    teardownTimeout: 30_000,
+    hookTimeout: 30_000,
     // Кросс-рантаймовые тесты сверяют web-расчёт с серверным: импортируют
     // модули облачных функций абсолютным путём выше корня vite. Vite пытался
     // их трансформировать как свои и падал на «Does the file exist?» — файл
@@ -111,7 +113,7 @@ export default defineConfig({
     server: { deps: { external: [/yandex-cloud-functions/] } },
     // Доп. ограничения
     passWithNoTests: true,
-    reporters: ['basic'],
+    reporters: ['dot'],
     coverage: {
       enabled: false, // Отключаем в CI
       provider: 'v8',
@@ -125,3 +127,4 @@ export default defineConfig({
     },
   },
 });
+
