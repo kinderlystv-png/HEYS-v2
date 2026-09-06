@@ -2185,8 +2185,10 @@ body:has(.page-reports) .hdr::after {
   position: absolute;
   top: 15px;
   right: 15px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 50%;
   background: rgba(239, 68, 68, 0.9);
   color: white;
@@ -2258,8 +2260,10 @@ body:has(.page-reports) .hdr::after {
   position: absolute;
   top: 15px;
   left: 15px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 50%;
   background: rgba(59, 130, 246, 0.9);
   color: white;
@@ -2286,8 +2290,10 @@ body:has(.page-reports) .hdr::after {
   position: absolute;
   top: 6px;
   left: 32px;
-  width: 22px;
-  height: 22px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 50%;
   background: rgba(14, 165, 233, 0.9);
   color: white;
@@ -2663,8 +2669,10 @@ body:has(.page-reports) .hdr::after {
 
 /* Кнопка настройки экрана — 40 px, карандаш (канвас home-widgets v4) */
 .widgets-settings-fab {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 999px;
   border: none;
   padding: 0;
@@ -2682,13 +2690,6 @@ body:has(.page-reports) .hdr::after {
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.widgets-settings-fab::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-}
-
-
 .widgets-settings-fab:active {
   opacity: 0.7;
   transition: opacity 120ms ease;
@@ -3041,9 +3042,11 @@ body:has(.page-reports) .hdr::after {
   position: absolute;
   left: 0;
   top: 50%;
-  margin-top: -11px;
-  width: 22px;
-  height: 22px;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 999px;
   background: var(--v4-tint, #f6e6dd);
   color: var(--v4-act-text, #8a4a20);
@@ -3053,14 +3056,6 @@ body:has(.page-reports) .hdr::after {
   cursor: pointer;
   z-index: 2;
   animation: widgets-quick-minus-in 180ms ease-out;
-}
-
-/* «круг минуса и чип возврата — не меньше 44×44 за счёт прозрачных полей
-   вокруг видимого круга 22 и чипа 28» (строка «области нажатия в карточке»). */
-.widgets-quick-minus::before {
-  content: '';
-  position: absolute;
-  inset: -11px;
 }
 
 @keyframes widgets-quick-minus-in {
@@ -3089,7 +3084,7 @@ body:has(.page-reports) .hdr::after {
 
 .widgets-quick-chip {
   position: relative;
-  min-height: 28px;
+  min-height: 44px;
   padding: 0 10px;
   border: none;
   border-radius: 999px;
@@ -3104,12 +3099,6 @@ body:has(.page-reports) .hdr::after {
     0 1px 2px rgba(80, 50, 20, 0.1),
     0 6px 16px rgba(80, 50, 20, 0.14);
   animation: widgets-quick-chip-in 140ms ease-out;
-}
-
-.widgets-quick-chip::before {
-  content: '';
-  position: absolute;
-  inset: -8px 0;
 }
 
 .widgets-quick-chip__label {
@@ -6878,6 +6867,7 @@ body:has(.page-reports) .hdr::after {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
+  min-height: 44px;
   border-radius: var(--widget-border-radius);
   background: var(--bg-secondary, #f8f9fa);
   cursor: pointer;
@@ -9587,8 +9577,10 @@ body.reports-fullscreen-open {
 }
 
 .widgets-settings__field input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   cursor: pointer;
   accent-color: var(--accent, #3b82f6);
 }
@@ -12079,7 +12071,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   border: none;
   background: transparent;
   padding: 0;
-  margin: -16px 0;
+  margin: 0;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -13431,23 +13423,14 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widgets-tab--editing .widget__delete-btn {
   top: 9px;
   right: 9px;
-  width: 22px;
-  height: 22px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   background: var(--v4-sand-surface-soft, #fffaf1);
   color: var(--v4-sand-act-mid, #a75c2b);
   box-shadow: none;
   backdrop-filter: none;
-}
-
-/* Кружок 22 px, область нажатия 44 pt (канвас v4, строка 52). */
-.widgets-tab--editing .widget__delete-btn::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
 }
 
 .widgets-tab--editing .widget__settings-btn {
@@ -14916,8 +14899,10 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__close {
   position: relative;
   flex: none;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border: none;
   padding: 0;
   border-radius: 999px;
@@ -14931,16 +14916,6 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 /* Кадр рисует круг 30×30, но палец меньше 44 px не ловит: зона нажатия
    растянута псевдоэлементом, сам круг остаётся 30 px. */
-.widget-bd-sheet__close::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
-}
-
 .widget-bd-sheet__close svg {
   position: relative;
   z-index: 1;
@@ -15965,4 +15940,66 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widget-bd-sheet__evening-dot.is-bad {
   background: var(--v4-bad-text, #a83c22);
+}
+
+/* polosa4 task69 — visible touch targets 44px (home-widgets) */
+.widgets-tab__btn,
+.widgets-header__btn,
+.widget,
+.widgets-grid--remove-pick .widget {
+  min-height: 44px;
+}
+
+.widget__quick-action,
+.widget__settings-btn,
+.widget__resize-btn,
+.widgets-quick-sheet__chip,
+.widgets-catalog__category,
+.widget-relapse-risk__dev-disclosure-summary,
+.widget-relapse-risk__modal-copy-btn,
+.widgets-settings__field input[type="checkbox"],
+.widgets-settings__size,
+.widgets-settings__scale-reset,
+.widget-v4-periods__btn,
+.widget-v4-add,
+.widget-v4-catalog__item,
+.widget-v4-empty__btn,
+.widget-wd-sheet__opt,
+.widget-v4-edit-footer__icon,
+.reports-fullscreen-modal__close-text,
+.reports-fullscreen-modal__close-icon {
+  min-height: 44px;
+}
+
+.widget__resize-handle,
+.widgets-quick-pencil,
+.widgets-catalog__close,
+.widget-relapse-risk__modal-close,
+.widget-crash-risk__popup-close,
+.widgets-settings__close,
+.widget-v4-catalog__remove-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.widgets-empty__btn,
+.widget-v4-catalog__item {
+  min-height: 44px;
+}
+
+.widgets-settings__scale-slider {
+  min-height: 44px;
+}
+
+.widget-v4-catalog__bar-cancel,
+.widget-v4-catalog__bar-done {
+  min-width: 44px;
+}
+
+.widgets-settings__field input[type="checkbox"] {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  flex: none;
 }

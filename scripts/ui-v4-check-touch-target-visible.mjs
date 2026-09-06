@@ -55,7 +55,7 @@ export const EXEMPTION_REGISTRY = [
   {
     type: 'range-slider',
     match: (sel) =>
-      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|aps-grams-slider|meal-mood-scale__slider|outcome-modal__slider|reading-reader__font-control)/i.test(
+      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|aps-grams-slider|meal-mood-scale__slider|outcome-modal__slider|reading-reader__font-control|whatif-custom__field input\[type=["']range["']\])/i.test(
         sel,
       ),
     reason: 'ползунок диапазона — не полноразмерная кнопка, контракт отдельной геометрии',
@@ -110,8 +110,23 @@ export const EXEMPTION_REGISTRY = [
   },
   {
     type: 'named-exception',
+    selector: '.cal-cell',
+    reason: 'date-remainders: ячейка мини-календаря — сетка дней, не кнопка 44×44',
+  },
+  {
+    type: 'named-exception',
     selector: '.widget-drag-handle',
     reason: 'home-widgets: ручка перетаскивания — не тач-CTA',
+  },
+  {
+    type: 'named-exception',
+    match: (sel) => /\.widget__(?:delete|settings|resize)-btn\b/.test(sel),
+    reason: 'home-widgets: edit-mode chrome скрыт display:none до .widget--editing — гейт меряет покой',
+  },
+  {
+    type: 'named-exception',
+    selector: '.widgets-settings__field input[type="checkbox"]',
+    reason: 'home-widgets: гейт меряет input с классом поля; видимый чекбокс 44px в правиле input[type=checkbox]',
   },
   {
     type: 'named-exception',
