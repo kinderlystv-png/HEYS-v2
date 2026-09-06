@@ -9457,9 +9457,10 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   border-top-color: rgba(148, 163, 184, 0.14);
 }
 
-[data-theme$="dark"] .date-picker-btn.today-btn {
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-}
+/* Синий градиент дореформенного пикера снят: кадр «Календарь · легенда» ·27
+   называет фон ролью --acs, и в песочно-тёмном наборе градиент красил кнопку
+   чужим синим. Роль --v4-tint-warm заведена во всех четырёх наборах
+   (002-ui-v4-palette-roles.css), заливка приходит из неё. */
 
 [data-theme$="dark"] .date-picker-tooltip {
   background: rgba(241, 245, 249, 0.96);

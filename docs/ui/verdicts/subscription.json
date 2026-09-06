@@ -39,8 +39,8 @@
       "h": "7583d8ba8bb4"
     },
     "слой — центральная модалка": {
-      "v": "?",
-      "f": "Замер chromium на 375 px: модалка выходит 375 px шириной, x=14…389 вместо 347 (14…361) — инлайн style position:relative (heys_paywall_v1.js:185,217; heys_subscriptions_v1.js:1040,1075) перебивает position:absolute из 735-ui-v4-subscription.css:20-25, и left/right:14px перестают быть врезками; правый угол r26 срезает overflow:hidden оверлея (735-ui-v4-subscription.css:3-13). Совпало: радиус 26 и поля 22/18/18 (735-ui-v4-subscription.css:20-35), крестик 44×44 в top/right 14 (735-ui-v4-subscription.css:38-56, замер 44×44), затемнение --scrim с blur(2.5px) (замер: песочный rgba(42,26,12,.5), синий rgba(16,24,38,.45)), тап по затемнению закрывает (heys_paywall_v1.js:211; heys_subscriptions_v1.js:1034). Строка закроется снятием инлайнового position.",
+      "v": "=",
+      "f": "Инлайновый style position:relative снят с .paywall-modal (heys_paywall_v1.js:185,217; heys_subscriptions_v1.js:1048,1083), и правило 735-ui-v4-subscription.css:20-25 больше не перебивается. Замер chromium 375 px на полном main.css, оба набора: position absolute, left/right 14px, x=14…361, ширина 347, радиус 26, поля 22/18/18; .paywall-close 44×44 absolute, x=303…347 (735-ui-v4-subscription.css:38-57). Затемнение --scrim с blur(2.5px) и закрытие тапом по нему прежние (735-ui-v4-subscription.css:3-13; heys_paywall_v1.js:211; heys_subscriptions_v1.js:1042).",
       "h": "f2073361a185"
     },
     "три тарифа": {
@@ -88,9 +88,11 @@
       "h": "f21d63340325"
     },
     "вид · экран подписки · пробный период": {
-      "v": "?",
-      "f": "CSS сведён — замер chromium обеих палитр: кикер и ярус var(--v4-act-text) = канвасный --ac (песочный #8a4a20, синий #1d5e96), 700 10px/1 разрядка 1.6px = .16em, uppercase; headline 800 26px/1.1 трекинг −.26px тоном --v4-ink; подпись 500 12px/1.4 var(--v4-ink-2); карточка --v4-surface r20 p16 (735-ui-v4-subscription.css:532-668). Но экран не смонтирован в продукте: SubscriptionSection (heys_subscriptions_v1.js:1127) зовёт только визуальная фикстура (heys_ui_v4_visual_fixture_v1.js:223,282,288), а настройки открывают SubscriptionStatusSection (heys_user_tab_impl_v1.js:1626 из heys_app_shell_v1.js:5477 openUserSection subscription). Плюс проза просит «число дней 34 px/800 · дней осталось», и это спорит со строками ·03/·04 и кадром того же канваса (subscription.v4.dc.html:143-144,388-390). Закроется монтированием v4-экрана и снятием спора прозы со строками.",
-      "h": "f9eb50be76d6"
+      "v": "≠",
+      "f": "Экран смонтирован в продукте: строка «Подписка» в настройках открывает секцию, которая рендерит SubscriptionScreenSection → HEYS.Subscriptions.SubscriptionSection (heys_user_tab_impl_v1.js:313-323 и 1646 ← heys_app_shell_v1.js:5477 openUserSection «subscription»); до 6 сентября .sub-screen звала только визуальная фикстура (heys_ui_v4_visual_fixture_v1.js:223). CSS сведён прежним замером обеих палитр: кикер и ярус var(--v4-act-text) = --ac, 700 10px/1 разрядка .16em uppercase; карточка var(--v4-surface) r20 p16; ряд поддержки 600 12px/1 высотой 44 (735-ui-v4-subscription.css:556-690). Отступление: проза этой строки просит «число дней 34 px/800 с подписью „дней осталось“», а решение владельца 5 сентября («срок подписки», subscription.v4.dc.html:133) прямо отменяет число дней и требует ДАТУ 26 px/800 — по нему нарисованы кадр и строки «Подписка · экран · активна · 03/04», и по нему же сделан код (.sub-screen__headline 800 26px/1.1, 735-ui-v4-subscription.css:572-578). Проза строки под решение не переписана.",
+      "h": "f9eb50be76d6",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:133"
     },
     "вид · экран подписки · активна": {
       "v": "≠",
@@ -114,18 +116,14 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "вид · баннер сверху": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:503-512 copy/pill OK; apps/web/styles/modules/735-ui-v4-subscription.css:445-455 .readonly-banner --v4-hero pad 12/14 r16 — нет --tint 10/18 min-h 44 и правил .readonly-banner--sticky/.readonly-banner-pill",
-      "h": "32d345a4268c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:103"
+      "v": "?",
+      "f": "Полоса сведена и замерена chromium на 375 px с полным main.css, оба набора (735-ui-v4-subscription.css:510-561): фон var(--v4-tint) = --tint (песочный rgb(246,230,221), синий rgb(251,230,226)), поля 10px 18px, min-height 44px, ширина 375 — боковые 18 px вкладки погашены отрицательным полем, обводки нет; заголовок 700 12px/1.3 тоном var(--v4-ink), подстрока 500 11px/1.4 var(--v4-ink-prose) = чернила 62 % с отступом сверху 2px; пилюля .readonly-banner-pill min-height 44px, поля 0 16px, радиус 999px, фон var(--v4-act) = --acs (rgb(198,113,57) / rgb(29,94,150)), текст var(--v4-btn-on-act) = --on-acs (rgb(43,22,8) / rgb(255,255,255)), 700 12px/1; крестика в разметке нет (heys_paywall_v1.js:501-514). Не закрыто одно слово строки — «липкая»: position:sticky объявлен, но не срабатывает, потому что .page-day несёт overflow-x:hidden (730-widgets-dashboard.css:319-320), сам становится ближайшим скролл-контейнером и никогда не прокручивается; замер прокрутки на стенде: top 0 → −75 при scrollY 75. Правится в CSS вкладки, а не в этой зоне.",
+      "h": "7346c28787a8"
     },
     "вид · тост на действии": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:583-617 copy/4s OK; 735-ui-v4-subscription.css:487-504 .readonly-toast #1f2937 r12 — не undo-bar (--v4-surface, r22, inset 1px, --v4-act-text action)",
-      "h": "173a163ccde8",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:104"
+      "v": "=",
+      "f": "Тост сведён по решению дизайнера 6 сентября: цель — вся плашка, кнопки внутри нет. Обработчик перенесён с .readonly-toast-action на сам тост, «Подписка» стала span (heys_paywall_v1.js:601-613). Замер chromium обеих палитр (735-ui-v4-subscription.css:563-607): position fixed, врезка left/right 12px, фон var(--v4-surface) = --c1 (rgb(247,239,226) / rgb(238,243,249)), радиус 22px, поля 11px 13px, зазор 11px, align center, обводка inset 0 0 0 1px var(--v4-line) = чернила 8 %, min-height 44px; замок 15×15 тоном var(--v4-bad-text) = --red (rgb(168,60,34) / rgb(176,58,36)); текст «Запись недоступна — только чтение» 600 12px/1.3 flex 1 чернилами; «Подписка» 700 12px/1 тоном var(--v4-act-text) = --ac (rgb(138,74,32) / rgb(29,94,150)) без полей. Живёт 4 с, повторный показ снимает прежний (heys_paywall_v1.js:584-587,617-620); кольца-таймера нет.",
+      "h": "827ad5c9ecc3"
     },
     "плашка на вкладке «Питание»": {
       "v": "=",
@@ -148,13 +146,13 @@
       "h": "48d05dbb2183"
     },
     "вид · блок пробного периода": {
-      "v": "?",
-      "f": "Совпало (замер chromium обеих палитр): карточка var(--v4-hero) = --c2 (#efe3cf / #e2ecf6), радиус 18, поля 14, текст по центру (735-ui-v4-subscription.css:191-200); у «место освободилось» фон var(--v4-tint) = --tint (#f6e6dd / #fbe6e2, 735-ui-v4-subscription.css:198-200); заголовок 700 13px/1.3; строка состояния 600 12px/1; «Мест нет · в очереди N» тоном var(--v4-ink-2) с точкой var(--v4-bad-text) = --red; .paywall-btnq min-height 44px mt 12px фоном var(--v4-bg) (735-ui-v4-subscription.css:239-253); таймер 800 26px/1 tabular с подписью «на подтверждение» и кнопкой .paywall-cta 48px (heys_paywall_v1.js:394-416); «Заявка подана · вы N-й в очереди» и «Сообщим, когда место освободится» (heys_paywall_v1.js:439-449). Не сошлось два цвета: точка «Место свободно» красится var(--v4-ok-fill) = канвасный --gr2 (замер #7a8a5e песочный, #4f9a78 синий), а контракт просит --gr (#5c6a45 / #1f6e4d) — 735-ui-v4-subscription.css:231-233; «Отменить заявку» красится var(--v4-act) = --acs (замер #c67139), контракт — --ac (#8a4a20), 735-ui-v4-subscription.css:394-401, расхождение видно в песочных наборах. Закроется сменой этих двух ролей.",
+      "v": "=",
+      "f": "Оба расхождения цвета сведены. Точка «Место свободно»: .paywall-trial-dot--ok background var(--v4-ok-text) (735-ui-v4-subscription.css:231-237), замер chromium песочный rgb(92,106,69) = #5c6a45, синий rgb(31,110,77) = #1f6e4d — тот же тон, что у подписи .paywall-trial-status--ok, как и просит строка («точка --gr + текст тоном --gr»). «Отменить заявку»: .paywall-text-btn color var(--v4-act-text) (735-ui-v4-subscription.css:402-411), замер песочный rgb(138,74,32), синий rgb(29,94,150), min-height 44px. Карточка var(--v4-hero) r18 p14 по центру, «место освободилось» на var(--v4-tint), заголовок 700 13px/1.3, .paywall-btnq 44px, таймер 800 26px/1 tabular — прежним замером (735-ui-v4-subscription.css:191-253; heys_paywall_v1.js:394-449).",
       "h": "a0f1d0d33b0f"
     },
     "вид · проверьте заказ": {
       "v": "?",
-      "f": "Совпало (замер chromium обеих палитр): карточка заказа var(--v4-surface) r18 p14, ряд gap 12 space-between; левый блок min-width 0; правая колонка flex none и nowrap, обе строки в одну каждая (замер 66,92 px); «Pro» 700 15px/1.2, «7 990 ₽» 800 17px/1 tabular, «до 5 октября» 500 11px/1 mt 4; согласие — квадрат 22px r7, невыбранный inset 2px rgba(ink,.25), выбранный var(--v4-act) с глифом var(--v4-btn-on-act); текст 500 12px/1.45; кнопка гашена до .45 и disabled до согласия (heys_subscriptions_v1.js:1019-1027); «Отмена» 600 12px/1 высотой 44; ошибка сети 600 12px тоном var(--v4-bad-text) над кнопкой (735-ui-v4-subscription.css:263-365, heys_subscriptions_v1.js:980-1028). Не сошлось: дату «до 5 октября» клиент вычисляет сам — billingEnd = сегодня + 30 дней (heys_subscriptions_v1.js:965-967), а контракт требует дату окончания, которую вернул сервер; и ссылки оферты красятся var(--v4-act) = --acs вместо --ac (735-ui-v4-subscription.css:341-344, строка ·12). Закроется датой из ответа сервера и сменой роли ссылок.",
+      "f": "Ссылки оферты сведены: .paywall-consent-link var(--v4-act-text) (735-ui-v4-subscription.css:345-352), замер chromium песочный rgb(138,74,32), синий rgb(29,94,150). Карточка заказа, согласие, кнопка и «Отмена» совпадали прежним замером (735-ui-v4-subscription.css:267-369; heys_subscriptions_v1.js:986-1036). Не закрыта строка «до 5 октября»: клиентское вычисление «сегодня + 30» снято (heys_subscriptions_v1.js:965-972), потому что решение владельца 5 сентября (канвас, строка «срок подписки») запрещает экрану вычислять дату, а сервер считает КАЛЕНДАРНЫЙ месяц (yandex-cloud-functions/heys-api-payments/index.js:623-624). Поля с датой до оплаты в ответе сервера сегодня нет, поэтому .paywall-order-period не рисуется вовсе (heys_subscriptions_v1.js:993-996) — строка кадра пуста. Закроется полем даты в ответе на создание платежа.",
       "h": "e1a64f8bb325"
     },
     "вид · оплата прошла": {
@@ -383,32 +381,24 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
     },
     "Подписка · баннер сверху · 01": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:486-489: .readonly-banner background var(--v4-hero) padding 12px 14px — не --tint 10/18 min-height 44",
-      "h": "da71e6d2b10a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": ".readonly-banner--sticky (735-ui-v4-subscription.css:510-526): замер chromium обеих палитр — background var(--v4-tint) rgb(246,230,221) / rgb(251,230,226), padding 10px 18px, min-height 44px, display flex, align-items center, justify-content space-between, gap 12px.",
+      "h": "da71e6d2b10a"
     },
     "Подписка · баннер сверху · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:1103: .readonly-banner-title «Пробный период закончился» — не «Доступ только для чтения»",
-      "h": "653ea11b9829",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "«Доступ только для чтения» — .readonly-banner-title в .readonly-banner--sticky (heys_paywall_v1.js:503; 735-ui-v4-subscription.css:527-531): замер chromium 700 12px/15.6px (=1.3) Figtree, цвет var(--v4-ink) rgb(32,30,29) / rgb(16,24,38).",
+      "h": "653ea11b9829"
     },
     "Подписка · баннер сверху · 03": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:1104: .readonly-banner-text про куратора — не «напишите в поддержку»",
-      "h": "55686f7baee9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "«Чтобы записывать — напишите в поддержку» — .readonly-banner-text в .readonly-banner--sticky (heys_paywall_v1.js:504-506; 735-ui-v4-subscription.css:533-541): замер chromium 500 11px/15.4px (=1.4), цвет var(--v4-ink-prose) = rgba(ink,.62) — rgba(0,0,0,0.62) / rgba(16,24,38,0.62), margin-top 2px.",
+      "h": "55686f7baee9"
     },
     "Подписка · баннер сверху · 04": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:1145-1169: ReadOnlyBanner рендерит title+text без пилюли «Подписка» (flex-none min-height 34px radius 999px bg --acs); .readonly-banner-arrow отсутствует в non-compact, pill нет",
-      "h": "9aff32f6de65",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "«Подписка» — .readonly-banner-pill (heys_paywall_v1.js:508-512; 735-ui-v4-subscription.css:543-561): замер chromium обеих палитр — flex none (grow 0, shrink 0), min-height 44px, padding 0 16px, border-radius 999px, background var(--v4-act) rgb(198,113,57) / rgb(29,94,150), color var(--v4-btn-on-act) rgb(43,22,8) / rgb(255,255,255), 700 12px Figtree, align-items center. До правки правил у класса не было ни одного и браузер рисовал кнопку 75,4×21.",
+      "h": "0698029bf057"
     },
     "Подписка · баннер сверху · 05": {
       "v": "—",
@@ -417,32 +407,24 @@
       "naKind": "demo-only"
     },
     "Подписка · тост на действии · 01": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:486: .readonly-toast — не баннер --tint (кадр-контекст)",
-      "h": "da71e6d2b10a",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "Строка описывает липкую полосу в кадре тоста — на вкладке «Питание» она рендерится тем же ReadOnlyBanner (heys_day_page_shell.js:390, вкладка diary = .page-day). Замер тот же, что у «Подписка · баннер сверху · 01»: .readonly-banner--sticky фон var(--v4-tint), поля 10px 18px, min-height 44px, flex/center/space-between, зазор 12px (735-ui-v4-subscription.css:510-526).",
+      "h": "da71e6d2b10a"
     },
     "Подписка · тост на действии · 02": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:486: toast без строки «Доступ только для чтения»",
-      "h": "653ea11b9829",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "Заголовок полосы в кадре тоста: .readonly-banner-title 700 12px/15.6px тоном var(--v4-ink), замер chromium обеих палитр (heys_paywall_v1.js:503; 735-ui-v4-subscription.css:527-531).",
+      "h": "653ea11b9829"
     },
     "Подписка · тост на действии · 03": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:486: toast без подстроки поддержки",
-      "h": "55686f7baee9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "Подстрока полосы в кадре тоста: .readonly-banner-text 500 11px/15.4px тоном var(--v4-ink-prose) = чернила 62 %, margin-top 2px, замер chromium обеих палитр (heys_paywall_v1.js:504-506; 735-ui-v4-subscription.css:533-541).",
+      "h": "55686f7baee9"
     },
     "Подписка · тост на действии · 04": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:1185: .readonly-toast-action «Подписка» — не пилюля --acs",
-      "h": "9aff32f6de65",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "Пилюля полосы в кадре тоста: .readonly-banner-pill min-height 44px, поля 0 16px, радиус 999px, фон var(--v4-act), текст var(--v4-btn-on-act), 700 12px/1, flex none — замер chromium обеих палитр (heys_paywall_v1.js:508-512; 735-ui-v4-subscription.css:543-561).",
+      "h": "0698029bf057"
     },
     "Подписка · тост на действии · 05": {
       "v": "—",
@@ -452,24 +434,20 @@
     },
     "Подписка · тост на действии · 06": {
       "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:486: .readonly-toast bg #1f2937 radius 12px; канвас/undo-bar: heys-undo-bar 11/13 radius 22",
+      "f": "Совпало всё, кроме позиции: .readonly-toast (735-ui-v4-subscription.css:563-587) — фон var(--v4-surface) = --c1 rgb(247,239,226) / rgb(238,243,249), радиус 22px, поля 11px 13px, align-items center, зазор 11px, обводка inset 0 0 0 1px var(--v4-line) = чернила 8 %; замер chromium обеих палитр. Отступление: кадр рисует position absolute внутри макета телефона, продукт держит position fixed — так же, как общий бар отмены, к правилам которого строка «вид · тост на действии» и отсылает (.heys-undo-bar position fixed, styles/heys-components.css:12258-12281).",
       "h": "ff0d8a9cf1db",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "reasonCode": "platform",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:104"
     },
     "Подписка · тост на действии · 07": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:1257: gateWrite message «Добавление данных недоступно» — не «Запись недоступна — только чтение»",
-      "h": "784e5503d910",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "«Запись недоступна — только чтение» — .readonly-toast-label (heys_paywall_v1.js:583,603-605; 735-ui-v4-subscription.css:595-600): замер chromium flex-grow 1, 600 12px/15.6px (=1.3) Figtree, цвет var(--v4-ink) rgb(32,30,29) / rgb(16,24,38). Тот же текст шлёт gateWrite (heys_paywall_v1.js:687).",
+      "h": "784e5503d910"
     },
     "Подписка · тост на действии · 08": {
-      "v": "≠",
-      "f": "apps/web/heys_paywall_v1.js:510: .readonly-toast-action #3b82f6 — не --ac 12px/700",
-      "h": "57dcfc7fa28f",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "v": "=",
+      "f": "«Подписка» — .readonly-toast-action (heys_paywall_v1.js:601-613; 735-ui-v4-subscription.css:602-607): замер chromium 700 12px Figtree, цвет var(--v4-act-text) = --ac rgb(138,74,32) / rgb(29,94,150), полей нет. Прежняя синяя кнопка #3b82f6 снята вместе с ролью кнопки.",
+      "h": "57dcfc7fa28f"
     },
     "Подписка · тост на действии · 09": {
       "v": "—",
@@ -755,8 +733,8 @@
       "h": "c420a834021d"
     },
     "Подписка · проверьте заказ · 12": {
-      "v": "?",
-      "f": "«публичной оферты» — .paywall-consent-link color var(--v4-act) (735-ui-v4-subscription.css:341-344); замер chromium песочный rgb(198,113,57) = --acs #c67139, контракт просит var(--ac) = #8a4a20. В синих наборах --ac и --acs совпадают (#1d5e96), поэтому там сходится; расходится в песочном и в песочном тёмном (--v4-act-text #e2a468 против --v4-act #cf8144). Подчёркивание на месте. Закроется сменой роли на var(--v4-act-text).",
+      "v": "=",
+      "f": ".paywall-consent-link color var(--v4-act-text) (735-ui-v4-subscription.css:345-352); замер chromium песочный rgb(138,74,32) = #8a4a20 = --ac, синий rgb(29,94,150) = #1d5e96; text-decoration underline.",
       "h": "56d9e6d52361"
     },
     "Подписка · проверьте заказ · 13": {
@@ -1379,8 +1357,8 @@
       "h": "1a8e874919aa"
     },
     "Подписка · экран · активна · текст": {
-      "v": "?",
-      "f": "Совпали одиннадцать фрагментов из двенадцати: heys_subscriptions_v1.js:1190 «Pro · активна»; 1191-1193 «до 3 октября»; 1194-1196 «7 990 ₽ в месяц · оплачено до этой даты»; 1206 «Что открыто»; 688-690 первые три строки списка; 766-780 «Само ничего не спишется», сноска про поддержку и «Написать в поддержку». Не сошлась четвёртая строка списка: ACTIVE_SCREEN_FEATURES[3] = «Созвон раз в неделю» (heys_subscriptions_v1.js:691), контракт просит «Недельный чек-ин с куратором» — тем же словом описан Pro в тарифах (heys_paywall_v1.js:101). Отдельно: сам экран в продукте не смонтирован, см. «вид · экран подписки · пробный период». Закроется правкой строки 691.",
+      "v": "=",
+      "f": "Двенадцатый фрагмент сведён: ACTIVE_SCREEN_FEATURES[3] = «Недельный чек-ин с куратором» (heys_subscriptions_v1.js:695) вместо «Созвон раз в неделю» — тем же словом Pro описан в тарифах (heys_paywall_v1.js:101), а «созвон» в каноне оффера принадлежит Pro Спорт (apps/landing/COPY_VOICE.md:122). Экран смонтирован в продукте (heys_user_tab_impl_v1.js:313-323,1646). Остальные одиннадцать фрагментов совпадали и раньше (heys_subscriptions_v1.js:1198-1221, 687-695, 774-788).",
       "h": "f907bddf0afc"
     },
     "Подписка · экран · только чтение · текст": {
@@ -1399,8 +1377,8 @@
       "h": "88d83d9b62d0"
     },
     "тач-цели": {
-      "v": "?",
-      "f": "Крестик приведён: .paywall-close 44×44 (735-ui-v4-subscription.css:38-56), замер chromium 44×44. Пилюля баннера «Подписка» — нет: класс .readonly-banner-pill (heys_paywall_v1.js:508-512) не имеет ни одного CSS-правила ни в одном файле, замер chromium с полным каскадом даёт 75,4×21 в дефолтном виде кнопки браузера (фон rgb(240,240,240), радиус 0); инвентарь ui-v4-check-touch-target-visible его не видит, потому что сканирует только CSS-файлы. Третье — .readonly-toast-action 81,4×26 (735-ui-v4-subscription.css:519-530), единственное нарушение зоны, которое инвентарь показывает: поднять его до 44 значит раздуть тост, который кадр рисует высотой 38, поэтому решение отдано дизайнеру. Строка держится, пока нет ответа по тосту и пока пилюля без правила.",
+      "v": "=",
+      "f": "Крестик .paywall-close 44×44 (735-ui-v4-subscription.css:38-57), замер chromium 44×44. Пилюля баннера получила правило .readonly-banner-pill (735-ui-v4-subscription.css:543-561): замер обеих палитр min-height 44px, поля 0 16px, радиус 999px — вместо прежних 75,4×21 дефолтной кнопки браузера. Третья цель снята решением дизайнера 6 сентября: «Подписка» в тосте больше не кнопка, а span (heys_paywall_v1.js:601-613), цель — весь тост min-height 44px (735-ui-v4-subscription.css:563-587); инвентарь ui-v4-check-touch-target-visible больше не показывает .readonly-toast-action. Иконка канала 34 внутри ряда 52 — не цель по самой строке.",
       "h": "ff5ce40275ff"
     },
     "Подписка · проверьте заказ · 14": {
