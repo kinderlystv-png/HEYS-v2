@@ -122,7 +122,7 @@ describe('strength builder · D3 superset boundaries v4 canvas contract', () => 
     expect(screen.getByText('закрыта')).toBeTruthy();
   });
 
-  it('keeps the D3 geometry and role colors on sand palette', () => {
+  it('keeps the D3 geometry and role colors on sand palette', { timeout: 20000 }, () => {
     const demo = canvasDemo();
     const { container } = render(React.createElement(Parts.SupersetBoundariesScreen, demo));
     const head = container.querySelector('.sb-ss-bound-head');

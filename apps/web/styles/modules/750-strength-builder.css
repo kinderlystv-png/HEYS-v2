@@ -1271,6 +1271,18 @@
   margin-top: 9px;
 }
 
+/* B3 «Своё упражнение» ·08–17: contain for canvas-contract harness (tasks 141/156/172). */
+.sb-root.sb-screen:has(.sb-ex-name) {
+  contain: layout style paint;
+}
+
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-cd-row,
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-unit-badges,
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-badges,
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-row {
+  contain: layout style;
+}
+
 /* B3 «Своё упражнение» ·08–12: badge-row единиц (кадр .cd / .badge). */
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-cd-row {
   padding: 9px 0;

@@ -55,7 +55,7 @@ function compileCss(paletteName) {
     .replaceAll('var(--c1)', palette.c1)
     .replaceAll('var(--c2)', palette.c2)
     .replaceAll('var(--tx)', palette.tx)
-    .replaceAll('var(--ac)', palette.ac)
+    /* var(--ac) не трогаем: replaceAll ломает var(--ac, fallback) в 750-strength-builder.css. */
     .replaceAll('var(--acs)', palette.acs)
     .replaceAll('var(--on-acs)', palette.onAcs)
     .replaceAll('var(--ink, 32, 30, 29)', inkRgb)
@@ -95,6 +95,7 @@ function renderNewExercise(paletteName = 'sand') {
   }));
   const root = document.querySelector('.sb-root.sb-screen');
   Object.assign(root.style, {
+    '--ac': palette.ac,
     '--acs': palette.acs,
     '--on-acs': palette.onAcs,
     '--ink': inkRgb,

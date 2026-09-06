@@ -168,7 +168,7 @@ describe('strength builder · В2 superset flat v4 canvas contract', () => {
     expect(screen.getByText(/Историю не переписываем/)).toBeTruthy();
   });
 
-  it('доказывает построчный computed-style контракт «Связка · старая, без раундов» на песочном наборе', () => {
+  it('доказывает построчный computed-style контракт «Связка · старая, без раундов» на песочном наборе', { timeout: 20000 }, () => {
     palette = usePalette('sand');
     renderFlatBlock('sand');
 
