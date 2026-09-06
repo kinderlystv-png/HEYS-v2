@@ -95,8 +95,10 @@
     },
     "вид карточки и боксов кода": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:435-491 .heys-auth-pin-box 56×64 r16, цифра 26 px, точка 9 px; :290-334 поле телефона r16 h44 префикс 15/600 номер 17/600; :613-622 .heys-auth-key h46 r16. Решение 30.08: кегль 15/17, не 13. Отступление: overlay :508-513 align-items center, кадр baseline у поля телефона",
-      "h": "570900da9624"
+      "f": "733-ui-v4-login-theme.css:435-491 .heys-auth-pin-box 56×64 r16, цифра 26 px, точка 9 px; :290-334 поле телефона r16 h44 префикс 15/600 номер 17/600; :613-622 .heys-auth-key h46 r16. Решение 30.08: кегль 15/17, не 13. Отступление: overlay :508-513 align-items center, кадр baseline у поля телефона Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "570900da9624",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "вид своей клавиатуры": {
       "v": "=",
@@ -347,8 +349,10 @@
     },
     "слова на экране": {
       "v": "≠",
-      "f": "heys_login_screen_v1.js:272-275 — обычный отказ «Код не подошёл — попробуйте ещё раз», блокировка отдельной карточкой :1199; обе строки про подпись в heys_client_access_code_setup_v1.js:502-511. Сервер не отдаёт остаток попыток — «Осталось N попыток» в login_client нет; контракт «ошибка при подписании» ждёт счётчик",
-      "h": "ab64967a4e5d"
+      "f": "heys_login_screen_v1.js:272-275 — обычный отказ «Код не подошёл — попробуйте ещё раз», блокировка отдельной карточкой :1199; обе строки про подпись в heys_client_access_code_setup_v1.js:502-511. Сервер не отдаёт остаток попыток — «Осталось N попыток» в login_client нет; контракт «ошибка при подписании» ждёт счётчик Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "ab64967a4e5d",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "возврат на экран и прокрутка": {
       "v": "=",
@@ -387,8 +391,10 @@
     },
     "Вход в анкету · 05": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:227-229 .heys-auth-card form.space-y-6 > .space-y-3:first-child — margin-top 22px; кадр ·05 просит 14px (intake-override нет)",
-      "h": "4129f5adae61"
+      "f": "733-ui-v4-login-theme.css:227-229 .heys-auth-card form.space-y-6 > .space-y-3:first-child — margin-top 22px; кадр ·05 просит 14px (intake-override нет) Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "4129f5adae61",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход в анкету · 06": {
       "v": "=",
@@ -432,8 +438,10 @@
     },
     "Вход в анкету · 14": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — padding 11/16, 11.5px/600, background transparent; кадр ·14 просит 13/16, 12px/600 и заливку на stop-кадре ik1",
-      "h": "837514ab3b8e"
+      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — padding 11/16, 11.5px/600, background transparent; кадр ·14 просит 13/16, 12px/600 и заливку на stop-кадре ik1 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "837514ab3b8e",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход в анкету · 15": {
       "v": "=",
@@ -442,13 +450,17 @@
     },
     "Вход в анкету · 16": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:734-737 intake .heys-auth-key height 42 совпал; :622 border-radius 16px против 14px кадра",
-      "h": "7edbb8bd23fb"
+      "f": "733-ui-v4-login-theme.css:734-737 intake .heys-auth-key height 42 совпал; :622 border-radius 16px против 14px кадра Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "7edbb8bd23fb",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход в анкету · 17": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:734-737 intake .heys-auth-key--delete height 42 совпал; :622 border-radius 16px против 14px кадра",
-      "h": "8bf1ba55b974"
+      "f": "733-ui-v4-login-theme.css:734-737 intake .heys-auth-key--delete height 42 совпал; :622 border-radius 16px против 14px кадра Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "8bf1ba55b974",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход в анкету · 18": {
       "v": "=",
@@ -542,23 +554,31 @@
     },
     "Вход · выбор свёрнут · 15": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — width 100%, margin-top 14, radius 16, 11.5px/600 var(--v4-warn-text); background transparent, кадр ·15 рисует заливку #f3e0d2 на stop t1",
-      "h": "8d741fa3c065"
+      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — width 100%, margin-top 14, radius 16, 11.5px/600 var(--v4-warn-text); background transparent, кадр ·15 рисует заливку #f3e0d2 на stop t1 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "8d741fa3c065",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · выбор свёрнут · 16": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:582-588 .heys-auth-keypad — gap 7px, margin-top 18px; кадр ·16 просит gap 8px",
-      "h": "a603f2b08a56"
+      "f": "733-ui-v4-login-theme.css:582-588 .heys-auth-keypad — gap 7px, margin-top 18px; кадр ·16 просит gap 8px Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "a603f2b08a56",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · выбор свёрнут · 17": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key — height 46, border-radius 16, background var(--v4-surface); кадр ·17 просит radius 14",
-      "h": "379a34d0fa64"
+      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key — height 46, border-radius 16, background var(--v4-surface); кадр ·17 просит radius 14 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "379a34d0fa64",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · выбор свёрнут · 18": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key--delete — height 46, border-radius 16; кадр ·18 просит radius 14 и фон #efe3cf",
-      "h": "88c88bd0a2ad"
+      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key--delete — height 46, border-radius 16; кадр ·18 просит radius 14 и фон #efe3cf Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "88c88bd0a2ad",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · выбор свёрнут · 19": {
       "v": "=",
@@ -777,23 +797,31 @@
     },
     "Вход · ошибка и выбор · 14": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — как ·15: transparent bg, кадр рисует заливку",
-      "h": "e8a091c8672b"
+      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — как ·15: transparent bg, кадр рисует заливку Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "e8a091c8672b",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · ошибка и выбор · 15": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:582-588 .heys-auth-keypad — gap 7px; кадр ·15 просит 8px",
-      "h": "a603f2b08a56"
+      "f": "733-ui-v4-login-theme.css:582-588 .heys-auth-keypad — gap 7px; кадр ·15 просит 8px Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "a603f2b08a56",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · ошибка и выбор · 16": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key — h46 r16; кадр ·16 просит r14",
-      "h": "379a34d0fa64"
+      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key — h46 r16; кадр ·16 просит r14 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "379a34d0fa64",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · ошибка и выбор · 17": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key--delete — h46 r16; кадр ·17 просит r14",
-      "h": "88c88bd0a2ad"
+      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key--delete — h46 r16; кадр ·17 просит r14 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "88c88bd0a2ad",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · ошибка и выбор · 18": {
       "v": "=",
@@ -917,18 +945,24 @@
     },
     "Вход · блокировка · 17": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:582-588 .heys-auth-keypad — gap 7px, margin-top 18px; кадр ·17 просит gap 8px",
-      "h": "a603f2b08a56"
+      "f": "733-ui-v4-login-theme.css:582-588 .heys-auth-keypad — gap 7px, margin-top 18px; кадр ·17 просит gap 8px Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "a603f2b08a56",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · блокировка · 18": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key — h46 r16 bg var(--v4-surface); кадр ·18 просит r14",
-      "h": "54cf14534caa"
+      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key — h46 r16 bg var(--v4-surface); кадр ·18 просит r14 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "54cf14534caa",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · блокировка · 19": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key--delete — h46 r16; кадр ·19 просит r14, delete bg #efe3cf",
-      "h": "fb88e4333e29"
+      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key--delete — h46 r16; кадр ·19 просит r14, delete bg #efe3cf Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "fb88e4333e29",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · блокировка · 20": {
       "v": "=",
@@ -1037,8 +1071,10 @@
     },
     "Вход · закрыт · 14": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:693-701 .heys-auth-notice — radius 16, padding 13/14, margin-top 16; кадр ·14 просит radius 20, padding 20/18",
-      "h": "9b4cf7529c6f"
+      "f": "733-ui-v4-login-theme.css:693-701 .heys-auth-notice — radius 16, padding 13/14, margin-top 16; кадр ·14 просит radius 20, padding 20/18 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "9b4cf7529c6f",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · закрыт · 15": {
       "v": "=",
@@ -1142,8 +1178,10 @@
     },
     "Свой код · первый вход · 11": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:693-701 .heys-auth-notice — radius 16, padding 13/14; кадр ·11 просит radius 20, padding 16/17 (margin-top 16 совпал)",
-      "h": "a9d7dc540cc1"
+      "f": "733-ui-v4-login-theme.css:693-701 .heys-auth-notice — radius 16, padding 13/14; кадр ·11 просит radius 20, padding 16/17 (margin-top 16 совпал) Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "a9d7dc540cc1",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Свой код · первый вход · 12": {
       "v": "=",
@@ -1159,8 +1197,10 @@
     },
     "Свой код · первый вход · 14": {
       "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:511 — вторая фраза в том же .heys-auth-reset-note; кадр ·14 — отдельная строка margin-top 9",
-      "h": "70c80a1ba6ed"
+      "f": "heys_client_access_code_setup_v1.js:511 — вторая фраза в том же .heys-auth-reset-note; кадр ·14 — отдельная строка margin-top 9 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "70c80a1ba6ed",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Свой код · первый вход · 15": {
       "v": "=",
@@ -1385,8 +1425,10 @@
     },
     "Новый код после сброса · 11": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:693-701 .heys-auth-notice — radius 16 padding 13/14; кадр ·11 просит radius 20 padding 15/17",
-      "h": "6efcccad39f0"
+      "f": "733-ui-v4-login-theme.css:693-701 .heys-auth-notice — radius 16 padding 13/14; кадр ·11 просит radius 20 padding 15/17 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "6efcccad39f0",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Новый код после сброса · 12": {
       "v": "=",
@@ -1395,8 +1437,10 @@
     },
     "Новый код после сброса · 13": {
       "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:597 — кнопка «Продолжить» (busy «Сохраняем…»); кадр ·13 просит «Сохранить код»",
-      "h": "2dd84c5f3a4d"
+      "f": "heys_client_access_code_setup_v1.js:597 — кнопка «Продолжить» (busy «Сохраняем…»); кадр ·13 просит «Сохранить код» Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "2dd84c5f3a4d",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Коды не совпали · 01": {
       "v": "=",
@@ -1492,8 +1536,10 @@
     },
     "Код слишком простой · 07": {
       "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:505-507 .heys-auth-reset-note — radius 20 padding 15/17; кадр ·07 просит radius 16 padding 13/15",
-      "h": "b44bcbdd1d5a"
+      "f": "heys_client_access_code_setup_v1.js:505-507 .heys-auth-reset-note — radius 20 padding 15/17; кадр ·07 просит radius 16 padding 13/15 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "b44bcbdd1d5a",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Код слишком простой · 08": {
       "v": "=",
@@ -1814,8 +1860,10 @@
     },
     "Подпись · готово · 17": {
       "v": "≠",
-      "f": "heys_consents_v1.js:1528-1530 — после подписи кнопка «Продолжить»; кадр ·17 просит «Готово»",
-      "h": "4e92792c3f6d"
+      "f": "heys_consents_v1.js:1528-1530 — после подписи кнопка «Продолжить»; кадр ·17 просит «Готово» Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "4e92792c3f6d",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · Вход куратора · 01": {
       "v": "=",
@@ -1954,13 +2002,17 @@
     },
     "Выбор · мягкая бежевая · 15": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — transparent bg; кадр ·15 заливка на stop-кадре",
-      "h": "8d741fa3c065"
+      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — transparent bg; кадр ·15 заливка на stop-кадре Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "8d741fa3c065",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Выбор · мягкая бежевая · 16": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:1191-1194 .heys-login-theme--login-only.is-expanded .heys-login-theme__panel — padding 16/14/14 radius 20; кадр ·16 просит padding 16 со всех сторон",
-      "h": "a60592e59acc"
+      "f": "733-ui-v4-login-theme.css:1191-1194 .heys-login-theme--login-only.is-expanded .heys-login-theme__panel — padding 16/14/14 radius 20; кадр ·16 просит padding 16 со всех сторон Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "a60592e59acc",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Выбор · мягкая бежевая · 17": {
       "v": "=",
@@ -1994,18 +2046,24 @@
     },
     "Выбор · мягкая бежевая · 23": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — миниатюра периода 7/14/30; кадр ·23 просит swatch-точку 15×15 #c67139 (733:1159-1162 .heys-login-theme__dot 8×8 — только кнопка ·35-37)",
-      "h": "5f5e950cb03d"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — миниатюра периода 7/14/30; кадр ·23 просит swatch-точку 15×15 #c67139 (733:1159-1162 .heys-login-theme__dot 8×8 — только кнопка ·35-37) Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "5f5e950cb03d",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Выбор · мягкая бежевая · 24": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет второй точки #7a8a5e 15×15; кадр ·24",
-      "h": "02df434b24b8"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет второй точки #7a8a5e 15×15; кадр ·24 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "02df434b24b8",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Выбор · мягкая бежевая · 25": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет ring-dot 15×15; кадр ·25 (контурная точка только у .heys-login-theme__dot 8×8 в footer)",
-      "h": "a5d95d47c313"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет ring-dot 15×15; кадр ·25 (контурная точка только у .heys-login-theme__dot 8×8 в footer) Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "a5d95d47c313",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Выбор · мягкая бежевая · 26": {
       "v": "=",
@@ -2019,18 +2077,24 @@
     },
     "Выбор · мягкая бежевая · 28": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет синей точки 15×15 #2e7cc0; кадр ·28",
-      "h": "c7614bb5943f"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет синей точки 15×15 #2e7cc0; кадр ·28 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "c7614bb5943f",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Выбор · мягкая бежевая · 29": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет точки #3e9a6b 15×15; кадр ·29",
-      "h": "d382f1cf6c0a"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет точки #3e9a6b 15×15; кадр ·29 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "d382f1cf6c0a",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Выбор · мягкая бежевая · 30": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет ring-dot синего набора 15×15; кадр ·30",
-      "h": "178399564ab3"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini — нет ring-dot синего набора 15×15; кадр ·30 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "178399564ab3",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Выбор · мягкая бежевая · 31": {
       "v": "=",
@@ -2430,13 +2494,17 @@
     },
     "Оформление внутри приложения · 72": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:465-513 — .heys-login-theme__panel раскрывается на месте (hidden: !expanded), без scrim rgba(32,30,29,.34); кадр ·72 bottom-sheet поверх затемнения",
-      "h": "fd2f5d2dc8ae"
+      "f": "heys_login_theme_picker_v1.js:465-513 — .heys-login-theme__panel раскрывается на месте (hidden: !expanded), без scrim rgba(32,30,29,.34); кадр ·72 bottom-sheet поверх затемнения Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "fd2f5d2dc8ae",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 73": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:1191-1194 .heys-login-theme__panel — radius 20 padding 16/14/14 in-place; кадр ·73 absolute sheet radius 26/26/28/28 padding 20/18/22",
-      "h": "d6540914d6e5"
+      "f": "733-ui-v4-login-theme.css:1191-1194 .heys-login-theme__panel — radius 20 padding 16/14/14 in-place; кадр ·73 absolute sheet radius 26/26/28/28 padding 20/18/22 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "d6540914d6e5",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 74": {
       "v": "≠",
@@ -2465,18 +2533,24 @@
     },
     "Оформление внутри приложения · 79": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini в soft-card; кадр ·79 точка 15×15 #c67139",
-      "h": "5f5e950cb03d"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini в soft-card; кадр ·79 точка 15×15 #c67139 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "5f5e950cb03d",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 80": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·80 точка #7a8a5e 15×15",
-      "h": "02df434b24b8"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·80 точка #7a8a5e 15×15 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "02df434b24b8",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 81": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·81 ring-dot 15×15",
-      "h": "a5d95d47c313"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·81 ring-dot 15×15 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "a5d95d47c313",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 82": {
       "v": "=",
@@ -2490,18 +2564,24 @@
     },
     "Оформление внутри приложения · 84": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·84 точка #2e7cc0 15×15",
-      "h": "c7614bb5943f"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·84 точка #2e7cc0 15×15 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "c7614bb5943f",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 85": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·85 точка #3e9a6b 15×15",
-      "h": "d382f1cf6c0a"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·85 точка #3e9a6b 15×15 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "d382f1cf6c0a",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 86": {
       "v": "≠",
-      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·86 ring-dot синего 15×15",
-      "h": "178399564ab3"
+      "f": "heys_login_theme_picker_v1.js:116-128 .heys-login-theme__soft-mini; кадр ·86 ring-dot синего 15×15 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "178399564ab3",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 87": {
       "v": "=",
@@ -2520,8 +2600,10 @@
     },
     "Оформление внутри приложения · 90": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:1293-1296 .heys-login-theme__chip--mode — padding 10/6 font 11.5px; кадр ·90 padding 13/0 font 12.5px",
-      "h": "38786d41d916"
+      "f": "733-ui-v4-login-theme.css:1293-1296 .heys-login-theme__chip--mode — padding 10/6 font 11.5px; кадр ·90 padding 13/0 font 12.5px Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "38786d41d916",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Оформление внутри приложения · 91": {
       "v": "=",
@@ -3900,8 +3982,10 @@
     },
     "Свой код · первый вход · текст": {
       "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:502-511 — заголовок/пояснение совпали; две строки плашки подписи склеены в .heys-auth-reset-note, кадр разносит ·13/·14",
-      "h": "95a75aae17b5"
+      "f": "heys_client_access_code_setup_v1.js:502-511 — заголовок/пояснение совпали; две строки плашки подписи склеены в .heys-auth-reset-note, кадр разносит ·13/·14 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "95a75aae17b5",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Свой код · подтверждение · текст": {
       "v": "=",
@@ -3915,8 +3999,10 @@
     },
     "Новый код после сброса · текст": {
       "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:67-72,487 — заголовок/пояснение/плашка совпали; кнопка «Продолжить» (:597) вместо «Сохранить код» кадра",
-      "h": "d10d6c919e24"
+      "f": "heys_client_access_code_setup_v1.js:67-72,487 — заголовок/пояснение/плашка совпали; кнопка «Продолжить» (:597) вместо «Сохранить код» кадра Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "d10d6c919e24",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Коды не совпали · текст": {
       "v": "=",
@@ -3925,8 +4011,10 @@
     },
     "Код слишком простой · текст": {
       "v": "≠",
-      "f": "heys_client_access_code_setup_v1.js:506-507 — перечень в .heys-auth-reset-note одной плашкой; кадр отдельная сноска про локальную проверку",
-      "h": "3fa2ff0e4746"
+      "f": "heys_client_access_code_setup_v1.js:506-507 — перечень в .heys-auth-reset-note одной плашкой; кадр отдельная сноска про локальную проверку Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "3fa2ff0e4746",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подпись документа · текст": {
       "v": "=",
@@ -3940,8 +4028,10 @@
     },
     "Подпись · готово · текст": {
       "v": "≠",
-      "f": "heys_consents_v1.js:1400-1520 — слова листа совпали; кнопка «Продолжить» (:1528) вместо «Готово»",
-      "h": "da4ac357241a"
+      "f": "heys_consents_v1.js:1400-1520 — слова листа совпали; кнопка «Продолжить» (:1528) вместо «Готово» Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "da4ac357241a",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Вход · Вход куратора · текст": {
       "v": "=",

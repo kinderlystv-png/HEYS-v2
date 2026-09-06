@@ -27,8 +27,10 @@
     },
     "вид · служебный лист": {
       "v": "≠",
-      "f": "Аудит 2026-09-04: именованная строка — .row имя/значение + пилюли cache/logout; кадр и runtime — advice-service-list без .row и пилюль (day/_advice.js:485-526; 400-water-and-hydration.css:2317-2353). Пакет 81faced28 data-v не менял. Нужна синхронизация canvas.",
-      "h": "715d0561ac5d"
+      "f": "Аудит 2026-09-04: именованная строка — .row имя/значение + пилюли cache/logout; кадр и runtime — advice-service-list без .row и пилюль (day/_advice.js:485-526; 400-water-and-hydration.css:2317-2353). Пакет 81faced28 data-v не менял. Нужна синхронизация canvas. Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "h": "715d0561ac5d",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "палитры": {
       "v": "=",
