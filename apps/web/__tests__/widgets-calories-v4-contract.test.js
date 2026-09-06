@@ -53,7 +53,7 @@ describe('Калории · сведённые stop-кадры', () => {
     expect(contractValue(canvas, 'Калории · Как сейчас · 03'))
       .toBe('«642» — моноцифры: шрифт 600 34px/.9 Figtree, цвет var(--ac), трекинг -.035em');
     expect(contractValue(canvas, 'Калории · Как сейчас · 06'))
-      .toBe('высота 6px, радиус 999px, фон rgba(var(--ink),.22)');
+      .toBe('высота 6px, радиус 999px, фон rgba(var(--ink),.1)');
     expect(contractValue(canvas, 'Калории · Как сейчас · 11'))
       .toBe('«съедено» — шрифт 500 8.5px/1 Figtree, цвет var(--ink-2)');
   });

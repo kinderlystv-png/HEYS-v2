@@ -14758,7 +14758,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   position: relative;
   height: 7px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.07);
+  background: rgba(var(--v4-ink-rgb), 0.07); /* v4-intentional */
   margin-top: auto;
 }
 
@@ -14767,7 +14767,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   top: 0;
   bottom: 0;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.13);
+  background: rgba(var(--v4-ink-rgb), 0.13); /* v4-intentional */
 }
 
 .widget-v4-sleep-window__actual {

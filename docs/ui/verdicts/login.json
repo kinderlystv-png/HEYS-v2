@@ -4039,7 +4039,7 @@
     },
     "тач-цели": {
       "v": "?",
-      "f": "Строка говорит про стопку у плавающей кнопки, и там долг живой: в продукте .widgets-fab-left 40×40 (730-widgets-dashboard.css:2653) и .widgets-fab-global 36×36 (:3530) — обе ниже 44 видимым размером, и гейт считает их в зоне home-widgets, а не здесь. По самой login инвентарь 6 сентября даёт 9 нарушений и 2 строки «ширина принята без замера» (.heys-login-theme__soft-card высотой 52, .heys-supp-revoke-backdrop высотой 44). Худшие: .consent-fulltext__retry 20,6, .heys-login-theme__done 28, .heys-login-theme__collapse 28×28 (733-ui-v4-login-theme.css:1244), .heys-auth-support-close 32×32. Строка закроется, когда стопка получит видимые 44 в 730-widgets-dashboard.css и инвентарь по login даст ноль.",
+      "f": "733-ui-v4-login-theme.css: все 9 прежних нарушений зоны закрыты 6 сентября (done/collapse/support-close/consent/retry/chip/doc-link/change-code min-height или 44×44). Инвентарь login — 0. Строка ещё называет стопку ФАБ 40→44 — .widgets-fab-left 40×40 и .widgets-fab-global 36×36 в 730-widgets-dashboard.css, зона home-widgets; без их подъёма строка не «=».",
       "h": "8d324ad2c8cd"
     },
     "кегль юридического текста": {

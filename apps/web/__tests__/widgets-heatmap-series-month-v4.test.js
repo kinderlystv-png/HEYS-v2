@@ -63,7 +63,7 @@ describe('Тепловая карта · Серия и Месяц целиком
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · 05'))
       .toBe('радиус 3px, фон var(--ovl)');
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · 06'))
-      .toBe('радиус 3px, фон rgba(var(--ink),.14)');
+      .toBe('радиус 3px, фон rgba(var(--ink),.08)');
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · 07'))
       .toBe('радиус 3px, фон var(--acs)');
     expect(contractValue(canvas, 'Тепловая карта · Месяц целиком · 08'))

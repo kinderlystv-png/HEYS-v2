@@ -231,28 +231,118 @@ describe('мёртвый второй pull-to-refresh снят', () => {
 });
 
 describe('слой обновления PWA взял общий знак ожидания', () => {
+  const paletteCss = fs.readFileSync(
+    path.join(WEB_DIR, 'styles/modules/002-ui-v4-palette-roles.css'), 'utf8',
+  );
+
+  function normColor(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw || raw === 'initial' || raw === 'transparent' || raw === 'rgba(0, 0, 0, 0)') return '';
+    if (raw.startsWith('#')) return raw;
+    const rgb = raw.match(/^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
+    if (!rgb) return raw;
+    const hex = (n) => Number(n).toString(16).padStart(2, '0');
+    return `#${hex(rgb[1])}${hex(rgb[2])}${hex(rgb[3])}`;
+  }
+
+  function mountPalette(themeId) {
+    document.documentElement.setAttribute('data-theme-id', themeId);
+    document.documentElement.setAttribute(
+      'data-theme',
+      themeId.includes('dark') ? themeId.replace('-dark', '') + '-dark' : themeId,
+    );
+    document.documentElement.setAttribute('data-palette', themeId.startsWith('blue') ? 'blue' : 'sand');
+  }
+
+  function mountStageIcon(platform) {
+    const src = platform.slice(
+      platform.indexOf('const UPDATE_ICON_PATHS = {'),
+      platform.indexOf('function renderStageDotItems(activeIndex)'),
+    );
+    // eslint-disable-next-line no-new-func
+    const parts = new Function(`${src}\nreturn renderStageIcon('downloading');`)();
+    const host = document.createElement('div');
+    host.className = 'heys-update-modal__icon';
+    host.innerHTML = `${parts.ring}<span class="heys-update-modal__glyph">${parts.glyph}</span>`;
+    document.body.appendChild(host);
+    return host;
+  }
+
   // Пятнадцатая сборка сняла развилку: строка pwa-update «вид иконки стадии»
   // теперь говорит «знак ожидания общий для продукта — круг 56 px заливкой
-  // --c2 <…> Своих глифов у стадий нет». Прежде слой держал свой знак (круг 60,
+  // --c2 <…> Своих глифов у стадий нет». Прежне слой держал свой знак (круг 60,
   // заливка акцента под 14 %, глиф 24/2,5 тоном #d98a4f) и спорил со строкой
   // spinners «форма» — тест фиксировал развилку, теперь фиксирует её исход.
   it('иконка стадии — круг 56 на --c2 с дугой в акценте, без своих глифов', () => {
     const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
     const platform = fs.readFileSync(path.join(WEB_DIR, 'heys_platform_apis_v1.js'), 'utf8');
+    const html = fs.readFileSync(path.join(WEB_DIR, 'index.html'), 'utf8');
+
     expect(components).toMatch(/\.heys-update-modal__icon \{[\s\S]*?width: 56px;/);
     expect(components).toMatch(
       /\.heys-update-modal__icon \{[\s\S]*?background: var\(--v4-hero, #efe3cf\);[\s\S]*?color: var\(--v4-act, #c67139\);/,
     );
     expect(components).not.toContain('background: rgba(217, 138, 79, 0.14);');
     expect(components).toContain('animation: heys-update-spin 1.1s linear infinite;');
-    // Дуга 26 обводкой 2,75, хвост под .16, тон — currentColor круга.
+
+    // Дуга 26 обводкой 2,75: хвост — круг ролью --v4-ink-30, дуга — currentColor.
     expect(platform).toContain("const UPDATE_ARC_PX = 26;");
     expect(platform).toContain("const UPDATE_ARC_STROKE = '2.75';");
-    expect(platform).toContain('<path d="M21 12a9 9 0 11-9-9" opacity=".16"/>');
+    expect(platform).toContain('stroke="var(--v4-ink-30');
+    expect(platform).toContain('<circle cx="12" cy="12" r="9.4"');
+    expect(platform).toContain('<path d="M12 3a9 9 0 019 9"/>');
+    expect(platform).not.toContain('opacity=".16"');
+
+    // Паритет с холодным стартом: один язык знака (круг --v4-ink-30 + дуга).
+    expect(html).toMatch(/heys-boot-mark__spin[\s\S]*?var\(--v4-ink-30/);
+    expect(html).not.toMatch(/heys-boot-mark__spin[\s\S]*?opacity="\.16"/);
+
     // Своих глифов у стадий нет: стрелка загрузки и круговые стрелки сняты.
     expect(platform).not.toContain("download: 'M12 4v10m0 0l-4-4m4 4l4-4M5 18h14'");
     expect(platform).not.toContain("refresh: 'M4 4v6h6M20 20v-6h-6");
     expect(platform).toContain("const glyph = s.done ? updateIconSvg('check', UPDATE_ARC_PX, UPDATE_ARC_STROKE) : '';");
+
+    const icon = mountStageIcon(platform);
+    const arc = icon.querySelector('.heys-update-modal__spinner');
+    expect(arc.getAttribute('width')).toBe('26');
+    expect(arc.getAttribute('stroke-width')).toBe('2.75');
+    expect(arc.querySelector('circle').getAttribute('stroke')).toContain('v4-ink-30');
+    expect(arc.querySelector('path').getAttribute('d')).toBe('M12 3a9 9 0 019 9');
+    expect(icon.querySelector('.heys-update-modal__glyph').innerHTML.trim()).toBe('');
+    icon.remove();
+  });
+
+  it('круг 56 и дуга следуют палитре на песочном и синем', () => {
+    const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
+    const platform = fs.readFileSync(path.join(WEB_DIR, 'heys_platform_apis_v1.js'), 'utf8');
+    const iconRule = components.slice(
+      components.indexOf('.heys-update-modal__icon {'),
+      components.indexOf('.heys-update-modal__icon--done {'),
+    );
+    const style = document.createElement('style');
+    style.textContent = `${paletteCss}\n${iconRule}`;
+    document.head.appendChild(style);
+
+    const cases = [
+      { theme: 'sand', disc: '#efe3cf', act: '#c67139' },
+      { theme: 'blue', disc: '#e2ecf6', act: '#1d5e96' },
+    ];
+
+    for (const c of cases) {
+      mountPalette(c.theme);
+      const icon = mountStageIcon(platform);
+      expect(normColor(getComputedStyle(icon).backgroundColor), c.theme).toBe(c.disc);
+      expect(normColor(getComputedStyle(icon).color), c.theme).toBe(c.act);
+      const arc = icon.querySelector('.heys-update-modal__spinner');
+      expect(arc.getAttribute('stroke'), `${c.theme} arc inherits`).toBe('currentColor');
+      expect(arc.querySelector('circle').getAttribute('stroke'), `${c.theme} tail role`).toContain('v4-ink-30');
+      icon.remove();
+    }
+
+    style.remove();
+    document.documentElement.removeAttribute('data-theme-id');
+    document.documentElement.removeAttribute('data-theme');
+    document.documentElement.removeAttribute('data-palette');
   });
 });
 

@@ -2359,14 +2359,6 @@
                 React.createElement('div', { className: 'advice-v4-toast-card__actions' },
                     React.createElement('button', {
                         type: 'button',
-                        className: 'advice-v4-toast-card__secondary',
-                        onClick: (e) => {
-                            e.stopPropagation();
-                            dismissToast && dismissToast();
-                        },
-                    }, 'Позже'),
-                    React.createElement('button', {
-                        type: 'button',
                         className: 'advice-v4-toast-card__primary',
                         onClick: (e) => {
                             e.stopPropagation();

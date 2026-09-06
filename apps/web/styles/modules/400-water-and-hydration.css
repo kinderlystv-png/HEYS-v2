@@ -123,6 +123,7 @@ html[data-theme-id="blue-dark"] .water-review {
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
+  min-height: 44px;
   margin-top: 9px;
   cursor: pointer;
 }
@@ -173,8 +174,9 @@ html[data-theme-id="blue-dark"] .water-review {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 2.75rem;
-  padding: 0 0.75rem;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 12px;
   border: none;
   border-radius: 999px;
   background: var(--wr-chip-fill);
@@ -252,6 +254,9 @@ html[data-theme-id="blue-dark"] .water-review {
 }
 
 .water-review__norm-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   border: none;
   padding: 0 0 1px;
   background: transparent;
@@ -303,8 +308,9 @@ html[data-theme-id="blue-dark"] .water-review {
 .water-review__chip--in-row {
   flex: none;
   margin-right: 6px;
-  height: 2.75rem;
-  padding: 0 0.75rem;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 12px;
   border-radius: 999px;
   box-shadow: inset 0 0 0 2px var(--wr-deep);
   font: 700 0.71875rem/1 Figtree, system-ui, sans-serif;
@@ -316,7 +322,8 @@ html[data-theme-id="blue-dark"] .water-review {
   justify-content: center;
   flex: 1;
   min-width: 0;
-  height: 2.75rem;
+  height: 44px;
+  min-height: 44px;
   padding: 0;
   border-radius: 12px;
   background: var(--wr-deep);
@@ -977,7 +984,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
 }
 
 .advice-list-dismiss-all {
-  min-height: 36px;
+  min-height: 44px;
   flex: 0 0 auto;
   max-width: 100%;
   padding: 6px 9px;
@@ -1010,9 +1017,9 @@ body.planning-tab-active .widgets-quick-fab-wrap {
 }
 
 .advice-list-close {
-  width: 32px;
-  height: 32px;
-  border-radius: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 22px;
   background: var(--bg-secondary, #f3f4f6);
   border: none;
   font-size: 18px;
@@ -1349,7 +1356,9 @@ body.planning-tab-active .widgets-quick-fab-wrap {
 }
 
 .advice-card-footnote-link {
-  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   padding: 0;
   border: none;
   background: transparent;
@@ -2250,6 +2259,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-service-back {
   border: none;
   background: transparent;
+  min-height: 44px;
+  min-width: 44px;
   padding: 4px;
   cursor: pointer;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
@@ -2790,9 +2801,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 .advice-v4-detail__close {
-  position: relative;
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   flex: none;
   border: none;
   border-radius: 999px;
@@ -2802,14 +2812,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-}
-
-/* Строка «области нажатия»: крестик — круг 30 px с областью 44. Припуск
-   прозрачный, чтобы не раздувать сам кружок; приём как у «Прочитать все». */
-.advice-v4-detail__close::after {
-  content: '';
-  position: absolute;
-  inset: -7px;
 }
 
 .advice-v4-detail__body {
@@ -3299,8 +3301,8 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
    «Совет · всплывающий»). --v4-hero — вторая (#efe3cf); тёмная тема ниже
    красит кнопку в #23201b, то есть в первую. */
 .advice-v4-science__close {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 999px;
   background: var(--v4-c1, #f7efe2);
@@ -3499,12 +3501,9 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   min-width: 0;
 }
 
-/* Крестику детали кадр даёт круг 30, крестику плашки 26; область до 44 обоим
-   добирает прозрачный припуск. Решение 6 сентября сняло припуск у пилюль-
-   действий зоны, но круглые крестики оно не называет ни целью, ни исключением
-   — вопрос дизайнеру записан в UI_V4_FINDINGS, до ответа приём сохранён. */
+/* Кадр «Совет · всплывающий · 12»: круг 26×26; кадр «Совет · всплывающий ·
+   рисунок 01»: глиф крестика 12×12 — размер SVG ниже, не общий 14 px детали. */
 .advice-v4-toast-card__close {
-  position: relative;
   width: 26px;
   height: 26px;
   flex: none;
@@ -3518,10 +3517,9 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   cursor: pointer;
 }
 
-.advice-v4-toast-card__close::after {
-  content: '';
-  position: absolute;
-  inset: -9px;
+.advice-v4-toast-card__close svg {
+  width: 12px;
+  height: 12px;
 }
 
 .advice-v4-toast-card__text {
@@ -3546,15 +3544,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   margin-top: 14px;
 }
 
-.advice-v4-toast-card__secondary,
+/* Кадр «Совет · всплывающий · 14»: одна «Открыть» во всю ширину ряда, высота
+   от 44 своим min-height, а не набранная из полей 11/11 с интерлиньяжем 1. */
 .advice-v4-toast-card__primary {
   flex: 1;
+  width: 100%;
   border: none;
   border-radius: 999px;
-  /* Горизонтальных полей нет: кнопки делят ряд поровну, и ненулевая база
-     при border-box увела бы доли от кадра — тот же приём, что у ряда оценки.
-     Кадр «Совет · всплывающий · 14»: высота от 44 своим min-height, а не
-     набранная из полей 11/11 с интерлиньяжем 1 — та давала 33,5. */
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -3562,17 +3558,6 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   padding: 0;
   font: 700 11.5px/1 Figtree, sans-serif;
   cursor: pointer;
-}
-
-.advice-v4-toast-card__secondary {
-  background: var(--v4-chip, #efe3cf);
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
-}
-
-/* Кадр «Совет · всплывающий · 14» (был 29): «Открыть» — фон --acs, текст --on-acs.
-   В синих наборах --v4-btn-on-act не заведена (контраст ждёт дизайнера) —
-   тот же приём, что у .advice-v4-science__primary. */
-.advice-v4-toast-card__primary {
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #fff5ef);
 }
@@ -3639,8 +3624,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   border-bottom-color: rgba(242, 237, 230, 0.08);
 }
 
-[data-theme$='dark'] .advice-v4-science__close,
-[data-theme$='dark'] .advice-v4-toast-card__secondary {
+[data-theme$='dark'] .advice-v4-science__close {
   background: var(--v4-c1, #23201b);
   color: rgba(242, 237, 230, 0.62);
 }

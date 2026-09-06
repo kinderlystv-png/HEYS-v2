@@ -2443,7 +2443,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           'div',
           { className: 'messenger-food-hint__text' },
           React.createElement('b', null, 'Время и вес в граммах'),
-          ' — тогда куратор соберёт день сразу, без уточняющих вопросов.',
+          ' — тогда куратор соберёт день сразу.',
         ),
         React.createElement(
           'div',

@@ -46,9 +46,9 @@ describe('Сон · Окно сна — сведённый кусок', () => {
       .toBe('«6,4 ч» — моноцифры: шрифт 700 10px/1 Figtree');
     expect(contractValue(canvas, 'Сон · Окно сна · 05')).toBe('отступ сверху auto');
     expect(contractValue(canvas, 'Сон · Окно сна · 06'))
-      .toBe('позиция relative, высота 7px, радиус 999px, фон var(--ink-30)');
+      .toBe('позиция relative, высота 7px, радиус 999px, фон rgba(var(--ink),.07)');
     expect(contractValue(canvas, 'Сон · Окно сна · 07'))
-      .toBe('позиция absolute, ширина 68%, радиус 999px, фон var(--ink-30)');
+      .toBe('позиция absolute, ширина 68%, радиус 999px, фон rgba(var(--ink),.13)');
     expect(contractValue(canvas, 'Сон · Окно сна · 08'))
       .toBe('позиция absolute, ширина 57%, радиус 999px, фон #7d98a6');
     expect(contractValue(canvas, 'Сон · Окно сна · 09'))
@@ -89,12 +89,12 @@ describe('Сон · Окно сна — сведённый кусок', () => {
     expect(track.height).toBe('7px');
     expect(track['border-radius']).toBe('999px');
     expect(track['margin-top']).toBe('auto');
-    expect(track.background).toBe('rgba(0, 0, 0, 0.07)');
+    expect(track.background).toBe('rgba(var(--v4-ink-rgb), 0.07)');
 
     const target = rules.get('.widget-v4-sleep-window__target');
     expect(target.position).toBe('absolute');
     expect(target['border-radius']).toBe('999px');
-    expect(target.background).toBe('rgba(0, 0, 0, 0.13)');
+    expect(target.background).toBe('rgba(var(--v4-ink-rgb), 0.13)');
     expect(target.width || '').toBe('');
 
     const actual = rules.get('.widget-v4-sleep-window__actual');

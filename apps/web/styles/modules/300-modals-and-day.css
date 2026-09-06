@@ -70,6 +70,10 @@
 
 .sleep-quality-preset {
   flex: 1;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 12px 8px;
   border-radius: 14px;
   border: 2px solid var(--v4-line, #e5e7eb);
@@ -414,6 +418,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 44px;
   padding: 10px 12px;
   background: var(--color-white);
   border: 1px solid #fce7f3;
@@ -600,6 +605,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
   padding: 8px 14px;
   background: var(--color-white);
   border: 1px solid #fce7f3;
@@ -2124,6 +2130,8 @@
 .ma-habit-cal-period-nav {
   flex-shrink: 0;
   margin: 0;
+  min-height: 44px;
+  min-width: 44px;
   padding: 2px 6px;
   border: none;
   border-radius: 0;
@@ -2183,6 +2191,10 @@
 }
 
 .ma-habit-cal-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   border-radius: 8px;
   border: 1px solid rgba(203, 213, 225, 0.9);
   background: var(--v4-hero, #f8fafc);
@@ -3522,6 +3534,11 @@
 
 .time-picker-cancel,
 .time-picker-confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
   background: none;
   border: none;
   font-size: 17px;
@@ -3779,6 +3796,11 @@
 }
 
 .quick-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 500;
@@ -3983,6 +4005,10 @@
 
 .mood-preset {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 8px 4px;
   border-radius: 12px;
   border: 1.5px solid var(--v4-line, #e5e7eb);
@@ -4179,6 +4205,10 @@
 }
 
 .mood-journal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 6px 14px;
   background: var(--color-gray-500);
   color: white;
@@ -4589,6 +4619,10 @@
 
 /* "Обычно вы едите" hint */
 .grams-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   text-align: center;
   padding: 8px 16px;
   font-size: 14px;
@@ -4619,6 +4653,10 @@
 }
 
 .kcal-calc-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   font-size: 14px;
   padding: 6px 12px;
   border: 1px solid var(--v4-line, #e0e0e0);
@@ -4681,8 +4719,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
   min-width: 72px;
+  min-height: 44px;
   padding: 10px 14px;
   border-radius: 12px;
   border: 2px solid var(--v4-line, #e5e5ea);
@@ -4975,6 +5015,10 @@
 }
 
 .grams-preset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 10px 16px;
   font-size: 15px;
   font-weight: 500;

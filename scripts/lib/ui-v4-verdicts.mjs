@@ -464,9 +464,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // стоят «?» — «области нажатия», глиф крестика плашки, галочка листа первого
     // совета (две строки), ручка листа и состав ряда кнопок плашки; все шесть
     // ждут дизайнера, записи в docs/ui/UI_V4_FINDINGS.md.
-    // 06.09, пакет 44 + legacy touch: «Настройки советов · 09» typed canvas-conflict;
-    // typedMismatch 5 → 6.
-    typedMismatch: [6, 'a288c63f94557aa0'],
+    // 06.09, пакет 42: шесть строк «?» закрыты — 3 «=» (код) + 3 typed «≠»
+    // (ручка 14 % vs --v4-track 12 %; нативный чекбокс vs глиф кадра ×2).
+    // typedMismatch 6 → 9.
+    typedMismatch: [9, '1a095e24d3c5fcd4'],
     notApplicable: [20, '39987a10df8b26dc'],
   }),
   'undo-bar': Object.freeze({

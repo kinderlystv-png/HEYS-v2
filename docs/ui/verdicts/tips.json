@@ -32,8 +32,8 @@
       "naKind": "handoff"
     },
     "области нажатия": {
-      "v": "?",
-      "f": "Поимённо сошлось живым замером chromium 375 px на песочном И синем наборе: «Прочитать все» 44 (apps/web/styles/modules/400-water-and-hydration.css:2536), «Открыть» 44 (apps/web/styles/modules/400-water-and-hydration.css:3541), «Вернуть» 44 (apps/web/styles/modules/400-water-and-hydration.css:2210), «Понятно» детали 48 (apps/web/styles/modules/400-water-and-hydration.css:2894) и науки 48 (apps/web/styles/modules/400-water-and-hydration.css:3415), «Показать совет» 48 (apps/web/styles/modules/400-water-and-hydration.css:3072) — высота у всех задана своим min-height, поля только боковые; иконки шапки 44×44 при глифе 17 (apps/web/styles/modules/000-base-and-gamification.css:4433, NavIcon size:17 в apps/web/heys_gamification_bar_v1.js:1219 и :1247); карточка совета нажимается целиком (onClick на .advice-list-item-v4, apps/web/day/_advice.js:1531), полоса состояния — её ::before шириной 4 (apps/web/styles/modules/400-water-and-hydration.css:2678); тумблер 24 замерен. НЕ сошлось: строка говорит «расширителя области нажатия нет ни у одной», а прозрачный припуск ::after остался у двух круглых крестиков — плашки 26→44 (apps/web/styles/modules/400-water-and-hydration.css:3512) и детали 30→44 (apps/web/styles/modules/400-water-and-hydration.css:2809); ни целью, ни исключением строка их не называет. Закроется ответом дизайнера — вопрос заведён в docs/ui/UI_V4_FINDINGS.md.",
+      "v": "=",
+      "f": "400-water-and-hydration.css:2536 «Прочитать все» min-height 44, :3542 «Открыть» min-height 44, :2210 «Вернуть» 44, :2894/:3415 «Понятно» 48, :3072 «Показать совет» 48 — ::after снят; 000-base-and-gamification.css:4433 иконки шапки 44×44; крестик плашки 26×26 (:3506) и детали 30×30 (:2792) без расширителя; замер chromium 375 px sand+blue: toastClose 26×26, detailClose 30×30; day/_advice.js:1531 onClick на .advice-list-item-v4",
       "h": "3a3458addf15"
     },
     "доступность": {
@@ -1106,9 +1106,11 @@
       "h": "5ac0c78a6f6a"
     },
     "Оговорка · 07": {
-      "v": "?",
-      "f": "Три числа из четырёх сошлись: ручка 38×4 радиусом 999 — .advice-v4-disclaimer-card__handle (apps/web/styles/modules/400-water-and-hydration.css:3001), замер 38×4, radius 999. Не сошёлся тон: кадр просит rgba(0,0,0,.14), продукт берёт роль --v4-track, а она в наборе rgba(0,0,0,.12) — замер computed на песочном и синем даёт .12. Это тот же случай, что у дорожки тумблера настроек (отступление гейта apps/web/__tests__/tips-v4-canvas-razbor.test.js:41): ступени 14 % у набора нет, ближайшая 12 %. Закроется решением дизайнера — новая ступень или 12 % в кадре.",
-      "h": "7655b277846a"
+      "v": "≠",
+      "f": "400-water-and-hydration.css:3001 .advice-v4-disclaimer-card__handle — background var(--v4-track); 002-ui-v4-palette-roles.css:192 --v4-track rgba(0,0,0,.12); кадр «Оговорка · 07» data-v rgba(0,0,0,.14); замер chromium 375 px sand+blue: rgba(0, 0, 0, 0.12)",
+      "h": "7655b277846a",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "apps/web/styles/modules/002-ui-v4-palette-roles.css:192"
     },
     "Оговорка · 08": {
       "v": "=",
@@ -1381,8 +1383,8 @@
       "h": "163302844c74"
     },
     "Совет · всплывающий · рисунок 01": {
-      "v": "?",
-      "f": "Крестик плашки — собственный элемент зоны, а не значок чужого экрана (прежний факт звал его «значком экрана дня или нижнего меню»). Кадр даёт полю 12×12, продукт рисует общий глиф renderAdviceV4Icon('close') шириной 14 (apps/web/day/_advice.js:340-346), своего размера у плашки нет. Отступление записано в гейте apps/web/__tests__/tips-v4-canvas-razbor.test.js:33. Закроется вторым размером глифа либо решением дизайнера оставить 14.",
+      "v": "=",
+      "f": "400-water-and-hydration.css:3520 .advice-v4-toast-card__close svg — width/height 12px; замер chromium 375 px sand+blue: svg 12×12, круг 26×26; day/_advice.js:2357 renderAdviceV4Icon(close)",
       "h": "072df04810cc"
     },
     "Совет · всплывающий · рисунок 02": {
@@ -1569,14 +1571,18 @@
       "naKind": "foreign-zone"
     },
     "Оговорка · рисунок 01": {
-      "v": "?",
-      "f": "Кадр рисует галочку своим глифом — поле 12×12 обводкой 3,4 внутри квадрата 20. Продукт своего глифа не рисует вовсе: это нативный input[type=checkbox] с accent-color (apps/web/styles/modules/400-water-and-hydration.css:3057-3073, разметка apps/web/day/_advice.js:659-662) — галочку внутри рисует браузер, и её размер нам не принадлежит. Прежний факт «совпадает с глифом в renderAdviceV4Icon» неверен: такого глифа у листа первого совета нет. Закроется решением — оставить нативный чекбокс или завести свой глиф.",
-      "h": "072df04810cc"
+      "v": "≠",
+      "f": "Кадр data-v поле рисунка 12×12 обводкой 3,4; продукт day/_advice.js:659 input[type=checkbox] — 400-water-and-hydration.css:3057 width/height 20px, accent-color var(--v4-act); глиф рисует браузер, не продукт",
+      "h": "072df04810cc",
+      "reasonCode": "platform",
+      "decisionRef": "apps/web/day/_advice.js:659"
     },
     "Оговорка · рисунок 02": {
-      "v": "?",
-      "f": "Путь галочки M5 13l4 4L19 7 у листа первого совета в продукте не встречается: чекбокс нативный (apps/web/day/_advice.js:659-662), собственного path у него нет — глиф 'check' с этим путём (apps/web/day/_advice.js:289) рисуется только в панели оценки и плашке пустого состояния. Закроется тем же решением, что и «рисунок 01».",
-      "h": "cce2a37dac03"
+      "v": "≠",
+      "f": "Кадр data-v path M5 13l4 4L19 7; у листа первого совета собственного path нет — day/_advice.js:659 нативный checkbox; глиф check с этим path (:289) только в панели оценки и пустой плашке",
+      "h": "cce2a37dac03",
+      "reasonCode": "platform",
+      "decisionRef": "apps/web/day/_advice.js:659"
     },
     "Научное описание · рисунок 01": {
       "v": "=",
@@ -1649,8 +1655,8 @@
       "h": "45550a299b08"
     },
     "Совет · всплывающий · текст": {
-      "v": "?",
-      "f": "Три строки из четырёх совпали: текст совета и подпись «<категория> · тап — подробнее» подставляются в apps/web/day/_advice.js:2344-2347, кнопка «Открыть» — apps/web/day/_advice.js:2375. Не совпало: продукт держит в ряду ВТОРУЮ кнопку «Позже» (apps/web/day/_advice.js:2360-2367), а кадр после пакета 6 сентября рисует одну — «Открыть» во всю ширину ряда. Снятие кнопки это продуктовое решение, а не правка стиля; вопрос заведён в docs/ui/UI_V4_FINDINGS.md.",
+      "v": "=",
+      "f": "day/_advice.js:2344-2347 текст совета и «${categoryRu} · тап — подробнее»; :2360-2367 одна кнопка «Открыть»; кадр data-v «…› Открыть › Главная…» без «Позже»; закрытие — крестик :2351 dismissToast",
       "h": "0449b26d23c1"
     },
     "Советы · пусто · текст": {

@@ -130,13 +130,13 @@ export const PLAN_FEED_DOM_CONTRACTS = Object.freeze([
       color: 'var(--tx)',
     }, { expectedText: 'Запланировано куратором' }),
   }),
-  contract('11', '«День B · верх тела · Артём, 3 августа» — шрифт 500 11px/1.3 Figtree, цвет rgba(var(--ink),.56)', {
+  contract('11', '«День B · верх тела · Артём, 3 августа» — шрифт 500 11px/1.3 Figtree, цвет var(--ink-2)', {
     assertion: computedStyle(':scope .sb-plan-summary-copy > .sb-plan-meta', {
       fontWeight: '500',
       fontSize: '11px',
       lineHeight: '1.3',
       fontFamily: 'Figtree',
-      color: 'rgba(var(--ink),.56)',
+      color: 'var(--ink-2)',
     }, { expectedText: 'День B · верх тела · Артём, 3 августа' }),
   }),
   contract('12', '«план» — пилюля', {
@@ -167,14 +167,14 @@ export const PLAN_FEED_DOM_CONTRACTS = Object.freeze([
       color: 'var(--tx)',
     }, { locatorText: 'Жим лёжа', expectedText: 'Жим лёжа' }),
   }),
-  contract('16', '«4 × 8–12 · 75 кг» — моноцифры: шрифт 600 11px/1 Figtree, цвет rgba(var(--ink),.56)', {
+  contract('16', '«4 × 8–12 · 75 кг» — моноцифры: шрифт 600 11px/1 Figtree, цвет var(--ink-2)', {
     assertion: computedStyle(':scope .sb-plan-exercises > li > i', {
       fontWeight: '600',
       fontSize: '11px',
       lineHeight: '1',
       fontFamily: 'Figtree',
       fontVariantNumeric: 'tabular-nums',
-      color: 'rgba(var(--ink),.56)',
+      color: 'var(--ink-2)',
     }, { locatorText: '4 × 8–12 · 75 кг', expectedText: '4 × 8–12 · 75 кг' }),
   }),
   contract('17', 'зазор 7px, отступ сверху 12px', {
@@ -220,13 +220,13 @@ export const PLAN_FEED_DOM_CONTRACTS = Object.freeze([
       padding: '8px 0px',
     }),
   }),
-  contract('24', '«Пн» — шрифт 600 9.5px/1 Figtree, цвет rgba(var(--ink),.56)', {
+  contract('24', '«Пн» — шрифт 600 9.5px/1 Figtree, цвет var(--ink-2)', {
     assertion: computedStyle(':scope .sb-plan-week-days > .is-done > i', {
       fontWeight: '600',
       fontSize: '9.5px',
       lineHeight: '1',
       fontFamily: 'Figtree',
-      color: 'rgba(var(--ink),.56)',
+      color: 'var(--ink-2)',
     }, { expectedText: 'Пн' }),
   }),
   contract('25', '«✓» — шрифт 700 11px/1 Figtree, цвет var(--gr)', {
@@ -250,13 +250,13 @@ export const PLAN_FEED_DOM_CONTRACTS = Object.freeze([
       padding: '8px 0px',
     }, { match: 'all' }),
   }),
-  contract('27', '«—» — шрифт 700 11px/1 Figtree, цвет rgba(var(--ink),.56)', {
+  contract('27', '«—» — шрифт 700 11px/1 Figtree, цвет var(--ink-2)', {
     assertion: computedStyle(':scope .sb-plan-week-days > .is-rest > b', {
       fontWeight: '700',
       fontSize: '11px',
       lineHeight: '1',
       fontFamily: 'Figtree',
-      color: 'rgba(var(--ink),.56)',
+      color: 'var(--ink-2)',
     }, { match: 'all', expectedText: '—' }),
   }),
   contract('28', 'флекс 1, направление column, выравнивание center, зазор 6px, фон var(--c2), радиус 10px, поля 8px 0', {
@@ -280,7 +280,7 @@ export const PLAN_FEED_DOM_CONTRACTS = Object.freeze([
       color: 'var(--ac)',
     }, { match: 'all', expectedText: '●' }),
   }),
-  contract('30', 'зазор 12px, перенос строк wrap, отступ сверху 10px, шрифт 600 10.5px/1 Figtree, цвет rgba(var(--ink),.56)', {
+  contract('30', 'зазор 12px, перенос строк wrap, отступ сверху 10px, шрифт 600 10.5px/1 Figtree, цвет var(--ink-2)', {
     assertion: computedStyle(':scope .sb-plan-week-legend', {
       display: 'flex',
       gap: '12px',
@@ -290,7 +290,7 @@ export const PLAN_FEED_DOM_CONTRACTS = Object.freeze([
       fontSize: '10.5px',
       lineHeight: '1',
       fontFamily: 'Figtree',
-      color: 'rgba(var(--ink),.56)',
+      color: 'var(--ink-2)',
     }),
   }),
   contract('31', 'выравнивание center, зазор 5px', {

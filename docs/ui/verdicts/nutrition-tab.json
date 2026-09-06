@@ -3698,7 +3698,7 @@
     },
     "тач-цели": {
       "v": "?",
-      "f": "Цели, которые называет строка, держат 44, но зона не в нуле. Инвентарь 6 сентября (node scripts/ui-v4-check-touch-target-visible.mjs --inventory): 7 нарушений в nutrition-tab плюс одна строка «ширина принята без замера» — .nutrition-v4-sheet__row-main высотой 44. Все семь — в листе правки приёма, которого строка не перечисляет: .nutrition-v4-mini 43,2 px, .nutrition-v4-sheet__row-remove 44×44 с расширителем отрицательным полем, .nutrition-v4-sheet__row, __action, __tips-toggle, __repeat и __delete — высота 44 при нулевой измеренной ширине (732-ui-v4-nutrition.css). Сами перечисленные строкой цели проверены отдельно и держат видимые 44: чип позиции :1063 min-height 44, пилюля режима курса :1518 min-height 44. Строка закроется, когда инвентарь по зоне даст ноль и снимет строку «принято без замера».",
+      "f": "Перечисленные строкой цели держат 44: .nutrition-v4-chip :1063, supplements__chip :1605, sheet CTA — min-height 44. 6 сентября: .nutrition-v4-mini min-height 44; .nutrition-v4-sheet__row-remove без negative-margin expander. Остаток инвентаря 5 — лист правки приёма с шириной 0 в jsdom (строки «ширина принята без замера»): __row, __action, __tips-toggle, __repeat, __delete — высота 44, ширина не измерена. Строка «=» при нуле инвентаря.",
       "h": "46f478ecb59b"
     },
     "равный выбор, а не склонение": {

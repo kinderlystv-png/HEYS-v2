@@ -1604,7 +1604,7 @@
     },
     "тач-цели": {
       "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 400-water-and-hydration.css: .water-review__chip--quick/--in-row и .water-fab-vol — видимая высота 44px, ::after/::before expanders сняты; .water-fab/.fab-group .water-fab — 44×44; .water-custom-sheet__preset/__confirm — min-height 44px; water-add-v4-canvas-razbor.test.js",
+      "f": "400-water-and-hydration.css: контрактные .water-review__chip/--quick/--in-row и .water-fab-vol — height/min-height 44px (rem→px 6 сентября); .water-fab 44×44; custom-sheet preset/confirm min-height 44. Закрыты advice-list-close, detail/science close 44×44, footnote-link min-height 44. Остаток инвентаря 8: .ios-toggle 26px (тумблер — не цель по аналогии с cycle), advice-* ссылки 0×0 в jsdom, .advice-v4-disclaimer-card__check 25.8px. Строка «=» при нуле инвентаря water-add.",
       "h": "8a798d7f2a5c"
     }
   },

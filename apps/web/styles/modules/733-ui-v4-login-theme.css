@@ -680,6 +680,9 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 .heys-auth-link-btn:hover,
 .heys-auth-link-btn:focus,
 .heys-auth-link-btn:visited {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   border: 0;
   background: none;
   padding: 0;
@@ -1026,8 +1029,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 10px;
   background: var(--v4-surface, #f7efe2);
@@ -1211,7 +1214,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 .heys-login-theme__done {
-  min-height: 28px;
+  min-height: 44px;
   padding: 0 10px;
   border: 0;
   border-radius: 10px;
@@ -1242,8 +1245,8 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 .heys-login-theme__collapse {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border: 0;
   border-radius: 10px;
   background: color-mix(in srgb, var(--v4-ink-2, #64748b) 10%, transparent);
@@ -1273,7 +1276,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-login-theme__chip {
   flex: 1 1 0;
-  min-height: 38px;
+  min-height: 44px;
   padding: 12px 8px;
   border: 0;
   border-radius: 14px;
@@ -1291,7 +1294,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 }
 
 .heys-login-theme__chip--mode {
-  min-height: 38px;
+  min-height: 44px;
   padding: 10px 6px;
   font-size: 11.5px;
 }
@@ -1731,8 +1734,11 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 }
 
 .heys-auth-card--pep .heys-auth-change-code {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
+  min-height: 44px;
   margin-top: 14px;
   padding: 0;
   border: none;
@@ -1903,6 +1909,9 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 }
 
 .heys-consent-sign-sheet__doc-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   flex: none;
   border: 0;
   padding: 0;
@@ -2396,8 +2405,8 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 }
 
 .consent-fulltext__close {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   flex: none;
   display: flex;
   align-items: center;
@@ -2710,7 +2719,12 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 }
 
 .consent-fulltext__retry {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   margin-top: 12px;
+  padding: 0 8px;
   border: 0;
   background: transparent;
   color: var(--v4-sand-act-text, #8a4a20);

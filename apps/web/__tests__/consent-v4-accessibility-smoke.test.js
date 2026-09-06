@@ -8,9 +8,82 @@ import path from 'node:path';
 import React from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  getPlaywrightBrowser,
+  releasePlaywrightBrowserForSuite,
+  retainPlaywrightBrowserForSuite,
+} from './helpers/playwright-browser.mjs';
 
 const WEB_DIR = path.resolve(__dirname, '..');
+const MODULES_DIR = path.join(WEB_DIR, 'styles/modules');
+const LEGAL_DISCLOSURE_MIN_PX = 12.5;
+const LEGAL_DISCLOSURE_MIN_LH = 1.55;
+const INACTIVE_REASON_PX = 11.5;
+const INACTIVE_REASON_WEIGHT = '600';
+
+function fontTokens(font) {
+  const normalized = String(font || '').replace(/\s+/g, ' ').trim();
+  const sizeLh = normalized.match(/([\d.]+)px\/([\d.]+)/);
+  const weight = normalized.match(/\b([1-9]00)\b/);
+  return {
+    weight: weight ? weight[1] : null,
+    sizePx: sizeLh ? parseFloat(sizeLh[1], 10) : null,
+    lineHeight: sizeLh ? parseFloat(sizeLh[2], 10) : null,
+  };
+}
+
+function readTypography(style) {
+  const fromShorthand = fontTokens(style.font);
+  if (fromShorthand.sizePx != null) return fromShorthand;
+  const sizePx = style.fontSize ? parseFloat(style.fontSize, 10) : null;
+  const weight = style.fontWeight ? String(style.fontWeight) : null;
+  let lineHeight = null;
+  if (style.lineHeight && sizePx) {
+    const raw = String(style.lineHeight);
+    const lh = parseFloat(raw, 10);
+    if (raw.includes('px')) lineHeight = lh / sizePx;
+    else if (lh <= 4) lineHeight = lh;
+    else lineHeight = lh / sizePx;
+  }
+  return { weight, sizePx, lineHeight };
+}
+
+function loadPaletteCss() {
+  return ['001-design-tokens.css', '002-ui-v4-palette-roles.css']
+    .map((file) => fs.readFileSync(path.join(MODULES_DIR, file), 'utf8'))
+    .join('\n');
+}
+
+async function measureConsentTypography(palette) {
+  const page = await (await getPlaywrightBrowser()).newPage({ viewport: { width: 375, height: 812 } });
+  const css = loadPaletteCss();
+  await page.setContent(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${css}</style></head>
+<body style="margin:0;width:375px;background:var(--v4-hero,#efe3cf)">
+  <div id="hint" style="margin-top:8px;font:500 12.5px/1.55 Figtree,system-ui,sans-serif;color:var(--v4-ink-2,rgba(0,0,0,.55))">Оба документа открываются целиком</div>
+  <div id="reason" style="text-align:center;font:600 11.5px/1.45 Figtree,system-ui,sans-serif;color:var(--v4-ink-2,rgba(0,0,0,.55))">Откройте и дочитайте оба документа</div>
+</body></html>`, { waitUntil: 'domcontentloaded' });
+  await page.evaluate(({ theme, palette: pal, themeId }) => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-palette', pal);
+    document.documentElement.setAttribute('data-theme-id', themeId);
+  }, palette);
+  const out = await page.evaluate(() => {
+    const read = (id) => {
+      const style = getComputedStyle(document.getElementById(id));
+      return {
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        lineHeight: style.lineHeight,
+        color: style.color,
+      };
+    };
+    return { hint: read('hint'), reason: read('reason') };
+  });
+  await page.close();
+  return out;
+}
 
 // У каждого документа своя актуальная версия, и загрузчик её проверяет:
 // отдать всем один текст — значит получить экран «CDN отдаёт устаревшую версию».
@@ -207,7 +280,7 @@ describe('согласия · вид шага и подпись обязател
     }));
   }
 
-  it('пояснение стоит под заголовком шага: 12 px/500, тон чернил 55 %', () => {
+  it('пояснение под заголовком: юридический кегль ≥12,5/500, роль --v4-ink-2', () => {
     const host = renderScreen();
     const title = findByText(host, 'div', 'Согласия и условия');
     expect(title).toBeTruthy();
@@ -215,9 +288,10 @@ describe('согласия · вид шага и подпись обязател
     const hint = title.nextElementSibling;
     expect(hint.textContent).toContain('Оба документа открываются целиком');
     expect(hint.style.marginTop).toBe('8px');
-    expect(hint.style.font.replace(/\s+/g, ' ')).toContain('12px');
-    expect(hint.style.font).toContain('500');
-    expect(hint.style.color.replace(/\s/g, '')).toContain('.55');
+    const font = readTypography(hint.style);
+    expect(font.sizePx).toBeGreaterThanOrEqual(LEGAL_DISCLOSURE_MIN_PX);
+    expect(font.weight).toBe('500');
+    expect(font.lineHeight).toBeGreaterThanOrEqual(LEGAL_DISCLOSURE_MIN_LH);
   });
 
   it('обязательность названа словом, звёздочка уходит из озвучки', () => {
@@ -231,12 +305,12 @@ describe('согласия · вид шага и подпись обязател
     expect(word.textContent).toContain('обязательно');
   });
 
-  it('неактивная кнопка гаснет до 45 %, причина — 11,5/500 тоном 55 %', () => {
+  it('неактивная кнопка гаснет до 45 %, причина — 11,5/600 ролью --v4-ink-2', () => {
     const host = renderScreen();
     const reason = findByText(host, 'div', 'Откройте и дочитайте оба документа');
-    expect(reason.style.font).toContain('500');
-    expect(reason.style.font).toContain('11.5px');
-    expect(reason.style.color.replace(/\s/g, '')).toContain('.55');
+    const font = readTypography(reason.style);
+    expect(font.sizePx).toBe(INACTIVE_REASON_PX);
+    expect(font.weight).toBe(INACTIVE_REASON_WEIGHT);
 
     const primary = Array.from(host.querySelectorAll('button'))
       .find((el) => (el.textContent || '').includes('Подписать'));
@@ -258,6 +332,34 @@ describe('согласия · вид шага и подпись обязател
     const link = findByText(host, 'button', 'Читать полностью');
     expect(link.style.minHeight).toBe('44px');
   });
+});
+
+describe('согласия · chromium @375: юридический кегль и причина блокировки', { timeout: 90_000, hookTimeout: 60_000 }, () => {
+  beforeAll(() => {
+    retainPlaywrightBrowserForSuite();
+  });
+
+  afterAll(async () => {
+    await releasePlaywrightBrowserForSuite();
+  }, 90_000);
+
+  for (const palette of [
+    { id: 'sand', theme: 'sand', palette: 'sand', themeId: 'sand' },
+    { id: 'blue', theme: 'blue', palette: 'blue', themeId: 'blue' },
+  ]) {
+    it(`${palette.id}: пояснение ≥12,5/500 и причина 11,5/600 на --v4-ink-2`, { timeout: 90_000 }, async () => {
+      const { hint, reason } = await measureConsentTypography(palette);
+      expect(parseFloat(hint.fontSize, 10)).toBeGreaterThanOrEqual(LEGAL_DISCLOSURE_MIN_PX);
+      expect(hint.fontWeight).toBe('500');
+      expect(parseFloat(hint.lineHeight, 10) / parseFloat(hint.fontSize, 10))
+        .toBeGreaterThanOrEqual(LEGAL_DISCLOSURE_MIN_LH - 0.02);
+      expect(hint.color).toBe('rgba(0, 0, 0, 0.55)');
+
+      expect(parseFloat(reason.fontSize, 10)).toBe(INACTIVE_REASON_PX);
+      expect(reason.fontWeight).toBe(INACTIVE_REASON_WEIGHT);
+      expect(reason.color).toBe('rgba(0, 0, 0, 0.55)');
+    });
+  }
 });
 
 // ── Шторка подписи: фокус, устройство, галочка ────────────────────────────
