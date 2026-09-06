@@ -7817,8 +7817,9 @@ NOVA: 1
           React.createElement('button', {
             type: 'button',
             className: 'pe-barcode-clear',
-            onClick: () => updateField('barcode', '')
-          }, '×')
+            onClick: () => updateField('barcode', ''),
+            'aria-label': 'Очистить штрихкод'
+          }, React.createElement(CloseIcon))
         )
       ),
 
@@ -8835,7 +8836,7 @@ NOVA: 1
               className: 'aps-v4-portions-row__remove',
               onClick: () => handleRemovePortion(i),
               'aria-label': 'Удалить порцию'
-            }, '×')
+            }, React.createElement(CloseIcon))
           )
         )
       ),

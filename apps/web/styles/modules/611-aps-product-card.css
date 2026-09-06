@@ -1061,7 +1061,7 @@
 
 .aps-v4-harm-compare__card.is-active {
   background: var(--v4-ok-bg, #eaefe0);
-  box-shadow: inset 0 0 0 1.5px var(--v4-sand-ok-text, #5c6a45);
+  box-shadow: inset 0 0 0 1.5px var(--v4-ok-fill, #7a8a5e);
 }
 
 .aps-v4-harm-compare__card:not(.is-active) .aps-v4-harm-compare__label {
@@ -1093,11 +1093,11 @@
 }
 
 .aps-v4-harm-compare__card.is-active .aps-v4-harm-compare__label {
-  color: var(--v4-sand-ok-text, #5c6a45);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .aps-v4-harm-compare__card.is-active .aps-v4-harm-compare__value {
-  color: var(--v4-sand-ok-text, #5c6a45);
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .aps-v4-harm-compare__card--own .aps-v4-harm-compare__label {
@@ -1108,7 +1108,7 @@
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: var(--v4-sand-ok-text, #5c6a45);
+  background: var(--v4-ok-fill, #7a8a5e);
   margin: 9px auto 0;
 }
 
