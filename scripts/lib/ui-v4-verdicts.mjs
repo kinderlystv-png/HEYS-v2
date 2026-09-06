@@ -55,8 +55,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'app-splash': Object.freeze({
     // 06.09, task 152: одна legacy «≠» сведена в «=» (4 → 3); одна типизирована
     // reasonCode — typedMismatch 0 → 1.
-    mismatch: [3, '10eccc4e729a7f26'],
-    typedMismatch: [1, '5bfe3b9a7f7d936e'],
+    // 06.09, task 163: «Стык · загрузчик · рисунок 01» bulk-closed с reasonCode —
+    // mismatch 3 → 2, typedMismatch 1 → 2.
+    mismatch: [2, '78827577643609a9'],
+    typedMismatch: [2, 'c84fb543d9447749'],
     notApplicable: [42, 'bd8795aa1e28be3e'],
   }),
   // 3 сентября (вечер): числа те же, отпечаток другой. Пакет перевёл четыре
