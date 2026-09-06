@@ -1170,6 +1170,25 @@
         return sortByOrder(filterPlanningEntities(lsGet(KEYS.TASKS, []), 'task'));
     }
 
+    function ruPluralNewTasksLabel(count) {
+        const n = Math.abs(Number(count) || 0);
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return 'новая';
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'новые';
+        return 'новых';
+    }
+
+    function countSettingsNewTasks() {
+        return getTasks().filter((task) => task && task.status === 'todo').length;
+    }
+
+    function getSettingsTasksBadgeMeta() {
+        const count = countSettingsNewTasks();
+        if (count <= 0) return '';
+        return count + ' ' + ruPluralNewTasksLabel(count);
+    }
+
     function saveTasks(tasks, opts) {
         persistPlanningKey(KEYS.TASKS, sortByOrder(tasks || []), {
             reason: opts?.reason || 'tasks-save',
@@ -2943,6 +2962,8 @@
         updateProject,
         deleteProject,
         getTasks,
+        countSettingsNewTasks,
+        getSettingsTasksBadgeMeta,
         saveTasks,
         addTask,
         updateTask,

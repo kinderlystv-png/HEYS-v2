@@ -4682,6 +4682,23 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const settingsProductCount = Array.isArray(products)
             ? products.length
             : (window.HEYS?.products?.getAll?.() || []).length;
+        const [settingsTasksBadgeTick, setSettingsTasksBadgeTick] = React.useState(0);
+        React.useEffect(() => {
+            const bump = () => setSettingsTasksBadgeTick((value) => value + 1);
+            window.addEventListener('heys:planning-updated', bump);
+            window.addEventListener('heys:client-changed', bump);
+            return () => {
+                window.removeEventListener('heys:planning-updated', bump);
+                window.removeEventListener('heys:client-changed', bump);
+            };
+        }, []);
+        const settingsTasksBadgeMeta = React.useMemo(() => {
+            try {
+                return window.HEYS?.Planning?.Store?.getSettingsTasksBadgeMeta?.() || '';
+            } catch (_) {
+                return '';
+            }
+        }, [settingsTasksBadgeTick, settingsMenuOpen]);
         const settingsPushLabel = !sheetPushStatus
             ? ''
             : sheetPushStatus.swAvailable === false
@@ -5737,6 +5754,8 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         canUseTasksAsHome && renderSettingsRow({
                             key: 'tasks',
                             label: 'Задачи',
+                            meta: settingsTasksBadgeMeta,
+                            metaTone: settingsTasksBadgeMeta ? 'accent' : undefined,
                             onClick: () => closeSettingsAndSwitch('tasks', 'tab-settings-tasks-switch'),
                         }),
                         canUseBoardAsHome && renderSettingsRow({
