@@ -89,6 +89,39 @@
     return null;
   }
 
+  /** Есть ли у конструкторской силовой отправленная/активная правка. */
+  function builderTrainingHasProposal(tr) {
+    if (!tr) return false;
+    const plan = tr.plan || {};
+    let proposal = tr.proposal;
+    if (!proposal && plan.proposal) proposal = plan.proposal;
+    if (!proposal) {
+      const ks = HEYS.TrainingKernel;
+      if (ks && typeof ks.pendingPlanProposal === 'function') {
+        proposal = ks.pendingPlanProposal(tr);
+      }
+    }
+    if (!proposal) return false;
+    const sentAt = +proposal.proposedAt || +proposal.sentAt || +proposal.updatedAt || 0;
+    return !!(sentAt || proposal.status);
+  }
+
+  /**
+   * День клиента с proposal для статуса правки: сегодня, затем недавние дни окна.
+   * Панель не переключает currentClientId — ключ и client_id явные.
+   */
+  async function loadClientDayTrainingWithProposal(clientId, refDate) {
+    const ref = refDate instanceof Date ? refDate : new Date(refDate || Date.now());
+    const scanDays = Math.min(windowDays() || 21, 14);
+    for (let offset = 0; offset < scanDays; offset += 1) {
+      const d = new Date(ref);
+      d.setDate(d.getDate() - offset);
+      const training = await loadClientDayTraining(clientId, fmtDate(d));
+      if (training && builderTrainingHasProposal(training)) return training;
+    }
+    return null;
+  }
+
   /**
    * День клиента для статуса правки: scoped-кеш, затем curator getKV.
    * Панель не переключает currentClientId — ключ и client_id явные.
@@ -132,7 +165,10 @@
     const o = opts || {};
     const openEdit = HEYS.CuratorPanel && HEYS.CuratorPanel.openCuratorEditStatus;
     if (typeof openEdit !== 'function') return false;
-    const training = o.training || await loadClientDayTraining(o.clientId, o.dateStr || fmtDate(new Date()));
+    const training = o.training || await loadClientDayTrainingWithProposal(
+      o.clientId,
+      o.dateStr ? new Date(o.dateStr + 'T12:00:00') : new Date()
+    );
     if (!training) return false;
     return !!openEdit({
       clientName: o.clientName || o.name || '',
@@ -1019,7 +1055,9 @@
     localIsoDate: fmtDate,
     persistDecision,
     pickBuilderStrengthTraining,
+    builderTrainingHasProposal,
     loadClientDayTraining,
+    loadClientDayTrainingWithProposal,
     openPanelClientEditStatus
   });
 
