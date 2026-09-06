@@ -97,7 +97,7 @@
 }
 
 .drums-ft__header span {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
@@ -153,7 +153,7 @@
 }
 
 .drums-ft-stat span {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
 }
 
@@ -236,7 +236,7 @@
 
 .drums-ft-session-card span:not(.drums-ft-session-card__icon),
 .drums-ft-method p {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 13px;
   line-height: 1.35;
 }
@@ -263,7 +263,7 @@
 }
 
 .drums-ft-run-head span {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
 }
 
@@ -298,7 +298,7 @@
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 10px;
   background: var(--v4-bg, #fff);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   font-weight: 800;
 }
@@ -382,7 +382,7 @@
 
 .drums-ft-count-in span,
 .drums-ft-ramp span {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 13px;
 }
 
@@ -470,7 +470,7 @@
   right: 8px;
   bottom: 3px;
   left: 8px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 9px;
   font-style: normal;
   font-weight: 800;
@@ -540,7 +540,7 @@
 }
 
 .drums-ft-notation__stick {
-  fill: var(--v4-ink-2, #64748b);
+  fill: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 13px;
 }
 
@@ -551,7 +551,7 @@
 
 .drums-ft-notation__rest {
   fill: none;
-  stroke: var(--v4-ink-2, #64748b);
+  stroke: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.4;
@@ -646,7 +646,7 @@
   padding: 10px 12px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.06);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
   font-weight: 800;
 }
@@ -738,7 +738,7 @@
 }
 
 .drums-ft-technique__step span {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 11px;
   font-weight: 700;
   line-height: 1.25;
@@ -780,7 +780,7 @@
 
 .drums-ft-technique__pause path {
   fill: none;
-  stroke: var(--v4-ink-2, #64748b);
+  stroke: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   stroke-linecap: round;
   stroke-width: 5;
 }
@@ -816,7 +816,7 @@
 }
 
 .drums-ft-current li {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 13px;
 }
 
@@ -896,7 +896,7 @@
 .drums-ft-quality-card small,
 .drums-ft-quality-check small,
 .drums-ft-pain small {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 11px;
   font-weight: 700;
   line-height: 1.25;
@@ -946,7 +946,7 @@
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
   background: var(--v4-bg, #fff);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
   font-weight: 700;
 }
@@ -1042,7 +1042,7 @@
 
 .drums-ft-tap-test__head span,
 .drums-ft-tap-test__meta span {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   font-weight: 800;
 }
@@ -1156,7 +1156,7 @@
 [data-theme='dark'] .drums-ft-quality-card small,
 [data-theme='dark'] .drums-ft-quality-check small,
 [data-theme='dark'] .drums-ft-pain small {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme='dark'] .drums-ft-pain {
@@ -1175,7 +1175,7 @@
 
 [data-theme='dark'] .drums-ft-tempo-picker__side,
 [data-theme='dark'] .drums-ft-tempo-picker__wheel em {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme='dark'] .drums-ft-notation__staff line {
@@ -1322,7 +1322,7 @@
 
 .drums-ft-modal__hint {
   font-size: 13px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .drums-ft-modal__bpm {
@@ -1341,7 +1341,7 @@
 
 .drums-ft-modal__bpm span {
   font-size: 13px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 700;
 }
 
@@ -1417,7 +1417,7 @@
 
 [data-theme='dark'] .drums-ft-modal__hint,
 [data-theme='dark'] .drums-ft-modal__bpm span {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme='dark'] .drums-ft-modal__steps button,
@@ -1457,7 +1457,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
@@ -1480,7 +1480,7 @@
 }
 
 [data-theme='dark'] .drums-ft-technique__variant-btn {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 @media (hover: hover) {
@@ -1626,7 +1626,7 @@
   align-items: center;
   justify-content: center;
   padding: 12px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 11px;
   text-align: center;
   font-weight: 600;
@@ -1643,7 +1643,7 @@
 }
 
 [data-theme='dark'] .drums-ft-technique__video-fallback {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* === Progress CTA on home === */
@@ -1687,7 +1687,7 @@
 
 .drums-ft-progress-cta__body span {
   font-size: 12px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .drums-ft-progress-cta__chev {
@@ -1702,7 +1702,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-cta__body span {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* === Progress screen === */
@@ -1731,7 +1731,7 @@
 .drums-ft-progress-screen__head span {
   grid-column: 2;
   font-size: 12px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .drums-ft-back-btn {
@@ -1758,7 +1758,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-screen__head span {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme='dark'] .drums-ft-back-btn {
@@ -1830,7 +1830,7 @@
   display: block;
   margin-top: 4px;
   font-size: 11px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 700;
 }
 
@@ -1838,7 +1838,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 700;
 }
 
@@ -1855,7 +1855,7 @@
 [data-theme='dark'] .drums-ft-progress-card__head span,
 [data-theme='dark'] .drums-ft-progress-card__metric span,
 [data-theme='dark'] .drums-ft-progress-card__foot {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme='dark'] .drums-ft-progress-card__metric strong {
@@ -1914,7 +1914,7 @@
 
 .drums-ft-progress-target span {
   font-size: 12px;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme='dark'] .drums-ft-progress-target {
@@ -1922,7 +1922,7 @@
 }
 
 [data-theme='dark'] .drums-ft-progress-target span {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .drums-ft-chart-wrap {
@@ -1946,7 +1946,7 @@
 }
 
 .drums-ft-chart__label {
-  fill: var(--v4-ink-2, #64748b);
+  fill: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 10px;
 }
 
@@ -1988,7 +1988,7 @@
 }
 
 [data-theme='dark'] .drums-ft-chart__label {
-  fill: var(--v4-ink-2, #94a3b8);
+  fill: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme='dark'] .drums-ft-chart__dot.is-clean {
@@ -2039,7 +2039,7 @@
 }
 
 .drums-ft-history__date {
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 700;
   min-width: 56px;
 }
@@ -2078,7 +2078,7 @@
   padding: 16px;
   border-radius: 10px;
   background: rgba(15, 23, 42, 0.04);
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
   font-size: 12px;
   font-weight: 600;
@@ -2102,11 +2102,11 @@
 
 [data-theme='dark'] .drums-ft-history__date,
 [data-theme='dark'] .drums-ft-history__session {
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme='dark'] .drums-ft-history__empty {
   background: rgba(255, 255, 255, 0.05);
-  color: var(--v4-ink-2, #94a3b8);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
