@@ -239,6 +239,7 @@
   align-items: flex-start;
   gap: 10px;
   width: 100%;
+  min-height: 44px;
   padding: 12px 14px;
   background: var(--v4-bg, #ffffff);
   border: 1px solid var(--v4-line, #e5e7eb);
@@ -408,6 +409,7 @@
 /* Кнопка "Назад" */
 .yv-back {
   align-self: flex-start;
+  min-height: 44px;
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 500;
@@ -840,7 +842,7 @@
   border: none;
   border-radius: 14px;
   padding: 0 13px;
-  min-height: 42px;
+  min-height: 44px;
   display: flex;
   flex-direction: row;
   align-items: center;

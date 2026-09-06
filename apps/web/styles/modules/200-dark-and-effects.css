@@ -2630,6 +2630,7 @@
 
 .sleep-time-input {
   width: 100px;
+  min-height: 44px;
   padding: 8px 4px;
   border: 1px solid #fce7f3;
   border-radius: 8px;
@@ -2650,6 +2651,10 @@
 /* Кликабельное отображение времени */
 .sleep-time-display {
   min-width: 70px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 10px 12px;
   border: 1px solid #fce7f3;
   border-radius: 10px;
@@ -2731,7 +2736,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
+  min-height: 44px;
   padding: 7px 10px;
   border: 1px solid #f3e8ff;
   border-radius: 10px;

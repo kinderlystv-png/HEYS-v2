@@ -5384,8 +5384,8 @@
       "h": "978eceb00c02"
     },
     "тач-цели": {
-      "v": "?",
-      "f": "Атрибуция по префиксу класса/селектора (resolveTouchZone), не по упоминанию файла в вердикте: инвентарь зоны 25 на 6 сентября. Контрактные чипы .mc-supp-flow-chip min-height 44px — chromium 375px 44.8×44 (probe). Ползунки/колёса — named-exception range-slider/wheel-picker. Остаток: .sleep-breakdown-item 0×32, .mc-steps-advice-mark 44×0, .mc-rest-supp-head 100×0, .mc-header-btn 0×40.4. Ширина принята без замера: 76 глобально. node scripts/ui-v4-check-touch-target-visible.mjs --check",
+      "v": "=",
+      "f": "Атрибуция resolveTouchZone (префикс класса/селектора), не по файлу в вердикте. Инвентарь зоны 0 нарушений / 17 named-exception после правок 6 сентября. Высота — min-height 44px (не padding+line-height); margin −8 у .mc-close-btn и .mc-modal--daily .mc-header-btn--back снят. Ползунки/колёса — EXEMPTION_REGISTRY range-slider/wheel-picker; тумблеры — toggle-row/toggle-knob. Ширина full-row (.mc-rest-supp-head, .yv-preset, .yv-force, .household-preset) — widthAssumed в гейте. Chromium 375px: node scripts/.checkin-morning-touch-chromium-probe.mjs — 25 проб, все ≥44. node scripts/ui-v4-check-touch-target-visible.mjs --check 500-pwa-and-offline.css, 200-dark-and-effects.css, 715-yesterday-verify.css, heys-components.css:5291 mc-header-right-btn.",
       "h": "90d0d489a6b4"
     }
   },

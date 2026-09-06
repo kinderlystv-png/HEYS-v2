@@ -5289,6 +5289,8 @@ body.tour-active .ios-pwa-banner {
 }
 
 .mc-header-right-btn {
+  min-height: 44px;
+  min-width: 44px;
   border: 1px solid var(--border-color, #e5e7eb);
   background: var(--v4-bg, #fff);
   color: var(--v4-ink, #111827);

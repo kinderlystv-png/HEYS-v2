@@ -97,8 +97,9 @@
 }
 
 .mc-cycle-day-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   border-radius: 50%;
   border: 2px solid #f9a8d4;
   background: white;
@@ -286,7 +287,7 @@
 }
 
 .mc-cycle-change-btn {
-  padding: 8px 16px;
+  padding: 0 16px;
   background: white;
   border: 2px solid #f9a8d4;
   border-radius: 8px;
@@ -295,6 +296,9 @@
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 @media (hover: hover) {
@@ -410,8 +414,9 @@
 }
 
 .mc-cycle-exact-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   border: 2px solid #f9a8d4;
   background: white;
   border-radius: 10px;
@@ -547,6 +552,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 44px;
 }
 
 .cycle-card__icon {
@@ -647,8 +653,9 @@
 }
 
 .cycle-card__day-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   border: 2px solid #f9a8d4;
   background: rgba(255, 255, 255, 0.6);
   border-radius: 12px;
@@ -680,12 +687,15 @@
 
 .cycle-card__clear-btn,
 .cycle-card__cancel-btn {
-  padding: 6px 12px;
+  padding: 0 12px;
   border: none;
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
   transition: opacity 0.15s;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .cycle-card__clear-btn {

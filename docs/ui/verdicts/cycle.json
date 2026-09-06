@@ -2266,8 +2266,8 @@
       "naKind": "handoff"
     },
     "тач-цели": {
-      "v": "?",
-      "f": "Инвентарь зоны 12 (было 113 ложных из 000-base по FILE_ZONE_HINTS+вердикты). .cycle-date-picker-cell — chromium 47.1×44. Тумблер 26px — не цель, строка 44. Худшие: .mc-rest-cycle-none-btn 0×16, .cycle-card-v4__action 0×17, .cycle-card-v4__date-confirm-main 0×0, .cycle-card-v4__cancel 0×17. node scripts/ui-v4-check-touch-target-visible.mjs --check",
+      "v": "=",
+      "f": "Ни одной цели ниже 44 в зоне: node scripts/ui-v4-check-touch-target-visible.mjs --check и --inventory дают cycle 0. Поднято видимым min-height/44×44: .mc-rest-cycle-none-btn, .cycle-card-v4__action/__cancel/__reset, .cycle-card-v4__date-confirm-main, .cycle-date-picker-sheet__month-nav (34→44), .mc-cycle-change-btn, .mc-cycle-exact-btn (36→44), legacy .mc-cycle-day-btn/.cycle-card__* (40→44). Расширителей нет. .cycle-date-picker-cell — chromium 47.1×44. Тумблер 26px — не цель, строка 44. node scripts/.cycle-touch-targets-measure.mjs — sand+blue @375.",
       "h": "0455750bd936"
     }
   },

@@ -98,7 +98,7 @@ describe('контракт цели касания 44 pt', () => {
   it('«Прочитать все» держит 44 своим размером, а не припуском', () => {
     const css = read('styles/modules/400-water-and-hydration.css');
     expect(rule(css, '.advice-list-header-link::after')).toBeNull();
-    expect(rule(css, '.advice-list-container--v4 .advice-list-header-link--read-all'))
+    expect(rule(css, '.advice-list-header-link--read-all'))
       .toMatch(/min-height:\s*44px/);
   });
 });

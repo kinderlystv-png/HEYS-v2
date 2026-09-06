@@ -714,8 +714,9 @@
 .mc-modal--daily .mc-header-btn--back {
   width: 44px;
   height: 44px;
+  min-height: 44px;
   padding: 0;
-  margin: -8px 0;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1180,7 +1181,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 3px;
+  min-width: 44px;
+  min-height: 44px;
   margin: 0;
   padding: 0;
   border: none;
@@ -1364,7 +1368,7 @@
 
 .mc-rest-measure-side-pill {
   min-width: 60px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 14px;
   border: none;
   border-radius: 999px;
@@ -1857,6 +1861,10 @@
   font: 700 11px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
 }
 
 .mc-rest-cycle-tier {
@@ -2088,6 +2096,10 @@
   font: 700 12px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
 }
 
 .cycle-card-v4__day {
@@ -2152,6 +2164,10 @@
   padding: 0;
   text-align: left;
   cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .cycle-card-v4__date-confirm-title {
@@ -2192,6 +2208,10 @@
   font: 600 12px/1 Figtree, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.45);
   cursor: pointer;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
 }
 
 /* Кадр «Цикл · карточка дня, заполнено · 08». */
@@ -2201,6 +2221,10 @@
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
   cursor: pointer;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
 }
 
 .cycle-card-v4__actions .cycle-card-v4__action {
@@ -2374,8 +2398,9 @@
 
 .cycle-date-picker-sheet__month-nav,
 .cycle-date-picker-sheet__month-nav-placeholder {
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   flex: none;
   border-radius: 999px;
 }
@@ -2654,6 +2679,7 @@
    треугольник раскрытия, и базовой линии у него нет. */
 .mc-rest-supp-head {
   width: 100%;
+  min-height: 44px;
   border: none;
   background: transparent;
   padding: 0;
@@ -3186,6 +3212,7 @@
 .mc-header-btn {
   background: none;
   border: none;
+  min-height: 44px;
   padding: 10px 14px;
   font-size: 17px;
   font-weight: 500;
@@ -3277,11 +3304,12 @@
   text-overflow: ellipsis;
 }
 
-/* Close button — контракт checkin-morning «минимальная область нажатия»: 44×44, margin −8 */
+/* Close button — контракт checkin-morning «минимальная область нажатия»: 44×44 видимым размером */
 .mc-close-btn {
   width: 44px;
   height: 44px;
-  margin: -8px;
+  min-height: 44px;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3316,6 +3344,7 @@
 
 .mc-btn-back,
 .mc-btn-next {
+  min-height: 44px;
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 600;
@@ -3635,6 +3664,7 @@
 }
 
 .mc-steps-btn {
+  min-height: 44px;
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
@@ -3707,7 +3737,7 @@
 
 .deficit-btn {
   width: 48px;
-  height: 32px;
+  min-height: 44px;
   border: none;
   border-radius: 8px;
   background: var(--v4-chip, #efe3cf);
@@ -3838,6 +3868,7 @@
 }
 
 .household-inc-btn {
+  min-height: 44px;
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
@@ -3916,6 +3947,7 @@
 
 .household-preset {
   width: 100%;
+  min-height: 44px;
   padding: 8px 6px;
   border-radius: 12px;
   border: 1.5px solid var(--v4-line, rgba(0, 0, 0, 0.08));
@@ -3953,6 +3985,7 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   background: transparent;
   border: none;
+  min-height: 44px;
   padding: 4px 8px;
   display: inline-flex;
   align-items: center;
@@ -4218,6 +4251,7 @@
 }
 
 .household-time-skip {
+  min-height: 44px;
   padding: 10px 20px;
   border-radius: 10px;
   border: 1.5px solid var(--v4-line, rgba(0, 0, 0, 0.08));
@@ -4271,6 +4305,8 @@
 
 .household-time-clear {
   margin-top: 8px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 6px 12px;
   border-radius: 8px;
   border: 1px solid rgba(239, 68, 68, 0.2);
@@ -4349,6 +4385,7 @@
 }
 
 .household-time-preset {
+  min-height: 44px;
   padding: 10px 8px;
   border-radius: 10px;
   border: 1.5px solid var(--v4-line, rgba(0, 0, 0, 0.08));
@@ -4451,6 +4488,7 @@
 }
 
 .deficit-preset {
+  min-height: 44px;
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
@@ -4692,7 +4730,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  min-height: 44px;
   padding: 10px 12px;
   background: var(--v4-chip, #efe3cf);
   border: 2px solid transparent;
@@ -4881,6 +4921,7 @@
 
 /* Skip button */
 .mc-skip-btn {
+  min-height: 44px;
   padding: 6px 12px;
   font-size: 13px;
   font-weight: 500;
@@ -4899,6 +4940,8 @@
 
 /* DEV: Clear button */
 .mc-dev-btn {
+  min-width: 44px;
+  min-height: 44px;
   padding: 6px 10px;
   font-size: 16px;
   background: rgba(239, 68, 68, 0.1);

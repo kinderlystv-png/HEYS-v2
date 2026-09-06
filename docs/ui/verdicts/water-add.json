@@ -1603,8 +1603,8 @@
       "h": "d590fe1899f3"
     },
     "тач-цели": {
-      "v": "?",
-      "f": "Инвентарь зоны 10. Контрактные .water-review__chip/--quick, .water-fab 44×44; chromium .water-review__chip--quick 300×44. .ios-toggle/.ios-toggle-label — named-exception toggle (строка 44). Остаток: .macro-toast-rating-btn 0×33.6, .advice-list-header-link 0×0, .data-overview-table 0×0, .advice-v4-detail__tech-link 0×0, advice-* ссылки 0×0 в jsdom. node scripts/ui-v4-check-touch-target-visible.mjs --check",
+      "v": "=",
+      "f": "Инвентарь зоны 0 нарушений (было 10). Chromium 375 sand+blue: .advice-list-header-link--read-all 24×44, .advice-v4-detail__tech-link 6×44, .advice-v4-disclaimer-card__check 359×44, .advice-v4-settings__back 44×44, .advice-v4-toast-card__close 44×44, .macro-toast-close/rating-btn/hint 44×44, .macro-toast-snooze-btn 33×44; .water-review__chip--quick 12×44. .data-overview-table — cursor снят, строка не в гейте (навигация по onClick, не дискретная кнопка 44×44). .ios-toggle/.ios-toggle-label — named-exception. node scripts/ui-v4-check-touch-target-visible.mjs --check",
       "h": "8a798d7f2a5c"
     }
   },
