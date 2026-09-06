@@ -135,7 +135,6 @@ const BASELINE = [
   'green-600',
   'green-700',
   'heys-app-chrome-height',
-  'heys-bg',
   'heys-border',
   'heys-color-success',
   'heys-color-warning',
