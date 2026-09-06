@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 /**
- * Polosa 4 · task 139 — bulk owner-decision «≠» for small divergences (outside polosa 3).
+ * Polosa 4 · task 139 + 167 — bulk owner-decision «≠» for small divergences (outside polosa 3).
  *
  * ЗАПУСК --apply только после полосы 3 (тон / высота / кегль выделены отдельно).
  * По умолчанию — --dry-run (счёт и handoff JSON, без записи вердиктов).
+ *
+ * Task 167: polosa-3 exclusion uses narrowed designer-risk (action / contrast / sub-44 / kegl<12),
+ * not broad tone-height-kegl classification. Cosmetic within minimum stays bulk-closeable.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { parseContractAssertions } from './lib/ui-v4-assertions.mjs';
+import { assessDesignerRisk } from './lib/ui-v4-divergence-risk.mjs';
 import {
   listZoneIds,
   readZone,
@@ -30,135 +33,9 @@ export const BULK_FACT =
 
 const ANSWER_BASENAME = 'ОТВЕТ-47-находок.md';
 
-// --- polosa 3 exclusion (tone / height / kegl) — mirrors task138 buckets ---
-const TON_PATTERNS = [
-  /\bцвет\b/i,
-  /\bтон\b/i,
-  /\bфон\b/i,
-  /\bзаливк/i,
-  /\bbackground\b/i,
-  /\bborder-color\b/i,
-  /\bbox-shadow\b/i,
-  /\bградиент/i,
-  /\bgradient/i,
-  /\bopacity\b/i,
-  /\bпрозрачност/i,
-  /\bполутон/i,
-  /\bcurrentColor\b/,
-  /\brgba?\(/i,
-  /\bhsla?\(/i,
-  /#[0-9a-f]{3,8}\b/i,
-  /--v4-(ink|surface|act|scrim|sand|hero|c\d)/i,
-  /--c[12]\b/,
-  /--scrim\b/,
-  /--gr\d\b/,
-  /\bvar\(--[a-z0-9-]*(?:ink|surface|scrim|act|color|c\d|gr\d)/i,
-  /\bрол[ьи]\s+(чернил|поверхност|акцент|scrim)/i,
-  /\bink-\d\b/i,
-  /\bцветом\b/i,
-  /\bscrim\b/i,
-];
-
-const HEIGHT_PATTERNS = [
-  /\bвысот[аыуе]\b/i,
-  /\bheight\b/i,
-  /\bmin-height\b/i,
-  /\bmax-height\b/i,
-  /\bpadding-top\b/i,
-  /\bpadding-bottom\b/i,
-  /\bmargin-top\b/i,
-  /\bmargin-bottom\b/i,
-  /\bвертикальн/i,
-  /\bgap\b/i,
-  /\b44\s*px\b/i,
-  /\bзон[аы]\s+нажати/i,
-  /\btouch\s*target/i,
-  /\bдиаметр\b/i,
-  /\bполе\s+рисунка\s+\d+×\d+/i,
-  /\b\d+×\d+\s*px\b/i,
-  /\bmin-h\b/i,
-  /\bпаддинг/i,
-];
-
-const KEGL_PATTERNS = [
-  /\bкегл/i,
-  /\bfont-size\b/i,
-  /\bfont:\s*[^;]*\d+(?:\.\d+)?px/i,
-  /\bразмер\s+шрифт/i,
-  /\bтипографик/i,
-  /\bletter-spacing\b/i,
-  /\bразрядк/i,
-  /\b\d+(?:\.\d+)?px\/\d/i,
-  /\b(?:^|[\s;])(9|10|11(?:\.\d+)?|12(?:\.\d+)?|13(?:\.\d+)?|14(?:\.\d+)?|15(?:\.\d+)?|16(?:\.\d+)?|17(?:\.\d+)?|18(?:\.\d+)?)px\b/,
-  /\bначертани/i,
-];
-
-function scorePatterns(text, patterns) {
-  let score = 0;
-  for (const re of patterns) {
-    if (re.test(text)) score += 1;
-  }
-  return score;
-}
-
-function classifyVisualBucket(key, canvasValue, fact) {
-  const combined = `${key} ${canvasValue} ${fact}`;
-  const notColor = /\bне\s+цвет\b/i.test(fact);
-
-  let ton = scorePatterns(combined, TON_PATTERNS);
-  let height = scorePatterns(combined, HEIGHT_PATTERNS);
-  let kegl = scorePatterns(combined, KEGL_PATTERNS);
-
-  if (notColor) ton = Math.max(0, ton - 3);
-  if (/\bвысот/i.test(key)) height += 3;
-  if (/\bкегл|font|типограф|шрифт/i.test(key)) kegl += 3;
-  if (/^\s*height\s*[:=]/i.test(canvasValue) || /\bвысота\s+\d/i.test(canvasValue)) height += 4;
-  if (/font-size|font:\s*\d|кегль|\d+px\/\d/i.test(canvasValue)) kegl += 4;
-  if (/фон|цвет|тон|rgba|#|var\(--(?:v4-)?(?:ink|surface|c\d|gr)/i.test(canvasValue)) ton += 4;
-
-  const visualMax = Math.max(ton, height, kegl);
-  if (visualMax === 0) return null;
-
-  if (kegl >= height && kegl >= ton && kegl === visualMax) return 'kegl';
-  if (height >= ton && height >= kegl && height === visualMax) return 'height';
-  if (ton === visualMax) return 'ton';
-  if (kegl === height && kegl === visualMax) return 'kegl';
-  if (ton === height && ton === visualMax) return /\bфон|цвет|тон\b/i.test(fact) ? 'ton' : 'height';
-  if (kegl === ton && kegl === visualMax) return /\d+(?:\.\d+)?px/.test(fact) && /font/i.test(fact) ? 'kegl' : 'ton';
-  return null;
-}
-
-function assertionPolosa3(parsed) {
-  for (const assertion of parsed?.assertions || []) {
-    if (assertion.kind === 'color') return 'tone';
-    if (assertion.kind === 'typography') {
-      const prop = String(assertion.property || '');
-      if (/font-size|font-weight|letter-spacing|^font$/i.test(prop)) return 'kegl';
-    }
-    if (assertion.kind === 'dimensions') {
-      const prop = String(assertion.property || '');
-      if (/height|min-height|max-height|padding-top|padding-bottom|margin-top|margin-bottom/i.test(prop)) {
-        return 'height';
-      }
-    }
-  }
-  return null;
-}
-
 export function isExcludedPolosa3(key, canvasValue, fact) {
-  const parsed = parseContractAssertions({ identity: key, value: canvasValue });
-  const fromAssertion = assertionPolosa3(parsed);
-  if (fromAssertion) return { excluded: true, reason: `assertion-${fromAssertion}` };
-
-  const bucket = classifyVisualBucket(key, canvasValue, fact || '');
-  if (bucket === 'ton' || bucket === 'height' || bucket === 'kegl') {
-    return { excluded: true, reason: `classify-${bucket}` };
-  }
-
-  if (/\b(тон|цвет|кегл|высот|font-size|min-height|letter-spacing)\b/i.test(key)) {
-    return { excluded: true, reason: 'key-text' };
-  }
-
+  const risk = assessDesignerRisk({ key, canvas: canvasValue, code: fact || '' });
+  if (risk) return { excluded: true, reason: risk };
   return { excluded: false };
 }
 
@@ -216,7 +93,7 @@ function resolveBulkDecisionRef() {
   return { relative, ref, ok: decision.ok, kind: decision.kind };
 }
 
-function collectPlan() {
+export function collectPlan() {
   const canvasCache = new Map();
   const wouldApply = [];
   const excluded = [];
@@ -345,4 +222,6 @@ function main() {
   }
 }
 
-main();
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  main();
+}

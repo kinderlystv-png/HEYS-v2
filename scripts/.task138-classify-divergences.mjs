@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 /**
- * Task 138 + 145 — classify «≠» verdicts, then narrow TON / HEIGHT / KEGL by designer RISK.
+ * Task 138 + 145 + 167 — classify «≠» verdicts, then narrow TON / HEIGHT / KEGL by designer RISK.
  * Regenerates docs/ui/DIVERGENCE_{TON,HEIGHT,KEGL,GENERAL}_FOR_DESIGNER.md
  *
- * Task 145 narrow rules (borderline method):
- * - TON: text ink only — canvas/code must name typography color (--tx, --ink, «состояние: цвет» on copy).
- *   Surface/bg/border/scrim/chart rows demote to general even if broad classifier said TON.
- * - HEIGHT: interactive 42–44px band or contract 44 vs code within ~2px; margins/gaps/cards/charts demote.
- * - KEGL: any font-size < 12px or dispute crosses 12 (e.g. 11 vs 12); 12.5 vs 13 stays in general.
+ * Task 167 (Lane 1) designer questions:
+ * - TON: text contrast 4.5 risk on copy (ink roles only)
+ * - HEIGHT: interactive tap target strictly below 44 px
+ * - KEGL: font-size below 12 px or crosses 12 boundary
+ * - GENERAL: everything else, including accepted tone/spacing/kegl within minimum
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { NARROW_PASS } from './lib/ui-v4-divergence-risk.mjs';
 import { readAllZones } from './lib/ui-v4-verdicts.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -311,209 +312,40 @@ function classifyRow(key, canvasValue, fact) {
   return { bucket: 'outside', scores, reason: 'ambiguous' };
 }
 
-/** Extract font-size px values from typography clauses (not bare layout px). */
-function extractFontSizes(text) {
-  const sizes = new Set();
-  for (const m of text.matchAll(/(?:font|шрифт)[^;|]{0,120}?(\d+(?:\.\d+)?)\s*px/gi)) {
-    sizes.add(parseFloat(m[1]));
-  }
-  for (const m of text.matchAll(/(\d+(?:\.\d+)?)\s*px\/[\d.]/g)) {
-    sizes.add(parseFloat(m[1]));
-  }
-  return [...sizes];
-}
-
-function extractHeights(text) {
-  const heights = new Set();
-  for (const m of text.matchAll(/(?:min-)?height:\s*(\d+(?:\.\d+)?)\s*px/gi)) {
-    heights.add(parseFloat(m[1]));
-  }
-  for (const m of text.matchAll(/высот[аыуе]\s+(\d+(?:\.\d+)?)\s*px/gi)) {
-    heights.add(parseFloat(m[1]));
-  }
-  for (const m of text.matchAll(/min-height:\s*(\d+(?:\.\d+)?)\s*px/gi)) {
-    heights.add(parseFloat(m[1]));
-  }
-  for (const m of text.matchAll(/\b(\d{2})\s*×\d+\s*px\b/g)) {
-    heights.add(parseFloat(m[1]));
-  }
-  return [...heights];
-}
-
-const TON_TEXT_INK = [
-  /\bцвет\s+(?:var\(--(?:tx|gr|ac2?|val)|rgba\(var\(--ink\))/i,
-  /шрифт\s+\d+\s+(\d+(?:\.\d+)?)\s*px[^;|]*,\s*цвет/i,
-  /,\s*цвет\s+rgba\(var\(--ink\)/i,
-  /состояние:\s*цвет/i,
-  /--v4-ink(?:-\d+)?\b/i,
-  /\b--tx\b/i,
-  /чернил(?:ами)?\s+\d+\s*%/i,
-  /тоном\s+(?:чернил|--tx|--gr\b|--ac2?\b|--val)/i,
-  /цветом\s+--(?:tx|gr|ac|val)/i,
-  /\bink-\d\b/i,
-  /моноцифр[^;|]{0,60}цвет/i,
-  /(?:заголовок|подпись|текст|кикер|badge|бейдж|состояние)[^;|]{0,100}чернил/i,
-  /(?:заголовок|подпись|кикер)[^;|]{0,80}цвет/i,
-  /\d+(?:\.\d+)?\s*px\/[\d.]+[^;|]{0,40}чернил/i,
-];
-
-const TON_NON_TEXT = [
-  /^\s*(?:фон|заливк|радиус|поля\s|padding|margin|флекс|направление|выравнивание)\b/i,
-  /\bфон\s+var\(--/i,
-  /\bзаливк[аи]\s+var\(--/i,
-  /--v4-(?:surface|sand|c1|c2|hero)\b/i,
-  /--c[12]\b/,
-  /--gr-bg\b/,
-  /\bscrim\b/i,
-  /\bобводк/i,
-  /\bborder(?:-color)?\b/i,
-  /\binset\s+0/i,
-  /\bполе\s+рисунка\b/i,
-  /\bviewBox\b/i,
-  /\bstroke\b/i,
-  /\bлиния\s+var\(--/i,
-  /\bтень\b/i,
-  /\bbox-shadow\b/i,
-];
-
-const HEIGHT_INTERACTIVE = [
-  /\bкнопк/i,
-  /\bbutton\b/i,
-  /\bchip\b/i,
-  /\bчип/i,
-  /\bicon-?btn/i,
-  /\bCTA\b/i,
-  /\bзакрыть/i,
-  /\bтап/i,
-  /\btouch\s*target/i,
-  /\bзон[аы]\s+нажати/i,
-  /\bkeypad\b/i,
-  /\bклавиш/i,
-  /\bPIN\b/,
-  /\bполе\s+ввода/i,
-  /\bпилюл/i,
-  /\bmin-height:\s*4[0-6]\s*px/i,
-  /\bвысот[аыу].*от\s+44\s*px/i,
-  /\b44\s*px\b.*(?:кнопк|клетк|pin|keypad|чип|cta|icon)/i,
-  /\bстрока\s+списка\b/i,
-  /\bвторичн(?:ая|ую)\s+кнопк/i,
-];
-
-const HEIGHT_NON_TARGET = [
-  /^\s*(?:зазор|отступ\s+сверху|margin-top|padding|поля|направление|выравнивание|распределение)\b/i,
-  /\bполе\s+рисунка\b/i,
-  /\bviewBox\b/i,
-  /\bslider-fill\b/i,
-  /\bрисунок\s+\d+/i,
-  /\bкарточк[аи].*высот/i,
-  /\bблок\b.*высот/i,
-  /\bсекци/i,
-  /\bmargin-top:\s*\d/i,
-  /\bотступ\s+сверху\s+\d/i,
-  /\bзазор\s+\d/i,
-  /\bgap:\s*\d/i,
-];
-
-/** Task 145 — text ink contrast risk only. */
-function passesTonRisk(entry) {
-  const { key, canvas, code } = entry;
-  const text = `${key} ${canvas} ${code}`;
-
-  if (/\b(рисунок|viewBox|поле\s+рисунка)\b/i.test(text)) return false;
-  if (/\bне\s+цвет\b/i.test(code) || /\bне\s+тоном\b/i.test(code)) return false;
-
-  const canvasTrim = canvas.trim();
-  const surfaceOnly =
-    TON_NON_TEXT.some((re) => re.test(canvasTrim)) &&
-    !TON_TEXT_INK.some((re) => re.test(canvasTrim));
-  if (surfaceOnly && !TON_TEXT_INK.some((re) => re.test(code))) return false;
-
-  if (!TON_TEXT_INK.some((re) => re.test(text))) return false;
-
-  // Icon/decorative fill without typography clause
-  if (/\bиконк/i.test(key) && /\bзаливк/i.test(canvas) && !/шрифт|подпись|текст|цвет\s+rgba\(var\(--ink\)/i.test(text)) {
-    return false;
-  }
-
-  return true;
-}
-
-/** Task 145 — sub-44px tap target risk only. */
-function passesHeightRisk(entry) {
-  const { key, canvas, code } = entry;
-  const text = `${key} ${canvas} ${code}`;
-  const canvasTrim = canvas.trim();
-
-  if (HEIGHT_NON_TARGET.some((re) => re.test(canvasTrim)) && !HEIGHT_INTERACTIVE.some((re) => re.test(text))) {
-    return false;
-  }
-  if (/\b(рисунок|viewBox|поле\s+рисунка|slider-fill)\b/i.test(text)) return false;
-
-  const interactive = HEIGHT_INTERACTIVE.some((re) => re.test(text));
-  if (!interactive) return false;
-
-  const heights = [...extractHeights(canvas), ...extractHeights(code)];
-  const inBand = heights.some((h) => h >= 42 && h <= 44);
-  const contract44 = /\b44\s*px\b/i.test(text);
-  const nearMiss =
-    heights.length >= 2 &&
-    heights.some((h) => h >= 42 && h <= 44) &&
-    heights.some((h) => h >= 40 && h <= 46) &&
-    Math.max(...heights) - Math.min(...heights) <= 3;
-
-  if (inBand) return true;
-  if (contract44 && nearMiss) return true;
-  if (contract44 && heights.some((h) => h >= 40 && h <= 46)) return true;
-
-  return false;
-}
-
-/** Task 145 — below 12px minimum or crosses 12 boundary. */
-function passesKeglRisk(entry) {
-  const { key, canvas, code } = entry;
-  const text = `${key} ${canvas} ${code}`;
-
-  const canvasSizes = extractFontSizes(`${key} ${canvas}`);
-  const codeSizes = extractFontSizes(code);
-  const allSizes = extractFontSizes(text);
-
-  if (allSizes.length === 0) return false;
-
-  if (allSizes.some((s) => s < 12)) return true;
-
-  if (canvasSizes.length && codeSizes.length) {
-    for (const c of canvasSizes) {
-      for (const p of codeSizes) {
-        if ((c < 12 && p >= 12) || (c >= 12 && p < 12)) return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-const NARROW_PASS = {
-  ton: passesTonRisk,
-  height: passesHeightRisk,
-  kegl: passesKeglRisk,
-};
-
 function narrowBuckets(broad) {
   const narrowed = { ton: [], height: [], kegl: [] };
   const general = [];
+  const placed = new Set();
 
-  for (const name of ['ton', 'height', 'kegl']) {
+  for (const name of ['ton', 'kegl']) {
     for (const entry of broad[name]) {
+      const id = `${entry.zone}::${entry.key}`;
       if (NARROW_PASS[name](entry)) {
         narrowed[name].push(entry);
-      } else {
-        general.push({ ...entry, wasIn: WAS_IN_LABEL[name] });
+        placed.add(id);
       }
     }
   }
 
-  for (const entry of broad.outside) {
-    general.push({ ...entry, wasIn: WAS_IN_LABEL.outside });
+  for (const name of ['ton', 'height', 'kegl', 'outside']) {
+    for (const entry of broad[name]) {
+      const id = `${entry.zone}::${entry.key}`;
+      if (placed.has(id)) continue;
+      if (NARROW_PASS.height(entry)) {
+        narrowed.height.push(entry);
+        placed.add(id);
+      }
+    }
+  }
+
+  for (const name of ['ton', 'height', 'kegl', 'outside']) {
+    for (const entry of broad[name]) {
+      const id = `${entry.zone}::${entry.key}`;
+      if (placed.has(id)) continue;
+      const wasIn = name === 'outside' ? WAS_IN_LABEL.outside : WAS_IN_LABEL[name];
+      general.push({ ...entry, wasIn });
+      placed.add(id);
+    }
   }
 
   return { narrowed, general };
@@ -524,7 +356,7 @@ const HEADERS = {
 
 Узкий список вердиктов «≠», где расхождение затрагивает **цвет текста**: подписи, чернила, роли \`--tx\` / \`--v4-ink\`, цвет типографики в кадре.
 
-**Критерий риска (Task 145):** полутона могут уронить контраст ниже 4.5:1 **на тексте**. Фоны, заливки карточек, обводки, scrim и декоративные пятна — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
+**Критерий риска (Task 167):** полутона могут уронить контраст ниже 4.5:1 **на тексте**. Фоны, заливки карточек, обводки, scrim и декоративные пятна — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
 
 Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}; было {{before}} до сужения).
 
@@ -533,9 +365,9 @@ const HEADERS = {
 `,
   height: `# Расхождения ВЫСОТА — риск зоны нажатия <44px (для дизайнера)
 
-Узкий список вердиктов «≠», где расхождение затрагивает **интерактивную высоту** в полосе 42–44px или контракт требует 44px, а код отличается примерно на 2px.
+Узкий список вердиктов «≠», где расхождение затрагивает **интерактивную зону нажатия ниже 44 px** видимым размером.
 
-**Критерий риска (Task 145):** 2px могут уронить цель с 44 на 42. Отступы, gap, высота карточек и блоков — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
+**Критерий риска (Task 167):** интерактивная цель **ниже 44 px** видимым размером. Отступы, gap, высота карточек и блоков — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
 
 Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}; было {{before}} до сужения).
 
@@ -546,7 +378,7 @@ const HEADERS = {
 
 Узкий список вердиктов «≠», где кегль **ниже 12px** или спор пересекает границу 12 (например 11 vs 12).
 
-**Критерий риска (Task 145):** 12.5 vs 13 неважно; 11 vs 12 уже ниже минимума. Косметика ≥12px — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
+**Критерий риска (Task 167):** 12.5 vs 13 неважно; 11 vs 12 уже ниже минимума. Косметика ≥12px — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
 
 Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}; было {{before}} до сужения).
 
@@ -555,7 +387,7 @@ const HEADERS = {
 `,
   general: `# Расхождения — общая пачка (для дизайнера)
 
-Все «≠», не попавшие в узкие списки риска по **ТОН / ВЫСОТА / КЕГЛЬ** (Task 145), плюс строки, изначально вне трёх визуальных корзин Task 138.
+Все «≠», не попавшие в узкие списки риска по **ТОН / ВЫСОТА / КЕГЛЬ** (Task 167), плюс строки, изначально вне трёх визуальных корзин Task 138. Сюда же уходит принятая косметика: тон/отступ/кегль в пределах минимума.
 
 Колонка **Было в** показывает, откуда строка ушла при сужении (или «вне трёх»).
 
