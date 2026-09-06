@@ -39,8 +39,12 @@
   position: absolute;
   top: 14px;
   right: 14px;
-  width: 34px;
-  height: 34px;
+  /* Канвас subscription, строка «слой — центральная модалка»: «крестик 44 px
+     в правом верхнем углу»; строка «тач-цели»: «.xb (34 → 44)». Поле справа
+     у .paywall-title (40 px) уже посчитано под 44 при right:14 и полях
+     модалки 18 — соседей правка не двигает. */
+  width: 44px;
+  height: 44px;
   border: none;
   background: var(--v4-surface, #f7efe2);
   border-radius: 999px;
@@ -301,6 +305,10 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  /* Нажимается весь ряд (onClick на нём, квадрат 22 px — только индикатор):
+     на двух строках 12 px/1.45 ряд давал 34,8 px. Норма 44 pt — видимым
+     размером; align-items:flex-start оставляет квадрат и текст на месте. */
+  min-height: 44px;
   margin-top: 16px;
   padding: 0 2px;
   cursor: pointer;

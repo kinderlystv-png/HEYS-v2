@@ -155,7 +155,11 @@ export function parseCssRules(cssText) {
   const re = /([^{}]+)\{([^{}]*)\}/g;
   let m;
   while ((m = re.exec(cleaned))) {
-    const selectors = m[1].trim();
+    // Перевод строки внутри многострочного селектора попадает в ключ ratchet.
+    // 500-pwa-and-offline.css и heys-components.css лежат в дереве с CRLF, и
+    // те же два правила читались как «новые» рядом со «исправленными» —
+    // отличие в одном \r, а не в геометрии. Пробел в селекторе не значащий.
+    const selectors = m[1].replace(/\r\n?/g, '\n').trim();
     if (!selectors || selectors.startsWith('@')) continue;
     rules.push({ selectors, block: m[2] });
   }
@@ -170,6 +174,68 @@ export function primaryClassFromSelector(selector) {
     if (classes.length) return classes[classes.length - 1];
   }
   return null;
+}
+
+/**
+ * Разбор селектора на цель и предков по ПОСЛЕДНЕМУ составному куску.
+ * `primaryClassFromSelector` берёт последний класс во всей части, и у
+ * `.msg-attachment-error button` это класс ПРЕДКА: гейт вешал правила
+ * контейнера на саму кнопку и мерил чужую коробку. Здесь цель — последний
+ * кусок как он есть, включая случай голого тега без класса.
+ * @param {string} selector
+ * @returns {{ className: string, tag: string|null, ancestors: string[] } | null}
+ */
+export function selectorTarget(selector) {
+  const parts = selector.split(',').map((s) => s.trim());
+  for (const part of parts) {
+    if (!/\.[a-zA-Z0-9_-]/.test(part)) continue;
+    const compounds = part
+      .replace(/\s*[>+~]\s*/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+    const last = compounds[compounds.length - 1];
+    const lastClasses = [...last.matchAll(/\.([a-zA-Z0-9_-]+)/g)].map((x) => x[1]);
+    const ancestors = [];
+    for (const compound of compounds.slice(0, -1)) {
+      const classes = [...compound.matchAll(/\.([a-zA-Z0-9_-]+)/g)].map((x) => x[1]);
+      if (classes.length) ancestors.push(classes.join(' '));
+    }
+    const tagMatch = /^([a-zA-Z][a-zA-Z0-9-]*)/.exec(last);
+    return {
+      className: lastClasses.join(' '),
+      tag: lastClasses.length ? null : tagMatch ? tagMatch[1].toLowerCase() : null,
+      ancestors,
+    };
+  }
+  return null;
+}
+
+/**
+ * Цепочка предков той же части селектора, что дала целевой класс.
+ * Без неё правило `.paywall-trial .btn { min-height: 44px }` замеряется на
+ * голой `<button class="btn">`, к которой оно не применяется: гейт получает
+ * ноль и записывает в нарушения собственную ПОЧИНКУ размера. Замер 6 сентября:
+ * так висели пять строк подряд, из них три — правила, добавленные ровно чтобы
+ * поднять цель до 44.
+ * @param {string} selector
+ * @returns {string[]} классы каждого предка, от внешнего к внутреннему
+ */
+export function ancestorClassesFromSelector(selector) {
+  const parts = selector.split(',').map((s) => s.trim());
+  for (const part of parts) {
+    if (!/\.[a-zA-Z0-9_-]/.test(part)) continue;
+    const compounds = part
+      .replace(/\s*[>+~]\s*/g, ' ')
+      .split(/\s+/)
+      .filter(Boolean);
+    const chain = [];
+    for (const compound of compounds.slice(0, -1)) {
+      const classes = [...compound.matchAll(/\.([a-zA-Z0-9_-]+)/g)].map((x) => x[1]);
+      if (classes.length) chain.push(classes.join(' '));
+    }
+    return chain;
+  }
+  return [];
 }
 
 /** @param {string} selector */
@@ -251,25 +317,90 @@ export function visibleAxis(rectVal, ...computedCandidates) {
 }
 
 /**
+ * Ряд во всю ширину контейнера по ширине не ограничен, и мерить её нечем:
+ * jsdom не раскладывает, rect всегда 0, а `width: auto` у блочного элемента
+ * это и есть «сколько дал родитель». Гейт считал такую ширину нулём и писал
+ * в нарушения ряды на все 375 px — среди них правила, добавленные ровно чтобы
+ * поднять цель до 44 (`.paywall-consent`, `.sb-rest-manual`). Ось высоты при
+ * этом остаётся строгой: она и есть то, что рука не находит.
+ * @param {{ display?: string, width?: string }} cs
+ */
+export function spansContainerWidth(cs) {
+  const display = String(cs.display || '');
+  if (!/^(block|flex|grid|list-item|table)$/i.test(display)) return false;
+  const width = String(cs.width || '').trim();
+  return width === '' || width === 'auto' || width === '100%';
+}
+
+/**
+ * Элемент, растянутый на весь содержащий блок: `position:absolute` +
+ * `inset:0` (или все четыре смещения). Габарит задаёт родитель, в разметке
+ * его нет — jsdom даёт 0 по обеим осям. Подложка листа так и попадала в
+ * нарушения, хотя нажимается в любой точке экрана.
+ * @param {{ position?: string, inset?: string, top?: string, right?: string, bottom?: string, left?: string }} cs
+ */
+export function fillsContainingBlock(cs) {
+  const position = String(cs.position || '');
+  if (!/^(absolute|fixed)$/i.test(position)) return false;
+  const sides = ['top', 'right', 'bottom', 'left'].map((k) => String(cs[k] || '').trim());
+  if (sides.every((v) => v !== '' && v !== 'auto')) return true;
+  const inset = String(cs.inset || '').trim();
+  return inset !== '' && inset !== 'auto';
+}
+
+/**
+ * Нижняя граница высоты строки: поля + рамки + одна строка текста. jsdom не
+ * раскладывает, поэтому `height` и `min-height` — единственное, что он знает;
+ * ряд с `padding: 16px` и текстом 13/1.4 читался нулевым и шёл в нарушения,
+ * тогда как в браузере он 50 px. Считаем только то, что есть в computed:
+ * контент шире одной строки эта оценка не видит и занижает, а не завышает.
+ * @param {Record<string, string>} cs
+ */
+export function lineBoxHeightFloor(cs) {
+  const pad = parsePx(cs.paddingTop) + parsePx(cs.paddingBottom);
+  const border = parsePx(cs.borderTopWidth) + parsePx(cs.borderBottomWidth);
+  // jsdom не наследует базовый кегль: у ряда без своего font-size computed
+  // пуст, и строка текста считалась нулевой. Берём браузерный дефолт 16 px —
+  // он выше реальных 12–13 в продукте, поэтому оценка идёт в запас, а не в
+  // послабление: занизить высоту она может, завысить сверх одной строки — нет.
+  const fontSize = parsePx(cs.fontSize) || 16;
+  const lineHeightRaw = String(cs.lineHeight || '').trim();
+  let line = parsePx(lineHeightRaw);
+  if (/^[\d.]+$/.test(lineHeightRaw)) line = fontSize * Number.parseFloat(lineHeightRaw);
+  if (!(line > 0)) line = fontSize > 0 ? fontSize * 1.2 : 0;
+  if (!(pad > 0 || border > 0)) return 0;
+  return pad + border + line;
+}
+
+/**
  * @param {Window} window
  * @param {string} className
- * @param {string} [wrapClass]
+ * @param {string|string[]} [wrapClass] один предок или цепочка от внешнего к внутреннему
+ * @param {string} [tagOverride] тег цели, когда последний кусок селектора — голый тег
  */
-export function measureElement(window, className, wrapClass) {
+export function measureElement(window, className, wrapClass, tagOverride) {
   const { document } = window;
+  const chain = (Array.isArray(wrapClass) ? wrapClass : wrapClass ? [wrapClass] : []).filter(
+    Boolean,
+  );
   let host;
   let target;
-  const tag = defaultTagForClass(className);
-  if (wrapClass) {
+  const tag = tagOverride || defaultTagForClass(className);
+  target = document.createElement(tag);
+  if (className) target.className = className;
+  if (chain.length) {
     host = document.createElement('div');
-    host.className = wrapClass;
-    target = document.createElement(tag);
-    target.className = className;
-    host.appendChild(target);
+    host.className = chain[0];
+    let parent = host;
+    for (const cls of chain.slice(1)) {
+      const mid = document.createElement('div');
+      mid.className = cls;
+      parent.appendChild(mid);
+      parent = mid;
+    }
+    parent.appendChild(target);
     document.body.appendChild(host);
   } else {
-    target = document.createElement(tag);
-    target.className = className;
     document.body.appendChild(target);
   }
   if (tag === 'button' || tag === 'a') {
@@ -284,8 +415,14 @@ export function measureElement(window, className, wrapClass) {
     else target.remove();
     return { width: 0, height: 0, display: cs.display, visibility: cs.visibility };
   }
-  const width = visibleAxis(rect.width, cs.width, cs.minWidth);
-  const height = visibleAxis(rect.height, cs.height, cs.minHeight);
+  const fills = fillsContainingBlock(cs);
+  const spansWidth = fills || spansContainerWidth(cs);
+  const rawWidth = visibleAxis(rect.width, cs.width, cs.minWidth);
+  const width = spansWidth ? Math.max(rawWidth, MIN_TOUCH_PX) : rawWidth;
+  const rawHeight = visibleAxis(rect.height, cs.height, cs.minHeight);
+  const height = fills
+    ? Math.max(rawHeight, MIN_TOUCH_PX)
+    : Math.max(rawHeight, rawHeight > 0 ? 0 : lineBoxHeightFloor(cs));
   const result = {
     width: Math.round(width * 100) / 100,
     height: Math.round(height * 100) / 100,
@@ -293,6 +430,10 @@ export function measureElement(window, className, wrapClass) {
     minHeight: parsePx(cs.minHeight),
     display: cs.display,
     visibility: cs.visibility,
+    // Ширина не измерена, а принята: см. spansContainerWidth. Остаток
+    // непроверенного гейт называет вслух, а не выдаёт за «сошлось».
+    widthAssumed: spansWidth && rawWidth < MIN_TOUCH_PX,
+    heightFromLineBox: rawHeight === 0 && height > 0,
   };
   if (host) host.remove();
   else target.remove();
@@ -370,6 +511,7 @@ export async function collectInventory(opts = {}) {
 
   const seen = new Set();
   const entries = [];
+  const widthAssumed = [];
 
   for (const file of files) {
     const base = path.basename(file);
@@ -381,8 +523,9 @@ export async function collectInventory(opts = {}) {
     for (const rule of rules) {
       if (!isInteractiveBlock(rule.block)) continue;
       const selector = rule.selectors;
-      const className = primaryClassFromSelector(selector);
-      if (!className) continue;
+      const target = selectorTarget(selector);
+      if (!target || (!target.className && !target.tag)) continue;
+      const className = target.className || primaryClassFromSelector(selector);
       const key = `${base}::${selector}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -393,7 +536,7 @@ export async function collectInventory(opts = {}) {
 
       let size = { width: 0, height: 0, minWidth: 0, minHeight: 0, display: '' };
       try {
-        size = measureElement(window, className);
+        size = measureElement(window, target.className, target.ancestors, target.tag);
       } catch {
         /* invalid selector cascade in jsdom — оставляем 0 */
       }
@@ -408,7 +551,12 @@ export async function collectInventory(opts = {}) {
       else if (visibleOk && tricks.length === 0) bucket = 'pass';
       else if (tricks.length > 0) bucket = 'violation';
 
-      if (bucket === 'pass') continue;
+      if (bucket === 'pass') {
+        if (size.widthAssumed) {
+          widthAssumed.push({ file: base, selector, className, zone, height: size.height });
+        }
+        continue;
+      }
 
       entries.push({
         file: base,
@@ -449,12 +597,14 @@ export async function collectInventory(opts = {}) {
     counts: {
       violations: violations.length,
       exceptions: exceptions.length,
+      widthAssumed: widthAssumed.length,
       interactiveRules: seen.size,
     },
     byZone,
     byFile,
     violations,
     exceptions,
+    widthAssumed,
   };
 }
 
@@ -499,6 +649,7 @@ function printSummary(inventory) {
   console.log(
     `Touch-target inventory: ${inventory.counts.violations} violations, ` +
       `${inventory.counts.exceptions} named exceptions, ` +
+      `${inventory.counts.widthAssumed} с непроверенной шириной, ` +
       `${inventory.scannedFiles.length} CSS files.`,
   );
   const zones = Object.entries(inventory.byZone).sort((a, b) => b[1].violations - a[1].violations);
@@ -548,6 +699,11 @@ async function main() {
     } else {
       console.log(
         `Ratchet: ${ratchet.current} violations (baseline ${ratchet.baseline}, Δ ${ratchet.delta >= 0 ? '+' : ''}${ratchet.delta})`,
+      );
+      // Остаток непроверенного называется вслух рядом с числом нарушений:
+      // ряд во всю ширину прошёл по высоте, а ширину гейт принял, не измерил.
+      console.log(
+        `Ширина принята без замера (ряд во всю ширину): ${inventory.counts.widthAssumed}`,
       );
       if (ratchet.newKeys.length) {
         console.error(`❌ Новые нарушения (${ratchet.newKeys.length}):`);

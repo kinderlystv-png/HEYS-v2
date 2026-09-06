@@ -69,8 +69,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 04.09: одна legacy «≠» типизирована reasonCode — долг 19 → 18.
     // 06.09, task 152: одна legacy «≠» сведена в «=» (9 → 8); одна типизирована
     // reasonCode — typedMismatch 1 → 2.
+    // 06.09, проход по реестру: «Добавки · добавление · 11» — выключенный чип
+    // отличается от кадра намеренно, заливка --c1 давала 1,45:1 на самом чипе.
+    // Записано ≠ accessibility с decisionRef на комментарий в коде;
+    // typedMismatch 2 → 3.
     mismatch: [8, '44515f2fe2e59d59'],
-    typedMismatch: [2, 'b0ea8bda06eb9577'],
+    typedMismatch: [3, '29154df8ac1cdb26'],
     notApplicable: [47, '19522329f4fb6522'],
   }),
   'curator-cabinet': Object.freeze({
@@ -163,7 +167,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, task 152: одна legacy «≠» сведена в «=» (59 → 58); одна типизирована
     // reasonCode — typedMismatch 0 → 1.
     mismatch: [51, 'cd1a730f03d9a943'],
-    typedMismatch: [1, '546fc0e845793148'],
+    // 06.09 (вечер): 1 -> 4. Закрыт ?-долг после пакета 5 сентября. Шесть строк
+    // «рисунок» пакет привёл к продукту (14 → 17), они стали «=»; три остались
+    // отступлением — крест очистки кода и крест удаления порции нарисованы
+    // типографским «×», а выбранная карточка «Вредности» взяла песочно-закреплённую
+    // роль и не следует синему набору.
+    typedMismatch: [4, '5afee50147dedbeb'],
     notApplicable: [74, '8b09da5915e34f96'],
   }),
   'pwa-update': Object.freeze({
@@ -275,7 +284,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     mismatch: [4, 'deadb20c166fe29b'],
     // 06.09: 0 -> 2. Тот же класс, что у spinners: принято без разбора
     // решением дизайнера, вердикт «≠» с owner-decision.
-    typedMismatch: [2, 'efd08a125ebc99c3'],
+    // 06.09 (вечер): 2 -> 13. Закрыт ?-долг после пакета 5 сентября: боксы значков
+    // шапки разобраны построчно, и одиннадцать строк оказались отступлением —
+    // девять по правому полю -8px у ползунков (продукт ставит только
+    // margin-block:-14px) и две по открытому состоянию лампочки, которого в коде
+    // нет. Рост записан, а не заморожен: это перевод «не смотрели» в судимое.
+    typedMismatch: [13, '3bf1e03fd7a046c4'],
     notApplicable: [426, '3ce8607a6612ec9e'],
   }),
   'undo-bar': Object.freeze({

@@ -7739,6 +7739,9 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  /* Канвас strength-builder, строка «вид · отчёт цикла»: «тихий ряд под
+     списком дней недели — высота 44». Было 12 + 16,25 + 12 = 40,25 px. */
+  min-height: 44px;
   margin-top: 10px;
   padding: 12px 13px;
   border: none;
