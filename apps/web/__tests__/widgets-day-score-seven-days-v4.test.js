@@ -53,7 +53,7 @@ describe('Оценка дня · Семь дней — сведённый кус
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 05'))
       .toBe('выравнивание flex-end, зазор 4px, высота 22px, отступ сверху auto');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 06'))
-      .toBe('флекс 1, высота 13px, радиус 2px, фон rgba(var(--ink),.28)');
+      .toBe('флекс 1, высота 13px, радиус 2px, фон rgba(var(--ink),.13)');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 12'))
       .toBe('флекс 1, высота 14px, радиус 2px, фон var(--acs)');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · текст'))
@@ -101,24 +101,25 @@ describe('Оценка дня · Семь дней — сведённый кус
     expect(rules.get('.widget-v4-stepbars--month').height).toBe('44px');
   });
 
-  it('цвет числа и столбиков — роли, песок ≠ синий на тёмных; прошлые --v4-track', () => {
+  it('цвет числа и столбиков — роли, песок ≠ синий на тёмных; прошлые 13 % чернил', () => {
     expect(body).toContain('--v4-sand-act-text');
     const sandInk = palette.match(/:root[\s\S]*?--v4-ink:\s*(#[0-9a-f]{6})/i)?.[1];
     const blueBlock = palette.slice(palette.indexOf('[data-theme-id="blue"]'));
     const blueInk = blueBlock.match(/--v4-ink:\s*(#[0-9a-f]{6})/i)?.[1];
     const sandDarkBlock = palette.slice(palette.indexOf('[data-theme-id="sand-dark"]'));
     const blueDarkBlock = palette.slice(palette.indexOf('[data-theme-id="blue-dark"]'));
-    const sandDarkTrack = sandDarkBlock.match(/--v4-track:\s*([^;]+);/)?.[1];
-    const blueDarkTrack = blueDarkBlock.match(/--v4-track:\s*([^;]+);/)?.[1];
+    const sandDarkInkRgb = sandDarkBlock.match(/--v4-ink-rgb:\s*([^;]+);/)?.[1];
+    const blueDarkInkRgb = blueDarkBlock.match(/--v4-ink-rgb:\s*([^;]+);/)?.[1];
     expect(sandInk).toBe('#201e1d');
     expect(blueInk).toBe('#101826');
     expect(sandInk).not.toBe(blueInk);
-    expect(sandDarkTrack).toBe('rgba(242, 237, 230, 0.12)');
-    expect(blueDarkTrack).toBe('rgba(238, 243, 248, 0.12)');
-    expect(sandDarkTrack).not.toBe(blueDarkTrack);
-    expect(rules.get('.widget-v4-week-bars__col--past').background).toContain('--v4-track');
+    expect(sandDarkInkRgb).toBe('242, 237, 230');
+    expect(blueDarkInkRgb).toBe('232, 238, 246');
+    expect(sandDarkInkRgb).not.toBe(blueDarkInkRgb);
+    expect(rules.get('.widget-v4-week-bars__col--past').background).toContain('--v4-ink-rgb');
+    expect(rules.get('.widget-v4-week-bars__col--past').background).toContain('0.13');
     expect(rules.get('.widget-v4-week-bars__col--today').background).toContain('--v4-sand-act');
-    expect(css).toMatch(/\.widget-v4-week-bars__col--past \{[^}]*--v4-track/);
+    expect(css).toMatch(/\.widget-v4-week-bars__col--past \{[^}]*--v4-ink-rgb/);
     expect(css).toMatch(/\.widget-v4-week-bars__col--today \{[^}]*--v4-sand-act/);
   });
 });

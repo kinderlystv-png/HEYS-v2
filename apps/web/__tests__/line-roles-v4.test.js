@@ -141,10 +141,6 @@ const ALLOWED = new Map(
       '9 % · дорожка макро-полосы, роли не имеет',
     '730-widgets-dashboard.css | .widget-v4-water-rhythm__bin | background':
       '10 % · пустая корзина ритма воды, роли не имеет',
-    '730-widgets-dashboard.css | .widget-v4-sleep-window | background':
-      '7 % · дорожка окна сна, роли не имеет',
-    '730-widgets-dashboard.css | .widget-v4-sleep-window__target | background':
-      '13 % · полоса цели поверх дорожки, роли не имеет',
   }),
 );
 

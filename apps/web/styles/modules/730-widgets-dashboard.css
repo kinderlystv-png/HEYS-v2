@@ -13780,7 +13780,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   flex: 1;
   min-height: 4px;
   border-radius: 2px;
-  background: rgba(0, 0, 0, 0.13);
+  background: rgba(var(--v4-ink-rgb), 0.13); /* v4-intentional */
   height: var(--wd-week-h, 20%);
   transform-origin: bottom center;
 }
@@ -14014,10 +14014,6 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
   background: rgba(242, 237, 230, 0.1);
 }
 
-[data-theme$="dark"] .widget-wd__week-col {
-  background: rgba(242, 237, 230, 0.14);
-}
-
 [data-theme$="dark"] .widget-wd-sheet__grab {
   background: rgba(242, 237, 230, 0.16);
 }
@@ -14185,10 +14181,9 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   margin-top: auto;
 }
 
-/* Прошлые дни бледнее: кадр даёт чернила 13 %, продукт берёт ближайшую роль
-   дорожки — 12 %. Сырой процент здесь запрещён гейтом ролей линии. */
+/* Прошлые дни бледнее: кадр «Оценка дня · Семь дней · 06» — чернила 13 %. */
 .widget-v4-week-bars__col--past {
-  background: var(--v4-track, rgba(0, 0, 0, 0.12));
+  background: rgba(var(--v4-ink-rgb), 0.13); /* v4-intentional */
 }
 
 .widget-v4-week-bars__col--today {

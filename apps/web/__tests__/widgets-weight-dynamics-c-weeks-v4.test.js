@@ -58,11 +58,11 @@ describe('Динамика · C столбики — сведённый кусо
     expect(contractValue(canvas, 'Динамика · C столбики · 05'))
       .toBe('выравнивание flex-end, зазор 4px, высота 24px, отступ сверху auto');
     expect(contractValue(canvas, 'Динамика · C столбики · 06'))
-      .toBe('флекс 1, высота 24px, радиус 2px, фон var(--ink-30)');
+      .toBe('флекс 1, высота 24px, радиус 2px, фон rgba(var(--ink),.13)');
     expect(contractValue(canvas, 'Динамика · C столбики · 07'))
-      .toBe('флекс 1, высота 19px, радиус 2px, фон var(--ink-30)');
+      .toBe('флекс 1, высота 19px, радиус 2px, фон rgba(var(--ink),.13)');
     expect(contractValue(canvas, 'Динамика · C столбики · 08'))
-      .toBe('флекс 1, высота 20px, радиус 2px, фон rgba(var(--ink),.28)');
+      .toBe('флекс 1, высота 20px, радиус 2px, фон rgba(var(--ink),.13)');
     expect(contractValue(canvas, 'Динамика · C столбики · 09'))
       .toBe('флекс 1, высота 13px, радиус 2px, фон var(--gr2)');
     expect(contractValue(canvas, 'Динамика · C столбики · текст'))
@@ -105,7 +105,7 @@ describe('Динамика · C столбики — сведённый кусо
     const col = rules.get('.widget-wd__week-col');
     expect(col.flex).toBe('1');
     expect(col['border-radius']).toBe('2px');
-    expect(col.background).toBe('rgba(0, 0, 0, 0.13)');
+    expect(col.background).toContain('rgba(var(--v4-ink-rgb), 0.13)');
     expect(col.height).toBe('var(--wd-week-h, 20%)');
     expect(rules.get('.widget-wd__week-col.widget-v4-val--good').background)
       .toContain('--v4-ok-fill');
