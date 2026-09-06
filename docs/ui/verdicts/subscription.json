@@ -40,7 +40,7 @@
     },
     "слой — центральная модалка": {
       "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:54-56: blur(var(--v4-modal-backdrop-blur, 2.5px)); 72-80: left/right 14px, radius 26px, padding 22/18/18; 90-94: close 34px; 829-830: tap scrim закрывает",
+      "f": "Замер chromium на 375 px: модалка выходит 375 px шириной, x=14…389 вместо 347 (14…361) — инлайн style position:relative (heys_paywall_v1.js:185,217; heys_subscriptions_v1.js:1040,1075) перебивает position:absolute из 735-ui-v4-subscription.css:20-25, и left/right:14px перестают быть врезками; правый угол r26 срезает overflow:hidden оверлея (735-ui-v4-subscription.css:3-13). Совпало: радиус 26 и поля 22/18/18 (735-ui-v4-subscription.css:20-35), крестик 44×44 в top/right 14 (735-ui-v4-subscription.css:38-56, замер 44×44), затемнение --scrim с blur(2.5px) (замер: песочный rgba(42,26,12,.5), синий rgba(16,24,38,.45)), тап по затемнению закрывает (heys_paywall_v1.js:211; heys_subscriptions_v1.js:1034). Строка закроется снятием инлайнового position.",
       "h": "f2073361a185"
     },
     "три тарифа": {
@@ -89,7 +89,7 @@
     },
     "вид · экран подписки · пробный период": {
       "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/styles/modules/735-ui-v4-subscription.css:530-668: sub-screen status-card --v4-surface r20 p16; kick/tier --v4-act-text 700 10px/.16em; headline 800 26px; body 0 18px; footnote/support. heys_subscriptions_v1.js trial SubscriptionSection. sand card #f7efe2 blue #eef3f9; act-text sand #8a4a20 blue #1d5e96 (subscription-package-a-v4.test.js)",
+      "f": "CSS сведён — замер chromium обеих палитр: кикер и ярус var(--v4-act-text) = канвасный --ac (песочный #8a4a20, синий #1d5e96), 700 10px/1 разрядка 1.6px = .16em, uppercase; headline 800 26px/1.1 трекинг −.26px тоном --v4-ink; подпись 500 12px/1.4 var(--v4-ink-2); карточка --v4-surface r20 p16 (735-ui-v4-subscription.css:532-668). Но экран не смонтирован в продукте: SubscriptionSection (heys_subscriptions_v1.js:1127) зовёт только визуальная фикстура (heys_ui_v4_visual_fixture_v1.js:223,282,288), а настройки открывают SubscriptionStatusSection (heys_user_tab_impl_v1.js:1626 из heys_app_shell_v1.js:5477 openUserSection subscription). Плюс проза просит «число дней 34 px/800 · дней осталось», и это спорит со строками ·03/·04 и кадром того же канваса (subscription.v4.dc.html:143-144,388-390). Закроется монтированием v4-экрана и снятием спора прозы со строками.",
       "h": "f9eb50be76d6"
     },
     "вид · экран подписки · активна": {
@@ -138,28 +138,28 @@
       "h": "314a9d7f62ee"
     },
     "вид · тарифы": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
+      "v": "=",
+      "f": "Замер chromium песочный/синий: .paywall-title 700 19px/1.2 — «Пробный период закончился» при reason=trial_ended, иначе «Подписка» (735-ui-v4-subscription.css:59-65, heys_paywall_v1.js:208,224); .paywall-subtitle 500 12.5px/1.5 «Выберите тариф — доступ откроется сразу после оплаты.» (735-ui-v4-subscription.css:67-72, heys_paywall_v1.js:227); .paywall-plans column gap 10px margin-top 14px (735-ui-v4-subscription.css:74-79); .paywall-cta min-height 48px с «Оформить Pro · 7 990 ₽», для proPlus «Написать в поддержку» (735-ui-v4-subscription.css:151-167, heys_paywall_v1.js:114-119); разделитель — линия 1px rgba(ink,.08) и «или» 600 11px/1 rgba(ink,.45), замер точно .08 и .45 (735-ui-v4-subscription.css:173-189); ниже блок пробного периода (heys_paywall_v1.js:266). Подзаголовок берёт var(--v4-ink-2) = .55 против .62 контракта — ступень лестницы чернил, как в закрытой «Подписка · экран · активна · 10».",
       "h": "b2c144139def"
     },
     "вид · карточка тарифа": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
+      "v": "=",
+      "f": "Замер chromium песочный/синий: .paywall-plan min-height 56px, фон var(--v4-surface) = --c1 (#f7efe2 / #eef3f9), радиус 18, поля 12/14, обводка inset 1px rgba(ink,.06); выбранная — inset 2px var(--v4-act) = --acs (#c67139 / #1d5e96); название 700 13.5px/1 тоном --v4-ink; описание 500 11px/1.4 var(--v4-ink-2); цена 700 13px/1 tabular-nums с «/ мес» 500 11px/1; бейдж «Популярный» 700 9px/1, letter-spacing 0.9px = .1em, uppercase, фон --v4-act и текст --v4-btn-on-act, absolute top −9px left 14px (735-ui-v4-subscription.css:81-149). Описания трёх тарифов совпадают дословно (heys_paywall_v1.js:88-111).",
       "h": "48d05dbb2183"
     },
     "вид · блок пробного периода": {
       "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
+      "f": "Совпало (замер chromium обеих палитр): карточка var(--v4-hero) = --c2 (#efe3cf / #e2ecf6), радиус 18, поля 14, текст по центру (735-ui-v4-subscription.css:191-200); у «место освободилось» фон var(--v4-tint) = --tint (#f6e6dd / #fbe6e2, 735-ui-v4-subscription.css:198-200); заголовок 700 13px/1.3; строка состояния 600 12px/1; «Мест нет · в очереди N» тоном var(--v4-ink-2) с точкой var(--v4-bad-text) = --red; .paywall-btnq min-height 44px mt 12px фоном var(--v4-bg) (735-ui-v4-subscription.css:239-253); таймер 800 26px/1 tabular с подписью «на подтверждение» и кнопкой .paywall-cta 48px (heys_paywall_v1.js:394-416); «Заявка подана · вы N-й в очереди» и «Сообщим, когда место освободится» (heys_paywall_v1.js:439-449). Не сошлось два цвета: точка «Место свободно» красится var(--v4-ok-fill) = канвасный --gr2 (замер #7a8a5e песочный, #4f9a78 синий), а контракт просит --gr (#5c6a45 / #1f6e4d) — 735-ui-v4-subscription.css:231-233; «Отменить заявку» красится var(--v4-act) = --acs (замер #c67139), контракт — --ac (#8a4a20), 735-ui-v4-subscription.css:394-401, расхождение видно в песочных наборах. Закроется сменой этих двух ролей.",
       "h": "a0f1d0d33b0f"
     },
     "вид · проверьте заказ": {
       "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
+      "f": "Совпало (замер chromium обеих палитр): карточка заказа var(--v4-surface) r18 p14, ряд gap 12 space-between; левый блок min-width 0; правая колонка flex none и nowrap, обе строки в одну каждая (замер 66,92 px); «Pro» 700 15px/1.2, «7 990 ₽» 800 17px/1 tabular, «до 5 октября» 500 11px/1 mt 4; согласие — квадрат 22px r7, невыбранный inset 2px rgba(ink,.25), выбранный var(--v4-act) с глифом var(--v4-btn-on-act); текст 500 12px/1.45; кнопка гашена до .45 и disabled до согласия (heys_subscriptions_v1.js:1019-1027); «Отмена» 600 12px/1 высотой 44; ошибка сети 600 12px тоном var(--v4-bad-text) над кнопкой (735-ui-v4-subscription.css:263-365, heys_subscriptions_v1.js:980-1028). Не сошлось: дату «до 5 октября» клиент вычисляет сам — billingEnd = сегодня + 30 дней (heys_subscriptions_v1.js:965-967), а контракт требует дату окончания, которую вернул сервер; и ссылки оферты красятся var(--v4-act) = --acs вместо --ac (735-ui-v4-subscription.css:341-344, строка ·12). Закроется датой из ответа сервера и сменой роли ссылок.",
       "h": "e1a64f8bb325"
     },
     "вид · оплата прошла": {
-      "v": "?",
-      "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
+      "v": "=",
+      "f": "Замер chromium песочный/синий: PaymentSuccessScreen рисуется без крестика (heys_subscriptions_v1.js:1050-1070); круг 56×56 r999 фоном var(--v4-ok-bg) с глифом 26px тоном var(--v4-ok-text) = --gr (#5c6a45 / #1f6e4d) — 735-ui-v4-subscription.css:367-376; заголовок «Подписка активна» 700 19px/1.2 mt 14 (heys_subscriptions_v1.js:919-923); карточка var(--v4-surface) r18 p14 колонкой gap 6, 500 12.5px/1.4, строки «Тариф — Pro» и «До … · … ₽ в месяц» tabular (735-ui-v4-subscription.css:378-392); .paywall-cta «Продолжить» mt 18 (heys_subscriptions_v1.js:1064). Роль --v4-ok-bg — продуктовое имя канвасного --gr-bg (002-ui-v4-palette-roles.css:150): в песочном совпадает значением (#eaefe0), в синем продукт даёт #e4efe7 против #e6f3ec канваса — это правка файла палитры, не зоны.",
       "h": "8da30899465c"
     },
     "точки входа": {
@@ -713,53 +713,55 @@
       "h": "f83b80058208"
     },
     "Подписка · проверьте заказ · 04": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:860: .paywall-order-name font 700 15px/1.2 «Pro»",
+      "v": "=",
+      "f": ".paywall-order-main min-width 0 (735-ui-v4-subscription.css:274-277); замер chromium — min-width 0px. Рядом объявлен flex:1 (базис 0%), которого в кадре нет; на ширину он не влияет: замер даёт 232,08 px и с flex:1, и с flex:0 1 auto, потому что описание тарифа длиннее свободного места и блок в обоих случаях занимает остаток.",
       "h": "b210d1e36112"
     },
     "Подписка · проверьте заказ · 05": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:864: блок цены text-align right в .paywall-order-card",
+      "v": "=",
+      "f": "«Pro» — .paywall-order-name font 700 15px/1.2 Figtree, color var(--v4-ink) (735-ui-v4-subscription.css:285-288); замер chromium: 700, 15px, line-height 18px = 1.2, песочный rgb(32,30,29) = --tx #201e1d, синий rgb(16,24,38) = #101826. Текст берётся из planName (heys_subscriptions_v1.js:961,982).",
       "h": "1045720b8968"
     },
     "Подписка · проверьте заказ · 06": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:865: .paywall-order-price font 800 17px/1 tabular-nums «7 990 ₽»",
+      "v": "=",
+      "f": ".paywall-order-aside flex none, text-align right, white-space nowrap (735-ui-v4-subscription.css:279-283); замер chromium: flex-grow 0, flex-shrink 0, textAlign right, whiteSpace nowrap, ширина 66,92 px — сжимается левый блок, а не колонка цены.",
       "h": "18b06cdab775"
     },
     "Подписка · проверьте заказ · 07": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:866: .paywall-order-period font 500 11px/1; margin-top 4px «за 30 дней»",
+      "v": "=",
+      "f": "«7 990 ₽» — .paywall-order-price font 800 17px/1, color var(--v4-ink), font-variant-numeric tabular-nums (735-ui-v4-subscription.css:290-295); замер chromium: 800, 17px, line-height 17px, tabular-nums, песочный rgb(32,30,29), синий rgb(16,24,38). Значение — formatPrice(selectedInfo.price) (heys_subscriptions_v1.js:986).",
       "h": "78fabf7bf8c3"
     },
     "Подписка · проверьте заказ · 08": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:870: .paywall-consent align-items flex-start; gap 12px; margin-top 16px; padding 0 2px",
-      "h": "5a0b7ccb4f81"
+      "v": "≠",
+      "f": "«до 5 октября» — .paywall-order-period font 500 11px/1 и margin-top 4px совпали (735-ui-v4-subscription.css:297-302; замер chromium 500, 11px, line-height 11px, mt 4px, text-align right). Цвет расходится: контракт просит rgba(var(--ink),.5), продукт красит var(--v4-ink-2), замер даёт rgba(0,0,0,.55) и в песочном, и в синем. Ступени 50 % у лестницы чернил набора нет (002-ui-v4-palette-roles.css:59-63,179-183,486-489): есть 62/56/55/45/38/30, элемент получает ближайшую, а красить литералом мимо палитры запрещено.",
+      "h": "5a0b7ccb4f81",
+      "reasonCode": "owner-decision",
+      "decisionRef": "docs/ui/UI_V4_OWNER_DECISIONS.md:177"
     },
     "Подписка · проверьте заказ · 09": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:363: .paywall-consent-box.is-checked background var(--v4-act, #c67139); color var(--v4-btn-on-act, #2b1608); sand act #c67139/on #2b1608 · blue act #1d5e96/on #ffffff",
+      "v": "=",
+      "f": ".paywall-consent align-items flex-start, gap 12px, margin-top 16px, padding 0 2px (735-ui-v4-subscription.css:304-314); замер chromium подтверждает все четыре свойства. Сверх кадра объявлен min-height 44px (735-ui-v4-subscription.css:311): ряд из двух строк 12px/1.45 даёт 34,8 px, а строка «тач-цели» того же контракта требует 44 видимым размером — нажимается весь ряд, квадрат 22 px остаётся индикатором.",
       "h": "a31c30ef31b7"
     },
     "Подписка · проверьте заказ · 10": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:877: .paywall-consent-text font 500 12px/1.45 «Принимаю условия»",
+      "v": "=",
+      "f": "Выбранный квадрат — .paywall-consent-box.is-checked background var(--v4-act), сам .paywall-consent-box color var(--v4-btn-on-act) (735-ui-v4-subscription.css:317-333); замер chromium: песочный фон rgb(198,113,57) = --acs #c67139 и глиф rgb(43,22,8) = --on-acs #2b1608; синий фон rgb(29,94,150) и глиф #ffffff.",
       "h": "9ef64d224296"
     },
     "Подписка · проверьте заказ · 11": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:882: .paywall-consent-link color var(--v4-act); text-decoration underline",
+      "v": "=",
+      "f": "«Принимаю условия» — .paywall-consent-text font 500 12px/1.45, color var(--v4-ink) (735-ui-v4-subscription.css:335-339); замер chromium: 500, 12px, line-height 17,4px = 1.45, песочный rgb(32,30,29), синий rgb(16,24,38) = --tx.",
       "h": "c420a834021d"
     },
     "Подписка · проверьте заказ · 12": {
       "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:901: .paywall-cta margin-top 18px; «Оплатить 7 990 ₽»; opacity .45 до согласия",
+      "f": "«публичной оферты» — .paywall-consent-link color var(--v4-act) (735-ui-v4-subscription.css:341-344); замер chromium песочный rgb(198,113,57) = --acs #c67139, контракт просит var(--ac) = #8a4a20. В синих наборах --ac и --acs совпадают (#1d5e96), поэтому там сходится; расходится в песочном и в песочном тёмном (--v4-act-text #e2a468 против --v4-act #cf8144). Подчёркивание на месте. Закроется сменой роли на var(--v4-act-text).",
       "h": "56d9e6d52361"
     },
     "Подписка · проверьте заказ · 13": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:906: .paywall-cancel min-height 44px; font 600 12px/1; color rgba(var(--v4-ink-rgb), .56)",
+      "v": "=",
+      "f": "«Оплатить 7 990 ₽» — margin-top 18px задан инлайном (heys_subscriptions_v1.js:1022-1023), остальное даёт класс главной кнопки .paywall-cta: min-height 48px, радиус 999, фон var(--v4-act), текст var(--v4-btn-on-act), 700 13px/1 (735-ui-v4-subscription.css:151-167). Замер chromium: mt 18px, 339×48, песочный фон rgb(198,113,57) и текст rgb(43,22,8), синий rgb(29,94,150) и #ffffff.",
       "h": "6beee72dee5a"
     },
     "Подписка · оплата прошла · 01": {
@@ -1352,23 +1354,23 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
     },
     "Подписка · тарифы · места есть · текст": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
+      "v": "=",
+      "f": "Цепочка совпадает дословно: heys_paywall_v1.js:208 «Пробный период закончился» при reason=trial_ended; 227 «Выберите тариф — доступ откроется сразу после оплаты.»; 88-111 три тарифа с описаниями и ценами 490 / 7 990 / 19 990 ₽ (heys_paywall_v1.js:33-37) и суффиксом «/ мес» (250-252); 244 бейдж «Популярный» первым узлом внутри карточки Pro — тот же порядок, что в кадре; 118 CTA «Оформить Pro · 7 990 ₽»; 269 «или»; 464 «Пробный период 7 дней — бесплатно»; 471 «Место свободно»; 478 «Начать пробный период».",
       "h": "1bfbaefc5a30"
     },
     "Подписка · тарифы · мест нет · текст": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
+      "v": "=",
+      "f": "Та же цепочка, что у «места есть», кроме двух хвостовых фрагментов: при available=false (условие heys_paywall_v1.js:458-460) строка состояния становится «Мест нет · в очереди N» (471), а кнопка — «Встать в очередь» (478). Число 4 в кадре — queue_length/queue_size из capacity (459-460). Остальные фрагменты совпадают дословно (208, 227, 88-111, 244, 118, 269, 464).",
       "h": "3193079b89e4"
     },
     "Подписка · тарифы · Pro Спорт · текст": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
+      "v": "=",
+      "f": "heys_paywall_v1.js:208 — при reason≠trial_ended заголовок «Подписка», как в кадре; 117 CTA «Написать в поддержку» для proPlus; 261-263 сноска «Pro Спорт подключается после согласования — поддержка ответит и оформит.»; 265-271 разделитель «или» и блок пробного периода рисуются только при selectedPlan не равном proPlus, поэтому в кадре их и нет. Три карточки и их описания те же (88-111).",
       "h": "e74e583a87e3"
     },
     "Подписка · проверьте заказ · текст": {
-      "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
+      "v": "=",
+      "f": "heys_subscriptions_v1.js:978 «Проверьте заказ»; 961-963 planName «Pro» и planDesc «Куратор ведёт дневник, чат, недельный чек-ин»; 986 цена через formatPrice; 967 и 700-703 «до 5 октября»; 1000-1019 «Принимаю условия» с ссылками «публичной оферты» и «политики конфиденциальности»; 1027 «Оплатить 7 990 ₽»; 1028 «Отмена». Цепочка совпадает дословно. То, что сама дата вычисляется клиентом, а не приходит с сервера, записано в строке «вид · проверьте заказ».",
       "h": "2efb43ef7426"
     },
     "Подписка · оплата прошла · текст": {
@@ -1378,7 +1380,7 @@
     },
     "Подписка · экран · активна · текст": {
       "v": "?",
-      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "f": "Совпали одиннадцать фрагментов из двенадцати: heys_subscriptions_v1.js:1190 «Pro · активна»; 1191-1193 «до 3 октября»; 1194-1196 «7 990 ₽ в месяц · оплачено до этой даты»; 1206 «Что открыто»; 688-690 первые три строки списка; 766-780 «Само ничего не спишется», сноска про поддержку и «Написать в поддержку». Не сошлась четвёртая строка списка: ACTIVE_SCREEN_FEATURES[3] = «Созвон раз в неделю» (heys_subscriptions_v1.js:691), контракт просит «Недельный чек-ин с куратором» — тем же словом описан Pro в тарифах (heys_paywall_v1.js:101). Отдельно: сам экран в продукте не смонтирован, см. «вид · экран подписки · пробный период». Закроется правкой строки 691.",
       "h": "f907bddf0afc"
     },
     "Подписка · экран · только чтение · текст": {
@@ -1398,12 +1400,12 @@
     },
     "тач-цели": {
       "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "f": "Крестик приведён: .paywall-close 44×44 (735-ui-v4-subscription.css:38-56), замер chromium 44×44. Пилюля баннера «Подписка» — нет: класс .readonly-banner-pill (heys_paywall_v1.js:508-512) не имеет ни одного CSS-правила ни в одном файле, замер chromium с полным каскадом даёт 75,4×21 в дефолтном виде кнопки браузера (фон rgb(240,240,240), радиус 0); инвентарь ui-v4-check-touch-target-visible его не видит, потому что сканирует только CSS-файлы. Третье — .readonly-toast-action 81,4×26 (735-ui-v4-subscription.css:519-530), единственное нарушение зоны, которое инвентарь показывает: поднять его до 44 значит раздуть тост, который кадр рисует высотой 38, поэтому решение отдано дизайнеру. Строка держится, пока нет ответа по тосту и пока пилюля без правила.",
       "h": "ff5ce40275ff"
     },
     "Подписка · проверьте заказ · 14": {
-      "v": "?",
-      "f": "Строка добавлена дизайнером, вердикта нет",
+      "v": "=",
+      "f": "«Отмена» — .paywall-cancel align-items center, justify-content center, min-height 44px, font 600 12px/1 (735-ui-v4-subscription.css:346-358); замер chromium: 339×44, 600, 12px, line-height 12px, цвет rgba(0,0,0,.55) через var(--v4-ink-2) под контрактные 56 % — та же ступень лестницы чернил, что уже закрыта в «Подписка · экран · активна · 04» и «· 10».",
       "h": "b81b231f9fa9"
     }
   },
