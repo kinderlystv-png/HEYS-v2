@@ -56,14 +56,20 @@ describe('UI v4 code→canvas screen coverage', () => {
     const registry = readScreenCoverageRegistry();
     const report = buildCodeScreenCoverageReport(roots, readCanvasPackage(), registry);
 
-    expect(roots).toHaveLength(143);
+    expect(roots).toHaveLength(149);
     // +9 roots зарегистрированы 5 сентября: reports-v4-periods-sheet и 8 sb-* экранов
     // (135→143, covered 36→45). reports-fullscreen-modal заменён на reports-v4-periods-sheet.
+    // +6 roots 6 сентября (143→149, gaps 77→83): экраны, построенные по ответам
+    // дизайнера — лист отзыва согласия, лист «На какой день записать?», экран
+    // подписки, модалка и лист действий мессенджера, «Код не распознан».
+    // Записаны как gap, а не covered: covered требует поимённой привязки к
+    // кадрам, и отчёт её проверяет; привязку никто не сверял. Заявить покрытие
+    // без сверки — завести зелёный, подтверждающий только собственную слепоту.
     expect(report.totals).toMatchObject({
-      codeRoots: 143,
+      codeRoots: 149,
       covered: 45,
       excluded: 21,
-      gaps: 77,
+      gaps: 83,
       pending: 0,
       missing: 0,
       stale: 0,
