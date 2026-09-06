@@ -23,7 +23,14 @@ for (const f of fs.readdirSync(PACK).filter((x) => x.endsWith('.v4.dc.html'))) {
   for (const m of html.matchAll(/data-v="([^"]*)"/g)) canvasBlob.push(decode(m[1]));
 }
 const HAY = canvasBlob.join('\u0000');
-const inCanvas = (s) => s.length > 0 && HAY.includes(s);
+// Доказательством считается ТОЛЬКО длинная строка. Короткий фрагмент вроде
+// `var(--ink-2)` есть в канвасе где угодно, и проверка вхождением на нём
+// подтверждает саму себя: 6 сентября так были переписаны четыре теста, которые
+// проверяют ПРОДУКТОВЫЙ CSS, а не строку контракта, — они ждали
+// `rgba(var(--ink), 0.56)` в правиле кода, получили `var(--ink-2)` и упали.
+// Порог в 40 знаков отсекает фрагменты; строка контракта всегда длиннее.
+const MIN_PROOF = 40;
+const inCanvas = (s) => s.length >= MIN_PROOF && HAY.includes(s);
 
 const FRACTIONS = {
   '--tx': ['.85'],
