@@ -1,16 +1,16 @@
 {
   "task": 139,
   "mode": "dry-run",
-  "generatedAt": "2026-09-06T00:00:06.635Z",
+  "generatedAt": "2026-09-06T00:19:26.916Z",
   "bulkFact": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
-  "decisionRefFile": null,
-  "decisionRef": null,
-  "decisionRefResolvable": false,
+  "decisionRefFile": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md",
+  "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1",
+  "decisionRefResolvable": true,
   "applyAllowed": false,
   "note": "ЗАПУСК --apply только после полосы 3 (тон / высота / кегль).",
   "totals": {
-    "wouldApply": 231,
-    "excludedPolosa3": 569,
+    "wouldApply": 220,
+    "excludedPolosa3": 545,
     "skippedAlreadyClosed": 0
   },
   "byZone": {
@@ -18,14 +18,13 @@
     "checkin-morning": 2,
     "curator-cabinet": 12,
     "curator-edits": 1,
-    "cycle": 2,
+    "cycle": 1,
     "first-run": 16,
     "food-meal": 13,
     "gamification": 6,
     "home-widgets": 13,
     "login": 4,
     "norm-correction": 4,
-    "nutrition-tab": 1,
     "product-card": 24,
     "pwa-update": 1,
     "questionnaire": 12,
@@ -36,7 +35,7 @@
     "spinners": 13,
     "strength-builder": 30,
     "subscription": 22,
-    "tab-activity": 13,
+    "tab-activity": 4,
     "tips": 2
   },
   "sampleWouldApply": [
