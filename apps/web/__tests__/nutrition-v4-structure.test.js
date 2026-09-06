@@ -18,6 +18,7 @@ const appShellSource = read('../heys_app_shell_v1.js');
 const paletteSource = read('../styles/modules/002-ui-v4-palette-roles.css');
 const mealsSource = read('../day/_meals.js');
 const paywallSource = read('../heys_paywall_v1.js');
+const subscriptionsSource = read('../heys_subscriptions_v1.js');
 
 describe('Nutrition tab v4 structure', () => {
   it('строит вкладку одной полосой без ярусов «Сейчас / Дневник / Разбор дня»', () => {
@@ -72,8 +73,11 @@ describe('Nutrition tab v4 structure', () => {
     expect(nutritionSource).toContain("CYCLE_CHIP = { key: 'cycle'");
   });
 
-  it('чипы конфигурации: min-height 30 px, без ::after-припуска', () => {
-    expect(cssSource).toMatch(/\.nutrition-v4-chip \{[^}]*min-height: 30px/);
+  // 06.09: было 30 px. Правило тач-целей дизайнера — 44 px ВИДИМЫМ размером,
+  // без псевдо-припуска: расширитель области нажатия снят намеренно, потому
+  // что цель должна совпадать с тем, что человек видит.
+  it('чипы конфигурации: min-height 44 px, без ::after-припуска', () => {
+    expect(cssSource).toMatch(/\.nutrition-v4-chip \{[^}]*min-height: 44px/);
     expect(cssSource).toMatch(/\.nutrition-v4-chip::after \{[^}]*content: none/);
   });
 
@@ -165,13 +169,18 @@ describe('Nutrition tab v4 structure', () => {
   });
 
   it('только чтение: плашка называет причину и что делать, кнопки гаснут', () => {
-    expect(paywallSource).toContain('Пробный период закончился');
-    expect(paywallSource).toContain('День и история открыты для чтения');
-    // Эмодзи и стрелка сняты: плашка живёт над содержимым вкладки.
-    const banner = paywallSource.slice(
-      paywallSource.indexOf('// Плашка называет причину'),
-      paywallSource.indexOf('// GATING LOGIC'),
-    );
+    // Плашка переехала из heys_paywall_v1.js в heys_subscriptions_v1.js при
+    // сведении readonly-поверхностей с канвасом. Правило прежнее и проверяется
+    // там, где плашка живёт: она называет ПРИЧИНУ и что делать дальше.
+    expect(subscriptionsSource).toContain('Пробный период закончился');
+    expect(subscriptionsSource).toContain('День и история открыты для чтения');
+    // Эмодзи и стрелка сняты. Прежде кусок вырезался по комментарию-маркеру
+    // «// Плашка называет причину» — его больше нет ни в одном файле, и такая
+    // проверка молча сравнивала бы пустую строку. Якорь теперь структурный:
+    // сама карточка состояния, по её классу.
+    const start = subscriptionsSource.indexOf("sub-screen__status-card--readonly");
+    expect(start).toBeGreaterThan(-1);
+    const banner = subscriptionsSource.slice(start, start + 600);
     expect(banner).not.toContain("'⏰'");
     expect(banner).not.toContain("'→'");
     expect(cssSource).toMatch(/\[data-readonly='true'\][\s\S]{0,200}opacity: 0\.4/);

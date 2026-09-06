@@ -60,8 +60,9 @@ describe('home-widgets owner batch: дата, куратор, вода, онбо
     expect(widgetsCss).toContain('.widgets-longpress-hint');
   });
 
-  it('чипы «Питания» 30 px без припуска', () => {
-    expect(nutritionCss).toMatch(/\.nutrition-v4-chip[\s\S]*?min-height:\s*30px/);
+  // 06.09: было 30 px — см. правило тач-целей, 44 видимым размером.
+  it('чипы «Питания» 44 px без припуска', () => {
+    expect(nutritionCss).toMatch(/\.nutrition-v4-chip[\s\S]*?min-height:\s*44px/);
     expect(nutritionCss).toMatch(/\.nutrition-v4-chip::after[\s\S]*?content:\s*none/);
   });
 
