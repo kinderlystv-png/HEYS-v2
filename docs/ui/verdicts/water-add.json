@@ -1604,7 +1604,7 @@
     },
     "тач-цели": {
       "v": "?",
-      "f": "400-water-and-hydration.css: контрактные .water-review__chip/--quick/--in-row и .water-fab-vol — height/min-height 44px (rem→px 6 сентября); .water-fab 44×44; custom-sheet preset/confirm min-height 44. Закрыты advice-list-close, detail/science close 44×44, footnote-link min-height 44. Остаток инвентаря 8: .ios-toggle 26px (тумблер — не цель по аналогии с cycle), advice-* ссылки 0×0 в jsdom, .advice-v4-disclaimer-card__check 25.8px. Строка «=» при нуле инвентаря water-add.",
+      "f": "Инвентарь зоны 10. Контрактные .water-review__chip/--quick, .water-fab 44×44; chromium .water-review__chip--quick 300×44. .ios-toggle/.ios-toggle-label — named-exception toggle (строка 44). Остаток: .macro-toast-rating-btn 0×33.6, .advice-list-header-link 0×0, .data-overview-table 0×0, .advice-v4-detail__tech-link 0×0, advice-* ссылки 0×0 в jsdom. node scripts/ui-v4-check-touch-target-visible.mjs --check",
       "h": "8a798d7f2a5c"
     }
   },

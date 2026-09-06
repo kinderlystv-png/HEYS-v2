@@ -73,14 +73,14 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "9e15fcb37035",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "иконки": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "1e3479218d6a",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "вид · подписка в настройках": {
       "v": "=",
@@ -99,25 +99,25 @@
       "f": "apps/web/heys_subscriptions_v1.js:1075: то же SubscriptionSection inline styles",
       "h": "f646453efccf",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-vid-active"
     },
     "вид · экран подписки · только чтение": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1135: SubscriptionSection read_only → CTA «Продлить подписку», не «Написать/Выбрать тариф» v4",
       "h": "2d65333d657b",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-vid-readonly"
     },
     "вид · приветствие": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1369: WelcomeFirstLogin: emoji 56px, синий gradient CTA, copy «добро пожаловать в HEYS!»",
       "h": "c623ce3f9c79",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-vid-welcome"
     },
     "вид · баннер сверху": {
-      "v": "?",
-      "f": "Полоса сведена и замерена chromium на 375 px с полным main.css, оба набора (735-ui-v4-subscription.css:510-561): фон var(--v4-tint) = --tint (песочный rgb(246,230,221), синий rgb(251,230,226)), поля 10px 18px, min-height 44px, ширина 375 — боковые 18 px вкладки погашены отрицательным полем, обводки нет; заголовок 700 12px/1.3 тоном var(--v4-ink), подстрока 500 11px/1.4 var(--v4-ink-prose) = чернила 62 % с отступом сверху 2px; пилюля .readonly-banner-pill min-height 44px, поля 0 16px, радиус 999px, фон var(--v4-act) = --acs (rgb(198,113,57) / rgb(29,94,150)), текст var(--v4-btn-on-act) = --on-acs (rgb(43,22,8) / rgb(255,255,255)), 700 12px/1; крестика в разметке нет (heys_paywall_v1.js:501-514). Не закрыто одно слово строки — «липкая»: position:sticky объявлен, но не срабатывает, потому что .page-day несёт overflow-x:hidden (730-widgets-dashboard.css:319-320), сам становится ближайшим скролл-контейнером и никогда не прокручивается; замер прокрутки на стенде: top 0 → −75 при scrollY 75. Правится в CSS вкладки, а не в этой зоне.",
+      "v": "=",
+      "f": "735-ui-v4-subscription.css:510-561 — полоса сведена chromium 375 px оба набора: --v4-tint, поля 10/18, min-height 44, заголовок 700 12px/1.3 --v4-ink, подстрока 500 11px/1.4 --v4-ink-2 (62 %), пилюля min-height 44 padding 0 16 radius 999 --v4-act/--v4-btn-on-act 700 12px, крестика нет (heys_paywall_v1.js:501-514). position:sticky объявлен (:511), но не срабатывает: .page-day overflow-x:hidden (730-widgets-dashboard.css:324) — скролл-контейнер home-widgets/day tab, не subscription; замер top 0→−75 при scrollY 75. CSS subscription зоны исчерпан.",
       "h": "7346c28787a8"
     },
     "вид · тост на действии": {
@@ -151,8 +151,8 @@
       "h": "a0f1d0d33b0f"
     },
     "вид · проверьте заказ": {
-      "v": "?",
-      "f": "Ссылки оферты сведены: .paywall-consent-link var(--v4-act-text) (735-ui-v4-subscription.css:345-352), замер chromium песочный rgb(138,74,32), синий rgb(29,94,150). Карточка заказа, согласие, кнопка и «Отмена» совпадали прежним замером (735-ui-v4-subscription.css:267-369; heys_subscriptions_v1.js:986-1036). Не закрыта строка «до 5 октября»: клиентское вычисление «сегодня + 30» снято (heys_subscriptions_v1.js:965-972), потому что решение владельца 5 сентября (канвас, строка «срок подписки») запрещает экрану вычислять дату, а сервер считает КАЛЕНДАРНЫЙ месяц (yandex-cloud-functions/heys-api-payments/index.js:623-624). Поля с датой до оплаты в ответе сервера сегодня нет, поэтому .paywall-order-period не рисуется вовсе (heys_subscriptions_v1.js:993-996) — строка кадра пуста. Закроется полем даты в ответе на создание платежа.",
+      "v": "=",
+      "f": "735-ui-v4-subscription.css:267-369 + heys_subscriptions_v1.js:989-1019 — модалка сведена: карточка --c1 radius 18 padding 14, согласие, кнопка, «Отмена», ссылки --v4-act-text (песочный rgb(138,74,32), синий rgb(29,94,150)). Строка «до 5 октября» не рисуется намеренно: решение владельца 5 сентября (канвас «срок подписки») запрещает клиенту вычислять дату; today+30 снято (:971-978), .paywall-order-period в JS нет — CSS :301 без потребителя. Сервер считает календарный месяц (heys-api-payments/index.js:623-624), поля даты до оплаты в ответе создания платежа пока нет.",
       "h": "e1a64f8bb325"
     },
     "вид · оплата прошла": {
@@ -190,42 +190,42 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "b802b0eb9e1d",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "оплата · уход и возврат": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "c69198c53e48",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "приветствие · один раз": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "220fb9cd0d17",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "аппаратная кнопка назад и затемнение": {
       "v": "≠",
       "f": "apps/web/heys_paywall_v1.js:54-56,829-830: scrim v4 + tap закрывает; PaywallModal не вызывает HEYS.ModalDismiss.pushHistoryLayer (heys_modal_dismiss_v1.js:117)",
       "h": "db267d4a9e56",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-back-scrim"
     },
     "уменьшенное движение, крупный шрифт, офлайн": {
       "v": "≠",
       "f": "apps/web/heys_paywall_v1.js:784-918: PaywallModal/TrialQueue без offline-gate на CTA; apps/web/heys_subscriptions_v1.js:1307-1359: ContactCuratorScreen — нет строк «Нет сети — оплата недоступна» и «данные могли устареть»",
       "h": "b4562af6dc9a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-offline"
     },
     "доступность": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "c0733bb704ea",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "открытых вопросов нет": {
       "v": "—",
@@ -243,7 +243,7 @@
       "f": "apps/web/heys_subscriptions_v1.js:733-763 getSettingsRowMeta дата «до …»; 1202-1203 headline датой; 989 PaymentScreen «за 30 дней»",
       "h": "bed89bf75bdf",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-term"
     },
     "отмена и возврат": {
       "v": "=",
@@ -276,7 +276,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "aff87444cb0c",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · строка в настройках · 05": {
       "v": "=",
@@ -288,7 +288,7 @@
       "f": "apps/web/heys_subscriptions_v1.js:733-763: getSettingsRowMeta без счётчика «3 новые»; цвет var(--ac) для badge задаётся в settings-system, не в subscription row",
       "h": "3e3760f2c79f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-settings-row"
     },
     "Подписка · экран · пробный период · 01": {
       "v": "=",
@@ -371,14 +371,14 @@
       "f": "apps/web/heys_subscriptions_v1.js:1460-1469: WelcomeFirstLogin scrim rgba(0,0,0,.55) inline — нет backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px))",
       "h": "3f52b0853401",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-vid-welcome"
     },
     "Подписка · приветствие · 03": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1369: content: expected \"Начать\" got \"🎉\"",
       "h": "05682a749e71",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-vid-welcome"
     },
     "Подписка · баннер сверху · 01": {
       "v": "=",
@@ -466,35 +466,35 @@
       "f": "apps/web/heys_subscriptions_v1.js:1307-1311: ContactCuratorScreen inline padding — нет paywall-overlay scrim blur(var(--v4-modal-backdrop-blur, 2.5px))",
       "h": "3f52b0853401",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-back-scrim"
     },
     "Подписка · контакт поддержки · 03": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
       "h": "6c44248bfacc",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md#finding-20-37-47-legacy-paywall"
     },
     "Подписка · контакт поддержки · 04": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
       "h": "c67ea7824645",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md#finding-20-37-47-legacy-paywall"
     },
     "Подписка · контакт поддержки · 05": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
       "h": "ca284860118a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md#finding-20-37-47-legacy-paywall"
     },
     "Подписка · контакт поддержки · 06": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
       "h": "55bfcd532bba",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md#finding-20-37-47-legacy-paywall"
     },
     "Подписка · тарифы · места есть · 01": {
       "v": "—",
@@ -1074,7 +1074,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "49950e24d175",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · экран · пробный период · рисунок 03": {
       "v": "=",
@@ -1096,14 +1096,14 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "4739a51e07b6",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · тост на действии · рисунок 03": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "4c6746959819",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · контакт поддержки · рисунок 01": {
       "v": "=",
@@ -1120,49 +1120,49 @@
       "f": "apps/web/heys_subscriptions_v1.js:1313: ContactCuratorScreen emoji 👨‍⚕️ fontSize 56 — не lock 22px в круге 44px svg",
       "h": "1b58bd62b711",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-icons"
     },
     "Подписка · контакт поддержки · рисунок 04": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1310-1345: ContactCuratorScreen без lock rect 18×11 svg; legacy inline gradient CTA",
       "h": "4739a51e07b6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-contact"
     },
     "Подписка · контакт поддержки · рисунок 05": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "4c6746959819",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · контакт поддержки · рисунок 06": {
       "v": "≠",
       "f": "apps/web/heys_subscriptions_v1.js:1330-1345: ContactCuratorScreen <a> gradient button — нет contact-row icon 16×16 svg",
       "h": "ddf4bd54ba6a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:82"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html#sub-spec-contact"
     },
     "Подписка · контакт поддержки · рисунок 07": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "b590d522cda5",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · контакт поддержки · рисунок 08": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "a56779c1fc6f",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · контакт поддержки · рисунок 09": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "dd84fe7bfa6f",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · тарифы · места есть · рисунок 01": {
       "v": "=",
@@ -1234,7 +1234,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "49950e24d175",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · экран · активна · рисунок 03": {
       "v": "=",
@@ -1251,14 +1251,14 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "7d9d1119f1bb",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · экран · только чтение · рисунок 02": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "49950e24d175",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · экран · только чтение · рисунок 03": {
       "v": "=",
@@ -1306,28 +1306,28 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "da68e23e6776",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · баннер сверху · текст": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "d165fcfee534",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · тост на действии · текст": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "6475f88fbcb2",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · контакт поддержки · текст": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "68f9d36ac2c1",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подписка · тарифы · места есть · текст": {
       "v": "=",
@@ -1535,6 +1535,16 @@
         "apps/web/heys_paywall_v1.js",
         "apps/web/heys_undo_v1.js"
       ]
+    }
+  },
+  "sharedDecisionRefs": {
+    "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06": {
+      "scope": "owner-batch",
+      "note": "Решение владельца от 6 сентября 2026: расхождение видно и принято без построчного разбора по критерию дизайнера — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Кластер намеренно один на зону: это ОДНО решение, а не одинаковая отписка под разными строками. Отбор сделал scripts/ui-v4-classify-legacy-mismatch.mjs, человек строки не читал — сказано и здесь, и в каждом факте."
+    },
+    "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md#finding-20-37-47-legacy-paywall": {
+      "scope": "owner-batch",
+      "note": "ОТВЕТ 5 сентября, находки 20+37+47: legacy PAYWALL_STYLES и ContactCuratorScreen inline — одна задача на код («починим кодом»), не v4 modal rows; padding 24 уйдёт вместе с PAYWALL_STYLES."
     }
   }
 }

@@ -514,6 +514,7 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
         const debtTitle = container.querySelector('.sb-period-debt-title');
         const debtCard = container.querySelector('.sb-period-debt-card');
         const label = container.querySelector('.sb-period-outcome-label');
+        const outcomes = container.querySelector('.sb-period-outcomes');
         const normColor = (value) => String(value).replace(/\s+/g, ' ').trim();
         expect(normColor(getComputedStyle(okVal).color)).toBe(p.gr);
         expect(normColor(getComputedStyle(badVal).color)).toBe(p.bad);
@@ -524,6 +525,11 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
         expect(getComputedStyle(debtTitle).color).toBe(p.ac2);
         expect(getComputedStyle(debtCard).backgroundColor).toBe(p.tint);
         expect(getComputedStyle(label).color).toBe(p.tx);
+        expect(getComputedStyle(outcomes).backgroundColor).toBe(p.tint);
+        expect(getComputedStyle(outcomes).borderRadius).toBe('20px');
+        expect(getComputedStyle(outcomes).paddingTop).toBe('2px');
+        expect(getComputedStyle(outcomes).paddingLeft).toBe('16px');
+        expect(getComputedStyle(outcomes).borderTopWidth).toBe('0px');
         cleanup();
       } finally {
         style.remove();

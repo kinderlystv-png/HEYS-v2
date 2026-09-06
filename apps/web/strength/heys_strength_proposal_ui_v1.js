@@ -906,7 +906,6 @@
     timeline: { display: 'flex', alignItems: 'center', gap: '9px' },
     skippedBadge: {
       font: '600 11px/1 Figtree, sans-serif',
-      color: 'var(--v4-mark-1)',
     },
     replacementLine: { font: '700 12.5px/1 Figtree, sans-serif', color: 'var(--tx)' },
     prose: {
@@ -1610,7 +1609,27 @@
           onClick: props.onOpenCycleReport,
         },
           h('span', null, 'Отчёт по циклу'),
-          h('span', { className: 'sb-cycle-report-chevron', 'aria-hidden': 'true' }, '›')
+          // Кадры «Программа · цикл · рисунок 01/02»: шеврон Lucide в поле
+          // 15×15 (viewBox 0 0 24 24), кривая M9 6l6 6-6 6 обводкой 2,75 —
+          // а не типографский глиф «›», у которого толщину и наклон задаёт
+          // шрифт.
+          h('span', { className: 'sb-cycle-report-chevron', 'aria-hidden': 'true' },
+            h('svg', {
+              width: 15,
+              height: 15,
+              viewBox: '0 0 24 24',
+              fill: 'none',
+              focusable: 'false'
+            },
+              h('path', {
+                d: 'M9 6l6 6-6 6',
+                stroke: 'currentColor',
+                strokeWidth: 2.75,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round'
+              })
+            )
+          )
         )
       )
     );

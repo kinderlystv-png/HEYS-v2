@@ -2497,7 +2497,6 @@
   function sheetRows(ctx) {
     const exercises = ctx.exercises || [];
     const current = exercises[ctx.openIdx >= 0 ? ctx.openIdx : 0] || {};
-    const hasPlanSnapshot = !!(ctx.hasPlanSnapshot);
     const lastSession = typeof ctx.lastSessionFor === 'function' ? ctx.lastSessionFor() : null;
     const canRepeatLast = !!(lastSession
       && Array.isArray(lastSession.exercises)
@@ -2543,29 +2542,6 @@
         off: exercises.length < 2,
         chevron: 'dim',
         go: function () { ctx.close(); ctx.setLinkFrom(0); ctx.go('superset'); }
-      },
-      {
-        icon: '📋', t: 'Назначено против сделано', d: 'отклонения от плана куратора',
-        off: !hasPlanSnapshot,
-        chevron: 'dim',
-        go: function () {
-          ctx.close();
-          if (typeof ctx.openPlanVsDone === 'function') {
-            ctx.openPlanVsDone();
-            return;
-          }
-          if (typeof Parts.openPlanVsDone === 'function') {
-            Parts.openPlanVsDone({
-              training: ctx.training || {},
-              bodyWeightKg: ctx.bodyWeightKg,
-              onMessageCurator: ctx.onMessageCurator,
-              onWeekReport: ctx.onWeekReport,
-              onBack: ctx.onPlanVsDoneBack
-            });
-            return;
-          }
-          if (typeof ctx.go === 'function') ctx.go('plan-vs-done');
-        }
       },
       {
         icon: '📝', t: 'Заметка к тренировке', d: 'самочувствие, зал, партнёр',

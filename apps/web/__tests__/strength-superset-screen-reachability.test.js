@@ -257,52 +257,19 @@ describe('superset_ui · screen reachability', () => {
     expect(closeOverlay).toHaveBeenCalledTimes(1);
   });
 
-  it('шторка ⋯ → «Назначено против сделано» → openPlanVsDone (канонический экран)', () => {
-    const close = vi.fn();
-    const go = vi.fn();
-    const openSpy = vi.spyOn(Parts, 'openPlanVsDone').mockReturnValue(true);
-    const training = {
-      planSnapshot: { exercises: [{ name: 'Жим', approaches: [work(70, 8, false)] }] },
-      workoutLog: { exercises: [{ name: 'Жим', approaches: [work(70, 8, true)] }] }
-    };
+  it('sheetRows не содержит «Назначено против сделано» (снято из шторки 5 сентября)', () => {
     const rows = Parts.sheetRows({
       exercises: [{ name: 'Жим' }],
       openIdx: 0,
-      hasPlanSnapshot: true,
-      close,
-      go,
-      training,
-      bodyWeightKg: 78
-    });
-    const row = rows.find(function (r) { return r.t === 'Назначено против сделано'; });
-    expect(row).toBeTruthy();
-    expect(row.off).toBe(false);
-    row.go();
-    expect(close).toHaveBeenCalledTimes(1);
-    expect(openSpy).toHaveBeenCalledWith(expect.objectContaining({
-      training,
-      bodyWeightKg: 78
-    }));
-    expect(go).not.toHaveBeenCalled();
-    openSpy.mockRestore();
-  });
-
-  it('sheetRows «Назначено против сделано» предпочитает ctx.openPlanVsDone', () => {
-    const close = vi.fn();
-    const ctxOpen = vi.fn();
-    const openSpy = vi.spyOn(Parts, 'openPlanVsDone').mockReturnValue(true);
-    const rows = Parts.sheetRows({
-      exercises: [{ name: 'Жим' }],
-      openIdx: 0,
-      hasPlanSnapshot: true,
-      close,
+      close: vi.fn(),
       go: vi.fn(),
-      openPlanVsDone: ctxOpen
+      training: {
+        planSnapshot: { exercises: [{ name: 'Жим', approaches: [work(70, 8, false)] }] },
+        workoutLog: { exercises: [{ name: 'Жим', approaches: [work(70, 8, true)] }] }
+      },
+      bodyWeightKg: 78
     });
-    rows.find(function (r) { return r.t === 'Назначено против сделано'; }).go();
-    expect(ctxOpen).toHaveBeenCalledTimes(1);
-    expect(openSpy).not.toHaveBeenCalled();
-    openSpy.mockRestore();
+    expect(rows.find(function (r) { return r.t === 'Назначено против сделано'; })).toBeUndefined();
   });
 
   it('buildPlanVsDoneSnapshot без профиля не подставляет bodyWeightKg=0 для своего веса', () => {

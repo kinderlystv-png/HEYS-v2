@@ -680,7 +680,8 @@
         ),
         // WheelPickers: День / Месяц / Год
         WheelPicker ? React.createElement('div', {
-          className: 'profile-personal-wheel-card flex justify-center gap-2',
+          className: 'profile-personal-wheel-card flex justify-center gap-2'
+            + (under18 ? ' profile-personal-wheel-card--under18' : ''),
           style: { background: '#f7efe2', borderRadius: 18, padding: '12px 10px 13px', marginTop: 8 }
         },
           // День
@@ -1804,7 +1805,7 @@
     const cardShell = (children) => React.createElement('div', {
       style: {
         width: '100%',
-        background: '#efe3cf',
+        background: 'var(--v4-hero, #efe3cf)',
         borderRadius: 20,
         padding: '14px 16px',
         marginTop: 20,

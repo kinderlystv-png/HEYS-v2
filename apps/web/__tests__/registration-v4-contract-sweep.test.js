@@ -275,7 +275,7 @@ describe('registration · сведение с контрактом v4', () => {
 
     it('«вид карточки итогов» — --c2, поля 14/16, строки 12/600 шагом 11 табличными цифрами', () => {
       const open = endingTree(openSub);
-      const card = styles(open).find((s) => s.background === '#efe3cf' && s.borderRadius === 20);
+      const card = styles(open).find((s) => s.background === 'var(--v4-hero, #efe3cf)' && s.borderRadius === 20);
       expect(card).toBeTruthy();
       expect(card.padding).toBe('14px 16px');
       expect(card.maxWidth).toBeUndefined();

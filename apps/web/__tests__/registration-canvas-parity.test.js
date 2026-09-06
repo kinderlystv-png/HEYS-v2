@@ -44,6 +44,18 @@ function collectText(node, output = []) {
   return output;
 }
 
+function flatten(node, out = []) {
+  if (node == null || node === false) return out;
+  if (Array.isArray(node)) {
+    node.forEach((child) => flatten(child, out));
+    return out;
+  }
+  if (typeof node !== 'object') return out;
+  out.push(node);
+  flatten(node.children, out);
+  return out;
+}
+
 function loadProfileSteps(storage, heysOverrides = {}) {
   const steps = {};
   window.React = {
@@ -417,6 +429,9 @@ describe('registration canvas parity', () => {
       expect(text).toContain('Продолжим, Александра');
       expect(text).toContain('Рост и вес — заново');
       expect(text).toContain('вес спросим заново');
+      const tree = steps['profile-resume'].component({ data: initial });
+      expect(flatten(tree).some((n) => n.props?.className === 'registration-v4-endpoint-disc')).toBe(true);
+      expect(flatten(tree).some((n) => n.type === 'svg' && n.props.width === 26)).toBe(true);
     });
 
     it('хром регистрации — daily: Дальше в футере, сохранение и ошибка как в канвасе', () => {

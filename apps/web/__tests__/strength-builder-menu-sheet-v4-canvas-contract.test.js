@@ -43,8 +43,8 @@ function loadParts() {
 describe('И2 · Шторка ⋯ · canvas contract', () => {
   afterEach(() => cleanup());
 
-  it('держит семь входов canvas и геометрию листа', () => {
-    expect(SUPERSET).toContain('Назначено против сделано');
+  it('держит входы canvas и геометрию листа', () => {
+    expect(SUPERSET).not.toContain("t: 'Назначено против сделано'");
     expect(SUPERSET).toContain('Круговой режим');
     expect(SUPERSET).toContain('Заметка к тренировке');
     expect(SUPERSET).toContain('Повторить прошлую');
@@ -70,7 +70,6 @@ describe('И2 · Шторка ⋯ · canvas contract', () => {
           setHistoryName: () => {},
           setWarmupDropIdx: () => {},
           setApproachTypesIdx: () => {},
-          hasPlanSnapshot: true
         });
         return React.createElement('div', { className: 'sb-builder-screen' },
           React.createElement('div', { className: 'sb-sheet' },
@@ -105,12 +104,8 @@ describe('И2 · Шторка ⋯ · canvas contract', () => {
       expect(screen.getByText('Каталог упражнений')).toBeTruthy();
       expect(screen.getByText('История и рекорды')).toBeTruthy();
       expect(screen.getByText('Круговой режим')).toBeTruthy();
-      expect(screen.getByText('Назначено против сделано')).toBeTruthy();
       expect(screen.getByText('Заметка к тренировке')).toBeTruthy();
       expect(screen.getByText('Повторить прошлую')).toBeTruthy();
-
-      fireEvent.click(screen.getByText('Назначено против сделано'));
-      expect(seen).toEqual(['plan-vs-done']);
 
       const grip = document.querySelector('.sb-sheet-grip');
       expect(getComputedStyle(grip).width).toBe('38px');

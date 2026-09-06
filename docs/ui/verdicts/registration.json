@@ -189,8 +189,8 @@
       "h": "56fba734594e"
     },
     "вид карточки итогов": {
-      "v": "?",
-      "f": "Геометрия сошлась, цвет — нет; прежний факт перепроверен на сегодняшнем коде и подтверждён. Сошлось: heys_profile_step_v1.js:1804-1813 cardShell — width 100 %, borderRadius 20, padding '14px 16px'; карточка одна на все три конца регистрации, вызовы :1838, :1882 и :1932; строки «поле — значение» :1723-1737 — fontSize 12, fontWeight 600, marginTop 11, значение справа с fontVariantNumeric 'tabular-nums'. НЕ сошёлся фон: :1807 держит литерал '#efe3cf' вместо роли --c2 (в продукте --v4-hero). Замер на стенде с набором на корне: карточка даёт rgb(239,227,207) и на песочном, и на синем, тогда как --v4-hero на синем — rgb(226,236,246) (проверено тем же прогоном на .cur-cab__back). Строка закроется, когда :1807 переведут на var(--v4-hero).",
+      "v": "=",
+      "f": "cardShell background var(--v4-hero, #efe3cf) heys_profile_step_v1.js:1804-1813; computed sand rgb(239,227,207) blue rgb(226,236,246) @375 registration-q7-colors.test.js",
       "h": "156f1666d3e5"
     },
     "ожидание": {
@@ -1726,8 +1726,8 @@
       "h": "cf5c31dfca7a"
     },
     "Регистрация · возраст меньше 18 · 08": {
-      "v": "?",
-      "f": "значения колеса — общий слой .mc-wheel-* (500-pwa:5026-5095), с кадром не сведён; обводка ошибки у карточки колеса отсутствует — вынесено в UI_V4_FINDINGS",
+      "v": "=",
+      "f": "profile-personal-wheel-card--under18 box-shadow inset 0 0 0 2px var(--v4-bad-text) 500-pwa-and-offline.css:5430-5433; class toggled heys_profile_step_v1.js:682-685",
       "h": "e5e49da81f22"
     },
     "Регистрация · возраст меньше 18 · 09": {
@@ -2083,8 +2083,8 @@
       "h": "c5a169aa68ab"
     },
     "Регистрация · возврат к незавершённой · 02": {
-      "v": "?",
-      "f": "диска с часами перед заголовком нет: экран начинается с «Продолжим» (heys_profile_step_v1.js:1966); кадр рисует круг 56 — ждём решения дизайнера",
+      "v": "=",
+      "f": ".registration-v4-endpoint-disc 56×56 radius 999 bg var(--v4-hero) 733-ui-v4-login-theme.css:2195-2204; computed sand rgb(239,227,207) blue rgb(226,236,246) registration-q7-colors.test.js",
       "h": "a3acdc62e1e3"
     },
     "Регистрация · возврат к незавершённой · 03": {
@@ -2652,18 +2652,18 @@
       "h": "314fb3a8451c"
     },
     "Регистрация · возврат к незавершённой · рисунок 01": {
-      "v": "?",
-      "f": "SVG-часы кадра не рендерятся — тот же пробел, что «возврат · 02» (heys_profile_step_v1.js:1966)",
+      "v": "=",
+      "f": "registrationResumeDisc SVG 26×26 viewBox 0 0 24 24 heys_profile_step_v1.js:1960-1978; renders before title :1996",
       "h": "c9e176031528"
     },
     "Регистрация · возврат к незавершённой · рисунок 02": {
-      "v": "?",
-      "f": "SVG-часы кадра не рендерятся — тот же пробел, что «возврат · 02» (heys_profile_step_v1.js:1966)",
+      "v": "=",
+      "f": "SVG path M12 7v5l3 2 heys_profile_step_v1.js:1975 — same clock hand as кадр",
       "h": "28c8f17128ec"
     },
     "Регистрация · возврат к незавершённой · рисунок 03": {
-      "v": "?",
-      "f": "SVG-часы кадра не рендерятся — тот же пробел, что «возврат · 02» (heys_profile_step_v1.js:1966)",
+      "v": "=",
+      "f": "SVG circle r=9 cx=12 cy=12 heys_profile_step_v1.js:1976 — same clock disc as кадр",
       "h": "7f48d89037c0"
     },
     "Регистрация · возврат к незавершённой · рисунок 04": {
@@ -2832,8 +2832,8 @@
       "h": "b1b72da418d6"
     },
     "Профиль · отзыв согласия на добавки · текст": {
-      "v": "?",
-      "f": "системный confirm говорит «Отозвать согласие на обработку данных о здоровье?», кадр — другая копия; продуктовая часть листа на месте, ждём выравнивания текста",
+      "v": "=",
+      "f": "SupplementsRevokeSheet bottom sheet — title/lead/impact/buttons match canvas text block heys_user_tab_impl_v1.js:2871-2898; revoke без window.confirm registration-consent-revoke-sheet.test.js:147-175",
       "h": "2980f36bef51"
     },
     "одно слово, два разных элемента": {

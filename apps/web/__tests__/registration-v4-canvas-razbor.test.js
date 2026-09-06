@@ -153,6 +153,8 @@ describe('registration · разбор кадра «персональные д�
 
   it('элементы 12–15/21–22 — капсула колеса и градиенты приглушения', () => {
     expect(PROFILE_SRC).toMatch(/background: '#f7efe2', borderRadius: 18, padding: '12px 10px 13px', marginTop: 8/);
+    expect(PROFILE_SRC).toMatch(/profile-personal-wheel-card--under18/);
+    expect(pwaCss).toMatch(/\.profile-personal-wheel-card--under18[\s\S]*box-shadow: inset 0 0 0 2px var\(--v4-bad-text/s);
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card::before[\s\S]*height: 14px/s);
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card::after[\s\S]*height: 14px/s);
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--prev[\s\S]*font: 600 12\.5px\/2\.1/s);

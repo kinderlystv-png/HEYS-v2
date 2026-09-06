@@ -50,7 +50,7 @@ describe('регистрация v4: решения контракта', () => {
   // 12 px/600 шагом 11. Три кадра концов рисуют три разные карточки — контракт
   // ставит одну намеренно: концы различаются смыслом, а не оформлением.
   it('карточка итогов одна на три конца и следует контракту, а не кадрам', () => {
-    expect(profile).toMatch(/background: '#efe3cf',\s*\n?\s*borderRadius: 20,\s*\n?\s*padding: '14px 16px'/);
+    expect(profile).toMatch(/background: 'var\(--v4-hero, #efe3cf\)',\s*\n?\s*borderRadius: 20,\s*\n?\s*padding: '14px 16px'/);
     expect((profile.match(/cardShell\(/g) || []).length).toBe(3);
   });
 

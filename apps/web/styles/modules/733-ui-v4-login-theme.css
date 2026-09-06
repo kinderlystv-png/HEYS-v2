@@ -2196,7 +2196,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   width: 56px;
   height: 56px;
   border-radius: 999px;
-  background: var(--v4-sand-surface-soft, #fffaf1);
+  background: var(--v4-hero, #efe3cf);
   display: flex;
   align-items: center;
   justify-content: center;

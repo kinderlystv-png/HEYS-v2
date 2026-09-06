@@ -137,7 +137,7 @@
       "f": "блок 5: четыре подписанные пары на месте; «не вели» — --v4-ink-30 по решению 31.08 (строка «вид · календарь»), а не 10 % из этой строки",
       "h": "47bc3169a222",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html#tab-spec-cal-legend"
     },
     "причина пропуска зарядки": {
       "v": "=",
@@ -159,7 +159,7 @@
       "f": "Решение 31.08 сведено: «Сегодня» — transparent + inset 1.5px, «не вели» — --v4-ink-30; сетка/чипы/листание — .ma-habit-cal--activity-v4. Остаток: календарь вторым слоем .activity-v4-history__cal; легенда 55 % (--v4-ink-2) вместо 50 % прозы кадра",
       "h": "6bd1b47f2c4d",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html#tab-spec-cal-view"
     },
     "вид · карточка силовой": {
       "v": "=",
@@ -1146,7 +1146,7 @@
       "f": "календарь встроен в список .cd (.activity-v4-history__cal), отдельной карточкой .grp не оборачивается",
       "h": "81d6d8e40a85",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html#tab-spec-cal-08"
     },
     "Календарь зарядки · 09": {
       "v": "=",
@@ -1158,7 +1158,7 @@
       "f": "точка «не вели» — --v4-ink-30 по решению 31.08; кадр ·10 ещё называет rgba(var(--ink),.1)",
       "h": "8fbe7d2c5c08",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html#tab-spec-cal-view"
     },
     "Календарь зарядки · 11": {
       "v": "=",
@@ -1180,7 +1180,7 @@
       "f": "точка «сегодня» neutral — обводка inset 1.5px (731-ui-v4-activity.css:689-691), не заливка 16 % кадра ·14",
       "h": "b0363046bca8",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html#tab-spec-cal-view"
     },
     "Календарь зарядки · 15": {
       "v": "=",
@@ -1199,7 +1199,7 @@
       "f": "строка листания — .ma-habit-cal-period--month внутри вложенного календаря, не отдельный список .cd кадра ·17",
       "h": "d641122bb122",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html#tab-spec-cal-17"
     },
     "Календарь зарядки · 18": {
       "v": "=",

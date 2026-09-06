@@ -64,7 +64,7 @@ describe('task48 · builder_ui sheet tails', () => {
 
   afterEach(() => cleanup());
 
-  it('шторка ⋯ → «Назначено против сделано» открывает BuilderPlanVsDoneScreen', () => {
+  it('шторка ⋯ не содержит «Назначено против сделано» (снято из кадра 5 сентября)', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: planSessionTraining(),
       dateKey: '2026-08-03',
@@ -74,15 +74,9 @@ describe('task48 · builder_ui sheet tails', () => {
     }));
 
     fireEvent.click(screen.getByRole('button', { name: 'Ещё' }));
-    const row = screen.getByText('Назначено против сделано');
-    expect(row.closest('button')?.disabled).toBe(false);
-
-    fireEvent.click(row);
-
-    expect(screen.getByText('Назначено против сделано')).toBeTruthy();
-    expect(screen.getByText('Пропущенная не считается сделанной')).toBeTruthy();
-    expect(document.querySelector('.sb-plan-vs-hole')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Ещё' })).toBeNull();
+    expect(screen.queryByText('Назначено против сделано')).toBeNull();
+    expect(screen.getByText('Порядок упражнений')).toBeTruthy();
+    expect(screen.getByText('Круговой режим')).toBeTruthy();
   });
 
   it('view plan-vs-done не делегирует в Parts.PlanVsDoneScreen', () => {

@@ -2267,7 +2267,7 @@
     },
     "тач-цели": {
       "v": "?",
-      "f": "Контрактная .cycle-date-picker-cell — height/min-height 44px в 500-pwa-and-offline.css:2413-2415; polosa4-task104-pkg36-touch-44px.test.js. Инвентарь зоны 113: 111 ложных из 000-base-and-gamification.css (селекторы .btn 0×0), приписанных cycle по вердиктам — не UI цикла. Строка закроется при нуле инвентаря по cycle или сужении FILE_ZONE_HINTS.",
+      "f": "Инвентарь зоны 12 (было 113 ложных из 000-base по FILE_ZONE_HINTS+вердикты). .cycle-date-picker-cell — chromium 47.1×44. Тумблер 26px — не цель, строка 44. Худшие: .mc-rest-cycle-none-btn 0×16, .cycle-card-v4__action 0×17, .cycle-card-v4__date-confirm-main 0×0, .cycle-card-v4__cancel 0×17. node scripts/ui-v4-check-touch-target-visible.mjs --check",
       "h": "0455750bd936"
     }
   },

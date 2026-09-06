@@ -5385,7 +5385,7 @@
     },
     "тач-цели": {
       "v": "?",
-      "f": "Строка требует чипы витаминов/минералов/жиров 44 видимым — .mc-supp-flow-chip min-height 44px уже в 500-pwa-and-offline.css:3028-3042. Инвентарь зоны 6 сентября после правок 300-modals-and-day.css (quick-chip, mood-preset, sleep-quality-preset, grams-preset и др.): 50 нарушений, из них 47 — heys-components.css и 715-yesterday-verify.css, приписанные зоне по вердиктам, не чек-ин. Худшие в 300-modals: .mood-slider 10px, .wheel-item 35px — ползунки/колёса, не чипы строки. Строка закроется при нуле инвентаря по checkin-morning.",
+      "f": "Атрибуция по префиксу класса/селектора (resolveTouchZone), не по упоминанию файла в вердикте: инвентарь зоны 25 на 6 сентября. Контрактные чипы .mc-supp-flow-chip min-height 44px — chromium 375px 44.8×44 (probe). Ползунки/колёса — named-exception range-slider/wheel-picker. Остаток: .sleep-breakdown-item 0×32, .mc-steps-advice-mark 44×0, .mc-rest-supp-head 100×0, .mc-header-btn 0×40.4. Ширина принята без замера: 76 глобально. node scripts/ui-v4-check-touch-target-visible.mjs --check",
       "h": "90d0d489a6b4"
     }
   },

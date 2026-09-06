@@ -7779,10 +7779,12 @@
 
 .sb-period-outcomes {
   margin-top: 12px;
-  padding: 0 13px;
-  border-radius: 14px;
-  background: var(--sb-card, var(--c1));
-  border: 1px solid var(--sb-br, rgba(var(--ink, 0, 0, 0), 0.1));
+  /* Канвасный .cd: фон --c1, радиус 20, поля 2px 16px, без рамки
+   * (строка «вид · отчёт за период», кадр Г6). */
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--c1);
+  border: 0;
 }
 
 .sb-period-outcome-row {

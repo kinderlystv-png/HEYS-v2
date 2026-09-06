@@ -5427,6 +5427,11 @@
   gap: 6px;
 }
 
+/* Кадр «возраст меньше 18 · 08»: обводка inset 2px тоном --ac2 на карточке колеса. */
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card--under18 {
+  box-shadow: inset 0 0 0 2px var(--v4-bad-text, #a1471c);
+}
+
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card::before,
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card::after {
   content: "";

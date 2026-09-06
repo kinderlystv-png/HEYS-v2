@@ -237,7 +237,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "f6d47f78e6af",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "план в ленте — назначение, а не факт": {
       "v": "=",
@@ -379,7 +379,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "9bd66f1be697",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "вид · карточка упражнения": {
       "v": "=",
@@ -518,7 +518,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "439179e9a0cf",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "итог программы называет рост, а не провалы": {
       "v": "=",
@@ -688,8 +688,8 @@
       "h": "5313399ce044"
     },
     "вид · отчёт цикла": {
-      "v": "?",
-      "f": "Цвет сведён: короткие роли объявлены на корне зоны (750-strength-builder.css:12-32), замер chromium 375 px даёт на .sb-root.program-cycle и .sb-cycle-report значения набора на всех четырёх наборах вместо прежних плоских чернил и прозрачного фона. Ряд входа сведён с кадром — строки «Программа · цикл · 33-35, рисунок 01-02» закрыты. ОСТАЛОСЬ ОДНО: пункт шторки «Назначено против сделано» снят решением 1 сентября и из разметки кадра 5 сентября, а в коде остаётся — sheetRows в strength/heys_strength_superset_ui_v1.js:2548-2568, ряд рисуется heys_strength_builder_ui_v1.js:2275-2292, ветка openPlanVsDone. Не тронуто намеренно: файл superset правит параллельная сессия (dirty в общем дереве), а снятие пункта вместе с веткой — правка поведения, а не цвета. Строка закроется, когда пункт уберут.",
+      "v": "=",
+      "f": "Короткие роли на .sb-root (750:12-32); chromium 375 px sand+blue — .sb-plan-vs-dot.is-summary background rgb(92,106,69)/rgb(31,110,77), .sb-plan-vs-cell.is-done.is-positive .sb-plan-vs-cell-val color те же (731:1729-1860). Пункт шторки «Назначено против сделано» снят из sheetRows — superset_ui:2497+.",
       "h": "fbe8cd3bfc93"
     },
     "вид · итог программы": {
@@ -854,7 +854,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "65165e19065b",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "принимается только целиком": {
       "v": "=",
@@ -989,7 +989,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "bc6a85637671",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "вес выше плана — прогресс, а не нарушение": {
       "v": "≠",
@@ -1003,7 +1003,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "33e01a22159b",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "переходы и анимации, кроме перенумерации, не описаны": {
       "v": "—",
@@ -2566,7 +2566,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "d9a337aab838",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Перенос · след в обе стороны · 13": {
       "v": "≠",
@@ -2630,7 +2630,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "32f6f04d630b",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Правка веса в сессии · 01": {
       "v": "=",
@@ -3102,7 +3102,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "175bdcc2e73a",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Правка легла не полностью · 02": {
       "v": "≠",
@@ -3116,14 +3116,14 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "a04292765ead",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Правка легла не полностью · 04": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "10cb2c396ec4",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Правка легла не полностью · 05": {
       "v": "=",
@@ -3190,7 +3190,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "66303182f9a3",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Связка · границы правки · 01": {
       "v": "=",
@@ -3322,21 +3322,21 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "3f4ba16443bc",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подход · таблица ввода · 05": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "3cbe60569836",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подход · таблица ввода · 06": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "2c445e6f5f43",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подход · таблица ввода · 07": {
       "v": "=",
@@ -3430,14 +3430,14 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "6b286135ed76",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подход · таблица ввода · 25": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "07ffbada0ee7",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Подход · таблица ввода · 26": {
       "v": "≠",
@@ -4695,7 +4695,7 @@
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Куратор и зал · 04": {
       "h": "1a96e89ed667",
@@ -4801,7 +4801,7 @@
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Куратор и зал · 24": {
       "h": "7d7a0afb9b50",
@@ -6594,9 +6594,10 @@
       "h": "af81bb6e54c6"
     },
     "Правка · одно живое предложение · 08": {
-      "v": "?",
-      "f": "Кадр Л4 «Правка от 09:14» ink-2 — полноэкран Л4 не монтируется; живой flow — ProposalCard/Review без этой строки (heys_strength_proposal_ui_v1.js:186-335).",
-      "h": "727f0b6e8693"
+      "v": "—",
+      "f": "Кадр Л4 «Правка от 09:14» ink-2 — полноэкран не монтируется; живой flow ProposalCard/ProposalReview без строки истории правок (heys_strength_proposal_ui_v1.js:186-340).",
+      "h": "727f0b6e8693",
+      "naKind": "demo-only"
     },
     "Правка · одно живое предложение · 09": {
       "v": "=",
@@ -8147,35 +8148,35 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "175bdcc2e73a",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Сессия · брошена вчера · 02": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "07ffbada0ee7",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Сессия · брошена вчера · 03": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "7994ec545954",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Сессия · брошена вчера · 04": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "233639ffdbb1",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Сессия · брошена вчера · 05": {
       "v": "≠",
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "c629f84f9712",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Сессия · брошена вчера · 06": {
       "v": "≠",
@@ -8231,7 +8232,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "af81bb6e54c6",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Сессия · брошена вчера · 14": {
       "v": "≠",
@@ -8273,7 +8274,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "6b286135ed76",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Сессия · брошена вчера · 20": {
       "v": "≠",
@@ -8287,7 +8288,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "eeaedd226e64",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "как читать графику": {
       "v": "—",
@@ -8380,7 +8381,7 @@
       "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
       "h": "8c2896c058d1",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Правка веса в сессии · текст": {
       "v": "=",
@@ -8474,8 +8475,8 @@
     },
     "Шторка ⋯ · текст": {
       "h": "33ff46c1fe23",
-      "v": "?",
-      "f": "Сноска шторки сходится дословно — heys_strength_builder_ui_v1.js:2294-2296. Не сходится состав: кадр 5 сентября снял пункт «Назначено против сделано» (решение 1 сентября), а sheetRows его по-прежнему отдаёт — strength/heys_strength_superset_ui_v1.js:2548-2568, ряд рисуется в builder_ui:2275-2292. Строка закроется, когда пункт уберут из sheetRows вместе с веткой openPlanVsDone. «Своё упражнение» (:2519) и «Повторить прошлую» (:2576) кадр не рисовал и прежде — это прежнее принятое различие, не находка пакета."
+      "v": "=",
+      "f": "Состав и сноска сходятся с кадром И2: sheetRows без «Назначено против сделано» (superset_ui:2497+), сноска builder_ui:2294-2296 дословно. «Своё упражнение» и «Повторить прошлую» — прежнее принятое отличие от кадра."
     },
     "План в ленте дня · текст": {
       "v": "—",
@@ -8667,8 +8668,8 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2345"
     },
     "вид · отчёт за период": {
-      "v": "?",
-      "f": "Цвет сведён: короткие роли объявлены на корне зоны (750-strength-builder.css:12-32); замер chromium 375 px на четырёх наборах — .sb-period-outcome-val.is-ok rgb(92,106,69)/rgb(31,110,77), .is-bad rgb(168,60,34)/rgb(176,58,36), .is-muted чернила 55 %, .sb-period-debt-card фон rgb(246,230,221)/rgb(251,230,226), заголовок --ac2, проза чернила 60 %. Подробность приведена к 45 % (750:7806-7811), значения получили моноцифры font-variant-numeric: tabular-nums (:7813-7820), у «своих вне плана» снят перебивавший font-weight 600 (:7830-7832) — теперь все четыре 700. ОСТАЛОСЬ: блок исходов .sb-period-outcomes (750:7774-7780) стоит на --sb-card (то есть на --bg) радиусом 14, полями 0 13px и с рамкой 1px, тогда как канвасный .cd — это фон --c1, радиус 20, поля 2px 16px и без рамки. Правка поверхности не сделана: она меняет вид блока целиком и её надо принимать глазами вместе с карточкой долга, а не подгонять числом.",
+      "v": "=",
+      "f": ".sb-period-outcomes приведён к канвасному .cd: фон var(--c1), радиус 20px, поля 2px 16px, без рамки (750:7780-7787); chromium 375 px sand rgb(247,239,226)/blue rgb(238,243,249). Тона исходов и долга — strength-proposal-v4-canvas-contract.test.js PeriodReportScreen computed.",
       "h": "8bbd8e2085da"
     },
     "снято · проверка «класс красится инлайном не везде»": {
@@ -8977,7 +8978,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 06": {
       "v": "=",
@@ -9058,7 +9059,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 15": {
       "v": "=",
@@ -9186,7 +9187,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 29": {
       "v": "=",
@@ -9206,7 +9207,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 31": {
       "v": "≠",
@@ -9217,7 +9218,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 32": {
       "v": "=",
@@ -9237,7 +9238,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 34": {
       "v": "=",
@@ -9257,7 +9258,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 36": {
       "v": "≠",
@@ -9268,7 +9269,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md:62"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 37": {
       "v": "=",
@@ -10558,6 +10559,14 @@
     "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3756": {
       "scope": "frame",
       "note": "Кадр Л11 «Исход · отказ» — полноэкранный исход не реализован."
+    },
+    "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06": {
+      "scope": "owner-batch",
+      "note": "Решение владельца от 6 сентября 2026: расхождение видно и принято без построчного разбора по критерию дизайнера — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Кластер намеренно один на зону: это ОДНО решение, а не одинаковая отписка под разными строками. Отбор сделал scripts/ui-v4-classify-legacy-mismatch.mjs, человек строки не читал — сказано и здесь, и в каждом факте."
+    },
+    "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06": {
+      "scope": "zone",
+      "note": "Finding 6 сентября (UI_V4_FINDINGS): А1б/А2 vs Г4/К — одно DOM-состояние «открытое весовое упражнение», три кадра расходятся; 7 строк ≠ ждут выбор источника дизайнером. CANVAS_CONFLICTS в strength-builder-calm-canvas-contract.test.js."
     }
   }
 }

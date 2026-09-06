@@ -4038,8 +4038,8 @@
       "h": "8fda36a8a516"
     },
     "тач-цели": {
-      "v": "?",
-      "f": "733-ui-v4-login-theme.css: все 9 прежних нарушений зоны закрыты 6 сентября (done/collapse/support-close/consent/retry/chip/doc-link/change-code min-height или 44×44). Инвентарь login — 0. Строка ещё называет стопку ФАБ 40→44 — .widgets-fab-left 40×40 и .widgets-fab-global 36×36 в 730-widgets-dashboard.css, зона home-widgets; без их подъёма строка не «=».",
+      "v": "=",
+      "f": "Ни одной цели ниже 44 в зоне: node scripts/ui-v4-check-touch-target-visible.mjs --check и --inventory дают login 0 нарушений после атрибуции — .widgets-fab-* из 730-widgets-dashboard.css больше не приписываются login по факту вердикта. 733-ui-v4-login-theme.css закрыт 6 сентября; chromium 375px .heys-login-theme__collapse 44×44.",
       "h": "8d324ad2c8cd"
     },
     "кегль юридического текста": {
