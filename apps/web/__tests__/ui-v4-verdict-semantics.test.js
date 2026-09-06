@@ -475,8 +475,12 @@ describe('UI v4 verdict semantics', () => {
     ).toEqual({ form: 'typed-v1-extra-keys', extraKeys: ['surprise'] });
   });
 
+  // Читает все 28 файлов зон — 17 681 строку — и в одиночку укладывается в 4,9 с
+  // при умолчании vitest в 5 с. На полном прогоне под нагрузкой не укладывается:
+  // 6 сентября упал по «Test timed out in 5000ms» при зелёном одиночном. Работа
+  // тяжёлая по существу, поэтому поднят порог, а не урезана проверка.
   it('текущий repository snapshot укладывается в миграционный baseline', () => {
     const state = inspectVerdictSemantics(readAllZones());
     expect(state.schemaProblems).toEqual([]);
-  });
+  }, 60_000);
 });
