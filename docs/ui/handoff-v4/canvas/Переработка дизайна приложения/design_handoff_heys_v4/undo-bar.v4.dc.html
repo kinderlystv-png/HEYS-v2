@@ -51,16 +51,16 @@
 </helmet><div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
   <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
     <span style="font:800 25px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em;">Отмена действия</span>
-    <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);">сквозной компонент · v4</span>
+    <span style="font:600 12px/1 Figtree,sans-serif;color:var(--ink-3);">сквозной компонент · v4</span>
   </div>
-  <p style="margin:0 0 6px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Один бар на всё приложение: двенадцать точек входа — удаление приёма и продукта, задачи планировщика, тренировки, голод и самочувствие, очередь триала. Действие применяется сразу, человеку даётся окно на возврат. До этого канваса отмена была описана в трёх файлах по-разному — 5 с полосой в «Питании», 3 с кольцом в капсуле даты, «не решено» в советах; здесь вид один, а различия сведены к состояниям.</p>
-  <p style="margin:0 0 26px;font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">файл в пакете: undo-bar.v4.dc.html · протокол docs/implementation/UNDO_BAR_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <p style="margin:0 0 6px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Один бар на всё приложение: двенадцать точек входа — удаление приёма и продукта, задачи планировщика, тренировки, голод и самочувствие, очередь триала. Действие применяется сразу, человеку даётся окно на возврат. До этого канваса отмена была описана в трёх файлах по-разному — 5 с полосой в «Питании», 3 с кольцом в капсуле даты, «не решено» в советах; здесь вид один, а различия сведены к состояниям.</p>
+  <p style="margin:0 0 26px;font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:var(--ink-2);">файл в пакете: undo-bar.v4.dc.html · протокол docs/implementation/UNDO_BAR_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
 
   <div class="ctr" data-contract="undo-bar">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="ctrH">Что это и чьё</div>
@@ -122,7 +122,7 @@
     <div class="spec"><b>тоста подтверждения нет</b><span data-v="всплывающего уведомления об успехе или ошибке действия не рисуем: успех подтверждается самим содержимым, ошибка — на месте действия. Снимается роль подтверждения у heys_toast_v1 (зелёное «Действие отменено» с кнопкой), а не компонент целиком"></span><i>решение 21 августа: одно всплывающее место про возврат — этот бар. Роль подтверждения дублировала его кнопку «Отменить», поэтому уходит она</i></div>
     <div class="spec" style="border-bottom:none"><b>всплывающий совет — не мой</b><span data-v="второй потребитель heys_toast_v1 — всплывающий совет и плашка «Всё отлично! Советов нет». Он остаётся и описан в tips.v4.dc.html (кадр «Всплывающий совет»); этот контракт его не снимает и вида ему не задаёт"></span><i>один файл кода в двух ролях: без этой строки «прежний компонент снимается» читается как «удалить heys_toast_v1», а на нём висят советы</i></div>
 
-                                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 01</b><span data-v="высота 300px, фон var(--bg), распределение flex-start"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 02</b><span data-v="«Питание» — поля 16px 18px 0, шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>

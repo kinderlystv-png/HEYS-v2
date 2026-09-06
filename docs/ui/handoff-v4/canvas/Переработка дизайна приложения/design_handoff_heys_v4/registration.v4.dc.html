@@ -33,16 +33,16 @@
     <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">РЕГИСТРАЦИЯ</span>
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Настройка профиля один раз: согласия, четыре шага, три конца</span>
   </div>
-  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Согласия стоят до первых персональных данных и подписываются кодом. Четыре шага профиля — по одному герою на экран. Концов три: доступ открыт, ждём куратора, неделя начнётся с даты.</p>
-  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">В пакете: registration.v4.dc.html · протокол docs/implementation/REGISTRATION_WELCOME_SPLIT_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Согласия стоят до первых персональных данных и подписываются кодом. Четыре шага профиля — по одному герою на экран. Концов три: доступ открыт, ждём куратора, неделя начнётся с даты.</p>
+  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-2);">В пакете: registration.v4.dc.html · протокол docs/implementation/REGISTRATION_WELCOME_SPLIT_PROTOCOL.md · экраны искать по data-screen-label</p>
   <div class="ctr" data-contract="registration">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
-    <div class="spec"><b>кегль юридического текста</b><span data-v="РЕШЕНИЕ 6 сентября: юридический текст и согласия — не ниже 12,5 px, интерлиньяж не меньше 1,45. Поднято 5 узлов зоны (было 10,5–11,5): «Храним имя, контакт и профиль в России…», «Письма о продукте, не чаще раза в месяц», «Введите код доступа — он заменяет собственноручную подпись», «Программа рассчитана на взрослых, и документы подписывает совершеннолетний», «Копия подписи хранится в профиле». Галочки согласий и текст рядом с ними — один кегль: разный делает одно из двух согласий второстепенным, а они равны по силе"></span><i>ступень заводится не ради контраста, а ради того, что согласие должно быть удобочитаемым: это требование к документу, а не к оформлению</i></div>
+    <div class="spec"><b>кегль юридического текста</b><span data-v="РЕШЕНИЕ 6 сентября, редакция четвёртая — КЛАСС ПЕРЕЧИСЛЕН, а не описан словами. Юридический текст и согласия — 12,5 px с интерлиньяжем 1,55. Первые три редакции определяли класс словарём («всё, что человек обязан прочесть до действия»), и каждая промахивалась на следующем члене: сперва «Код вводится каждый раз при подписании», потом предупреждение о данных здоровья — ни одно не отвечало ни одному токену. ЧЛЕНСТВО ОПРЕДЕЛЯЕТСЯ ЧТЕНИЕМ КАДРОВ, и вот исчерпывающий перечень по зонам. login (13 фраз): «Код доступа заменяет собственноручную подпись…», «Я принимаю Соглашение об использовании простой электронной подписи», «Нажимая «Продолжить», вы заключаете соглашение…», «Проверка идёт на устройстве, код никуда не отправляется», «Код вводится каждый раз при подписании…», «Запись о подписании сохранена…», «Куратор выдал код для входа…», «Не сообщайте код никому, включая куратора», «Прежний код перестал работать…», «Не подходят: подряд идущие цифры…», «Ещё раз, чтобы не ошибиться. Восстановить его нельзя…», «Мы не узнаём это устройство… устройство запомнится на 30 дней», «Дальше вы входите своим кодом…». registration (16): «Храним имя, контакт и профиль в России…», «Введите код доступа — он заменяет собственноручную подпись», «Копия подписи хранится в профиле…», «Принимая Соглашение, вы подтверждаете…», «Программа рассчитана на взрослых…», «Оба документа открываются целиком…», «HEYS — учёт питания и сопровождение куратора, не медицинская услуга», «Telegram — только сигнал «хочу обратиться»…», «Статус пробной недели и сообщения куратора», «Необязательное отмечается тапом…», «Подпись — код доступа, 16 августа в 17:46», «При росте 168 см нижняя граница нормы — 52 кг…», «Курс и все отметки приёма будут удалены без возможности вернуть…», разделы соглашения 1.1, 1.2 и 12.1. questionnaire (3): «HEYS — сервис сопровождения по режиму питания. Это не медицинская услуга…» (блок целиком, включая «Не сообщайте куратору сведения о заболеваниях…»), «Прочитайте предупреждение и подтвердите…», «Я ознакомился с предупреждением…», «Ответы видите вы и назначенный куратор. Анкета не гарантирует пробную неделю». ЧТО В КЛАСС НЕ ВХОДИТ и остаётся прозой 11–11,5: навигационные подсказки («Поставьте галочку выше, чтобы отправить анкету», «Вернитесь к шагу 5 и подтвердите предупреждение»), технические сообщения («Нет связи с сервером…», «Ответы сохранены на сервере…»), объяснения механики («Умеренно — минус 15 % от расхода…», «Волна задаёт, сколько после приёма пищи…»), настройка вида («Выбор запоминается на этом устройстве…»). Причина ступени не косметическая: согласие, набранное мельче вспомогательной подписи, юридически слабее — человек подписывает то, что ему было тяжело прочесть"></span><i>ступень заводится не ради контраста, а ради того, что согласие должно быть удобочитаемым: это требование к документу, а не к оформлению</i></div>
     <div class="ctrH">Что это и чьё</div>
     <div class="spec"><b>фича</b><span data-v="регистрация клиента: два обязательных документа с подписью кодом, четыре шага профиля, три возможных конца"></span></div>
     <div class="spec"><b>границы</b><span data-v="канвас рисует содержимое шагов, документ и шторку подписи; системная клавиатура и статус-бар — платформы"></span></div>
@@ -119,31 +119,30 @@
     <div class="spec"><b>пояснение под заголовком шага</b><span data-v="есть у всех четырёх шагов, одна строка 12 px/500 тоном чернил 55 % через 9 px под заголовком. Дословно: шаг 1 — «Имя увидит только ваш куратор» · шаг 2 — «Вес будете уточнять каждое утро, здесь только точка отсчёта» · шаг 3 — «Цель можно поменять в любой момент» · шаг 4 — «По этим двум числам считается окно приёмов». Больше пояснений на шаге нет: подписи полей объясняют себя сами"></span><i>текст назван дословно 25 августа — раньше строка требовала пояснение у каждого шага, а копия была только у второго, и дописать её за дизайнера кодер не имеет права. Каждая фраза отвечает на «зачем вы это спрашиваете», а не пересказывает заголовок</i></div>
     <div class="spec"><b>особый период в профиле</b><span data-v="тумблер «Особый период» — пятая строка группы «Нормы», между «Сном» и «Инсулиновой волной»; дорожка 40×24, ползунок 18, включённый — заливка --acs. Строка видна только при поле «Женский»; включение без подтверждения, выключение спрашивает и удаляет отметки"></span><i>он меняет нормы дня, поэтому живёт рядом с ними, а не в «Медицинском»: отдельного согласия у функции больше нет. Вид карточки периода, ряда дней и множителей — cycle.v4.dc.html</i></div>
     <div class="spec" style="border-bottom:none"><b>профиль в настройках</b><span data-v="экран профиля — три группы: «Обо мне» (имя, пол, дата рождения, рост, базовый вес, текущий вес) · «Нормы и цели» со вторым уровнем заголовков (цель, нормы, пульсовые зоны) · «Медицинское» (ограничения, добавки, документы, отзыв согласия). Экран прокручивается: содержимое выше высоты экрана, поэтому на канвасе оно нарисовано двумя кадрами одной прокрутки — «Профиль · верх» и «Профиль · низ»; шапка и полка с «Сохранить» закреплены и стоят в обоих. Раскладку регистрации экран повторяет значением в значение только внутри «Обо мне». Главный для состава групп и адресов вынесенного — settings-system.v4.dc.html, строки «профиль — три группы вместо восьми» и «адреса вынесенного из профиля»; своих чисел для них этот файл не заводит"></span><i>решение владельца 25 августа, вариант А: три группы с названным адресом для каждого вынесенного блока. Прежняя редакция несла вариант Б («остальные аккордеоны остаются как есть») и спорила с решением, а до неё требовала три плоские группы из двенадцати строк, не говоря, куда девать пульсовые зоны, нормы БЖУ и безопасность. Кадров два, потому что 814 px содержимого в экран 706 не укладываются ни при какой обрезке отступов — обрезалась ровно группа «Медицинское», ради которой перерисовка и делалась</i></div>
-                                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                                          <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Регистрация · согласия · 01</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Регистрация · согласия · 02</b><span data-v="«Согласия и условия» — шрифт 700 20px/1.3 Figtree, цвет var(--tx), отступ сверху 6px"></span></div>
-    <div class="spec"><b>Регистрация · согласия · 03</b><span data-v="«Оба документа открываются целиком: отметка появитс» — шрифт 500 12px/1.5 Figtree, цвет var(--ink-2), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Регистрация · согласия · 03</b><span data-v="«Оба документа открываются целиком: отметка появитс» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 8px"></span></div>
     <div class="spec"><b>Регистрация · согласия · 04</b><span data-v="фон var(--tint), радиус 18px, поля 13px 15px, отступ сверху 16px"></span></div>
     <div class="spec"><b>Регистрация · согласия · 05</b><span data-v="«Важно» — шрифт 700 12px/1.4 Figtree, цвет var(--ac2)"></span></div>
-    <div class="spec"><b>Регистрация · согласия · 06</b><span data-v="«HEYS — учёт питания и сопровождение куратора, не м» — шрифт 500 11.5px/1.5 Figtree, цвет var(--ink-2), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Регистрация · согласия · 06</b><span data-v="«HEYS — учёт питания и сопровождение куратора, не м» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 4px"></span></div>
     <div class="spec"><b>Регистрация · согласия · 07</b><span data-v="фон var(--c1), радиус 18px, поля 11px 14px, отступ сверху 8px"></span></div>
     <div class="spec"><b>Регистрация · согласия · 08</b><span data-v="выравнивание flex-start, зазор 11px"></span></div>
     <div class="spec"><b>Регистрация · согласия · 09</b><span data-v="ширина 22px, высота 22px, радиус 6px, фон var(--bg), рамка inset 0 0 0 2px rgba(var(--ink),.18), флекс none, отступ сверху 1px"></span></div>
-    <div class="spec"><b>Регистрация · согласия · 10</b><span data-v="«Пользовательское соглашение» — шрифт 600 12.5px/1.4 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Регистрация · согласия · 10</b><span data-v="«Пользовательское соглашение» — шрифт 600 12.5px/1.55 Figtree, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Регистрация · согласия · 11</b><span data-v="«*» — цвет var(--ac)"></span></div>
     <div class="spec"><b>Регистрация · согласия · 12</b><span data-v="фон var(--bg), радиус 14px, поля 9px 12px, отступ сверху 8px"></span></div>
     <div class="spec"><b>Регистрация · согласия · 13</b><span data-v="«Коротко и честно» — шрифт 700 10.5px/1.3 Figtree, цвет var(--gr)"></span></div>
     <div class="spec"><b>Регистрация · согласия · 14</b><span data-v="«Доступ к HEYS, условия тарифа и отмены.» — шрифт 500 11px/1.5 Figtree, цвет var(--ink-2), отступ сверху 4px"></span></div>
     <div class="spec"><b>Регистрация · согласия · 15</b><span data-v="«Читать полностью →» — высота от 40px, выравнивание center, шрифт 700 11.5px/1 Figtree, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Регистрация · согласия · 16</b><span data-v="«Храним имя, контакт и профиль в России. Доступ у в» — шрифт 500 12.5px/1.5 Figtree, цвет var(--ink-2), отступ сверху 4px"></span></div>
-    <div class="spec"><b>Регистрация · согласия · 17</b><span data-v="подвал: направление column, зазор 4px, поля 10px 18px 14px"></span></div>
-    <div class="spec"><b>Регистрация · согласия · 18</b><span data-v="«Откройте и дочитайте оба документа» — шрифт 600 11.5px/1.45 Figtree, цвет var(--ink-2), выключка center"></span></div>
-    <div class="spec"><b>Регистрация · согласия · 19</b><span data-v="«Подписать оба» — главная кнопка: фон var(--c1), цвет var(--ink-30)"></span></div>
-    <div class="spec"><b>Регистрация · согласия · 20</b><span data-v="«Выйти без регистрации» — высота от 40px, выравнивание center, распределение center, шрифт 700 12px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Регистрация · согласия · 16</b><span data-v="подвал: направление column, зазор 4px, поля 10px 18px 14px"></span></div>
+    <div class="spec"><b>Регистрация · согласия · 17</b><span data-v="«Откройте и дочитайте оба документа» — шрифт 600 11.5px/1.45 Figtree, цвет var(--ink-2), выключка center"></span></div>
+    <div class="spec"><b>Регистрация · согласия · 18</b><span data-v="«Подписать оба» — главная кнопка: фон var(--c1), цвет var(--ink-30)"></span></div>
+    <div class="spec"><b>Регистрация · согласия · 19</b><span data-v="«Выйти без регистрации» — высота от 40px, выравнивание center, распределение center, шрифт 700 12px/1 Figtree, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Документ · начало · 01</b><span data-v="поля 14px 16px 10px, выравнивание center, зазор 10px, фон var(--bg)"></span></div>
     <div class="spec"><b>Документ · начало · 02</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 999px, фон var(--c1), выравнивание center, распределение center"></span></div>
-    <div class="spec"><b>Документ · начало · 03</b><span data-v="«Пользовательское соглашение» — флекс 1, шрифт 700 12.5px/1.3 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Документ · начало · 03</b><span data-v="«Пользовательское соглашение» — флекс 1, шрифт 700 12.5px/1.55 Figtree, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Документ · начало · 04</b><span data-v="«8 %» — моноцифры: шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Документ · начало · 05</b><span data-v="высота 3px, фон rgba(var(--ink),.07)"></span></div>
     <div class="spec"><b>Документ · начало · 06</b><span data-v="ширина 8%, высота 3px, фон var(--acs)"></span></div>
@@ -154,41 +153,40 @@
     <div class="spec"><b>Документ · начало · 11</b><span data-v="«В силе с 14 августа 2026» — поля 5px 10px, радиус 999px, фон var(--c1), шрифт 600 10px/1 Figtree, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Документ · начало · 12</b><span data-v="высота 1px, фон rgba(var(--ink),.08), отступы 16px 0"></span></div>
     <div class="spec"><b>Документ · начало · 13</b><span data-v="«1. Общие положения» — шрифт 700 14px/1.3 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Документ · начало · 14</b><span data-v="«1.1. Настоящее Соглашение регулирует отношения меж» — шрифт 500 12.5px/1.65 Figtree, цвет var(--ink-2), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Документ · начало · 14</b><span data-v="«1.1. Настоящее Соглашение регулирует отношения меж» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 9px"></span></div>
     <div class="spec"><b>Документ · начало · 15</b><span data-v="зазор 9px, отступ сверху 11px"></span></div>
     <div class="spec"><b>Документ · начало · 16</b><span data-v="ширина 5px, высота 5px, радиус 999px, фон var(--acs), флекс none, отступ сверху 7px"></span></div>
     <div class="spec"><b>Документ · начало · 17</b><span data-v="шрифт 500 12.5px/1.6 Figtree, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Документ · начало · 18</b><span data-v="«Исполнителем» — цвет var(--tx)"></span></div>
     <div class="spec"><b>Документ · начало · 19</b><span data-v="зазор 9px, отступ сверху 9px"></span></div>
-    <div class="spec"><b>Документ · начало · 20</b><span data-v="«1.2. Предмет Соглашения — доступ к сервису HEYS дл» — шрифт 500 12.5px/1.65 Figtree, цвет var(--ink-2), отступ сверху 13px"></span></div>
+    <div class="spec"><b>Документ · начало · 20</b><span data-v="«1.2. Предмет Соглашения — доступ к сервису HEYS дл» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 13px"></span></div>
     <div class="spec"><b>Документ · начало · 21</b><span data-v="подвал: направление column, зазор 4px, поля 10px 18px 14px"></span></div>
     <div class="spec"><b>Документ · начало · 22</b><span data-v="«Долистайте до конца, чтобы принять» — шрифт 600 11px/1.4 Figtree, цвет var(--ink-2), выключка center"></span></div>
     <div class="spec"><b>Документ · начало · 23</b><span data-v="«Ознакомлен, принимаю» — главная кнопка: фон var(--c1), цвет var(--ink-30)"></span></div>
     <div class="spec"><b>Документ · конец · 01</b><span data-v="поля 14px 16px 10px, выравнивание center, зазор 10px, фон var(--bg)"></span></div>
     <div class="spec"><b>Документ · конец · 02</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 999px, фон var(--c1), выравнивание center, распределение center"></span></div>
-    <div class="spec"><b>Документ · конец · 03</b><span data-v="«Пользовательское соглашение» — флекс 1, шрифт 700 12.5px/1.3 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Документ · конец · 03</b><span data-v="«Пользовательское соглашение» — флекс 1, шрифт 700 12.5px/1.55 Figtree, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Документ · конец · 04</b><span data-v="«100 %» — моноцифры: шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Документ · конец · 05</b><span data-v="высота 3px, фон rgba(var(--ink),.07)"></span></div>
     <div class="spec"><b>Документ · конец · 06</b><span data-v="ширина 100%, высота 3px, фон var(--acs)"></span></div>
     <div class="spec"><b>Документ · конец · 07</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Документ · конец · 08</b><span data-v="«12. Разрешение споров» — шрифт 700 14px/1.3 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Документ · конец · 09</b><span data-v="«12.1. Споры разрешаются путём переговоров. 12.2. П» — шрифт 500 12.5px/1.65 Figtree, цвет var(--ink-2), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Документ · конец · 09</b><span data-v="«12.1. Споры разрешаются путём переговоров. 12.2. П» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 9px"></span></div>
     <div class="spec"><b>Документ · конец · 10</b><span data-v="высота 1px, фон rgba(var(--ink),.08), отступы 16px 0"></span></div>
     <div class="spec"><b>Документ · конец · 11</b><span data-v="фон var(--c1), радиус 16px, поля 13px 15px, отступ сверху 10px"></span></div>
     <div class="spec"><b>Документ · конец · 12</b><span data-v="распределение space-between, зазор 10px, шрифт 600 12px/1.4 Figtree"></span></div>
     <div class="spec"><b>Документ · конец · 13</b><span data-v="«Почта» — цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Документ · конец · 14</b><span data-v="«poplanton@mail.ru» — цвет var(--tx)"></span></div>
     <div class="spec"><b>Документ · конец · 15</b><span data-v="распределение space-between, зазор 10px, отступ сверху 10px, шрифт 600 12px/1.4 Figtree"></span></div>
-    <div class="spec"><b>Документ · конец · 16</b><span data-v="«Telegram — только сигнал «хочу обратиться». Заявле» — шрифт 500 11px/1.5 Figtree, цвет var(--ink-2), отступ сверху 9px"></span></div>
-    <div class="spec"><b>Документ · конец · 17</b><span data-v="«Принимая Соглашение, вы подтверждаете, что прочита» — шрифт 600 12px/1.6 Figtree, цвет var(--tx), отступ сверху 16px"></span></div>
-    <div class="spec"><b>Документ · конец · 18</b><span data-v="подвал: направление column, зазор 4px, поля 10px 18px 14px"></span></div>
-    <div class="spec"><b>Документ · конец · 19</b><span data-v="«Ознакомлен, принимаю» — главная кнопка"></span></div>
-    <div class="spec"><b>Документ · конец · 20</b><span data-v="«Закрыть без принятия» — высота от 40px, выравнивание center, распределение center, шрифт 700 12px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Документ · конец · 16</b><span data-v="«Принимая Соглашение, вы подтверждаете, что прочита» — шрифт 600 12.5px/1.55 Figtree, цвет var(--tx), отступ сверху 16px"></span></div>
+    <div class="spec"><b>Документ · конец · 17</b><span data-v="подвал: направление column, зазор 4px, поля 10px 18px 14px"></span></div>
+    <div class="spec"><b>Документ · конец · 18</b><span data-v="«Ознакомлен, принимаю» — главная кнопка"></span></div>
+    <div class="spec"><b>Документ · конец · 19</b><span data-v="«Закрыть без принятия» — высота от 40px, выравнивание center, распределение center, шрифт 700 12px/1 Figtree, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 01</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 02</b><span data-v="«Обязательные» — шрифт 600 10px/1 Figtree, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 16px 0 8px"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 03</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 14px, поля 11px 13px"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 04</b><span data-v="ширина 22px, высота 22px, радиус 6px, фон var(--acs), выравнивание center, распределение center, флекс none, отступ сверху 1px"></span></div>
-    <div class="spec"><b>Регистрация · необязательные согласия · 05</b><span data-v="«Пользовательское соглашение» — шрифт 600 12px/1.35 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Регистрация · необязательные согласия · 05</b><span data-v="«Пользовательское соглашение» — шрифт 600 12.5px/1.55 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 06</b><span data-v="выравнивание center, зазор 11px, фон var(--c1), радиус 14px, поля 11px 13px, отступ сверху 6px"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 07</b><span data-v="направление column, зазор 6px"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 08</b><span data-v="выравнивание flex-start, зазор 11px, фон var(--c1), радиус 14px, поля 11px 13px"></span></div>
@@ -196,8 +194,8 @@
     <div class="spec"><b>Регистрация · необязательные согласия · 10</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 11</b><span data-v="«Замеры тела» — шрифт 600 12px/1.35 Figtree, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 12</b><span data-v="«Обхваты тела в дневнике» — шрифт 500 10.5px/1.4 Figtree, цвет var(--ink-2), отступ сверху 3px"></span></div>
-    <div class="spec"><b>Регистрация · необязательные согласия · 13</b><span data-v="«Письма о продукте, не чаще раза в месяц» — шрифт 500 12.5px/1.4 Figtree, цвет var(--ink-2), отступ сверху 3px"></span></div>
-    <div class="spec"><b>Регистрация · необязательные согласия · 14</b><span data-v="«Необязательное отмечается тапом и меняется в настр» — шрифт 500 11px/1.5 Figtree, цвет var(--ink-2), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Регистрация · необязательные согласия · 13</b><span data-v="«Статус пробной недели и сообщения куратора» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 3px"></span></div>
+    <div class="spec"><b>Регистрация · необязательные согласия · 14</b><span data-v="«Необязательное отмечается тапом и меняется в настр» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 12px"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 15</b><span data-v="подвал"></span></div>
     <div class="spec"><b>Регистрация · необязательные согласия · 16</b><span data-v="«Подписать» — главная кнопка"></span></div>
     <div class="spec"><b>Регистрация · подпись кодом · 01</b><span data-v="область прокрутки: прозрачность .5"></span></div>
@@ -207,7 +205,7 @@
     <div class="spec"><b>Регистрация · подпись кодом · 05</b><span data-v="позиция absolute, вписан 0, направление column, распределение flex-end, поля 12px"></span></div>
     <div class="spec"><b>Регистрация · подпись кодом · 06</b><span data-v="фон var(--bg), радиус 26px, поля 20px 18px 18px, рамка 0 18px 50px rgba(var(--shadow),.28)"></span></div>
     <div class="spec"><b>Регистрация · подпись кодом · 07</b><span data-v="«Подпишите документы» — шрифт 700 15px/1.35 Figtree, цвет var(--tx), выключка center"></span></div>
-    <div class="spec"><b>Регистрация · подпись кодом · 08</b><span data-v="«Введите код доступа — он заменяет собственноручную» — шрифт 500 12.5px/1.5 Figtree, цвет var(--ink-2), отступ сверху 7px, выключка center"></span></div>
+    <div class="spec"><b>Регистрация · подпись кодом · 08</b><span data-v="«Введите код доступа — он заменяет собственноручную» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 7px, выключка center"></span></div>
     <div class="spec"><b>Регистрация · подпись кодом · 09</b><span data-v="распределение center, зазор 10px, отступ сверху 18px"></span></div>
     <div class="spec"><b>Регистрация · подпись кодом · 10</b><span data-v="ширина 44px, высота 52px, радиус 14px, фон var(--c1), выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Регистрация · подпись кодом · 11</b><span data-v="ширина 9px, высота 9px, радиус 999px, фон var(--acs)"></span></div>
@@ -224,13 +222,13 @@
     <div class="spec"><b>Регистрация · подписано · 07</b><span data-v="направление column, выравнивание center"></span></div>
     <div class="spec"><b>Регистрация · подписано · 08</b><span data-v="ширина 52px, высота 52px, радиус 999px, фон var(--gr-bg), выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Регистрация · подписано · 09</b><span data-v="«Документы подписаны» — шрифт 700 16px/1.3 Figtree, цвет var(--tx), отступ сверху 12px, выключка center"></span></div>
-    <div class="spec"><b>Регистрация · подписано · 10</b><span data-v="«Подпись — код доступа, 16 августа в 17:46» — шрифт 500 11.5px/1.5 Figtree, цвет var(--ink-2), отступ сверху 5px, выключка center"></span></div>
+    <div class="spec"><b>Регистрация · подписано · 10</b><span data-v="«Подпись — код доступа, 16 августа в 17:46» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 5px, выключка center"></span></div>
     <div class="spec"><b>Регистрация · подписано · 11</b><span data-v="фон var(--c1), радиус 18px, поля 12px 14px, отступ сверху 16px"></span></div>
     <div class="spec"><b>Регистрация · подписано · 12</b><span data-v="выравнивание baseline, распределение space-between, зазор 10px"></span></div>
-    <div class="spec"><b>Регистрация · подписано · 13</b><span data-v="«Пользовательское соглашение» — шрифт 600 12px/1.4 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Регистрация · подписано · 13</b><span data-v="«Пользовательское соглашение» — шрифт 600 12.5px/1.55 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Регистрация · подписано · 14</b><span data-v="«в. 1.11» — моноцифры: шрифт 700 10.5px/1 Figtree, цвет var(--ac), флекс none"></span></div>
     <div class="spec"><b>Регистрация · подписано · 15</b><span data-v="высота 1px, фон rgba(var(--ink),.08), отступы 10px 0"></span></div>
-    <div class="spec"><b>Регистрация · подписано · 16</b><span data-v="«Копия подписи хранится в профиле — её видно в наст» — шрифт 500 12.5px/1.5 Figtree, цвет var(--ink-2), отступ сверху 10px, выключка center"></span></div>
+    <div class="spec"><b>Регистрация · подписано · 16</b><span data-v="«Копия подписи хранится в профиле — её видно в наст» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 10px, выключка center"></span></div>
     <div class="spec"><b>Регистрация · подписано · 17</b><span data-v="«Продолжить» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Регистрация · персональные данные · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Регистрация · персональные данные · 02</b><span data-v="ширина 44px, высота 44px, отступы -8px 0, выравнивание center"></span></div>
@@ -426,7 +424,7 @@
     <div class="spec"><b>Регистрация · ниже нормы имт · 14</b><span data-v="отступ сверху 10px"></span></div>
     <div class="spec"><b>Регистрация · ниже нормы имт · 15</b><span data-v="фон var(--tint), радиус 16px, поля 12px 14px, отступ сверху 12px"></span></div>
     <div class="spec"><b>Регистрация · ниже нормы имт · 16</b><span data-v="«ИМТ цели 17,0 — ниже нормы» — шрифт 700 12px/1.4 Figtree, цвет var(--ac2)"></span></div>
-    <div class="spec"><b>Регистрация · ниже нормы имт · 17</b><span data-v="«При росте 168 см нижняя граница нормы — 52 кг. Цел» — шрифт 500 11.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Регистрация · ниже нормы имт · 17</b><span data-v="«При росте 168 см нижняя граница нормы — 52 кг. Цел» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 5px"></span></div>
     <div class="spec"><b>Регистрация · ниже нормы имт · 18</b><span data-v="подвал"></span></div>
     <div class="spec"><b>Регистрация · ниже нормы имт · 19</b><span data-v="«Дальше» — главная кнопка"></span></div>
     <div class="spec"><b>Регистрация · клавиатура · 01</b><span data-v="шапка"></span></div>
@@ -524,7 +522,7 @@
     <div class="spec"><b>Профиль · отзыв согласия на добавки · 09</b><span data-v="позиция absolute, вписан 0, фон var(--scrim)"></span></div>
     <div class="spec"><b>Профиль · отзыв согласия на добавки · 10</b><span data-v="позиция absolute, фон var(--bg), радиус 26px, поля 18px 16px 16px, рамка 0 -2px 20px rgba(80,50,20,.1)"></span></div>
     <div class="spec"><b>Профиль · отзыв согласия на добавки · 11</b><span data-v="«Отозвать согласие на добавки?» — шрифт 700 16px/1.3 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Профиль · отзыв согласия на добавки · 12</b><span data-v="«Курс и все отметки приёма будут удалены без возмож» — шрифт 500 12px/1.55 Figtree, цвет var(--ink-2), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Профиль · отзыв согласия на добавки · 12</b><span data-v="«Курс и все отметки приёма будут удалены без возмож» — шрифт 500 12.5px/1.55 Figtree, цвет var(--ink-2), отступ сверху 8px"></span></div>
     <div class="spec"><b>Профиль · отзыв согласия на добавки · 13</b><span data-v="фон var(--tint), радиус 16px, поля 11px 13px, отступ сверху 13px, направление column, зазор 5px, шрифт 600 11.5px/1.4 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Профиль · отзыв согласия на добавки · 14</b><span data-v="направление column, зазор 9px, отступ сверху 15px"></span></div>
     <div class="spec"><b>Профиль · отзыв согласия на добавки · 15</b><span data-v="«Отозвать и удалить» — высота от 48px, радиус 999px, фон var(--red), выравнивание center, распределение center, шрифт 700 13px/1 Figtree, цвет #fffaf1"></span></div>
@@ -630,13 +628,13 @@
     <div class="ph" data-demo="stop" data-screen-label="Регистрация · согласия">
       <div class="sc">
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
-        <div style="font:500 12px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Оба документа открываются целиком: отметка появится, когда дочитаете до конца.</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Оба документа открываются целиком: отметка появится, когда дочитаете до конца.</div>
         <div style="background:var(--tint);border-radius:18px;padding:13px 15px;margin-top:16px;">
           <div style="font:700 12px/1.4 Figtree,sans-serif;color:var(--ac2);">Важно</div>
-          <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">HEYS — учёт питания и сопровождение куратора, не медицинская услуга.</div>
+          <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">HEYS — учёт питания и сопровождение куратора, не медицинская услуга.</div>
         </div>
         <div style="background:var(--c1);border-radius:18px;padding:11px 14px;margin-top:8px;">
-          <div style="display:flex;align-items:flex-start;gap:11px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="font:600 12.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">Пользовательское соглашение <span style="color:var(--ac);">*</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:11px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);">Пользовательское соглашение <span style="color:var(--ac);">*</span></span></div>
           <div style="background:var(--bg);border-radius:14px;padding:9px 12px;margin-top:8px;">
             <div style="font:700 10.5px/1.3 Figtree,sans-serif;color:var(--gr);">Коротко и честно</div>
             <div style="font:500 11px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">Доступ к HEYS, условия тарифа и отмены.</div>
@@ -644,10 +642,10 @@
           <div style="min-height:40px;display:flex;align-items:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">Читать полностью →</div>
         </div>
         <div style="background:var(--c1);border-radius:18px;padding:11px 14px;margin-top:8px;">
-          <div style="display:flex;align-items:flex-start;gap:11px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="font:600 12.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">Обработка персональных данных <span style="color:var(--ac);">*</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:11px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);">Обработка персональных данных <span style="color:var(--ac);">*</span></span></div>
           <div style="background:var(--bg);border-radius:14px;padding:9px 12px;margin-top:8px;">
             <div style="font:700 10.5px/1.3 Figtree,sans-serif;color:var(--gr);">Коротко и честно</div>
-            <div style="font:500 12.5px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">Храним имя, контакт и профиль в России. Доступ у вас и куратора. Telegram, Google и Apple получают только то, что названо в согласии, — приглашение, статус заявки и доставку уведомлений.</div>
+            <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">Храним имя, контакт и профиль в России. Доступ у вас и куратора. Telegram, Google и Apple получают только то, что названо в согласии, — приглашение, статус заявки и доставку уведомлений.</div>
           </div>
           <div style="min-height:40px;display:flex;align-items:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);">Читать полностью →</div>
         </div>
@@ -659,7 +657,7 @@
     <div class="ph" data-demo="stop" data-screen-label="Документ · начало">
       <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;background:var(--bg);">
         <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
-        <span style="flex:1;font:700 12.5px/1.3 Figtree,sans-serif;color:var(--ink-2);">Пользовательское соглашение</span>
+        <span style="flex:1;font:700 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);">Пользовательское соглашение</span>
         <span class="n" style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">8 %</span>
       </div>
       <div style="height:3px;background:rgba(var(--ink),.07);"><div style="width:8%;height:3px;background:var(--acs);"></div></div>
@@ -671,10 +669,10 @@
         </div>
         <div style="height:1px;background:rgba(var(--ink),.08);margin:16px 0;"></div>
         <div style="font:700 14px/1.3 Figtree,sans-serif;color:var(--tx);">1. Общие положения</div>
-        <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-wrap:pretty;">1.1. Настоящее Соглашение регулирует отношения между:</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-wrap:pretty;">1.1. Настоящее Соглашение регулирует отношения между:</div>
         <div style="display:flex;gap:9px;margin-top:11px;"><span style="width:5px;height:5px;border-radius:999px;background:var(--acs);flex:none;margin-top:7px;"></span><div style="font:500 12.5px/1.6 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;"><b style="font-weight:700;color:var(--tx);">Исполнителем</b> — ИП Поплавский Антон Сергеевич, ИНН 263517141102</div></div>
         <div style="display:flex;gap:9px;margin-top:9px;"><span style="width:5px;height:5px;border-radius:999px;background:var(--acs);flex:none;margin-top:7px;"></span><div style="font:500 12.5px/1.6 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;"><b style="font-weight:700;color:var(--tx);">Пользователем</b> — физическим лицом, принявшим условия Соглашения</div></div>
-        <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);margin-top:13px;text-wrap:pretty;">1.2. Предмет Соглашения — доступ к сервису HEYS для ведения дневника питания и сопровождения по вопросам питания и активности.</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:13px;text-wrap:pretty;">1.2. Предмет Соглашения — доступ к сервису HEYS для ведения дневника питания и сопровождения по вопросам питания и активности.</div>
       </div>
       <div class="foot" style="display:flex;flex-direction:column;gap:4px;padding:10px 18px 14px;">
         <div style="font:600 11px/1.4 Figtree,sans-serif;color:var(--ink-2);text-align:center;">Долистайте до конца, чтобы принять</div>
@@ -686,21 +684,21 @@
     <div class="ph" data-demo="stop" data-screen-label="Документ · конец">
       <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;background:var(--bg);">
         <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
-        <span style="flex:1;font:700 12.5px/1.3 Figtree,sans-serif;color:var(--ink-2);">Пользовательское соглашение</span>
+        <span style="flex:1;font:700 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);">Пользовательское соглашение</span>
         <span class="n" style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">100 %</span>
       </div>
       <div style="height:3px;background:rgba(var(--ink),.07);"><div style="width:100%;height:3px;background:var(--acs);"></div></div>
       <div class="sc" style="padding-top:16px;">
         <div style="font:700 14px/1.3 Figtree,sans-serif;color:var(--tx);">12. Разрешение споров</div>
-        <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-wrap:pretty;">12.1. Споры разрешаются путём переговоров. 12.2. При невозможности договориться спор рассматривается судом по правилам подсудности законодательства РФ.</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-wrap:pretty;">12.1. Споры разрешаются путём переговоров. 12.2. При невозможности договориться спор рассматривается судом по правилам подсудности законодательства РФ.</div>
         <div style="height:1px;background:rgba(var(--ink),.08);margin:16px 0;"></div>
         <div style="font:700 14px/1.3 Figtree,sans-serif;color:var(--tx);">13. Контакты</div>
         <div style="background:var(--c1);border-radius:16px;padding:13px 15px;margin-top:10px;">
           <div style="display:flex;justify-content:space-between;gap:10px;font:600 12px/1.4 Figtree,sans-serif;"><span style="color:var(--ink-2);">Почта</span><span style="color:var(--tx);">poplanton@mail.ru</span></div>
           <div style="display:flex;justify-content:space-between;gap:10px;margin-top:10px;font:600 12px/1.4 Figtree,sans-serif;"><span style="color:var(--ink-2);">Telegram</span><span style="color:var(--tx);">@heyslab_support_bot</span></div>
-          <div style="font:500 11px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-wrap:pretty;">Telegram — только сигнал «хочу обратиться». Заявления с номером телефона и суммой идут на почту или в приложение.</div>
+          <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-wrap:pretty;">Telegram — только сигнал «хочу обратиться». Заявления с номером телефона и суммой идут на почту или в приложение.</div>
         </div>
-        <div style="font:600 12px/1.6 Figtree,sans-serif;color:var(--tx);margin-top:16px;text-wrap:pretty;">Принимая Соглашение, вы подтверждаете, что прочитали, поняли и согласны с его условиями.</div>
+        <div style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--tx);margin-top:16px;text-wrap:pretty;">Принимая Соглашение, вы подтверждаете, что прочитали, поняли и согласны с его условиями.</div>
       </div>
       <div class="foot" style="display:flex;flex-direction:column;gap:4px;padding:10px 18px 14px;">
         <div class="btn">Ознакомлен, принимаю</div>
@@ -712,16 +710,16 @@
     <div class="ph" data-demo="stop" data-screen-label="Регистрация · необязательные согласия">
       <div class="sc">
         <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:16px 0 8px;">Обязательные</div>
-        <div style="display:flex;align-items:center;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span style="font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Пользовательское соглашение</span></div>
-        <div style="display:flex;align-items:center;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;margin-top:6px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span style="font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Обработка персональных данных</span></div>
+        <div style="display:flex;align-items:center;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--tx);">Пользовательское соглашение</span></div>
+        <div style="display:flex;align-items:center;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;margin-top:6px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--tx);">Обработка персональных данных</span></div>
         <div style="font:600 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:16px 0 8px;">Можно включить, можно нет</div>
         <div style="display:flex;flex-direction:column;gap:6px;">
           <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:var(--ink-2);">Замеры тела</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:var(--ink-2);margin-top:3px;">Обхваты тела в дневнике</span></span></div>
           <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:var(--ink-2);">Добавки и витамины</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:var(--ink-2);margin-top:3px;">Учёт приёма в дневнике</span></span></div>
-          <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:var(--ink-2);">Напоминания</span><span style="display:block;font:500 10.5px/1.4 Figtree,sans-serif;color:var(--ink-2);margin-top:3px;">Статус пробной недели и сообщения куратора</span></span></div>
-          <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:var(--ink-2);">Новости и советы</span><span style="display:block;font:500 12.5px/1.4 Figtree,sans-serif;color:var(--ink-2);margin-top:3px;">Письма о продукте, не чаще раза в месяц</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:var(--ink-2);">Напоминания</span><span style="display:block;font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:3px;">Статус пробной недели и сообщения куратора</span></span></div>
+          <div style="display:flex;align-items:flex-start;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--bg);box-shadow:inset 0 0 0 2px rgba(var(--ink),.18);flex:none;margin-top:1px;"></span><span style="flex:1;"><span style="display:block;font:600 12px/1.35 Figtree,sans-serif;color:var(--ink-2);">Новости и советы</span><span style="display:block;font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:3px;">Письма о продукте, не чаще раза в месяц</span></span></div>
         </div>
-        <div style="font:500 11px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:12px;text-wrap:pretty;">Необязательное отмечается тапом и меняется в настройках в любой момент. Заранее ничего не включено.</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:12px;text-wrap:pretty;">Необязательное отмечается тапом и меняется в настройках в любой момент. Заранее ничего не включено.</div>
       </div>
       <div class="foot"><div class="btn">Подписать</div></div>
     </div></div>
@@ -735,7 +733,7 @@
       <div style="position:absolute;inset:0;background:rgba(var(--shadow),.35);"></div>
       <div style="position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;"><div style="background:var(--bg);border-radius:26px;padding:20px 18px 18px;box-shadow:0 18px 50px rgba(var(--shadow),.28);">
         <div style="font:700 15px/1.35 Figtree,sans-serif;color:var(--tx);text-align:center;">Подпишите документы</div>
-        <div style="font:500 12.5px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:7px;text-align:center;text-wrap:pretty;">Введите код доступа — он заменяет собственноручную подпись.</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:7px;text-align:center;text-wrap:pretty;">Введите код доступа — он заменяет собственноручную подпись.</div>
         <div style="display:flex;justify-content:center;gap:10px;margin-top:18px;">
           <span style="width:44px;height:52px;border-radius:14px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><span style="width:9px;height:9px;border-radius:999px;background:var(--acs);"></span></span><span style="width:44px;height:52px;border-radius:14px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><span style="width:9px;height:9px;border-radius:999px;background:var(--acs);"></span></span><span style="width:44px;height:52px;border-radius:14px;background:var(--c1);display:flex;align-items:center;justify-content:center;"></span><span style="width:44px;height:52px;border-radius:14px;background:var(--c1);display:flex;align-items:center;justify-content:center;"></span>
         </div>
@@ -760,14 +758,14 @@
           <div style="display:flex;flex-direction:column;align-items:center;">
             <span style="width:52px;height:52px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
             <div style="font:700 16px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:12px;text-align:center;">Документы подписаны</div>
-            <div style="font:500 11.5px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:5px;text-align:center;text-wrap:pretty;">Подпись — код доступа, 16 августа в 17:46</div>
+            <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:5px;text-align:center;text-wrap:pretty;">Подпись — код доступа, 16 августа в 17:46</div>
           </div>
           <div style="background:var(--c1);border-radius:18px;padding:12px 14px;margin-top:16px;">
-            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Пользовательское соглашение</span><span class="n" style="font:700 10.5px/1 Figtree,sans-serif;color:var(--ac);flex:none;">в. 1.11</span></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--tx);">Пользовательское соглашение</span><span class="n" style="font:700 10.5px/1 Figtree,sans-serif;color:var(--ac);flex:none;">в. 1.11</span></div>
             <div style="height:1px;background:rgba(var(--ink),.08);margin:10px 0;"></div>
-            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Обработка персональных данных</span><span class="n" style="font:700 10.5px/1 Figtree,sans-serif;color:var(--ac);flex:none;">в. 1.4</span></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;"><span style="font:600 12.5px/1.55 Figtree,sans-serif;color:var(--tx);">Обработка персональных данных</span><span class="n" style="font:700 10.5px/1 Figtree,sans-serif;color:var(--ac);flex:none;">в. 1.4</span></div>
           </div>
-          <div style="font:500 12.5px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:10px;text-align:center;text-wrap:pretty;">Копия подписи хранится в профиле — её видно в настройках</div>
+          <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:10px;text-align:center;text-wrap:pretty;">Копия подписи хранится в профиле — её видно в настройках</div>
           <div class="btn" style="margin-top:14px;">Продолжить</div>
         </div>
       </div>
@@ -1041,7 +1039,7 @@
         </div></div>
         <div style="background:var(--tint);border-radius:16px;padding:12px 14px;margin-top:12px;">
           <div style="font:700 12px/1.4 Figtree,sans-serif;color:var(--ac2);">ИМТ цели 17,0 — ниже нормы</div>
-          <div style="font:500 11.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:5px;text-wrap:pretty;">При росте 168 см нижняя граница нормы — 52 кг. Цель можно оставить, но прогноз по срокам для неё мы не строим — обсудите её с куратором.</div>
+          <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:5px;text-wrap:pretty;">При росте 168 см нижняя граница нормы — 52 кг. Цель можно оставить, но прогноз по срокам для неё мы не строим — обсудите её с куратором.</div>
         </div>
       </div>
       <div class="foot"><div class="btn">Дальше</div></div>
@@ -1132,7 +1130,7 @@
       <span style="position:absolute;inset:0;background:var(--scrim);"></span>
       <div style="position:absolute;left:12px;right:12px;bottom:12px;background:var(--bg);border-radius:26px;padding:18px 16px 16px;box-shadow:0 -2px 20px rgba(80,50,20,.1);">
         <div style="font:700 16px/1.3 Figtree,sans-serif;color:var(--tx);text-wrap:pretty;">Отозвать согласие на добавки?</div>
-        <div style="font:500 12px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Курс и все отметки приёма будут удалены без возможности вернуть. Блок добавок исчезнет с вкладки и из чек-ина.</div>
+        <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Курс и все отметки приёма будут удалены без возможности вернуть. Блок добавок исчезнет с вкладки и из чек-ина.</div>
         <div style="background:var(--tint);border-radius:16px;padding:11px 13px;margin-top:13px;display:flex;flex-direction:column;gap:5px;font:600 11.5px/1.4 Figtree,sans-serif;color:var(--tx);">
           <span>Курс на 3 месяца</span>
           <span style="font-weight:500;color:var(--ink-2);">64 отметки приёма за 21 день</span>

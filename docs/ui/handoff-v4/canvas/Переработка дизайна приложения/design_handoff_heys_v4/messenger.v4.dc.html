@@ -74,10 +74,10 @@
 <div style="background:#e9dfcd;padding:44px 46px 70px;width:max-content;">
   <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
     <span style="font:800 25px/1 Figtree,sans-serif;color:#201e1d;letter-spacing:-.02em;">Мессенджер · сторона клиента</span>
-    <span style="font:600 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45);">переписка с куратором · фото и голосовые · «внесено в день» · v4</span>
+    <span style="font:600 12px/1 Figtree,sans-serif;color:var(--ink-3);">переписка с куратором · фото и голосовые · «внесено в день» · v4</span>
   </div>
-  <p style="margin:0 0 6px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Один тред с одним человеком. Клиент присылает еду, вес и самочувствие; куратор отвечает и собирает из этого день — результат возвращается в тред системной карточкой. Канвас рисует то, что видит клиент: пустой тред и подсказки первого сообщения, строку «Ждём», состояния своего сообщения, композер с фото и голосовым, поиск, офлайн-очередь, меню и диалоги. Сторона куратора — инбокс и панель «Собрать в день» — живёт в кабинете куратора и здесь названа границей.</p>
-  <p style="margin:0 0 26px;font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">файл в пакете: messenger.v4.dc.html · код heys_messenger_v1.js · экраны искать по data-screen-label</p>
+  <p style="margin:0 0 6px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Один тред с одним человеком. Клиент присылает еду, вес и самочувствие; куратор отвечает и собирает из этого день — результат возвращается в тред системной карточкой. Канвас рисует то, что видит клиент: пустой тред и подсказки первого сообщения, строку «Ждём», состояния своего сообщения, композер с фото и голосовым, поиск, офлайн-очередь, меню и диалоги. Сторона куратора — инбокс и панель «Собрать в день» — живёт в кабинете куратора и здесь названа границей.</p>
+  <p style="margin:0 0 26px;font:600 10.5px/1.7 ui-monospace,Menlo,monospace;color:var(--ink-2);">файл в пакете: messenger.v4.dc.html · код heys_messenger_v1.js · экраны искать по data-screen-label</p>
 
   <div style="display:inline-flex;align-items:center;gap:10px;background:#b4442a;color:#fff;border-radius:999px;padding:9px 16px 9px 12px;margin:0 0 26px;font:700 11px/1.4 Figtree,sans-serif;max-width:980px;"><span style="font:800 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.12em;background:rgba(255,255,255,.18);padding:5px 8px;border-radius:999px;">В ПРОД</span><span style="text-wrap:pretty;">Все кадры. Поведение из кода сохранено целиком — меняется вид и слова; вкладки намерений (фаза 2 кода) в v4 не входят и названы строкой «снято».</span></div>
 
@@ -85,7 +85,7 @@
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="spec"><b>тач-цели</b><span data-v="ПРИВЕДЕНО 5 сентября, видимым размером: круглые кнопки шапки .ib (40 → 44), чипы строки «Ждём» .wc (30 → 44), пилюли подсказки «время и граммы» .hp (32 → 44), полоса офлайна с действием «Повторить» .offl (40 → 44). Не цели: аватар куратора 38, точка состояния 7"></span><i>норма 44 pt держится видимым размером: невидимый расширитель проходит замер и проваливается в руке — палец не видит ::after</i></div>
@@ -140,7 +140,7 @@
     <div class="ctrH">Решения владельца · 5 сентября</div>
     <div class="spec"><b>звонок куратору</b><span data-v="РЕШЕНИЕ ВЛАДЕЛЬЦА 5 сентября: КНОПКИ «СОЗВОН» НЕТ — ни в шапке, ни в меню «Ещё». В мессенджере нет ни одного метода звонка: API умеет отправку, тред, входящие и согласие на расшифровку. Кнопка на несуществующую механику — обещание, которого продукт не выполняет. Созвон Pro живёт вне приложения и договаривается в переписке"></span><i>вопрос закрыт, к нему не возвращаемся до появления самой механики в API</i></div>
     <div class="spec" style="border-bottom:none"><b>долг канваса</b><span data-v="кадры расшифровки голосового (готовая и в процессе) нарисованы одним состоянием — «в процессе» показан строкой в контракте, отдельного кадра нет"></span></div>
-                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Мессенджер · пустой тред · 01</b><span data-v="«ОЛ» — аватар"></span></div>
     <div class="spec"><b>Мессенджер · пустой тред · 02</b><span data-v="флекс 1"></span></div>

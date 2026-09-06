@@ -49,14 +49,14 @@
     <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ОБНОВЛЕНИЕ PWA</span>
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Один тёмный кадр на 1–3 секунды, потом страховка на случай, если он не сработал</span>
   </div>
-  <p style="margin:0 0 8px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Сценарий не меняется: приложение находит и ставит обновление само, без спроса. Дизайн закрывает три живых кадра модалки, страховку «Требуется обновление» (починена 2026-08-19) и офлайн-баннер. Бейдж, toast, системный баннер, «Всё актуально!» и стадии checking / found / installing — мёртвый код по решению владельца от 2026-08-19, не рисуются; см. «Решения» внизу.</p>
-  <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">Источник: docs/ui/handoff-v4/ПРОМПТ_дизайнеру_обновление_PWA.md · твик «Статично» показывает уменьшенное движение · экраны искать по data-screen-label</p>
+  <p style="margin:0 0 8px;max-width:980px;font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Сценарий не меняется: приложение находит и ставит обновление само, без спроса. Дизайн закрывает три живых кадра модалки, страховку «Требуется обновление» (починена 2026-08-19) и офлайн-баннер. Бейдж, toast, системный баннер, «Всё актуально!» и стадии checking / found / installing — мёртвый код по решению владельца от 2026-08-19, не рисуются; см. «Решения» внизу.</p>
+  <p style="margin:0 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-2);">Источник: docs/ui/handoff-v4/ПРОМПТ_дизайнеру_обновление_PWA.md · твик «Статично» показывает уменьшенное движение · экраны искать по data-screen-label</p>
 
   <div class="ctr" data-contract="pwa-update">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="ctrH">Что это и чьё</div>
@@ -126,7 +126,7 @@
     <div class="spec"><b>жест обновления · названное отступление</b><span data-v="жест «потянуть вниз» показывает свой знак ожидания продукта, а не системное кольцо платформы: круг 56 с дугой, как у остальных ожиданий. Системное кольцо не используется вовсе — оно перезагружает страницу, а наш жест гоняет синхронизацию с этапами «идёт → готово → ошибка → слишком долго»"></span><i>решение 25 августа, названное отступление от требования системного кольца. Проверено предметно: в установленном PWA на iOS системный аффорданс не рисуется вовсе — он живёт в интерфейсе Safari, который standalone прячет; на Android кольцо есть, но его глушит наш обработчик прокрутки. Главное не в этом: буквальная реализация подменила бы адресную синхронизацию со статусом полным reload, а на iPhone оставила бы жест без обратной связи</i></div>
     <div class="ctrH">Не реализовывать</div>    <div class="spec" style="border-bottom:none"><b>мягкие уведомления</b><span data-v="бейдж, toast, системный баннер, «Всё актуально!», стадии checking / found / installing — не рисуем"></span><i>решение владельца 2026-08-19: код мёртв и уходит отдельной задачей по чистке, а не отрисовкой</i></div>
 
-                                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Обновление · загрузка · 01</b><span data-v="фон #fffaf1"></span></div>
     <div class="spec"><b>Обновление · загрузка · 02</b><span data-v="поля 56px 18px 0"></span></div>
@@ -235,7 +235,7 @@
 </div>
 
   <div class="secH" style="margin-top:0;">Живые кадры модалки — путь по умолчанию</div>
-  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Один и тот же контейнер, DOM не пересоздаётся — стадии сменяют друг друга на месте. Три точки под подписью честно называют, где вы в последовательности, вместо процента, который ничего не измерял. Кольцо крутится только там, где реально идёт неопределённое ожидание (загрузка, перезагрузка); «Готово!» — вспышка на 0,8 с, ничего не грузится, кольцо стоит.</p>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Один и тот же контейнер, DOM не пересоздаётся — стадии сменяют друг друга на месте. Три точки под подписью честно называют, где вы в последовательности, вместо процента, который ничего не измерял. Кольцо крутится только там, где реально идёт неопределённое ожидание (загрузка, перезагрузка); «Готово!» — вспышка на 0,8 с, ничего не грузится, кольцо стоит.</p>
 
   <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
 
@@ -257,7 +257,7 @@
       </div>
     </div></div>
 
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:340px;color:rgba(0,0,0,.35);flex:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b style="font:700 10px/1 ui-monospace,Menlo,monospace;">0,5–3 с</b></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:340px;color:var(--ink-4);flex:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b style="font:700 10px/1 ui-monospace,Menlo,monospace;">0,5–3 с</b></div>
 
     <div><div class="lab"><b>Готово!</b><span>вспышка на 0,8 с, кольцо не крутится</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Обновление · готово" style="background:#fffaf1;">
@@ -275,7 +275,7 @@
       </div>
     </div></div>
 
-    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:340px;color:rgba(0,0,0,.35);flex:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b style="font:700 10px/1 ui-monospace,Menlo,monospace;">0,8 с</b></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:340px;color:var(--ink-4);flex:none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b style="font:700 10px/1 ui-monospace,Menlo,monospace;">0,8 с</b></div>
 
     <div><div class="lab"><b>Перезагрузка</b><span>необратимо, без крестика</span></div>
     <div class="ph" data-demo="loop" data-screen-label="Обновление · перезагрузка" style="background:#fffaf1;">
@@ -323,10 +323,10 @@
     <div class="swatch"><div class="updRing" style="width:40px;height:40px;background:var(--c2);margin:0 auto 10px;"><svg class="spin liveRing" width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.4" stroke="var(--ink-30)" stroke-width="2.75"/><circle cx="12" cy="12" r="9.4" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-dasharray="18 41"/></svg><span class="stillRing" style="display:none;position:absolute;inset:2px;border-radius:999px;background:var(--c2);"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--acs);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6M20 20v-6h-6M5.5 15a7 7 0 0012.5 2.5M18.5 9A7 7 0 006 6.5"/></svg></span></div><div style="font:700 13px/1 Figtree,sans-serif;color:var(--tx);text-align:center;">Перезагрузка</div></div>
     <div class="stg" style="width:110px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b>0,5 с → страница перезагружается</b></div>
   </div>
-  <p style="margin:12px 0 0;max-width:900px;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Аварийный предел: если модалка провисит на экране дольше 10 с (или 12 с при сверке версии) — её скрывают. У кадра есть потолок жизни, «вечного кольца» быть не должно.</p>
+  <p style="margin:12px 0 0;max-width:900px;font:500 11px/1.5 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Аварийный предел: если модалка провисит на экране дольше 10 с (или 12 с при сверке версии) — её скрывают. У кадра есть потолок жизни, «вечного кольца» быть не должно.</p>
 
   <div class="secH">«Требуется обновление» — страховка, починена 2026-08-19</div>
-  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Появляется, если три попытки подряд не встали. Тон признания сбоя, не тревоги — поэтому тот же тёплый тёмный слой, без движения: тут ничего не грузится, кольцо больше не крутится ни в одном варианте.</p>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Появляется, если три попытки подряд не встали. Тон признания сбоя, не тревоги — поэтому тот же тёплый тёмный слой, без движения: тут ничего не грузится, кольцо больше не крутится ни в одном варианте.</p>
   <div style="display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;">
 
     <div><div class="lab"><b>С версией</b><span>не-iOS, кнопка есть</span></div>
@@ -384,7 +384,7 @@
   </div>
 
   <div class="secH">Офлайн-баннер</div>
-  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">Один визуальный язык с обновлением: тот же тёплый тёмный слой, та же линейная иконка вместо эмодзи. Отступ сверху теперь считает вырез экрана, а не липнет к самой кромке.</p>
+  <p style="margin:-6px 0 16px;max-width:900px;font:500 11.5px/1.55 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Один визуальный язык с обновлением: тот же тёплый тёмный слой, та же линейная иконка вместо эмодзи. Отступ сверху теперь считает вырез экрана, а не липнет к самой кромке.</p>
   <div><div class="lab"><b>Офлайн</b><span>верхний отступ = safe-area-inset-top + 8</span></div>
   <div class="ph" data-demo="stop" data-screen-label="Офлайн-баннер">
     <div class="offBar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8.82a15 15 0 0120 0M5 12.86a10 10 0 0114 0M8.5 16.5a5 5 0 017 0M12 20h.01M2 2l20 20"/></svg><span>Офлайн режим — данные сохраняются локально</span></div>

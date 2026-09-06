@@ -33,13 +33,13 @@
     <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ПРАВКИ КУРАТОРА</span>
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Лист изменений и оболочка вокруг него: вкладка, дата, настройки</span>
   </div>
-  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, шторка настроек. Строка даты и её поведение при прокрутке живут в «Дата и остатки v4» — здесь их больше нет, чтобы одно поведение не описывалось в двух канвасах.</p>
-  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">В пакете: curator-edits.v4.dc.html · протокол docs/implementation/CURATOR_CHANGELOG_SHEET_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, шторка настроек. Строка даты и её поведение при прокрутке живут в «Дата и остатки v4» — здесь их больше нет, чтобы одно поведение не описывалось в двух канвасах.</p>
+  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-2);">В пакете: curator-edits.v4.dc.html · протокол docs/implementation/CURATOR_CHANGELOG_SHEET_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
   <div class="ctr" data-contract="curator-edits">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="ctrH">Что это и чьё</div>
@@ -106,7 +106,7 @@
     <div class="spec"><b>точка на «Питании»</b><span data-v="7 px у иконки вкладки, без числа; гаснет, когда неподтверждённых записей не осталось"></span><i>«43» превращает помощь куратора в долг, который нужно разгрести</i></div>
     <div class="spec" style="border-bottom:none"><b>строка входа</b><span data-v="в шапке дня: «Куратор обновил этот день · N изменений» открывает тот же лист, отфильтрованный датой; если правок на открытой дате нет — называет чужую дату и переключает день вместе с открытием"></span><i>по точке на активной вкладке нажать нельзя; это же единственный способ вернуться к правкам после «Понятно»</i></div>
 
-                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                          <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Куратор · один приём · 01</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Куратор · один приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
@@ -136,7 +136,7 @@
     <div class="spec"><b>Куратор · свёрнуто по типам · 07</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 08</b><span data-v="«Приёмы» — перенос nowrap"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 09</b><span data-v="«· 12» — шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Куратор · свёрнуто по типам · 10</b><span data-v="«и ещё девять правок приёмов» — цвет rgba(0,0,0,.5)"></span></div>
+    <div class="spec"><b>Куратор · свёрнуто по типам · 10</b><span data-v="«и ещё девять правок приёмов» — цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 11</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 12</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · две даты · 01</b><span data-v="область прокрутки"></span></div>
@@ -347,7 +347,7 @@
           <div class="row" style="padding-left:26px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
           <div class="row" style="padding-left:26px;"><div class="rowt"><b>Рис в обеде: 200 → 288 г</b><span>+ 118 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
           <div class="row" style="padding-left:26px;"><div class="rowt"><b>Из завтрака убраны два продукта</b><span>− 298 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
-          <div class="row" style="padding-left:26px;"><div class="rowt"><b style="color:rgba(0,0,0,.5);">и ещё девять правок приёмов</b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
+          <div class="row" style="padding-left:26px;"><div class="rowt"><b style="color:var(--ink-2);">и ещё девять правок приёмов</b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
           <div class="row"><div class="rowt"><b style="font-weight:700;white-space:nowrap;">Вода<i style="font:700 11px/1 Figtree,sans-serif;font-style:normal;color:var(--ac);margin-left:7px;">· 3</i></b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
           <div class="row"><div class="rowt"><b style="font-weight:700;white-space:nowrap;">Замеры<i style="font:700 11px/1 Figtree,sans-serif;font-style:normal;color:var(--ac);margin-left:7px;">· 1</i></b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
         </div>

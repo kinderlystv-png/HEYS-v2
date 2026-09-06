@@ -39,13 +39,13 @@
     <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">НАСТРОЙКИ И СИСТЕМНОЕ</span>
     <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Шторка настроек и системные листы приложения</span>
   </div>
-  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:rgba(0,0,0,.6);text-wrap:pretty;">Настройки не отдельная вкладка, а шторка: «Вы», «Приложение», «Сопровождение». Значение стоит справа от названия, поэтому большинство вопросов закрывается без захода внутрь. Диагностика живёт вне ярусов — служебной створкой. Рядом — системный лист про иконку на домашнем экране: без неё на iPhone не приходят напоминания.</p>
-  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:rgba(0,0,0,.56);">В пакете: settings-system.v4.dc.html · экраны искать по data-screen-label</p>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Настройки не отдельная вкладка, а шторка: «Вы», «Приложение», «Сопровождение». Значение стоит справа от названия, поэтому большинство вопросов закрывается без захода внутрь. Диагностика живёт вне ярусов — служебной створкой. Рядом — системный лист про иконку на домашнем экране: без неё на iPhone не приходят напоминания.</p>
+  <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-2);">В пакете: settings-system.v4.dc.html · экраны искать по data-screen-label</p>
   <div class="ctr" data-contract="settings-system">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
       <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="spec"><b>тач-цели</b><span data-v="ПРИВЕДЕНО 5 сентября, видимым размером: малый ФАБ .fabSm (38 → 44)"></span><i>норма 44 pt держится видимым размером: невидимый расширитель проходит замер и проваливается в руке — палец не видит ::after</i></div>
@@ -130,7 +130,7 @@
     <div class="spec"><b>снятый прогон</b><span data-v="анимация перестройки стопки (появление 220 мс с перелётом до 1,06, исчезновение 160 мс, смыкание соседей 220 мс) снята 24 августа и не реализуется"></span><i>вердикт по строке — «—»: кадр остался протоколом, чтобы объяснить, почему её нет</i></div>
     <div class="spec" style="border-bottom:none"><b>появление и исчезновение кнопки</b><span data-v="при переходе через один включённый пункт кнопка меняет иконку и тон за 220 мс; при нуле — сжимается за 160 мс, при первом включённом вырастает за 220 мс с перелётом до 1,06"></span><i>та же пружина, что у смены вида виджета: иначе экран выглядит собранным из двух приложений</i></div>
 
-                                                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Настройки · список · 01</b><span data-v="позиция absolute, вписан 0, фон var(--c2)"></span></div>
     <div class="spec"><b>Настройки · список · 02</b><span data-v="позиция relative, отступы 0 0 56px, фон var(--bg), радиус 0 0 22px 22px, рамка 0 8px 24px rgba(80,50,20,.12)"></span></div>
@@ -525,7 +525,7 @@
     </div>
     <div style="width:330px;margin-top:11px;display:flex;align-items:center;gap:9px;">
       <span class="chip on chipAnim" style="gap:7px;flex:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg>Голод и энергия</span>
-      <span style="font:500 10.5px/1.4 Figtree,sans-serif;color:rgba(0,0,0,.56);text-wrap:pretty;">кадр отвергнут: стопка из четырёх кругов заменена одной кнопкой с карточкой, перестраивать на экране нечего</span>
+      <span style="font:500 10.5px/1.4 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">кадр отвергнут: стопка из четырёх кругов заменена одной кнопкой с карточкой, перестраивать на экране нечего</span>
     </div></div>
 
     <div data-nomirror style="width:400px;flex:none;">
