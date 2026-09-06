@@ -262,7 +262,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // входят. Остальные 49 из 78 вообще не называют файл со строкой — это
     // отдельный долг адресов, он назван в задаче полосам.
     // 05.09: 28 typed «≠» сведены в «=» по факту кода — долг 78 → 50.
-    typedMismatch: [49, 'a2fc985e553f14d3'],
+    typedMismatch: [51, '99920748d1da4cf8'],
   }),
   'tab-activity': Object.freeze({
     // 06.09, полоса 2/4: 43 legacy «≠» типизированы reasonCode — mismatch 43 → 0,
