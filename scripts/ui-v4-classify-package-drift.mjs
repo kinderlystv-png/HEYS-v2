@@ -142,6 +142,11 @@ function classify(before, after) {
 }
 
 const baseRef = process.argv[2] || 'HEAD~1';
+// Имя файла со списком строк несёт номер пакета: список пакета 43 не должен
+// молча перезаписываться списком 44 — полосы читают его как источник задания,
+// а перезапись выглядит как «задание изменилось», а не как «это другой пакет».
+const labelAt = process.argv.indexOf('--label');
+const pkgLabel = labelAt >= 0 ? process.argv[labelAt + 1] : 'unlabeled';
 const summary = {};
 const reviewRows = [];
 const renameByZone = {};
@@ -236,6 +241,6 @@ if (process.argv.includes('--rows')) {
   for (const r of reviewRows) console.log(`  ${r.zone} :: ${r.key} [${r.verdict}] — ${r.why}`);
 }
 if (process.argv.includes('--json')) {
-  fs.writeFileSync(path.join(ROOT, 'scripts/.package-43-review-rows.json'), `${JSON.stringify(reviewRows, null, 2)}\n`, 'utf8');
-  console.log(`\nСтроки под разбор → scripts/.package-43-review-rows.json (${reviewRows.length})`);
+  fs.writeFileSync(path.join(ROOT, `scripts/.package-${pkgLabel}-review-rows.json`), `${JSON.stringify(reviewRows, null, 2)}\n`, 'utf8');
+  console.log(`\nСтроки под разбор → scripts/.package-${pkgLabel}-review-rows.json (${reviewRows.length})`);
 }

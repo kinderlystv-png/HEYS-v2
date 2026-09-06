@@ -67,8 +67,8 @@
     },
     "Служебное · за входом куратора · 05": {
       "v": "=",
-      "f": ".advice-service-note: --v4-tint, r18, padding 14/15, mt18, 11.5/500/1.5 и data tone; дословная копия в day/_advice.js — service-curator-v4-canvas-razbor.test.js.",
-      "h": "082f17d1f5e4"
+      "f": ".advice-service-note: --v4-tint, r18, padding 14/15, mt18, 11.5/500/1.5 и data tone; дословная копия в day/_advice.js — service-curator-v4-canvas-razbor.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "c1744451b06f"
     },
     "Служебное · за входом куратора · 06": {
       "v": "=",
@@ -92,13 +92,13 @@
     },
     "Служебное · за входом куратора · 10": {
       "v": "=",
-      "f": ".advice-service-row__title: 12.5/600/1 и --v4-ink-2 (.55 light/.63 dark) — canvas razbor test.",
-      "h": "4f5f47212eef"
+      "f": ".advice-service-row__title: 12.5/600/1 и --v4-ink-2 (.55 light/.63 dark) — canvas razbor test. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f8c0ef1eb31c"
     },
     "Служебное · за входом куратора · 11": {
       "v": "=",
-      "f": ".advice-service-row__hint: 10.5/500/1.4, mt5, --v4-ink-data 56%; copy exact — canvas razbor test.",
-      "h": "08bf0309b139"
+      "f": ".advice-service-row__hint: 10.5/500/1.4, mt5, --v4-ink-data 56%; copy exact — canvas razbor test. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1cc37de945db"
     },
     "Служебное · за входом куратора · 12": {
       "v": "=",
@@ -107,13 +107,13 @@
     },
     "Служебное · за входом куратора · 13": {
       "v": "=",
-      "f": ".advice-service-footer-note: 11/500/1.5, mt14, data 56%, exact copy — canvas razbor test.",
-      "h": "5864573c1c11"
+      "f": ".advice-service-footer-note: 11/500/1.5, mt14, data 56%, exact copy — canvas razbor test. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "27b59373cd11"
     },
     "Служебное · за входом куратора · 14": {
       "v": "=",
-      "f": ".advice-service-footer-tag: padding 16/18/20, 9.5/600/1, .18em uppercase, data56 center — canvas razbor test.",
-      "h": "d9f6eb095299"
+      "f": ".advice-service-footer-tag: padding 16/18/20, 9.5/600/1, .18em uppercase, data56 center — canvas razbor test. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "d2aeea72d9e6"
     },
     "как читать графику": {
       "v": "—",
