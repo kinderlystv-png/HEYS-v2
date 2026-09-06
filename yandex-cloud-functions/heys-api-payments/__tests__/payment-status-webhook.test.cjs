@@ -92,6 +92,13 @@ test('buildYukassaPaymentPayload keeps customer contacts out of payment metadata
   );
 });
 
+test('computeProjectedPeriodEnd uses calendar months like PostgreSQL INTERVAL', async () => {
+  const { computeProjectedPeriodEnd } = loadPaymentsModule();
+  const ref = new Date('2026-01-31T12:00:00.000Z');
+  const end = computeProjectedPeriodEnd(null, ref);
+  assert.equal(end.toISOString().slice(0, 10), '2026-02-28');
+});
+
 test('applyPaymentStatus activates first payment and records PII-free funnel metadata', async (t) => {
   t.mock.method(console, 'log', () => {});
   t.mock.method(console, 'warn', () => {});

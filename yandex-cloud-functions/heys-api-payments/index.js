@@ -154,6 +154,47 @@ function errorResponse(statusCode, message, code = 'ERROR') {
   return jsonResponse(statusCode, { error: message, code });
 }
 
+/** Календарный месяц как PostgreSQL INTERVAL 'N month' (31 янв → 28/29 фев). */
+function addCalendarMonthInterval(date, months) {
+  const d = date instanceof Date ? date : new Date(date);
+  const year = d.getUTCFullYear();
+  const month = d.getUTCMonth();
+  const day = d.getUTCDate();
+  const hour = d.getUTCHours();
+  const min = d.getUTCMinutes();
+  const sec = d.getUTCSeconds();
+  const ms = d.getUTCMilliseconds();
+
+  const targetMonthIndex = month + months;
+  const targetYear = year + Math.floor(targetMonthIndex / 12);
+  const normalizedMonth = ((targetMonthIndex % 12) + 12) % 12;
+  const lastDayOfTargetMonth = new Date(Date.UTC(targetYear, normalizedMonth + 1, 0)).getUTCDate();
+  const clampedDay = Math.min(day, lastDayOfTargetMonth);
+
+  return new Date(Date.UTC(targetYear, normalizedMonth, clampedDay, hour, min, sec, ms));
+}
+
+/**
+ * Та же арифметика, что в webhook при payment.succeeded:
+ * GREATEST(NOW(), COALESCE(subscription_ends_at, NOW())) + INTERVAL '1 month'.
+ *
+ * @param {Date|string|null|undefined} subscriptionEndsAt
+ * @param {Date} [referenceNow]
+ * @returns {Date}
+ */
+function computeProjectedPeriodEnd(subscriptionEndsAt, referenceNow = new Date()) {
+  const now = referenceNow instanceof Date
+    ? new Date(referenceNow.getTime())
+    : new Date(referenceNow);
+  const currentEnd = subscriptionEndsAt
+    ? (subscriptionEndsAt instanceof Date
+      ? new Date(subscriptionEndsAt.getTime())
+      : new Date(subscriptionEndsAt))
+    : now;
+  const base = currentEnd > now ? currentEnd : now;
+  return addCalendarMonthInterval(base, 1);
+}
+
 async function markFunnelEventMetricaStatus(client, eventId, status, error) {
   if (!eventId) return;
   try {
@@ -290,6 +331,51 @@ function buildYukassaPaymentPayload(input) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 📋 ORDER PREVIEW — прогноз срока до оплаты
+// ═══════════════════════════════════════════════════════════════════════════════
+
+async function getOrderPreview(plan, clientId) {
+  if (!plan || !PLANS[plan]) {
+    return errorResponse(
+      400,
+      `Invalid plan. Valid: ${Object.keys(PLANS).join(', ')}`,
+      'INVALID_PLAN',
+    );
+  }
+  if (!clientId) {
+    return errorResponse(400, 'Client ID required', 'NO_CLIENT_ID');
+  }
+
+  const pool = getPool();
+  const client = await pool.connect();
+
+  try {
+    const result = await client.query(
+      `SELECT subscription_ends_at FROM clients WHERE id = $1`,
+      [clientId],
+    );
+
+    if (result.rows.length === 0) {
+      return errorResponse(404, 'Client not found', 'NOT_FOUND');
+    }
+
+    const projectedPeriodEnd = computeProjectedPeriodEnd(result.rows[0].subscription_ends_at);
+
+    return jsonResponse(200, {
+      plan,
+      period_kind: 'estimate',
+      projected_period_end: projectedPeriodEnd.toISOString(),
+      duration_months: 1,
+    });
+  } catch (error) {
+    console.error('[ORDER_PREVIEW] Query error:', error);
+    return errorResponse(500, 'Failed to build order preview', 'DB_ERROR');
+  } finally {
+    client.release();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 💳 CREATE PAYMENT — Создание платежа в ЮKassa
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -343,6 +429,7 @@ async function createPayment(body, clientId) {
   let paymentId;
   let clientPhone = null;
   let clientEmail = null;
+  let subscriptionEndsAt = null;
 
   try {
     // 152-ФЗ ст.9 + ст.437-438 ГК РФ: акцепт оферты должен быть зафиксирован
@@ -374,10 +461,10 @@ async function createPayment(body, clientId) {
       );
     }
 
-    // Получаем телефон + email клиента для чека 54-ФЗ
+    // Получаем телефон + email + текущий срок подписки для чека и прогноза периода
     const clientResult = await client.query(
       `
-      SELECT phone, email FROM clients WHERE id = $1
+      SELECT phone, email, subscription_ends_at FROM clients WHERE id = $1
     `,
       [clientId],
     );
@@ -385,6 +472,7 @@ async function createPayment(body, clientId) {
     if (clientResult.rows.length > 0) {
       clientPhone = clientResult.rows[0].phone;
       clientEmail = clientResult.rows[0].email;
+      subscriptionEndsAt = clientResult.rows[0].subscription_ends_at;
     }
 
     const insertResult = await client.query(
@@ -493,12 +581,17 @@ async function createPayment(body, clientId) {
     // 4. Возвращаем URL для редиректа
     const confirmationUrl = yukassaResult.confirmation?.confirmation_url;
 
+    const projectedPeriodEnd = computeProjectedPeriodEnd(subscriptionEndsAt);
+
     return jsonResponse(200, {
       success: true,
       paymentId: paymentId,
       externalPaymentId: yukassaResult.id,
       confirmationUrl: confirmationUrl,
       status: yukassaResult.status,
+      period_kind: 'estimate',
+      projected_period_end: projectedPeriodEnd.toISOString(),
+      duration_months: 1,
     });
   } catch (apiError) {
     console.error('[PAYMENTS] API call error:', apiError);
@@ -941,6 +1034,8 @@ async function getPaymentStatus(paymentId, clientId) {
 
     const payment = result.rows[0];
 
+    const confirmedPeriodEnd = payment.period_end || null;
+
     return jsonResponse(200, {
       id: payment.id,
       status: payment.status,
@@ -949,7 +1044,10 @@ async function getPaymentStatus(paymentId, clientId) {
       amount: payment.amount,
       createdAt: payment.created_at,
       periodStart: payment.period_start,
-      periodEnd: payment.period_end,
+      periodEnd: confirmedPeriodEnd,
+      period_kind: confirmedPeriodEnd ? 'confirmed' : null,
+      confirmed_period_end: confirmedPeriodEnd,
+      paid: payment.status === 'completed',
     });
   } catch (error) {
     console.error('[STATUS] Query error:', error);
@@ -1123,13 +1221,26 @@ module.exports.handler = async function (event, context) {
       return await getPaymentStatus(paymentId, auth.clientId);
     }
 
+    // Route: GET /payments/order-preview — прогноз срока до оплаты
+    if (method === 'GET' && path.includes('/order-preview')) {
+      const auth = await authenticateClientRequest(event, requestedClientId);
+      if (auth.error) return auth.error;
+      const plan = params.plan || body.plan;
+      return await getOrderPreview(plan, auth.clientId);
+    }
+
     // Health check
     if (method === 'GET' && (path === '/payments' || path === '/payments/')) {
       return jsonResponse(200, {
         service: 'heys-api-payments',
         status: 'ok',
         version: '1.0.0',
-        endpoints: ['/payments/create', '/payments/webhook', '/payments/status'],
+        endpoints: [
+          '/payments/create',
+          '/payments/webhook',
+          '/payments/status',
+          '/payments/order-preview',
+        ],
       });
     }
 
@@ -1143,4 +1254,7 @@ module.exports.handler = async function (event, context) {
 // Экспортируем applyPaymentStatus для переиспользования в cron-poll (P0.4)
 module.exports.applyPaymentStatus = applyPaymentStatus;
 module.exports.buildYukassaPaymentPayload = buildYukassaPaymentPayload;
+module.exports.computeProjectedPeriodEnd = computeProjectedPeriodEnd;
+module.exports.addCalendarMonthInterval = addCalendarMonthInterval;
+module.exports.getOrderPreview = getOrderPreview;
 module.exports.PLANS = PLANS;

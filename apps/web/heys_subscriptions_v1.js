@@ -325,10 +325,17 @@
       devLog('[Subscriptions] Payment status:', data);
 
       // Платёж успешен?
-      if (data.paid && data.status === 'succeeded') {
+      if (isPaymentStatusSucceeded(data)) {
+        const confirmedPeriodEnd = data.confirmed_period_end || data.periodEnd || null;
         // Очищаем pending и возвращаем успех
         localStorage.removeItem('heys_pending_payment');
-        return { success: true, plan, paymentId };
+        return {
+          success: true,
+          plan,
+          paymentId,
+          confirmed_period_end: confirmedPeriodEnd,
+          period_kind: confirmedPeriodEnd ? 'confirmed' : null,
+        };
       }
 
       // Платёж отменён или ошибка?
@@ -708,6 +715,89 @@
     return `до ${formatDateShort(date)}`;
   }
 
+  function getPaymentsApiBaseUrl() {
+    const host = window.location?.hostname || '';
+    const isLocal = host === 'localhost' || host === '127.0.0.1';
+    return isLocal ? 'http://localhost:4001' : 'https://api.heyslab.ru';
+  }
+
+  function getClientSessionAuthHeaders() {
+    const headers = { 'Content-Type': 'application/json' };
+    const token = (typeof HEYS?.auth?.getSessionToken === 'function' && HEYS.auth.getSessionToken())
+      || (() => {
+        try { return localStorage.getItem('heys_session_token'); } catch (_) { return null; }
+      })();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return headers;
+  }
+
+  /**
+   * Прогноз срока подписки до оплаты (period_kind = estimate).
+   * @returns {Promise<{projected_period_end?: string, period_kind?: string}|null>}
+   */
+  async function fetchOrderPreview(clientId, plan) {
+    const normalizedPlan = normalizePlanId(plan);
+    const YandexAPI = window.HEYS?.YandexAPI;
+    if (YandexAPI?.getOrderPreview) {
+      const { data, error } = await YandexAPI.getOrderPreview(clientId, normalizedPlan);
+      if (error) {
+        devWarn('[Subscriptions] getOrderPreview error:', error);
+        return null;
+      }
+      return data;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        plan: normalizedPlan,
+        clientId: String(clientId || ''),
+      });
+      const response = await fetch(
+        `${getPaymentsApiBaseUrl()}/payments/order-preview?${params.toString()}`,
+        {
+          method: 'GET',
+          headers: getClientSessionAuthHeaders(),
+          credentials: 'include',
+        },
+      );
+      if (!response.ok) {
+        devWarn('[Subscriptions] fetchOrderPreview HTTP', response.status);
+        return null;
+      }
+      return await response.json();
+    } catch (err) {
+      devWarn('[Subscriptions] fetchOrderPreview error:', err);
+      trackError(err, { scope: 'Subscriptions', action: 'fetchOrderPreview' });
+      return null;
+    }
+  }
+
+  /**
+   * Выбор даты для строки периода: факт после оплаты, прогноз до.
+   */
+  function resolveOrderPeriodLine({ projected_period_end, confirmed_period_end, period_kind } = {}) {
+    if (period_kind === 'confirmed' && confirmed_period_end) {
+      return {
+        date: confirmed_period_end,
+        period_kind: 'confirmed',
+      };
+    }
+    if (projected_period_end) {
+      return {
+        date: projected_period_end,
+        period_kind: period_kind || 'estimate',
+      };
+    }
+    return null;
+  }
+
+  function isPaymentStatusSucceeded(data) {
+    if (!data || typeof data !== 'object') return false;
+    return data.paid === true
+      || data.status === 'completed'
+      || data.externalStatus === 'succeeded';
+  }
+
   function subscriptionScreenCheckIcon() {
     return h('svg', {
       width: 15,
@@ -849,6 +939,21 @@
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [ofertaAccepted, setOfertaAccepted] = useState(false);
+    const [orderPeriod, setOrderPeriod] = useState(null);
+
+    useEffect(() => {
+      let cancelled = false;
+      if (!clientId) return undefined;
+
+      (async () => {
+        const preview = await fetchOrderPreview(clientId, selectedPlan);
+        if (cancelled || !preview) return;
+        const resolved = resolveOrderPeriodLine(preview);
+        if (resolved?.date) setOrderPeriod(resolved);
+      })();
+
+      return () => { cancelled = true; };
+    }, [clientId, selectedPlan]);
 
     /**
      * Логирование согласия payment_oferta перед оплатой (ст. 438 ГК РФ)
@@ -968,14 +1073,13 @@
     const planDesc = selectedPlan === 'pro'
       ? 'Куратор ведёт дневник, чат, недельный чек-ин'
       : (selectedInfo?.features?.[0] || '');
-    // Дату окончания даёт сервер: он считает КАЛЕНДАРНЫЙ месяц
-    // (heys-api-payments/index.js:623-624 — GREATEST(NOW(), subscription_ends_at)
-    // + INTERVAL '1 month'). Прежний «сегодня + 30» обещал больше, чем есть:
-    // с 31 января сервер даёт 28 февраля, а экран рисовал 2 марта. Решение
-    // владельца 5 сентября (канвас, строка «срок подписки»): экран дату НЕ
-    // вычисляет — ни вычитанием, ни прибавлением. Поля с датой в ответе до
-    // оплаты сегодня нет, поэтому строка периода не рисуется вовсе: лучше не
-    // показать дату, чем показать неверную.
+    // Дату окончания даёт сервер: календарный месяц
+    // (heys-api-payments/index.js — GREATEST(NOW(), subscription_ends_at)
+    // + INTERVAL '1 month'). До оплаты — projected_period_end (estimate),
+    // после — confirmed_period_end (fact). Клиент дату не вычисляет.
+    const periodLabel = orderPeriod?.date
+      ? formatSubscriptionHeadlineDate(orderPeriod.date)
+      : '';
     const payLabel = `Оплатить ${formatPrice(selectedInfo?.price || 0)}`;
 
     const body = h('div', null,
@@ -994,7 +1098,8 @@
           h('div', { className: 'paywall-plan-desc' }, planDesc)
         ),
         h('div', { className: 'paywall-order-aside' },
-          h('div', { className: 'paywall-order-price n' }, formatPrice(selectedInfo?.price || 0))
+          h('div', { className: 'paywall-order-price n' }, formatPrice(selectedInfo?.price || 0)),
+          periodLabel && h('div', { className: 'paywall-order-period' }, periodLabel)
         )
       ),
 
@@ -1054,10 +1159,14 @@
   /**
    * Экран успешной оплаты
    */
-  function PaymentSuccessScreen({ plan, expiresAt, onContinue, embedded = false }) {
+  function PaymentSuccessScreen({ plan, expiresAt, confirmed_period_end, period_kind, onContinue, embedded = false }) {
     const planInfo = getPlan(normalizePlanId(plan));
     const planName = planInfo?.name || plan || 'Pro';
-    const untilLabel = formatDateShort(expiresAt);
+    const resolvedEnd = resolveOrderPeriodLine({
+      confirmed_period_end: confirmed_period_end || expiresAt,
+      period_kind: period_kind || (confirmed_period_end || expiresAt ? 'confirmed' : null),
+    });
+    const untilLabel = resolvedEnd?.date ? formatDateShort(resolvedEnd.date) : '';
     const priceLabel = formatPrice(planInfo?.price || 0);
 
     const body = h('div', null,
@@ -1655,6 +1764,8 @@
     // Payment (ЮKassa)
     checkPendingPayment,
     waitForPayment,
+    fetchOrderPreview,
+    resolveOrderPeriodLine,
 
     // Components
     SubscriptionBadge,
