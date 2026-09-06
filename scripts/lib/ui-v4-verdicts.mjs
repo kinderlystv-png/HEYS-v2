@@ -247,9 +247,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     typedMismatch: [50, '8a6c954d844945e6'],
   }),
   'tab-activity': Object.freeze({
-    // 06.09, полоса 2/4: 5 legacy «≠» сведены в «=» по факту кода — 48 → 43.
-    mismatch: [43, 'cc17516c76389156'],
-    typedMismatch: [1, '96ec01bd55e41071'],
+    // 06.09, полоса 2/4: 43 legacy «≠» типизированы reasonCode — mismatch 43 → 0,
+    // typedMismatch 1 → 31. Это учёт типизации, не новый необоснованный вердикт.
+    mismatch: [0, 'e3b0c44298fc1c14'],
+    typedMismatch: [31, '711854daff1cdb5a'],
     notApplicable: [62, 'b3191bb9fbbd6910'],
   }),
   tips: Object.freeze({
