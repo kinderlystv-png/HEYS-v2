@@ -1,7 +1,13 @@
 #!/usr/bin/env node
 /**
- * Task 138 — classify all «≠» verdicts into designer-facing TON / HEIGHT / KEGL lists.
- * Regenerates docs/ui/DIVERGENCE_{TON,HEIGHT,KEGL}_FOR_DESIGNER.md
+ * Task 138 + 145 — classify «≠» verdicts, then narrow TON / HEIGHT / KEGL by designer RISK.
+ * Regenerates docs/ui/DIVERGENCE_{TON,HEIGHT,KEGL,GENERAL}_FOR_DESIGNER.md
+ *
+ * Task 145 narrow rules (borderline method):
+ * - TON: text ink only — canvas/code must name typography color (--tx, --ink, «состояние: цвет» on copy).
+ *   Surface/bg/border/scrim/chart rows demote to general even if broad classifier said TON.
+ * - HEIGHT: interactive 42–44px band or contract 44 vs code within ~2px; margins/gaps/cards/charts demote.
+ * - KEGL: any font-size < 12px or dispute crosses 12 (e.g. 11 vs 12); 12.5 vs 13 stays in general.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,6 +25,14 @@ const OUT = {
   ton: path.join(ROOT, 'docs/ui/DIVERGENCE_TON_FOR_DESIGNER.md'),
   height: path.join(ROOT, 'docs/ui/DIVERGENCE_HEIGHT_FOR_DESIGNER.md'),
   kegl: path.join(ROOT, 'docs/ui/DIVERGENCE_KEGL_FOR_DESIGNER.md'),
+  general: path.join(ROOT, 'docs/ui/DIVERGENCE_GENERAL_FOR_DESIGNER.md'),
+};
+
+const WAS_IN_LABEL = {
+  ton: 'ТОН',
+  height: 'ВЫСОТА',
+  kegl: 'КЕГЛЬ',
+  outside: 'вне трёх',
 };
 
 function contractRows(html, contractOnly) {
@@ -297,39 +311,258 @@ function classifyRow(key, canvasValue, fact) {
   return { bucket: 'outside', scores, reason: 'ambiguous' };
 }
 
+/** Extract font-size px values from typography clauses (not bare layout px). */
+function extractFontSizes(text) {
+  const sizes = new Set();
+  for (const m of text.matchAll(/(?:font|шрифт)[^;|]{0,120}?(\d+(?:\.\d+)?)\s*px/gi)) {
+    sizes.add(parseFloat(m[1]));
+  }
+  for (const m of text.matchAll(/(\d+(?:\.\d+)?)\s*px\/[\d.]/g)) {
+    sizes.add(parseFloat(m[1]));
+  }
+  return [...sizes];
+}
+
+function extractHeights(text) {
+  const heights = new Set();
+  for (const m of text.matchAll(/(?:min-)?height:\s*(\d+(?:\.\d+)?)\s*px/gi)) {
+    heights.add(parseFloat(m[1]));
+  }
+  for (const m of text.matchAll(/высот[аыуе]\s+(\d+(?:\.\d+)?)\s*px/gi)) {
+    heights.add(parseFloat(m[1]));
+  }
+  for (const m of text.matchAll(/min-height:\s*(\d+(?:\.\d+)?)\s*px/gi)) {
+    heights.add(parseFloat(m[1]));
+  }
+  for (const m of text.matchAll(/\b(\d{2})\s*×\d+\s*px\b/g)) {
+    heights.add(parseFloat(m[1]));
+  }
+  return [...heights];
+}
+
+const TON_TEXT_INK = [
+  /\bцвет\s+(?:var\(--(?:tx|gr|ac2?|val)|rgba\(var\(--ink\))/i,
+  /шрифт\s+\d+\s+(\d+(?:\.\d+)?)\s*px[^;|]*,\s*цвет/i,
+  /,\s*цвет\s+rgba\(var\(--ink\)/i,
+  /состояние:\s*цвет/i,
+  /--v4-ink(?:-\d+)?\b/i,
+  /\b--tx\b/i,
+  /чернил(?:ами)?\s+\d+\s*%/i,
+  /тоном\s+(?:чернил|--tx|--gr\b|--ac2?\b|--val)/i,
+  /цветом\s+--(?:tx|gr|ac|val)/i,
+  /\bink-\d\b/i,
+  /моноцифр[^;|]{0,60}цвет/i,
+  /(?:заголовок|подпись|текст|кикер|badge|бейдж|состояние)[^;|]{0,100}чернил/i,
+  /(?:заголовок|подпись|кикер)[^;|]{0,80}цвет/i,
+  /\d+(?:\.\d+)?\s*px\/[\d.]+[^;|]{0,40}чернил/i,
+];
+
+const TON_NON_TEXT = [
+  /^\s*(?:фон|заливк|радиус|поля\s|padding|margin|флекс|направление|выравнивание)\b/i,
+  /\bфон\s+var\(--/i,
+  /\bзаливк[аи]\s+var\(--/i,
+  /--v4-(?:surface|sand|c1|c2|hero)\b/i,
+  /--c[12]\b/,
+  /--gr-bg\b/,
+  /\bscrim\b/i,
+  /\bобводк/i,
+  /\bborder(?:-color)?\b/i,
+  /\binset\s+0/i,
+  /\bполе\s+рисунка\b/i,
+  /\bviewBox\b/i,
+  /\bstroke\b/i,
+  /\bлиния\s+var\(--/i,
+  /\bтень\b/i,
+  /\bbox-shadow\b/i,
+];
+
+const HEIGHT_INTERACTIVE = [
+  /\bкнопк/i,
+  /\bbutton\b/i,
+  /\bchip\b/i,
+  /\bчип/i,
+  /\bicon-?btn/i,
+  /\bCTA\b/i,
+  /\bзакрыть/i,
+  /\bтап/i,
+  /\btouch\s*target/i,
+  /\bзон[аы]\s+нажати/i,
+  /\bkeypad\b/i,
+  /\bклавиш/i,
+  /\bPIN\b/,
+  /\bполе\s+ввода/i,
+  /\bпилюл/i,
+  /\bmin-height:\s*4[0-6]\s*px/i,
+  /\bвысот[аыу].*от\s+44\s*px/i,
+  /\b44\s*px\b.*(?:кнопк|клетк|pin|keypad|чип|cta|icon)/i,
+  /\bстрока\s+списка\b/i,
+  /\bвторичн(?:ая|ую)\s+кнопк/i,
+];
+
+const HEIGHT_NON_TARGET = [
+  /^\s*(?:зазор|отступ\s+сверху|margin-top|padding|поля|направление|выравнивание|распределение)\b/i,
+  /\bполе\s+рисунка\b/i,
+  /\bviewBox\b/i,
+  /\bslider-fill\b/i,
+  /\bрисунок\s+\d+/i,
+  /\bкарточк[аи].*высот/i,
+  /\bблок\b.*высот/i,
+  /\bсекци/i,
+  /\bmargin-top:\s*\d/i,
+  /\bотступ\s+сверху\s+\d/i,
+  /\bзазор\s+\d/i,
+  /\bgap:\s*\d/i,
+];
+
+/** Task 145 — text ink contrast risk only. */
+function passesTonRisk(entry) {
+  const { key, canvas, code } = entry;
+  const text = `${key} ${canvas} ${code}`;
+
+  if (/\b(рисунок|viewBox|поле\s+рисунка)\b/i.test(text)) return false;
+  if (/\bне\s+цвет\b/i.test(code) || /\bне\s+тоном\b/i.test(code)) return false;
+
+  const canvasTrim = canvas.trim();
+  const surfaceOnly =
+    TON_NON_TEXT.some((re) => re.test(canvasTrim)) &&
+    !TON_TEXT_INK.some((re) => re.test(canvasTrim));
+  if (surfaceOnly && !TON_TEXT_INK.some((re) => re.test(code))) return false;
+
+  if (!TON_TEXT_INK.some((re) => re.test(text))) return false;
+
+  // Icon/decorative fill without typography clause
+  if (/\bиконк/i.test(key) && /\bзаливк/i.test(canvas) && !/шрифт|подпись|текст|цвет\s+rgba\(var\(--ink\)/i.test(text)) {
+    return false;
+  }
+
+  return true;
+}
+
+/** Task 145 — sub-44px tap target risk only. */
+function passesHeightRisk(entry) {
+  const { key, canvas, code } = entry;
+  const text = `${key} ${canvas} ${code}`;
+  const canvasTrim = canvas.trim();
+
+  if (HEIGHT_NON_TARGET.some((re) => re.test(canvasTrim)) && !HEIGHT_INTERACTIVE.some((re) => re.test(text))) {
+    return false;
+  }
+  if (/\b(рисунок|viewBox|поле\s+рисунка|slider-fill)\b/i.test(text)) return false;
+
+  const interactive = HEIGHT_INTERACTIVE.some((re) => re.test(text));
+  if (!interactive) return false;
+
+  const heights = [...extractHeights(canvas), ...extractHeights(code)];
+  const inBand = heights.some((h) => h >= 42 && h <= 44);
+  const contract44 = /\b44\s*px\b/i.test(text);
+  const nearMiss =
+    heights.length >= 2 &&
+    heights.some((h) => h >= 42 && h <= 44) &&
+    heights.some((h) => h >= 40 && h <= 46) &&
+    Math.max(...heights) - Math.min(...heights) <= 3;
+
+  if (inBand) return true;
+  if (contract44 && nearMiss) return true;
+  if (contract44 && heights.some((h) => h >= 40 && h <= 46)) return true;
+
+  return false;
+}
+
+/** Task 145 — below 12px minimum or crosses 12 boundary. */
+function passesKeglRisk(entry) {
+  const { key, canvas, code } = entry;
+  const text = `${key} ${canvas} ${code}`;
+
+  const canvasSizes = extractFontSizes(`${key} ${canvas}`);
+  const codeSizes = extractFontSizes(code);
+  const allSizes = extractFontSizes(text);
+
+  if (allSizes.length === 0) return false;
+
+  if (allSizes.some((s) => s < 12)) return true;
+
+  if (canvasSizes.length && codeSizes.length) {
+    for (const c of canvasSizes) {
+      for (const p of codeSizes) {
+        if ((c < 12 && p >= 12) || (c >= 12 && p < 12)) return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+const NARROW_PASS = {
+  ton: passesTonRisk,
+  height: passesHeightRisk,
+  kegl: passesKeglRisk,
+};
+
+function narrowBuckets(broad) {
+  const narrowed = { ton: [], height: [], kegl: [] };
+  const general = [];
+
+  for (const name of ['ton', 'height', 'kegl']) {
+    for (const entry of broad[name]) {
+      if (NARROW_PASS[name](entry)) {
+        narrowed[name].push(entry);
+      } else {
+        general.push({ ...entry, wasIn: WAS_IN_LABEL[name] });
+      }
+    }
+  }
+
+  for (const entry of broad.outside) {
+    general.push({ ...entry, wasIn: WAS_IN_LABEL.outside });
+  }
+
+  return { narrowed, general };
+}
+
 const HEADERS = {
-  ton: `# Расхождения ТОН (цвет) — для дизайнера
+  ton: `# Расхождения ТОН — риск контраста текста (для дизайнера)
 
-Список вердиктов «≠», где продукт расходится с канвасом по **цвету**: фон, заливка, тон чернил, роли ink/surface/act/scrim, градиенты, прозрачность, цвет обводки и тени.
+Узкий список вердиктов «≠», где расхождение затрагивает **цвет текста**: подписи, чернила, роли \`--tx\` / \`--v4-ink\`, цвет типографики в кадре.
 
-**Почему важно:** полутон или неверная роль может опустить контраст текста ниже 4.5:1.
+**Критерий риска (Task 145):** полутона могут уронить контраст ниже 4.5:1 **на тексте**. Фоны, заливки карточек, обводки, scrim и декоративные пятна — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
 
-Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}).
-
-| Зона | Ключ | В кадре | В коде |
-|------|------|---------|--------|
-`,
-  height: `# Расхождения ВЫСОТА (вертикальный размер) — для дизайнера
-
-Список вердиктов «≠», где продукт расходится с канвасом по **вертикальной геометрии**: height, padding-top/bottom, margin-top/bottom, gap в вертикальной раскладке, touch target 44px, диаметр/поле иконки.
-
-**Почему важно:** 2px могут опустить зону нажатия с 44 до 42px.
-
-Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}).
+Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}; было {{before}} до сужения).
 
 | Зона | Ключ | В кадре | В коде |
 |------|------|---------|--------|
 `,
-  kegl: `# Расхождения КЕГЛЬ (размер шрифта) — для дизайнера
+  height: `# Расхождения ВЫСОТА — риск зоны нажатия <44px (для дизайнера)
 
-Список вердиктов «≠», где продукт расходится с канвасом по **кеглю**: font-size, компонент size в font shorthand, letter-spacing уровня кегля.
+Узкий список вердиктов «≠», где расхождение затрагивает **интерактивную высоту** в полосе 42–44px или контракт требует 44px, а код отличается примерно на 2px.
 
-**Почему важно:** 12.5 vs 13 допустимо; 11 vs 12 пересекает минимум читаемости.
+**Критерий риска (Task 145):** 2px могут уронить цель с 44 на 42. Отступы, gap, высота карточек и блоков — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
 
-Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}).
+Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}; было {{before}} до сужения).
 
 | Зона | Ключ | В кадре | В коде |
 |------|------|---------|--------|
+`,
+  kegl: `# Расхождения КЕГЛЬ — риск ниже минимума 12px (для дизайнера)
+
+Узкий список вердиктов «≠», где кегль **ниже 12px** или спор пересекает границу 12 (например 11 vs 12).
+
+**Критерий риска (Task 145):** 12.5 vs 13 неважно; 11 vs 12 уже ниже минимума. Косметика ≥12px — в [общей пачке](DIVERGENCE_GENERAL_FOR_DESIGNER.md).
+
+Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}; было {{before}} до сужения).
+
+| Зона | Ключ | В кадре | В коде |
+|------|------|---------|--------|
+`,
+  general: `# Расхождения — общая пачка (для дизайнера)
+
+Все «≠», не попавшие в узкие списки риска по **ТОН / ВЫСОТА / КЕГЛЬ** (Task 145), плюс строки, изначально вне трёх визуальных корзин Task 138.
+
+Колонка **Было в** показывает, откуда строка ушла при сужении (или «вне трёх»).
+
+Всего строк: **{{count}}** (из {{total}} «≠» на {{date}}).
+
+| Зона | Ключ | В кадре | В коде | Было в |
+|------|------|---------|--------|--------|
 `,
 };
 
@@ -392,28 +625,56 @@ function main() {
 
   const total = all.length;
   const date = new Date().toISOString().slice(0, 10);
+  const before = {
+    ton: buckets.ton.length,
+    height: buckets.height.length,
+    kegl: buckets.kegl.length,
+    outside: buckets.outside.length,
+  };
 
-  for (const [name, header] of Object.entries(HEADERS)) {
-    const rows = sortRows(buckets[name]);
+  const { narrowed, general } = narrowBuckets(buckets);
+
+  for (const name of ['ton', 'height', 'kegl']) {
+    const rows = sortRows(narrowed[name]);
+    const header = HEADERS[name]
+      .replace('{{count}}', String(rows.length))
+      .replace('{{total}}', String(total))
+      .replace('{{date}}', date)
+      .replace('{{before}}', String(before[name]));
     const body = rows
       .map(
         (r) =>
           `| ${escCell(r.zone)} | ${escCell(r.key)} | ${escCell(r.canvas)} | ${escCell(r.code)} |`,
       )
       .join('\n');
-    const text = header.replace('{{count}}', String(rows.length)).replace('{{total}}', String(total)).replace('{{date}}', date)
-      + body
-      + '\n';
-    fs.writeFileSync(OUT[name], text, 'utf8');
+    fs.writeFileSync(OUT[name], header + body + '\n', 'utf8');
   }
+
+  const generalRows = sortRows(general);
+  const generalHeader = HEADERS.general
+    .replace('{{count}}', String(generalRows.length))
+    .replace('{{total}}', String(total))
+    .replace('{{date}}', date);
+  const generalBody = generalRows
+    .map(
+      (r) =>
+        `| ${escCell(r.zone)} | ${escCell(r.key)} | ${escCell(r.canvas)} | ${escCell(r.code)} | ${escCell(r.wasIn)} |`,
+    )
+    .join('\n');
+  fs.writeFileSync(OUT.general, generalHeader + generalBody + '\n', 'utf8');
+
+  const after = {
+    ton: narrowed.ton.length,
+    height: narrowed.height.length,
+    kegl: narrowed.kegl.length,
+    general: general.length,
+  };
 
   const summary = {
     total,
-    ton: buckets.ton.length,
-    height: buckets.height.length,
-    kegl: buckets.kegl.length,
-    outside: buckets.outside.length,
-    sum: buckets.ton.length + buckets.height.length + buckets.kegl.length + buckets.outside.length,
+    before,
+    after,
+    sum: after.ton + after.height + after.kegl + after.general,
     ambiguousNearTie: ambiguousDup.length,
   };
   console.log(JSON.stringify(summary, null, 2));
