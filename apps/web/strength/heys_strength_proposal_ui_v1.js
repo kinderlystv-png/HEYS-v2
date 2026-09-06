@@ -123,6 +123,101 @@
     return { frozen: frozen, ahead: ahead };
   }
 
+  function memberLinesForBlock(exercises, indexes, roundCount) {
+    const Parts = HEYS.StrengthBuilderParts || {};
+    if (typeof Parts.supersetMemberLines === 'function') {
+      return Parts.supersetMemberLines(exercises, indexes, roundCount);
+    }
+    return (Array.isArray(indexes) ? indexes : []).map(function (i) {
+      return exercises[i] && exercises[i].name ? exercises[i].name : '';
+    });
+  }
+
+  function blockRoundCount(exercises, indexes, ks) {
+    const rounds = ks.supersetRounds(exercises, exercises[indexes[0]] && exercises[indexes[0]].ssGroup);
+    if (rounds) return rounds.length;
+    const counts = indexes.map(function (i) { return ks.workApproaches(exercises[i]).length; });
+    return counts.length ? Math.min.apply(null, counts) : 0;
+  }
+
+  function namesEqual(left, right) {
+    if (left.length !== right.length) return false;
+    for (let i = 0; i < left.length; i++) {
+      if (left[i] !== right[i]) return false;
+    }
+    return true;
+  }
+
+  function currentSupersetRound(exercises, groupId, ks) {
+    const rounds = ks.supersetRounds(exercises, groupId);
+    if (!rounds || !rounds.length) return { current: 0, total: 0 };
+    for (let ri = 0; ri < rounds.length; ri++) {
+      const cells = rounds[ri];
+      for (let ci = 0; ci < cells.length; ci++) {
+        const a = exercises[cells[ci].exerciseIndex].approaches[cells[ci].approachIndex];
+        if (!ks.isApproachDone(a)) return { current: ri + 1, total: rounds.length };
+      }
+    }
+    return { current: rounds.length, total: rounds.length };
+  }
+
+  /**
+   * Границы правки связки для кадра Д3: не начатая меняется целиком парой
+   * «было → станет», начатая держит состав до конца.
+   */
+  function describeSupersetBoundaries(liveExercises, proposedExercises) {
+    const ks = kernel();
+    const replacements = [];
+    const frozen = [];
+    if (!ks) return { replacements: replacements, frozen: frozen };
+
+    const live = Array.isArray(liveExercises) ? liveExercises : [];
+    const proposed = Array.isArray(proposedExercises) ? proposedExercises : [];
+    const liveBlocks = ks.orderBlocks(live);
+    const proposedBlocks = ks.orderBlocks(proposed);
+    const liveByGroup = {};
+    liveBlocks.forEach(function (block) {
+      if (block.groupId) liveByGroup[block.groupId] = block;
+    });
+    const seen = {};
+
+    proposedBlocks.forEach(function (pb) {
+      if (!pb.groupId || pb.indexes.length < 2 || seen[pb.groupId]) return;
+      const lb = liveByGroup[pb.groupId];
+      if (!lb || lb.indexes.length < 2) return;
+      seen[pb.groupId] = true;
+
+      const started = lb.indexes.some(function (i) { return ks.hasDoneApproach(live[i]); });
+      const liveNames = lb.indexes.map(function (i) { return live[i].name; });
+      const propNames = pb.indexes.map(function (i) { return proposed[i].name; });
+      const liveRounds = blockRoundCount(live, lb.indexes, ks);
+      const propRounds = blockRoundCount(proposed, pb.indexes, ks);
+      const compositionChanged = !namesEqual(liveNames, propNames) || liveRounds !== propRounds;
+      if (!compositionChanged) return;
+
+      if (started) {
+        const letter = HEYS.StrengthBuilderParts && HEYS.StrengthBuilderParts.supersetGroupLetter
+          ? HEYS.StrengthBuilderParts.supersetGroupLetter(pb.groupId)
+          : 'A';
+        const round = currentSupersetRound(live, pb.groupId, ks);
+        frozen.push({
+          title: 'Связка ' + letter + ' · раунд ' + round.current + ' из ' + round.total,
+          subtitle: 'состав заморожен до конца',
+          badge: 'закрыта'
+        });
+        return;
+      }
+
+      replacements.push({
+        key: 'связка не начата',
+        beforeLines: memberLinesForBlock(live, lb.indexes, liveRounds),
+        afterLines: memberLinesForBlock(proposed, pb.indexes, propRounds)
+      });
+    });
+
+    return { replacements: replacements, frozen: frozen };
+  }
+
   const KIND_SIGN = { added: '+', removed: '−', changed: '~', same: '·' };
 
   const V4 = {
@@ -273,9 +368,7 @@
     const isReadOnly = !!readOnly || proposal.status !== 'pending';
     const wl = (training && training.workoutLog) || {};
     const diff = describePlanEdit(wl.exercises, proposal.exercises);
-    const boundaries = typeof Parts.describeSupersetBoundaries === 'function'
-      ? Parts.describeSupersetBoundaries(wl.exercises, proposal.exercises)
-      : { replacements: [], frozen: [] };
+    const boundaries = describeSupersetBoundaries(wl.exercises, proposal.exercises);
     const who = proposal.proposedBy || 'Куратор';
     const BoundBody = HEYS.StrengthBuilderParts && HEYS.StrengthBuilderParts.SupersetBoundariesBody;
 
@@ -1603,9 +1696,376 @@
           );
         }),
         weekRowsBlock(snapshot.weekRows),
-        snapshot.footnote && h('p', { className: 'sb-cycle-footnote' }, snapshot.footnote)
+        snapshot.footnote && h('p', { className: 'sb-cycle-footnote' }, snapshot.footnote),
+        props.onOpenCycleReport && h('button', {
+          type: 'button',
+          className: 'sb-cycle-report-link',
+          onClick: props.onOpenCycleReport,
+        },
+          h('span', null, 'Отчёт по циклу'),
+          h('span', { className: 'sb-cycle-report-chevron', 'aria-hidden': 'true' }, '›')
+        )
       )
     );
+  }
+
+  const CYCLE_REPORT_FOOTNOTE = 'Перенос и пропуск — разные исходы: перенос освобождает исходный день заранее и пропуском не считается, пропуск остаётся навсегда — прошедший день не переигрываем.';
+  const PERIOD_REPORT_DEBT_TITLE = 'Пропущенная не считается сделанной';
+  const PERIOD_REPORT_DEBT_PROSE = 'Сейчас в счёт объёма попадает и пропущенная запись — отчёт говорит об этом прямо, а не делает вид, что работает.';
+  const PERIOD_REPORT_FOOTNOTE = 'Отчёт дня и отчёт периода — разные экраны: у дня спрашивают «что сегодня не сошлось», у периода — «сколько раз за две недели». Сводка по исходам живёт здесь, потому что за один день она всегда «4 · 1 · 1 · 2» из четырёх упражнений и не отвечает ни на что.';
+
+  function fmtReportVolumeDisplay(kg, unmeasured, bodyWeightKg) {
+    if (unmeasured > 0 && bodyWeightKg == null && !(+kg > 0)) return '—';
+    return fmtVolume(kg);
+  }
+
+  function cycleReportHeaderKey(program, days) {
+    const assigned = (days || []).filter(function (d) {
+      return d && d.status !== 'skipped';
+    }).length;
+    const weekRange = program && program.weekRange ? String(program.weekRange).trim() : '';
+    if (weekRange) return weekRange + ' · ' + assigned + ' назначено';
+    return assigned + ' назначено';
+  }
+
+  function findLatestProgramTraining(days, readDay, opts) {
+    const o = opts || {};
+    const list = (days || []).slice().sort(function (a, b) {
+      return String(b.date).localeCompare(String(a.date));
+    });
+    for (let i = 0; i < list.length; i++) {
+      const d = list[i];
+      if (o.requireDone && d.status !== 'done') continue;
+      if (typeof readDay !== 'function') continue;
+      let blob = null;
+      try { blob = readDay(d.date); } catch (_) { blob = null; }
+      const trainings = blob && Array.isArray(blob.trainings) ? blob.trainings : [];
+      const training = trainings.find(function (t) {
+        return t && t.planSnapshot && Array.isArray(t.planSnapshot.exercises)
+          && t.workoutLog && Array.isArray(t.workoutLog.exercises);
+      });
+      if (training) return { day: d, training: training };
+    }
+    return null;
+  }
+
+  function buildCycleReportSnapshot(program, days, readDay, opts) {
+    const o = opts || {};
+    const buildPvd = Parts.buildPlanVsDoneSnapshot;
+    const hit = findLatestProgramTraining(days, readDay, { requireDone: !o.allowIncomplete });
+    const training = o.training || (hit && hit.training) || null;
+    const planVsDone = buildPvd && training
+      ? buildPvd(training, { bodyWeightKg: o.bodyWeightKg })
+      : { rows: [], percent: 0, summarySub: '', plannedVolume: 0, doneVolume: 0, planUnmeasured: 0, doneUnmeasured: 0, bodyWeightKg: null };
+    if (planVsDone && !planVsDone.headerKey) {
+      planVsDone.headerKey = cycleReportHeaderKey(program, days);
+    }
+    return {
+      headerKey: cycleReportHeaderKey(program, days),
+      planVsDone: planVsDone,
+      training: training,
+    };
+  }
+
+  function planVsDoneRowEl(row, i, rowsLen) {
+    const doneCellClass = row.doneTone === 'positive'
+      ? ' is-positive'
+      : row.doneTone === 'skip'
+        ? ' is-skip'
+        : row.doneTone === 'neutral'
+          ? ' is-neutral'
+          : '';
+    return h('div', {
+      key: row.name + i,
+      className: 'sb-plan-vs-row is-' + row.status
+    },
+      h('div', { className: 'sb-plan-vs-row-head' },
+        h('span', { className: 'sb-plan-vs-dot is-' + row.status, 'aria-hidden': 'true' }),
+        h('b', null, row.name)
+      ),
+      row.note && h('p', { className: 'sb-plan-vs-note' }, row.note),
+      h('div', { className: 'sb-plan-vs-cols' },
+        h('div', { className: 'sb-plan-vs-cell is-assigned' },
+          h('span', { className: 'sb-plan-vs-cell-label' }, 'Назначено'),
+          h('span', { className: 'sb-plan-vs-cell-val' }, row.planned)
+        ),
+        h('div', { className: 'sb-plan-vs-cell is-done' + doneCellClass },
+          h('span', { className: 'sb-plan-vs-cell-label' }, 'Сделано'),
+          h('span', { className: 'sb-plan-vs-cell-val' }, row.actual)
+        )
+      )
+    );
+  }
+
+  function planVsDoneBodyEl(snapshot, handlers) {
+    const hdl = handlers || {};
+    const rows = snapshot.rows || [];
+    if (!rows.length) {
+      return h('p', { className: 'sb-plan-vs-empty' }, 'План куратора для сравнения не найден.');
+    }
+    return h(React.Fragment, null,
+      h('div', { className: 'sb-plan-vs-summary' },
+        h('div', { className: 'sb-plan-vs-summary-head' },
+          h('span', { className: 'sb-plan-vs-dot is-summary', 'aria-hidden': 'true' }),
+          h('span', { className: 'sb-plan-vs-summary-title' },
+            'План выполнен на ' + snapshot.percent + ' %')
+        ),
+        snapshot.summarySub && h('p', { className: 'sb-plan-vs-summary-sub' }, snapshot.summarySub)
+      ),
+      h('div', { className: 'sb-plan-vs-list' },
+        rows.map(function (row, i) { return planVsDoneRowEl(row, i, rows.length); })
+      ),
+      h('div', { className: 'sb-plan-vs-cd' },
+        h('div', { className: 'sb-plan-vs-cd-row' },
+          h('span', { className: 'sb-plan-vs-cd-label' }, 'Объём назначенного'),
+          h('span', { className: 'sb-plan-vs-cd-val is-muted' },
+            fmtReportVolumeDisplay(snapshot.plannedVolume, snapshot.planUnmeasured, snapshot.bodyWeightKg))
+        ),
+        h('div', { className: 'sb-plan-vs-cd-row is-last' },
+          h('span', { className: 'sb-plan-vs-cd-label' }, 'Объём сделанного'),
+          h('span', { className: 'sb-plan-vs-cd-val' },
+            fmtReportVolumeDisplay(snapshot.doneVolume, snapshot.doneUnmeasured, snapshot.bodyWeightKg))
+        )
+      ),
+      h('div', { className: 'sb-plan-vs-actions' },
+        h('button', {
+          type: 'button',
+          className: 'sb-btn sb-plan-cta',
+          onClick: hdl.onMessageCurator || undefined
+        }, 'Написать куратору'),
+        h('button', {
+          type: 'button',
+          className: 'sb-btn is-accent sb-plan-cta',
+          onClick: hdl.onWeekReport || undefined
+        }, 'Отчёт за неделю')
+      ),
+      h('p', { className: 'sb-plan-vs-foot' }, CYCLE_REPORT_FOOTNOTE)
+    );
+  }
+
+  /**
+   * Г2 · Отчёт по циклу: полноэкранный compare назначено/сделано за период программы.
+   * Shell как ProgramDone / ProposalOutcome (sb-finish-head + sb-finish-list).
+   */
+  function CycleReportScreen(props) {
+    const snapshot = props.snapshot
+      || buildCycleReportSnapshot(props.program, props.days, props.readDay, props.snapshotOpts || {});
+    const body = snapshot.planVsDone || {};
+    const onClose = props.onClose;
+
+    return h('div', { className: 'sb-root sb-screen sb-plan-vs-done sb-cycle-report' },
+      h('div', { className: 'sb-head sb-finish-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть',
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, 'Отчёт по циклу'),
+          snapshot.headerKey && h('div', { className: 'sb-head-sub' }, snapshot.headerKey)
+        )
+      ),
+      h('div', { className: 'sb-list sb-finish-list sb-plan-vs-scroll' },
+        planVsDoneBodyEl(body, {
+          onMessageCurator: props.onMessageCurator,
+          onWeekReport: props.onWeekReport || props.onOpenPeriodReport,
+        })
+      )
+    );
+  }
+
+  function weekdayLabelFromDateKey(dateKey) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
+    if (!m) return '';
+    const dt = new Date(+m[1], (+m[2]) - 1, +m[3]);
+    const wd = WEEKDAY_SHORT[dt.getDay()] || '';
+    return wd ? wd.charAt(0).toUpperCase() + wd.slice(1) : '';
+  }
+
+  function buildPeriodReportSnapshot(program, days, readDay, opts) {
+    const o = opts || {};
+    const scoped = (days || []).filter(function (d) { return d && d.date; });
+    let matchCount = 0;
+    let movedCount = 0;
+    let skippedCount = 0;
+    let ownCount = 0;
+    let movedDetail = '';
+    let skippedDetail = '';
+    scoped.forEach(function (d) {
+      if (d.status === 'done') matchCount += 1;
+      if (d.status === 'skipped') {
+        skippedCount += 1;
+        if (!skippedDetail) {
+          skippedDetail = fmtProgramStartDate(d.date) + ' · день прошёл';
+        }
+      }
+      if (d.status === 'moved' || d.movedTo) {
+        movedCount += 1;
+        if (!movedDetail && d.movedTo) {
+          const fromWd = weekdayLabelFromDateKey(d.date);
+          const toWd = weekdayLabelFromDateKey(d.movedTo);
+          if (fromWd && toWd) movedDetail = fromWd + ' → ' + toWd;
+        }
+      }
+      if (typeof readDay === 'function') {
+        let blob = null;
+        try { blob = readDay(d.date); } catch (_) { blob = null; }
+        const trainings = blob && Array.isArray(blob.trainings) ? blob.trainings : [];
+        trainings.forEach(function (t) {
+          if (t && t.workoutLog && (!t.plan || !t.plan.programId) && !t.planSnapshot) ownCount += 1;
+        });
+      }
+    });
+    if (o.incomplete) {
+      matchCount = Math.min(matchCount, 2);
+      movedCount = movedCount || 0;
+      skippedCount = skippedCount || 0;
+      ownCount = ownCount || 1;
+    }
+    return {
+      headerKey: cycleReportHeaderKey(program, scoped),
+      outcomes: [
+        { key: 'match', label: 'Сделано как назначено', value: String(matchCount), tone: 'ok' },
+        { key: 'moved', label: 'Перенесено', value: String(movedCount), tone: 'tx', detail: movedDetail },
+        { key: 'skipped', label: 'Пропущено', value: String(skippedCount), tone: 'bad', detail: skippedDetail },
+        { key: 'own', label: 'Своих, вне плана', value: String(ownCount), tone: 'muted', isLast: true },
+      ],
+      showDebtCard: skippedCount > 0 || o.incomplete,
+    };
+  }
+
+  function periodOutcomeRow(row) {
+    const valClass = 'sb-period-outcome-val'
+      + (row.tone === 'ok' ? ' is-ok' : '')
+      + (row.tone === 'bad' ? ' is-bad' : '')
+      + (row.tone === 'muted' ? ' is-muted' : '');
+    return h('div', {
+      key: row.key,
+      className: 'sb-period-outcome-row' + (row.isLast ? ' is-last' : ''),
+    },
+      h('span', { className: 'sb-period-outcome-label' },
+        row.detail
+          ? h(React.Fragment, null,
+            h('span', null, row.label),
+            h('span', { className: 'sb-period-outcome-detail' }, row.detail)
+          )
+          : row.label
+      ),
+      h('span', { className: valClass }, row.value)
+    );
+  }
+
+  /**
+   * Г6 · Отчёт за период: сводка исходов за две недели программы.
+   */
+  function PeriodReportScreen(props) {
+    const snapshot = props.snapshot
+      || buildPeriodReportSnapshot(props.program, props.days, props.readDay, props.snapshotOpts || {});
+    const onClose = props.onClose;
+
+    return h('div', { className: 'sb-root sb-screen sb-period-report' },
+      h('div', { className: 'sb-head sb-finish-head' },
+        h('button', {
+          type: 'button', className: 'sb-icon-btn', onClick: onClose, 'aria-label': 'Закрыть',
+        }, '✕'),
+        h('div', { className: 'sb-head-title' },
+          h('b', null, 'Отчёт за период'),
+          snapshot.headerKey && h('div', { className: 'sb-head-sub' }, snapshot.headerKey)
+        )
+      ),
+      h('div', { className: 'sb-list sb-finish-list sb-period-scroll' },
+        h('div', { className: 'sb-period-outcomes' },
+          (snapshot.outcomes || []).map(periodOutcomeRow)
+        ),
+        snapshot.showDebtCard && h('div', { className: 'sb-period-debt-card' },
+          h('div', { className: 'sb-period-debt-title' }, PERIOD_REPORT_DEBT_TITLE),
+          h('p', { className: 'sb-period-debt-prose' }, PERIOD_REPORT_DEBT_PROSE)
+        ),
+        h('button', {
+          type: 'button',
+          className: 'sb-btn is-accent sb-period-cta',
+          onClick: props.onWeekReport || onClose,
+        }, 'Отчёт за неделю'),
+        h('p', { className: 'sb-period-footnote' }, PERIOD_REPORT_FOOTNOTE)
+      )
+    );
+  }
+
+  const CYCLE_REPORT_FS_ID = 'strength-cycle-report';
+  const PERIOD_REPORT_FS_ID = 'strength-period-report';
+
+  function openCycleReport(opts) {
+    const o = opts || {};
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    if (!fs) return false;
+    const snapshot = o.snapshot
+      || buildCycleReportSnapshot(o.program, o.days, o.readDay, o.snapshotOpts || {});
+    return fs.mount({
+      id: CYCLE_REPORT_FS_ID,
+      ariaLabel: 'Отчёт по циклу',
+      render: function (api) {
+        return h(CycleReportScreen, {
+          program: o.program,
+          days: o.days,
+          readDay: o.readDay,
+          snapshot: snapshot,
+          snapshotOpts: o.snapshotOpts,
+          onClose: function () {
+            api.close();
+            if (typeof o.onClose === 'function') o.onClose();
+          },
+          onMessageCurator: function () {
+            if (typeof o.onMessageCurator === 'function') o.onMessageCurator();
+            else {
+              try { window.dispatchEvent(new CustomEvent('heys:open-messages')); } catch (_) { /* noop */ }
+            }
+          },
+          onWeekReport: function () {
+            if (typeof o.onWeekReport === 'function') o.onWeekReport();
+            else openPeriodReport({
+              program: o.program,
+              days: o.days,
+              readDay: o.readDay,
+              snapshotOpts: o.snapshotOpts,
+              onClose: o.onClose,
+            });
+          },
+          onOpenPeriodReport: function () {
+            openPeriodReport({
+              program: o.program,
+              days: o.days,
+              readDay: o.readDay,
+              snapshotOpts: o.snapshotOpts,
+            });
+          },
+        });
+      },
+    });
+  }
+
+  function openPeriodReport(opts) {
+    const o = opts || {};
+    const TK = HEYS.TrainingKernel;
+    const fs = TK && TK.fullscreen;
+    if (!fs) return false;
+    const snapshot = o.snapshot
+      || buildPeriodReportSnapshot(o.program, o.days, o.readDay, o.snapshotOpts || {});
+    return fs.mount({
+      id: PERIOD_REPORT_FS_ID,
+      ariaLabel: 'Отчёт за период',
+      render: function (api) {
+        return h(PeriodReportScreen, {
+          program: o.program,
+          days: o.days,
+          readDay: o.readDay,
+          snapshot: snapshot,
+          onClose: function () {
+            api.close();
+            if (typeof o.onClose === 'function') o.onClose();
+          },
+          onWeekReport: o.onWeekReport,
+        });
+      },
+    });
   }
 
   function weekRowsBlock(rows) {
@@ -1633,6 +2093,12 @@
   Parts.buildProgramDoneSnapshot = buildProgramDoneSnapshot;
   Parts.CycleScreen = CycleScreen;
   Parts.buildProgramCycleSnapshot = buildProgramCycleSnapshot;
+  Parts.CycleReportScreen = CycleReportScreen;
+  Parts.buildCycleReportSnapshot = buildCycleReportSnapshot;
+  Parts.openCycleReport = openCycleReport;
+  Parts.PeriodReportScreen = PeriodReportScreen;
+  Parts.buildPeriodReportSnapshot = buildPeriodReportSnapshot;
+  Parts.openPeriodReport = openPeriodReport;
 
   const ACCEPTED_OUTCOME_FOOTNOTE = 'Исход виден составом, а не словом «применено»: человек должен увидеть, что именно у него теперь в плане, и что отмеченное осталось на месте.';
   const DECLINED_OUTCOME_FOOTNOTE = 'Одна кнопка, и та тихая: отказ — это не ошибка, которую надо исправлять формой с причиной. Предложение сохраняется, чтобы к нему можно было вернуться.';
@@ -2101,6 +2567,7 @@
   Parts.openCuratorEditStatusFromCabinet = openCuratorEditStatusFromCabinet;
   Parts.resolveCuratorCabinetEditOpts = resolveCuratorCabinetEditOpts;
   Parts.describePlanEdit = describePlanEdit;
+  Parts.describeSupersetBoundaries = describeSupersetBoundaries;
   Parts.ProposalCard = ProposalCard;
   Parts.ProposalReview = ProposalReview;
   Parts.ProposalStrip = ProposalStrip;
