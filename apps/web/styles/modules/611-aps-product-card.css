@@ -791,19 +791,41 @@
   font-weight: 500;
   line-height: 1.5;
   text-align: center;
-  color: rgba(242, 237, 230, 0.56);
+  color: var(--v4-ink-3, rgba(242, 237, 230, 0.5));
 }
 
 .aps-barcode-unrecognized {
   margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(242, 237, 230, 0.12);
+  text-align: left;
+}
+
+.aps-barcode-unrecognized__tier {
   font-size: 12px;
   font-weight: 600;
   line-height: 1.4;
-  text-align: center;
   color: var(--v4-ink, #f2ede6);
+}
+
+.aps-barcode-unrecognized__card {
+  margin-top: 0;
+  padding: 15px;
+  border-radius: 18px;
+  background: var(--v4-hero, #efe3cf);
+}
+
+.aps-barcode-unrecognized__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--v4-ink, #201e1d);
+}
+
+.aps-barcode-unrecognized__hint {
+  margin-top: 7px;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 /* Кадр «Штрихкод · не найден · 01–03»: шапка с круглым закрытием 44 и рисунком 17. */

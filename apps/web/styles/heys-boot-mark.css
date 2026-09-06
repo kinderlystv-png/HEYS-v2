@@ -281,6 +281,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
 .heys-boot-mark__slow-text {
     margin-top: 0;
     font: 700 15px/1.35 Figtree, system-ui, sans-serif;
+    color: var(--boot-muted);
     text-align: center;
     text-wrap: pretty;
 }

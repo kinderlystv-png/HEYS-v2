@@ -3989,7 +3989,14 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           className: 'aps-barcode-unrecognized',
           role: 'status',
           'aria-live': 'polite'
-        }, 'Код не распознан'),
+        },
+          React.createElement('div', { className: 'aps-barcode-unrecognized__tier' }, 'Код не распознан'),
+          React.createElement('div', { className: 'aps-barcode-unrecognized__card' },
+            React.createElement('div', { className: 'aps-barcode-unrecognized__title' }, 'Не получается прочитать'),
+            React.createElement('div', { className: 'aps-barcode-unrecognized__hint' },
+              'Поднесите ближе или уберите блик. Код можно ввести цифрами.')
+          )
+        ),
         React.createElement('div', { className: 'aps-barcode-manual' },
           React.createElement('input', {
             className: 'aps-barcode-input',
@@ -6554,6 +6561,18 @@ NOVA: 1
       return `${value}${suffix}`;
     }, []);
 
+    const buildPreviewExtraLine = useCallback((product) => {
+      if (!product) return '';
+      const parts = [];
+      if (product.gi != null && product.gi !== '') parts.push(`ГИ ${product.gi}`);
+      if (product.fiber100 != null && product.fiber100 !== '') parts.push(`клетчатка ${product.fiber100}`);
+      if (product.sodium100 != null && product.sodium100 !== '') parts.push(`натрий ${product.sodium100} мг`);
+      if (product.nova_group != null && product.nova_group !== '') parts.push(`NOVA ${product.nova_group}`);
+      const density = product.nutrient_density ?? product.nutrientDensity;
+      if (density != null && density !== '') parts.push(`пло ${density}`);
+      return parts.join(' · ');
+    }, []);
+
     // Парсинг вставленного текста (копия логики из heys_core_v12.js)
     const parseProductLine = useCallback((text) => {
       if (!text || !text.trim()) return null;
@@ -7254,6 +7273,8 @@ NOVA: 1
           React.createElement('span', null, 'Ж ' + parsedPreview.fat100 + 'г'),
           React.createElement('span', null, 'У ' + parsedPreview.carbs100 + 'г')
         ),
+        buildPreviewExtraLine(parsedPreview) && React.createElement('div', { className: 'aps-preview-extra' },
+          buildPreviewExtraLine(parsedPreview)),
         React.createElement('div', { className: 'aps-preview-details' },
           PREVIEW_FIELDS.map((field) => React.createElement('div', { className: 'aps-preview-row', key: field.key },
             React.createElement('span', { className: 'aps-preview-label' }, field.label),

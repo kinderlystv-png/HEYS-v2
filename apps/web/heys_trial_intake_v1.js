@@ -155,8 +155,19 @@
   const hintStyle = { marginTop: 5, fontSize: 11.5, lineHeight: 1.45, color: INK_55, fontWeight: 500 };
   const titleStyle = { fontSize: 22, fontWeight: 700, lineHeight: 1.2, letterSpacing: '-.02em', color: INK, margin: 0 };
   const subtitleStyle = { fontSize: 12.5, fontWeight: 500, lineHeight: 1.55, color: INK_55, margin: '9px 0 0' };
-  const legalTextStyle = { fontSize: 12.5, fontWeight: 500, lineHeight: 1.45 };
-  const legalConsentLabelStyle = { fontSize: 12.5, fontWeight: 600, lineHeight: 1.45 };
+  const legalTextStyle = { fontSize: 12.5, fontWeight: 500, lineHeight: 1.55 };
+  const legalConsentLabelStyle = { fontSize: 12.5, fontWeight: 500, lineHeight: 1.55 };
+  const selectInputStyle = {
+    ...inputStyle,
+    marginTop: 8,
+    minHeight: 56,
+    borderRadius: 16,
+    padding: '13px 15px',
+    fontSize: 13,
+    lineHeight: 1.5,
+    fontWeight: 500,
+    color: INK,
+  };
   // Строка «области нажатия»: кнопки футера 48.
   const pillStyle = {
     minHeight: 48, borderRadius: 999, border: 0, padding: '0 18px',
@@ -435,7 +446,7 @@
       React.createElement('select', {
         id: fieldId,
         value: value || '', onChange: (event) => onChange(event.target.value),
-        required, style: { ...inputStyle, marginTop: 8 },
+        required, style: selectInputStyle,
       }, [
         React.createElement('option', { key: 'empty', value: '' }, 'Выберите вариант'),
         ...options.map(([optionValue, optionLabel]) => React.createElement('option', {
@@ -467,12 +478,12 @@
   // Строка «области нажатия»: нажимается вся строка с текстом, а не квадрат
   // 22 px — по нему промахивается половина попыток, поэтому 44 px держит сама
   // строка, а не поля вокруг квадрата.
-  function warningMark({ field, label, checked, onToggle }) {
+  function warningMark({ field, label, checked, onToggle, labelStyle = legalConsentLabelStyle }) {
     return React.createElement('label', {
       key: `warning-mark-${field}`,
       style: {
         display: 'flex', gap: 11, alignItems: 'flex-start', color: INK,
-        ...legalConsentLabelStyle,
+        ...labelStyle,
         minHeight: 44, cursor: 'pointer',
       },
     },
@@ -520,12 +531,11 @@
           // должна получать фокус сама по себе.
           tabIndex: 0,
           style: {
-            // Строка «вид блока предупреждения»: своя область 186 px с
-            // настоящей прокруткой — иначе четыре абзаца выталкивают
-            // чекбокс за экран, и подтвердить нечем.
+            marginTop: 16,
+            minHeight: 120,
             maxHeight: 186, overflowY: 'auto',
             padding: '14px 16px', borderRadius: 18, background: SURFACE_1,
-            color: INK, ...legalTextStyle, lineHeight: 1.6,
+            color: INK_55, ...legalTextStyle,
             display: 'grid', gap: 10,
             // Строка «вид блока предупреждения» (переписана 25 августа): текст
             // предупреждения выделяется и копируется — человек имеет право
@@ -561,6 +571,7 @@
           warningMark({
             field: 'age_confirmed_at',
             label: AGE_CONFIRM_CHECKBOX_LABEL,
+            labelStyle: { fontSize: 12, fontWeight: 600, lineHeight: 1.4, color: INK },
             checked: Boolean(value.age_confirmed_at),
             onToggle: (checked) => set('age_confirmed_at', checked ? new Date().toISOString() : ''),
           })
@@ -1688,10 +1699,10 @@
       ) : null,
       // Строка «вид плашки доступа»: фон --tint, радиус 18, поля 13/15,
       // текст 11,5/500 тоном чернил 60 %; иконок и обводки нет.
-      step === 0 ? React.createElement('div', {
+      step === 1 ? React.createElement('div', {
         style: {
-          padding: '13px 15px', borderRadius: 18, background: TINT,
-          color: INK_60, fontSize: 11.5, fontWeight: 500, lineHeight: 1.55, marginTop: 14,
+          padding: '14px 15px', borderRadius: 18, background: SURFACE_1,
+          color: INK_55, fontSize: 12.5, fontWeight: 500, lineHeight: 1.55, marginTop: 14,
         }
       }, 'Ответы видите вы и назначенный куратор. Анкета не гарантирует пробную неделю.') : null,
       React.createElement('h1', { style: { ...titleStyle, marginTop: 20 } }, current.title),

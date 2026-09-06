@@ -128,7 +128,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 34px;
+  min-height: 44px;
   margin-top: 20px;
   padding-top: 16px;
   border: none;
@@ -1346,8 +1346,8 @@
 }
 
 .heys-score-screen__back {
-  min-width: 40px;
-  min-height: 40px;
+  min-width: 44px;
+  min-height: 44px;
   border: none;
   border-radius: 12px;
   background: var(--v4-card, #f7efe2);
@@ -1423,7 +1423,8 @@
 
 .heys-score-screen__phrase {
   font: 600 13px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink, #0f172a);
+  /* Контракт «вид · экран разбора Score»: слово состояния тоном --gr, не чернилами. */
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .heys-score-screen__cascade-head {

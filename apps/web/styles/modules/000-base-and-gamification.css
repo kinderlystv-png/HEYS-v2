@@ -8044,7 +8044,7 @@ body:has(.offline-banner) .wrap {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
-  margin: -6px 0;
+  margin: 0;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -11533,7 +11533,7 @@ body:has(:is(
 }
 
 .tab-settings-diary-toggle.is-on .tab-settings-diary-toggle__switch {
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act, #c67139);
 }
 
 .tab-settings-diary-toggle__knob {

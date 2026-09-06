@@ -502,13 +502,21 @@
         phase === 'code' && entryIssue !== 'mismatch'
           ? React.createElement(
             'div',
-            { className: 'heys-auth-reset-note' },
+            { className: 'heys-auth-reset-note' + (entryIssue === 'weak' ? ' heys-auth-reset-note--weak' : '') },
             entryIssue === 'weak'
               ? 'Не подходят: подряд идущие цифры, одна цифра четыре раза и код, который выдал куратор.'
-              : (skipPepAgreement
-                ? 'Прежний код перестал работать, и все входы на других устройствах завершены. '
-                : '')
-              + 'Код доступа заменяет собственноручную подпись. Не сообщайте его никому, включая куратора.',
+              : [
+                skipPepAgreement
+                  ? React.createElement('p', { key: 'reset-prefix' },
+                    'Прежний код перестал работать, и все входы на других устройствах завершены.')
+                  : null,
+                React.createElement('p', {
+                  key: 'reset-lead',
+                  className: 'heys-auth-reset-note__lead',
+                }, 'Код доступа заменяет собственноручную подпись.'),
+                React.createElement('p', { key: 'reset-tail' },
+                  'Не сообщайте его никому, включая куратора.'),
+              ],
           )
           : null,
         React.createElement(

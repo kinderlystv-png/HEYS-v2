@@ -198,7 +198,7 @@
     if (!ctx?.allContexts?.length) return [];
     const types = new Set(ctx.allContexts.map((entry) => entry.type));
     const chips = [];
-    if (types.has('household')) chips.push('Бытовая активность');
+    if (types.has('household')) chips.push('Активный быт');
     if (types.has('post')) chips.push('После тренировки');
     return chips;
   }

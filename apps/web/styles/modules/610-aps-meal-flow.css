@@ -4943,7 +4943,7 @@ button.meal-quality-badge:active {
 .aps-v4-preset-confirm__actions {
   display: flex;
   gap: 8px;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 
 .aps-v4-preset-confirm__actions > * {

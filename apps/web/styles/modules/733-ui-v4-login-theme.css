@@ -204,10 +204,10 @@
 }
 
 .heys-auth-meta {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: rgba(0, 0, 0, 0.56);
   font-size: 12.5px;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.55;
   text-align: center;
 }
 
@@ -1590,20 +1590,41 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 
 /* Строки «создание кода» и «после сброса»: объяснение стоит под заголовком. */
 .heys-auth-card--pep .heys-auth-heading .heys-auth-subtitle {
+  margin-top: 9px;
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.55;
   text-align: center;
 }
 
 .heys-auth-card--pep .heys-auth-reset-note {
   width: 100%;
   margin-top: 16px;
-  padding: 15px 17px;
-  border-radius: 20px;
-  background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  padding: 13px 15px;
+  border-radius: 16px;
+  background: #efe3cf;
+  color: rgba(0, 0, 0, 0.6);
   font-size: 12.5px;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.55;
   text-wrap: pretty;
+}
+
+.heys-auth-card--pep .heys-auth-reset-note > p {
+  margin: 0;
+}
+
+.heys-auth-card--pep .heys-auth-reset-note > p + p {
+  margin-top: 9px;
+}
+
+.heys-auth-card--pep .heys-auth-reset-note__lead {
+  margin-top: 8px;
+}
+
+.heys-auth-card--pep .heys-auth-reset-note--weak {
+  margin-bottom: 12px;
 }
 
 [data-theme="dark"] .heys-auth-card--pep .heys-auth-reset-note,
@@ -1670,10 +1691,10 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   width: 100%;
   max-width: none;
   margin-top: 18px;
-  color: var(--v4-ink, #201e1d);
+  color: #201e1d;
   font-size: 12.5px;
   font-weight: 600;
-  line-height: 1.45;
+  line-height: 1.55;
   text-align: left;
 }
 
@@ -2002,8 +2023,8 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 
 .heys-consent-sign-sheet__done-meta {
   margin-top: 5px;
-  color: rgba(0, 0, 0, 0.5);
-  font: 500 12.5px/1.45 Figtree, system-ui, sans-serif;
+  color: #5c6a45;
+  font: 600 12.5px/1.55 Figtree, system-ui, sans-serif;
   text-align: center;
   text-wrap: pretty;
   /* Строка «язык, выделение, часовой пояс»: подпись/дата не выделяются. */
@@ -2047,7 +2068,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 .heys-consent-sign-sheet__done-note {
   margin: 10px 0 0;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  font: 500 12.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.55 Figtree, system-ui, sans-serif;
   text-align: center;
   text-wrap: pretty;
 }
@@ -2393,7 +2414,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1.3;
-  color: rgba(0, 0, 0, 0.55);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .consent-fulltext__progress-label {
@@ -2492,7 +2513,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 .consent-doc-body {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   font-size: 12.5px;
-  line-height: 1.65;
+  line-height: 1.55;
   text-wrap: pretty;
 }
 
@@ -2521,6 +2542,19 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   margin: 9px 0 0;
 }
 
+.consent-doc-p--after-block {
+  margin-top: 13px;
+}
+
+.consent-doc-closing {
+  margin: 16px 0 0;
+  color: var(--v4-ink, #201e1d);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
 .consent-doc-ul,
 .consent-doc-ol {
   margin: 11px 0 0;
@@ -2533,7 +2567,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   margin: 9px 0 0;
   padding-left: 14px;
   font-size: 12.5px;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .consent-doc-li::before {

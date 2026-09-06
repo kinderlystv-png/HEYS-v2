@@ -1761,7 +1761,7 @@
 .mc-rest-row {
   width: 100%;
   border: none;
-  background: var(--v4-sand-surface, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   border-radius: 16px;
   padding: 13px 14px;
   min-height: 44px;
@@ -1779,7 +1779,7 @@
   min-height: 66px;
   padding: 11px 12px 11px 14px;
   border-radius: 16px;
-  background: var(--v4-sand-surface, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
 }
 
 .mc-rest-step--cycle-week {
@@ -5416,7 +5416,10 @@
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-family input[type="text"]::placeholder {
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 42%, transparent);
+  /* Кадр просит 45 % — ступень --v4-ink-3. Стояло 42 %: доли, которой
+     в лестнице набора нет (55/45/38/30), поэтому цвет не следовал ни
+     одному из четырёх наборов. */
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card {
@@ -5473,7 +5476,8 @@
   height: auto;
   min-height: 0;
   font: 600 12.5px/2.1 Figtree, system-ui, sans-serif;
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 40%, transparent);
+  /* Кадр просит 38 % — ступень --v4-ink-4. Стояло 40 %, ступени нет. */
+  color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   opacity: 1;
 }
 
@@ -6616,7 +6620,12 @@
 }
 
 .ca-modal__type-more-title {
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
+  /* Кадр «свёрнуто по типам» просит 55 %, и это ступень набора --v4-ink-2.
+     Стояло 50 % — доля, которой в лестнице нет вовсе (55/45/38/30), то есть
+     цвет не следовал набору ни в одном из четырёх. Роль ещё и инвертируется
+     в тёмных, чего color-mix от --v4-ink здесь не делал: тёмное
+     переопределение ниже задавало свои .5 руками. */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
 }
 
 .ca-modal__type-members {

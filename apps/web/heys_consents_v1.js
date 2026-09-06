@@ -10,7 +10,7 @@
   const { useState, useEffect, useCallback, useRef, useMemo } = React || {};
   const INK_DATA = 'var(--v4-ink-data, rgba(0,0,0,.56))';
   const INK_2 = 'var(--v4-ink-2, rgba(0,0,0,.55))';
-  const LEGAL_DISCLOSURE_FONT = '500 12.5px/1.5 Figtree, system-ui, sans-serif';
+  const LEGAL_DISCLOSURE_FONT = '500 12.5px/1.55 Figtree, system-ui, sans-serif';
   const LEGAL_DISCLOSURE_TYPES = new Set(['personal_data']);
 
   // v4 roles для registration (смысл, не оттенок — UI_V4_BARE_LITERALS_DECISION.md).
@@ -1600,8 +1600,8 @@
             React.createElement('div', {
               style: {
                 marginTop: 8,
-                font: '500 12px/1.5 Figtree, system-ui, sans-serif',
-                color: 'rgba(0,0,0,.55)',
+                font: LEGAL_DISCLOSURE_FONT,
+                color: INK_2,
                 textWrap: 'pretty',
               }
             }, hasOutdatedDocuments
@@ -1621,8 +1621,8 @@
               React.createElement('div', {
                 style: {
                   marginTop: 4,
-                  font: '500 11.5px/1.5 Figtree, system-ui, sans-serif',
-                  color: 'rgba(0,0,0,.6)',
+                  font: LEGAL_DISCLOSURE_FONT,
+                  color: INK_2,
                   textWrap: 'pretty',
                 }
               }, CONSENT_TEXTS.disclaimer.short)
@@ -1891,8 +1891,8 @@
             requiredConsentReason && React.createElement('div', {
               style: {
                 textAlign: 'center',
-                font: '500 11.5px/1.45 Figtree, system-ui, sans-serif',
-                color: 'rgba(0,0,0,.55)',
+                font: '600 11.5px/1.45 Figtree, system-ui, sans-serif',
+                color: INK_2,
               }
             }, requiredConsentReason),
             React.createElement('button', {
@@ -1935,7 +1935,7 @@
                 alignItems: 'center',
                 justifyContent: 'center',
                 font: '700 12px/1 Figtree, system-ui, sans-serif',
-                color: 'rgba(0,0,0,.5)',
+                color: INK_2,
                 cursor: loading ? 'not-allowed' : 'pointer',
               }
             }, 'Выйти без регистрации')
@@ -2088,9 +2088,9 @@
           style: {
             display: 'inline',
             font: canvasCard
-              ? (compact ? '600 12px/1.35 Figtree, system-ui, sans-serif' : '600 12.5px/1.4 Figtree, system-ui, sans-serif')
+              ? (compact ? '600 12px/1.35 Figtree, system-ui, sans-serif' : '600 12.5px/1.55 Figtree, system-ui, sans-serif')
               : undefined,
-            color: checked && canvasCard ? '#201e1d' : (canvasCard ? 'rgba(0,0,0,.55)' : '#3f3f46'),
+            color: checked && canvasCard ? 'var(--v4-ink, #201e1d)' : (canvasCard ? INK_2 : '#3f3f46'),
           },
           className: canvasCard ? undefined : 'text-sm'
         }, title),
@@ -2458,6 +2458,7 @@
     const lines = text.split('\n');
     const out = [];
     let i = 0;
+    let afterBlock = false;
 
     while (i < lines.length) {
       const line = lines[i];
@@ -2472,6 +2473,7 @@
         out.push(opts.consentDoc
           ? '<hr class="consent-doc-hr">'
           : '<hr class="my-4 border-zinc-300 dark:border-zinc-600">');
+        afterBlock = opts.consentDoc;
         i += 1;
         continue;
       }
@@ -2566,6 +2568,7 @@
           i += 1;
         }
         out.push('</ul>');
+        afterBlock = opts.consentDoc;
         continue;
       }
 
@@ -2582,6 +2585,7 @@
           i += 1;
         }
         out.push('</ol>');
+        afterBlock = opts.consentDoc;
         continue;
       }
 
@@ -2594,9 +2598,17 @@
         paraParts.push(chunk);
         i += 1;
       }
-      out.push(opts.consentDoc
-        ? `<p class="consent-doc-p">${formatInline(paraParts.join(' '))}</p>`
-        : `<p class="my-2">${formatInline(paraParts.join(' '))}</p>`);
+      const rawJoined = paraParts.join(' ').trim();
+      const isClosing = opts.consentDoc && /^_.+_$/.test(rawJoined);
+      if (opts.consentDoc) {
+        const cls = isClosing
+          ? 'consent-doc-closing'
+          : `consent-doc-p${afterBlock ? ' consent-doc-p--after-block' : ''}`;
+        out.push(`<p class="${cls}">${formatInline(rawJoined)}</p>`);
+        afterBlock = false;
+      } else {
+        out.push(`<p class="my-2">${formatInline(rawJoined)}</p>`);
+      }
     }
 
     return out.join('\n');
