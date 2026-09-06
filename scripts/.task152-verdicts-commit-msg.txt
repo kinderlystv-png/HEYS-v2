@@ -1,0 +1,3 @@
+docs(ui): task 152 triage — 14 audit verdicts from task 146
+
+Nutrition swap CTA =; cycle disable =; 11 frame-disputes typed with reasonCode/decisionRef.

@@ -774,8 +774,8 @@
       "h": "2b50e8023aeb"
     },
     "совет с заменой": {
-      "v": "≠",
-      "f": "canvas data-v (497, кадр 1764): «Заменить → …» в карточке совета. heys_day_meal_optimizer_section.js:160-207 — .meal-optimizer__product с «+», не «Заменить →»; rg «Заменить» в apps/web product UI — 0 (кроме mobility). MealOptimizer отдаёт products (heys_meal_optimizer_v1.js:1803-1841), строку замены NutritionTabV4 не рисует",
+      "v": "=",
+      "f": "heys_day_meal_optimizer_section.js:128-141 — productCta swap рендерит «Заменить → {name}»; правило с swap в heys_meal_optimizer_v1.js:865",
       "h": "6711397c78e9"
     },
     "советов нет": {

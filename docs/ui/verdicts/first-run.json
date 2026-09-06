@@ -136,7 +136,7 @@
     },
     "иконки": {
       "v": "≠",
-      "f": "тур и desktop gate на emoji (👋🍽️📱💡), Lucide layout-grid/plus/compass/bar-chart-2/copy/smartphone/log-out в продуктовом onboarding/desktop gate не рендерятся",
+      "f": "тур и desktop gate на emoji (👋🍽️📱💡), Lucide layout-grid/plus/compass/bar-chart-2/copy/smartphone/log-out в onboarding/desktop gate не рендерятся",
       "h": "93d5ad589c9d",
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:99"

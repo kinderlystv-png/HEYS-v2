@@ -4710,7 +4710,7 @@
     "Куратор и зал · 04": {
       "h": "1a96e89ed667",
       "v": "≠",
-      "f": "Подзаголовок fmtTime, без «что приходит от куратора…»: builder_ui:1209-1212.",
+      "f": "подзаголовок fmtTime, без «что приходит от куратора…»: heys_strength_builder_ui_v1.js:1211-1213",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3312"
     },

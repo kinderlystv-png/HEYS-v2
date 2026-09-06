@@ -135,7 +135,7 @@
     },
     "переход по строке": {
       "v": "≠",
-      "f": "heys_curator_actions_banner_v1.js:2236-2237 — тап строки зовёт hideActionLocally и maybeAckFullyHiddenEntries; при нуле видимых действий (:1902-1915) enqueueAckForEntries + flushPendingAcks подтверждают запись на сервере. Контракт data-v: «не подтверждает записи на сервере». Смоук curator-actions-banner.test.js «acks only when no visible actions remain»",
+      "f": "heys_curator_actions_banner_v1.js:2236-2237 — тап строки подтверждает запись на сервере при нуле видимых действий (:1902-1915); контракт data-v: «не подтверждает». Смоук curator-actions-banner.test.js",
       "h": "444afd7ab26d",
       "reasonCode": "logic-invariant",
       "decisionRef": "apps/web/heys_curator_actions_banner_v1.js:2237"
