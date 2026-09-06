@@ -104,7 +104,7 @@ describe('Шаги · Месяц — сведённый кусок', () => {
 
     const meta = rules.get('.widget-v4-row__meta');
     expect(meta['font-size']).toBe('9px');
-    expect(meta.color).toContain('--v4-ink-data');
+    expect(meta.color).toContain('--v4-ink-2');
 
     const barsRow = rules.get('.widget-v4-stepbars--month');
     expect(barsRow.position).toBe('relative');

@@ -93,7 +93,7 @@ describe('Белок · Добрать — сведённый кусок', () =>
     expect(fact['font-size']).toBe('9px');
     expect(fact['font-weight']).toBe('600');
     expect(fact['line-height']).toBe('1');
-    expect(fact.color).toContain('--v4-ink-data');
+    expect(fact.color).toContain('--v4-ink-2');
 
     const hero = rules.get('.widget-v4-goal-hero');
     expect(hero['align-items']).toBe('baseline');
@@ -112,7 +112,7 @@ describe('Белок · Добрать — сведённый кусок', () =>
   });
 
   it('цвет «N из M г» и «+N» — роли, песок ≠ синий', () => {
-    expect(rules.get('.widget-v4-protein-add__now').color).toContain('--v4-ink-data');
+    expect(rules.get('.widget-v4-protein-add__now').color).toContain('--v4-ink-2');
     const sandRgb = palette.match(/:root[\s\S]*?--v4-ink-rgb:\s*([^;]+);/)?.[1].trim();
     const sandInk = palette.match(/:root[\s\S]*?--v4-ink:\s*(#[0-9a-f]{6})/i)?.[1];
     const blueBlock = palette.slice(palette.indexOf('[data-theme-id="blue"]'));

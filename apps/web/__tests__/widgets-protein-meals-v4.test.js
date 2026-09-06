@@ -132,7 +132,7 @@ describe('Белок · По приёмам — сведённый кусок', 
     const num = rules.get('.widget-v4-protein-meals__bars .widget-v4-mealbars__num');
     expect(num['font-size']).toBe('8.5px');
     expect(num.color).toContain('--v4-ink');
-    expect(rules.get('.widget-v4-mealbars__num').color).toContain('--v4-ink-data');
+    expect(rules.get('.widget-v4-mealbars__num').color).toContain('--v4-ink-2');
 
     expect(rules.get('.widget-v4-protein-add__head').gap).toBe('6px');
     expect(rules.get('.widget-v4-mini.widget-v4-protein .widget-v4-goal-hero').gap).toBe('3px');

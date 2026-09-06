@@ -144,7 +144,7 @@ describe('Каталог · значки вместо эмодзи · шапка
     const budget = rules.get('.widget-v4-catalog__budget');
     expect(budget['font-size']).toBe('11px');
     expect(budget['font-weight']).toBe('600');
-    expect(budget.color).toContain('--v4-ink-data');
+    expect(budget.color).toContain('--v4-ink-2');
     expect(budget['font-variant-numeric']).toBe('tabular-nums');
     expect(budget['font-family'] || '').not.toMatch(/mono/i);
 

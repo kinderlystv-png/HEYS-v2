@@ -39,7 +39,7 @@ const EXPECT = Object.freeze({
     c1: '#eef3f9',
     act: '#1d5e96',
     tint: '#e8f0f8',
-    inkDataRaw: 'rgba(16,24,38,0.64)',
+    inkDataRaw: 'rgba(0,0,0,0.61)',
     okText: '#1f6e4d',
   },
 });

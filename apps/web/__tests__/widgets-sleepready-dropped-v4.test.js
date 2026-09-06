@@ -86,7 +86,7 @@ describe('Готовность ко сну · пункт без данных —
     const meta = rules.get('.widget-v4-row__meta');
     expect(meta['font-size']).toBe('9px');
     expect(meta['font-weight']).toBe('600');
-    expect(meta.color).toContain('--v4-ink-data');
+    expect(meta.color).toContain('--v4-ink-2');
 
     const dots = rules.get('.widget-v4-sleepready-check .widget-v4-checklist--dots');
     expect(dots.gap).toBe('10px');
@@ -96,12 +96,12 @@ describe('Готовность ко сну · пункт без данных —
     expect(dropped['font-size']).toBe('8.5px');
     expect(dropped['font-weight']).toBe('600');
     expect(dropped['line-height']).toBe('1');
-    expect(dropped.color).toContain('--v4-ink-data');
+    expect(dropped.color).toContain('--v4-ink-2');
 
     const muted = rules.get('.widget-v4-muted');
     expect(muted['font-size']).toBe('10px');
     expect(muted['font-weight']).toBe('700');
-    expect(muted.color).toContain('--v4-ink-data');
+    expect(muted.color).toContain('--v4-ink-2');
 
     const chip = rules.get('.widget-v4-sleepready-check .widget-v4-checklist__chip');
     expect(chip['font-size']).toBe('8.5px');

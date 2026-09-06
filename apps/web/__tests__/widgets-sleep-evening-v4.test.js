@@ -93,7 +93,7 @@ describe('Окно до сна · Вечер — сведённый кусок',
     expect(meta['font-size']).toBe('9px');
     expect(meta['font-weight']).toBe('600');
     expect(meta['line-height']).toBe('1');
-    expect(meta.color).toContain('--v4-ink-data');
+    expect(meta.color).toContain('--v4-ink-2');
 
     const hero = rules.get('.widget-v4-goal-hero');
     expect(hero['align-items']).toBe('baseline');

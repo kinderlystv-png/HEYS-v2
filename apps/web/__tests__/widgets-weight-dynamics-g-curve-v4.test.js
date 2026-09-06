@@ -109,7 +109,7 @@ describe('Динамика · G сброшено и кривая — сведё�
     expect(rem['font-size']).toBe('9px');
     expect(rem['font-weight']).toBe('600');
     expect(rem['line-height']).toBe('1');
-    expect(rem.color).toContain('--v4-ink-data');
+    expect(rem.color).toContain('--v4-ink-2');
     expect(rem['font-variant-numeric']).toBe('tabular-nums');
 
     const row = rules.get('.widget-wd__curve-row');

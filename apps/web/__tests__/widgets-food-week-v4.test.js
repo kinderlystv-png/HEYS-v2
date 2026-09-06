@@ -98,7 +98,7 @@ describe('Качество еды · Неделя — сведённый кус�
     expect(avg['font-size']).toBe('9px');
     expect(avg['font-weight']).toBe('600');
     expect(avg['margin-left']).toBe('auto');
-    expect(avg.color).toContain('--v4-ink-data');
+    expect(avg.color).toContain('--v4-ink-2');
 
     const bars = rules.get('.widget-v4-weekbars.widget-v4-foodquality-week__bars');
     expect(bars.height).toBe('44px');
@@ -120,7 +120,7 @@ describe('Качество еды · Неделя — сведённый кус�
 
   it('цвет числа, среднего и сегодняшнего столбика — роли, песок ≠ синий; прошлые литерал', () => {
     expect(rules.get('.widget-v4-val--neutral').color).toContain('--v4-ink');
-    expect(rules.get('.widget-v4-foodquality-week__avg').color).toContain('--v4-ink-data');
+    expect(rules.get('.widget-v4-foodquality-week__avg').color).toContain('--v4-ink-2');
     const sandInk = palette.match(/:root[\s\S]*?--v4-ink:\s*(#[0-9a-f]{6})/i)?.[1];
     const blueBlock = palette.slice(palette.indexOf('[data-theme-id="blue"]'));
     const blueInk = blueBlock.match(/--v4-ink:\s*(#[0-9a-f]{6})/i)?.[1];

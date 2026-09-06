@@ -387,7 +387,7 @@
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1.45;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .ios-home-install-modal__actions {
@@ -478,7 +478,7 @@
 }
 
 [data-theme$="dark"] .ios-home-install-modal__footnote {
-  color: var(--v4-ink-data, rgba(245, 242, 238, 0.56));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .ios-home-install-modal__btn--later {
@@ -829,7 +829,7 @@
   margin-top: 11px;
   text-align: center;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -838,7 +838,7 @@
 }
 
 [data-theme$="dark"] .mc-recorded .mc-recorded-sub {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .mc-recorded-card {
@@ -863,7 +863,7 @@
 }
 
 [data-theme$="dark"] .mc-recorded .mc-recorded-hint {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-daily-footer {
@@ -909,7 +909,7 @@
 
 .mc-daily-header-caption {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-daily-header-caption--layer {
@@ -1005,7 +1005,7 @@
 
 .mc-scale-value {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   user-select: none;
   -webkit-user-select: none;
 }
@@ -1097,12 +1097,12 @@
 /* Тот же кадр, элементы 11 и 19: обе строки — data-подписи самого шага. */
 .mc-weight-hero > .mc-recorded-hint {
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-weight-step > .mc-recorded-hint {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-kilo-label,
@@ -1110,7 +1110,7 @@
   font: 600 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
@@ -1150,7 +1150,7 @@
 .mc-sleep-norm {
   margin-top: 12px;
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
@@ -1287,7 +1287,7 @@
 .mc-rest-layer-hint {
   margin-top: 6px;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1344,7 +1344,7 @@
 
 .mc-rest-measure-unit {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   flex: none;
 }
 
@@ -1358,7 +1358,7 @@
 
 .mc-rest-measure-side-label {
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-measure-side-pills {
@@ -1374,7 +1374,7 @@
   border-radius: 999px;
   background: var(--v4-sand-surface, #f7efe2);
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -1387,7 +1387,7 @@
 .mc-rest-measure-foot-hint {
   text-align: center;
   margin-top: 2px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-recorded-check {
@@ -1403,7 +1403,7 @@
 .mc-rest-empty-note {
   margin-top: 14px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1419,7 +1419,7 @@
    серии холодного душа, — она напоминает правило, а не хвалит за серию. */
 .mc-rest-coffee-note {
   font: 500 11px/1.2 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
   flex: none;
 }
@@ -1448,7 +1448,7 @@
   margin-top: 10px;
   font-size: 11px;
   line-height: 1.45;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадры «Цикл · копия шага 5», элементы 29-30: ряд ответов рутины — зазор 6 и
@@ -1507,7 +1507,7 @@
 .mc-rest-consent-card-body {
   margin-top: 4px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1579,7 +1579,7 @@
 .mc-steps-refeed-hint {
   margin-top: 3px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   max-width: 220px;
 }
 
@@ -1673,7 +1673,7 @@
 .mc-recorded-hint,
 .mc-recorded-sub {
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 5px;
 }
 
@@ -1681,13 +1681,13 @@
    лестница относит их к data-тексту и задаёт единый floor 56 %. */
 .mc-mood-step > .mc-recorded-sub {
   margin-top: 8px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-mood-step > .mc-recorded-hint {
   margin-top: 12px;
   font: 500 10.5px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-step > .mc-recorded-sub {
@@ -1696,12 +1696,12 @@
 
 .mc-steps-slider-container > .mc-recorded-hint {
   font: 600 10.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-step > .mc-recorded-hint {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Чек-ин · как вы сегодня»: первая шкала отбита от подписи на 22,
@@ -1759,7 +1759,7 @@
 }
 
 .mc-rest-type.is-on .mc-rest-wave {
-  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-row {
@@ -1890,7 +1890,7 @@
   background: var(--v4-bg, #fffaf1);
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -1979,7 +1979,7 @@
 .mc-rest-cycle-ended-note {
   margin-top: 5px;
   font: 500 11px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* В свёрнутой строке цикла пояснение компактнее общего текста карточки. */
@@ -2180,7 +2180,7 @@
   display: block;
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-card-v4__date-confirm-chip {
@@ -2219,7 +2219,7 @@
   border: none;
   background: transparent;
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   min-height: 44px;
   display: inline-flex;
@@ -2242,7 +2242,7 @@
 .cycle-card-v4__warn-text {
   margin-top: 7px;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-card-v4__warn {
@@ -2267,7 +2267,7 @@
 .cycle-card-v4__insight-text {
   margin-top: 7px;
   font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-card-v4__norm-rows {
@@ -2473,7 +2473,7 @@
   margin-top: 14px;
   padding-top: 13px;
   border-top: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 8%, transparent);
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-date-picker-sheet__selected-title {
@@ -2484,7 +2484,7 @@
 .cycle-date-picker-sheet__selected-copy {
   margin-top: 4px;
   font: 500 11px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cycle-date-picker-sheet__actions {
@@ -2505,7 +2505,7 @@
   display: block;
   margin-top: 2px;
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .date-picker-title {
@@ -2734,7 +2734,7 @@
 
 .mc-rest-supp-time {
   font: 500 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
 }
 
@@ -2904,14 +2904,14 @@
 
 .mc-supp-flow-empty-body {
   font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 6px;
   text-wrap: pretty;
 }
 
 .mc-supp-flow-note {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 14px;
   text-wrap: pretty;
   text-align: center;
@@ -2928,7 +2928,7 @@
 
 .mc-supp-flow-lead {
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3132,7 +3132,7 @@
 
 .mc-supp-flow-dose-hint {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 12px;
   text-align: center;
   text-wrap: pretty;
@@ -3246,7 +3246,7 @@
    чернил 50 %; красный прежней системы читался как «удалить», хотя шаг просто
    закрывается. Ступень лестницы чернил ближайшая к 50 % — 56 %. */
 .mc-header-btn--close {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 26px;
   font-weight: 400;
   padding: 4px 12px;
@@ -3851,7 +3851,7 @@
 .household-status {
   font-size: 14px;
   font-weight: 600;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .household-slider-container {
@@ -3874,7 +3874,7 @@
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: var(--v4-bg, #fff);
   font-weight: 700;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -3952,7 +3952,7 @@
   border-radius: 12px;
   border: 1.5px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: var(--v4-bg, #fff);
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 600;
   font-size: 12px;
   cursor: pointer;
@@ -4169,7 +4169,7 @@
 .household-time-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   display: flex;
   align-items: center;
   gap: 4px;
@@ -4228,7 +4228,7 @@
 
 .household-time-intro-text {
   font-size: 14px;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   line-height: 1.4;
 }
 
@@ -4290,7 +4290,7 @@
 .household-time-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .household-time-value-small {
@@ -4345,7 +4345,7 @@
 .household-summary-main {
   font-size: 18px;
   font-weight: 600;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .household-summary-value {
@@ -4390,7 +4390,7 @@
   border-radius: 10px;
   border: 1.5px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: var(--v4-bg, #fff);
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
@@ -4437,7 +4437,7 @@
   background: var(--v4-bg, #fff);
   font-size: 15px;
   font-weight: 600;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   outline: none;
   transition: all 0.15s ease;
 }
@@ -5693,7 +5693,7 @@
   justify-content: space-between;
   margin-top: 8px;
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-slider-label-health {
@@ -5706,7 +5706,7 @@
 }
 
 [data-theme$="dark"] .mc-steps-slider-labels {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-recommendation {
@@ -6278,7 +6278,7 @@
 
 .ca-banner__summary {
   font-size: 12px;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   line-height: 1.3;
   margin-top: 2px;
   white-space: nowrap;
@@ -7132,7 +7132,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-daily-greeting-date {
   margin-top: 6px;
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
@@ -7195,7 +7195,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   font: 600 10px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 

@@ -117,7 +117,7 @@ describe('Динамика · H сброшено и остаток — свед�
     const rem = rules.get('.widget-wd__remainder');
     expect(rem['font-size']).toBe('9px');
     expect(rem['font-weight']).toBe('600');
-    expect(rem.color).toContain('--v4-ink-data');
+    expect(rem.color).toContain('--v4-ink-2');
 
     const row = rules.get('.widget-wd__num-row');
     expect(row['margin-top']).toBe('auto');

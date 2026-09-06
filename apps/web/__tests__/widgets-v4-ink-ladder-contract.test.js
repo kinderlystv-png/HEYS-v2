@@ -127,16 +127,16 @@ describe('семантическая лестница чернил home-widgets'
     expect(palette.match(/--v4-val-bad: #e08a72;/g)).toHaveLength(2);
   });
 
-  it('держит все названные мелкие нейтральные подписи на data 56 %', () => {
+  it('держит все названные мелкие нейтральные подписи на ink-2 56 %', () => {
     const wrong = SMALL_NEUTRAL_TEXT.flatMap((selector) => {
       const color = rules.get(selector)?.color || '';
-      return color.includes('--v4-ink-data') ? [] : [`${selector}: ${color || 'нет color'}`];
+      return color.includes('--v4-ink-2') ? [] : [`${selector}: ${color || 'нет color'}`];
     });
     expect(wrong).toEqual([]);
   });
 
   it('сохраняет смысл ступеней у текста от 12 px и у разметки', () => {
-    expect(rules.get('.widget-v4-macro__num')?.fill).toContain('--v4-ink-data');
+    expect(rules.get('.widget-v4-macro__num')?.fill).toContain('--v4-ink-2');
     expect(rules.get('.widget-v4-macro__fact-sep')?.color).toContain('--v4-ink-secondary');
     expect(rules.get('.widget-v4-macro__fact-tgt')?.color).toContain('--v4-ink-secondary');
     expect(rules.get('.widget-bd-sheet__hero-unit')?.color).toContain('--v4-ink-secondary');

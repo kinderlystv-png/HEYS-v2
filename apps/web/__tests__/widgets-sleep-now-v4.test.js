@@ -90,7 +90,7 @@ describe('Окно до сна · Как сейчас — сведённый к�
     expect(word['font-size']).toBe('8.5px');
     expect(word['font-weight']).toBe('500');
     expect(word['line-height']).toBe('1');
-    expect(word.color).toContain('--v4-ink-data');
+    expect(word.color).toContain('--v4-ink-2');
 
     const generalUnit = rules.get('.widget-v4-unit');
     expect(generalUnit['font-size']).toBe('0.625rem');

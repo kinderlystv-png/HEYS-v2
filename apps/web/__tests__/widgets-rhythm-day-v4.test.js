@@ -93,7 +93,7 @@ describe('Ритм приёмов · Лента дня — сведённый к
     expect(meta['font-size']).toBe('9px');
     expect(meta['font-weight']).toBe('600');
     expect(meta['line-height']).toBe('1');
-    expect(meta.color).toContain('--v4-ink-data');
+    expect(meta.color).toContain('--v4-ink-2');
 
     const line = rules.get('.widget-v4-rhythm__line');
     expect(line.position).toBe('relative');
@@ -130,7 +130,7 @@ describe('Ритм приёмов · Лента дня — сведённый к
     expect(scale['font-weight']).toBe('600');
     expect(scale['line-height']).toBe('1');
     expect(scale['margin-top']).toBe('4px');
-    expect(scale.color).toContain('--v4-ink-data');
+    expect(scale.color).toContain('--v4-ink-2');
 
     expect(rules.get('.widget-v4-mini.widget-v4-foodquality .widget-v4-goal-value')['font-size'])
       .toBe('21px');

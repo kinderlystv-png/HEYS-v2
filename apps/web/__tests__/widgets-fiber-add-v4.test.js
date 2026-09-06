@@ -86,7 +86,7 @@ describe('Клетчатка · Добрать — сведённый кусок
     expect(now['font-size']).toBe('9px');
     expect(now['font-weight']).toBe('600');
     expect(now['line-height']).toBe('1');
-    expect(now.color).toContain('--v4-ink-data');
+    expect(now.color).toContain('--v4-ink-2');
 
     const hero = rules.get('.widget-v4-goal-hero');
     expect(hero['align-items']).toBe('baseline');
@@ -109,7 +109,7 @@ describe('Клетчатка · Добрать — сведённый кусок
   });
 
   it('цвет «N из M г» и «+N» — роли, песок ≠ синий', () => {
-    expect(rules.get('.widget-v4-fiber-add__now').color).toContain('--v4-ink-data');
+    expect(rules.get('.widget-v4-fiber-add__now').color).toContain('--v4-ink-2');
     expect(rules.get('.widget-v4-val--neutral').color).toContain('--v4-ink');
     const sandRgb = palette.match(/:root[\s\S]*?--v4-ink-rgb:\s*([^;]+);/)?.[1].trim();
     const sandInk = palette.match(/:root[\s\S]*?--v4-ink:\s*(#[0-9a-f]{6})/i)?.[1];

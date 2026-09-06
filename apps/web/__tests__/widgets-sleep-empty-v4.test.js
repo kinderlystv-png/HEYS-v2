@@ -90,7 +90,7 @@ describe('Окно до сна · нет данных — сведённый к�
     expect(liveWord['font-size']).toBe('8.5px');
     const emptyWord = rules.get('.widget-v4-mini.widget-v4-sleepwindow .widget-v4-unit.widget-v4-unit--empty');
     expect(emptyWord['font-size']).toBe('7.5px');
-    expect(liveWord.color).toContain('--v4-ink-data');
+    expect(liveWord.color).toContain('--v4-ink-2');
 
     const live = rules.get('.widget-v4-val--neutral');
     expect(live.color).toContain('--v4-ink');

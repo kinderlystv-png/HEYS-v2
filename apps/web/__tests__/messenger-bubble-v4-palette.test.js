@@ -29,7 +29,7 @@ const EXPECT = Object.freeze({
     theirsBg: '#eef3f9',
     mineBg: '#e2ecf6',
     ink: '#101826',
-    ink2Raw: 'rgba(16,24,38,0.64)',
+    ink2Raw: 'rgba(0,0,0,0.61)',
   },
 });
 
@@ -147,7 +147,7 @@ describe('messenger bubbles · v4 palette (sand + blue)', () => {
       expect(
         MESSENGER_CSS,
         `${id} meta ink-data role`,
-      ).toMatch(/\.msg-meta,\s*\n\.msg-edited-marker \{[\s\S]*?color:\s*var\(--v4-ink-data\)/);
+      ).toMatch(/\.msg-meta,\s*\n\.msg-edited-marker \{[\s\S]*?color:\s*var\(--v4-ink-2\)/);
     }
   });
 

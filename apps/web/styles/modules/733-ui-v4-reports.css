@@ -31,7 +31,7 @@
   flex: 1;
   min-width: 120px;
   font: 500 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -59,7 +59,7 @@
   border-bottom: 2px solid transparent;
   border-radius: 0;
   background: none;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   white-space: nowrap;
 }
@@ -308,7 +308,7 @@
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Текущий вес и Δ за период — правая половина шапки карточки.
@@ -339,7 +339,7 @@
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-dynamics-card__legend {
@@ -356,7 +356,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-dynamics-card__legend-swatch {
@@ -496,7 +496,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-dynamics-card--cycle .reports-v4-dynamics-card__period {
@@ -795,7 +795,7 @@
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-discipline {
@@ -876,7 +876,7 @@
   text-align: right;
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-discipline__delta.is-up {
@@ -884,7 +884,7 @@
 }
 
 .reports-v4-discipline__delta.is-down {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-discipline__off {
@@ -919,7 +919,7 @@
 }
 
 .reports-v4-discipline__score.is-zero {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Средняя доля вместо Δ у нулевой строки: контракт «карточка · нулевая строка
@@ -930,7 +930,7 @@
   width: 62px;
   text-align: right;
   font: 600 10px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-discipline__footnote {
@@ -940,7 +940,7 @@
      Тон актуального кадра — общая ступень данных 56 %. */
   padding-top: 12px;
   font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Отчёты · мало данных»: карточка на второй поверхности --c2. Роль
@@ -1210,7 +1210,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-ready__state.is-on {
@@ -1440,7 +1440,7 @@
    на две ступени мельче шкалы зоны. */
 .heys-score-screen__note {
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка каскада собрана в два этажа — так её рисует кадр «Разбор Score»
@@ -1607,7 +1607,7 @@
   border-radius: 999px;
   background: var(--v4-surface, #f7efe2);
   font: 600 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -1632,7 +1632,7 @@
   align-items: center;
   gap: 6px;
   font: 500 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-periods-sheet__dot {
@@ -1666,7 +1666,7 @@
   border-radius: 20px;
   background: var(--v4-surface, #f7efe2);
   font: 500 12px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-periods-card {
@@ -1711,7 +1711,7 @@
   flex: none;
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-periods-card__delta.is-muted,
@@ -1729,7 +1729,7 @@
 .reports-v4-periods-card__reliability-text {
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-periods-card__metrics {
@@ -1758,14 +1758,14 @@
 
 .reports-v4-periods-card__metric-label {
   font: 500 9.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-periods-card__weight-note {
   margin-top: 10px;
   font: 600 11px/1.4 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-periods-card__days {
@@ -1797,7 +1797,7 @@
 .reports-v4-periods-card__footnote {
   margin-top: 10px;
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-periods-card__breakdown {

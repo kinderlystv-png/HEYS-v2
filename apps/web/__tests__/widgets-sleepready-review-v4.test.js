@@ -128,7 +128,7 @@ describe('Готовность ко сну · Разбор — сведённы�
     const val = rules.get('.widget-v4-sleepready-review .widget-v4-checklist__value');
     expect(val['font-size']).toBe('8.5px');
     expect(val['font-weight']).toBe('600');
-    expect(val.color).toContain('--v4-ink-data');
+    expect(val.color).toContain('--v4-ink-2');
     expect(rules.get('.widget-v4-checklist__value').color).toContain('--v4-ink');
 
     const dot = rules.get('.widget-v4-sleepready-review__dot');

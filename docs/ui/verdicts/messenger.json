@@ -454,7 +454,7 @@
       "f": "кадр 30×30 play; продукт .msg-audio-play 44×44 — accessibility, тач-цели 6 сентября (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "5085f47d4f9c",
       "reasonCode": "accessibility",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#две-цели-messenger-контракт-зоны-просит-36-и-34-px-против-решения-о-44"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#messenger-targets-below-44"
     },
     "Мессенджер · запись голосового · 10": {
       "v": "=",

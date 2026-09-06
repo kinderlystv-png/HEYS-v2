@@ -109,7 +109,7 @@ describe('Шаги · Неделя — сведённый кусок', () => {
     expect(meta['font-size']).toBe('9px');
     expect(meta['font-weight']).toBe('600');
     expect(meta['line-height']).toBe('1');
-    expect(meta.color).toContain('--v4-ink-data');
+    expect(meta.color).toContain('--v4-ink-2');
     expect(meta['font-variant-numeric']).toBe('tabular-nums');
 
     const barsRow = rules.get('.widget-v4-stepbars');

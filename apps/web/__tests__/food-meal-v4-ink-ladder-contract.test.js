@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { readRules } from './canvas-razbor-helpers.js';
 
-function usesInkData(color) {
-  return Boolean(color) && color.includes('--v4-ink-data');
+function usesInk2(color) {
+  return Boolean(color) && color.includes('--v4-ink-2');
 }
 
 const MEAL_CSS = fs.readFileSync(
@@ -63,7 +63,7 @@ describe('food-meal · лестница чернил для мелких дан�
     const rules = readRules(MEAL_CSS);
     const drift = MEAL_SELECTORS.flatMap((selector) => {
       const color = rules.get(selector)?.color;
-      return usesInkData(color) ? [] : [`${selector}: ${color || 'нет color'}`];
+      return usesInk2(color) ? [] : [`${selector}: ${color || 'нет color'}`];
     });
     expect(drift).toEqual([]);
   });
@@ -72,7 +72,7 @@ describe('food-meal · лестница чернил для мелких дан�
     expect(APS_SOURCE).toContain("className: 'mpr-footnote mpr-create-footnote'");
     const footnoteColor = readRules(MEAL_CSS).get('.mpr-footnote')?.color;
     expect(footnoteColor, '.mpr-footnote').toBeTruthy();
-    expect(footnoteColor).toContain('--v4-ink-data');
+    expect(footnoteColor).toContain('--v4-ink-2');
   });
 
   it('строка продукта и данные списка приёмов используют уровень данных 56 %', () => {

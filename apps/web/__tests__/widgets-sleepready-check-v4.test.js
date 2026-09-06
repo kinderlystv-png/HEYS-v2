@@ -87,7 +87,7 @@ describe('Готовность ко сну · Чек-лист — сведённ
     expect(meta['font-size']).toBe('9px');
     expect(meta['font-weight']).toBe('600');
     expect(meta['line-height']).toBe('1');
-    expect(meta.color).toContain('--v4-ink-data');
+    expect(meta.color).toContain('--v4-ink-2');
 
     const dots = rules.get('.widget-v4-sleepready-check .widget-v4-checklist--dots');
     expect(dots.gap).toBe('10px');
@@ -100,7 +100,7 @@ describe('Готовность ко сну · Чек-лист — сведённ
     expect(chip['font-weight']).toBe('600');
     expect(chip['line-height']).toBe('1');
     expect(rules.get('.widget-v4-checklist__chip')['align-items']).toBe('center');
-    expect(rules.get('.widget-v4-checklist__chip').color).toContain('--v4-ink-data');
+    expect(rules.get('.widget-v4-checklist__chip').color).toContain('--v4-ink-2');
 
     const done = rules.get('.widget-v4-sleepready-check .widget-v4-checklist__chip.is-done');
     expect(done.color).toContain('--v4-ok-text');

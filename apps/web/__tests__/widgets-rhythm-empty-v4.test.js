@@ -102,7 +102,7 @@ describe('Ритм приёмов · нет данных — сведённый 
     expect(label['font-weight']).toBe('600');
     expect(label['line-height']).toBe('1');
     expect(label['margin-top']).toBe('4px');
-    expect(label.color).toContain('--v4-ink-data');
+    expect(label.color).toContain('--v4-ink-2');
 
     expect(rules.get('.widget-v4-rhythm__line').height).toBe('14px');
     expect(rules.get('.widget-v4-rhythm__dot').width).toBe('8px');

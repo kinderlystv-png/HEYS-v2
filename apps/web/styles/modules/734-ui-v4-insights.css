@@ -33,7 +33,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-period-pills {
@@ -233,7 +233,7 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 /* Кадр «Стоит внимания · голос куратора», элемент 11: «Ещё N →» — кнопка во всю
@@ -387,7 +387,7 @@
 .insights-v4-weight__key {
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-weight__value {
@@ -421,7 +421,7 @@
 
 .insights-v4-weight__pace {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -462,7 +462,7 @@
 }
 
 .heys-score-insights-v4__trend--stable {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .heys-score-insights-v4__scale {
@@ -501,7 +501,7 @@
   margin-top: 9px;
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.02em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .heys-score-insights-v4__legend .is-maximum {
@@ -511,7 +511,7 @@
 .heys-score-insights-v4__story {
   margin: 12px 0 0;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -530,7 +530,7 @@
 .heys-score-insights-v4__key {
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .heys-score-insights-v4__contribution {
@@ -587,7 +587,7 @@
   justify-content: space-between;
   margin-top: 11px;
   font: 500 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .heys-score-insights-v4__reports-link {
@@ -718,7 +718,7 @@
 /* Элемент 10: «окно — вечер» — data-текст 56 %. */
 .insights-v4-attention__risk-window {
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-window {
@@ -956,7 +956,7 @@
    поясняющим, тон следует актуальной data-роли 56 %. */
 .insights-v4-nutrition__rhythm-line {
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 10px;
 }
 
@@ -1357,7 +1357,7 @@
   flex: none;
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Третий ярус: имя приглушено, справа причина словом, колонок нет вовсе. */
@@ -1537,7 +1537,7 @@
 
 .insights-v4-whatif__place {
   font: 500 11px/1 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-whatif__scroll {
@@ -1600,7 +1600,7 @@
   flex: none;
   max-width: 48%;
   font: 600 11px/1 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-whatif__parameter-track {
@@ -1630,7 +1630,7 @@
 .insights-v4-whatif__score-label {
   font: 600 10.5px/1 Figtree, sans-serif;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-whatif__score-before,
@@ -1645,7 +1645,7 @@
 
 .insights-v4-whatif__score-arrow {
   font: 600 13px/1 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-whatif__score-after {
@@ -1666,7 +1666,7 @@
    минус остаётся на data-чернилах. */
 .insights-v4-whatif__score-delta.is-negative {
   background: var(--v4-tint, #f6e6dd);
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-whatif__unavailable {
@@ -1711,7 +1711,7 @@
 .insights-v4-whatif__explanation {
   margin: 12px 0 0;
   font: 500 11px/1.5 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1813,7 +1813,7 @@
 /* Сила источника — data-текст актуальной лестницы, 56 %. */
 .insights-v4-sources__strength {
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-sheet__ok {
@@ -2035,5 +2035,5 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }

@@ -948,7 +948,7 @@
   font-weight: 500;
   line-height: 1.5;
   text-wrap: pretty;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Счётчик базы в шапке шага: моноцифры 10,5/600 чернилами 56 % по разбору
@@ -959,7 +959,7 @@
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-create-shell {
@@ -1090,7 +1090,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-harm-compare__card:not(.is-active) .aps-v4-harm-compare__value {
@@ -1270,7 +1270,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-harm-breakdown__version {
@@ -1279,7 +1279,7 @@
   font-size: 9.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-harm-breakdown__section-title {
@@ -1306,7 +1306,7 @@
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-harm-breakdown__row {
@@ -1477,7 +1477,7 @@
   margin-left: auto;
   font-size: 10px;
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Схема полей по кадру: карточка первой поверхности радиусом 14, моноширинным
@@ -1492,7 +1492,7 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1.55;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   background: var(--v4-surface, #f7efe2);
   padding: 11px 13px;
@@ -1539,7 +1539,7 @@
 
 .aps-create-prompt-note {
   font-size: 11px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-create-barcode-field {
@@ -1656,7 +1656,7 @@
 .aps-create-brand-note {
   font-size: 10px;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$='dark'] .aps-create-barcode-input,
@@ -1670,7 +1670,7 @@
 
 [data-theme$='dark'] .aps-create-barcode-note,
 [data-theme$='dark'] .aps-create-brand-note {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 @media (max-width: 420px) {
@@ -1689,7 +1689,7 @@
 
 [data-theme$='dark'] .aps-create-format {
   background: #374151;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$='dark'] .aps-create-prompt-btn {
@@ -1778,7 +1778,7 @@
 
 .aps-create-example-note {
   font-size: 11px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-create-error {
@@ -2015,7 +2015,7 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Готовая к нажатию — заливка акцентом. Прежде зелёный градиент из двух
@@ -2180,7 +2180,7 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   pointer-events: none;
 }
 
@@ -2225,7 +2225,7 @@
   line-height: 1;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* «Использовать шаблон» — третий вид вторичного: обводка вместо заливки.
@@ -2238,7 +2238,7 @@
   background: none;
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
   font-size: 11px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-portions-suggest .aps-v4-portions-list {

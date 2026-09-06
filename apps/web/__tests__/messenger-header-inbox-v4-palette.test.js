@@ -51,7 +51,7 @@ const EXPECT = Object.freeze({
     // 61 %: тем же решением. На --v4-hero #e2ecf6 при 55 % контраст был 3,77 —
     // синий не проходил порог ни на одной поверхности, при 61 % стало 4,52.
     ink2Raw: 'rgba(0,0,0,0.61)',
-    inkDataRaw: 'rgba(16,24,38,0.64)',
+    inkDataRaw: 'rgba(0,0,0,0.61)',
     lineRaw: 'rgba(0,0,0,0.08)',
   },
 });
@@ -211,7 +211,7 @@ describe('messenger header/inbox · v4 palette (sand + blue)', () => {
       expect(title.color, `${id} title ink`).toBe(exp.ink);
 
       expect(MESSENGER_CSS, `${id} subtitle role in source`).toMatch(
-        /\.messenger-subtitle\s*\{[\s\S]*?color:\s*var\(--v4-ink-data,\s*rgba\(0,\s*0,\s*0,\s*0\.56\)\)/,
+        /\.messenger-subtitle\s*\{[\s\S]*?color:\s*var\(--v4-ink-2\)/,
       );
 
       const checklistMissing = probeSelector('messenger-day-checklist__chip messenger-day-checklist__chip--missing');

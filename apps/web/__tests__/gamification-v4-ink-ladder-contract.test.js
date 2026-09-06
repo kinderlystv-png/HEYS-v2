@@ -12,7 +12,7 @@ const rule = (selector) => {
   return CSS.match(new RegExp(`${escaped}\\s*\\{([\\s\\S]*?)\\}`))?.[1] || '';
 };
 
-describe('gamification v4 · data ink ladder', () => {
+describe('gamification v4 · ink-2 ladder', () => {
   it.each([
     '.game-v4-sheet__streak-bar-caption',
     '.game-v4-sheet__card-sub',
@@ -23,8 +23,8 @@ describe('gamification v4 · data ink ladder', () => {
     '.game-v4-sheet__ladder-xp',
     '.game-v4-sheet__xp-value',
     '.game-v4-sheet__footnote',
-  ])('%s uses the 56%% data role', (selector) => {
-    expect(rule(selector)).toContain('var(--v4-ink-data');
+  ])('%s uses ink-2 for auxiliary captions', (selector) => {
+    expect(rule(selector)).toContain('var(--v4-ink-2');
   });
 
   it('.game-v4-sheet__hero-muted uses ink-2 at 12.5px per frame ·08', () => {

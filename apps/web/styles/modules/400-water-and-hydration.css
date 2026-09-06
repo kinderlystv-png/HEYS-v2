@@ -1062,7 +1062,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-tertiary, var(--v4-ink-data, rgba(0, 0, 0, 0.56)));
+  color: var(--text-tertiary, var(--v4-ink-2, rgba(0, 0, 0, 0.56)));
   padding: 8px 12px 4px;
   margin-top: 4px;
   /* Контракт «язык, выделение, часовой пояс» (tips): подписи категорий не
@@ -1422,7 +1422,7 @@ body.planning-tab-active .widgets-quick-fab-wrap {
   gap: 8px;
   padding: 12px;
   font-size: 11px;
-  color: var(--text-tertiary, var(--v4-ink-data, rgba(0, 0, 0, 0.56)));
+  color: var(--text-tertiary, var(--v4-ink-2, rgba(0, 0, 0, 0.56)));
   border-top: 1px solid var(--border, #e5e7eb);
   flex-wrap: wrap;
 }
@@ -1847,7 +1847,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   white-space: nowrap;
   font-size: 11px;
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   letter-spacing: 0.02em;
 }
 
@@ -2042,7 +2042,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-panel--sync .advice-v4-panel__hint--sync {
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .advice-v4-panel__head {
@@ -2060,7 +2060,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-panel__hint {
   margin-top: 10px;
   font: 500 11.5px/1.5 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2128,7 +2128,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   justify-content: center;
   font: 700 11.5px/1 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   border: none;
   background: transparent;
@@ -2212,7 +2212,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   display: block;
   margin-top: 5px;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2290,7 +2290,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
      ответом дизайнера №13, чужой день красится тем же --v4-tint. */
   background: var(--v4-tint, #f6e6dd);
   font: 500 11.5px/1.5 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2335,7 +2335,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   display: block;
   margin-top: 5px;
   font: 500 10.5px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .advice-service-row__chevron {
@@ -2381,7 +2381,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-service-footer-note {
   margin-top: 14px;
   font: 500 11px/1.5 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2390,7 +2390,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 600 9.5px/1 Figtree, sans-serif;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
@@ -2425,7 +2425,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 [data-theme$="dark"] .advice-v4-panel__hint,
 [data-theme$="dark"] .advice-v4-hide-copy__subtitle,
 [data-theme$="dark"] .advice-v4-panel__skip {
-  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .advice-v4-panel__btn--useful {
@@ -2474,7 +2474,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 
 [data-theme$="dark"] .advice-service-row__hint,
 [data-theme$="dark"] .advice-rules-pool-empty {
-  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .advice-service-row {
@@ -2624,7 +2624,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 700 9.5px/1 Figtree, sans-serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка «панель оценки»: ряд из двух кнопок высотой 44 и радиусом 999 —
@@ -2667,7 +2667,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-rate-note {
   margin-top: 12px;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2837,7 +2837,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   font: 600 10px/1 Figtree, sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .advice-v4-detail__hero-text {
@@ -2868,7 +2868,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   padding: 14px 15px;
   margin-top: 6px;
   font: 500 11.5px/1.55 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3145,7 +3145,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-settings__intro {
   margin: 16px 0 0;
   font: 500 11.5px/1.55 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3198,7 +3198,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   display: block;
   margin-top: 5px;
   font: 500 11px/1.45 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3253,7 +3253,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-settings__footnote {
   margin: 12px 0 0;
   font: 500 11px/1.5 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -3385,7 +3385,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-science__source-meta {
   margin-top: 4px;
   font: 500 10.5px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Элементы 14 и 15: оговорка стоит карточкой на второй поверхности, а не
@@ -3541,7 +3541,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-toast-card__meta {
   margin: 6px 0 0;
   font: 500 11px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .advice-v4-toast-card__actions {

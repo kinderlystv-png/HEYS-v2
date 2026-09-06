@@ -79,7 +79,7 @@
   padding: 8px 10px;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: rgba(59, 130, 246, 0.06);
   border-radius: 10px;
   border: 1px solid rgba(59, 130, 246, 0.15);
@@ -120,7 +120,7 @@
 
 .ts-wb-label {
   font-size: 13px;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .ts-wb-duration-input {
@@ -153,13 +153,13 @@
 .ts-wb-ex-num {
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .ts-wb-ex-remove {
   border: none;
   background: var(--v4-chip, #efe3cf);
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   width: 28px;
   height: 28px;
   border-radius: 8px;
@@ -189,7 +189,7 @@
   flex: 1;
   min-width: 72px;
   font-size: 11px;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -283,7 +283,7 @@
 .ts-type-label {
   font-size: 12px;
   font-weight: 500;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .ts-type-btn.active .ts-type-label {
@@ -297,7 +297,7 @@
 
 .ts-time-wheel-label {
   font-size: 14px;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink, #201e1d);
   text-align: center;
   margin-bottom: 8px;
 }
@@ -335,7 +335,7 @@
 
 .ts-time-label {
   font-size: 14px;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .ts-time-picker {
@@ -356,7 +356,7 @@
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
 }
 
@@ -426,7 +426,7 @@
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink, #201e1d);
 }
 
 .ts-zone-wheel-range {
@@ -478,7 +478,7 @@
 .ts-zone-name {
   font-size: 13px;
   font-weight: 500;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink, #201e1d);
 }
 
 .ts-zone-range {
@@ -504,7 +504,7 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
 }
 
@@ -552,7 +552,7 @@
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 16px;
   cursor: pointer;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
 }
 

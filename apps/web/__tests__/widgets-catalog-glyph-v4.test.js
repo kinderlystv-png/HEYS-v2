@@ -151,7 +151,7 @@ describe('вид · значок вместо эмодзи — сведённы�
     expect(desc['font-size']).toBe('10.5px');
     expect(desc['font-weight']).toBe('500');
     expect(desc['margin-top']).toBe('3px');
-    expect(desc.color).toContain('--v4-ink-data');
+    expect(desc.color).toContain('--v4-ink-2');
 
     const readyName = rules.get('.widget-v4-catalog__item:not(.widget-v4-catalog__item--soon):not(.widget-v4-catalog__item--waiting) .widget-v4-catalog__name');
     expect(readyName['font-size']).toBe('12px');

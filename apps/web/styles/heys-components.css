@@ -1301,7 +1301,7 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -1513,7 +1513,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-correction__legend-item.is-weight {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .weekly-wrap-correction__legend-item.is-waist {
@@ -1579,7 +1579,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 10px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Тон разводит расчёт и измерение — тот же приём, что в листе куратора. */
@@ -1593,7 +1593,7 @@ body.tour-active .ios-pwa-banner {
 .weekly-wrap-correction__fact-value.is-quiet {
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Значение строки факта без акцента: кегль как у строки, тон 55 %. */
@@ -1787,7 +1787,7 @@ body.tour-active .ios-pwa-banner {
   margin-top: 12px;
   font-weight: 500;
   line-height: 1.55;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -4672,7 +4672,7 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
   line-height: 1;
   margin-bottom: 5px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Поля кадра отличаются от листа заливкой, а не контуром: первая поверхность
@@ -4797,7 +4797,7 @@ body.tour-active .ios-pwa-banner {
   flex-shrink: 0;
   margin-bottom: 0;
   font-size: 10.5px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .pe-field--inline .pe-input {
@@ -4809,7 +4809,7 @@ body.tour-active .ios-pwa-banner {
   background: none;
   font-size: 10.5px;
   text-align: center;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Группа полей — не карточка: ни один кадр шагов правки не рисует под полями
@@ -4891,7 +4891,7 @@ body.tour-active .ios-pwa-banner {
 .pe-portions-block .pe-section-title {
   margin: 0;
   letter-spacing: 0.1em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .pe-portions-name,
@@ -4913,7 +4913,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 10px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кнопка «Шаблон» на грунте по кадру: высота от 44, пилюля, 11 px/700 тоном
@@ -4976,7 +4976,7 @@ body.tour-active .ios-pwa-banner {
   right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
@@ -5057,7 +5057,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -5096,7 +5096,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -5146,7 +5146,7 @@ body.tour-active .ios-pwa-banner {
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .pe-preview-label {
@@ -5215,7 +5215,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 [data-theme$="dark"] .pe-portions-block .pe-section-title {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .pe-accordion-chevron {
@@ -5252,11 +5252,11 @@ body.tour-active .ios-pwa-banner {
 [data-theme$="dark"] .pe-preview {
   background: var(--v4-bg, #fffaf1);
   border-color: var(--v4-sand-ink-slate, #1f2937);
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .pe-field--inline .pe-input {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .pe-warning {

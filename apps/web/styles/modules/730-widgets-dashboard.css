@@ -1520,7 +1520,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widget--weight .widget__trend--stable {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: rgba(107, 114, 128, 0.1);
 }
 
@@ -1896,7 +1896,7 @@ body:has(.page-reports) .hdr::after {
 
 .widget-cascade--empty .widget-cascade__badge {
   background: rgba(148, 163, 184, 0.16);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 @keyframes widget-cascade-pulse {
@@ -2894,7 +2894,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   /* «формат чисел»: счётчик воды меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
 }
@@ -3462,7 +3462,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -3475,7 +3475,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -3547,7 +3547,7 @@ body:has(.page-reports) .hdr::after {
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   display: inline-flex;
   align-items: center;
@@ -3938,7 +3938,7 @@ body:has(.page-reports) .hdr::after {
 .widget-calories__remaining-line {
   font-size: 12px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
@@ -4278,7 +4278,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Спарклайн недели слева от числа — кадр «Главная · дефолтная раскладка»,
@@ -5814,7 +5814,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-right: 8px;
 }
 
@@ -6123,7 +6123,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   pointer-events: none;
 }
 
@@ -6949,7 +6949,7 @@ body:has(.page-reports) .hdr::after {
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1.35;
-  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7791,7 +7791,7 @@ body:has(.page-reports) .hdr::after {
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.06);
   font-size: 14px;
   line-height: 1.55;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-relapse-risk__breakdown-list,
@@ -7814,7 +7814,7 @@ body:has(.page-reports) .hdr::after {
   min-width: 108px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-relapse-risk__breakdown-track,
@@ -7846,7 +7846,7 @@ body:has(.page-reports) .hdr::after {
   background: rgba(248, 250, 252, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.16);
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-relapse-risk__impact-chips {
@@ -7921,7 +7921,7 @@ body:has(.page-reports) .hdr::after {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-relapse-risk__dev-disclosure-summary::-webkit-details-marker {
@@ -8945,7 +8945,7 @@ body.reports-fullscreen-open {
   padding: 18px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.82);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 800;
   text-align: center;
 }
@@ -9252,7 +9252,7 @@ body.reports-fullscreen-open {
 
 .meal-rec-card__goal-eyebrow {
   margin-bottom: 3px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 700;
   line-height: 1.3;
@@ -9299,7 +9299,7 @@ body.reports-fullscreen-open {
 }
 
 .meal-rec-card__goal-metric-label {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 600;
   line-height: 1.2;
@@ -10530,7 +10530,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-weight: 600;
   line-height: 1.1;
   letter-spacing: 0.03em;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка контракта «длинное значение в узком формате»: число не сжимается
@@ -10594,14 +10594,14 @@ body:has(.widgets-tab) .widget-calories__value--lg {
 .widget-calories__hero-unit {
   font-size: 0.625rem;
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-calories__hero-remaining-label {
   font-size: 0.625rem;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 7px;
   flex-shrink: 0;
 }
@@ -10661,7 +10661,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -10682,7 +10682,7 @@ body:has(.widgets-tab) .widget-calories__value--lg {
   font-size: 8.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] body:has(.widgets-tab) .widget {
@@ -10838,7 +10838,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   flex-shrink: 0;
   /* «формат чисел»: строки стоят столбцом — цифры табличные. */
   font-variant-numeric: tabular-nums;
@@ -10856,7 +10856,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 .widget-v4-unit {
   font-size: 0.625rem;
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-ok {
@@ -10951,7 +10951,7 @@ body:has(.widgets-tab) .widget-heatmap--2x1.widget-v4-stack {
 }
 
 .widget-v4-muted {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -11648,7 +11648,7 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   font-size: 9.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-insulin-wave__note--next {
@@ -11732,7 +11732,7 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Главная · дефолтная раскладка», элемент 29: подпись волны прижата к
@@ -11749,7 +11749,7 @@ body:has(.widgets-tab) .widget--water.widget--1x1 .widget__content,
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-stack__footer.widget-v4-insulin-wave__footer > span {
@@ -11826,7 +11826,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widget-v4-macro__num {
   font: 600 12px Figtree, system-ui, sans-serif;
-  fill: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  fill: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -11857,7 +11857,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data) /* v4-intentional */);
+  color: var(--v4-ink-2) /* v4-intentional */);
   font-variant-numeric: tabular-nums;
 }
 
@@ -11868,7 +11868,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-macro__fact--empty .widget-v4-macro__fact-sep,
 .widget-v4-macro__fact--empty .widget-v4-macro__fact-tgt {
   font-weight: 700;
-  color: var(--v4-ink-data) /* v4-intentional */);
+  color: var(--v4-ink-2) /* v4-intentional */);
 }
 
 .widget-v4-macro__empty {
@@ -11942,7 +11942,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-periods {
@@ -11959,7 +11959,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9.5px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
@@ -11973,7 +11973,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-periods__suffix {
   font-size: 9.5px;
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-spark--ok .widget-v4-spark__line,
@@ -12185,7 +12185,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1.35;
-  color: var(--v4-ink-data, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-catalog__item {
@@ -12244,7 +12244,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9.5px;
   font-weight: 500;
   line-height: 1.35;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-catalog__need {
@@ -12257,7 +12257,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-catalog__hint {
   font-size: 9px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Название готовой строки уже несёт превью; тут оно только для чтения с
@@ -12290,13 +12290,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-catalog__item--waiting .widget-v4-catalog__name {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-catalog__name {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-catalog__item:not(.widget-v4-catalog__item--soon):not(.widget-v4-catalog__item--waiting) .widget-v4-catalog__name {
@@ -12417,7 +12417,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-edit-footer__hint {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widgets-tab__hold-hint {
@@ -12533,7 +12533,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 6px;
 }
 
@@ -12669,7 +12669,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 8.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data) /* v4-intentional */;
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 /* Кадр «Окно до сна · нет данных»: прочерк 21/600 тоном 42 %, «не ел» 7.5 px.
@@ -12770,7 +12770,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9.5px;
   font-weight: 500;
   line-height: 1.35;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -12799,7 +12799,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -12824,7 +12824,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -12848,7 +12848,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -12904,7 +12904,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -12961,7 +12961,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -13001,7 +13001,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   flex: none;
   font-size: 9.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -13025,7 +13025,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   flex: none;
   font-size: 10px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -13167,7 +13167,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 8px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -13192,7 +13192,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 8px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
 }
 
 /* Чек-лист вечера: закрытый пункт — шалфейная точка и шалфейное слово,
@@ -13217,7 +13217,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 5px;
   font-size: 9.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
 }
 
@@ -13248,7 +13248,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   gap: 8px;
   font-size: 10px;
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-checklist__row.is-done .widget-v4-checklist__label {
@@ -13297,7 +13297,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
 }
 
 /* Кадр «Готовность ко сну · Разбор»: герой 26 px / gap 5 / отступ 7,
@@ -13340,7 +13340,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)) /* v4-intentional */;
 }
 
 .widget-v4-sleepready-review__dot {
@@ -13389,7 +13389,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1.45;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -13609,7 +13609,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
   /* Кадры зовут остаток моноцифрами (класс `n`): «Динамика · E график 2×2 ·
      04», «G сброшено и кривая · 04», «Смена вида · удержание · 15». Число
@@ -13923,7 +13923,7 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-wd-sheet__list {
@@ -14004,7 +14004,7 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1.3;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-wd-sheet__opt-sub {
@@ -14012,7 +14012,7 @@ html[data-theme-id="blue-dark"] .widget-wd-sheet__opt.is-active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-wd-sheet__check {
@@ -14323,7 +14323,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 10px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -14339,7 +14339,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: auto;
   /* «формат чисел»: число меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
@@ -14380,14 +14380,14 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-calories__line-meta {
   font-size: 8.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   /* «формат чисел»: число меняется на месте — цифры табличные. */
   font-variant-numeric: tabular-nums;
 }
@@ -14413,7 +14413,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -14444,7 +14444,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-calories__dinner-budget {
@@ -14663,7 +14663,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-deficit-rows__row {
@@ -14709,7 +14709,7 @@ body:has(.widgets-tab) .widget .widget__content > .widget-v4-tile {
   font-size: 8px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-v4-water-rhythm {
@@ -14793,7 +14793,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Сон · Окно сна · 04»: длительность в шапке 700 10px, не общий meta 9/600. */
@@ -14813,7 +14813,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-weight__scatter-foot {
   font-size: 9px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 5px;
 }
 
@@ -14821,7 +14821,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 9.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: auto;
 }
 
@@ -14926,7 +14926,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр рисует круг 30×30, но палец меньше 44 px не ловит: зона нажатия
@@ -14952,7 +14952,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   line-height: 1;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 16px;
 }
 
@@ -14992,7 +14992,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 16px;
 }
 
@@ -15109,7 +15109,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__grid3x7 {
@@ -15129,7 +15129,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   flex: 0 0 12px;
   font-size: 9px;
   font-weight: 700;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__grid-cell {
@@ -15202,7 +15202,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 7.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__sleep-timeline-track {
@@ -15242,7 +15242,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__wave-placeholder {
@@ -15272,7 +15272,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__wave-week-row.is-today .widget-bd-sheet__wave-week-label {
@@ -15354,7 +15354,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__hero-track-bar {
@@ -15379,7 +15379,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widget-bd-sheet__hero-track-label {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 10px;
   font-weight: 700;
 }
@@ -15434,7 +15434,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 .widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-total .widget-bd-sheet__stat-label {
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__stats--table .widget-bd-sheet__stat-row.is-total .widget-bd-sheet__stat-value {
@@ -15453,7 +15453,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__stat-value {
@@ -15470,7 +15470,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -15533,7 +15533,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-bd-sheet__factor-label {
   flex: none;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__factor-share {
@@ -15541,7 +15541,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   text-align: right;
   font-size: 9.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__factor-share.is-bad {
@@ -15600,7 +15600,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.3;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__chart-axis .is-accent {
@@ -15626,7 +15626,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__contrib-track {
@@ -15755,7 +15755,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__source-val {
@@ -15764,7 +15764,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__source-bar {
@@ -15805,7 +15805,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 8.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__meal-axis > span {
@@ -15901,7 +15901,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__evening-track {
@@ -15932,7 +15932,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .widget-bd-sheet__evening-dots {

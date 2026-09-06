@@ -156,8 +156,8 @@ describe('Ритм приёмов · Интервалы — сведённый �
     expect(ink(sand)).not.toBe(ink(blue));
     expect(palette).toContain('--v4-ink-data: rgba(var(--v4-ink-rgb), 0.56)');
     expect(blue).toContain('--v4-ink-data: rgba(var(--v4-ink-rgb), 0.64)');
-    expect(rules.get('.widget-v4-row__meta').color).toContain('--v4-ink-data');
-    expect(rules.get('.widget-v4-mealbars__time').color).toContain('--v4-ink-data');
+    expect(rules.get('.widget-v4-row__meta').color).toContain('--v4-ink-2');
+    expect(rules.get('.widget-v4-mealbars__time').color).toContain('--v4-ink-2');
     expect(Math.round((265 / 360) * 100)).toBe(74);
     expect(Math.round((215 / 360) * 100)).toBe(60);
     expect(Math.round((170 / 360) * 100)).toBe(47);

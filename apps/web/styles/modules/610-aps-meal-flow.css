@@ -417,7 +417,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.45;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка «вид · модалка»: подпись 11 px/1,4 тоном чернил 50 %. Стояли 10 px/1
@@ -428,7 +428,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .flow-selection-btn__chevron {
@@ -590,7 +590,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .meal-mood-prefill__icon {
@@ -605,7 +605,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .meal-mood-scale__slider {
@@ -812,7 +812,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 2px;
 }
 
@@ -842,12 +842,12 @@
 
 .meal-rating-text {
   font-size: 12px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-left: 6px;
 }
 
 [data-theme$='dark'] .meal-rating-text {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Пресеты справа */
@@ -1191,7 +1191,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .meal-mood-sparkline {
@@ -1228,7 +1228,7 @@
 
 .meal-mood-history-name {
   font-size: 10px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
@@ -1427,7 +1427,7 @@
   padding: 0 16px;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 11.5px;
   font-weight: 700;
 }
@@ -1478,7 +1478,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -1511,7 +1511,7 @@
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1851,7 +1851,7 @@
   margin-top: 5px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   line-height: 1.3;
 }
 
@@ -1926,7 +1926,7 @@
 .mpr-preview-item-kcal {
   flex: 1;
   font-size: 11px;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mpr-preview-item-grams {
@@ -2045,7 +2045,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mpr-preview-total__value {
@@ -2198,7 +2198,7 @@
 .mpr-create-item-kcal {
   flex: 1;
   font-size: 11px;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* «Сохранить набор» — главная кнопка экрана. Стояла янтарным градиентом
@@ -3423,7 +3423,7 @@ button.meal-quality-badge:active {
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -3456,7 +3456,7 @@ button.meal-quality-badge:active {
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-search-footnote {
@@ -3634,7 +3634,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-grams-last {
@@ -3642,7 +3642,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-grams-impact {
@@ -3678,7 +3678,7 @@ button.meal-quality-badge:active {
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-grams-impact__bar {
@@ -3730,7 +3730,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Порция · продукт уже в приёме» даёт карточке ту же вторую бумагу
@@ -3795,7 +3795,7 @@ button.meal-quality-badge:active {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* «В переборе вторая половина меняется на „перебор M" тоном --val-bad,
@@ -4034,7 +4034,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-search-state__similar {
@@ -4136,7 +4136,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка «вид · две кнопки над вкладками», переписана 31 августа: над вкладками
@@ -4244,7 +4244,7 @@ button.meal-quality-badge:active {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.45;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* === Модалки набора: сохранение и удаление ==========================
@@ -4493,7 +4493,7 @@ button.meal-quality-badge:active {
   font-size: 10.5px;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--v4-ink-data); /* v4-intentional */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)); /* v4-intentional */
 }
 
 .meal-transfer-v4__product--defect .meal-transfer-v4__product-reason,
@@ -4539,7 +4539,7 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__product-meta {
   flex: 0 0 auto;
-  color: var(--v4-ink-data); /* v4-intentional */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)); /* v4-intentional */
   font-size: 10.5px;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -4651,7 +4651,7 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__empty {
   margin-bottom: 8px;
-  color: var(--v4-ink-data); /* v4-intentional */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)); /* v4-intentional */
   font-size: 11px;
   font-style: italic;
   font-weight: 500;
@@ -4730,7 +4730,7 @@ button.meal-quality-badge:active {
 .meal-transfer-v4__target-meta {
   min-width: 0;
   overflow: hidden;
-  color: var(--v4-ink-data); /* v4-intentional */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)); /* v4-intentional */
   font-size: 10.5px;
   font-weight: 500;
   line-height: 1;
@@ -4740,7 +4740,7 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__target--pick .meal-transfer-v4__chevron {
   flex: 0 0 auto;
-  color: var(--v4-ink-data); /* v4-intentional */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)); /* v4-intentional */
 }
 
 /* Приём-источник: выбрать нельзя, подпись «(откуда)» стоит в самой строке. */
@@ -4772,7 +4772,7 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__summary {
   padding: 14px 18px 0;
-  color: var(--v4-ink-data); /* v4-intentional */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56)); /* v4-intentional */
   font-size: 11px;
   font-weight: 500;
   line-height: 1;
@@ -4936,7 +4936,7 @@ button.meal-quality-badge:active {
   flex: none;
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(var(--ink),.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 

@@ -65,7 +65,7 @@ describe('food-meal · копирование без целей', () => {
     expect(sheet?.classList.contains('meal-transfer-v4__sheet--empty-targets')).toBe(true);
     expect(emptyState?.textContent).toBe('На сегодня приёмов ещё нет — создадим новый.');
     expect(emptyState?.hasAttribute('style')).toBe(false);
-    expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*color:\s*var\(--v4-ink-data\)/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*color:\s*var\(--v4-ink-2/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*font-size:\s*11px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*line-height:\s*1\.5/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__items\s*{[^}]*flex:\s*0 1 auto[^}]*padding:\s*6px 18px 0/s);

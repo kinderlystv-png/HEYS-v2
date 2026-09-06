@@ -108,6 +108,6 @@ describe('Сон · Окно сна — сведённый кусок', () => {
     expect(labels['font-weight']).toBe('600');
     expect(labels['line-height']).toBe('1');
     expect(labels['margin-top']).toBe('7px');
-    expect(labels.color).toContain('--v4-ink-data');
+    expect(labels.color).toContain('--v4-ink-2');
   });
 });

@@ -101,7 +101,7 @@ describe('Клетчатка · Неделя — сведённый кусок',
     expect(norm['font-size']).toBe('9px');
     expect(norm['font-weight']).toBe('600');
     expect(norm['margin-left']).toBe('auto');
-    expect(norm.color).toContain('--v4-ink-data');
+    expect(norm.color).toContain('--v4-ink-2');
 
     const bars = rules.get('.widget-v4-weekbars.widget-v4-fiber-week__bars');
     expect(bars.position).toBe('relative');
@@ -131,7 +131,7 @@ describe('Клетчатка · Неделя — сведённый кусок',
 
   it('цвет числа, нормы и сегодняшнего столбика — роли, песок ≠ синий; прошлые литерал', () => {
     expect(rules.get('.widget-v4-val--neutral').color).toContain('--v4-ink');
-    expect(rules.get('.widget-v4-fiber-week__norm').color).toContain('--v4-ink-data');
+    expect(rules.get('.widget-v4-fiber-week__norm').color).toContain('--v4-ink-2');
     const sandInk = palette.match(/:root[\s\S]*?--v4-ink:\s*(#[0-9a-f]{6})/i)?.[1];
     const blueBlock = palette.slice(palette.indexOf('[data-theme-id="blue"]'));
     const blueInk = blueBlock.match(/--v4-ink:\s*(#[0-9a-f]{6})/i)?.[1];

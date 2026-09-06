@@ -145,6 +145,6 @@ describe('Тепловая карта · Серия и Месяц целиком
       .toContain('--v4-line');
     expect(rules.get('.widget-heatmap__cell--month.widget-heatmap__cell--today').background)
       .toContain('--v4-act');
-    expect(rules.get('.widget-heatmap__month-meta').color).toContain('--v4-ink-data');
+    expect(rules.get('.widget-heatmap__month-meta').color).toContain('--v4-ink-2');
   });
 });

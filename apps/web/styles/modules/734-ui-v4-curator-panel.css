@@ -183,7 +183,7 @@
    чернилами 38 %, а не акцентом: акцент в этом списке значит «здесь есть на
    что нажать», и на «нет» он обещал действие, которого нет. */
 .cur-row__count--muted {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cur-row__avatar {
@@ -278,7 +278,7 @@
 .cur-row__age.is-data {
   padding: 0;
   background: transparent;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-family: inherit;
   font-size: 11px;
   font-weight: 600;
@@ -413,7 +413,7 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 /* Имя факта в кадре набрано полными чернилами кеглем ряда: приглушена только
@@ -567,7 +567,7 @@
   font-size: 10px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cur-sheet__hist-legend .is-target {
@@ -609,7 +609,7 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -632,7 +632,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Предложение нормы — главным числом экрана. В первом слое остаётся вывод и
@@ -995,7 +995,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-surface, #f7efe2);
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 10.5px;
   font-weight: 700;
   line-height: 1;
@@ -1151,7 +1151,7 @@
   white-space: nowrap;
   /* Нейтральная величина без нормы — вес: у него нет «хорошо» и «плохо». */
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cur-cab__mch.is-ok {
@@ -1176,7 +1176,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Отклонение от цели: тёплое предупреждение, не красный — красный в наборе
@@ -1270,7 +1270,7 @@
   line-height: 1.3;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Сбой и отклонение отличаются тоном числа, а не рамкой: рамка вокруг
@@ -1323,7 +1323,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cdo-list-val.is-ok {
@@ -1837,7 +1837,7 @@
   font-weight: 600;
   line-height: 1;
   margin-top: 4px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cur-cab__tab-note.is-form-note {
@@ -1902,7 +1902,7 @@
   margin-top: 10px;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.42));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .cur-cab__source .is-act {
@@ -1944,7 +1944,7 @@
   font-size: 11.5px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -2034,11 +2034,11 @@
 }
 
 .cur-cab__queue-limits-key {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .cur-cab__queue-limits-val {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -2158,7 +2158,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 /* Поле без рамки: в кадре оно отличается от листа заливкой, а не контуром —
@@ -2283,7 +2283,7 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Разбор кадров «Диагностика · 13» и «· 14» даёт кнопкам высоту от 44,
@@ -2377,7 +2377,7 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2405,5 +2405,5 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }

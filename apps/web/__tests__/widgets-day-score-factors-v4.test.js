@@ -92,7 +92,7 @@ describe('Оценка дня · Из чего сложилась — сведё
     const label = rules.get('.widget-v4-factor-cols__label');
     expect(label['font-size']).toBe('8px');
     expect(label['margin-top']).toBe('5px');
-    expect(label.color).toContain('--v4-ink-data');
+    expect(label.color).toContain('--v4-ink-2');
   });
 
   it('тон полос — роли good/warn/bad; песок ≠ синий на ok-fill и warn', () => {

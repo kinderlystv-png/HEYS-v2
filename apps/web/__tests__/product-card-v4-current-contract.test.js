@@ -12,6 +12,7 @@ const PRODUCT = fs.readFileSync(path.join(ROOT, 'apps/web/heys_add_product_step_
 const CSS_611 = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/611-aps-product-card.css'), 'utf8');
 const CSS_600 = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/600-steps-and-aps.css'), 'utf8');
 const COMPONENTS = fs.readFileSync(path.join(ROOT, 'apps/web/styles/heys-components.css'), 'utf8');
+const INK2_COLOR = 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))';
 const DATA_COLOR = 'var(--v4-ink-data, rgba(0, 0, 0, 0.56))';
 
 function contractRows() {
@@ -94,7 +95,7 @@ describe('product-card current v4 contract', () => {
       '.aps-v4-portions-suggest .aps-v4-btn-ghost',
     ];
     for (const selector of productSelectors) {
-      expect(rule(CSS_611, selector), selector).toContain(`color: ${DATA_COLOR}`);
+      expect(rule(CSS_611, selector), selector).toContain(`color: ${INK2_COLOR}`);
     }
 
     expect(rule(CSS_600, '.aps-preview-macros')).toContain(`color: ${DATA_COLOR}`);
@@ -115,7 +116,7 @@ describe('product-card current v4 contract', () => {
       '[data-theme$="dark"] .pe-field--inline .pe-input',
     ];
     for (const selector of editorSelectors) {
-      expect(rule(COMPONENTS, selector), selector).toContain(`color: ${DATA_COLOR}`);
+      expect(rule(COMPONENTS, selector), selector).toContain(`color: ${INK2_COLOR}`);
     }
 
     expect(rule(CSS_611, '.aps-barcode-overlay--v4-fullscreen .aps-barcode-finder-hint'))
@@ -139,7 +140,7 @@ describe('product-card current v4 contract', () => {
     expect(rule(CSS_611, '.aps-v4-portions-row__remove')).toContain('width: 44px');
     expect(rule(CSS_611, '.aps-v4-portions-add')).toContain('margin-top: 8px');
     expect(rule(COMPONENTS, '.pe-segment-btn')).toContain('min-height: 44px');
-    expect(rule(COMPONENTS, '.pe-segment-btn')).toContain('var(--v4-ink-data');
+    expect(rule(COMPONENTS, '.pe-segment-btn')).toContain('var(--v4-ink-2');
     expect(rule(CSS_611, '.aps-v4-harm-compare__card--own .aps-v4-harm-compare__label')).toContain('font-size: 10px');
   });
 

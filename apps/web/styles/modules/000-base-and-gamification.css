@@ -974,7 +974,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .compact-stat span {
   font-weight: 600;
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink) /* v4-intentional */;
 }
 
 .compact-note {
@@ -1212,7 +1212,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink) /* v4-intentional */;
   margin-bottom: 8px;
 }
 
@@ -1439,7 +1439,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   display: flex;
   gap: 12px;
   font-size: 13px;
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .household-detail {
@@ -1481,7 +1481,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .compact-train--minimal .compact-train-title {
   font-weight: 600;
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink) /* v4-intentional */;
 }
 
 /* Силовая: карточка конструктора (дневник в блоке активности) */
@@ -1902,7 +1902,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-size: 16px;
   font-weight: 600;
   line-height: 1.35;
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink) /* v4-intentional */;
   word-break: break-word;
 }
 
@@ -7234,7 +7234,7 @@ color: var(--v4-sand-ink, #201e1d);
 .hdr-client-lastname {
   font-size: 9px;
   font-weight: 400;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   line-height: 1.1;
   white-space: nowrap;
   overflow: hidden;
@@ -7905,7 +7905,7 @@ body:has(.offline-banner) .wrap {
 
 .hdr-client-label {
   font-size: 11px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -7997,7 +7997,7 @@ body:has(.offline-banner) .wrap {
   gap: 4px;
   padding: 4px 8px;
   font-size: 10px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: var(--v4-chip, #efe3cf);
   border-radius: 6px;
   white-space: nowrap;
@@ -8317,7 +8317,7 @@ body:has(.offline-banner) .wrap {
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .date-picker--v4 .date-picker-text {
@@ -8590,7 +8590,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   margin: 16px 0 0;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .date-picker-sheet .legend-item,
@@ -8903,13 +8903,13 @@ svg.date-picker-icon {
 
 .date-picker-sub {
   font-size: 11px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   line-height: 1.2;
 }
 
 .date-picker-arrow {
   font-size: 10px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: transform 0.15s;
 }
 
@@ -9107,7 +9107,7 @@ svg.date-picker-icon {
   text-align: center;
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   padding: 4px;
   text-transform: uppercase;
 }
@@ -9347,7 +9347,7 @@ svg.date-picker-icon {
   padding: 8px 0;
   margin-bottom: 4px;
   font-size: 10px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .legend-item {
@@ -9976,7 +9976,7 @@ body:has([data-heys-visible-frame="consent"]) .tabs {
   padding: 8px 10px;
   gap: 6px;
   border-radius: 12px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: transparent;
   box-shadow: none;
 }
@@ -10675,7 +10675,7 @@ body:has(:is(
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint {
   margin-top: 4px;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__tier {
@@ -10790,7 +10790,7 @@ body:has(:is(
   margin-left: auto;
   font: 600 0.75rem/1.2 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__meta-text--accent {
@@ -10916,7 +10916,7 @@ body:has(:is(
 .hdr-settings-sheet__fab-lead {
   margin: 0;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -10967,7 +10967,7 @@ body:has(:is(
 
 .hdr-settings-sheet__fab-count {
   font: 600 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__fab-ok {
@@ -11044,7 +11044,7 @@ body:has(:is(
 
 .hdr-settings-sheet__diag-copy {
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
   margin-bottom: 4px;
 }
@@ -11065,7 +11065,7 @@ body:has(:is(
   margin-top: 8px;
   padding: 0 3px;
   font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__diag-panel + .hdr-settings-sheet__build {
@@ -11103,7 +11103,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint {
-  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__tier {
@@ -11159,7 +11159,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-lead {
-  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-chip {
@@ -11174,7 +11174,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-count {
-  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__fab-ok,
@@ -11192,7 +11192,7 @@ body:has(:is(
 
 [data-theme$="dark"] .hdr-settings-sheet__hint,
 [data-theme$="dark"] .hdr-settings-sheet__diag-copy {
-  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__diag-panel {
@@ -11206,7 +11206,7 @@ body:has(:is(
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__build {
-  color: var(--v4-ink-data, rgba(242, 237, 230, 0.56));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$="dark"] .hdr-settings-sheet__dot--outline {
@@ -11308,7 +11308,7 @@ body:has(:is(
   font: 700 10px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .notify-detail__card {
@@ -11421,7 +11421,7 @@ body:has(:is(
 .notify-detail__quiet-note {
   margin: 10px 0 0;
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -12467,7 +12467,7 @@ body:has(:is(
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink-2) /* v4-intentional */;
   opacity: 0.9;
   text-transform: uppercase;
   display: flex;
@@ -12659,7 +12659,7 @@ body:has(:is(
 .meal-type-preview-value.meal-type-snack1,
 .meal-type-preview-value.meal-type-snack2,
 .meal-type-preview-value.meal-type-snack3 {
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: var(--v4-hero, #efe3cf);
 }
 
@@ -14261,7 +14261,7 @@ body:has(:is(
     flex: 1;
     font-size: 13px;
     font-weight: 500;
-    color: var(--v4-ink-prose) /* v4-intentional */;
+    color: var(--v4-ink) /* v4-intentional */;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -14277,7 +14277,7 @@ body:has(:is(
     border: 1px solid #d1d5db;
     border-radius: 4px;
     background: var(--v4-hero, #efe3cf);
-    color: var(--v4-ink-prose) /* v4-intentional */;
+    color: var(--v4-ink-2) /* v4-intentional */;
     -webkit-appearance: none;
     -moz-appearance: textfield;
   }
@@ -14293,7 +14293,7 @@ body:has(:is(
     border: 1px solid #d1d5db;
     border-radius: 6px;
     background: var(--v4-hero, #efe3cf);
-    color: var(--v4-ink-prose) /* v4-intentional */;
+    color: var(--v4-ink-2) /* v4-intentional */;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
   }
@@ -14404,7 +14404,7 @@ body:has(:is(
   .mpc-kcal {
     font-weight: 600;
     font-size: 13px;
-    color: var(--v4-ink-prose) /* v4-intentional */;
+    color: var(--v4-ink-2) /* v4-intentional */;
     min-width: 36px;
     text-align: right;
   }
@@ -14436,12 +14436,12 @@ body:has(:is(
     gap: 2px;
     text-align: center;
     font-size: 10px;
-    color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+    color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   }
 
   .mpc-header {
     font-weight: 600;
-    color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+    color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
     margin-top: 4px;
   }
 
@@ -14451,7 +14451,7 @@ body:has(:is(
   }
 
   .mpc-grid .mpc-dim {
-    color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+    color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
     white-space: nowrap;
   }
 
@@ -14460,13 +14460,13 @@ body:has(:is(
     display: flex;
     gap: 6px;
     font-size: 10px;
-    color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+    color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
     margin-top: 3px;
     flex-wrap: wrap;
   }
 
   .mpc-row2 .mpc-dim {
-    color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+    color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   }
 
   /* Meal totals - grid layout */
@@ -16326,7 +16326,7 @@ body:has(:is(
   font-size: 10px;
   font-weight: 600;
   background: rgba(0, 0, 0, 0.04);
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .profile-section__chevron {
@@ -18207,7 +18207,7 @@ html.heys-bg-paused *::after {
   margin-top: 10px;
   font-size: 10.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Радиус 20 — строки «вид карточки „Ближе всего“» и «вид · строки XP и таблица
@@ -18258,7 +18258,7 @@ html.heys-bg-paused *::after {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .game-v4-sheet__card-sub--mult {
@@ -18302,7 +18302,7 @@ html.heys-bg-paused *::after {
   margin-top: 10px;
   font-size: 10.5px;
   font-weight: 500;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .game-v4-sheet__hero .game-v4-sheet__card-meta {
@@ -18361,14 +18361,14 @@ html.heys-bg-paused *::after {
 .game-v4-sheet__level-floor-hint {
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр «Геймификация · первый день», элемент 37: 600 тоном чернил 38 %. */
 .game-v4-sheet__level-line-hint {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Тон 40 % у обоих кадров, ближайшая роль набора --v4-ink-4. Вес разный:
@@ -18380,7 +18380,7 @@ html.heys-bg-paused *::after {
   justify-content: space-between;
   margin-top: 10px;
   font-size: 10.5px;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .game-v4-sheet__level-floor-xp {
@@ -18489,7 +18489,7 @@ html.heys-bg-paused *::after {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.4;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Строка «состав группы»: заголовок группы раскрывает дальние закрытые. */
@@ -18586,7 +18586,7 @@ html.heys-bg-paused *::after {
   font-size: 11.5px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .game-v4-sheet__mult-card {
@@ -18617,7 +18617,7 @@ html.heys-bg-paused *::after {
   flex: none;
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: right;
 }
 
@@ -18625,7 +18625,7 @@ html.heys-bg-paused *::after {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-data, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 12px;
 }
 
