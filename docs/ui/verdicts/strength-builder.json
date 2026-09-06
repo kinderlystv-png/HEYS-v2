@@ -688,9 +688,9 @@
       "h": "5313399ce044"
     },
     "вид · отчёт цикла": {
-      "v": "=",
-      "f": "CycleReportScreen Г2: heys_strength_proposal_ui_v1.js:1850+ sb-finish-head+✕ «Отчёт по циклу»+cycleReportHeaderKey; planVsDoneBodyEl reuse .sb-plan-vs-*; вход CycleScreen .sb-cycle-report-link→openCycleReport; strength-proposal-v4-canvas-contract.test.js",
-      "h": "78857355eb48"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: CycleReportScreen Г2: heys_strength_proposal_ui_v1.js:1850+ sb-finish-head+✕ «Отчёт по циклу»+cycleReportHeaderKey; planVsDoneBodyEl reuse .sb-plan-vs-*; вход CycleScreen .sb-cycle-report-link→openCycleReport; strength-proposal-v4-canvas-contract.test.js",
+      "h": "fbe8cd3bfc93"
     },
     "вид · итог программы": {
       "v": "=",
@@ -1035,10 +1035,9 @@
       "h": "564518c92246"
     },
     "чего нет в этом заходе": {
-      "v": "—",
-      "f": "Handoff: разбор 16c–16d исходной сборки не найден; кадр «Программа · цикл» сверен по правилам канваса — strength-builder.v4.dc.html:2456; naKind handoff",
-      "h": "123c890d8ada",
-      "naKind": "handoff"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Handoff: разбор 16c–16d исходной сборки не найден; кадр «Программа · цикл» сверен по правилам канваса — strength-builder.v4.dc.html:2456; naKind handoff",
+      "h": "391a0f28ac0c"
     },
     "фикстура на 23 подхода": {
       "v": "=",
@@ -2309,9 +2308,9 @@
       "h": "5f0b3e3988e9"
     },
     "Программа · цикл · 33": {
-      "v": "=",
-      "f": ".sb-cycle-footnote sm prose; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "3a10bafed6ea"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: .sb-cycle-footnote sm prose; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
+      "h": "6f1be906bde6"
     },
     "Программа · назначено против сделано · 01": {
       "v": "=",
@@ -8380,9 +8379,9 @@
       "h": "940c1650a380"
     },
     "Программа · цикл · текст": {
-      "v": "=",
-      "f": "CycleScreen (proposal_ui:1041–1138) + buildProgramCycleSnapshot; contract test рендерит полный текст кадра: title/key/badge, метрики, фазы, «Эта неделя», сноска — strength-builder-cycle-v4-canvas-contract.test.js:116–138.",
-      "h": "37e97492ad3e"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: CycleScreen (proposal_ui:1041–1138) + buildProgramCycleSnapshot; contract test рендерит полный текст кадра: title/key/badge, метрики, фазы, «Эта неделя», сноска — strength-builder-cycle-v4-canvas-contract.test.js:116–138.",
+      "h": "eed1dfabc6e1"
     },
     "Перенос · след в обе стороны · текст": {
       "v": "≠",
@@ -8482,9 +8481,9 @@
       "f": "Сноска очереди дословно: .sb-cur-sync-foot — superset_ui:2109-2110."
     },
     "Шторка ⋯ · текст": {
-      "h": "7df146c40687",
-      "v": "=",
-      "f": "Сноска шторки дословно: .sb-sheet-footnote — builder_ui:1342-1344; menu-sheet test."
+      "h": "33ff46c1fe23",
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Сноска шторки дословно: .sb-sheet-footnote — builder_ui:1342-1344; menu-sheet test."
     },
     "План в ленте дня · текст": {
       "v": "—",
@@ -8676,9 +8675,9 @@
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2345"
     },
     "вид · отчёт за период": {
-      "v": "=",
-      "f": "PeriodReportScreen Г6: heys_strength_proposal_ui_v1.js:1959+ sb-finish-head «Отчёт за период»; .sb-period-outcomes четыре исхода; debt card+CTA+footnote; 750-strength-builder.css:7628+; strength-proposal-v4-canvas-contract.test.js",
-      "h": "c74307af927a"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: PeriodReportScreen Г6: heys_strength_proposal_ui_v1.js:1959+ sb-finish-head «Отчёт за период»; .sb-period-outcomes четыре исхода; debt card+CTA+footnote; 750-strength-builder.css:7628+; strength-proposal-v4-canvas-contract.test.js",
+      "h": "8bbd8e2085da"
     },
     "снято · проверка «класс красится инлайном не везде»": {
       "v": "—",
@@ -9997,6 +9996,31 @@
       "f": "Пакет 36: строка scope канваса — contract-snapshot.js + data-canonref на 34 кадрах; не поведение продукта — strength-builder.v4.dc.html:2456+",
       "h": "cefbb6176e11",
       "naKind": "handoff"
+    },
+    "Программа · цикл · 34": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "bbd7e24a4256"
+    },
+    "Программа · цикл · 35": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "23f1b43c08ab"
+    },
+    "Программа · цикл · 36": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "3a10bafed6ea"
+    },
+    "Программа · цикл · рисунок 01": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "7d9d1119f1bb"
+    },
+    "Программа · цикл · рисунок 02": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "163302844c74"
     }
   },
   "frames": {

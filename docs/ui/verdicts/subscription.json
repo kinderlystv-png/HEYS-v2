@@ -39,9 +39,9 @@
       "h": "7583d8ba8bb4"
     },
     "слой — центральная модалка": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:54-56: blur(var(--v4-modal-backdrop-blur, 2.5px)); 72-80: left/right 14px, radius 26px, padding 22/18/18; 90-94: close 34px; 829-830: tap scrim закрывает",
-      "h": "ed6c5c106710"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:54-56: blur(var(--v4-modal-backdrop-blur, 2.5px)); 72-80: left/right 14px, radius 26px, padding 22/18/18; 90-94: close 34px; 829-830: tap scrim закрывает",
+      "h": "f2073361a185"
     },
     "три тарифа": {
       "v": "=",
@@ -88,9 +88,9 @@
       "h": "f21d63340325"
     },
     "вид · экран подписки · пробный период": {
-      "v": "=",
-      "f": "apps/web/styles/modules/735-ui-v4-subscription.css:530-668: sub-screen status-card --v4-surface r20 p16; kick/tier --v4-act-text 700 10px/.16em; headline 800 26px; body 0 18px; footnote/support. heys_subscriptions_v1.js trial SubscriptionSection. sand card #f7efe2 blue #eef3f9; act-text sand #8a4a20 blue #1d5e96 (subscription-package-a-v4.test.js)",
-      "h": "0ebc8e8a8d32"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/styles/modules/735-ui-v4-subscription.css:530-668: sub-screen status-card --v4-surface r20 p16; kick/tier --v4-act-text 700 10px/.16em; headline 800 26px; body 0 18px; footnote/support. heys_subscriptions_v1.js trial SubscriptionSection. sand card #f7efe2 blue #eef3f9; act-text sand #8a4a20 blue #1d5e96 (subscription-package-a-v4.test.js)",
+      "h": "f9eb50be76d6"
     },
     "вид · экран подписки · активна": {
       "v": "≠",
@@ -116,7 +116,7 @@
     "вид · баннер сверху": {
       "v": "?",
       "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
-      "h": "9fde9a0c13f0"
+      "h": "32d345a4268c"
     },
     "вид · тост на действии": {
       "v": "?",
@@ -141,7 +141,7 @@
     "вид · карточка тарифа": {
       "v": "?",
       "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
-      "h": "5ec06fc7903f"
+      "h": "48d05dbb2183"
     },
     "вид · блок пробного периода": {
       "v": "?",
@@ -151,7 +151,7 @@
     "вид · проверьте заказ": {
       "v": "?",
       "f": "apps/web/heys_subscriptions_v1.js:1042: Сводное prose-описание; детали в ·02…·NN и «вид ·» соседних блоков",
-      "h": "dd6e7f9b3636"
+      "h": "e1a64f8bb325"
     },
     "вид · оплата прошла": {
       "v": "?",
@@ -709,54 +709,54 @@
       "h": "f83b80058208"
     },
     "Подписка · проверьте заказ · 04": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:860: .paywall-order-name font 700 15px/1.2 «Pro»",
-      "h": "1045720b8968"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:860: .paywall-order-name font 700 15px/1.2 «Pro»",
+      "h": "b210d1e36112"
     },
     "Подписка · проверьте заказ · 05": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:864: блок цены text-align right в .paywall-order-card",
-      "h": "1d5eb3e2f313"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:864: блок цены text-align right в .paywall-order-card",
+      "h": "1045720b8968"
     },
     "Подписка · проверьте заказ · 06": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:865: .paywall-order-price font 800 17px/1 tabular-nums «7 990 ₽»",
-      "h": "78fabf7bf8c3"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:865: .paywall-order-price font 800 17px/1 tabular-nums «7 990 ₽»",
+      "h": "18b06cdab775"
     },
     "Подписка · проверьте заказ · 07": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:866: .paywall-order-period font 500 11px/1; margin-top 4px «за 30 дней»",
-      "h": "88205a677667"
+      "h": "78fabf7bf8c3"
     },
     "Подписка · проверьте заказ · 08": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:870: .paywall-consent align-items flex-start; gap 12px; margin-top 16px; padding 0 2px",
-      "h": "a31c30ef31b7"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:870: .paywall-consent align-items flex-start; gap 12px; margin-top 16px; padding 0 2px",
+      "h": "5a0b7ccb4f81"
     },
     "Подписка · проверьте заказ · 09": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:363: .paywall-consent-box.is-checked background var(--v4-act, #c67139); color var(--v4-btn-on-act, #2b1608); sand act #c67139/on #2b1608 · blue act #1d5e96/on #ffffff",
-      "h": "9ef64d224296"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:363: .paywall-consent-box.is-checked background var(--v4-act, #c67139); color var(--v4-btn-on-act, #2b1608); sand act #c67139/on #2b1608 · blue act #1d5e96/on #ffffff",
+      "h": "a31c30ef31b7"
     },
     "Подписка · проверьте заказ · 10": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:877: .paywall-consent-text font 500 12px/1.45 «Принимаю условия»",
-      "h": "c420a834021d"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:877: .paywall-consent-text font 500 12px/1.45 «Принимаю условия»",
+      "h": "9ef64d224296"
     },
     "Подписка · проверьте заказ · 11": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:882: .paywall-consent-link color var(--v4-act); text-decoration underline",
-      "h": "56d9e6d52361"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:882: .paywall-consent-link color var(--v4-act); text-decoration underline",
+      "h": "c420a834021d"
     },
     "Подписка · проверьте заказ · 12": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:901: .paywall-cta margin-top 18px; «Оплатить 7 990 ₽»; opacity .45 до согласия",
-      "h": "6beee72dee5a"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:901: .paywall-cta margin-top 18px; «Оплатить 7 990 ₽»; opacity .45 до согласия",
+      "h": "56d9e6d52361"
     },
     "Подписка · проверьте заказ · 13": {
-      "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:906: .paywall-cancel min-height 44px; font 600 12px/1; color rgba(var(--v4-ink-rgb), .56)",
-      "h": "b81b231f9fa9"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_subscriptions_v1.js:906: .paywall-cancel min-height 44px; font 600 12px/1; color rgba(var(--v4-ink-rgb), .56)",
+      "h": "6beee72dee5a"
     },
     "Подписка · оплата прошла · 01": {
       "v": "—",
@@ -1350,22 +1350,22 @@
     "Подписка · тарифы · места есть · текст": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
-      "h": "efecadabfb06"
+      "h": "1bfbaefc5a30"
     },
     "Подписка · тарифы · мест нет · текст": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
-      "h": "3ccbba9330f9"
+      "h": "3193079b89e4"
     },
     "Подписка · тарифы · Pro Спорт · текст": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
-      "h": "cc0cc0e423ab"
+      "h": "e74e583a87e3"
     },
     "Подписка · проверьте заказ · текст": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:574-591 / heys_subscriptions_v1.js PaymentScreen: копия кадра сверена с canvas data-v текст",
-      "h": "f9542029d1b3"
+      "h": "2efb43ef7426"
     },
     "Подписка · оплата прошла · текст": {
       "v": "=",
@@ -1373,11 +1373,9 @@
       "h": "1a8e874919aa"
     },
     "Подписка · экран · активна · текст": {
-      "v": "≠",
-      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
-      "h": "5fdf75246faf",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-47-находок.md:1"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "h": "f907bddf0afc"
     },
     "Подписка · экран · только чтение · текст": {
       "v": "=",
@@ -1385,14 +1383,24 @@
       "h": "ed7dc2c35921"
     },
     "Подписка · очередь · заявка подана · текст": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:778: getPaywallCtaLabel «Оформить Pro · 7 990 ₽» + 1101 «Заявка подана · вы N-й в очереди» — copy chain canvas присутствует",
-      "h": "f684d63fa6af"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:778: getPaywallCtaLabel «Оформить Pro · 7 990 ₽» + 1101 «Заявка подана · вы N-й в очереди» — copy chain canvas присутствует",
+      "h": "0314add19307"
     },
     "Подписка · очередь · место освободилось · текст": {
-      "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:1055-1077: copy chain «Место освободилось · Начать пробный период · на подтверждение» в TrialQueueSection",
-      "h": "d3c1d40fb2ea"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: apps/web/heys_paywall_v1.js:1055-1077: copy chain «Место освободилось · Начать пробный период · на подтверждение» в TrialQueueSection",
+      "h": "88d83d9b62d0"
+    },
+    "тач-цели": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "ff5ce40275ff"
+    },
+    "Подписка · проверьте заказ · 14": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "b81b231f9fa9"
     }
   },
   "frames": {

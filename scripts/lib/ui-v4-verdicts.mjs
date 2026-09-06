@@ -76,7 +76,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'curator-cabinet': Object.freeze({
     mismatch: [29, '85c5b18956a3e908'],
     typedMismatch: [5, '45c28c49d17e23d8'],
-    notApplicable: [16, '18e1767ff39da867'],
+    notApplicable: [14, 'd5c0e5d25ec8306b'],
   }),
   'curator-edits': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
@@ -88,9 +88,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 04.09 (вечер): bde48fd79 закрыл последний «?» — legacy mismatch 21 → 20.
     // 06.09, task 152: disable CTA сведён в «=» (16 → 14); две frame-dispute
     // типизированы reasonCode — typedMismatch 4 → 5.
-    mismatch: [14, '4a6067c8ff8f3396'],
-    typedMismatch: [5, 'f679faa2ee194275'],
-    notApplicable: [23, '7558e003ad93df9c'],
+    mismatch: [13, '1d428c157ae2e923'],
+    typedMismatch: [4, '73d74685b79f4e13'],
+    notApplicable: [22, '6989dc63af608a23'],
   }),
   'date-remainders': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
@@ -116,7 +116,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // naKind. Долг вырос относительно пониженной базы 03.09: ≠ 25 → 32,
     // «—» 38 → 54.
     mismatch: [27, 'ec6c0f73e273a572'],
-    notApplicable: [54, '5864600e16443fce'],
+    notApplicable: [53, '6ff13f721aa831ad'],
   }),
   'home-widgets': Object.freeze({
     // 2 сентября: 128 -> 110. Восемнадцать строк «Разбор · … · 78» стояли
@@ -134,12 +134,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   login: Object.freeze({
     mismatch: [47, '68f95f4b8789dcbd'],
-    notApplicable: [301, '624bf9693c19435e'],
+    notApplicable: [300, '09e96c95595984f5'],
   }),
   // Зона заведена 05.09 вместе с первым разбором messenger.v4.dc.html: 4 typed «≠»
   // — это canvas-conflict по строкам, где продукт ещё не сведён с кадром.
   messenger: Object.freeze({
-    typedMismatch: [4, '2013051693f33a06'],
+    typedMismatch: [0, 'e3b0c44298fc1c14'],
   }),
   'norm-correction': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
@@ -162,9 +162,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // назван вслух: у всех 76 «—» нет naKind, а разных фактов на «—» — 26 из 76.
     // 06.09, task 152: одна legacy «≠» сведена в «=» (59 → 58); одна типизирована
     // reasonCode — typedMismatch 0 → 1.
-    mismatch: [58, '46e2bc7b10fc88db'],
+    mismatch: [51, 'cd1a730f03d9a943'],
     typedMismatch: [1, '546fc0e845793148'],
-    notApplicable: [76, 'ea3054255c5fd126'],
+    notApplicable: [74, '8b09da5915e34f96'],
   }),
   'pwa-update': Object.freeze({
     // 06.09, полоса 2/4: 6 legacy «≠» сведены в «=» по факту кода — 10 → 4.
@@ -173,14 +173,14 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   questionnaire: Object.freeze({
     mismatch: [44, 'e7f7d20da23b3877'],
-    notApplicable: [8, '93d4d16668687118'],
+    notApplicable: [7, '18a813a161685464'],
   }),
   registration: Object.freeze({
     // 04.09: Phase1-2 re-review — 2 audit «?» закрыты в «=» (8467957d7, 116a79e09); legacy 67→65.
     // 05.09: 27 legacy «≠» типизированы reasonCode — долг 65 → 38.
     // 06.09, task 152: одна legacy «≠» сведена в «=» (38 → 37); одна типизирована
     // reasonCode — typedMismatch 1 → 2.
-    mismatch: [37, 'ac924ecccc11984b'],
+    mismatch: [31, '61372c33cdaf7220'],
     typedMismatch: [2, 'cc2aeef1a0bae834'],
     notApplicable: [28, '1a861974e2dfd0f8'],
   }),
@@ -202,12 +202,16 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'settings-system': Object.freeze({
     // 04.09: ad762ae20 — 4 stale «≠» → «?», 2 «≠» typed reasonCode.
     // Legacy untyped: 13 → 9 (11 total «≠», из них 2 typed-v1).
-    mismatch: [8, '9233e5246dc376b1'],
-    typedMismatch: [1, '53aeb82771e99b0a'],
-    notApplicable: [23, '93658b5f26c8caeb'],
+    mismatch: [6, 'f15408803d6fd563'],
+    typedMismatch: [3, '73892391895252a7'],
+    notApplicable: [22, '2cbc7eba0ddc099c'],
   }),
   spinners: Object.freeze({
-    mismatch: [27, 'f750371cc4c3e2e0'],
+    mismatch: [14, 'be078aefb156159c'],
+    // 06.09: 0 -> 13. Массовое закрытие по решению дизайнера — «расхождение
+    // видно, принято без разбора». Форму назвал он сам, чтобы «=» не стало
+    // ложным доказательством совпадения кадра и кода.
+    typedMismatch: [13, 'ec1272c6b959073a'],
     notApplicable: [33, '2f00fa5302804302'],
   }),
   'strength-builder': Object.freeze({
@@ -258,18 +262,21 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // входят. Остальные 49 из 78 вообще не называют файл со строкой — это
     // отдельный долг адресов, он назван в задаче полосам.
     // 05.09: 28 typed «≠» сведены в «=» по факту кода — долг 78 → 50.
-    typedMismatch: [50, '8a6c954d844945e6'],
+    typedMismatch: [49, 'a2fc985e553f14d3'],
   }),
   'tab-activity': Object.freeze({
     // 06.09, полоса 2/4: 43 legacy «≠» типизированы reasonCode — mismatch 43 → 0,
     // typedMismatch 1 → 31. Это учёт типизации, не новый необоснованный вердикт.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [31, '711854daff1cdb5a'],
+    typedMismatch: [29, '62b1cbba4826cdb0'],
     notApplicable: [62, 'b3191bb9fbbd6910'],
   }),
   tips: Object.freeze({
-    mismatch: [6, 'a288c63f94557aa0'],
-    notApplicable: [448, 'c20d6000d1712d11'],
+    mismatch: [4, 'deadb20c166fe29b'],
+    // 06.09: 0 -> 2. Тот же класс, что у spinners: принято без разбора
+    // решением дизайнера, вердикт «≠» с owner-decision.
+    typedMismatch: [2, 'efd08a125ebc99c3'],
+    notApplicable: [426, '3ce8607a6612ec9e'],
   }),
   'undo-bar': Object.freeze({
     // 03.09: пакет привёл кадры к продукту — во всех трёх «Отмена · … · 09»

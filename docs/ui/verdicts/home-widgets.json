@@ -159,9 +159,9 @@
       "h": "7c8582f30296"
     },
     "превью": {
-      "v": "=",
-      "f": "renderPreview рисует настоящий WidgetContent (ui:1697), галочка и is-active в variants:382,402",
-      "h": "a3111b3054d1"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: renderPreview рисует настоящий WidgetContent (ui:1697), галочка и is-active в variants:382,402",
+      "h": "29a0c3faa61b"
     },
     "смена": {
       "v": "=",
@@ -1099,9 +1099,9 @@
       "h": "7373f6c88e65"
     },
     "safe-area · правило продукта": {
-      "v": "=",
-      "f": "730-widgets:2630,2689 кнопки и critical:866 навигация — было верно. Плюс лист достижений (gamification_bar) и общий модал разбора (Динамика веса/Оценка дня/Риск-радар) теперь тоже вычитают нижнюю врезку",
-      "h": "ef4a9fea7155"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 730-widgets:2630,2689 кнопки и critical:866 навигация — было верно. Плюс лист достижений (gamification_bar) и общий модал разбора (Динамика веса/Оценка дня/Риск-радар) теперь тоже вычитают нижнюю врезку",
+      "h": "7e498dc31a98"
     },
     "аппаратная кнопка назад · правило продукта": {
       "v": "=",
@@ -1214,9 +1214,9 @@
       "h": "c7595b75d1b1"
     },
     "шапка листа": {
-      "v": "=",
-      "f": "730-widgets:13672 title 15/700; :13679 close 44×44; variants_v4:1269-1277 title + svg close без даты",
-      "h": "5e16f74c2c3d"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 730-widgets:13672 title 15/700; :13679 close 44×44; variants_v4:1269-1277 title + svg close без даты",
+      "h": "08eb6c7470af"
     },
     "герой листа": {
       "v": "=",
@@ -25024,9 +25024,9 @@
       "h": "64d13e295f58"
     },
     "затемнение под слоем · правило продукта": {
-      "v": "=",
-      "f": "002-ui-v4-palette-roles.css: --scrim на четыре набора (песочный rgba(42,26,12,.5), тёмные .62, синий rgba(16,24,38,.45)); --v4-modal-backdrop-dim алиас var(--scrim). 730-widgets-dashboard.css: .widgets-quick-scrim и .widget-wd-sheet__scrim — var(--scrim) + blur 2.5px; .widget-bd-sheet__scrim — var(--scrim) без блюра (строка «каркас разбора · общий»). Тесты: widgets-v4-canvas-geometry, widgets-bd-sheet-canvas-razbor, widgets-canvas-copy, home-widgets-breakdown-v4.",
-      "h": "8027b5a06c60"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 002-ui-v4-palette-roles.css: --scrim на четыре набора (песочный rgba(42,26,12,.5), тёмные .62, синий rgba(16,24,38,.45)); --v4-modal-backdrop-dim алиас var(--scrim). 730-widgets-dashboard.css: .widgets-quick-scrim и .widget-wd-sheet__scrim — var(--scrim) + blur 2.5px; .widget-bd-sheet__scrim — var(--scrim) без блюра (строка «каркас разбора · общий»). Тесты: widgets-v4-canvas-geometry, widgets-bd-sheet-canvas-razbor, widgets-canvas-copy, home-widgets-breakdown-v4.",
+      "h": "b19b671ff72a"
     },
     "тач-цели": {
       "v": "=",

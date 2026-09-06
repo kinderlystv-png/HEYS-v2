@@ -1603,9 +1603,9 @@
       "h": "d590fe1899f3"
     },
     "тач-цели": {
-      "v": "=",
-      "f": "400-water-and-hydration.css: .water-review__chip--quick/--in-row и .water-fab-vol — видимая высота 44px, ::after/::before expanders сняты; .water-fab/.fab-group .water-fab — 44×44; .water-custom-sheet__preset/__confirm — min-height 44px; water-add-v4-canvas-razbor.test.js",
-      "h": "74b06121003b"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 400-water-and-hydration.css: .water-review__chip--quick/--in-row и .water-fab-vol — видимая высота 44px, ::after/::before expanders сняты; .water-fab/.fab-group .water-fab — 44×44; .water-custom-sheet__preset/__confirm — min-height 44px; water-add-v4-canvas-razbor.test.js",
+      "h": "8a798d7f2a5c"
     }
   },
   "frames": {

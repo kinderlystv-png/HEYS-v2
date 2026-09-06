@@ -459,9 +459,9 @@
       "h": "de05cf70d34b"
     },
     "вид чипа": {
-      "v": "=",
-      "f": "732-ui-v4-nutrition.css:1063 .nutrition-v4-chip — min-height 44px (:1068), ::after content:none (:1081-1083); видимая цель без расширителя; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :620-625",
-      "h": "ee64712e5a56"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 732-ui-v4-nutrition.css:1063 .nutrition-v4-chip — min-height 44px (:1068), ::after content:none (:1081-1083); видимая цель без расширителя; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :620-625",
+      "h": "5094dd8e68cc"
     },
     "что нельзя выключить": {
       "v": "=",
@@ -614,9 +614,9 @@
       "h": "203212eee19a"
     },
     "вход в настройку курса": {
-      "v": "=",
-      "f": "732-ui-v4-nutrition.css:1520 .nutrition-v4-supplements__pill.is-course — min-height 44px (:1523), inline-flex, обводка --v4-act; heys_day_nutrition_v1.js:912-916; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :627-634",
-      "h": "3e3696f9cfcd"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 732-ui-v4-nutrition.css:1520 .nutrition-v4-supplements__pill.is-course — min-height 44px (:1523), inline-flex, обводка --v4-act; heys_day_nutrition_v1.js:912-916; apps/web/__tests__/nutrition-tab-v4-contract-fixes.test.js :627-634",
+      "h": "941c06bad8fe"
     },
     "курса нет": {
       "v": "=",
@@ -3695,6 +3695,21 @@
       "v": "=",
       "f": "копия кадра найдена в коде. Проверял не целиком строкой, а поимённо: из каждой копии взяты фразы длиннее восемнадцати знаков без чисел и найдены поиском по дереву. Числа и названия продуктов в кадре — демонстрационные, они приходят из данных человека Кадр и блок в продукте есть; демо-строки кадра не копируются в код",
       "h": "3345a5f435ec"
+    },
+    "тач-цели": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "46f478ecb59b"
+    },
+    "равный выбор, а не склонение": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "6cba78fb8a74"
+    },
+    "след записи в чужой день": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "79d023b33a57"
     }
   },
   "frames": {

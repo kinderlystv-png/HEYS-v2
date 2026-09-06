@@ -1855,9 +1855,9 @@
       "h": "b5aac2f109ce"
     },
     "Капсула · ночь на 21 августа · 03": {
-      "v": "=",
-      "f": "000-base:8043 .date-picker-day-nav width/height 44 px, radius 999, background --v4-surface, color --v4-ink-2; кадр обновлён 5 сентября с 34 на 44; apps/web/__tests__/polosa6-task106-date-remainders-touch-44px.test.js computed + date-remainders-v4-canvas-razbor ·03",
-      "h": "779e987f7662"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 000-base:8043 .date-picker-day-nav width/height 44 px, radius 999, background --v4-surface, color --v4-ink-2; кадр обновлён 5 сентября с 34 на 44; apps/web/__tests__/polosa6-task106-date-remainders-touch-44px.test.js computed + date-remainders-v4-canvas-razbor ·03",
+      "h": "c460f09ba1e6"
     },
     "Капсула · ночь на 21 августа · 04": {
       "v": "=",

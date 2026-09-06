@@ -54,18 +54,14 @@
       "h": "06bb7bc1bad3"
     },
     "«Ждём» — вторая строка шапки": {
-      "v": "≠",
-      "f": "heys_messenger_v1.js:2535 DayChecklistRow шаблоны/API сведены; 1000-messenger.css:313-340 chips min-height 44px — data-v «чипы 30 px»",
-      "h": "6663cb9ccd32",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:116"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: heys_messenger_v1.js:2535 DayChecklistRow шаблоны/API сведены; 1000-messenger.css:313-340 chips min-height 44px — data-v «чипы 30 px»",
+      "h": "fae5109d02d4"
     },
     "подсказка «время и граммы» — рабочая": {
-      "v": "≠",
-      "f": "heys_messenger_v1.js:2424 FoodHintCard + shouldShowFoodHint streak=10; 1000-messenger.css:1859 pills min-height 44px — data-v «пилюль 32 px»",
-      "h": "7bbada7b7f01",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:116"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: heys_messenger_v1.js:2424 FoodHintCard + shouldShowFoodHint streak=10; 1000-messenger.css:1859 pills min-height 44px — data-v «пилюль 32 px»",
+      "h": "3362411b3228"
     },
     "карточка «Внесено в дневник» — системная": {
       "v": "=",
@@ -114,18 +110,14 @@
       "h": "a412eae18f08"
     },
     "вид · шапка": {
-      "v": "≠",
-      "f": "1000-messenger.css:148-377 padding 14/12/10/18, avatar 38px, title 14.5/700, subtitle 11/500, buttons 44px round — data-v «кнопки 40 px»",
-      "h": "90529c6c4bba",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:116"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 1000-messenger.css:148-377 padding 14/12/10/18, avatar 38px, title 14.5/700, subtitle 11/500, buttons 44px round — data-v «кнопки 40 px»",
+      "h": "d9d5046ca0b5"
     },
     "вид · строка «Ждём»": {
-      "v": "≠",
-      "f": "1000-messenger.css:279-340 padding 8/18/10, label 9.5/.14em, chips min-height 44px padding 0/11 — data-v «чипы 30 px»",
-      "h": "16d6db95a391",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:116"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 1000-messenger.css:279-340 padding 8/18/10, label 9.5/.14em, chips min-height 44px padding 0/11 — data-v «чипы 30 px»",
+      "h": "38d69e082b93"
     },
     "вид · тред": {
       "v": "=",
@@ -1634,6 +1626,11 @@
       "f": "текстовый слой кадра канваса, не runtime-копия продукта",
       "h": "e5d7058421f9",
       "naKind": "demo-only"
+    },
+    "тач-цели": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "fb2555e9a93f"
     }
   },
   "frames": {
