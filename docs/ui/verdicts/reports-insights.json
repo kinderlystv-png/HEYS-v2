@@ -1349,7 +1349,7 @@
     },
     "Визуал v4 · Отчёты · 27": {
       "v": "=",
-      "f": "733-ui-v4-reports.css:148-155 .reports-v4-hero__footer-text — 600 12px/1 tabular-nums var(--v4-ink-2)",
+      "f": "733-ui-v4-reports.css:148-155 .reports-v4-hero__footer-text — 600 12px/1 tabular-nums var(--v4-ink-2); 733-ui-v4-reports.css:148 .reports-v4-hero__footer-text color; 733-ui-v4-reports.css:148 .reports-v4-hero__footer-text color; 733-ui-v4-reports.css:148 .reports-v4-hero__footer-text color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "175a5c73fd85"
     },
     "Визуал v4 · Отчёты · 28": {
@@ -1399,7 +1399,7 @@
     },
     "Визуал v4 · Отчёты · 37": {
       "v": "=",
-      "f": "740-cascade-card.css:1128-1131 .heys-score-tile__entry-label — 600 12px/1 var(--v4-ink-2)",
+      "f": "740-cascade-card.css:1128-1131 .heys-score-tile__entry-label — 600 12px/1 var(--v4-ink-2); 740-cascade-card.css:1128 .heys-score-tile__entry-label color; 740-cascade-card.css:1128 .heys-score-tile__entry-label color; 740-cascade-card.css:1128 .heys-score-tile__entry-label color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "f57252f169e4"
     },
     "Визуал v4 · Отчёты · 38": {
@@ -2126,7 +2126,7 @@
     },
     "Инсайты · 23": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:214-218 .insights-priority-action__freeze-label — 600 10.5px/1 var(--v4-ink-2)",
+      "f": "734-ui-v4-insights.css:214-218 .insights-priority-action__freeze-label — 600 10.5px/1 var(--v4-ink-2); 734-ui-v4-insights.css:214 .insights-priority-action__freeze-label color; 734-ui-v4-insights.css:214 .insights-priority-action__freeze-label color; 734-ui-v4-insights.css:214 .insights-priority-action__freeze-label color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "c4f72c477b3f"
     },
     "Инсайты · 24": {
@@ -2316,20 +2316,20 @@
     },
     "Инсайты · 61": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:731-735 .insights-v4-window__label «окно наблюдения» — color var(--v4-ink-4)",
+      "f": "734-ui-v4-insights.css:731-735 .insights-v4-window__label «окно наблюдения» — color var(--v4-ink-4); 734-ui-v4-insights.css:731 .insights-v4-window__label color; 734-ui-v4-insights.css:731 .insights-v4-window__label color; 734-ui-v4-insights.css:731 .insights-v4-window__label color; sand rgba(0,0,0/0.38) blue rgba(0,0,0/0.38) — computed :3001 2026-09-06",
       "h": "e0372dc3743e"
     },
     "Инсайты · 62": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:753-756 .insights-v4-window__chip.is-active «7 дней» — min-height 44px, bg var(--v4-chip), color var(--v4-act-text)",
+      "f": "734-ui-v4-insights.css:753-756 .insights-v4-window__chip.is-active «7 дней» — min-height 44px, bg var(--v4-chip), color var(--v4-act-text); 734-ui-v4-insights.css:753 .insights-v4-window__chip.is-active color; 734-ui-v4-insights.css:753 .insights-v4-window__chip.is-active color; 734-ui-v4-insights.css:753 .insights-v4-window__chip.is-active color; sand rgb(138,74,32) blue rgb(29,94,150) — computed :3001 2026-09-06",
       "h": "530fb0c9dbea"
     },
     "Инсайты · 63": {
       "v": "≠",
-      "f": "Невыбранный чип «30» — color var(--v4-ink-30) сведён (734-ui-v4-insights.css:744), но min-height 44px против 34px кадра",
+      "f": "Невыбранный чип «30» — color var(--v4-ink-30) (734-ui-v4-insights.css:744), min-height 44px (734-ui-v4-insights.css:737) против 34px кадра ·63; 734-ui-v4-insights.css:744 .insights-v4-window__chip:not(.is-active) color; 734-ui-v4-insights.css:744 .insights-v4-window__chip:not(.is-active) color; 734-ui-v4-insights.css:744 .insights-v4-window__chip:not(.is-active) color; sand rgba(0,0,0/0.3) blue rgba(0,0,0/0.3) — computed :3001 2026-09-06",
       "h": "d334efd7ed7a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "apps/web/styles/modules/734-ui-v4-insights.css:737"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4330"
     },
     "Инсайты · 64": {
       "v": "=",
@@ -2343,7 +2343,7 @@
     },
     "Инсайты · 66": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:792-797 .insights-v4-patterns__title — color var(--v4-ink-2)",
+      "f": "734-ui-v4-insights.css:792-797 .insights-v4-patterns__title — color var(--v4-ink-2); 734-ui-v4-insights.css:792 .insights-v4-patterns__title color; 734-ui-v4-insights.css:792 .insights-v4-patterns__title color; 734-ui-v4-insights.css:792 .insights-v4-patterns__title color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "c7711751308b"
     },
     "Инсайты · 67": {
@@ -2353,12 +2353,12 @@
     },
     "Инсайты · 68": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:669-674 .insights-v4-maturity--rule — 700 9px/1 mono, bg var(--v4-ok-bg), color var(--v4-ok-text)",
+      "f": "734-ui-v4-insights.css:669-674 .insights-v4-maturity--rule — 700 9px/1 mono, bg var(--v4-ok-bg), color var(--v4-ok-text); 734-ui-v4-insights.css:669 .insights-v4-maturity--rule color; 734-ui-v4-insights.css:669 .insights-v4-maturity--rule color; 734-ui-v4-insights.css:669 .insights-v4-maturity--rule color; sand rgb(92,106,69) blue rgb(31,110,77) — computed :3001 2026-09-06",
       "h": "f2c13f55c244"
     },
     "Инсайты · 69": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:799-803 .insights-v4-patterns__support «18 дней» — color var(--v4-ink-4), tabular-nums",
+      "f": "734-ui-v4-insights.css:799-803 .insights-v4-patterns__support «18 дней» — color var(--v4-ink-4), tabular-nums; 734-ui-v4-insights.css:799 .insights-v4-patterns__support color; 734-ui-v4-insights.css:799 .insights-v4-patterns__support color; 734-ui-v4-insights.css:799 .insights-v4-patterns__support color; sand rgba(0,0,0/0.38) blue rgba(0,0,0/0.38) — computed :3001 2026-09-06",
       "h": "6dcc6ba517f0"
     },
     "Инсайты · 70": {
@@ -2373,7 +2373,7 @@
     },
     "Инсайты · 72": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:316-321 .insights-v4-detail-link__text «Подробно» — 700 12.5px/1 var(--v4-act-text)",
+      "f": "734-ui-v4-insights.css:316-321 .insights-v4-detail-link__text «Подробно» — 700 12.5px/1 var(--v4-act-text); 734-ui-v4-insights.css:316 .insights-v4-detail-link__text color; 734-ui-v4-insights.css:316 .insights-v4-detail-link__text color; 734-ui-v4-insights.css:316 .insights-v4-detail-link__text color; sand rgb(138,74,32) blue rgb(29,94,150) — computed :3001 2026-09-06",
       "h": "a458c2ab75e1"
     },
     "Инсайты · 73": {
@@ -2567,9 +2567,11 @@
       "h": "db0f71846c8a"
     },
     "Инсайты · ярус Питание · 06": {
-      "v": "=",
-      "f": ".meal-rec-card--v4 border none, box-shadow none, background var(--v4-card); .meal-rec-v4__why var(--v4-ink-2); computed sand/blue — polosa4-task41-legacy-surface-v4.test.js.",
-      "h": "d8a3b1fa0b2d"
+      "v": "≠",
+      "f": "720-predictive-insights.css:8993-9010 .meal-rec-card__title/.meal-rec-card__subtitle — пре-v4 карточка рекомендации; кегль/тон не сведены с кадром яруса Питание ·06",
+      "h": "d8a3b1fa0b2d",
+      "reasonCode": "canvas-conflict",
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4876"
     },
     "Инсайты · ярус Питание · 07": {
       "v": "=",
@@ -2988,7 +2990,7 @@
     },
     "Инсайты · риск срыва · 17": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:246-259 .insights-v4-attention__more «Ещё N» — min-height 44px, 600 12px/1 var(--v4-ink-2), без фона",
+      "f": "734-ui-v4-insights.css:246-259 .insights-v4-attention__more «Ещё N» — min-height 44px, 600 12px/1 var(--v4-ink-2), без фона; 734-ui-v4-insights.css:246 .insights-v4-attention__more color; 734-ui-v4-insights.css:246 .insights-v4-attention__more color; 734-ui-v4-insights.css:246 .insights-v4-attention__more color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "f02ed3222b84"
     },
     "Инсайты · что если · 01": {
@@ -3123,7 +3125,7 @@
     },
     "Раскрывашка · Как считается долг · 05": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:354-360 .insights-v4-detail__disclaimer — 500 12px/1.55 var(--v4-ink-2), margin-top 10px",
+      "f": "734-ui-v4-insights.css:354-360 .insights-v4-detail__disclaimer — 500 12px/1.55 var(--v4-ink-2), margin-top 10px; 734-ui-v4-insights.css:354 .insights-v4-detail__disclaimer color; 734-ui-v4-insights.css:354 .insights-v4-detail__disclaimer color; 734-ui-v4-insights.css:354 .insights-v4-detail__disclaimer color; sand rgba(0,0,0/0.38) blue rgba(0,0,0/0.38) — computed :3001 2026-09-06",
       "h": "650149b8651a"
     },
     "Раскрывашка · Как считается долг · 06": {
@@ -3153,7 +3155,7 @@
     },
     "Раскрывашка · Как посчитано · 05": {
       "v": "=",
-      "f": "734-ui-v4-insights.css:354-360 .insights-v4-detail__disclaimer — тот же класс пояснения, var(--v4-ink-2)",
+      "f": "734-ui-v4-insights.css:354-360 .insights-v4-detail__disclaimer — тот же класс пояснения, var(--v4-ink-2); 734-ui-v4-insights.css:354 .insights-v4-detail__disclaimer color; 734-ui-v4-insights.css:354 .insights-v4-detail__disclaimer color; 734-ui-v4-insights.css:354 .insights-v4-detail__disclaimer color; sand rgba(0,0,0/0.38) blue rgba(0,0,0/0.38) — computed :3001 2026-09-06",
       "h": "d2d774f6d04b"
     },
     "Раскрывашка · Как посчитано · 06": {
@@ -4144,7 +4146,7 @@
     },
     "День под порогом · выбор · 07": {
       "v": "=",
-      "f": "heys_day_low_cal_banner_v1.js:216 renderChoiceBanner descLine — 500 12px/1.5 var(--v4-ink-2), margin-top 6px inline",
+      "f": "heys_day_low_cal_banner_v1.js:216 renderChoiceBanner descLine — 500 12px/1.5 var(--v4-ink-2), margin-top 6px inline; heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "338a5ef911e8"
     },
     "День под порогом · выбор · 08": {
@@ -4219,7 +4221,7 @@
     },
     "День пустой · выбор · 07": {
       "v": "=",
-      "f": "heys_day_low_cal_banner_v1.js:208-217 renderChoiceBanner — descLine 12px var(--v4-ink-2) для пустого pending-дня",
+      "f": "heys_day_low_cal_banner_v1.js:208-217 renderChoiceBanner — descLine 12px var(--v4-ink-2) для пустого pending-дня; heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "5c5a4845ac60"
     },
     "День пустой · выбор · 08": {
@@ -4324,7 +4326,7 @@
     },
     "Мало калорий · подтверждение · 11": {
       "v": "=",
-      "f": "heys_day_low_cal_banner_v1.js:216 — descLine «Сейчас N из M ккал…» 12px/1.5 var(--v4-ink-2)",
+      "f": "heys_day_low_cal_banner_v1.js:216 — descLine «Сейчас N из M ккал…» 12px/1.5 var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "58af45a23159"
     },
     "Мало калорий · подтверждение · 12": {
@@ -4389,7 +4391,7 @@
     },
     "Мало калорий · рекомендуем очистить · 07": {
       "v": "=",
-      "f": "heys_day_low_cal_banner_v1.js:216 — descLine low-kcal recommend tier, var(--v4-ink-2)",
+      "f": "heys_day_low_cal_banner_v1.js:216 — descLine low-kcal recommend tier, var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); heys_day_low_cal_banner_v1.js:216 descLine color var(--v4-ink-2); sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "7faf4b9ed302"
     },
     "Мало калорий · рекомендуем очистить · 08": {
@@ -4499,7 +4501,7 @@
     },
     "Визуал v4 · Отчёты · рисунок 16": {
       "v": "=",
-      "f": "733-ui-v4-reports.css:409-413 .sparkline-goal--reports-v4 — stroke var(--v4-ink-30), width 2, dasharray 3 5",
+      "f": "733-ui-v4-reports.css:409-413 .sparkline-goal--reports-v4 — stroke var(--v4-ink-30), width 2, dasharray 3 5; 733-ui-v4-reports.css:409 .sparkline-goal--reports-v4 stroke; 733-ui-v4-reports.css:409 .sparkline-goal--reports-v4 stroke; 733-ui-v4-reports.css:409 .sparkline-goal--reports-v4 stroke; sand rgba(0,0,0/0.3) blue rgba(0,0,0/0.3) — computed :3001 2026-09-06",
       "h": "348a3afd3b9b"
     },
     "Визуал v4 · Отчёты · рисунок 17": {
@@ -4804,7 +4806,7 @@
     },
     "Мало калорий · подтверждение · рисунок 02": {
       "v": "=",
-      "f": "733-ui-v4-reports.css:409-413 .sparkline-goal--reports-v4 — линия var(--v4-ink-30) толщиной 2, dash 4 4 у tier-кадра совпадает с ролью набора",
+      "f": "733-ui-v4-reports.css:409-413 .sparkline-goal--reports-v4 — линия var(--v4-ink-30) толщиной 2, dash 4 4 у tier-кадра совпадает с ролью набора; 733-ui-v4-reports.css:409 .sparkline-goal--reports-v4 stroke; 733-ui-v4-reports.css:409 .sparkline-goal--reports-v4 stroke; 733-ui-v4-reports.css:409 .sparkline-goal--reports-v4 stroke; sand rgba(0,0,0/0.3) blue rgba(0,0,0/0.3) — computed :3001 2026-09-06",
       "h": "a7fa5a327ed2"
     },
     "Мало калорий · подтверждение · рисунок 03": {

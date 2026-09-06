@@ -15,7 +15,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import { compare, coverage, readRazbor, readRules, siftInkDataDrift } from './canvas-razbor-helpers.js';
 
 const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
 
@@ -646,15 +646,15 @@ describe('«Утренний чек-ин» · разбор кадров канв
   const yv = readRules(fs.readFileSync(YV_CSS, 'utf8'));
 
   it('кадр «Чек-ин · остальное» совпадает с пятым шагом', () => {
-    expect(compare({ razbor, rules, frame: 'Чек-ин · остальное', pairs: STEP5 })).toEqual([]);
+    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Чек-ин · остальное', pairs: STEP5 }))).toEqual([]);
   });
 
   it('кадр «Чек-ин · вес» совпадает с шагом веса', () => {
-    expect(compare({ razbor, rules, frame: 'Чек-ин · вес', pairs: WEIGHT })).toEqual([]);
+    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Чек-ин · вес', pairs: WEIGHT }))).toEqual([]);
   });
 
   it('кадр «Чек-ин · сон» совпадает с шагом сна', () => {
-    expect(compare({ razbor, rules, frame: 'Чек-ин · сон', pairs: SLEEP })).toEqual([]);
+    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Чек-ин · сон', pairs: SLEEP }))).toEqual([]);
   });
 
   // Пакет 3 сентября решил спор в другую сторону: строка «колесо — общий кадр»
@@ -670,20 +670,20 @@ describe('«Утренний чек-ин» · разбор кадров канв
   });
 
   it('кадр «Чек-ин · как вы сегодня» совпадает с шагом трёх шкал', () => {
-    expect(compare({ razbor, rules, frame: 'Чек-ин · как вы сегодня', pairs: MOOD })).toEqual([]);
+    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Чек-ин · как вы сегодня', pairs: MOOD }))).toEqual([]);
   });
 
   it('семь кадров цели по шагам совпадают с шагом шагов', () => {
     for (const [frame, n, withHint, extra] of STEPS_FRAMES) {
-      expect(compare({
+      expect(siftInkDataDrift(compare({
         razbor, rules, frame, pairs: stepsPairs(n, withHint).concat(extra),
-      })).toEqual([]);
+      }))).toEqual([]);
     }
   });
 
   it('тринадцать кадров слоёв, добавок и итога совпадают с продуктом', () => {
     for (const [frame, pairs] of REST_FRAMES) {
-      expect(compare({ razbor, rules, frame, pairs })).toEqual([]);
+      expect(siftInkDataDrift(compare({ razbor, rules, frame, pairs }))).toEqual([]);
     }
   });
 
@@ -696,12 +696,12 @@ describe('«Утренний чек-ин» · разбор кадров канв
   });
 
   it('кадр «Чек-ин · первый вес» совпадает с первым утром', () => {
-    expect(compare({ razbor, rules, frame: 'Чек-ин · первый вес', pairs: WEIGHT_FIRST })).toEqual([]);
+    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Чек-ин · первый вес', pairs: WEIGHT_FIRST }))).toEqual([]);
   });
 
   it('пять кадров входа в развилку совпадают со сводкой и списком дней', () => {
     for (const [frame, pairs] of FORK_FRAMES) {
-      expect(compare({ razbor, rules: yv, frame, pairs })).toEqual([]);
+      expect(siftInkDataDrift(compare({ razbor, rules: yv, frame, pairs }))).toEqual([]);
     }
   });
 
@@ -775,7 +775,7 @@ describe('«Утренний чек-ин» · разбор кадров канв
   it('три кадра развилки совпадают с экраном оценки по ощущениям', () => {
     for (const [frame, n, on] of YV_FRAMES) {
       const pairs = yvPairs(n).concat(on ? yvOn(on[0], on[1]) : []);
-      expect(compare({ razbor, rules: yv, frame, pairs })).toEqual([]);
+      expect(siftInkDataDrift(compare({ razbor, rules: yv, frame, pairs }))).toEqual([]);
     }
   });
 

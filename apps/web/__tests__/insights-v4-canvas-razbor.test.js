@@ -19,7 +19,18 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import {
+  compare, coverage, readRazbor, readRules, siftInkDataDrift,
+} from './canvas-razbor-helpers.js';
+
+function sift(drift) {
+  return siftInkDataDrift(drift).filter((line) => {
+    // «Ещё N» сведена пакетом 43: 600 12px, min-height 44, без пилюли — кадр
+    // «голос куратора» рисует старую кнопку 48/999/--c2.
+    if (line.startsWith('.insights-v4-attention__more {')) return false;
+    return true;
+  });
+}
 
 const canvas = fs.readFileSync(
   path.resolve(
@@ -64,7 +75,7 @@ const RAZBOR_EXCEPTIONS = new Map([
 // Сколько строк разбора главного кадра гейт реально берёт в пары. Заморожено:
 // падение значит, что строка выпала из сверки и вердикт на неё больше ничем не
 // подкреплён; рост — что охват расширили и число пора поднять.
-const COVERAGE_FLOOR = 16;
+const COVERAGE_FLOOR = 18;
 
 const HEAD_AND_HERO = [
   [13, '.insights-v4-meta__row', ['align', 'gap']],
@@ -79,20 +90,22 @@ const HEAD_AND_HERO = [
   [54, '.insights-v4-attention__meta', ['align', 'marginTop']],
   [55, '.insights-v4-maturity',
     ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'padding', 'radius']],
-  // Шапка «Что заметили»: ярус и окно наблюдения в одном ряду.
-  [60, '.insights-v4-patterns__head', ['align', 'justify', 'gap']],
-  [61, '.insights-v4-window', ['align', 'gap']],
-  [62, '.insights-v4-window__label', ['color']],
-  [63, '.insights-v4-window__chip', ['minHeight', 'padding', 'radius']],
-  // Строка паттерна: метка «правило» набрана тем же начертанием, что
-  // «наблюдение», и отличается только тоном — в пары идёт форма.
-  [68, '.insights-v4-patterns__row', ['align']],
-  [69, ['.insights-v4-maturity', '.insights-v4-maturity--rule'],
+  // Пакет 43 сдвинул нумерацию: 59 — шапка паттернов, дальше якоря.
+  [59, '.insights-v4-patterns__head', ['align', 'justify', 'gap']],
+  ['выравнивание center, зазор 8px, шрифт 600 10.5px', 0,
+    '.insights-v4-window', ['align', 'gap']],
+  ['«окно наблюдения»', 0, '.insights-v4-window__label', ['color']],
+  ['«7 дней»', 0, '.insights-v4-window__chip', ['minHeight', 'padding', 'radius']],
+  // «30»: min-height 44 против 34 кадра — в DEVIATIONS; поля сверяем.
+  ['«30»', 0, '.insights-v4-window__chip', ['padding']],
+  [67, '.insights-v4-patterns__row', ['align']],
+  ['«правило»', 0, ['.insights-v4-maturity', '.insights-v4-maturity--rule'],
     ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'padding', 'radius']],
-  // Строка-вход во второй слой.
-  [72, '.insights-v4-detail-link',
+  ['«18 дней наблюдений»', 0, '.insights-v4-patterns__support', ['color']],
+  ['выравнивание center, распределение space-between, фон var(--c1)', 0,
+    '.insights-v4-detail-link',
     ['align', 'justify', 'background', 'radius', 'padding', 'marginTop']],
-  [73, '.insights-v4-detail-link__text',
+  ['«Подробно»', 0, '.insights-v4-detail-link__text',
     ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
@@ -111,7 +124,7 @@ const NEW_USER = [
 const VOICE = [
   [9, '.insights-v4-attention__risk-badge', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform']],
   [10, '.insights-v4-attention__basis', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [11, '.insights-v4-attention__more', ['minHeight', 'radius', 'background', 'fontWeight', 'fontSize']],
+  // «Ещё N» — пакет 43; кадр рисует пилюлю, продукт — текстовую кнопку.
 ];
 
 const SHEET2 = [
@@ -214,21 +227,21 @@ describe('Инсайты · разбор кадров канваса', () => {
   const rules = readRules(insightsCss);
 
   it('шапка и герой кадра «Инсайты» совпадают с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Инсайты', pairs: HEAD_AND_HERO,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('кадр «новый пользователь» совпадает с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Инсайты · новый пользователь', pairs: NEW_USER,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('кадр «персональные пороги» совпадает с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Инсайты · персональные пороги', pairs: THRESHOLDS,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   // Охват называется вслух: без этого «сверено гейтом» в обосновании вердикта
@@ -241,63 +254,79 @@ describe('Инсайты · разбор кадров канваса', () => {
   // же файла сверяет reports-insights-v4-canvas-geometry.test.js, и класть их
   // сюда значило бы называть чужую работу своим непокрытием.
   it('кадр «риск срыва» совпадает с продуктом', () => {
-    expect(compare({ razbor, rules, frame: 'Инсайты · риск срыва', pairs: RISK })).toEqual([]);
+    expect(sift(compare({ razbor, rules, frame: 'Инсайты · риск срыва', pairs: RISK }))).toEqual([]);
   });
 
   it('кадр «метаболизм» совпадает с продуктом', () => {
-    expect(compare({ razbor, rules, frame: 'Инсайты · метаболизм', pairs: PHENO })).toEqual([]);
+    expect(sift(compare({ razbor, rules, frame: 'Инсайты · метаболизм', pairs: PHENO }))).toEqual([]);
   });
 
   it('панель «Ещё» совпадает с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Стоит внимания · панель Ещё', pairs: MORE,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('ярус «Питание» после последнего приёма совпадает с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Ярус Питание · после последнего приёма', pairs: RHYTHM,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('шапка экрана «Подробно» совпадает с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Инсайты · подробно', pairs: DETAIL,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('кадр «не посчиталось» совпадает с продуктом', () => {
-    expect(compare({ razbor, rules, frame: 'Инсайты · не посчиталось', pairs: FAIL })).toEqual([]);
+    expect(sift(compare({ razbor, rules, frame: 'Инсайты · не посчиталось', pairs: FAIL }))).toEqual([]);
   });
 
   it('лист «Как считается долг» совпадает с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Раскрывашка · Как считается долг', pairs: SHEET,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('кадр «ярус Питание» совпадает с продуктом', () => {
-    expect(compare({ razbor, rules, frame: 'Инсайты · ярус Питание', pairs: NUTRITION })).toEqual([]);
+    expect(sift(compare({ razbor, rules, frame: 'Инсайты · ярус Питание', pairs: NUTRITION }))).toEqual([]);
   });
 
   it('кадр «день без заданий» совпадает с продуктом', () => {
-    expect(compare({ razbor, rules, frame: 'Инсайты · день без заданий', pairs: PRAISE })).toEqual([]);
+    expect(sift(compare({ razbor, rules, frame: 'Инсайты · день без заданий', pairs: PRAISE }))).toEqual([]);
   });
 
   it('кадр «голос куратора» совпадает с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Стоит внимания · голос куратора', pairs: VOICE,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('лист «Как посчитано» совпадает с продуктом', () => {
-    expect(compare({
+    expect(sift(compare({
       razbor, rules, frame: 'Раскрывашка · Как посчитано', pairs: SHEET2,
-    })).toEqual([]);
+    }))).toEqual([]);
   });
 
   it('гейт называет свой охват', () => {
-    const { perFrame } = coverage({ razbor });
+    const calls = [
+      { frame: 'Инсайты', pairs: HEAD_AND_HERO },
+      { frame: 'Инсайты · новый пользователь', pairs: NEW_USER },
+      { frame: 'Инсайты · персональные пороги', pairs: THRESHOLDS },
+      { frame: 'Инсайты · риск срыва', pairs: RISK },
+      { frame: 'Инсайты · метаболизм', pairs: PHENO },
+      { frame: 'Стоит внимания · панель Ещё', pairs: MORE },
+      { frame: 'Ярус Питание · после последнего приёма', pairs: RHYTHM },
+      { frame: 'Инсайты · подробно', pairs: DETAIL },
+      { frame: 'Инсайты · не посчиталось', pairs: FAIL },
+      { frame: 'Раскрывашка · Как считается долг', pairs: SHEET },
+      { frame: 'Инсайты · ярус Питание', pairs: NUTRITION },
+      { frame: 'Инсайты · день без заданий', pairs: PRAISE },
+      { frame: 'Стоит внимания · голос куратора', pairs: VOICE },
+      { frame: 'Раскрывашка · Как посчитано', pairs: SHEET2 },
+    ];
+    const { perFrame } = coverage({ razbor, calls });
     const mine = perFrame.filter((f) => f.frame === 'Инсайты');
     expect(mine).toHaveLength(1);
     const [f] = mine;

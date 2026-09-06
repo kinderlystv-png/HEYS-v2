@@ -245,8 +245,10 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, пакет 43: «27», «37», «рисунок 16», «риск срыва · 17» → «=»;
     // «Инсайты · 63» — новый typed ≠ (min-height); mismatch 124 → 120,
     // typedMismatch 18 → 19.
+    // 06.09, пакет 43 tail: «Инсайты · ярус Питание · 06» → typed ≠ (meal-rec);
+    // typedMismatch 19 → 20.
     mismatch: [120, 'eebb1cfb3f75a65b'],
-    typedMismatch: [19, '33a2ea0429c269ca'],
+    typedMismatch: [20, 'e153882907ee5e18'],
     notApplicable: [131, '6754e4d70d6ce812'],
   }),
   'service-curator': Object.freeze({

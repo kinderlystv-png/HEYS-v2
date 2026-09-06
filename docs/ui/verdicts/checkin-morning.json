@@ -1449,7 +1449,7 @@
     },
     "Чек-ин · вес · 19": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:7369-7372 .mc-weight-kilo-card .mc-wheel-value--prev/next — 600 16px/1.45, color var(--v4-ink-30)",
+      "f": "500-pwa-and-offline.css:7369-7372 .mc-weight-kilo-card .mc-wheel-value--prev/next — 600 16px/1.45, color var(--v4-ink-30); 500-pwa-and-offline.css:7369 .mc-weight-kilo-card .mc-wheel-value--prev color; 500-pwa-and-offline.css:7369 .mc-weight-kilo-card .mc-wheel-value--prev color; 500-pwa-and-offline.css:7369 .mc-weight-kilo-card .mc-wheel-value--prev color; sand color(srgb0.125490.1176470.113725/0.22) blue color(srgb0.06274510.09411760.14902/0.22) — computed :3001 2026-09-06",
       "h": "31c13142c893"
     },
     "Чек-ин · вес · 20": {
@@ -1554,7 +1554,7 @@
     },
     "Чек-ин · первый вес · 16": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:7369-7372 — соседнее значение колеса веса, тот же класс и роль --v4-ink-30",
+      "f": "500-pwa-and-offline.css:7369-7372 — соседнее значение колеса веса, тот же класс и роль --v4-ink-30; 500-pwa-and-offline.css:7369 .mc-weight-kilo-card .mc-wheel-value--prev color; 500-pwa-and-offline.css:7369 .mc-weight-kilo-card .mc-wheel-value--prev color; 500-pwa-and-offline.css:7369 .mc-weight-kilo-card .mc-wheel-value--prev color; sand color(srgb0.125490.1176470.113725/0.22) blue color(srgb0.06274510.09411760.14902/0.22) — computed :3001 2026-09-06",
       "h": "b9fb9b620fb7"
     },
     "Чек-ин · первый вес · 17": {
@@ -1864,7 +1864,7 @@
     },
     "Чек-ин · сон · 25": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:7240-7243 .mc-sleep-combined .mc-wheel-value--prev/next — 600 16px/1.45 var(--v4-ink-30)",
+      "f": "500-pwa-and-offline.css:7240-7243 .mc-sleep-combined .mc-wheel-value--prev/next — 600 16px/1.45 var(--v4-ink-30); 500-pwa-and-offline.css:7240 .mc-sleep-combined .mc-wheel-value--prev color; 500-pwa-and-offline.css:7240 .mc-sleep-combined .mc-wheel-value--prev color; 500-pwa-and-offline.css:7240 .mc-sleep-combined .mc-wheel-value--prev color; sand color(srgb0.125490.1176470.113725/0.22) blue color(srgb0.06274510.09411760.14902/0.22) — computed :3001 2026-09-06",
       "h": "d7998cb0c0ca"
     },
     "Чек-ин · сон · 26": {
@@ -2104,7 +2104,7 @@
     },
     "Чек-ин · цель по шагам · 24": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice — 700 11.5px/1, color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice — 700 11.5px/1, color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "db36a5cf36a0"
     },
     "Чек-ин · цель по шагам · 25": {
@@ -2179,7 +2179,7 @@
     },
     "Чек-ин · остальное · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» — min-height 44px, color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» — min-height 44px, color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "5f72bea6608c"
     },
     "Чек-ин · остальное · 12": {
@@ -2209,7 +2209,7 @@
     },
     "Чек-ин · остальное · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «до 12:00» — min-height 44px, color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «до 12:00» — min-height 44px, color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "c8022eb9749d"
     },
     "Чек-ин · остальное · 18": {
@@ -2279,7 +2279,7 @@
     },
     "Чек-ин · остальное · 31": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1962-1964 .mc-rest-row-actions .mc-pill — font-size 11.5px на пилюле «Сделал», color var(--v4-ink-2) у .mc-pill--choice",
+      "f": "500-pwa-and-offline.css:1962-1964 .mc-rest-row-actions .mc-pill — font-size 11.5px на пилюле «Сделал», color var(--v4-ink-2) у .mc-pill--choice; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "19dcf9ec0f4a"
     },
     "Чек-ин · остальное · 32": {
@@ -2359,7 +2359,7 @@
     },
     "Чек-ин · замеры просрочены · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice в строке просроченных замеров — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice в строке просроченных замеров — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "5f72bea6608c"
     },
     "Чек-ин · замеры просрочены · 12": {
@@ -2389,7 +2389,7 @@
     },
     "Чек-ин · замеры просрочены · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «до 12:00» в кадре просрочки — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «до 12:00» в кадре просрочки — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "c8022eb9749d"
     },
     "Чек-ин · замеры просрочены · 18": {
@@ -2459,7 +2459,7 @@
     },
     "Чек-ин · замеры просрочены · 31": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделал» в кадре просрочки — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделал» в кадре просрочки — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "19dcf9ec0f4a"
     },
     "Чек-ин · замеры просрочены · 32": {
@@ -2604,7 +2604,7 @@
     },
     "Чек-ин · холод тип · 20": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2555-2559 .mc-rest-cold-time .mc-wheel-value--prev/next — 600 12px/1.5 var(--v4-ink-30)",
+      "f": "500-pwa-and-offline.css:2555-2559 .mc-rest-cold-time .mc-wheel-value--prev/next — 600 12px/1.5 var(--v4-ink-30); 500-pwa-and-offline.css:2555 .mc-rest-cold-time .mc-wheel-value--prev color; 500-pwa-and-offline.css:2555 .mc-rest-cold-time .mc-wheel-value--prev color; 500-pwa-and-offline.css:2555 .mc-rest-cold-time .mc-wheel-value--prev color; sand rgba(0,0,0/0.3) blue rgba(0,0,0/0.3) — computed :3001 2026-09-06",
       "h": "67ae11eed5e1"
     },
     "Чек-ин · холод тип · 21": {
@@ -2624,7 +2624,7 @@
     },
     "Чек-ин · холод тип · 24": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2573-2580 .mc-rest-cold-clear — font 700 12px/1 var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:2573-2580 .mc-rest-cold-clear — font 700 12px/1 var(--v4-ink-2); 500-pwa-and-offline.css:2573 .mc-rest-cold-clear color; 500-pwa-and-offline.css:2573 .mc-rest-cold-clear color; 500-pwa-and-offline.css:2573 .mc-rest-cold-clear color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "53fde5b50148"
     },
     "Чек-ин · холод тип · 25": {
@@ -2729,7 +2729,7 @@
     },
     "Чек-ин · замеры · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1259-1266 .mc-pill--quiet «Не сейчас» — font 600 12px/1; тон приведён к --v4-ink-2 в пакете 43",
+      "f": "500-pwa-and-offline.css:1259-1266 .mc-pill--quiet «Не сейчас» — font 600 12px/1; тон приведён к --v4-ink-2 в пакете 43; 500-pwa-and-offline.css:1259 .mc-pill--quiet color; 500-pwa-and-offline.css:1259 .mc-pill--quiet color; 500-pwa-and-offline.css:1259 .mc-pill--quiet color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "de63ec5c9301"
     },
     "Чек-ин · замеры · 19": {
@@ -2799,7 +2799,7 @@
     },
     "Чек-ин · остальное минимум · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» минимум — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» минимум — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "5f72bea6608c"
     },
     "Чек-ин · остальное минимум · 12": {
@@ -2829,7 +2829,7 @@
     },
     "Чек-ин · остальное минимум · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» минимум — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» минимум — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "76104603973e"
     },
     "Чек-ин · остальное минимум · 18": {
@@ -2899,7 +2899,7 @@
     },
     "Чек-ин · остальное со строкой периода · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» со строкой периода — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» со строкой периода — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "5f72bea6608c"
     },
     "Чек-ин · остальное со строкой периода · 12": {
@@ -2924,7 +2924,7 @@
     },
     "Чек-ин · остальное со строкой периода · 16": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделал» со строкой периода — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделал» со строкой периода — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "19dcf9ec0f4a"
     },
     "Чек-ин · остальное со строкой периода · 17": {
@@ -3029,7 +3029,7 @@
     },
     "Чек-ин · остальное на неделе периода · 14": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Закончились» — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Закончились» — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "7d33a09229da"
     },
     "Чек-ин · остальное на неделе периода · 15": {
@@ -3064,7 +3064,7 @@
     },
     "Чек-ин · остальное на неделе периода · 21": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» на неделе периода — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» на неделе периода — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "f238c442493d"
     },
     "Чек-ин · остальное на неделе периода · 22": {
@@ -3074,7 +3074,7 @@
     },
     "Чек-ин · остальное на неделе периода · 23": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1947-1951 .mc-rest-row--measurements-deferred .mc-rest-card-title — 600 13px/1 var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1947-1951 .mc-rest-row--measurements-deferred .mc-rest-card-title — 600 13px/1 var(--v4-ink-2); 500-pwa-and-offline.css:1947 .mc-rest-row--measurements-deferred .mc-rest-card-title color; 500-pwa-and-offline.css:1947 .mc-rest-row--measurements-deferred .mc-rest-card-title color; 500-pwa-and-offline.css:1947 .mc-rest-row--measurements-deferred .mc-rest-card-title color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "541da5308816"
     },
     "Чек-ин · остальное на неделе периода · 24": {
@@ -3159,7 +3159,7 @@
     },
     "Чек-ин · курс добавок пуст · 13": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1259-1266 .mc-pill--quiet «Позже» — font 600 12px/1 var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1259-1266 .mc-pill--quiet «Позже» — font 600 12px/1 var(--v4-ink-2); 500-pwa-and-offline.css:1259 .mc-pill--quiet color; 500-pwa-and-offline.css:1259 .mc-pill--quiet color; 500-pwa-and-offline.css:1259 .mc-pill--quiet color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "05ca3420abd0"
     },
     "Добавки · курс · 01": {
@@ -3301,7 +3301,7 @@
     },
     "Добавки · добавление · 14": {
       "v": "=",
-      "f": "732-ui-v4-nutrition.css:1093 .nutrition-v4-chip__label «Выбрано» — 700 12px/1.3 var(--v4-ink-2)",
+      "f": "732-ui-v4-nutrition.css:1093 .nutrition-v4-chip__label «Выбрано» — 700 12px/1.3 var(--v4-ink-2); 732-ui-v4-nutrition.css:1093 .nutrition-v4-chip__label color; 732-ui-v4-nutrition.css:1093 .nutrition-v4-chip__label color; 732-ui-v4-nutrition.css:1093 .nutrition-v4-chip__label color; sand rgb(43,22,8) blue rgb(255,255,255) — computed :3001 2026-09-06",
       "h": "a5473f34ab36"
     },
     "Добавки · добавление · 15": {
@@ -3446,7 +3446,7 @@
     },
     "Чек-ин · согласие не подписано · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» согласие — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Было» согласие — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "5f72bea6608c"
     },
     "Чек-ин · согласие не подписано · 12": {
@@ -3476,7 +3476,7 @@
     },
     "Чек-ин · согласие не подписано · 17": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» согласие — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» согласие — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "76104603973e"
     },
     "Чек-ин · согласие не подписано · 18": {
@@ -3501,7 +3501,7 @@
     },
     "Чек-ин · согласие не подписано · 22": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Не сейчас» согласие — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Не сейчас» согласие — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "97dfef0e11de"
     },
     "Чек-ин · согласие не подписано · 23": {
@@ -4201,7 +4201,7 @@
     },
     "Чек-ин · записано · 07": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1677-1682 .mc-recorded-sub — 500 12px/1.5 var(--v4-ink-2), margin-top 7px",
+      "f": "500-pwa-and-offline.css:1677-1682 .mc-recorded-sub — 500 12px/1.5 var(--v4-ink-2), margin-top 7px; 500-pwa-and-offline.css:1677 .mc-recorded-sub color; 500-pwa-and-offline.css:1677 .mc-recorded-sub color; 500-pwa-and-offline.css:1677 .mc-recorded-sub color; sand rgba(0,0,0/0.56) blue rgba(16,24,38/0.64) — computed :3001 2026-09-06",
       "h": "cdfd0c049830"
     },
     "Чек-ин · записано · 08": {
@@ -4281,7 +4281,7 @@
     },
     "Чек-ин · записано с расчётным весом · 07": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1677-1682 .mc-recorded-sub — та же строка серии, color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1677-1682 .mc-recorded-sub — та же строка серии, color var(--v4-ink-2); 500-pwa-and-offline.css:1677 .mc-recorded-sub color; 500-pwa-and-offline.css:1677 .mc-recorded-sub color; 500-pwa-and-offline.css:1677 .mc-recorded-sub color; sand rgba(0,0,0/0.56) blue rgba(16,24,38/0.64) — computed :3001 2026-09-06",
       "h": "ee9a1a5f2453"
     },
     "Чек-ин · записано с расчётным весом · 08": {
@@ -5331,7 +5331,7 @@
     },
     "Рутина · резервный вопрос после еды · 38": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» резервный вопрос — color var(--v4-ink-2)",
+      "f": "500-pwa-and-offline.css:1234-1236 .mc-pill--choice «Сделаю» резервный вопрос — color var(--v4-ink-2); 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; 500-pwa-and-offline.css:1234 .mc-pill--choice color; sand rgba(0,0,0/0.55) blue rgba(0,0,0/0.55) — computed :3001 2026-09-06",
       "h": "677e97666e0f"
     },
     "Рутина · резервный вопрос после еды · 39": {

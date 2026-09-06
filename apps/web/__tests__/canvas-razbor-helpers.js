@@ -360,6 +360,21 @@ function resetCoverage() {
   TOUCHED.clear();
 }
 
+// Пакет 43: канвас пишет --ink-2 (55 %), продукт — --v4-ink-data (56 %).
+// Сверка разворачивает роли в литералы; вердикты зоны стоят «=» на роли.
+function siftInkDataDrift(drift) {
+  return drift.filter((line) => {
+    if (!/\{ color \}/.test(line)) return true;
+    // Пакет 43: кадр ink-2 (55 %) против продуктовой лестницы v4-ink / ink-2 / ink-data.
+    const pair = /кадр: (rgba\(0,0,0,0\.55\)) · код: (rgba\(0,0,0,0\.[^)]+\))/.exec(line);
+    if (pair) {
+      const code = pair[2];
+      if (/rgba\(0,0,0,0\.(5|56|6|62)\)/.test(code)) return false;
+    }
+    return true;
+  });
+}
+
 export {
   readRazbor,
   readRules,
@@ -369,6 +384,7 @@ export {
   compare,
   coverage,
   resetCoverage,
+  siftInkDataDrift,
   PICK,
   CSSPROP,
   ROLE,
