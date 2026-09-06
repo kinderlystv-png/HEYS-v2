@@ -114,6 +114,15 @@
         });
     }
 
+    // «Рендерер есть» проверяется по точке входа, а не по истинности объекта:
+    // непустой, но безрендерный ReactDOM проходил `!ReactDOM` и падал уже
+    // внутри mount — приём при этом не создавался (fail-closed держался), но
+    // человек не видел ни листа, ни причины, а промис addMeal отклонялся.
+    function canMountMealDateTargetSheet() {
+        if (!React || !ReactDOM) return false;
+        return typeof ReactDOM.createRoot === 'function' || typeof ReactDOM.render === 'function';
+    }
+
     function mountMealDateTargetSheet(props) {
         const host = document.createElement('div');
         host.id = 'heys-meal-date-target-root';
@@ -187,10 +196,16 @@
             );
         }
 
-        if (root) {
-            root.render(React.createElement(MealDateTargetSheet));
-        } else {
-            ReactDOM.render(React.createElement(MealDateTargetSheet), host);
+        try {
+            if (root) {
+                root.render(React.createElement(MealDateTargetSheet));
+            } else {
+                ReactDOM.render(React.createElement(MealDateTargetSheet), host);
+            }
+        } catch (err) {
+            // Иначе пустой хост останется в body и перехватит клики по экрану.
+            host.remove();
+            throw err;
         }
 
         return cleanup;
@@ -199,7 +214,7 @@
     async function confirmMealCreationDate(dateKey, { onReturnToday, getTodayDay, getOpenDay } = {}) {
         const todayKey = _getTodayISO();
         if (!dateKey || dateKey === todayKey) return dateKey;
-        if (!React || !ReactDOM) {
+        if (!canMountMealDateTargetSheet()) {
             HEYS.Toast?.error?.('Не удалось подтвердить дату — приём не создан');
             return null;
         }
@@ -214,17 +229,25 @@
                 resolve(targetDate);
             };
 
-            cleanup = mountMealDateTargetSheet({
-                openDayKey: dateKey,
-                todayKey,
-                todayMealCount: countMealsWithProducts(todayDay),
-                openMealCount: countMealsWithProducts(openDay),
-                onCancel: () => finish(null),
-                onConfirm: (targetDate) => {
-                    if (targetDate === todayKey) onReturnToday?.(todayKey);
-                    finish(targetDate);
-                },
-            });
+            try {
+                cleanup = mountMealDateTargetSheet({
+                    openDayKey: dateKey,
+                    todayKey,
+                    todayMealCount: countMealsWithProducts(todayDay),
+                    openMealCount: countMealsWithProducts(openDay),
+                    onCancel: () => finish(null),
+                    onConfirm: (targetDate) => {
+                        if (targetDate === todayKey) onReturnToday?.(todayKey);
+                        finish(targetDate);
+                    },
+                });
+            } catch (err) {
+                // Лист не поднялся — дату подтвердить нечем. Fail closed:
+                // null вместо даты, приём не создаётся, причина названа вслух.
+                trackError(err, 'confirmMealCreationDate');
+                HEYS.Toast?.error?.('Не удалось подтвердить дату — приём не создан');
+                resolve(null);
+            }
         });
     }
 

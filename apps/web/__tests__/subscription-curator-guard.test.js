@@ -328,8 +328,16 @@ describe('HEYS.Subscription curator guard', () => {
       subscriptionsModuleSource.indexOf('function SubscriptionSection('),
       subscriptionsModuleSource.indexOf('function showPaymentRequired('),
     );
-    expect(subscriptionSectionSource).toContain("subscriptionStatus === 'read_only'");
-    expect(subscriptionSectionSource).not.toContain("status?.status === 'trial' || status?.status === 'read_only'");
+    // Проверка сторожит правило: «только чтение» и «пробный» — РАЗНЫЕ ветки,
+    // и активный пробный не получает раннего призыва к оплате. Форма записи
+    // изменилась при сведении экрана подписки с канвасом: вместо инлайновых
+    // сравнений status?.status появились именованные флаги. Правило от этого
+    // не ослабло, а стало виднее, поэтому сторожим его, а не прежний литерал.
+    expect(subscriptionSectionSource).toContain("const isReadOnly = subscriptionStatus === 'read_only'");
+    expect(subscriptionSectionSource).toContain("const isTrial = subscriptionStatus === 'trial'");
+    expect(subscriptionSectionSource).toContain('if (isReadOnly)');
+    // Слитая ветка вернула бы пробному экран «только чтение» вместе с оплатой.
+    expect(subscriptionSectionSource).not.toMatch(/isReadOnly\s*\|\|\s*isTrial|isTrial\s*\|\|\s*isReadOnly/);
   });
 
   it('does not remount trial welcome after dismiss in the same session', () => {

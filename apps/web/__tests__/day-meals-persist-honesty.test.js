@@ -18,7 +18,15 @@ describe('day/_meals.js — честность после записи в localS
   it('не показывает ложный успех при провале записи приёма (fork-модалка вместо toast)', () => {
     const source = readDayMealsSource();
     const anchor = "const mealPersisted = persistDayData(newDayData, 'create_meal_mobile_flow');";
-    const mealCreateBlock = source.slice(source.indexOf(anchor), source.indexOf(anchor) + 700);
+    const start = source.indexOf(anchor);
+    expect(start).toBeGreaterThan(-1);
+    // Раньше окно было фиксированным (+700 символов) и разъехалось, когда в
+    // ветку успеха добавили undo для записи в чужой день (лист выбора даты).
+    // Граница теперь структурная: развилка обязана целиком уместиться между
+    // записью в LS и событием heysMealAdded, которое эту ветку закрывает.
+    const end = source.indexOf('heysMealAdded', start);
+    expect(end).toBeGreaterThan(start);
+    const mealCreateBlock = source.slice(start, end);
     expect(mealCreateBlock).toContain('const mealPersisted = persistDayData(');
     expect(mealCreateBlock).toContain('if (mealPersisted) {');
     expect(mealCreateBlock).not.toContain("HEYS.Toast?.success('Приём создан');");

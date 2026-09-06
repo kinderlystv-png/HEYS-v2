@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import React from 'react';
+import * as ReactDOMClient from 'react-dom/client';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,17 +32,25 @@ function setNavigatorConnection(connection) {
     });
 }
 
+// Лист выбора даты монтируется руками через ReactDOM, поэтому пустая заглушка
+// `{}` (годилась, пока диалог был ConfirmModal) больше не работает: нужен
+// настоящий createRoot. Сломанный рендерер подаётся явно — тестом fail-closed.
 function loadMealModule({
     connection = { saveData: true, effectiveType: '4g' },
     ImageCtor = originalWindowImage,
     requestIdleCallback = originalRequestIdleCallback,
+    reactDOM = { createRoot: ReactDOMClient.createRoot },
 } = {}) {
     globalThis.React = React;
-    globalThis.ReactDOM = {};
+    globalThis.ReactDOM = reactDOM;
     globalThis.HEYS = {
         Paywall: {
             canWriteSync: vi.fn(() => true),
             showBlockedToast: vi.fn(),
+        },
+        Toast: {
+            error: vi.fn(),
+            success: vi.fn(),
         },
         ConfirmModal: {
             show: vi.fn(),
@@ -275,57 +284,123 @@ describe('meal plate guide', () => {
         expect(imageHarness.images).toHaveLength(0);
     });
 
+    // Диалог даты переписан: вместо ConfirmModal со склонением к сегодня
+    // («Перейти на сегодня» / «Всё-таки записать») — лист «На какой день
+    // записать?» с двумя равными рядами и отдельной кнопкой действия. Правила
+    // те же: до явного подтверждения приём не создаётся, а если лист поднять
+    // нечем — не создаётся тем более.
     it('blocks meal creation on another date until the warning is explicitly confirmed', async () => {
         const HEYS = loadMealModule();
         const { getHandlers } = renderHandlersHarness(HEYS, { date: '2020-01-02' });
-        HEYS.ConfirmModal.show.mockResolvedValueOnce('confirm');
 
+        let dismissed;
         await act(async () => {
-            await getHandlers().addMeal({ skipPlateGuide: true });
+            dismissed = getHandlers().addMeal({ skipPlateGuide: true });
         });
 
-        expect(HEYS.ConfirmModal.show).toHaveBeenCalledTimes(1);
-        const modalOptions = HEYS.ConfirmModal.show.mock.calls[0][0];
-        expect(modalOptions.title).toBe('');
-        expect(modalOptions.defaultActionValue).toBe('today');
-        expect(modalOptions.cancelActionValue).toBe('today');
-        expect(modalOptions.actions[0]).toMatchObject({ value: 'today', isDefault: true, isCancel: true });
-        expect(modalOptions.actions[1]).toMatchObject({ value: 'confirm', variant: 'text' });
-        expect(modalOptions.actions[1].label).toContain('2 января');
+        const sheet = document.querySelector('.nutrition-v4-date-target-sheet');
+        expect(sheet).toBeTruthy();
+        expect(sheet.getAttribute('aria-label')).toBe('На какой день записать?');
+        // Два равных ряда, а не «опасное» и «безопасное» действие.
+        const rows = [...sheet.querySelectorAll('.nutrition-v4-sheet__row')];
+        expect(rows).toHaveLength(2);
+        expect(rows[0].textContent).toContain('2 января');
+        expect(rows[0].textContent).toContain('открытый день');
+        expect(rows[0].className).toContain('is-selected');
+        expect(rows[1].textContent).toContain('Сегодня');
+        expect(rows[1].className).not.toContain('is-selected');
+        // Пока кнопку действия не нажали — приём не создан.
+        expect(HEYS.MealStep.showAddMeal).not.toHaveBeenCalled();
 
-        render(modalOptions.text);
-        expect(screen.getByRole('alert')).toBeTruthy();
-        expect(screen.getByText('Внимание')).toBeTruthy();
-        expect(screen.getByText(/Приём запишется на 2 января, а не на сегодня/)).toBeTruthy();
-        expect(screen.getByText(/В календаре выбран другой день/)).toBeTruthy();
+        // Уход из листа без выбора тоже ничего не создаёт.
+        await act(async () => {
+            fireEvent.keyDown(document, { key: 'Escape' });
+            expect(await dismissed).toBe(false);
+        });
+        expect(HEYS.MealStep.showAddMeal).not.toHaveBeenCalled();
+        expect(document.querySelector('.nutrition-v4-date-target-sheet')).toBeNull();
+
+        let confirmed;
+        await act(async () => {
+            confirmed = getHandlers().addMeal({ skipPlateGuide: true });
+        });
+        const cta = document.querySelector('.nutrition-v4-cta');
+        expect(cta.textContent).toBe('Записать на 2 января');
+
+        await act(async () => {
+            fireEvent.click(cta);
+            await confirmed;
+        });
+
         expect(HEYS.MealStep.showAddMeal).toHaveBeenCalledTimes(1);
+        expect(HEYS.MealStep.showAddMeal.mock.calls[0][0].dateKey).toBe('2020-01-02');
     });
 
-    it('returns to today without creating a meal when the safe action is chosen', async () => {
+    // Прежнее имя — «returns to today without creating a meal when the safe
+    // action is chosen». Ряды теперь равны, поэтому «сегодня» это не отступление
+    // от записи, а выбор дня: календарь переезжает на сегодня И приём пишется
+    // туда же. Отказ от записи остался за уходом из листа (тест выше).
+    it('switches to today and records there when the today row is chosen', async () => {
         const HEYS = loadMealModule();
         const { getHandlers } = renderHandlersHarness(HEYS, { date: '2020-01-02' });
         const setSelectedDate = vi.fn();
         globalThis.window.__heysSetSelectedDate = setSelectedDate;
-        HEYS.ConfirmModal.show.mockResolvedValueOnce('today');
+
+        let pending;
+        await act(async () => {
+            pending = getHandlers().addMeal({ skipPlateGuide: true });
+        });
+
+        const rows = [...document.querySelectorAll('.nutrition-v4-sheet__row')];
+        await act(async () => {
+            fireEvent.click(rows[1]);
+        });
+        expect(rows[1].className).toContain('is-selected');
+        expect(rows[0].className).not.toContain('is-selected');
 
         await act(async () => {
-            await getHandlers().addMeal({ skipPlateGuide: true });
+            fireEvent.click(document.querySelector('.nutrition-v4-cta'));
+            await pending;
         });
 
         expect(setSelectedDate).toHaveBeenCalledWith(getTodayISO());
-        expect(HEYS.MealStep.showAddMeal).not.toHaveBeenCalled();
+        expect(HEYS.MealStep.showAddMeal).toHaveBeenCalledTimes(1);
+        expect(HEYS.MealStep.showAddMeal.mock.calls[0][0].dateKey).toBe(getTodayISO());
     });
 
+    // Правило безопасности: дату подтвердить нечем — приём не создаётся, и
+    // причина названа вслух. Проверяются оба отказа рендерера: его нет вовсе и
+    // он падает на рендере (раньше второй случай выбрасывал исключение из
+    // addMeal вместо тихого fail-closed с тостом).
     it('fails closed when the date cannot be confirmed', async () => {
-        const HEYS = loadMealModule();
+        const HEYS = loadMealModule({ reactDOM: {} });
         const { getHandlers } = renderHandlersHarness(HEYS, { date: '2020-01-02' });
-        HEYS.ConfirmModal.show = undefined;
 
         await act(async () => {
-            await getHandlers().addMeal({ skipPlateGuide: true });
+            expect(await getHandlers().addMeal({ skipPlateGuide: true })).toBe(false);
         });
 
         expect(HEYS.MealStep.showAddMeal).not.toHaveBeenCalled();
+        expect(HEYS.Toast.error).toHaveBeenCalledWith('Не удалось подтвердить дату — приём не создан');
+        expect(document.querySelector('.nutrition-v4-date-target-sheet')).toBeNull();
+
+        const throwingDOM = {
+            createRoot: () => ({
+                render: () => { throw new Error('renderer down'); },
+                unmount: vi.fn(),
+            }),
+        };
+        const brokenHEYS = loadMealModule({ reactDOM: throwingDOM });
+        const broken = renderHandlersHarness(brokenHEYS, { date: '2020-01-02' });
+
+        await act(async () => {
+            expect(await broken.getHandlers().addMeal({ skipPlateGuide: true })).toBe(false);
+        });
+
+        expect(brokenHEYS.MealStep.showAddMeal).not.toHaveBeenCalled();
+        expect(brokenHEYS.Toast.error).toHaveBeenCalledWith('Не удалось подтвердить дату — приём не создан');
+        // Пустой хост не остаётся в DOM перехватывать клики.
+        expect(document.getElementById('heys-meal-date-target-root')).toBeNull();
     });
 
     it('starts meal creation directly — the plate guide was removed 2026-08-13 (owner decision: shown every time, no "don\'t show again", pure annoyance)', async () => {

@@ -267,7 +267,11 @@ describe('Meal preset bulk add', () => {
   it('marks a newly created mobile meal as pending before the next modal can open', () => {
     const mealsSource = readDayMealsSource();
 
-    expect(mealsSource).toContain("HEYS.Day?.markPendingMutation?.(date);");
+    // Лист «На какой день записать?» сделал дату приёма явной: поток пишет в
+    // выбранный `flowDate`, а не в ambient `date` вкладки. Правило то же —
+    // мутация помечается pending ДО открытия следующей модалки, — но помечается
+    // для того дня, куда приём реально ляжет.
+    expect(mealsSource).toContain("HEYS.Day?.markPendingMutation?.(flowDate);");
     expect(mealsSource).toContain("persistDayData(newDayData, 'create_meal_mobile_flow');");
     expect(mealsSource).toContain('HEYS.Day?.requestFlush?.({ force: true });');
   });
