@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#14181D; font-family:'Golos Text',system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  a { color:#C3CBD4; } a:hover { color:#E8EBEF; }
+  .spec { display:grid; grid-template-columns:190px 1fr; gap:4px 18px; padding:9px 0; border-bottom:1px solid #262C33; }
+  .spec > b { font-size:12px; font-weight:600; letter-spacing:0.02em; color:#8FB4D8; }
+  .spec > span[data-v]::before { content:attr(data-v); font-size:13px; line-height:1.5; color:#E8EBEF; }
+  .check { display:grid; grid-template-columns:220px 54px 54px 1fr; gap:4px 14px; align-items:baseline; padding:8px 0; border-bottom:1px solid #262C33; }
+  .check > b { font-size:12.5px; font-weight:500; color:#C3CBD4; }
+  .check > span { min-height:18px; border-bottom:1px dashed #333B45; }
+  .check > span:nth-child(2), .check > span:nth-child(3) { text-align:center; }
+  .check-head { border-bottom:1px solid #3A4450; padding-bottom:10px; }
+  .check-head > b, .check-head > span { font-size:10.5px; font-weight:600; letter-spacing:0.14em; text-transform:uppercase; color:#8D97A3; border:0; }
+  .spec > i { grid-column:2; font-style:normal; font-size:12px; line-height:1.5; color:#8D97A3; }
+</style>
+<script>
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-copy-spec]');
+    if (!b) return;
+    var box = b.closest('div');
+    var rows = [].slice.call(box.querySelectorAll('.spec')).map(function (r) {
+      var k = r.querySelector('b'), v = r.querySelector('span[data-v]');
+      return (k ? k.textContent : '') + '\t' + (v ? v.getAttribute('data-v') : '');
+    });
+    if (!b.dataset.label) b.dataset.label = b.textContent;
+    function say(msg) {
+      b.textContent = msg;
+      clearTimeout(b._restore);
+      b._restore = setTimeout(function () { b.textContent = b.dataset.label; }, 2200);
+    }
+    function plural(n) {
+      var d = n % 10, dd = n % 100;
+      if (d === 1 && dd !== 11) return n + ' строка';
+      if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return n + ' строки';
+      return n + ' строк';
+    }
+    var text = rows.join('\n');
+    if (!navigator.clipboard) { say('Буфер недоступен — скопируйте вручную'); return; }
+    navigator.clipboard.writeText(text).then(function () {
+      say('Скопировано · ' + plural(rows.length));
+    }, function () {
+      say('Не скопировалось — кликните по странице и повторите');
+    });
+  });
+</script>
+</helmet>
+
+<section style="padding:44px 40px 60px;color:#E8EBEF">
+  <h1 style="margin:0 0 8px;font-size:15px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#8D97A3">Контракты · лендинг D</h1>
+  <p style="margin:0 0 10px;max-width:860px;font-size:14px;line-height:1.6;color:#A5AEB9">Значения живут здесь по одному разу — в атрибуте <span style="color:#8FB4D8">data-v</span>, оттуда же рисуются. Курсивом под строкой — причина решения: воспроизводить не обязательно, переспаривать без причины не нужно. Проза на доске ревью может повторять числа; <span style="color:#E8EBEF">при расхождении верен этот файл и код</span>.</p>
+  <p style="margin:0 0 36px;max-width:860px;font-size:13.5px;line-height:1.6;color:#8D97A3">Контракты пишутся по одному перед передачей блока — впрок они устаревают раньше, чем их прочитают. Кадры блоков помечены в сборке атрибутами <span style="color:#8FB4D8">data-screen-label</span> и <span style="color:#8FB4D8">data-demo="stop"</span>; по какому из них мерить — сказано в контракте блока. Разделы «Открыто до передачи» — то, что кодер не решает сам: пункт уходит оттуда, только когда решение написано текстом.</p>
+
+  <div style="display:flex;flex-direction:column;gap:44px;width:max-content">
+
+    <div style="display:grid;grid-template-columns:390px 860px;gap:14px 28px;align-items:start">
+      <div style="grid-column:1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:#1F3329;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8FD3A8">Общее</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">Для страницы</span>
+        <span style="font-size:12.5px;color:#8D97A3">страничные константы</span>
+      </div>
+      <div style="grid-column:1;grid-row:2;width:390px;box-sizing:border-box;border:1px dashed #2E4256;border-radius:16px;background:#151A20;padding:16px 17px">
+        <p style="margin:0;font-size:13px;line-height:1.6;color:#A5AEB9">Константы страницы живут только здесь. Контракты блоков на них <span style="color:#E8EBEF">ссылаются словами</span>, а не копируют значение — иначе при правке сетки придётся вспомнить про каждый блок.</p>
+        <p style="margin:9px 0 0;font-size:12.5px;line-height:1.6;color:#8D97A3">Блочными остаются только те числа, которые у блоков разные: точка переключения раскладки, зазор карточек, положение фото.</p>
+      </div>
+      <div style="grid-column:2;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:#1E2A38;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8FB4D8">Контракт</span>
+        <span style="font-size:12.5px;color:#8D97A3">одно значение — одна строка — одно место</span>
+      </div>
+      <div style="grid-column:2;grid-row:2;width:860px;box-sizing:border-box;border:1px solid #2A3138;border-radius:16px;background:#171B20;padding:16px 17px">
+        <div class="spec"><b>ширины</b><span data-v="390 · 768 · 1280"></span><i>контрольные; между ними тянется, ломается на 560</i></div>
+        <div class="spec"><b>контейнер</b><span data-v="max 1060; блок заявки и FAQ — 760 и 860"></span></div>
+        <div class="spec"><b>поля контейнера</b><span data-v="20 на ≤560, иначе 32"></span><i>на 390 внутренние 40/44 съедали 39% ширины — отсюда 20; совпадает с продом (.pricing-wrap, .trial-wrap) · подтверждено владельцем 21.08</i></div>
+        <div class="spec"><b>ответ куратора</b><span data-v="ориентир ~1–2 часа, ежедневно 09:00–21:00 МСК · слово «ориентир» — ссылка на § 5.4"></span><i>принят ориентир, не обязательство: § 5.1 оферты снимает гарантии по скорости, а § 5.4 задаёт потолок в сутки</i></div>
+        <div class="spec"><b>контраст подписей</b><span data-v="не светлее #5F6A77 на светлом фоне · #8D97A3 на тёмном"></span><i>≈5.2:1 и ≈5.5:1; 11–12px требуют 4.5:1</i></div>
+        <div class="spec"><b>порог reveal</b><span data-v="0.94 вьюпорта, один механизм на всю страницу"></span><i>дёргается и по таймеру, и из обработчика скролла — иначе задержка до 250 мс</i></div>
+        <div class="spec"><b>минимальный кегль</b><span data-v="11px; служебные подписи не мельче"></span><i>ниже не проходит AA ни на одном фоне доски</i></div>
+        <p style="margin:14px 0 0;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#D8A0A0">Открыто до передачи</p>
+        <p style="margin:8px 0 0;font-size:12.5px;line-height:1.6;color:#A5AEB9">— Формулировка «отвечаю в тот же день; задержусь — скажу сам» рассматривалась как обязательство вместо ориентира и нарисована в кадрах оси ответственности. Сейчас принят ориентир; вернуть её можно только вместе с решением по оси.</p>
+                <button type="button" data-copy-spec="1" style="margin-top:14px;width:100%;background:#1E2A38;border:1px solid #2E4256;color:#8FB4D8;font-family:'Golos Text',sans-serif;font-weight:600;font-size:13px;border-radius:12px;padding:11px 16px;cursor:pointer">Скопировать контракт</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:390px 860px;gap:14px 28px;align-items:start">
+      <div style="grid-column:1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 9px;border-radius:999px;background:#2A3138;font-size:12px;font-weight:600;letter-spacing:0.04em;color:#E8EBEF">05</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">Кто ведёт</span>
+        <span style="font-size:12.5px;color:#8D97A3">блок 05</span>
+      </div>
+      <div style="grid-column:1;grid-row:2;width:390px;box-sizing:border-box;border:1px dashed #2E4256;border-radius:16px;background:#151A20;padding:16px 17px">
+        <p style="margin:0;font-size:13px;line-height:1.6;color:#A5AEB9">Второй контракт после тарифов: здесь решение принято, макеты нарисованы, блок ждёт передачи. Дальше — по одному перед передачей, впрок не пишем.</p>
+        <p style="margin:9px 0 0;font-size:12.5px;line-height:1.6;color:#8D97A3">Кадры блока помечены на доске атрибутами <span style="color:#8FB4D8">data-screen-label</span> и <span style="color:#8FB4D8">data-demo="stop"</span>. Их три: «как в коде», «исправленный» и «ось ответственности». Мерить по «исправленный»; третий — эскиз до решения по оси.</p>
+      </div>
+      <div style="grid-column:2;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:#1E2A38;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8FB4D8">Контракт</span>
+        <span style="font-size:12.5px;color:#8D97A3">кадры помечены на доске · целевой назван ниже</span>
+      </div>
+      <div style="grid-column:2;grid-row:2;width:860px;box-sizing:border-box;border:1px solid #2A3138;border-radius:16px;background:#171B20;padding:16px 17px">
+        <div class="spec"><b>раскладка блока</b><span data-v="фото сбоку только от 768; ниже — сверху"></span><i>на 390 кадр 120×150 рядом с именем оставляет тексту 210px</i></div>
+        <div class="spec"><b>зазоры блока</b><span data-v="карточка radius 20 · внутренние 20/18"></span><i>поля контейнера — из блока «Общее для страницы»</i></div>
+                <div class="spec"><b>порядок</b><span data-v="фото · имя · цитата куратора · дневник участницы · «Один порядок разбора» · «кому не подходит»"></span><i>состав по оси ответственности; при отказе от оси остаются первые три и «Один порядок разбора»</i></div>
+        <div class="spec"><b>дневник участницы</b><span data-v="месяц заполненных дней — еда, сон, вес, с провалами · подпись «дневник участницы, месяц подряд»"></span><i>имени не называем и «клиентом» не зовём; тот же дневник идёт в демо-ролике героя и дублируется скринами в 04</i></div>
+        <div class="spec"><b>«кому не подходит»</b><span data-v="четыре пункта: результат к дате · готовый план без разговоров · лечебное питание · неготовность присылать данные"></span><i>готовность отказать читается как уверенность; место в 05, не перед формой</i></div>
+        <div class="spec"><b>подача постулатов</b><span data-v="A · список с маркерами"></span><i>принята 21.08: после пересборки в блоке три сильных акцента — цитата, дневник, обязательство; постулаты фон, карточки и курсив поднимали бы их громкость</i></div>
+        <div class="spec"><b>положение фото</b><span data-v="сверху 4/5 · сверху 16/10 · сбоку 120×150"></span><i>сбоку сокращает высоту блока, но уводит фото из смыслового центра</i></div>
+        <div class="spec"><b>фото</b><span data-v="рабочий кадр вполоборота · object-fit cover · radius 16"></span><i>человек в кадре есть, зрительного контакта нет; постановочный портрет и видео не делаются</i></div>
+        <div class="spec"><b>имя</b><span data-v="Антон Поплавский · 19–20/600 · letter-spacing −0.02em"></span><i>фамилия обязательна: она и так стоит в подвале, полуприкрытое имя хуже открытого</i></div>
+        <div class="spec"><b>постулаты</b><span data-v="четыре, дословно из § 6.1 документа решений"></span><i>порядок не менять: мотивация → факты → срыв → устойчивость</i></div>
+        <div class="spec"><b>строка границы</b><span data-v="«Я не врач и не диетолог с дипломом: это двадцать лет практики на себе, а не образование»"></span><i>слова «на себе» обязательны — без них абзац читается как обещание квалификации</i></div>
+        <div class="spec"><b>«Один порядок разбора»</b><span data-v="фон #12283E · radius 14 · внутри «Кураторов обучаю я, их разборы проверяю тоже я»"></span><i>это то, что переживает найм: продаём метод, себя — как гаранта метода</i></div>
+        <div class="spec"><b>кегль абзаца</b><span data-v="14 / 1.65"></span></div>
+        <div class="spec"><b>кегль постулатов</b><span data-v="14 / 1.55"></span></div>
+        <div class="spec"><b>кегль строки границы</b><span data-v="13 / 1.6"></span></div>
+        <div class="spec"><b>копирайт</b><span data-v="абзац и четыре постулата воспроизводить дословно, включая тире"></span><i>согласовано с владельцем; «забота» и «сорвались» запрещены</i></div>
+        <div class="spec"><b>границы</b><span data-v="макет рисует карточку блока; секция, заголовок 05 и её паддинг — продукта"></span></div>
+        <div class="spec"><b>источник</b><span data-v="главный для блока 05; при расхождении с CuratorSection.tsx верна эта строка"></span></div>
+        <div class="spec"><b>что не реализовывать</b><span data-v="строка «Более 20 лет практики» · постановочный портрет · открытый дневник основателя"></span><i>отклонено: первое не подтверждается фактурой, остальное куратор не берёт</i></div>
+        <p style="margin:14px 0 0;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#D8A0A0">Открыто до передачи</p>
+        <p style="margin:8px 0 0;font-size:12.5px;line-height:1.6;color:#A5AEB9">— <span style="color:#E8EBEF;font-weight:600">Ось страницы</span>: от неё зависит состав блока. При оси ответственности — дневник, обязательство и «кому не подходит»; без неё блок остаётся на постулатах.</p>
+                <p style="margin:6px 0 0;font-size:12.5px;line-height:1.6;color:#A5AEB9">— Положение фото и его пропорция: 4/5 сверху, 16/10 сверху или 120×150 сбоку.</p>
+        <p style="margin:6px 0 0;font-size:12.5px;line-height:1.6;color:#A5AEB9">— Реальное фото куратора: в макетах стоит кадр из прода. Финальный ждёт съёмку.</p>
+        <button type="button" data-copy-spec="1" style="margin-top:14px;width:100%;background:#1E2A38;border:1px solid #2E4256;color:#8FB4D8;font-family:'Golos Text',sans-serif;font-weight:600;font-size:13px;border-radius:12px;padding:11px 16px;cursor:pointer">Скопировать контракт</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:390px 860px;gap:14px 28px;align-items:start">
+      <div style="grid-column:1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 9px;border-radius:999px;background:#2A3138;font-size:12px;font-weight:600;letter-spacing:0.04em;color:#E8EBEF">06</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">Тарифы</span>
+        <span style="font-size:12.5px;color:#8D97A3">пилот метода</span>
+      </div>
+      <div style="grid-column:1;grid-row:2;width:390px;box-sizing:border-box;border:1px dashed #2E4256;border-radius:16px;background:#151A20;padding:16px 17px">
+        <p style="margin:0;font-size:13px;line-height:1.6;color:#A5AEB9">Значения тарифов живут справа — по одному разу, в <span style="color:#8FB4D8">data-v</span>. Карточки ниже отрисованы по ним; при расхождении верен контракт.</p>
+        <p style="margin:9px 0 0;font-size:12.5px;line-height:1.6;color:#8D97A3">Кадры блока помечены на доске атрибутами <span style="color:#8FB4D8">data-screen-label</span> и <span style="color:#8FB4D8">data-demo="stop"</span>. Их три: «Тарифы · 390 · как в коде», «…· исправленный» и «…· ось ответственности». Мерить по «исправленный»; третий — эскиз до решения по оси.</p>
+      </div>
+      <div style="grid-column:2;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:#1E2A38;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8FB4D8">Контракт</span>
+        <span style="font-size:12.5px;color:#8D97A3">кадры помечены на доске · целевой назван ниже</span>
+      </div>
+      <div style="grid-column:2;grid-row:2;width:860px;box-sizing:border-box;border:1px solid #2A3138;border-radius:16px;background:#171B20;padding:16px 17px">
+        <div class="spec"><b>раскладка блока</b><span data-v="на 560 карточки переключаются: колонкой ниже, рядом выше"></span></div>
+        <div class="spec"><b>зазор карточек</b><span data-v="14"></span><i>поля контейнера — из блока «Общее для страницы»</i></div>
+        <div class="spec"><b>карточка</b><span data-v="radius 22 · фон #FFFFFF · разделители 1px rgba(16,24,38,0.08)"></span></div>
+        <div class="spec"><b>порядок карточек</b><span data-v="Pro · Self · Pro Спорт; менять нельзя"></span><i>Pro первый: основной формат, остальные читаются относительно него</i></div>
+        <div class="spec"><b>шапка Pro</b><span data-v="градиент #12263B → #0A1420 · орнамент 6% · без рамки · тень 0 18px 44px rgba(10,17,25,0.12)"></span></div>
+        <div class="spec"><b>шапка Self</b><span data-v="градиент #E9EFF6 → #F3F7FB · рамка rgba(16,24,38,0.12)"></span><i>верхний стоп новый — дописать в токены</i></div>
+        <div class="spec"><b>шапка Pro Спорт</b><span data-v="градиент #4A4C7E → #3E4069 · орнамент 7% · рамка #C9C7E0"></span><i>#3E4069 новый — дописать в токены</i></div>
+        <div class="spec"><b>цена Pro</b><span data-v="компоновка A без счётчика: бейдж «Первый набор · 10 мест» · 7 990 ₽/мес · строка «первые 3 месяца, дальше 11 990»"></span><i>зачёркивания нет: по 11 990 не продано ни одного месяца</i></div>
+        <div class="spec"><b>дата акции</b><span data-v="календарная дата · назначается после включения ПЭП · живёт в конфиге, в макеты не зашивается"></span><i>от неё считаются карточка, баннеры за 14 и 3 дня и обе ветки 1 ноября</i></div>
+        <div class="spec"><b>цена Self</b><span data-v="подача A: крупный 0 ₽, условие «до конца акции · дальше 490 ₽/мес» мелким рядом"></span><i>дату брать из конфига, в макет не зашивать</i></div>
+        <div class="spec"><b>цена Pro Спорт</b><span data-v="19 990 ₽/мес"></span></div>
+        <div class="spec"><b>кегль цены</b><span data-v="название 20–24/600 · число 34–38/600 letter-spacing −0.025em · «₽/мес» 13.5–14"></span></div>
+        <div class="spec"><b>числовая строка Pro</b><span data-v="30 · ~1–2 ч · 4 — три ячейки, вертикальные разделители"></span><i>«~90 приёмов пищи» снято: объём задаёт клиент</i></div>
+        <div class="spec"><b>числовая строка Спорт</b><span data-v="4 · 45–60 · ∞"></span><i>«∞ приёмов в день — вносим всё, что прислали»: пересказ оферты, не обещание объёма</i></div>
+        <div class="spec"><b>ссылка «ориентир»</b><span data-v="#2467A3 · подчёркивание 0.5px · offset 2px · без жирности"></span><i>ведёт на § 5.4; тильда читается как «полтора часа», потолок — сутки</i></div>
+        <div class="spec"><b>подпись цены</b><span data-v="строку «около 270 ₽ в день» не переносить"></span><i>7 990 — это 266 ₽, 11 990 — 400 ₽; непонятно, к какой цифре относится</i></div>
+        <div class="spec"><b>блок «После срыва»</b><span data-v="фон #F8F1E6 · левая граница 3px #A8823C · radius 16 · Playfair italic 16"></span><i>тёмная плашка совпадала с шапкой и разваливала карточку надвое</i></div>
+        <div class="spec"><b>блок «Дополнительно к Pro»</b><span data-v="пилюля rgba(74,76,126,0.1) · текст #3E4069 · 12/600 · uppercase"></span></div>
+        <div class="spec"><b>кнопки</b><span data-v="Pro #12283E · Self белая с рамкой rgba(16,24,38,0.25) · Спорт #4A4C7E · radius 14 · padding 15/20 · 14.5/600"></span></div>
+        <div class="spec"><b>копирайт</b><span data-v="дословно: «Один специалист на питание и тренировки», «После срыва», «что нужно учесть», «∞ приёмов в день — вносим всё, что прислали»"></span><i>«тренер» третьим лицом читается как второй исполнитель; «сорвались» запрещено</i></div>
+        <div class="spec"><b>границы</b><span data-v="макет рисует карточки и их внутренние отступы; секция, её паддинг и заголовок 06 — продукта"></span></div>
+        <div class="spec"><b>источник</b><span data-v="главный для карточек тарифов; при расхождении с прототипом лендинга верна эта строка и pricing.ts"></span></div>
+        <div class="spec"><b>что не реализовывать</b><span data-v="промежуточный тариф 2 500–3 500 · зачёркнутые цены · разбор внутри Self · счётчик дней в карточке"></span><i>отклонено владельцем, § 6.5</i></div>
+        <p style="margin:14px 0 0;font-size:11px;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:#D8A0A0">Открыто до передачи</p>
+                        <p style="margin:6px 0 0;font-size:12.5px;line-height:1.6;color:#A5AEB9">— Двухэтажные цены дают таблице тарифов две строки высоты. На 390px не мерено.</p>
+        <button type="button" data-copy-spec="1" style="margin-top:14px;width:100%;background:#1E2A38;border:1px solid #2E4256;color:#8FB4D8;font-family:'Golos Text',sans-serif;font-weight:600;font-size:13px;border-radius:12px;padding:11px 16px;cursor:pointer">Скопировать контракт</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:390px 860px;gap:14px 28px;align-items:start">
+      <div style="grid-column:1;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;width:390px;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:#2B2233;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#C0A0D8">Приёмка</span>
+        <span style="font-size:13.5px;font-weight:600;color:#B6C2CE">Лист по контракту 06</span>
+        <span style="font-size:12.5px;color:#8D97A3">заполняет кодер</span>
+      </div>
+      <div style="grid-column:1;grid-row:2;width:390px;box-sizing:border-box;border:1px dashed #3A2E4A;border-radius:16px;background:#17131C;padding:16px 17px">
+        <p style="margin:0;font-size:13px;line-height:1.6;color:#A5AEB9">Одна строка проверки на каждую строку контракта. Значение брать из <span style="color:#8FB4D8">data-v</span>, геометрию мерить в браузере по кадру «Тарифы · 390 · исправленный».</p>
+        <p style="margin:9px 0 0;font-size:12.5px;line-height:1.6;color:#8D97A3"><span style="color:#8FD3A8;font-weight:600">=</span> совпало · <span style="color:#D8A0A0;font-weight:600">≠</span> расходится, вписать фактическое · <span style="color:#D8B48A;font-weight:600">—</span> не реализовано · <span style="color:#C0A0D8;font-weight:600">?</span> не проверить без решения дизайнера.</p>
+        <p style="margin:9px 0 0;font-size:12.5px;line-height:1.6;color:#8D97A3">Строка <span style="color:#D8A0A0;font-weight:600">≠</span> закрывается либо правкой кода, либо правкой контракта — но не молча. По опыту трети расхождений виноват контракт, а не код.</p>
+      </div>
+      <div style="grid-column:2;grid-row:1;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px">
+        <span style="display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:#1E2A38;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#8FB4D8">Лист</span>
+        <span style="font-size:12.5px;color:#8D97A3">вердикт по каждой ширине · факт в коде</span>
+      </div>
+      <div style="grid-column:2;grid-row:2;width:860px;box-sizing:border-box;border:1px solid #2A3138;border-radius:16px;background:#171B20;padding:16px 17px">
+        <div class="check check-head">
+          <b>строка контракта</b>
+          <span>390</span>
+          <span>1280</span>
+          <span>факт в коде</span>
+        </div>
+        <div class="check" data-key="раскладка блока">
+          <b>раскладка блока</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="зазор карточек">
+          <b>зазор карточек</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="карточка">
+          <b>карточка</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="порядок карточек">
+          <b>порядок карточек</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="шапка Pro">
+          <b>шапка Pro</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="шапка Self">
+          <b>шапка Self</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="шапка Pro Спорт">
+          <b>шапка Pro Спорт</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="цена Pro">
+          <b>цена Pro</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="цена Self">
+          <b>цена Self</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="цена Pro Спорт">
+          <b>цена Pro Спорт</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="кегль цены">
+          <b>кегль цены</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="числовая строка Pro">
+          <b>числовая строка Pro</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="числовая строка Спорт">
+          <b>числовая строка Спорт</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="ссылка «ориентир»">
+          <b>ссылка «ориентир»</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="подпись цены">
+          <b>подпись цены</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="блок «После срыва»">
+          <b>блок «После срыва»</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="блок «Дополнительно к Pro»">
+          <b>блок «Дополнительно к Pro»</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="кнопки">
+          <b>кнопки</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="копирайт">
+          <b>копирайт</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="границы">
+          <b>границы</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="источник">
+          <b>источник</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <div class="check" data-key="что не реализовывать">
+          <b>что не реализовывать</b>
+          <span class="v390"></span>
+          <span class="v1280"></span>
+          <span class="fact"></span>
+        </div>
+        <p style="margin:14px 0 0;font-size:12.5px;line-height:1.6;color:#8D97A3">Итог первого прогона записать сюда: сколько «=» из 22. Пока лист не заполнен, «готово на 90 %» остаётся догадкой.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>

@@ -67,7 +67,7 @@
   .fb>span{font:500 11px/1.5 Figtree,sans-serif;color:rgba(var(--ink),.56);display:block;margin-top:6px;text-wrap:pretty}
   .arw{display:flex;align-items:center;font:700 15px/1 Figtree,sans-serif;color:rgba(var(--ink),.3)}
   .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
-  .cell{height:38px;border-radius:11px;background:var(--c1);position:relative;display:flex;align-items:center;justify-content:center;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);font-variant-numeric:tabular-nums}
+  .cell{height:44px;border-radius:11px;background:var(--c1);position:relative;display:flex;align-items:center;justify-content:center;font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.56);font-variant-numeric:tabular-nums}
   .cell.cyc::before{content:"";position:absolute;left:4px;top:9px;bottom:9px;width:3px;border-radius:999px;background:rgba(var(--ink),.46)}
   .cell.eat::after{content:"";position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:999px;background:rgba(var(--ink),.34)}
   .cell.rf{box-shadow:inset 0 -3px 0 rgba(var(--ink),.28)}
@@ -714,8 +714,8 @@
   <div class="spec"><b>демо</b><span data-v="анимаций на канвасе нет: все кадры — стоп-кадры, сверять можно любой"></span></div>
   <div class="spec"><b>палитры</b><span data-v="все четыре темы собираются зеркалом из песочного ряда: значения берутся из v4-canvas.css, своих хексов в кадрах нет. Колонка «Решения» в зеркало не едет"></span></div>
   <div class="spec"><b>открыто до передачи</b><span data-v="ничего: все решения по особому периоду приняты текстом. Баннер «ЭСКИЗ» снимается на «В ПРОД» после подтверждения множителей владельцем — множители в контракте уже совпадают с каноном кода"></span></div>
-  <div class="spec"><b>тач-цели</b><span data-v="ПРИВЕДЕНО 5 сентября: клетка календаря .cycle-date-picker-cell (.cell) поднята с 38 до 44 px видимым размером; без невидимого расширителя ::after. Остальные цели зоны уже ≥44 px по прежним строкам"></span><i>норма 44 pt держится видимым размером</i></div>
-                                                        <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                        <div class="spec"><b>тач-цели</b><span data-v="ПРИВЕДЕНО 5 сентября, видимым размером: клетка календаря цикла .cell (38 → 44) — по клетке тапают, чтобы открыть день. Не цель: тумблер настройки 26 — нажимается вся строка 44, тумблер только показывает состояние"></span><i>норма 44 pt держится видимым размером: невидимый расширитель проходит замер и проваливается в руке — палец не видит ::after</i></div>
+        <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Цикл · шаг 5, строка в стопке · 01</b><span data-v="выравнивание center, распределение space-between, зазор 10px, отступ снизу 12px"></span></div>
     <div class="spec"><b>Цикл · шаг 5, строка в стопке · 02</b><span data-v="ширина 17px, высота 17px"></span></div>

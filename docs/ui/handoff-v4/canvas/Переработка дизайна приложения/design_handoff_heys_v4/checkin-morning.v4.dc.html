@@ -157,7 +157,10 @@
     <div class="spec"><b>доза</b><span data-v="спрашивается следующим экраном, не в чипе: шаговый ввод + капсулы «Утром / Днём / Вечером / С едой»"></span><i>дозировка в капсуле сделала бы её двухстрочной и убила плотность; время — подсказка для утреннего списка, пушей про таблетки нет</i></div>
     <div class="spec" style="border-bottom:none"><b>курс</b><span data-v="состав дня, не отметка «выпил»: в утреннем шаге показывается строкой и не спрашивает по пунктам; факт приёма живёт в дневнике"></span><i>раздел называется «Добавки»; расшифровка «витамины, минералы, омега» — только в пустом курсе</i></div>
 
-                                                                                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                                                                      <div class="ctrH">Тач-цели</div>
+    <div class="spec" style="border-bottom:none"><b>тач-цели</b><span data-v="ПРИВЕДЕНО 5 сентября, видимым размером: чипы витаминов, минералов и жиров (36 → 44, девятнадцать по кадрам) — их выбирают тапом, и стоят они в переносящихся рядах с зазором 6, где расширитель области перекрыл бы соседа. ПОСЛЕДСТВИЕ НАЗВАНО: подъём добавил высоты переносящимся рядам, и шаг «Остальное» прокручивается — перебор 79 px в обычном виде и 76 px при просроченных замерах. Требования «влезает целиком» у этого шага нет (в отличие от первых четырёх), прокрутка включена, ни один чип не сжимается и не прячется: цель важнее того, чтобы шаг помещался в экран одним видом"></span><i>норма 44 pt держится видимым размером: невидимый расширитель проходит замер и проваливается в руке</i></div>
+
+            <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Чек-ин · вчерашний день · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Чек-ин · вчерашний день · 02</b><span data-v="ширина 44px"></span></div>
@@ -697,8 +700,8 @@
     <div class="spec"><b>Добавки · добавление · 07</b><span data-v="«Поиск по названию» — шрифт 500 12.5px/1 Figtree, цвет rgba(var(--ink),.38)"></span></div>
     <div class="spec"><b>Добавки · добавление · 08</b><span data-v="«Витамины и микроэлементы» — ярус: отступы 14px 0 7px"></span></div>
     <div class="spec"><b>Добавки · добавление · 09</b><span data-v="перенос строк wrap, зазор 6px"></span></div>
-    <div class="spec"><b>Добавки · добавление · 10</b><span data-v="высота от 36px, выравнивание center, зазор 6px, поля 0 13px, радиус 999px, фон var(--acs), шрифт 700 12px/1 Figtree, цвет var(--on-acs)"></span></div>
-    <div class="spec"><b>Добавки · добавление · 11</b><span data-v="«C» — высота от 36px, выравнивание center, поля 0 13px, радиус 999px, фон var(--c1), шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
+    <div class="spec"><b>Добавки · добавление · 10</b><span data-v="высота от 44px, выравнивание center, зазор 6px, поля 0 13px, радиус 999px, фон var(--acs), шрифт 700 12px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Добавки · добавление · 11</b><span data-v="«C» — высота от 44px, выравнивание center, поля 0 13px, радиус 999px, фон var(--c1), шрифт 600 12px/1 Figtree, цвет rgba(var(--ink),.62)"></span></div>
     <div class="spec"><b>Добавки · добавление · 12</b><span data-v="«Минералы и жиры» — ярус: отступы 13px 0 7px"></span></div>
     <div class="spec"><b>Добавки · добавление · 13</b><span data-v="подвал: выравнивание center, зазор 10px"></span></div>
     <div class="spec"><b>Добавки · добавление · 14</b><span data-v="«Выбрано» — шрифт 700 12px/1.3 Figtree, цвет rgba(var(--ink),.5), флекс none"></span></div>
@@ -1875,37 +1878,37 @@
 
         <div class="tier" style="margin:14px 0 7px;">Витамины и микроэлементы</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          <span style="min-height:36px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border-radius:999px;background:var(--acs);font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--on-acs)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>D3</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">C</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Цинк</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Селен</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">B12</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">B6</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Йод</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border-radius:999px;background:var(--acs);font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--on-acs)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>D3</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">C</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Цинк</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Селен</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">B12</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">B6</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Йод</span>
         </div>
 
         <div class="tier" style="margin:13px 0 7px;">Минералы и жиры</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          <span style="min-height:36px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border-radius:999px;background:var(--acs);font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--on-acs)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Магний</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Омега-3</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Кальций</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">K2</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Лецитин</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;gap:6px;padding:0 13px;border-radius:999px;background:var(--acs);font:700 12px/1 Figtree,sans-serif;color:var(--on-acs);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--on-acs)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>Магний</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Омега-3</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Кальций</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">K2</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Лецитин</span>
         </div>
 
         <div class="tier" style="margin:13px 0 7px;">Сон и восстановление</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Мелатонин</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Глицин</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">L-теанин</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Коллаген</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Мелатонин</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Глицин</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">L-теанин</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Коллаген</span>
         </div>
 
         <div class="tier" style="margin:13px 0 7px;">Спортивное питание</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Креатин</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">BCAA</span>
-          <span style="min-height:36px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Протеин</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Креатин</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">BCAA</span>
+          <span style="min-height:44px;display:inline-flex;align-items:center;padding:0 13px;border-radius:999px;background:var(--c1);font:600 12px/1 Figtree,sans-serif;color:rgba(var(--ink),.62);">Протеин</span>
         </div>
       </div>
       <div class="foot" style="display:flex;align-items:center;gap:10px;"><span style="font:700 12px/1.3 Figtree,sans-serif;color:rgba(var(--ink),.5);flex:none;">Выбрано<br>два</span><div class="btn" style="flex:1;">Дозы и время</div></div>

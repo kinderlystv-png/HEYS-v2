@@ -24,7 +24,23 @@
   12. кадры на канвасе есть, а видимых ни одного — разметка схлопнулась
       (чаще всего незакрытый div в контракте, и всё остальное ушло внутрь скрытого блока).
 
-   Адресации: data-vid="<ключ>" — кадр называет свою строку вида; data-dim="<ключ>" — текст
+   22. снятое решением нарисовано в живом кадре. Пока элемент стоит в кадре с data-demo="stop",
+      «его нет» — обещание контракта, а кадр — доказательство обратного, и верстают по кадру:
+      так переключатель вида в water-add был снят ТРЕМЯ строками и продолжал рисоваться
+      в образце. Лексически проверить это нельзя (пробовали: названия в кавычках из строк
+      со словом «снят» дают 400+ срабатываний при одном настоящем: «Продолжить»,
+      «Удалить», «Готово» живут и в снятых ветках, и на живых экранах). Поэтому — адресация,
+      та же парная схема, что у data-vid и data-owner:
+        — строка контракта, которая снимает элемент, несёт data-removed="<имя>";
+        — разметка, которая его рисует, несёт data-was="<имя>".
+      Проверяется три вещи, и каждая — без лексики: помеченный снятым элемент не стоит
+      в живом кадре; у каждого data-was есть своя строка data-removed; имя в data-removed
+      не висит в пустоте, если строка сама говорит, что элемент остаётся в протоколе.
+      Снятие без остатка в протоколе адресации не требует — проверять там нечего.
+
+   Адресации: data-vid="<ключ>" — кадр называет свою строку вида; data-removed="<имя>" на .spec
+   и data-was="<имя>" на разметке — пара «снято решением» и «вот оно нарисовано»;
+   data-dim="<ключ>" — текст
    приглушён решением (соседние цифры колеса, ненаступившие дни), и названная строка это
    объявляет; data-owner на
    [data-fitnote] — замер сверяется только с числами названной строки;
@@ -468,6 +484,40 @@
     });
     if (painted.length) out.push('заливочная роль красит текст (' + painted.length + '): ' + uniq(painted).slice(0, 4).join(' · ') + ' — у заливки берётся её парная роль текста');
 
+    // 22. снятое решением нарисовано в живом кадре. Проверка по адресации, не по словам:
+    // строка со снятием несёт data-removed="<имя>", разметка снятого — data-was="<имя>".
+    // Лексика здесь не работает в принципе: «Продолжить» и «Готово» есть и в снятых
+    // ветках, и на живых экранах — пробовали 5 сентября: 400+ ложных на одном настоящем.
+    var removedBy = {};
+    [].forEach.call(document.querySelectorAll('[data-contract] .spec[data-removed]'), function (r) {
+      var nm = (r.getAttribute('data-removed') || '').trim();
+      if (!nm) return;
+      var b = r.querySelector('b');
+      removedBy[nm] = ((b && b.textContent) || '?').trim();
+    });
+    var aliveDraw = [], orphanWas = {}, mutedRemoval = [], wasSet = {};
+    [].forEach.call(document.querySelectorAll('[data-was]'), function (el) {
+      var nm = (el.getAttribute('data-was') || '').trim();
+      if (!nm) return;
+      wasSet[nm] = 1;
+      if (!removedBy[nm]) { orphanWas[nm] = 1; return; }
+      // в палитрных зеркалах разметка клонируется целиком — судить по ним нельзя
+      if (el.closest('.pal')) return;
+      if (el.closest('[data-demo="protocol"]')) return;                       // в протоколе законно
+      var fr = el.closest('[data-screen-label]');
+      if (!fr) return;                                                        // вне кадра — не образец
+      aliveDraw.push('«' + nm + '» в «' + fr.getAttribute('data-screen-label') + '» (строка «' + removedBy[nm] + '»)');
+    });
+    // строка сама обещает, что снятое осталось в протоколе — значит оно обязано быть помечено
+    Object.keys(removedBy).forEach(function (nm) {
+      var row = vals.filter(function (v) { return v.key === removedBy[nm]; })[0];
+      if (!row || !/протокол/i.test(row.val)) return;
+      if (!wasSet[nm]) mutedRemoval.push('«' + nm + '»');
+    });
+    if (aliveDraw.length) out.push('снятое решением нарисовано в живом кадре: ' + uniq(aliveDraw).slice(0, 4).join(' · '));
+    if (Object.keys(orphanWas).length) out.push('data-was без строки со снятием: ' + Object.keys(orphanWas).slice(0, 4).join(' · '));
+    if (mutedRemoval.length) out.push('строка обещает снятое в протоколе, а разметка не помечена data-was: ' + mutedRemoval.slice(0, 4).join(' · '));
+
     var shown = {};
     [].forEach.call(document.querySelectorAll('[data-screen-label]'), function (f) {
       (nrm(f.textContent || '').match(/\d+[,.]?\d*/g) || []).forEach(function (x) { shown[x] = true; });
@@ -574,7 +624,7 @@
     return keys;
   }
 
-  window.__auditVersion = '21.0';
+  window.__auditVersion = '22.0';
   function paint() {
     var f = findings();
     if (!f) return;
@@ -607,10 +657,10 @@
     var ctr = document.querySelector('[data-contract]');
     var ctrHidden = !!ctr && (ctr.offsetParent === null || getComputedStyle(ctr).display === 'none');
     el.style.display = (!f.length && ctrHidden) ? 'none' : '';
-    el.title = f.length ? '' : 'Проверено: у каждого кадра есть строка вида, кнопки идут общим рядом, числа в прозе есть в контракте, живые замеры сходятся со своей строкой, у каждого содержательного раздела есть вид, объявленные замеры измеряются, чужие канвасы названы, ключи не спорят, незакрытое собрано, роли на месте, литералы совпадают с таблицей ролей, каждая var(--…) из разметки разрешается, круглые мишени не ниже порога, каждый атом источника назван контрактом, кадры видны';
+    el.title = f.length ? '' : 'Проверено: у каждого кадра есть строка вида, кнопки идут общим рядом, числа в прозе есть в контракте, живые замеры сходятся со своей строкой, у каждого содержательного раздела есть вид, объявленные замеры измеряются, чужие канвасы названы, ключи не спорят, незакрытое собрано, роли на месте, литералы совпадают с таблицей ролей, каждая var(--…) из разметки разрешается, круглые мишени не ниже порога, снятое решением не нарисовано в живых кадрах, каждый атом источника назван контрактом, кадры видны';
     var txt = f.length
       ? '\u26a0 сверка: ' + f.join(' | ')
-      : '\u2713 сверка чиста · 21 проверка' + (window.__coverage ? ' · источник покрыт ' + window.__coverage : '');
+      : '\u2713 сверка чиста · 22 проверки' + (window.__coverage ? ' · источник покрыт ' + window.__coverage : '');
     if (el.textContent === txt) return;
     el.textContent = txt;
     el.style.color = f.length ? '#a8382b' : '#5c6a45';
