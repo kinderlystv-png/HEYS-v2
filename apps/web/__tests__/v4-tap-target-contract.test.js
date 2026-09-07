@@ -81,6 +81,20 @@ const cases = [
     visible: 22,
   },
   {
+    what: 'переключатель научного обоснования в reason-card',
+    file: 'styles/modules/725-metabolic-intelligence.css',
+    host: '.reason-card__science-toggle',
+    inset: '-6px 0',
+    visible: 32,
+  },
+  {
+    what: 'редактирование имени продукта в таблице',
+    file: 'styles/heys-components.css',
+    host: '.product-name-edit',
+    inset: '-14px',
+    visible: 16,
+  },
+  {
     what: 'плитка в режиме редактирования — цель удаления',
     file: 'styles/modules/730-widgets-dashboard.css',
     host: '.widgets-grid--remove-pick .widget',
