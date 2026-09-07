@@ -3424,6 +3424,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .advice-diagnostics-modal__close {
+
   flex: 0 0 auto;
   width: 34px;
   height: 34px;
@@ -3434,7 +3435,18 @@ body.tour-active .ios-pwa-banner {
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.advice-diagnostics-modal__close::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
 
 .advice-diagnostics-modal__body {
   overflow-y: auto;
@@ -4188,6 +4200,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .advice-technical-trigger {
+
   min-height: 24px;
   border: none;
   border-radius: 999px;
@@ -4198,7 +4211,18 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
   cursor: pointer;
   opacity: 0.72;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.advice-technical-trigger::after {
+  content: '';
+  position: absolute;
+  inset: -10px -22px;
+}
+
 
 @media (hover: hover) {
   .advice-technical-trigger:hover {
@@ -7878,6 +7902,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-week-card__expand-btn {
+
   border: 1px solid var(--v4-accent-bg, #f0dcc6);
   background: #eff6ff;
   color: var(--v4-act-text, #8a4a20);
@@ -7893,7 +7918,18 @@ body.tour-active .ios-pwa-banner {
   cursor: pointer;
   line-height: 1.2;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.monthly-week-card__expand-btn::after {
+  content: '';
+  position: absolute;
+  inset: -15px -22px;
+}
+
 
 .monthly-week-card__expand-btn--open {
   background: var(--v4-accent-bg, #f0dcc6);
@@ -9863,6 +9899,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .sync-pending-banner__vpn {
+
   align-self: flex-start;
   margin-top: 4px;
   padding: 0;
@@ -9874,7 +9911,18 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   font-weight: 600;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sync-pending-banner__vpn::after {
+  content: '';
+  position: absolute;
+  inset: -22px;
+}
+
 
 .sync-vpn-help {
   position: fixed;
@@ -14294,6 +14342,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .diary-compact-summary__range-btn {
+
   border: 1px solid transparent;
   border-radius: 999px;
   min-height: 18px;
@@ -14305,7 +14354,18 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   line-height: 1;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.diary-compact-summary__range-btn::after {
+  content: '';
+  position: absolute;
+  inset: -13px -22px;
+}
+
 
 .diary-compact-summary__range-btn.is-active {
   border-color: var(--summary-accent-border);
@@ -14791,6 +14851,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .diary-fiber-panel__hide {
+
   display: inline-flex;
   align-self: flex-start;
   align-items: center;
@@ -14805,7 +14866,18 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.diary-fiber-panel__hide::after {
+  content: '';
+  position: absolute;
+  inset: -7px -22px;
+}
+
 
 @media (hover: hover) {
   .diary-fiber-panel__hide:hover {

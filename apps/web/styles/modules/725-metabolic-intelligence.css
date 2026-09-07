@@ -3638,13 +3638,24 @@
 }
 
 .adv-analytics__energy-bar {
+
   flex: 1;
   min-width: 16px;
   border-radius: 3px 3px 0 0;
   position: relative;
   cursor: pointer;
   transition: opacity 0.2s;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.adv-analytics__energy-bar::after {
+  content: '';
+  position: absolute;
+  inset: -8px -14px;
+}
+
 
 @media (hover: hover) {
   .adv-analytics__energy-bar:hover {

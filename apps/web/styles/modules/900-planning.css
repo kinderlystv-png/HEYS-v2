@@ -1037,6 +1037,7 @@
 }
 
 .planning-goals-workspace__task button {
+
     min-width: 0;
     padding: 0;
     border: 0;
@@ -1047,7 +1048,18 @@
     font-weight: 700;
     text-align: left;
     cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.planning-goals-workspace__task button::after {
+  content: '';
+  position: absolute;
+  inset: -22px;
+}
+
 
 .planning-goals-workspace__task small {
     color: #434587;
@@ -3420,6 +3432,7 @@
 
 .planning-task-repeat__dates,
 .planning-task-repeat__kind button {
+
     min-height: 32px;
     border: 1px solid var(--planning-border);
     border-radius: 8px;
@@ -3428,13 +3441,35 @@
     font-size: 10px;
     font-weight: 650;
     cursor: pointer;
+  position: relative;
+
 }
 
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.planning-task-repeat__kind button::after {
+  content: '';
+  position: absolute;
+  inset: -6px -22px;
+}
+
+
 .planning-task-repeat__dates {
+
   position: relative;
     padding: 0 9px;
     text-align: left;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.planning-task-repeat__dates::after {
+  content: '';
+  position: absolute;
+  inset: -6px -22px;
+}
+
 
 .planning-task-repeat__time {
     display: flex;
@@ -10933,6 +10968,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-gantt2-bar {
+
     position: absolute;
     border-radius: 8px;
     color: var(--v4-bg, #fffaf1);
@@ -10945,15 +10981,22 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     align-items: center;
 }
 
-/* Resize-zone visual hints — shown only on bars wider than 66px (where resize is enabled).
-   The actual hit-zone is computed in JS (RESIZE_EDGE_PX = 22px) — these are purely cosmetic
-   suggestion that the bar can be resized at the edges. */
-.planning-gantt2-bar::before,
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
 .planning-gantt2-bar::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
+
+/* Resize-zone visual hint (левый край) — чисто косметика; hit-zone в JS. */
+.planning-gantt2-bar::before {
     content: '';
     position: absolute;
     top: 4px;
     bottom: 4px;
+    left: 4px;
     width: 3px;
     border-radius: 2px;
     background: rgba(255, 255, 255, 0.55);
@@ -10962,17 +11005,10 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     transition: opacity 120ms ease;
 }
 
-.planning-gantt2-bar::before { left: 4px; }
-.planning-gantt2-bar::after { right: 4px; }
-
-/* Show hints only on bars wide enough for resize; we approximate via a min-width media-like
-   trick: bars get the .can-resize class when wider than 66px. JS adds it conditionally — but
-   for now keep it always-on at low opacity (still subtle, no JS coupling). */
 @media (hover: hover) {
-  .planning-gantt2-bar:hover::before,
-.planning-gantt2-bar:hover::after {
+  .planning-gantt2-bar:hover::before {
     opacity: 0.85;
-}
+  }
 }
 
 .planning-gantt2-bar.is-done {
@@ -10994,12 +11030,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     box-shadow: 0 0 0 2px var(--v4-warn-1, #d99a63), 0 0 0 4px var(--v4-warn-soft, #c9922e), 0 1px 2px rgba(15, 23, 42, 0.18);
 }
 
-.planning-gantt2-bar.is-behind::after {
-    /* Diagonal hatch overlay on the right portion of the bar to signal "running late". */
-    content: '';
-    position: absolute;
-    top: 0; right: 0; bottom: 0;
-    width: 40%;
+.planning-gantt2-bar.is-behind {
     background-image: repeating-linear-gradient(
         45deg,
         rgba(0, 0, 0, 0.08),
@@ -11007,9 +11038,9 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
         rgba(0, 0, 0, 0.18) 4px,
         rgba(0, 0, 0, 0.18) 8px
     );
-    border-radius: 0 8px 8px 0;
-    pointer-events: none;
-    opacity: 1;
+    background-size: 40% 100%;
+    background-position: right center;
+    background-repeat: no-repeat;
 }
 
 .planning-gantt2-bar.is-dragging {

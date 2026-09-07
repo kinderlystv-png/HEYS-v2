@@ -352,9 +352,21 @@ body:has(.widgets-quick-fab-wrap) .fab-group--messenger-only {
 }
 
 button.messenger-day-checklist__chip {
+
   cursor: pointer;
   transition: transform 0.15s ease, filter 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+button.messenger-day-checklist__chip::after {
+  content: '';
+  position: absolute;
+  inset: -8px -22px;
+}
+
 
 @media (hover: hover) {
   button.messenger-day-checklist__chip:hover {
@@ -687,6 +699,7 @@ button.messenger-day-checklist__chip:active {
  * Кнопка «Показать ранее» — collapse старых дней
  * ═══════════════════════════════════════════════════════════════════ */
 .messenger-show-older {
+
   align-self: center;
   display: inline-flex;
   align-items: center;
@@ -705,7 +718,18 @@ button.messenger-day-checklist__chip:active {
   color: var(--v4-ink-2); /* v4-intentional: контракт 56% */
   cursor: pointer;
   transition: color 0.15s ease, background-color 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.messenger-show-older::after {
+  content: '';
+  position: absolute;
+  inset: -4px -22px;
+}
+
 
 @media (hover: hover) {
   .messenger-show-older:hover {
@@ -843,6 +867,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-audio-wave {
+
   min-width: 0;
   height: 22px;
   border: none;
@@ -852,7 +877,18 @@ button.messenger-day-checklist__chip:active {
   align-items: center;
   gap: 2px;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.msg-audio-wave::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+}
+
 
 .msg-audio-wave span {
   flex: 1;

@@ -6647,6 +6647,7 @@
 }
 
 .ca-modal__more-products {
+
   margin-top: 8px;
   border: none;
   background: none;
@@ -6657,7 +6658,18 @@
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   text-align: left;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ca-modal__more-products::after {
+  content: '';
+  position: absolute;
+  inset: -22px;
+}
+
 
 .ca-modal__repeat-group {
   list-style: none;

@@ -48,13 +48,13 @@
 
 .reports-v4-period-pill {
 
+
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  margin: -16px -6px;
   padding: 0 6px;
   border: none;
   border-bottom: 2px solid transparent;
@@ -64,7 +64,17 @@
   cursor: pointer;
   white-space: nowrap;
 
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.reports-v4-period-pill::after {
+  content: '';
+  position: absolute;
+  inset: -16px -6px;
+}
+
 
 /* Выбранное окно отмечается только подчёркиванием: все три таба сохраняют
    одинаковую 44px область нажатия и не меняют ширину при переключении. */

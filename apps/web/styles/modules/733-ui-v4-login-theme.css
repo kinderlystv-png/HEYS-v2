@@ -618,6 +618,7 @@
 }
 
 .heys-auth-key {
+
   border: 0;
   border-radius: 16px;
   background: var(--v4-surface, #f7efe2);
@@ -631,7 +632,18 @@
   line-height: 1;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.heys-auth-key::after {
+  content: '';
+  position: absolute;
+  inset: -10px -22px;
+}
+
 
 .heys-auth-key:active {
   opacity: 0.7;
@@ -2683,10 +2695,22 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 }
 
 .consent-fulltext__accept.is-ready {
+
   background: var(--v4-sand-act, #c67139);
   color: var(--v4-sand-ink-deep, #2b1608);
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.consent-fulltext__accept.is-ready::after {
+  content: '';
+  position: absolute;
+  inset: -8px -22px;
+}
+
 
 .consent-fulltext__accept.is-busy {
   opacity: 0.82;
