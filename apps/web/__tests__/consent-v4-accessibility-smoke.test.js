@@ -344,8 +344,10 @@ describe('согласия · chromium @375: юридический кегль �
   }, 90_000);
 
   for (const palette of [
-    { id: 'sand', theme: 'sand', palette: 'sand', themeId: 'sand' },
-    { id: 'blue', theme: 'blue', palette: 'blue', themeId: 'blue' },
+    // Доля --v4-ink-2 своя у набора: решение дизайнера 7 сентября — по самой
+    // тёмной поверхности набора 55 % давало 4,48 в песочном и 3,77 в синем.
+    { id: 'sand', theme: 'sand', palette: 'sand', themeId: 'sand', ink2: 'rgba(0, 0, 0, 0.56)' },
+    { id: 'blue', theme: 'blue', palette: 'blue', themeId: 'blue', ink2: 'rgba(0, 0, 0, 0.61)' },
   ]) {
     it(`${palette.id}: пояснение ≥12,5/500 и причина 11,5/600 на --v4-ink-2`, { timeout: 90_000 }, async () => {
       const { hint, reason } = await measureConsentTypography(palette);
@@ -353,11 +355,11 @@ describe('согласия · chromium @375: юридический кегль �
       expect(hint.fontWeight).toBe('500');
       expect(parseFloat(hint.lineHeight, 10) / parseFloat(hint.fontSize, 10))
         .toBeGreaterThanOrEqual(LEGAL_DISCLOSURE_MIN_LH - 0.02);
-      expect(hint.color).toBe('rgba(0, 0, 0, 0.55)');
+      expect(hint.color).toBe(palette.ink2);
 
       expect(parseFloat(reason.fontSize, 10)).toBe(INACTIVE_REASON_PX);
       expect(reason.fontWeight).toBe(INACTIVE_REASON_WEIGHT);
-      expect(reason.color).toBe('rgba(0, 0, 0, 0.55)');
+      expect(reason.color).toBe(palette.ink2);
     });
   }
 });

@@ -122,7 +122,7 @@ describe('Ритм приёмов · нет данных — сведённый 
     expect(ink(sand)).not.toBe(ink(blue));
     expect(line(sand)).toBe('rgba(0, 0, 0, 0.08)');
     expect(line(blue)).toBe('rgba(0, 0, 0, 0.08)');
-    expect(palette).toContain('--v4-ink-2: rgba(var(--v4-ink-rgb), 0.56)');
-    expect(blue).toContain('--v4-ink-2: rgba(var(--v4-ink-rgb), 0.64)');
+    expect(palette).toContain('--v4-ink-2: rgba(0, 0, 0, 0.56)');
+    expect(blue).toContain('--v4-ink-2: rgba(0, 0, 0, 0.61)');
   });
 });

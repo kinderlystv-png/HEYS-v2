@@ -91,8 +91,6 @@
   /* Скролл-лист: пропускаем layout/paint вне экрана (лёгкий аналог windowing при длинных списках) */
   content-visibility: auto;
   contain-intrinsic-size: auto 52px;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -234,11 +232,8 @@
 }
 
 .aps-barcode-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-width: 44px;
-  height: 44px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
   color: var(--v4-ink-3, #94a3b8);
@@ -246,7 +241,6 @@ width: 44px;
   cursor: pointer;
   transition: all 0.15s;
   border-radius: 7px;
-  min-height: 44px;
 }
 
 /* Иконка штрихкода в строке: по контракту «вид · строка поиска» она тоном
@@ -342,14 +336,13 @@ width: 44px;
   justify-content: center;
   width: 44px;
   height: 44px;
-  
+  margin: -6px -6px -6px 0;
   border: none;
   border-radius: 999px;
   background: none;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 45%, transparent);
   cursor: pointer;
-  min-height: 44px;
-  min-width: 44px;}
+}
 
 .aps-barcode-camera {
   position: relative;
@@ -512,7 +505,6 @@ width: 44px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  min-height: 44px;
 }
 
 .aps-barcode-manager-add {
@@ -1369,8 +1361,6 @@ width: 44px;
   color: var(--v4-sand-act-deep, #8a4a20);
   cursor: pointer;
   text-align: left;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .aps-v4-create-advanced-grid {
@@ -1936,14 +1926,11 @@ width: 44px;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
   text-align: center;
-  min-height: 44px;
-  min-width: 44px;
-  box-sizing: border-box;}
+}
 
 .aps-create-mode-btn:active {
   opacity: 0.7;
   transition: opacity 120ms ease;
-  min-height: 44px;
 }
 
 .aps-create-mode-icon {

@@ -121,8 +121,6 @@ body:has(.activity-v4) .hdr::after {
   /* Кадр просит 50 %, ближайшая ступень набора — 55 %. */
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .activity-v4-hero__footer-link {
@@ -290,7 +288,6 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-today__row--action {
   cursor: pointer;
-  min-height: 44px;
 }
 
 .activity-v4-today__key {
@@ -768,8 +765,6 @@ body:has(.activity-v4) .hdr::after {
   padding: 4px 10px;
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-period-label--month {
@@ -798,7 +793,6 @@ body:has(.activity-v4) .hdr::after {
   background: none;
   cursor: pointer;
   text-align: left;
-  min-height: 44px;
 }
 
 .activity-v4-history__row--last {
@@ -1377,8 +1371,6 @@ body:has(.activity-v4) .hdr::after {
   text-align: center;
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 /* Карточка силовой: спокойная поверхность для обычного состояния и явный

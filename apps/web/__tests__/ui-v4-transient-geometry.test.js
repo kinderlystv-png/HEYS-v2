@@ -85,7 +85,9 @@ describe('UI v4 transient states — deterministic DOM/geometry gates', () => {
     expect(getComputedStyle(bar).right).toBe('12px');
     expect(getComputedStyle(bar).borderRadius).toBe('22px');
     expect(getComputedStyle(content).padding).toBe('11px 13px');
-    expect(rule.style.getPropertyValue('box-shadow')).toBe('inset 0 0 0 1px var(--v4-line, #e5e7eb)');
+    // Запасное значение приведено к значению роли в песочном наборе: прежний
+    // #e5e7eb был литералом чужой системы и на подмену роли не отвечал.
+    expect(rule.style.getPropertyValue('box-shadow')).toBe('inset 0 0 0 1px var(--v4-line, rgba(0, 0, 0, 0.08))');
   });
 
   it('app-splash has a fixed 56 px disc and the final fail cross', () => {

@@ -417,9 +417,7 @@
   color: var(--v4-ink-2, #6b7280);
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 44px;
-  min-width: 44px;
-  box-sizing: border-box;}
+}
 
 @media (hover: hover) {
   .refeed-toggle:hover {
@@ -427,7 +425,6 @@
   border-color: var(--v4-warn-1, #d99a63);
   color: var(--v4-warn-text, #a1471c);
 }
-  min-height: 44px;
 }
 
 .refeed-toggle--active {

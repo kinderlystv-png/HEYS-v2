@@ -41,7 +41,6 @@
 }
 
 .metrics-card {
-
   position: relative;
   min-width: 0;
   background: var(--v4-hero, #efe3cf);
@@ -50,10 +49,9 @@
   padding: 8px 4px;
   text-align: center;
   transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease, border-color 0.3s ease;
-  
+  /* perf: skip layout/paint for offscreen metric cards */
   content-visibility: auto;
   contain-intrinsic-size: auto 72px;
-
 }
 
 .metrics-icon {
@@ -78,22 +76,16 @@
 
 @keyframes valueBounce {
   0% {
-
-    transform: rotate(0deg);
-  
-}
+    transform: scale(1);
+  }
 
   50% {
-
-    opacity: 0.8;
-  
-}
+    transform: scale(1.15);
+  }
 
   100% {
-
-    transform: rotate(360deg);
-  
-}
+    transform: scale(1);
+  }
 }
 
 /* Вздрагивание карточки при сохранении */
@@ -135,34 +127,27 @@
 
   0%,
   100% {
-
-    opacity: 0.5;
-  
-}
+    transform: translateX(0);
+  }
 
   10%,
   30%,
   50%,
   70%,
   90% {
-
-    transform: translateX(-50%) rotate(-2deg);
-  
-}
+    transform: translateX(-3px);
+  }
 
   20%,
   40%,
   60%,
   80% {
-
-    transform: scale(0.9);
-  
-}
+    transform: translateX(3px);
+  }
 }
 
 /* === 02. KCAL SPARKLINE — график калорий (стиль как вес) === */
 .kcal-sparkline-container {
-
   grid-column: 1 / -1;
   display: block;
   background: linear-gradient(135deg, #ecfdf5 0%, #dcfce7 100%);
@@ -171,13 +156,13 @@
   --sparkline-bg-start: #ecfdf5;
   --sparkline-bg-end: #dcfce7;
   padding: 24px var(--heys-diary-card-padding-x, 16px) 14px;
-  
+  /* место для аннотаций сверху */
   margin-top: 4px;
   overflow: visible;
-  
-  
+  /* чтобы аннотации не обрезались */
+  /* NOTE: content-visibility:auto intentionally omitted — chart is visible on stats tab open,
+     deferring layout to first viewport entry causes a one-time paint stall on tab switch */
   contain: layout style paint;
-
 }
 
 .kcal-sparkline-header {
@@ -202,10 +187,9 @@
 
 /* Inline badge в header */
 .kcal-header-right .kcal-goal-badge-inline {
-
-  font-size: 10px;
-  padding: 3px 8px;
-
+  position: static;
+  top: auto;
+  right: auto;
 }
 
 .kcal-goal-badge-inline {
@@ -222,7 +206,6 @@
 }
 
 .kcal-period-pill {
-
   font-size: 10px;
   font-weight: 600;
   padding: 3px 8px;
@@ -232,9 +215,6 @@
   color: var(--v4-ok-text, #5c6a45);
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .kcal-period-pill:active {
@@ -317,17 +297,18 @@
 }
 
 .kcal-realdata-card__footer {
-
-    flex-direction: column;
-    align-items: stretch;
-  
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
 
 .kcal-realdata-card__actions {
-
-    display: flex;
-    flex-direction: column;
-  
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
 }
 
 /* Метка доли и счёт приёмов стоят одной строкой: оба кадра «Мало калорий»
@@ -352,7 +333,6 @@
    градиентом кнопки: тёплое предупреждение красится ролями, а не тремя
    оттенками апельсина. */
 .kcal-realdata-card__badge {
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -360,12 +340,12 @@
   height: 24px;
   padding: 0 8px;
   border-radius: 8px;
-  
+  /* Строка контракта «карточка · подтверждение чисел дня» и оба кадра сходятся
+     на 11 px/600; стоял вес 700 — метка звучала громче заголовка над ней. */
   font: 600 11px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-warn-text, #a1471c);
   background: var(--v4-bg, #fffaf1);
   border: none;
-
 }
 
 /* Кнопки во всю ширину общим рядом 48: рекомендованная заливкой, вторая на
@@ -429,14 +409,12 @@
 
 /* === 03. SPARKLINE — мини-график калорий === */
 .sparkline-container {
-
   display: block;
   position: relative;
-  
+  /* для позиционирования тултипа */
   padding: 0;
   overflow: visible;
-  
-
+  /* чтобы тултип не обрезался */
 }
 
 .sparkline-label {
@@ -447,9 +425,13 @@
 }
 
 .sparkline-svg {
-
-  transition: opacity 0.3s ease;
-
+  display: block;
+  width: 100%;
+  height: auto;
+  /* адаптируется к inline style */
+  min-height: 100px;
+  overflow: visible;
+  /* чтобы аннотации не обрезались */
 }
 
 .sparkline-area {
@@ -457,17 +439,15 @@
 }
 
 .sparkline-line {
-
   fill: none;
   stroke: var(--v4-ok-fill, #7a8a5e);
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
-  
-  
+  /* Анимация рисования линии — dasharray/offset задаётся inline для точной длины */
+  /* delay 0.1s: gives main thread time to finish tab transition before stroke-dashoffset repaints begin */
   animation: drawSparkline 3s linear 0.1s forwards;
   transition: stroke-width 0.2s ease;
-
 }
 
 /* Hover-эффект — утолщение линии при наведении */
@@ -618,11 +598,9 @@
   }
 
   70% {
-
     opacity: 1;
-    transform: translateY(-1px) scale(1.05);
-  
-}
+    transform: scale(1.3);
+  }
 
   100% {
     opacity: 1;
@@ -644,24 +622,18 @@
 }
 
 .sparkline-dot-ok {
-
   fill: var(--v4-ok-fill, #7a8a5e);
-  
-
+  /* зелёный — в норме */
 }
 
 .sparkline-dot-warn {
-
   fill: var(--v4-warn-1, #d99a63);
-  
-
+  /* жёлтый — немного превышено */
 }
 
 .sparkline-dot-over {
-
   fill: var(--v4-val-bad, #a8382b);
-  
-
+  /* красный — сильно превышено */
 }
 
 .sparkline-dot-today {
@@ -743,11 +715,8 @@
 
 @keyframes sparklinePopupFadeIn {
   from {
-
     opacity: 0;
-    transform: translateY(-10px);
-  
-}
+  }
 
   to {
     opacity: 1;
@@ -905,7 +874,6 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-btn-v2 {
-
   width: 100%;
   padding: 8px;
   background: var(--v4-chip, #efe3cf);
@@ -916,8 +884,6 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   transition: all 0.15s;
-  min-height: 44px;
-
 }
 
 @media (hover: hover) {
@@ -939,7 +905,6 @@
 }
 
 .sparkline-popup-v2 .sparkline-popup-close {
-
   position: absolute;
   top: 10px;
   right: 10px;
@@ -952,9 +917,6 @@
   line-height: 1;
   border-radius: 6px;
   transition: all 0.15s;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -1267,7 +1229,6 @@
 }
 
 .sparkline-popup-btn {
-
   margin-top: 6px;
   width: 100%;
   padding: 6px;
@@ -1279,8 +1240,6 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   transition: background 0.15s;
-  min-height: 44px;
-
 }
 
 @media (hover: hover) {
@@ -1563,27 +1522,23 @@
 }
 
 .sparkline-mood-bar {
-
   flex: 1;
   min-width: 0;
-  
+  /* для корректного flex */
   height: 6px;
   border-radius: 3px;
   overflow: visible;
-
 }
 
 /* Современный бар оценки дня — CSS градиент вместо SVG */
 .sparkline-mood-bar-modern {
-
   height: 8px;
   border-radius: 4px;
-  
+  /* pill shape */
   box-shadow:
     inset 0 1px 2px rgba(255, 255, 255, 0.3),
     0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
-
 }
 
 /* Глянцевый блик сверху */
@@ -1636,41 +1591,31 @@
 
 /* Цвета индикаторов сна по длительности */
 .sparkline-sleep-indicator.sleep-critical {
-
   filter: grayscale(0) brightness(1);
-  
+  /* 😴 <5ч — красный оттенок */
   text-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
-
 }
 
 .sparkline-sleep-indicator.sleep-bad {
-
   filter: hue-rotate(-15deg);
-  
+  /* 😴 5-6ч — оранжевый оттенок */
   text-shadow: 0 0 4px color-mix(in srgb, var(--v4-act, #c67139) 40%, transparent);
-
 }
 
 .sparkline-sleep-indicator.sleep-low {
-
-  
+  /* 😴 6-7ч — нормальный */
   opacity: 0.8;
-
 }
 
 .sparkline-sleep-indicator.sleep-good {
-
-  
+  /* 💤 7-8.5ч — хорошо */
   opacity: 1;
-
 }
 
 .sparkline-sleep-indicator.sleep-over {
-
   filter: hue-rotate(40deg);
-  
+  /* 😪 8.5+ч — синий оттенок (пересып) */
   text-shadow: 0 0 4px rgba(59, 130, 246, 0.4);
-
 }
 
 /* === 08. Slider Elements === */
@@ -1766,7 +1711,6 @@
 
 /* Brush Stats Badge */
 .sparkline-brush-stats {
-
   position: absolute;
   top: 4px;
   right: 4px;
@@ -1785,8 +1729,6 @@
   z-index: 5;
   cursor: pointer;
   transition: background-color 0.15s;
-  min-height: 44px;
-
 }
 
 @media (hover: hover) {
@@ -1836,7 +1778,6 @@
 
 /* Zoom Indicator */
 .sparkline-zoom-indicator {
-
   position: absolute;
   bottom: 4px;
   right: 4px;
@@ -1849,9 +1790,6 @@
   opacity: 0.8;
   transition: opacity 0.15s;
   z-index: 5;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -2006,17 +1944,15 @@
 
 /* === 11. SPARKLINE ANNOTATIONS — иконки событий на графике === */
 .sparkline-annotation {
-
   font-size: 11px;
   text-anchor: middle;
   pointer-events: none;
   opacity: 0;
   animation: fadeInAnnotation 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   animation-delay: 4.5s;
-  
+  /* после рисования линии 5s */
   dominant-baseline: auto;
-  
-
+  /* рендерим корректно */
 }
 
 @keyframes fadeInAnnotation {
@@ -2037,14 +1973,12 @@
 }
 
 .sparkline-annotation-training {
-
   font-size: 10px;
   fill: var(--v4-water, #7d98a6);
-  
+  /* фиолетовый для тренировок */
   opacity: 0;
   animation: fadeInSimple 0.3s ease-out forwards;
   animation-delay: var(--delay, 0s);
-
 }
 
 /* Зарядка — молния под точкой */
@@ -2066,35 +2000,29 @@
 
 /* Пунктирная линия от эмодзи тренировки к точке — синхронизирована с точкой */
 .sparkline-training-line {
-
   stroke: var(--v4-wgt-link, #c67139);
-  
+  /* светло-фиолетовый */
   stroke-width: 1;
   stroke-dasharray: 2 2;
   opacity: 0;
   animation: fadeInLine 0.3s ease-out forwards;
   animation-delay: var(--delay, 0s);
-
 }
 
 /* Пунктирная линия от точки к дню — синхронизирована с точкой */
 .sparkline-point-line {
-
   stroke: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
-  
+  /* slate-400 — ярче */
   stroke-width: 1;
   stroke-dasharray: 2 2;
   opacity: 0;
   animation: fadeInPointLine 0.3s ease-out forwards;
   animation-delay: var(--delay, 0s);
-
 }
 
 .weight-sparkline-point-line {
-
   stroke: var(--v4-wgt-violet, #a68b7a);
-  
-
+  /* purple-400 — для веса, ярче */
 }
 
 @keyframes fadeInPointLine {
@@ -2118,10 +2046,8 @@
 }
 
 .sparkline-annotation-holiday {
-
   fill: var(--v4-warn-1, #d99a63);
-  
-
+  /* оранжевый для праздников */
 }
 
 /* Прогнозная линия */
@@ -2132,10 +2058,8 @@
 }
 
 .sparkline-forecast-dot {
-
-  animation: dotAppear 0.15s ease-out forwards;
-  animation-delay: var(--delay, 3s);
-
+  fill: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
+  opacity: 0.5;
 }
 
 /* Золотая streak-линия между 🔥 днями */
@@ -2150,10 +2074,8 @@
 
 /* Анимированная streak-линия — рисуется синхронно с основной */
 .sparkline-streak-animated {
-
   animation: drawSparkline linear forwards;
-  
-
+  /* animationDelay и animationDuration задаются inline */
 }
 
 /* Прогнозная линия — маска для анимации пунктира */
@@ -2164,11 +2086,9 @@
 
 /* Прогнозная линия веса — маска для анимации */
 .weight-sparkline-forecast-mask {
-
   animation: drawForecastLine 1.2s ease-out forwards;
   animation-delay: 2.5s;
-  
-
+  /* после основной линии веса */
 }
 
 /* Анимация "рисования" прогнозной линии — плавнее */
@@ -2235,18 +2155,13 @@
 
 /* Подсказка о целевом весе */
 .weight-goal-hint {
-
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  font-size: 10px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 10%, transparent);
-  border-radius: 8px;
-  border: 1px dashed color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, transparent);
-
+  text-align: center;
+  padding: 4px 8px;
+  background: var(--v4-chip, #efe3cf);
+  border-radius: 4px;
+  margin-top: 4px;
 }
 
 .dark .weight-goal-hint {
@@ -2288,9 +2203,8 @@
 
 /* Золотые пульсирующие точки для идеальных дней */
 .sparkline-dot-gold {
-
   fill: var(--v4-warn-soft, #c9922e);
-  
+  /* золотой */
   stroke: var(--v4-warn-1, #d99a63);
   stroke-width: 1.5;
   opacity: 0;
@@ -2300,7 +2214,6 @@
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--v4-warn-soft, #c9922e) 60%, transparent));
   transform-box: fill-box;
   transform-origin: center center;
-
 }
 
 .sparkline-dot-gold-today {
@@ -2318,11 +2231,10 @@
 
 /* 🔄 Refeed day точки — оранжевые с пульсацией */
 .sparkline-dot-refeed {
-
   fill: var(--v4-act, #c67139);
-  
+  /* orange-500 */
   stroke: var(--v4-act-text, #8a4a20);
-  
+  /* orange-600 */
   stroke-width: 1.5;
   opacity: 0;
   transform: scale(0);
@@ -2331,7 +2243,6 @@
   filter: drop-shadow(0 0 4px color-mix(in srgb, var(--v4-act, #c67139) 60%, transparent));
   transform-box: fill-box;
   transform-origin: center center;
-
 }
 
 .sparkline-dot-refeed-today {
@@ -2492,12 +2403,8 @@
 
 /* Кликабельный блок корреляции */
 .correlation-clickable {
-
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -2568,7 +2475,6 @@
 }
 
 .week-heatmap-action-wrap {
-
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -2579,20 +2485,14 @@
   background: rgba(255, 255, 255, 0.76);
   border: 1px solid rgba(191, 219, 254, 0.82);
   box-shadow: 0 12px 24px -24px rgba(15, 23, 42, 0.6);
-  min-height: 44px;
-
 }
 
 .week-heatmap-action-label {
-
   font-size: 11px;
   font-weight: 700;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   letter-spacing: 0.01em;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -2602,7 +2502,6 @@
 }
 
 .week-heatmap-action {
-
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -2616,9 +2515,6 @@
   justify-content: center;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -2694,7 +2590,6 @@
 }
 
 .week-heatmap-norm {
-
   font-size: 11px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
@@ -2704,9 +2599,6 @@
   border: 1px solid rgba(226, 232, 240, 0.9);
   transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -2739,15 +2631,12 @@
 }
 
 .week-heatmap-day {
-
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   cursor: pointer;
   transition: transform 0.15s ease;
-  min-height: 44px;
-
 }
 
 @media (hover: hover) {
@@ -2778,9 +2667,7 @@
 /* Выходные: красный текст + розовая рамка */
 .week-heatmap-day.weekend .week-heatmap-date,
 .week-heatmap-day.weekend .week-heatmap-name {
-
-  font-weight: 600;
-
+  color: var(--v4-warn-1, #d99a63);
 }
 
 .week-heatmap-day.weekend .week-heatmap-date {
@@ -2792,19 +2679,10 @@
 }
 
 .week-heatmap-day.weekend .week-heatmap-cell {
-
-  width: 31px;
-  height: 31px;
-  border-radius: 10px;
-  background: var(--v4-chip, #efe3cf);
-  position: relative;
-  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
-
+  box-shadow: inset 0 0 0 1.5px rgba(251, 113, 133, 0.5);
 }
 
 .week-heatmap-day.today .week-heatmap-date {
-
   background: var(--v4-act, #c67139);
   color: white;
   padding: 2px 5px;
@@ -2812,9 +2690,8 @@
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
   font-weight: 700;
   margin-top: -2px;
-  
+  /* Компенсация паддингов для выравнивания */
   margin-bottom: -2px;
-
 }
 
 .week-heatmap-day.today .week-heatmap-name {
@@ -2841,10 +2718,8 @@
 
 /* Статусы — fallback если нет inline градиента */
 .week-heatmap-day.low .week-heatmap-cell:not([style*="background"]) {
-
   background: var(--v4-warn-soft, #c9922e);
-  
-
+  /* жёлтый для low */
 }
 
 .week-heatmap-day.green .week-heatmap-cell:not([style*="background"]) {
@@ -2891,11 +2766,9 @@
 
 /* Today ring — статичный акцент без свечения и пульса */
 .week-heatmap-day.today .week-heatmap-cell {
-
   box-shadow: 0 0 0 2px var(--v4-act, #c67139);
   z-index: 1;
-  
-
+  /* чтобы свечение было поверх соседей */
 }
 
 /* Паттерн-инсайт */
@@ -3111,20 +2984,14 @@
 
 /* === 13.5 CALORIC BALANCE CARDS — упрощённые карточки баланса === */
 .caloric-balance-card {
-
   grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  gap: 8px;
+  border: 1px solid;
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   margin-top: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  user-select: none;
-  min-height: 44px;
-
 }
 
 .caloric-balance-main {
@@ -3134,11 +3001,8 @@
 }
 
 .caloric-balance-icon {
-
-  font-size: 16px;
-  line-height: 1;
+  font-size: 18px;
   flex-shrink: 0;
-
 }
 
 .caloric-balance-text {
@@ -3281,22 +3145,13 @@
 }
 
 .caloric-balance-viz-inline.caloric-balance-viz-large .balance-viz-bar {
-
-  cursor: pointer;
-  transition: transform 0.15s ease, text-shadow 0.15s ease;
-  min-height: 44px;
-  min-width: 44px;
-
+  font-size: 18px !important;
 }
 
 /* Кликабельные столбцы графика */
 .balance-viz-bar-clickable {
-
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -3391,17 +3246,12 @@
 }
 
 .caloric-insight-emoji {
-
-  font-size: 16px;
-  line-height: 1;
-
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 .caloric-insight-text {
-
   flex: 1;
-  font-weight: 500;
-
 }
 
 /* Научная сводка Forbes */
@@ -3651,7 +3501,6 @@
 }
 
 .debt-science-btn {
-
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -3665,9 +3514,6 @@
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -4207,7 +4053,6 @@
 
 .balance-viz-bar {
   cursor: pointer;
-  min-height: 44px;
   transition: transform 0.15s ease, text-shadow 0.15s ease;
 }
 
@@ -4631,11 +4476,9 @@
 
 /* Прогноз нормализации */
 .weight-retention-forecast {
-
   font-size: 11px;
-  color: #9d174d; 
+  color: #9d174d; /* задержка воды — роли нет */
   font-weight: 500;
-
 }
 
 /* Персональный инсайт */
@@ -4655,21 +4498,17 @@
 }
 
 .weight-retention-stats b {
-
-  color: #be185d; 
+  color: #be185d; /* задержка воды — роли нет */
   font-weight: 600;
-
 }
 
 .weight-sparkline-svg {
-
   display: block;
   width: 100%;
   height: auto;
-  
+  /* адаптируется к inline style */
   min-height: 100px;
   transition: opacity 0.3s ease;
-
 }
 
 .weight-sparkline-area {
@@ -4716,11 +4555,9 @@
 }
 
 .weight-sparkline-dot {
-
   transition: r 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), fill 0.15s ease, filter 0.2s ease;
   cursor: pointer;
-  
-
+  /* Цвет задаётся inline через style */
 }
 
 @media (hover: hover) {
@@ -4772,11 +4609,9 @@
 
 /* Кнопки периода для графика веса (используют стили kcal-period-pills) */
 .weight-period-pills {
-
   background: rgba(139, 92, 246, 0.15);
-  
+  /* Фиолетовый вместо зелёного */
   margin-left: auto;
-
 }
 
 .weight-period-pills .kcal-period-pill {
@@ -4808,7 +4643,6 @@
 }
 
 .weight-goal-hint-link {
-
   background: none;
   border: none;
   color: var(--v4-warn-text, #a1471c);
@@ -4817,9 +4651,6 @@
   text-decoration: underline;
   padding: 0;
   font-size: inherit;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -5125,7 +4956,6 @@
 }
 
 .goal-bonus-info {
-
   width: 14px;
   height: 14px;
   margin-top: 0;
@@ -5140,9 +4970,6 @@
   justify-content: center;
   cursor: pointer;
   background: var(--v4-bg, #fffaf1);
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .goal-unit {
@@ -5550,21 +5377,19 @@
 }
 
 .macro-ring {
-
   position: relative;
   width: 68px;
   height: 68px;
   border-radius: 50%;
-  
+  /* Чистый белый фон без "грязи" */
   background: var(--v4-bg, #ffffff);
-  
+  /* Мягкая внешняя тень вместо жесткой "грязной" */
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.06),
     0 1px 3px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   justify-content: center;
-
 }
 
 /* Удаляем псевдо-элементы, создававшие "грязные" блики */
@@ -5574,23 +5399,19 @@
 }
 
 .macro-ring-svg {
-
   transform: rotate(-90deg);
   width: 100%;
   height: 100%;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
-  
-
+  /* Легкий объем самого кольца */
 }
 
 /* Фон трека - очень прозрачный серый, не грязный */
 .macro-ring-bg {
-
   fill: none;
   stroke: var(--v4-hero, #efe3cf);
-  
+  /* Slate-100 - очень светлый */
   stroke-width: 5;
-
 }
 
 /* Само кольцо прогресса - с аккуратным скруглением */
@@ -5606,23 +5427,19 @@
 
 /* Маркер конца линии (белая точка для блика/объема) */
 .macro-ring-marker {
-
   display: none;
-  
-
+  /* Убираем, если не нужна */
 }
 
 .macro-ring-fill--over {
-
   fill: none;
   stroke: var(--v4-warn-1, #d99a63);
-  
+  /* Ярко-красный для перебора */
   stroke-width: 5;
   stroke-linecap: round;
   stroke-dashoffset: var(--over-offset, 0);
   animation: none;
   transition: stroke-dasharray var(--widget-motion-ms, 1100ms) cubic-bezier(0.65, 0, 0.35, 1);
-
 }
 
 /* Точка-блик на конце дуги */
@@ -5635,13 +5452,11 @@
 
 /* Чёрная линия-маркер на позиции нормы (100%) */
 .macro-ring-norm-marker {
-
   stroke: var(--v4-ink, #201e1d);
-  
+  /* Slate-800 — тёмный, контрастный */
   stroke-width: 1.5;
   stroke-linecap: round;
   fill: none;
-
 }
 
 @keyframes macroRingFillIn {
@@ -5666,37 +5481,30 @@
 
 /* Цвета - делаем чуть насыщеннее */
 .macro-ring.protein {
-
   --macro-ring-color: var(--v4-warn-1, #d99a63);
-  
+  /* Red-500 */
   --macro-ring-over: #b91c1c;
-  
-
+  /* Red-700 */
 }
 
 
 .macro-ring.fat {
-
   --macro-ring-color: var(--v4-warn-1, #d99a63);
-  
+  /* Amber-500 */
   --macro-ring-over: var(--v4-warn-text, #a1471c);
-  
-
+  /* Amber-700 */
 }
 
 
 .macro-ring.carbs {
-
   --macro-ring-color: var(--v4-ok-fill, #7a8a5e);
-  
+  /* Green-500 */
   --macro-ring-over: #15803d;
-  
-
+  /* Green-700 */
 }
 
 
 .macro-ring-value {
-
   position: absolute;
   top: 50%;
   left: 50%;
@@ -5705,28 +5513,23 @@
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--v4-ink, #201e1d);
-  
+  /* Slate-800 */
   z-index: 2;
-
 }
 
 .macro-ring-label {
-
   font-size: 13px;
   font-weight: 600;
   color: var(--v4-ink, #201e1d);
-  
+  /* Slate-700 */
   letter-spacing: -0.01em;
-
 }
 
 .macro-ring-target {
-
   font-size: 11px;
   font-weight: 500;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
-  
-
+  /* Slate-400 */
 }
 
 .macro-ring-badges {
@@ -5737,14 +5540,10 @@
 }
 
 .macro-ring-badge {
-
   font-size: 12px;
   line-height: 1;
   cursor: pointer;
   transition: transform 0.15s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .macro-ring-badge:active {
@@ -5754,19 +5553,17 @@
 
 /* === 18. MACRO BADGE POPUP === */
 .macro-badge-popup {
-
   background: var(--color-white);
   border-radius: 14px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
   min-width: 200px;
   max-width: 240px;
-  
+  /* Above bottom tabs/FABs (1000-1001), below fullscreen overlays/modals (10000+). */
   z-index: 1010;
   animation: popupFadeIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
   position: relative;
   touch-action: pan-y;
-
 }
 
 /* Цветная полоса сверху */
@@ -6039,7 +5836,6 @@
 }
 
 .macro-badge-popup-close {
-
   position: absolute;
   top: 10px;
   right: 10px;
@@ -6052,9 +5848,6 @@
   line-height: 1;
   border-radius: 6px;
   transition: all 0.15s;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -6242,7 +6035,6 @@
 
 /* Close button */
 .metric-popup-close {
-
   position: absolute;
   top: 10px;
   right: 10px;
@@ -6255,9 +6047,6 @@
   line-height: 1;
   border-radius: 6px;
   transition: all 0.15s;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -6391,7 +6180,6 @@
 
 /* === 20. WEIGHT CARD MODERN (стиль как у goal progress bar) === */
 .weight-card-modern {
-
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -6407,8 +6195,6 @@
   min-width: 85px;
   max-width: 85px;
   flex-shrink: 0;
-  min-height: 44px;
-
 }
 
 @media (hover: hover) {
@@ -6474,9 +6260,10 @@
 }
 
 .weight-card-bottom-row {
-
-  justify-content: center;
-
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .weight-card-trend {
@@ -6526,7 +6313,6 @@
 }
 
 .weight-clear-btn-mini {
-
   width: 14px;
   height: 14px;
   padding: 0;
@@ -6542,9 +6328,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -6572,7 +6355,6 @@
 
 /* === 21. DEFICIT CARD === */
 .deficit-card-modern {
-
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -6588,8 +6370,6 @@
   min-width: 85px;
   max-width: 85px;
   flex-shrink: 0;
-  min-height: 44px;
-
 }
 
 @media (hover: hover) {
@@ -6692,12 +6472,9 @@
 
 .activity-cards-row > .formula-card,
 .activity-cards-row > .activity-right-col {
-
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-
+  flex: 0 0 calc(50% - 4px);
+  max-width: calc(50% - 4px);
+  min-width: 0;
 }
 
 .activity-cards-row--single > .activity-right-col {
@@ -6713,20 +6490,10 @@
 }
 
 .activity-actions-row .add-training-btn {
-
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
   padding: 14px 12px;
-  border: 1px dashed var(--v4-act, #c67139);
-  background: color-mix(in srgb, var(--v4-act, #c67139) 8%, transparent);
-  color: var(--v4-act-text, #8a4a20);
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .activity-actions-row .add-charge-btn {
@@ -6879,7 +6646,6 @@
 }
 
 .household-activity-card {
-
   flex: 1;
   background: var(--color-white);
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
@@ -6891,8 +6657,6 @@
   display: flex;
   flex-direction: column;
   contain: layout style paint;
-  min-height: 44px;
-
 }
 
 @media (hover: hover) {
@@ -6910,50 +6674,40 @@
 }
 
 .household-activity-header {
-
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: var(--heys-diary-card-header-gap, 10px);
-
 }
 
 .household-activity-icon {
-
-  font-size: 18px;
-
+  font-size: 16px;
 }
 
 .household-activity-title {
-
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--v4-ok-text, #5c6a45);
-
 }
 
 .household-activity-value {
-
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 4px;
-
+  flex-wrap: wrap;
 }
 
 .household-value-number {
-
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--success-dark);
-
+  line-height: 1;
 }
 
 .household-value-unit {
-
-  font-size: 14px;
+  font-size: 13px;
   color: var(--v4-wgt-ok-deep, #5c6a45);
   font-weight: 500;
-
 }
 
 .household-value-time {
@@ -6964,12 +6718,10 @@
 }
 
 .household-value-kcal {
-
   font-size: 12px;
   color: var(--v4-ok-text, #5c6a45);
-  margin-left: 8px;
   font-weight: 500;
-
+  margin-top: 2px;
 }
 
 /* Ссылка на статистику - отдельная строка */
@@ -7005,7 +6757,6 @@
 
 /* Кнопка "+ Добавить" внутри карточки бытовой активности */
 .household-add-btn {
-
   width: 100%;
   margin-top: 8px;
   padding: 10px 12px;
@@ -7017,8 +6768,6 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-
 }
 
 @media (hover: hover) {
@@ -7036,7 +6785,6 @@
 /* Кнопка добавления тренировки в правой колонке */
 .add-training-btn {
   padding: 14px 12px;
-  min-height: 44px;
   border: 1px dashed var(--v4-act, #c67139);
   background: color-mix(in srgb, var(--v4-act, #c67139) 8%, transparent);
   color: var(--v4-act-text, #8a4a20);
@@ -7417,8 +7165,6 @@
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .zone-formula-edit-btn:active {
@@ -7432,12 +7178,8 @@
 
 /* Кликабельный badge калорий */
 .compact-badge.clickable {
-
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .compact-badge.clickable:active {
@@ -7481,7 +7223,6 @@
 }
 
 .training-type-btn {
-
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -7493,8 +7234,6 @@
   background: var(--color-white);
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-
 }
 
 .training-type-btn:active {
@@ -7552,12 +7291,8 @@
 
 /* Make compact-train-header clickable */
 .compact-train-header {
-
   cursor: pointer;
   margin-bottom: var(--heys-diary-card-header-gap, 10px);
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 /* Training Zones Section in Modal */
@@ -7669,7 +7404,6 @@
 }
 
 .training-preset-btn {
-
   padding: 10px 12px;
   font-size: 13px;
   font-weight: 500;
@@ -7680,9 +7414,6 @@
   cursor: pointer;
   transition: all 0.15s;
   text-align: left;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .training-preset-btn:active {
@@ -7904,10 +7635,7 @@
 }
 
 .training-card-rating.physical .training-card-rating-value {
-
-  font-weight: 700;
-  font-size: 13px;
-
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Wellbeing (самочувствие) - фиолетовый */
@@ -7985,12 +7713,8 @@
 
 /* Clickable zone values */
 .zone-clickable {
-
   cursor: pointer;
   transition: transform 0.1s;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .zone-clickable:active {
@@ -8238,8 +7962,6 @@
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .steps-goal-preset:active {
@@ -8255,10 +7977,9 @@
 
 /* === 27. FAB (Floating Action Button) === */
 .fab-add-meal {
-
   position: fixed;
   bottom: calc(90px + env(safe-area-inset-bottom, 0px));
-  
+  /* над нижней навигацией + safe-area для iPhone */
   right: 20px;
   width: 64px;
   height: 64px;
@@ -8275,7 +7996,6 @@
   justify-content: center;
   transition: transform 0.2s, box-shadow 0.2s;
   z-index: 100;
-
 }
 
 @media (hover: hover) {
@@ -8292,12 +8012,32 @@
 
 /* === 28. MACRO TOAST — подсказка БЖУ снизу === */
 .macro-toast {
-
-  will-change: transform;
-  touch-action: pan-x;
+  position: fixed;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  /* над нижней навигацией + safe-area */
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 12px 16px;
+  /* Gradient border + pastel background */
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background:
+    linear-gradient(var(--toast-bg, var(--color-white)), var(--toast-bg, var(--color-white))) padding-box,
+    var(--toast-gradient, linear-gradient(135deg, #94a3b8 0%, #64748b 100%)) border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  /* Above bottom tabs/FABs (1000-1001), below fullscreen overlays/modals (10000+). */
+  z-index: 1010;
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+  width: 80%;
+  /* 4/5 ширины экрана */
+  max-width: 400px;
+  /* ограничение на больших экранах */
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-
 }
 
 .macro-toast.visible {
@@ -8355,92 +8095,72 @@
 
 /* === Toast Gradient Borders + Pastel Backgrounds по типам === */
 .macro-toast-warning {
-
   --toast-gradient: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
   --toast-bg: #fef2f2;
-  
-
+  /* red-50 */
 }
 
 .macro-toast-success {
-
   --toast-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
   --toast-bg: #ecfdf5;
-  
-
+  /* emerald-50 */
 }
 
 /* Fiber - зелёный (клетчатка) */
 .macro-toast-fiber {
-
   --toast-gradient: linear-gradient(135deg, #6ee7b7 0%, #10b981 100%);
   --toast-bg: #ecfdf5;
-  
-
+  /* emerald-50 */
 }
 
 /* Tip - синий (подсказки) */
 .macro-toast-tip {
-
   --toast-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
   --toast-bg: #eff6ff;
-  
-
+  /* blue-50 */
 }
 
 /* Achievement - золотой с анимацией */
 .macro-toast-achievement {
-
   --toast-gradient: linear-gradient(135deg, var(--v4-warn-soft, #c9922e) 0%, var(--v4-warn-1, #d99a63) 100%);
   --toast-bg: var(--v4-accent-bg, #f0dcc6);
-  
+  /* yellow-50 */
   animation: achievementPulse 0.5s ease-out;
-
 }
 
 /* Streak - огненный */
 .macro-toast-streak {
-
   --toast-gradient: linear-gradient(135deg, var(--v4-warn-1, #d99a63) 0%, var(--v4-act, #c67139) 100%);
   --toast-bg: var(--v4-accent-bg, #f0dcc6);
-  
-
+  /* orange-50 */
 }
 
 /* Emotional - фиолетовый */
 .macro-toast-emotional {
-
   --toast-gradient: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
   --toast-bg: #f5f3ff;
-  
-
+  /* violet-50 */
 }
 
 /* Hydration - голубой */
 .macro-toast-hydration {
-
   --toast-gradient: linear-gradient(135deg, #67e8f9 0%, #06b6d4 100%);
   --toast-bg: #ecfeff;
-  
-
+  /* cyan-50 */
 }
 
 /* Nutrition - зеленоватый */
 .macro-toast-nutrition {
-
   --toast-gradient: linear-gradient(135deg, #86efac 0%, #22c55e 100%);
   --toast-bg: var(--v4-ok-bg, #eaefe0);
-  
-
+  /* green-50 */
 }
 
 /* Lifestyle - индиго */
 .macro-toast-lifestyle {
-
   --toast-gradient: linear-gradient(135deg, #a5b4fc 0%, #3b82f6 100%);
   --toast-bg: #eef2ff;
-  
-
+  /* indigo-50 */
 }
 
 /* Dark mode — более тёмные пастельные оттенки */
@@ -8835,12 +8555,11 @@
 
 /* === 29. EXPANDABLE ADVICE TOAST === */
 .macro-toast.expanded {
-
-    max-height: 250px;
-    overflow-y: auto;
-    flex-direction: column;
-    align-items: stretch;
-  
+  bottom: 90px;
+  max-height: 400px;
+  border-radius: 16px;
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .macro-toast-main {
@@ -8952,10 +8671,13 @@
 }
 
 .macro-toast-extras {
-
-    max-height: 150px;
-    overflow-y: auto;
-  
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideDown 0.2s ease-out;
 }
 
 @keyframes slideDown {
@@ -8971,10 +8693,13 @@
 }
 
 .macro-toast-extra {
-
-    font-size: 12px;
-    padding: 6px 10px;
-  
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  font-size: 13px;
 }
 
 .macro-toast-extra-warning {

@@ -326,21 +326,13 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-action-buttons .aps-new-product-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
-  border: 1.5px dashed #93c5fd;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--v4-act, #2563eb);
-  min-height: 44px;
-  min-width: 44px;
-  box-sizing: border-box;}
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  justify-content: center;
+  gap: 5px;
+  padding-inline: 6px;
+}
 
 .aps-action-buttons .aps-new-product-btn > span:not(.aps-new-icon):not(.aps-ready-sets-badge) {
   min-width: 0;
@@ -355,8 +347,6 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  min-height: 44px;
-  box-sizing: border-box;
   background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
   border: 1.5px dashed #93c5fd;
   border-radius: 10px;
@@ -429,8 +419,6 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   font-size: 13px;
   font-weight: 600;
   color: var(--v4-warn-text, #a1471c);
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -532,7 +520,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   flex: 0 0 76px;
   align-self: center;
   width: 76px;
-  min-height: 44px;
+  height: 36px;
+  min-height: 36px;
   padding: 0 6px;
   color: #7c3aed;
   font-size: 12px;
@@ -551,7 +540,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
     color 0.15s ease,
     box-shadow 0.15s ease,
     transform 0.15s ease;
-  min-width: 44px;}
+}
 
 .aps-shared-toggle.is-active {
   color: var(--v4-bg, #fff);
@@ -663,8 +652,6 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .aps-quick-filter.active {
@@ -857,11 +844,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 /* Кнопка удаления — маленькая */
 .aps-delete-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-width: 44px;
-  height: 44px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -870,7 +854,6 @@ width: 44px;
   transition: all 0.15s;
   border-radius: 7px;
   opacity: 0.4;
-  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -891,7 +874,7 @@ width: 44px;
 .aps-fav-btn {
   width: 44px;
   height: 44px;
-  
+  margin: -13px -6px -13px 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -903,15 +886,13 @@ width: 44px;
   cursor: pointer;
   transition: all 0.15s;
   border-radius: 7px;
-  min-height: 44px;
-  min-width: 44px;}
+}
 
 @media (hover: hover) {
   .aps-fav-btn:hover {
     background: var(--v4-accent-bg, #f0dcc6);
     color: var(--v4-act, #c67139);
   }
-  min-height: 44px;
 }
 
 /* Избранное — акцент набора, а не янтарь: кадр даёт --acs. */
@@ -920,11 +901,8 @@ width: 44px;
 }
 
 .aps-edit-product-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-width: 44px;
-  height: 44px;
+  width: 26px;
+  height: 26px;
   border: none;
   background: transparent;
   color: var(--v4-ink-3, #94a3b8);
@@ -932,7 +910,6 @@ width: 44px;
   cursor: pointer;
   transition: all 0.15s;
   border-radius: 7px;
-  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -972,8 +949,6 @@ width: 44px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -1063,8 +1038,6 @@ width: 44px;
   transition: all 0.15s;
   flex-shrink: 1;
   min-width: 0;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -1205,8 +1178,6 @@ width: 44px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -1277,8 +1248,6 @@ width: 44px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .aps-mode-btn.active {
@@ -1397,8 +1366,6 @@ width: 44px;
   font-weight: 600;
   line-height: 1.25;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .aps-brand-extract-btn:active,
@@ -2067,8 +2034,6 @@ width: 44px;
   color: var(--text-secondary, #6b7280);
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2219,8 +2184,6 @@ width: 44px;
   font-weight: 650;
   cursor: pointer;
   text-align: left;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .aps-similar-warn__item:active {
@@ -2249,8 +2212,6 @@ width: 44px;
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 [data-theme$='dark'] .aps-similar-warn {
@@ -2466,8 +2427,6 @@ width: 44px;
   text-decoration: underline;
   color: var(--v4-sand-act-deep, #8a4a20);
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .aps-v4-notsent-chip__retry:disabled {
@@ -2725,9 +2684,7 @@ width: 44px;
   background: transparent;
   text-align: left;
   cursor: pointer;
-  min-height: 44px;
-  min-width: 44px;
-  box-sizing: border-box;}
+}
 
 .aps-v4-product-row:last-child {
   border-bottom: none;
@@ -2776,20 +2733,17 @@ width: 44px;
   justify-content: center;
   width: 44px;
   height: 44px;
-  
+  margin: -13px -6px -13px 0;
   padding: 0;
   border: 0;
   background: transparent;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 28%, transparent);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  min-height: 44px;
-  min-width: 44px;
-  box-sizing: border-box;}
+}
 
 .aps-v4-product-row__fav.is-active {
   color: var(--v4-act, #c67139);
-  min-height: 44px;
 }
 
 /* Имя экрана шага: кадры дают .ttl 700 15px/1. Было 600 — на песочном грунте

@@ -107,16 +107,35 @@ describe('семантическая лестница чернил home-widgets'
     expect(contract).toContain('Промежуточных ступеней (42, 50) НЕ ЗАВОДИМ');
   });
 
-  it('строит точные роли от raw ink-rgb каждого набора', () => {
-    for (const role of [
-      ['prose', '0.62'],
-      ['2', '0.56'],
-      ['3', '0.45'],
-      ['4', '0.38'],
-      ['30', '0.3'],
-    ]) {
-      expect(palette).toContain(`--v4-ink-${role[0]}: rgba(var(--v4-ink-rgb), ${role[1]});`);
+  it('объявляет каждую ступень в каждом наборе своим значением', () => {
+    // Ступени живут не одной формулой в :root, а по объявлению в каждом наборе.
+    // Общая формула от --v4-ink-rgb давала всем наборам одну долю — ровно тот
+    // дефект, из-за которого вспомогательный текст в синем не держал 4,5.
+    // Решение дизайнера 7 сентября: доля считается по САМОЙ ТЁМНОЙ поверхности
+    // набора, поэтому у ink-2 она своя (56 песочный, 61 синий, 63 тёмные).
+    const blocks = {
+      sand: ['rgba(0, 0, 0, 0.56)', 'rgba(0, 0, 0, 0.45)', 'rgba(0, 0, 0, 0.38)', 'rgba(0, 0, 0, 0.3)'],
+      'sand-dark': [
+        'rgba(242, 237, 230, 0.63)', 'rgba(242, 237, 230, 0.5)',
+        'rgba(242, 237, 230, 0.46)', 'rgba(242, 237, 230, 0.3)',
+      ],
+      blue: ['rgba(0, 0, 0, 0.61)', 'rgba(0, 0, 0, 0.45)', 'rgba(0, 0, 0, 0.38)', 'rgba(0, 0, 0, 0.3)'],
+      'blue-dark': [
+        'rgba(238, 243, 248, 0.63)', 'rgba(238, 243, 248, 0.5)',
+        'rgba(238, 243, 248, 0.46)', 'rgba(238, 243, 248, 0.3)',
+      ],
+    };
+    const order = ['2', '3', '4', '30'];
+    for (const [set, values] of Object.entries(blocks)) {
+      const at = palette.indexOf(`[data-theme-id="${set}"]`);
+      expect(at, `набор ${set} объявлен`).toBeGreaterThan(-1);
+      const block = palette.slice(at, palette.indexOf('}', at));
+      order.forEach((step, i) => {
+        expect(block, `${set} · --v4-ink-${step}`).toContain(`--v4-ink-${step}: ${values[i]};`);
+      });
     }
+    // --v4-ink-prose ступени не имеет и пока живёт общей долей в :root.
+    expect(palette).toContain('--v4-ink-prose: rgba(var(--v4-ink-rgb), 0.62);');
     expect(palette.match(/--v4-ink-rgb:/g)).toHaveLength(4);
     expect(palette).toContain('--v4-ink-rgb: 0, 0, 0;');
     expect(palette).toContain('--v4-ink-rgb: 242, 237, 230;');

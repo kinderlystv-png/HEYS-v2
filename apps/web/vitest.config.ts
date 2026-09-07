@@ -71,6 +71,12 @@ const designGates = process.env.HEYS_DESIGN_GATES;
 
 export default defineConfig({
   plugins: [react(), stripShebang],
+  // Сторожа вердиктов (sb-750-handoff-*-guard) импортируют scripts/ абсолютным
+  // путём — это выше корня vite, и его защита файловой системы отдавала «Does
+  // the file exist?» на существующие файлы. Три теста из-за этого молчали,
+  // охраняя чужие строки вердиктов от пакетной перезаписи. Разрешаем корень
+  // репозитория явно; шире корня доступ не открывается.
+  server: { fs: { allow: [path.resolve(__dirname, '..', '..')] } },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

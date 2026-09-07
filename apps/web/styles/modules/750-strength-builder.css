@@ -134,15 +134,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   border-radius: 10px;
   border: 1px solid var(--sb-br);
   background: var(--sb-card);
   color: var(--sb-tx);
   font-size: 16px;
   cursor: pointer;
-  min-height: 44px;
 }
 
 .sb-stats {
@@ -1327,12 +1326,6 @@
   letter-spacing: 0.06em;
   text-transform: lowercase;
   cursor: pointer;
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-unit-badge.is-on {
@@ -1358,12 +1351,6 @@
   letter-spacing: 0.06em;
   text-transform: lowercase;
   cursor: pointer;
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-badge.is-on {
@@ -1403,8 +1390,6 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 /* ── Состояния строк подходов: один сигнал на одно состояние ────────────── */
@@ -1468,8 +1453,6 @@
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .sb-rest-manual.is-on {
@@ -2635,8 +2618,6 @@
   border-radius: 999px;
   font: 700 11.5px/1 Figtree, -apple-system, system-ui, sans-serif;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .sb-order-screen .sb-head {
@@ -2677,12 +2658,11 @@
 }
 
 .sb-order-done.obtn {
-  min-height: 44px;
+  height: 36px;
   padding: 0 15px;
   background: var(--v4-tint, var(--sb-accbg));
   box-shadow: inset 0 0 0 1.5px var(--v4-act, var(--sb-acc-strong));
   color: var(--v4-act-text, var(--sb-acc));
-  box-sizing: border-box;
 }
 
 .sb-order-list {
@@ -2840,7 +2820,7 @@
 
 /* legacy alias kept for older selectors */
 .sb-order-done {
-  min-height: 44px;
+  min-height: 36px;
   padding: 0 14px;
   border-radius: 9px;
   border: none;
@@ -5502,7 +5482,6 @@
   font: 700 11.5px/1 Figtree, sans-serif;
   color: var(--ac);
   cursor: pointer;
-  min-height: 44px;
 }
 
 .sb-ex-card-save {
@@ -5531,7 +5510,6 @@
   font: 700 12px/1 Figtree, sans-serif;
   color: var(--ac);
   cursor: pointer;
-  min-height: 44px;
 }
 
 .sb-time-summary {
@@ -5751,8 +5729,6 @@
   background: var(--sb-card, #fff);
   color: var(--sb-tx, #0f172a);
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .sb-move-day b {
@@ -5802,8 +5778,6 @@
   color: var(--sb-mut, #64748b);
   font-size: 12.5px;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .sb-plan-card.is-moved {
@@ -7017,8 +6991,6 @@
   font-variant-numeric: tabular-nums;
   text-align: left;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .sb-tw-cell.is-done {
@@ -7243,8 +7215,6 @@
   font: 700 11.5px/1 Figtree, sans-serif;
   color: var(--sb-acc);
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .sb-cur-sync-foot {
@@ -7296,8 +7266,6 @@
   background: transparent;
   text-align: left;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .sb-sheet-menu-row:first-of-type {
@@ -7904,15 +7872,4 @@
 
 .sb-cycle-report.sb-plan-vs-done .sb-finish-head .sb-icon-btn {
   flex: none;
-}
-
-/* Гейт тач-целей меряет badge без предков :has() — дублируем минимум здесь. */
-.sb-ex-unit-badge,
-.sb-ex-muscle-badge {
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
 }

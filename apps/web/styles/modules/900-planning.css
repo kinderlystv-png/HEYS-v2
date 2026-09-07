@@ -13,7 +13,7 @@
     --planning-text: var(--text, var(--text-primary, #0f172a));
     --planning-muted: var(--muted, var(--text-secondary, #64748b));
     --planning-muted-soft: var(--text-tertiary, #94a3b8);
-    --planning-fab-size: 44px;
+    --planning-fab-size: 36px;
     --planning-main-tabs-height: calc(76px + env(safe-area-inset-bottom, 0px));
     --planning-subnav-height: 44px;
     display: flex;
@@ -66,10 +66,10 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
+    width: var(--planning-fab-size);
+    min-width: var(--planning-fab-size);
+    height: var(--planning-fab-size);
+    min-height: var(--planning-fab-size);
     gap: 0;
     padding: 0;
     border-radius: 999px;
@@ -3185,10 +3185,10 @@
     }
 
     .planning-subnav__item {
-        width: 44px;
-        min-width: 44px;
-        height: 44px;
-        min-height: 44px;
+        width: 34px;
+        min-width: 34px;
+        height: 34px;
+        min-height: 34px;
     }
 
     .planning-subnav__icon {
@@ -6390,11 +6390,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-quick-link-cancel {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
     border: none;
     background: transparent;
     padding: 8px 4px;
@@ -12429,109 +12424,4 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     .planning-duration-modal__custom {
         grid-template-columns: 1fr;
     }
-}
-
-
-/* task69-touch-44 — do not remove without baseline update */
-.planning-subnav__item,
-.planning-goals-new-button,
-.planning-goals-wizard__chips button,
-.planning-goals-wizard__choices button,
-.planning-goals-inline-add button,
-.planning-goals-review button,
-.planning-goals-wizard__actions button,
-.planning-goals-archived-notice button,
-.planning-goals-card__done,
-.planning-goals-advanced-toggle,
-.planning-goals-settings__back,
-.planning-goals-workspace__course button,
-.planning-goals-workspace__focus-actions button,
-.planning-goals-schedule-panel > button,
-.planning-goals-workspace__task button,
-.planning-goals-review-panel__more,
-.planning-goals-review-panel__actions button,
-.planning-goals-card__restore-action,
-.planning-goals-card__archive-action,
-.planning-goals-archive__toggle,
-.planning-goals-archive__item button,
-.planning-checklists-screen__create,
-.planning-checklists-screen__facility-option,
-.planning-checklists-screen__item,
-.planning-checklists-screen__bulk-toggle,
-.planning-checklists-screen__bulk-confirm,
-.planning-checklists-screen__empty-add,
-.planning-checklists-archive-badge,
-.planning-checklists-screen__card-toggle,
-.planning-checklists-screen__params-collapse,
-.planning-checklists-screen__params-summary,
-.planning-checklists-archive-row__restore,
-.planning-checklists-archive-row__delete,
-.planning-checklists-modal__tab,
-.planning-checklists-modal__preset-option,
-.planning-checklists-modal__primary,
-.planning-checklists-modal__secondary,
-.planning-task-repeat__toggle,
-.planning-task-repeat__dates,
-.planning-task-repeat__kind button,
-.planning-quick-target-trigger,
-.planning-quick-target-menu__cancel,
-.planning-quick-target-option,
-.planning-date-picker__btn,
-.planning-duration-trigger,
-.planning-priority-btn,
-.planning-add-btn,
-.planning-filter-btn,
-.planning-project-group__header,
-.planning-completed-toggle,
-.planning-task-row__body,
-.planning-action-menu__swatch,
-.planning-clear-tasks-modal__cancel,
-.planning-clear-tasks-modal__confirm,
-.planning-quick-link-cancel,
-.planning-quick-repeat__toggle,
-.planning-bg-section__toggle,
-.planning-quick-repeat__pick-dates,
-.planning-quick-repeat__reset,
-.planning-repeat-calendar__clear,
-.planning-repeat-calendar__confirm,
-.planning-modal__segment-button,
-.planning-modal__details-summary,
-.planning-task-editor__status-btn,
-.planning-duration-modal__option,
-.planning-btn,
-.planning-dependency-picker__item,
-.planning-slot-delete-sheet__btn,
-.planning-gantt2-zoom-btn,
-.planning-gantt2-toggle-btn,
-.planning-gantt2-today-pill,
-.planning-gantt2-backlog__head,
-.planning-gantt2-backlog__item,
-.planning-gantt2-undo-toast__btn,
-.planning-calendar-undo-toast__btn,
-.gantt-quick-edit-progress-slider,
-.gantt-quick-edit-seg-btn {
-  min-height: 44px;
-}
-
-.planning-goals-card__settings,
-.planning-checklists-screen__item-edit,
-.planning-checklists-screen__item-delete,
-.planning-checklists-screen__group-edit,
-.planning-checklists-screen__group-add,
-.planning-checklists-screen__group-delete,
-.planning-checklists-screen__edit,
-.planning-checklists-screen__delete,
-.planning-checklists-modal__close,
-.planning-filter-toggle,
-.planning-matrix-toggle,
-.planning-action-menu__close,
-.planning-weekday-chip,
-.planning-repeat-calendar__nav,
-.planning-modal__close,
-.planning-modal__icon-btn,
-.planning-calendar-task-picker__close,
-.planning-calendar-task-picker__action,
-.planning-calendar-display-settings__close {
-  min-height: 44px;
-  min-width: 44px;
 }

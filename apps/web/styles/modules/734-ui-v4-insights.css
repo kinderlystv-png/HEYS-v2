@@ -45,7 +45,7 @@
 .insights-v4-period-pill {
   min-width: 44px;
   min-height: 44px;
-  
+  margin: -16px -6px;
   padding: 0 6px;
   border: none;
   background: none;
@@ -342,8 +342,6 @@
   font-weight: 600;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .insights-v4-detail__title {
@@ -607,8 +605,12 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   text-align: left;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
+}
+
+.heys-score-insights-v4__reports-link::before {
+  content: '';
+  position: absolute;
+  inset: -12px 0;
 }
 
 .heys-score-insights-v4__reports-link > svg {
@@ -931,8 +933,7 @@
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
-  min-height: 44px;
-  min-width: 44px;}
+}
 
 .meal-rec-v4__how-body {
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
@@ -1486,8 +1487,6 @@
   font: 600 12.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-align: left;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .insights-v4-outcomes__row {
@@ -1725,10 +1724,6 @@
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   text-align: left;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  box-sizing: border-box;
 }
 
 /* Контракт «вид · лист»: шторка снизу на --bg радиусом 28/28/0/0 с полями

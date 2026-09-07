@@ -14,7 +14,7 @@
 .planning-reading-screen__header > p:last-child { margin: 0; color: var(--reading-muted); font-size: 17px; }
 .planning-reading-screen__eyebrow { margin: 0; color: var(--reading-brand); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
 
-.reading-continue { position: relative; display: grid; width: 100%; max-width: 680px; min-height: 76px; margin: 0 0 22px; padding: 14px 18px 16px; overflow: hidden; border: 1px solid var(--reading-line); border-radius: 16px; background: color-mix(in srgb, var(--reading-brand) 6%, var(--bg-card, #fff)); color: var(--reading-ink); text-align: left; font: inherit; cursor: pointer; }
+.reading-continue { position: relative; display: grid; width: min(100%, 680px); min-height: 76px; margin: 0 0 22px; padding: 14px 18px 16px; overflow: hidden; border: 1px solid var(--reading-line); border-radius: 16px; background: color-mix(in srgb, var(--reading-brand) 6%, var(--bg-card, #fff)); color: var(--reading-ink); text-align: left; font: inherit; cursor: pointer; }
 .reading-continue__eyebrow { margin-bottom: 4px; color: var(--reading-brand); font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .reading-continue strong { padding-right: 100px; font-size: 16px; }
 .reading-continue > span:nth-of-type(2) { margin-top: 3px; color: var(--reading-muted); font-size: 12px; }

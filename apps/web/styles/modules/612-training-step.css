@@ -45,8 +45,6 @@
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .ts-strength-mode-btn:active {
@@ -159,19 +157,15 @@
 }
 
 .ts-wb-ex-remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-border: none;
+  border: none;
   background: var(--v4-chip, #efe3cf);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-  width: 44px;
-  height: 44px;
+  width: 28px;
+  height: 28px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
-  min-height: 44px;
 }
 
 .ts-wb-ex-name {
@@ -230,8 +224,6 @@ border: none;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 [data-theme$='dark'] .ts-strength-mode-btn,
@@ -272,8 +264,6 @@ border: none;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .ts-type-btn:active {
@@ -355,8 +345,8 @@ border: none;
 }
 
 .ts-time-btn {
-  width: 44px;
-  height: 44px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -368,7 +358,6 @@ border: none;
   cursor: pointer;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
-  min-height: 44px;
 }
 
 .ts-time-btn:active {
@@ -504,8 +493,8 @@ border: none;
 }
 
 .ts-zone-btn {
-  width: 44px;
-  height: 44px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -517,7 +506,6 @@ border: none;
   cursor: pointer;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
-  min-height: 44px;
 }
 
 .ts-zone-btn:active {
@@ -566,8 +554,6 @@ border: none;
   cursor: pointer;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .ts-quick-btn:active {

@@ -396,8 +396,6 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .flow-selection-btn__copy {
@@ -787,13 +785,12 @@
 /* Большой emoji слева */
 .meal-rating-emoji-lg {
   font-size: 28px;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   min-width: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
 }
 
 .meal-rating-emoji-lg.bounce {
@@ -860,8 +857,8 @@
 }
 
 .meal-preset-btn {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--v4-line, #e2e8f0); /* v4-intentional */
   border-radius: 8px;
   background: white;
@@ -871,7 +868,6 @@
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
-  min-height: 44px;
 }
 
 .meal-preset-btn:active {
@@ -1048,8 +1044,6 @@
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .meal-comment-chip:active {
@@ -1332,8 +1326,6 @@
   color: var(--v4-sand-act-deep, #8a4a20);
   cursor: pointer;
   text-align: right;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .mpr-header-edit-btn.is-active {
@@ -1465,7 +1457,6 @@
 
 .mpr-my-set-row--editable {
   cursor: pointer;
-  min-height: 44px;
 }
 
 .mpr-my-set-row__main {
@@ -1552,8 +1543,6 @@
   border-radius: 16px;
   gap: 10px;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .mpr-card-info {
@@ -1681,8 +1670,6 @@
   color: var(--v4-sand-act-deep, #8a4a20);
   transition: all 0.2s;
   margin-top: 4px;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -1781,8 +1768,6 @@
   gap: 2px;
   transition: background 0.12s;
   width: 100%;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2352,8 +2337,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   background: linear-gradient(135deg, var(--v4-sand-warn-bg, #fef3c7) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 25%, var(--v4-sand-warn-bg, #fef3c7)) 100%);
   border: 1.5px solid var(--v4-warn-soft, #c9922e);
   border-radius: 8px;
@@ -2361,7 +2346,6 @@
   font-size: 15px;
   transition: all 0.2s;
   self-align: center;
-  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -2435,10 +2419,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  
+  /* Контракт «вид · строка поиска»: иконка штрихкода 22 px тоном чернил 55 % в
+     области нажатия 44 × 44 с отрицательными полями. Тон был #434587 — цвет
+     снятой системы; область 40 × 44 не дотягивала до минимальной цели касания,
+     и отрицательные поля нужны, чтобы цель не растянула саму строку. */
   width: 44px;
   height: 44px;
-  
+  margin: -13px -6px -13px 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -2451,8 +2438,7 @@
   transition:
     opacity 0.15s ease,
     transform 0.15s ease;
-  min-height: 44px;
-  min-width: 44px;}
+}
 
 @media (hover: hover) {
   .aps-search-barcode-btn:hover {
@@ -2619,11 +2605,8 @@
 }
 
 .aps-grams-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
@@ -2632,7 +2615,6 @@ width: 44px;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
-  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -2718,8 +2700,6 @@ width: 44px;
   color: var(--v4-act, #2563eb);
   transition: all 0.2s ease;
   white-space: nowrap;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -3106,7 +3086,6 @@ button.meal-quality-badge:active {
     transform 0.1s ease,
     box-shadow 0.2s ease;
   cursor: pointer;
-  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -4370,16 +4349,14 @@ button.meal-quality-badge:active {
   justify-content: center;
   width: 44px;
   height: 44px;
-  
+  margin: -14px -8px -14px 0;
   padding: 0;
-  color: rgba(var(--v4-ink-rgb), 0.35); 
+  color: rgba(var(--v4-ink-rgb), 0.35); /* v4-intentional */
   background: transparent;
   border: 0;
   border-radius: 999px;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
-  min-width: 44px;}
+}
 
 .meal-transfer-v4__items {
   display: flex;
@@ -4407,9 +4384,9 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__select-all {
   min-height: 44px;
-  
+  margin: -17px -8px -17px 0;
   padding: 0 8px;
-  color: var(--v4-act-text); 
+  color: var(--v4-act-text); /* v4-intentional */
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -4419,8 +4396,7 @@ button.meal-quality-badge:active {
   border: 0;
   border-radius: 999px;
   cursor: pointer;
-  min-width: 44px;
-  box-sizing: border-box;}
+}
 
 .meal-transfer-v4__product-list {
   display: flex;
@@ -4451,7 +4427,6 @@ button.meal-quality-badge:active {
   gap: 10px;
   min-width: 0;
   cursor: pointer;
-  min-height: 44px;
 }
 
 .meal-transfer-v4__native-control {

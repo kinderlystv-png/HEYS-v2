@@ -23,6 +23,12 @@ const CLUSTER_BASELINE = Object.freeze([
     rowCount: 17,
   },
   {
+    zoneId: 'reports-insights',
+    decisionRef:
+      'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4346',
+    rowCount: 5,
+  },
+  {
     zoneId: 'norm-correction',
     decisionRef:
       'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715',
@@ -38,6 +44,30 @@ const CLUSTER_BASELINE = Object.freeze([
     decisionRef:
       'docs/ui/UI_V4_FINDINGS_HISTORY.md#закрыто-3-сентября-превью-листа-смены-вида-уменьшение-кадра-а-не-своё-правило',
     rowCount: 4,
+  },
+  {
+    zoneId: 'date-remainders',
+    decisionRef:
+      'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149',
+    rowCount: 4,
+  },
+  // 07.09: эти два кластера не новый долг, а прежний под новым адресом. Решения
+  // жили якорями в файлах дизайнера (subscription.v4.dc.html, tab-activity.v4.dc.html,
+  // ОТВЕТ-47-находок.md); пакет 45 переписал канвасы, якорей не стало, и 24
+  // вердикта повисли на ссылках в никуда. Решения перенесены в наш архив со
+  // стабильными якорями — по одному адресу на зону вместо россыпи, отсюда и
+  // цифры 13 и 6 там, где раньше стояли мелкие кластеры вне scope гейта.
+  {
+    zoneId: 'subscription',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06',
+    rowCount: 13,
+  },
+  {
+    zoneId: 'tab-activity',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-calendar-decisions-2026-08-31',
+    rowCount: 6,
   },
 ]);
 

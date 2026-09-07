@@ -49,11 +49,13 @@ describe('package 43 · registration + home-widgets computed ink', () => {
       /\.consent-doc-body\s*\{[^}]*color:\s*var\(--v4-ink-2,\s*rgba\(0,\s*0,\s*0,\s*0\.55\)\)/,
     );
     expect(LOGIN_CSS).toMatch(/\.consent-doc-body\s*\{[^}]*line-height:\s*1\.55/);
+    // Доли разошлись решением дизайнера 7 сентября: 55 % не держало 4,5 по
+    // самой тёмной поверхности набора — 4,48 в песочном, 3,77 в синем.
     expect(PALETTE_CSS).toMatch(
-      /\[data-palette="sand"\][\s\S]*--v4-ink-2:\s*rgba\(0,\s*0,\s*0,\s*0\.55\)/,
+      /\[data-palette="sand"\][\s\S]*--v4-ink-2:\s*rgba\(0,\s*0,\s*0,\s*0\.56\)/,
     );
     expect(PALETTE_CSS).toMatch(
-      /\[data-palette="blue"\][\s\S]*--v4-ink-2:\s*rgba\(0,\s*0,\s*0,\s*0\.55\)/,
+      /\[data-palette="blue"\][\s\S]*--v4-ink-2:\s*rgba\(0,\s*0,\s*0,\s*0\.61\)/,
     );
     document.body.innerHTML = `
       <style>${PALETTE_CSS}</style>
@@ -63,7 +65,12 @@ describe('package 43 · registration + home-widgets computed ink', () => {
     `;
     const body = document.querySelector('.consent-doc-body');
     const meta = document.querySelector('.heys-consent-sign-sheet__done-meta');
-    for (const palette of ['sand', 'blue']) {
+    // Доля ступени своя у набора, и проверяется именно это: одна доля на оба
+    // набора и была тем дефектом, который решение дизайнера 7 сентября сняло.
+    for (const [palette, ink2Expected] of [
+      ['sand', 'rgba(0, 0, 0, 0.56)'],
+      ['blue', 'rgba(0, 0, 0, 0.61)'],
+    ]) {
       applyTheme(palette);
       expect(getComputedStyle(body).fontSize).toBe('12.5px');
       const bodyLh = getComputedStyle(body).lineHeight;
@@ -71,7 +78,7 @@ describe('package 43 · registration + home-widgets computed ink', () => {
       const ink2 = getComputedStyle(document.documentElement)
         .getPropertyValue('--v4-ink-2')
         .trim();
-      expect(ink2).toBe('rgba(0, 0, 0, 0.55)');
+      expect(ink2).toBe(ink2Expected);
       // jsdom не разворачивает color: var(--v4-ink-2) на элементе; роль на :root — факт.
       const metaLh = getComputedStyle(meta).lineHeight;
       expect(metaLh === '1.55' || metaLh === '19.375px').toBe(true);

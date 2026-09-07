@@ -13,12 +13,13 @@
 
 /* === 01. DARK THEME === */
 [data-theme$="dark"] {
+  /* ══════════════════════════════════════════════════════════════
+   * COLOR PALETTE OVERRIDES — Унифицированная палитра
+   * ══════════════════════════════════════════════════════════════ */
 
-  
-
-  
+  /* Base colors */
   --color-white: #ffffff;
-  
+  /* Остаток легаси-ступеней без объявления в :root — читают 300-modals / 500-pwa */
   --color-slate-300: #cbd5e1;
   --color-slate-600: var(--v4-ink-4, #475569);
   --color-slate-800: var(--v4-hero, #1e293b);
@@ -29,29 +30,30 @@
   --color-gray-700: #374151;
   --color-gray-800: #1f2937;
 
-  
+  /* Semantic colors (ярче для темного фона) */
   --color-blue-500: var(--v4-act-text, #60a5fa);
-  
+  /* Blue 400 */
   --color-blue-600: var(--v4-act, #3b82f6);
-  
+  /* Blue 500 */
   --color-emerald-500: var(--v4-ok-text, #4ade80);
-  
+  /* Green 400 */
 
-  
+  /* ══════════════════════════════════════════════════════════════
+   * SEMANTIC UI TOKENS
+   * ══════════════════════════════════════════════════════════════ */
 
-  
-  
+  /* Специальные блоки (улучшенная видимость) */
+  /* Stats block (тёмно-синий с лучшей границей) */
   --stats-bg: var(--v4-accent-bg, #1e3a5f);
   --stats-border: var(--heys-primary);
 
-  
+  /* Activity block (тёмно-жёлтый с улучшенным контрастом) */
   --activity-bg: #3d3520;
   --activity-border: #d4a76a;
 
-  
+  /* Sleep/Day block (тёмно-розовый с четкими границами) */
   --sleep-bg: #4a2639;
   --sleep-border: #c26691;
-
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -124,29 +126,23 @@
 
 /* Protein toast */
 [data-theme$="dark"] .macro-toast-protein {
-
   border-left-color: #f87171;
-  
+  /* Яркий красный */
   background: linear-gradient(135deg, #37222c 0%, #4a2d39 100%);
-
 }
 
 /* Fat toast */
 [data-theme$="dark"] .macro-toast-fat {
-
   border-left-color: var(--v4-warn-1, #d99a63);
-  
+  /* Яркий жёлтый */
   background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 12%, var(--v4-hero, #2f2820));
-
 }
 
 /* Carbs toast */
 [data-theme$="dark"] .macro-toast-carbs {
-
   border-left-color: var(--v4-ok-text, #4ade80);
-  
+  /* Яркий зелёный */
   background: linear-gradient(135deg, #1f3a2c 0%, #2a4638 100%);
-
 }
 
 /* Warning toast */
@@ -175,11 +171,9 @@
 
 /* Achievement toast */
 [data-theme$="dark"] .macro-toast-achievement {
-
   border-left-color: var(--v4-warn-1, #d99a63);
-  
+  /* Яркий оранжевый */
   background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 15%, transparent);
-
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -196,10 +190,8 @@
 }
 
 [data-theme$="dark"] .macro-badge-popup-swipe {
-
   background: var(--v4-ink-3, #64748b);
-  
-
+  /* Slate 500 - ярче */
 }
 
 [data-theme$="dark"] .macro-badge-popup-title {
@@ -220,18 +212,14 @@
 }
 
 [data-theme$="dark"] .macro-badge-popup-compare.up {
-
-  
+  /* Green */
   color: #86efac;
-
 }
 
 [data-theme$="dark"] .macro-badge-popup-compare.down {
-
   background: rgba(248, 113, 113, 0.2);
-  
+  /* Red */
   color: #fca5a5;
-
 }
 
 [data-theme$="dark"] .macro-badge-popup-time-msg {
@@ -288,9 +276,7 @@
 }
 
 [data-theme$="dark"] .metric-popup-progress {
-
-  background: var(--v4-hero); 
-
+  background: var(--v4-hero); /* v4-intentional */
 }
 
 [data-theme$="dark"] .metric-popup-compare.up {
@@ -303,9 +289,7 @@
 }
 
 [data-theme$="dark"] .metric-popup-extra {
-
-  color: var(--v4-ink-4); 
-
+  color: var(--v4-ink-4); /* v4-intentional */
 }
 
 [data-theme$="dark"] .metric-popup-extra b {
@@ -325,10 +309,8 @@
 }
 
 [data-theme$="dark"] .metric-popup-close {
-
   background: rgba(255, 255, 255, 0.1);
-  color: var(--v4-ink-4); 
-
+  color: var(--v4-ink-4); /* v4-intentional */
 }
 
 @media (hover: hover) {
@@ -339,18 +321,13 @@
 }
 
 [data-theme$="dark"] .skeleton-item {
-
-  background: linear-gradient(90deg, var(--heys-bg-elevated) 0%, #475569 50%, var(--heys-bg-elevated) 100%);
-
+  background: linear-gradient(90deg, var(--v4-hero) 0%, var(--v4-track) 50%, var(--v4-hero) 100%); /* v4-intentional */
 }
 
 [data-theme$="dark"] .meal-card,
 [data-theme$="dark"] .card {
-
   background: var(--card);
   border-color: var(--border);
-  color: var(--text);
-
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -358,17 +335,13 @@
  * ══════════════════════════════════════════════════════════════ */
 
 [data-theme$="dark"] .meal-sep.meal-type-breakfast {
-
   color: var(--v4-warn-1, #d99a63);
-  
-
+  /* Orange 400 */
 }
 
 [data-theme$="dark"] .meal-sep.meal-type-lunch {
-
   color: var(--v4-ok-text, #4ade80);
-  
-
+  /* Green 400 */
 }
 
 /* Meal badges — warn-роли: на песочном/синем тёмном наборе тон внимания
@@ -544,30 +517,15 @@
 
 /* FAB */
 [data-theme$="dark"] .fab-add-meal {
-
-    bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-    
-    right: 24px;
-    width: 52px;
-    height: 52px;
-    font-size: 28px;
-  
+  background: var(--acc);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.4);
 }
 
 /* Empty states */
 [data-theme$="dark"] .empty-state {
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 24px;
-  text-align: center;
   background: var(--card);
-  border: 2px dashed var(--border);
-  border-radius: 16px;
-  margin: 16px 0;
-
+  border-color: var(--border);
+  color: var(--text);
 }
 
 /* Cards */
@@ -744,23 +702,11 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme$="dark"] .sparkline-skeleton-line {
-
-  height: 2px;
-  background: linear-gradient(90deg, var(--border) 0%, var(--muted) 50%, var(--border) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 1px;
-
+  background: linear-gradient(90deg, var(--heys-bg-elevated) 0%, #475569 50%, var(--heys-bg-elevated) 100%);
 }
 
 [data-theme$="dark"] .sparkline-skeleton-dot {
-
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  animation: pulse 1.5s ease-in-out infinite;
-
+  background: var(--v4-ink-4, #475569);
 }
 
 /* Kcal sparkline */
@@ -1841,16 +1787,12 @@
 
 [data-theme$="dark"] .tone-slate .mpc-totals-wrap .mpc-header,
 [data-theme$="dark"] .tone-slate .mpc-totals-wrap .mpc-totals-values {
-
-  color: var(--v4-ink-4); 
-
+  color: var(--v4-ink-4); /* v4-intentional */
 }
 
 [data-theme$="dark"] .tone-slate .mpc-totals {
-
   background: var(--v4-surface, #2a3040);
-  color: var(--v4-ink-4); 
-
+  color: var(--v4-ink-4); /* v4-intentional */
 }
 
 /* Violet main-violet card */
@@ -1865,10 +1807,8 @@
 }
 
 [data-theme$="dark"] .card.tone-violet.main-violet .violet-table td {
-
   border-color: #4c3d6e;
-  color: var(--v4-ink-4); 
-
+  color: var(--v4-ink-4); /* v4-intentional */
 }
 
 [data-theme$="dark"] .card.tone-violet.main-violet .stat {
@@ -1877,9 +1817,7 @@
 }
 
 [data-theme$="dark"] .card.tone-violet.main-violet .stat>label {
-
-  color: var(--v4-ink-4); 
-
+  color: var(--v4-ink-4); /* v4-intentional */
 }
 
 /* Header bottom — v4: плоская строка названия вкладки, без плашки и тени
@@ -2029,8 +1967,8 @@
   position: fixed;
   top: 12px;
   right: 12px;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--card);
   border: 1px solid var(--border);
@@ -2042,7 +1980,6 @@
   z-index: 100;
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -2101,37 +2038,28 @@
 
 @keyframes confetti-fall-global {
   0% {
-
-    transform: scale(0.3);
-    opacity: 0;
-  
-}
+    top: -10px;
+    opacity: 1;
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
 
   25% {
-
-    transform: scale(1.05) rotate(-3deg);
-  
-}
+    transform: translateX(20px) rotate(180deg) scale(1);
+  }
 
   50% {
-
-    opacity: 0.9;
-    box-shadow: 0 0 12px 2px rgba(16, 185, 129, 0.3);
-  
-}
+    transform: translateX(-15px) rotate(360deg) scale(0.9);
+  }
 
   75% {
-
-    transform: scale(1.08) rotate(3deg);
-  
-}
+    transform: translateX(10px) rotate(540deg) scale(0.8);
+  }
 
   100% {
-
-    transform: scale(1);
-    opacity: 1;
-  
-}
+    top: 100vh;
+    opacity: 0;
+    transform: translateX(-5px) rotate(720deg) scale(0.6);
+  }
 }
 
 /* === 04. EMPTY STATE === */
@@ -2158,10 +2086,8 @@
 
   0%,
   100% {
-
-    transform: scale(1) rotate(0deg);
-  
-}
+    transform: translateY(0);
+  }
 
   50% {
     transform: translateY(-8px);
@@ -2248,7 +2174,6 @@
 }
 
 .sparkline-empty-btn {
-
   margin-top: 12px;
   padding: 10px 20px;
   font-size: 14px;
@@ -2260,9 +2185,6 @@
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 @media (hover: hover) {
@@ -2389,16 +2311,12 @@
 
 /* Desktop: показываем обычную кнопку */
 .desktop-only {
-
-    display: none !important;
-  
+  display: flex;
 }
 
 /* Mobile: показываем FAB */
 .mobile-only {
-
-    display: flex !important;
-  
+  display: none;
 }
 
 @media (max-width: 640px) {
@@ -2502,13 +2420,11 @@
 }
 
 .metrics-progress {
-
   height: 4px;
-  background: var(--v4-track); 
+  background: var(--v4-track); /* v4-intentional */
   border-radius: 2px;
   margin-top: 8px;
   overflow: hidden;
-
 }
 
 .metrics-progress-bar {
@@ -2519,13 +2435,19 @@
 
 /* === 08. DAY SUBTABS (Мобильные под-вкладки) === */
 .day-subtabs {
-
-    display: none;
-  
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  /* Ниже чем календарь (z-index: 9999) */
+  margin: -12px -12px 12px -12px;
 }
 
 .day-subtab {
-
   flex: 1;
   display: flex;
   align-items: center;
@@ -2541,8 +2463,6 @@
   cursor: pointer;
   transition: all 0.2s ease;
   -webkit-tap-highlight-color: transparent;
-  min-height: 44px;
-
 }
 
 .day-subtab:active {
@@ -3040,7 +2960,6 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 .day-score-manual-hint {
-
   font-size: 11px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-left: 8px;
@@ -3049,9 +2968,6 @@ button.sleep-breakdown-item:focus-visible {
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .day-score-manual-hint:active {
@@ -3142,7 +3058,6 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 .day-score-preset {
-
   flex: 1;
   padding: 12px 8px;
   border-radius: 14px;
@@ -3153,9 +3068,6 @@ button.sleep-breakdown-item:focus-visible {
   color: #374151;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
-  min-width: 44px;
-
 }
 
 .day-score-preset:active {
@@ -3280,8 +3192,6 @@ button.sleep-breakdown-item:focus-visible {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
   transition: all 0.2s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
@@ -3379,7 +3289,7 @@ button.sleep-breakdown-item:focus-visible {
 
 .ndte-expand__subtitle {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #64748b);
   margin-top: 2px;
 }
 
@@ -3433,7 +3343,7 @@ button.sleep-breakdown-item:focus-visible {
 
 .ndte-expand__decay-label {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #64748b);
 }
 
 .ndte-expand__decay-time {

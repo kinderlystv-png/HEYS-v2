@@ -59,19 +59,16 @@
   display: flex;
   align-items: flex-start;
   padding: 10px 12px;
-  
+  /* Строка «плашка входа»: --c2 плоской заливкой, градиента нет. */
   background: var(--v4-hero, #efe3cf);
   cursor: pointer;
   gap: 10px;
-  min-height: 44px;
-  min-width: 44px;
-  box-sizing: border-box;}
+}
 
 @media (hover: hover) {
   .meal-optimizer__header:hover {
     background: var(--v4-accent-bg, #f0dcc6);
   }
-  min-height: 44px;
 }
 
 /* Значок семейства правила: 15×15, обводка 2,75 в единицах viewBox, тон --ac.
@@ -179,7 +176,7 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  
+  margin: -12px -12px -12px 0;
   padding: 0;
   background: none;
   border: none;
@@ -187,13 +184,10 @@
   cursor: pointer;
   transition: color 0.15s;
   line-height: 1;
-  min-height: 44px;
-  min-width: 44px;
-  box-sizing: border-box;}
+}
 
 .meal-optimizer__dismiss {
   font-size: 16px;
-  min-height: 44px;
 }
 
 .meal-optimizer__item-dismiss {
@@ -330,8 +324,6 @@
   font-size: 12px;
   color: var(--v4-ink, #201e1d);
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @media (hover: hover) {

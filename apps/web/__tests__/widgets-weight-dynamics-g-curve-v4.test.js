@@ -140,9 +140,9 @@ describe('Динамика · G сброшено и кривая — сведё�
     const sand = palette.slice(palette.indexOf('[data-theme-id="sand"]'), palette.indexOf('[data-theme-id="sand-dark"]'));
     const blue = palette.slice(palette.indexOf('[data-theme-id="blue"]'), palette.indexOf('[data-theme-id="blue-dark"]'));
     const role = (block, name) => block.match(new RegExp(`${name}:\\s*([^;]+);`))?.[1]?.trim();
-    expect(role(root, '--v4-ink-2')).toBe('rgba(var(--v4-ink-rgb), 0.56)');
-    expect(role(blue, '--v4-ink-2')).toBe('rgba(var(--v4-ink-rgb), 0.64)');
-    expect(role(root, '--v4-ink-2')).not.toBe(role(blue, '--v4-ink-2'));
+    expect(role(sand, '--v4-ink-2')).toBe('rgba(0, 0, 0, 0.56)');
+    expect(role(blue, '--v4-ink-2')).toBe('rgba(0, 0, 0, 0.61)');
+    expect(role(sand, '--v4-ink-2')).not.toBe(role(blue, '--v4-ink-2'));
     expect(role(sand, '--v4-ink-rgb')).toBe('0, 0, 0');
     expect(role(blue, '--v4-ink-rgb')).toBe('16, 24, 38');
     expect(role(sand, '--v4-sand-ok-text')).toBe('#5c6a45');

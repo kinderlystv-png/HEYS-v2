@@ -982,7 +982,7 @@
 }
 
 .insulin-time-start {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #64748b);
 }
 
 .insulin-time-end {
@@ -1330,7 +1330,7 @@
 }
 
 .day-wave-overview__time {
-  fill: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  fill: var(--v4-ink-2, #64748b);
   font-size: 8px;
   font-weight: 750;
 }
@@ -1356,7 +1356,7 @@
 }
 
 .day-wave-overview__interaction-label--micro {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #64748b);
 }
 
 [data-theme$="dark"] .day-wave-overview {
@@ -1394,7 +1394,7 @@
 [data-theme$="dark"] .day-wave-overview__canvas {
   border-color: rgba(148, 163, 184, 0.14);
   background: rgba(15, 23, 42, 0.62);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme$="dark"] .day-wave-overview__axis {
@@ -1436,7 +1436,7 @@
 }
 
 [data-theme$="dark"] .day-wave-overview__time {
-  fill: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  fill: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme$="dark"] .day-wave-overview__overlaps {
@@ -1770,7 +1770,7 @@
 }
 
 [data-theme$="dark"] .month-trainings-empty {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme$="dark"] .month-trainings-row {
@@ -1779,7 +1779,7 @@
 }
 
 [data-theme$="dark"] .month-trainings-row-date {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme$="dark"] .month-trainings-row-type {
@@ -2310,7 +2310,7 @@
 .ma-habit-cal-cell.is-missed {
   border-color: rgba(251, 207, 216, 0.95);
   background: linear-gradient(180deg, #f8f4f5 0%, rgba(252, 231, 243, 0.82) 100%);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #64748b);
   text-shadow: none;
   box-shadow: none;
 }
@@ -2343,7 +2343,7 @@
   justify-content: space-between;
   gap: 8px;
   font-size: 10px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #64748b);
 }
 
 [data-theme$="dark"] .ma-habit-cal-shell {
@@ -2365,7 +2365,7 @@
 
 [data-theme$="dark"] .ma-habit-cal-period-nav {
   background: transparent;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 @media (hover: hover) {
@@ -2379,12 +2379,12 @@
 }
 
 [data-theme$="dark"] .ma-habit-cal-period-label--28 {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme$="dark"] .ma-habit-cal-footer,
 [data-theme$="dark"] .ma-habit-cal-wd {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 [data-theme$="dark"] .ma-habit-cal-wd--weekend {
@@ -2490,7 +2490,7 @@
   margin-top: 4px;
   font-size: 11px;
   line-height: 1.4;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #64748b);
 }
 
 @media (hover: hover) {
@@ -2509,7 +2509,7 @@
 }
 
 [data-theme$="dark"] .ma-skip-notice-sub {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  color: var(--v4-ink-2, #94a3b8);
 }
 
 /* Steps Slider */

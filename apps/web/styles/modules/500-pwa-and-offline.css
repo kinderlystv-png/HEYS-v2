@@ -85,8 +85,6 @@
   border-radius: 999px;
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .pwa-banner-install:active {
@@ -104,8 +102,6 @@
   font-weight: 600;
   text-align: center;
   cursor: pointer;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .pwa-banner-later:active {
@@ -578,8 +574,6 @@
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .update-toast-update:active {
@@ -588,8 +582,8 @@
 }
 
 .update-toast-dismiss {
-  width: 44px;
-  height: 44px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -600,7 +594,6 @@
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.15s ease;
-  min-height: 44px;
 }
 
 .update-toast-dismiss:active {
@@ -2026,7 +2019,6 @@
 .profile-v4-toggle {
   width: 40px;
   height: 24px;
-  min-height: 44px;
   border: none;
   border-radius: 999px;
   background: var(--v4-track, rgba(0, 0, 0, 0.12));
@@ -5989,8 +5981,8 @@
 }
 
 .wn-close {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6002,7 +5994,6 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
-  min-height: 44px;
 }
 
 .wn-close:active {
@@ -6174,8 +6165,6 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s, opacity 0.15s;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .wn-got-it:active {
@@ -6263,8 +6252,6 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   animation: ca-banner-in 0.25s ease-out;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 @keyframes ca-banner-in {
@@ -6308,8 +6295,8 @@
 }
 
 .ca-banner__dismiss {
-  width: 44px;
-  height: 44px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -6321,7 +6308,6 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  min-height: 44px;
 }
 
 .ca-banner__dismiss:active {
@@ -6443,7 +6429,7 @@
 .ca-modal__close {
   width: 44px;
   height: 44px;
-  
+  margin: -12px -12px 0 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6453,7 +6439,6 @@
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 28%, transparent);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  min-height: 44px;
 }
 .ca-modal__close-svg {
   width: 17px;
@@ -6646,8 +6631,6 @@
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   text-align: left;
-  min-height: 44px;
-  box-sizing: border-box;
 }
 
 .ca-modal__repeat-group {
@@ -6903,7 +6886,6 @@
 [data-theme$="dark"] .ca-banner {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
   border-color: rgba(99, 102, 241, 0.3);
-  min-height: 44px;
 }
 [data-theme$="dark"] .ca-banner__title { color: var(--v4-ink, #f2ede6); }
 [data-theme$="dark"] .ca-banner__summary { color: var(--v4-ink, #f2ede6); }
