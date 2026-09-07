@@ -1257,7 +1257,15 @@ color: var(--v4-sand-ink-slate, #1f2937);
   cursor: pointer;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+  position: relative;
 }
+
+.compact-train-fold-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .compact-train-fold-btn:hover {
@@ -1360,7 +1368,15 @@ color: var(--v4-sand-ink-slate, #1f2937);
   cursor: pointer;
   border-radius: 6px;
   transition: color, background-color 0.2s ease;
+  position: relative;
 }
+
+.compact-train-remove::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .compact-train-remove:hover {
@@ -6405,7 +6421,15 @@ color: var(--v4-sand-ink, #201e1d);
   font-size: 12px;
   transition: background-color, transform 0.2s ease;
   flex-shrink: 0;
+  position: relative;
 }
+
+.game-expand-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .game-expand-btn:hover {
@@ -6975,7 +6999,15 @@ color: var(--v4-sand-ink, #201e1d);
 @media (max-width: 380px) {
   .yesterday-quick-btn {
     display: none;
-  }
+  position: relative;
+}
+
+.yesterday-quick-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
   .hdr-bottom {
     gap: 8px;
@@ -8188,7 +8220,15 @@ body:has(.offline-banner) .wrap {
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
+  position: relative;
 }
+
+.date-picker--v4 .date-picker-trigger::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .date-picker--v4 .date-picker-trigger:hover {
@@ -8349,7 +8389,15 @@ body:has(.offline-banner) .wrap {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
+  position: relative;
 }
+
+.date-picker--v4 .date-picker-inline-today::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
   /* v4-intentional */
@@ -8883,7 +8931,15 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   cursor: pointer;
   transition: background-color, border-color 0.15s ease;
   min-width: 140px;
+  position: relative;
 }
+
+.date-picker:not(.date-picker--v4) .date-picker-trigger::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .date-picker:not(.date-picker--v4) .date-picker-trigger:hover {
@@ -9167,7 +9223,15 @@ svg.date-picker-icon {
   align-items: center;
   justify-content: center;
   transition: background-color 0.15s;
+  position: relative;
 }
+
+.date-picker-nav::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .date-picker-nav:hover {
@@ -13777,7 +13841,15 @@ body:has(:is(
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
+
+.cal-nav::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   background: var(--v4-edge, rgba(0, 0, 0, 0.18)); /* v4-intentional */
@@ -13838,7 +13910,15 @@ body:has(:is(
   justify-content: center;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  position: relative;
 }
+
+.today-quick-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .today-quick-btn:hover {
@@ -13895,7 +13975,15 @@ body:has(:is(
   justify-content: center;
   margin-left: 8px;
   transition: background 0.15s, transform 0.1s;
+  position: relative;
 }
+
+.cal-today-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .cal-today-btn:hover {
@@ -17891,6 +17979,13 @@ body:has(:is(
   cursor: pointer;
 }
 
+.achievement-story-close::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+
 .achievement-story-rarity {
   font-size: 11px;
   text-transform: uppercase;
@@ -18337,7 +18432,15 @@ html.heys-bg-paused *::after {
   justify-content: center;
   line-height: 1;
   padding: 0;
+  position: relative;
 }
+
+.game-v4-sheet__back::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 .game-v4-sheet__header-title {
   font-size: 15px;
@@ -19101,138 +19204,4 @@ html.heys-bg-paused *::after {
   content: '';
   position: absolute;
   inset: -14px 0;
-}
-
-
-
-/* polosa5-touch-hit-area — v4-tap-target-contract */
-
-.game-v4-sheet__back {
-  position: relative;
-}
-
-.game-v4-sheet__back::after {
-  content: '';
-  position: absolute;
-  inset: -6px;
-}
-
-.game-expand-btn {
-  position: relative;
-}
-
-.game-expand-btn::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-}
-
-.achievement-story-close {
-  position: relative;
-}
-
-.achievement-story-close::after {
-  content: '';
-  position: absolute;
-  inset: -6px;
-}
-
-.achievement-story-btn {
-  position: relative;
-}
-
-.achievement-story-btn::after {
-  content: '';
-  position: absolute;
-  inset: -2px 0;
-}
-
-.game-v4-sheet__tab {
-  position: relative;
-}
-
-.game-v4-sheet__tab::after {
-  content: '';
-  position: absolute;
-  inset: -5px 0;
-}
-
-.game-v4-sheet__tier--tap {
-  position: relative;
-}
-
-.game-v4-sheet__tier--tap::after {
-  content: '';
-  position: absolute;
-  inset: -5px 0;
-}
-
-.game-v4-sheet__more-groups {
-  position: relative;
-}
-
-.game-v4-sheet__more-groups::after {
-  content: '';
-  position: absolute;
-  inset: -5px 0;
-}
-
-.cal-nav {
-  position: relative;
-}
-
-.cal-nav::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-}
-
-.yesterday-quick-btn {
-  position: relative;
-}
-
-.yesterday-quick-btn::after {
-  content: '';
-  position: absolute;
-  inset: -6px 0;
-}
-
-.today-quick-btn {
-  position: relative;
-}
-
-.today-quick-btn::after {
-  content: '';
-  position: absolute;
-  inset: -5px 0;
-}
-
-.cal-today-btn {
-  position: relative;
-}
-
-.cal-today-btn::after {
-  content: '';
-  position: absolute;
-  inset: -6px 0;
-}
-
-.date-picker-nav {
-  position: relative;
-}
-
-.date-picker-nav::after {
-  content: '';
-  position: absolute;
-  inset: -6px 0;
-}
-
-.date-picker-goto-today {
-  position: relative;
-}
-
-.date-picker-goto-today::after {
-  content: '';
-  position: absolute;
-  inset: -2px 0;
 }
