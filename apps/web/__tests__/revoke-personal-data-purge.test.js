@@ -79,14 +79,38 @@ describe('revoke personal_data client API', () => {
 describe('privacy settings copy', () => {
   it('does not promise diary deletion on health revoke button', () => {
     expect(userTabSource).toContain('handleRevokePersonal');
-    expect(userTabSource).toMatch(/handleRevokeHealth[\s\S]*?Дневник питания, переписка и фото удаляются отдельно/);
+    expect(userTabSource).toContain('CONSENT_REVOKE_COPY');
+    expect(userTabSource).toMatch(
+      /health_data:[\s\S]*?Дневник питания, переписка и фото удаляются отдельно/,
+    );
+    expect(userTabSource).toMatch(
+      /handleRevokeHealth[\s\S]*?setPrivacyRevokeType\('health_data'\)/,
+    );
+    expect(userTabSource).not.toMatch(
+      /handleRevokeHealth[\s\S]{0,400}window\.confirm/,
+    );
     expect(userTabSource).toContain('Отозвать согласие на персональные данные');
   });
 
   it('does not promise diary deletion in consent list handleRevoke', () => {
-    expect(userTabSource).not.toMatch(/handleRevoke[\s\S]*?дневник питания, вес, активность/);
-    expect(userTabSource).toMatch(/handleRevoke[\s\S]*?revokePersonalDataAndPurge/);
-    expect(userTabSource).toMatch(/handleRevoke[\s\S]*?пульсовые зоны, анкета пробного периода/);
+    expect(userTabSource).not.toMatch(
+      /health_data:[\s\S]*?дневник питания, вес, активность/i,
+    );
+    expect(userTabSource).toMatch(
+      /health_data:[\s\S]*?пульсовые зоны, анкета пробного периода/,
+    );
+    expect(userTabSource).toMatch(
+      /handleRevoke[\s\S]*?setConsentRevokeType\(consentType\)/,
+    );
+    expect(userTabSource).not.toMatch(
+      /consentType === 'health_data'[\s\S]{0,400}window\.confirm/,
+    );
+    expect(userTabSource).toMatch(
+      /executeRevokeConsentSheet[\s\S]*?revokeHealthDataAndPurge/,
+    );
+    expect(userTabSource).toMatch(
+      /executeRevokeConsentSheet[\s\S]*?revokePersonalDataAndPurge/,
+    );
   });
 
   it('does not treat health_data as a required profile consent after 1.11', () => {

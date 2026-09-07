@@ -114,6 +114,8 @@ describe('отзыв health_data / personal_data — лист, не window.confi
 
     expect(host.querySelector('.heys-supp-revoke-sheet')).toBeTruthy();
     expect(host.textContent).toContain('данные о здоровье');
+    expect(host.textContent).toContain('Дневник питания, переписка и фото удаляются отдельно');
+    expect(host.textContent).not.toMatch(/дневник питания, вес, активность/i);
     click(findButtonByText(host, 'Отозвать согласие'));
     await flush();
 
