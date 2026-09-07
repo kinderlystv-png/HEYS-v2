@@ -91,9 +91,9 @@ describe('брошенная вчерашняя сессия — три исхо
     }));
 
     expect(screen.getByText('Вчерашняя не закрыта')).toBeTruthy();
-    fireEvent.click(screen.getByText('Удалить сессию'));
-    fireEvent.click(screen.getByText('Дописать'));
-    fireEvent.click(screen.getByText('Завершить вчерашним'));
+    fireEvent.click(screen.getByText('удалить'));
+    fireEvent.click(screen.getByText('дописать'));
+    fireEvent.click(screen.getByText('закрыть'));
     expect(actions).toEqual(['delete', 'resume', 'finish']);
   });
 });

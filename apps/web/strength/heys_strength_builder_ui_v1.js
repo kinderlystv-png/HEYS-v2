@@ -1037,13 +1037,6 @@
             || (Array.isArray(openExLocal.approaches) ? openExLocal.approaches.length : 0);
           return (openExLocal.name || 'Без названия') + ' · ' + approachCountLabel(count);
         }
-        if (openUnitLocal === 'weight_reps' || openUnitLocal === 'bodyweight') {
-          const progress = exerciseWorkProgress(openExLocal);
-          if (progress.total) {
-            return (openExLocal.name || 'Без названия') + ' · '
-              + progress.current + ' из ' + progress.total;
-          }
-        }
       }
       return wl.title || (typeof PartsLocal.sessionTitle === 'function'
         ? PartsLocal.sessionTitle(exercises)
@@ -1055,8 +1048,14 @@
       const openExLocal = openIdx >= 0 ? exercises[openIdx] : null;
       const openUnitLocal = openExLocal ? (openExLocal.unit || 'weight_reps') : '';
       if (openIdx >= 0 && openExLocal && (openUnitLocal === 'weight_reps' || openUnitLocal === 'bodyweight')) {
-        const key = exerciseWorkProgressKey(openExLocal);
-        if (key) return key;
+        const proposal = SK && SK.pendingPlanProposal ? SK.pendingPlanProposal(training) : null;
+        const weightEditCtx = proposal && startedAt > 0 && !completedAt
+          ? weightEditSessionContext(exercises, openExLocal, proposal)
+          : null;
+        if (weightEditCtx) {
+          const key = exerciseWorkProgressKey(openExLocal);
+          if (key) return key;
+        }
       }
       // M4: ключ единицы времени — в шапке (.sb-head-sub). M5/M6 — только в карточке.
       if (openIdx >= 0 && openExLocal && openUnitLocal === 'time') {
