@@ -355,6 +355,8 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
+  min-height: 44px;
+  box-sizing: border-box;
   background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
   border: 1.5px dashed #93c5fd;
   border-radius: 10px;
@@ -531,7 +533,6 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   align-self: center;
   width: 76px;
   min-height: 44px;
-  min-height: 36px;
   padding: 0 6px;
   color: #7c3aed;
   font-size: 12px;
