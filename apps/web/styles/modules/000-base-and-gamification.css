@@ -4327,22 +4327,6 @@ html[data-theme-id="blue-dark"] {
 }
 
 /* ОТВЕТ-22 Q6, вариант B: припуск на внутреннем host, не на fixed-кнопке. */
-.theme-fab__host {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.theme-fab__host::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-}
-
-
 @media (hover: hover) {
   .theme-fab:hover {
   transform: scale(1.05);
