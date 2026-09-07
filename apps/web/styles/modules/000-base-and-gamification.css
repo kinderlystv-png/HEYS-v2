@@ -1904,14 +1904,6 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .ct-wb-ex-fold-toggle:active {
   cursor: pointer;
-  position: relative;
-}
-
-/* Гейт меряет :active отдельно — дублируем припуск базового хоста. */
-.ct-wb-ex-fold-toggle:active::after {
-  content: '';
-  position: absolute;
-  inset: -8px 0;
 }
 
 .ct-wb-ex-num {

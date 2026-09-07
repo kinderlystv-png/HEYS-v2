@@ -1,8 +1,9 @@
 {
   "captured": "2026-09-07",
-  "totalViolations": 0,
+  "totalViolations": 1,
   "unknownViolations": 0,
   "byZone": {
+    "strength-builder": 1,
     "date-remainders": 0,
     "settings-system": 0,
     "food-meal": 0,
@@ -13,10 +14,11 @@
     "tab-activity": 0,
     "reports-insights": 0,
     "nutrition-tab": 0,
-    "strength-builder": 0,
     "planning": 0,
     "product-card": 0
   },
-  "byFile": {},
-  "violationKeys": []
+  "byFile": {
+    "000-base-and-gamification.css": 1
+  },
+  "violationKeys": ["000-base-and-gamification.css::.ct-wb-ex-fold-toggle:active"]
 }
