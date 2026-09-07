@@ -72,6 +72,7 @@
 }
 
 .insights-card__tab {
+
   flex: 1;
   padding: 8px 12px;
   border: 1px solid rgba(107, 114, 128, 0.2);
@@ -82,7 +83,18 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-card__tab::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 .insights-card__tab:active {
   opacity: 0.7;
@@ -334,9 +346,21 @@
 }
 
 .insights-total--clickable {
+
   cursor: pointer;
   transition: transform 0.2s ease, opacity 0.2s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-total--clickable::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 @media (hover: hover) {
   .insights-total--clickable:hover {
@@ -860,6 +884,7 @@
 }
 
 .insights-priority-action__simulate {
+
   margin-top: 8px;
   padding: 6px 12px;
   font-size: 12px;
@@ -870,7 +895,18 @@
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   min-height: 32px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-priority-action__simulate::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
 
 .insights-priority-action__simulate:focus-visible {
   background: rgba(99, 102, 241, 0.1);
@@ -1816,6 +1852,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .insights-tab__tab {
+
   padding: 5px 14px;
   border: none;
   border-radius: 6px;
@@ -1826,7 +1863,18 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-tab__tab::after {
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}
+
 
 [data-theme$="dark"] .insights-tab__tab {
   color: rgba(148, 163, 184, 0.7);
@@ -2464,6 +2512,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .early-warning-modal-card__science-toggle {
+
   background: transparent;
   border: 1px solid rgba(100, 116, 139, 0.25);
   padding: 8px 12px;
@@ -2478,7 +2527,18 @@ body:has(.insights-tab) .hdr::after {
   display: flex;
   align-items: center;
   gap: 6px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.early-warning-modal-card__science-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
 
 @media (hover: hover) {
   .early-warning-modal-card__science-toggle:hover {
@@ -2529,6 +2589,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .early-warning-modal-card__action-btn {
+
   font-size: 12px;
   padding: 6px 10px;
   border-radius: 8px;
@@ -2538,7 +2599,18 @@ body:has(.insights-tab) .hdr::after {
   border: 1px solid rgba(100, 116, 139, 0.25);
   background: var(--v4-bg, #ffffff);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.early-warning-modal-card__action-btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 @media (hover: hover) {
   .early-warning-modal-card__action-btn:hover {
@@ -2577,6 +2649,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .early-warning-modal__footer-btn {
+
   flex: 1;
   padding: 10px 14px;
   border-radius: 10px;
@@ -2587,7 +2660,18 @@ body:has(.insights-tab) .hdr::after {
   transition: all 0.18s ease;
   background: var(--v4-bg, #ffffff);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.early-warning-modal__footer-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
 
 @media (hover: hover) {
   .early-warning-modal__footer-btn:hover {
@@ -2715,6 +2799,7 @@ body:has(.insights-tab) .hdr::after {
 
 /* Карточка с кольцом */
 .insights-ring-mini {
+
   background: white;
   border-radius: 12px;
   padding: 10px 8px;
@@ -2727,7 +2812,17 @@ body:has(.insights-tab) .hdr::after {
   transition: all 0.2s ease;
   border: 1px solid rgba(0, 0, 0, 0.04);
   position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-ring-mini::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+
 
 [data-theme$="dark"] .insights-ring-mini {
   border-color: var(--heys-border-default);
@@ -3141,11 +3236,23 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .tab-switch-labels--triple .tab-switch-label {
+
   text-align: center;
   font-size: 9px;
   cursor: pointer;
   white-space: nowrap;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.tab-switch-labels--triple .tab-switch-label::after {
+  content: '';
+  position: absolute;
+  inset: -13px 0;
+}
+
 
 /* =============================================================================
    QUAD TAB SWITCH — 4 вкладки
@@ -3179,11 +3286,23 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .tab-switch-labels--quad .tab-switch-label {
+
   text-align: center;
   font-size: 9px;
   cursor: pointer;
   white-space: nowrap;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.tab-switch-labels--quad .tab-switch-label::after {
+  content: '';
+  position: absolute;
+  inset: -13px 0;
+}
+
 
 /* =============================================================================
    QUINT TAB SWITCH — 5 вкладок
@@ -3257,12 +3376,25 @@ body:has(.insights-tab) .hdr::after {
 
 .tab-switch-labels--quint .tab-switch-label,
 .tab-switch-labels--sext .tab-switch-label {
+
   text-align: center;
   font-size: 9px;
   cursor: pointer;
   white-space: nowrap;
   min-width: 0;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.tab-switch-labels--quint .tab-switch-label,
+.tab-switch-labels--sext .tab-switch-label::after {
+  content: '';
+  position: absolute;
+  inset: -13px 0;
+}
+
 
 .tab-switch-labels--sext .tab-switch-label {
   font-size: 8px;
@@ -3712,6 +3844,7 @@ body:has(.insights-tab) .hdr::after {
 
 /* Кнопка (?) */
 .info-button {
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3727,7 +3860,18 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.info-button::after {
+  content: '';
+  position: absolute;
+  inset: -13px;
+}
+
 
 .info-button:focus {
   background: var(--color-primary, #3b82f6);
@@ -3821,6 +3965,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .info-modal__close {
+
   width: 32px;
   height: 32px;
   display: flex;
@@ -3833,7 +3978,18 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.15s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.info-modal__close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 @media (hover: hover) {
   .info-modal__close:hover {
@@ -3885,6 +4041,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .info-modal__accordion-trigger {
+
   width: 100%;
   border: 1px solid var(--border-color, #e5e7eb);
   background: var(--bg-secondary, #f9fafb);
@@ -3895,7 +4052,18 @@ body:has(.insights-tab) .hdr::after {
   justify-content: space-between;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.info-modal__accordion-trigger::after {
+  content: '';
+  position: absolute;
+  inset: -3px 0;
+}
+
 
 @media (hover: hover) {
   .info-modal__accordion-trigger:hover {
@@ -5404,6 +5572,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .weekly-wrap-card__close {
+
   width: 32px;
   height: 32px;
   border: none;
@@ -5413,7 +5582,18 @@ body:has(.insights-tab) .hdr::after {
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.weekly-wrap-card__close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 @media (hover: hover) {
   .weekly-wrap-card__close:hover {
@@ -5431,6 +5611,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .weekly-wrap-card__tab {
+
   flex: 1;
   padding: 10px 12px;
   border: none;
@@ -5441,7 +5622,18 @@ body:has(.insights-tab) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   transition: all 0.2s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.weekly-wrap-card__tab::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 @media (hover: hover) {
   .weekly-wrap-card__tab:hover {
@@ -6064,6 +6256,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .status-card__action {
+
   display: flex;
   align-items: center;
   gap: 10px;
@@ -6072,7 +6265,18 @@ body:has(.insights-tab) .hdr::after {
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.2s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.status-card__action::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
 
 @media (hover: hover) {
   .status-card__action:hover {
@@ -6776,6 +6980,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .pattern-debug-modal__close {
+
   background: rgba(100, 116, 139, 0.08);
   border: 1px solid #e2e8f0;
   font-size: 16px;
@@ -6789,7 +6994,18 @@ body:has(.insights-tab) .hdr::after {
   justify-content: center;
   border-radius: 10px;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.pattern-debug-modal__close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 [data-theme$="dark"] .pattern-debug-modal__close {
   background: rgba(148, 163, 184, 0.1);
@@ -6826,6 +7042,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .pattern-debug-modal__tab-button {
+
   border: 1px solid rgba(100, 116, 139, 0.25);
   background: var(--v4-bg, #ffffff);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -6836,7 +7053,18 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.pattern-debug-modal__tab-button::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
 
 @media (hover: hover) {
   .pattern-debug-modal__tab-button:hover {
@@ -7001,6 +7229,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .pattern-debug-modal__unlock-plan-toggle {
+
   border: 1px solid rgba(37, 99, 235, 0.2);
   background: rgba(37, 99, 235, 0.08);
   color: var(--v4-act-text, #8a4a20);
@@ -7014,7 +7243,18 @@ body:has(.insights-tab) .hdr::after {
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.pattern-debug-modal__unlock-plan-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 
 @media (hover: hover) {
   .pattern-debug-modal__unlock-plan-toggle:hover {
@@ -7059,6 +7299,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .pattern-debug-modal__unlock-plan-btn {
+
   display: flex;
   align-items: center;
   gap: 6px;
@@ -7070,7 +7311,18 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.16s ease;
   text-align: left;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.pattern-debug-modal__unlock-plan-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
 
 @media (hover: hover) {
   .pattern-debug-modal__unlock-plan-btn:hover {
@@ -7150,6 +7402,7 @@ body:has(.insights-tab) .hdr::after {
 
 /* ===== Accordion Header ===== */
 .pattern-debug-modal__accordion-header {
+
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -7159,7 +7412,18 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.pattern-debug-modal__accordion-header::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
 
 @media (hover: hover) {
   .pattern-debug-modal__accordion-header:hover {
@@ -7650,6 +7914,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .pattern-debug-modal__quick-action-btn {
+
   border: 1px solid rgba(16, 185, 129, 0.28);
   background: rgba(16, 185, 129, 0.08);
   color: var(--v4-ok-text, #5c6a45);
@@ -7662,7 +7927,18 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.15s ease;
   line-height: 1;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.pattern-debug-modal__quick-action-btn::after {
+  content: '';
+  position: absolute;
+  inset: -13px;
+}
+
 
 @media (hover: hover) {
   .pattern-debug-modal__quick-action-btn:hover {
@@ -8139,6 +8415,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .whatif-scenarios-panel__close {
+
   background: none;
   border: none;
   font-size: 24px;
@@ -8147,7 +8424,18 @@ body:has(.insights-tab) .hdr::after {
   padding: 4px 8px;
   border-radius: 8px;
   transition: all 0.2s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.whatif-scenarios-panel__close::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
 
 @media (hover: hover) {
   .whatif-scenarios-panel__close:hover {
@@ -8703,6 +8991,7 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .phenotype-panel__close {
+
   background: none;
   border: none;
   font-size: 24px;
@@ -8710,7 +8999,18 @@ body:has(.insights-tab) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   padding: 4px 8px;
   border-radius: 8px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.phenotype-panel__close::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
 
 @media (hover: hover) {
   .phenotype-panel__close:hover {

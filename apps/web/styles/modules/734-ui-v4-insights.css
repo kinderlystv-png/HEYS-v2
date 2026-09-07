@@ -43,15 +43,16 @@
 }
 
 .insights-v4-period-pill {
+
   min-width: 44px;
   min-height: 44px;
-  margin: -16px -6px;
   padding: 0 6px;
   border: none;
   background: none;
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   cursor: pointer;
+
 }
 
 .insights-v4-period-pill.is-active {
@@ -335,6 +336,7 @@
 }
 
 .insights-v4-detail__back {
+
   border: none;
   background: none;
   padding: 8px 0;
@@ -342,7 +344,18 @@
   font-weight: 600;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-v4-detail__back::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
 
 .insights-v4-detail__title {
   margin: 0;
@@ -943,7 +956,7 @@
 .meal-rec-v4__how::after {
   content: '';
   position: absolute;
-  inset: -2px -0px;
+  inset: -2px 0;
 }
 
 
@@ -1502,8 +1515,20 @@
 }
 
 .insights-v4-outcomes__row {
+
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-v4-outcomes__row::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 /* Число итога — то, ради чего строка существует, и контракт даёт ему вес
    числа: 12,5/700 тоном чернил, моноцифрами. Стояло 11,5 приглушённым — имя
@@ -1736,6 +1761,19 @@
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   text-align: left;
+  position: relative;
+}
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-v4-attention__sheet-link::after {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 /* Контракт «вид · лист»: шторка снизу на --bg радиусом 28/28/0/0 с полями

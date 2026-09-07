@@ -99,6 +99,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.cascade-card__header::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
+}
+
+
 .cascade-card__header:focus-visible {
   outline: 2px solid var(--v4-water, #3b82f6);
   outline-offset: -2px;
@@ -220,6 +229,7 @@
 }
 
 .cascade-card__copy-btn {
+
   border: 1px solid rgba(100, 116, 139, 0.28);
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -237,7 +247,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.cascade-card__copy-btn::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
 
 @media (hover: hover) {
   .cascade-card__copy-btn:hover {
@@ -1078,6 +1099,7 @@
 ───────────────────────────────────────────────────── */
 
 .heys-score-tile {
+
   grid-column: 1 / -1;
   cursor: pointer;
   background: var(--card-bg, #fff);
@@ -1086,7 +1108,18 @@
   padding: 12px 14px;
   margin-top: 4px;
   box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.35);
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.heys-score-tile::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
 
 /* Шапка плитки — ключ и дельта по краям (элемент 30 кадра). Зазор 12,
    а не 8: они разведены распоркой, и зазор тут — минимальный просвет при
@@ -1372,6 +1405,19 @@
   border: none;
   padding: 0;
   cursor: pointer;
+  position: relative;
+}
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.heys-score-insights-card__transition::after {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 @media (hover: hover) {

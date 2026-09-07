@@ -3033,7 +3033,7 @@ button.sleep-breakdown-item:focus-visible {
 .ndte-badge::after {
   content: '';
   position: absolute;
-  inset: -10.4px -0px;
+  inset: -11px 0;
 }
 
 

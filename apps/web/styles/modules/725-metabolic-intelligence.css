@@ -503,6 +503,7 @@
 }
 
 .reason-card__science-toggle {
+
   background: transparent;
   border: 1px solid var(--border-color, #e2e8f0);
   padding: 6px 12px;
@@ -512,7 +513,18 @@
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 32px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.reason-card__science-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
 
 .reason-card__science-toggle:active {
   opacity: 0.7;
@@ -981,6 +993,7 @@
 }
 
 .predictive-dashboard__timeline-btn {
+
   width: 32px;
   height: 32px;
   display: flex;
@@ -993,7 +1006,18 @@
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.predictive-dashboard__timeline-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 .predictive-dashboard__timeline-btn:disabled {
   opacity: 0.3;
@@ -1021,6 +1045,7 @@
 }
 
 .predictive-dashboard__timeline-date {
+
   padding: 6px 10px;
   border: none;
   border-radius: 6px;
@@ -1030,7 +1055,18 @@
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.predictive-dashboard__timeline-date::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
 
 @media (hover: hover) {
   .predictive-dashboard__timeline-date:hover {
@@ -1065,6 +1101,7 @@
 }
 
 .predictive-dashboard__tab {
+
   flex: 1;
   display: flex;
   align-items: center;
@@ -1079,7 +1116,18 @@
   color: var(--text-secondary, #64748b);
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.predictive-dashboard__tab::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 @media (hover: hover) {
   .predictive-dashboard__tab:hover {
@@ -1417,6 +1465,7 @@
 }
 
 .dual-risk-panel__meter-card {
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1427,7 +1476,18 @@
   border: 2px solid transparent;
   transition: all 0.2s ease;
   min-width: 140px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.dual-risk-panel__meter-card::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
 
 @media (hover: hover) {
   .dual-risk-panel__meter-card:hover {
@@ -1532,6 +1592,7 @@
 }
 
 .dual-risk-panel__debug-btn {
+
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1544,7 +1605,18 @@
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.dual-risk-panel__debug-btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 @media (hover: hover) {
   .dual-risk-panel__debug-btn:hover {
@@ -2054,6 +2126,7 @@
 }
 
 .phenotype-panel__more {
+
   width: 100%;
   padding: 12px;
   border: 1px dashed var(--border-color, #cbd5e1);
@@ -2063,7 +2136,18 @@
   color: var(--v4-water, #7d98a6);
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.phenotype-panel__more::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+
 
 @media (hover: hover) {
   .phenotype-panel__more:hover {
@@ -2217,6 +2301,7 @@
 }
 
 .feedback-widget__btn {
+
   padding: 8px 16px;
   border: 1px solid var(--border-color, #cbd5e1);
   border-radius: 8px;
@@ -2224,7 +2309,18 @@
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.feedback-widget__btn::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
 
 @media (hover: hover) {
   .feedback-widget__btn:hover {
@@ -2283,6 +2379,7 @@
 }
 
 .feedback-widget__submit {
+
   align-self: flex-end;
   padding: 8px 16px;
   background: var(--v4-water, #7d98a6);
@@ -2291,7 +2388,18 @@
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.feedback-widget__submit::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
 
 @media (hover: hover) {
   .feedback-widget__submit:hover {
@@ -2323,6 +2431,7 @@
 }
 
 .feedback-prompt__btn {
+
   width: 28px;
   height: 28px;
   display: flex;
@@ -2335,7 +2444,18 @@
   cursor: pointer;
   transition: all 0.15s ease;
   opacity: 0.6;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.feedback-prompt__btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
 
 @media (hover: hover) {
   .feedback-prompt__btn:hover {
@@ -2941,6 +3061,7 @@
 }
 
 .adv-analytics-card__tab {
+
   flex: 1;
   padding: 8px 12px;
   border: none;
@@ -2950,7 +3071,18 @@
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: 0.6;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.adv-analytics-card__tab::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 @media (hover: hover) {
   .adv-analytics-card__tab:hover {
@@ -4117,6 +4249,7 @@
 }
 
 .insights-tab__filter-btn {
+
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -4132,7 +4265,18 @@
   cursor: pointer;
   transition: all 0.2s ease;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.insights-tab__filter-btn::after {
+  content: '';
+  position: absolute;
+  inset: -12px 0;
+}
+
 
 @media (hover: hover) {
   .insights-tab__filter-btn:hover {
@@ -4270,6 +4414,7 @@
 }
 
 .category-filter-bar__btn {
+
   display: flex;
   align-items: center;
   gap: 4px;
@@ -4284,7 +4429,18 @@
   white-space: nowrap;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.category-filter-bar__btn::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
 
 @media (hover: hover) {
   .category-filter-bar__btn:hover {
@@ -4355,6 +4511,7 @@
 }
 
 .priority-filter-bar__btn {
+
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -4367,7 +4524,18 @@
   color: var(--text-secondary, #64748b);
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.priority-filter-bar__btn::after {
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}
+
 
 @media (hover: hover) {
   .priority-filter-bar__btn:hover {
@@ -4504,6 +4672,7 @@
 }
 
 .whatif-card__expand {
+
   font-size: 12px;
   color: #10b981;
   background: transparent;
@@ -4512,7 +4681,18 @@
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 0.2s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.whatif-card__expand::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+}
+
 
 @media (hover: hover) {
   .whatif-card__expand:hover {
@@ -4527,6 +4707,7 @@
 }
 
 .whatif-card__quick-btn {
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -4539,7 +4720,18 @@
   transition: all 0.2s;
   font-size: 12px;
   min-width: 72px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.whatif-card__quick-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
 
 .dark .whatif-card__quick-btn,
 [data-theme$="dark"] .whatif-card__quick-btn {
@@ -4694,6 +4886,7 @@
 }
 
 .whatif-simulator__category {
+
   display: flex;
   align-items: center;
   gap: 6px;
@@ -4707,7 +4900,18 @@
   transition: all 0.2s;
   white-space: nowrap;
   color: var(--text-primary, #1e293b);
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.whatif-simulator__category::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 .dark .whatif-simulator__category,
 [data-theme$="dark"] .whatif-simulator__category {
@@ -5017,6 +5221,7 @@
 }
 
 .whatif-result__advice-item {
+
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -5028,7 +5233,18 @@
   color: var(--text-primary, #1e293b);
   cursor: pointer;
   transition: background 0.2s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.whatif-result__advice-item::after {
+  content: '';
+  position: absolute;
+  inset: -3px 0;
+}
+
 
 .dark .whatif-result__advice-item,
 [data-theme$="dark"] .whatif-result__advice-item {
@@ -5118,8 +5334,20 @@
 }
 
 .phenotype-card--clickable {
+
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.phenotype-card--clickable::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 @media (hover: hover) {
   .phenotype-card--clickable:hover {
@@ -5329,6 +5557,11 @@
 }
 
 .phenotype-modal__close {
+
+
+  position: relative;
+
+
   position: absolute;
   top: 12px;
   right: 12px;
@@ -5344,7 +5577,18 @@
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.phenotype-modal__close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 @media (hover: hover) {
   .phenotype-modal__close:hover {

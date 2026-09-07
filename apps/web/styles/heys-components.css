@@ -1141,6 +1141,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__nav-btn {
+
   width: 34px;
   height: 34px;
   border-radius: 12px;
@@ -1153,7 +1154,18 @@ body.tour-active .ios-pwa-banner {
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.weekly-wrap-step__nav-btn::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
 
 @media (hover: hover) {
   .weekly-wrap-step__nav-btn:hover {
@@ -1649,12 +1661,28 @@ body.tour-active .ios-pwa-banner {
    слое — строкой «Предохранители · развернуть». Прятать их совсем нельзя: там,
    где решает куратор, человек всё равно вправе знать границы механизма. */
 .weekly-wrap-correction__safeguards-more > summary {
+
   font-size: 12px;
   font-weight: 700;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   list-style: none;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.weekly-wrap-correction__safeguards-more > summary::after {
+  content: '';
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 
 .weekly-wrap-correction__safeguards-more > summary::-webkit-details-marker {
   display: none;
@@ -1904,9 +1932,21 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-step__stat--clickable {
+
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.weekly-wrap-step__stat--clickable::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 @media (hover: hover) {
   .weekly-wrap-step__stat--clickable:hover {
@@ -3150,6 +3190,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-breakdown__close {
+
   align-self: flex-end;
   border: 1px solid rgba(191, 219, 254, 0.82);
   background: linear-gradient(180deg, #ffffff, #eff6ff);
@@ -3158,7 +3199,18 @@ body.tour-active .ios-pwa-banner {
   padding: 6px 12px;
   font-size: 12px;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.weekly-wrap-breakdown__close::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 @media (hover: hover) {
   .weekly-wrap-breakdown__close:hover {
@@ -4514,11 +4566,6 @@ body.tour-active .ios-pwa-banner {
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.aps-portions-apply-btn::after {
-  content: '';
-  position: absolute;
-  inset: -7.8px -0px;
-}
 
 
 .aps-portions-editor {
@@ -4615,7 +4662,7 @@ body.tour-active .ios-pwa-banner {
 .aps-portions-add-btn::after {
   content: '';
   position: absolute;
-  inset: -5.2px -0px;
+  inset: -6px 0;
 }
 
 
@@ -4649,7 +4696,7 @@ body.tour-active .ios-pwa-banner {
 .aps-portions-next-btn::after {
   content: '';
   position: absolute;
-  inset: -4.2px -0px;
+  inset: -5px 0;
 }
 
 
@@ -4895,7 +4942,7 @@ body.tour-active .ios-pwa-banner {
 .pe-section--collapsible::after {
   content: '';
   position: absolute;
-  inset: -7.9px -0px;
+  inset: -8px 0;
 }
 
 
@@ -5269,7 +5316,7 @@ body.tour-active .ios-pwa-banner {
 .pe-next-btn::after {
   content: '';
   position: absolute;
-  inset: -3.6px -0px;
+  inset: -4px 0;
 }
 
 
@@ -6269,7 +6316,7 @@ body.tour-active .ios-pwa-banner {
 .onboarding-fusion__ring::before {
   content: '';
   position: absolute;
-  inset: 20px;
+  inset: -20px;
   border-radius: 50%;
   border: 2px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, transparent);
   animation: fusionRingPulse 1.2s ease-in-out 0.5s infinite;
@@ -6545,7 +6592,7 @@ body.tour-active .ios-pwa-banner {
 .onboarding-fusion__btn::after {
   content: '';
   position: absolute;
-  inset: -1px -0px;
+  inset: -1px 0;
 }
 
 
@@ -6810,7 +6857,7 @@ body.tour-active .ios-pwa-banner {
 .heys-update-modal__still {
   display: none;
   position: absolute;
-  inset: 2px;
+  inset: -2px;
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
 }
@@ -7390,6 +7437,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-reports-tab {
+
   border: 0;
   background: transparent;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -7399,7 +7447,18 @@ body.tour-active .ios-pwa-banner {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.monthly-reports-tab::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
 
 .monthly-reports-tab--active {
   background: var(--v4-bg, #ffffff);
@@ -7416,6 +7475,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-reports-page-btn {
+
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: var(--v4-bg, #ffffff);
   color: var(--v4-ink, #201e1d);
@@ -7425,7 +7485,18 @@ body.tour-active .ios-pwa-banner {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.monthly-reports-page-btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 .monthly-reports-page-btn:disabled {
   opacity: 0.45;
@@ -7446,6 +7517,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .monthly-reports-filter__btn {
+
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: var(--v4-bg, #ffffff);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -7456,7 +7528,18 @@ body.tour-active .ios-pwa-banner {
   line-height: 1.2;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.monthly-reports-filter__btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+}
+
 
 .monthly-reports-filter__btn--active {
   color: #166534;
@@ -7652,6 +7735,7 @@ body.tour-active .ios-pwa-banner {
 }
 
 .reports-sleep-card__button {
+
   border: 1px solid transparent;
   border-radius: 10px;
   padding: 9px 12px;
@@ -7659,7 +7743,18 @@ body.tour-active .ios-pwa-banner {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.reports-sleep-card__button::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 .reports-sleep-card__button--primary {
   background: var(--v4-act, #c67139);
@@ -8716,18 +8811,6 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   background: linear-gradient(90deg, rgba(56, 189, 248, 0), rgba(59, 130, 246, 0.55), rgba(168, 85, 247, 0.55), rgba(56, 189, 248, 0));
 }
 
-/* ── Curator dropdown switch (clients ↔ competitions) ── */
-
-.curator-dropdown-switch {
-  display: flex;
-  gap: 0;
-  margin: 10px 12px 8px;
-  padding: 3px;
-  border-radius: 12px;
-  background: var(--bg-secondary, #f1f5f9);
-  border: 1px solid var(--border, rgba(148, 163, 184, 0.22));
-}
-
 .curator-section-header {
   padding: 4px 16px 8px;
   font-size: 12px;
@@ -8745,41 +8828,6 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 
 .curator-competitions-section {
   padding: 0 0 6px;
-}
-
-.curator-dropdown-switch__tab {
-  flex: 1;
-  padding: 7px 6px;
-  border: none;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--muted, #64748b);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.curator-dropdown-switch__tab.is-active {
-  background: var(--card, #fff);
-  color: var(--text, #1e293b);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
-
-[data-theme$="dark"] .curator-dropdown-switch {
-  background: rgba(15, 23, 42, 0.6);
-  border-color: rgba(96, 165, 250, 0.18);
-}
-
-[data-theme$="dark"] .curator-dropdown-switch__tab {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-}
-
-[data-theme$="dark"] .curator-dropdown-switch__tab.is-active {
-  background: rgba(30, 41, 59, 0.9);
-  color: #e2e8f0;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
 }
 
 .curator-competitions-loading,
@@ -9877,8 +9925,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .sync-vpn-help__done {
+
   width: 100%;
-  margin-top: 18px;
   padding: 13px 16px;
   border: 0;
   border-radius: 14px;
@@ -9887,6 +9935,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+  position: relative;
+
 }
 
 @keyframes heysPendingSyncBannerIn {
@@ -9985,7 +10035,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 .sync-lock-overlay__spinner::after {
   content: '';
   position: absolute;
-  inset: 8px;
+  inset: -8px;
   border-radius: inherit;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0));
   opacity: 0.9;
@@ -10083,9 +10133,12 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .sync-lock-overlay--ephemeral {
+
   z-index: calc(var(--v4-z-sync-lock, 10030) - 2);
   animation: heysSyncLockEphemeralIn 0.22s ease-out both;
   cursor: pointer;
+  position: relative;
+
 }
 
 .sync-lock-overlay--ephemeral.sync-lock-overlay--ephemeral-out {
@@ -11576,7 +11629,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 .meal-rec-card__header::after {
   content: '';
   position: absolute;
-  inset: -2.4px -0px;
+  inset: -3px 0;
 }
 
 
@@ -11847,7 +11900,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 .meal-rec-card__product-item::after {
   content: '';
   position: absolute;
-  inset: -6.4px -0px;
+  inset: -7px 0;
 }
 
 
@@ -11992,7 +12045,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 .meal-rec-card__add-selected-btn--active::after {
   content: '';
   position: absolute;
-  inset: -9.9px -0px;
+  inset: -10px 0;
 }
 
 
@@ -12061,9 +12114,8 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 
 .meal-rec-card__open-products-btn {
 
+
   width: 100%;
-  margin-top: 10px;
-  margin-bottom: 8px;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid #93c5fd;
@@ -12075,15 +12127,11 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   transition: all 0.15s ease;
   position: relative;
 
+
 }
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.meal-rec-card__open-products-btn::after {
-  content: '';
-  position: absolute;
-  inset: -3.8px -0px;
-}
 
 
 @media (hover: hover) {
@@ -13087,6 +13135,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .outcome-modal__close-btn {
+
   background: transparent;
   border: none;
   font-size: 28px;
@@ -13101,7 +13150,18 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   justify-content: center;
   border-radius: 6px;
   transition: all 0.2s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.outcome-modal__close-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 @media (hover: hover) {
   .outcome-modal__close-btn:hover {
@@ -13572,6 +13632,7 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
 }
 
 .score-explainer-modal__summary-row--clickable {
+
   width: 100%;
   border-left: none;
   border-right: none;
@@ -13579,7 +13640,18 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   cursor: pointer;
   text-align: left;
   transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.score-explainer-modal__summary-row--clickable::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 @media (hover: hover) {
   .score-explainer-modal__summary-row--clickable:hover {
@@ -14916,4 +14988,28 @@ body:has(.wrap.dropdown-blur-active) .tabs:not(.tabs--settings-open) {
   content: '';
   position: absolute;
   inset: -6px 0;
+}
+
+.aps-portions-apply-btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
+.sync-vpn-help__done::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
+.sync-lock-overlay--ephemeral::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
+.meal-rec-card__open-products-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
