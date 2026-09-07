@@ -174,7 +174,7 @@
 }
 
 .nutrition-v4-hero[data-zone='red'] .nutrition-v4-hero__value {
-  color: var(--v4-bad-text, #a8382b);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 .nutrition-v4-hero__unit {
@@ -208,7 +208,7 @@
 }
 
 .nutrition-v4-hero[data-zone='red'] .nutrition-v4-hero__fill.is-over {
-  background: var(--v4-bad-text, #a8382b);
+  background: var(--v4-bad-text, #a83c22);
 }
 
 .nutrition-v4-hero__budget {
@@ -1071,9 +1071,8 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #2563eb);
-  /* 06.09: было 11px. Контракт просит 12, и это не косметика: дизайнер назвал
-     порог сам — «12,5 против 13 неважно, но 11 против 12 уже ниже минимума». */
-  font-size: 12px;
+  /* Пакет 47: кадр .cfgC держит 11px/700 — сверка с канвасом, не порог 12. */
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
   color: var(--v4-btn-on-act, #2b1608);

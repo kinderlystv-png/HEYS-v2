@@ -158,9 +158,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // typedMismatch 36 → 41.
     // 06.09, пилюля «Сегодня»: food-meal «Приёмы дня · список · 03» — кадр
     // --c2 против date-remainders «вид чужого дня»; typedMismatch 41 → 42.
+    // 07.09, package 47: «что в шапке» получила naKind foreign-zone — шапка
+    // карточки живёт в product-card; untyped «—» типизирован: 87 → 86.
     mismatch: [0, 'e3b0c44298fc1c14'],
     typedMismatch: [42, 'bc5759cbb0faa849'],
-    notApplicable: [87, '21bc4201a8c68471'],
+    notApplicable: [86, 'd1df0e93941b3256'],
   }),
   gamification: Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -434,7 +436,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 5 сентября («срок подписки») требует дату 26 px, по которой нарисованы
     // кадр и код. Долг 52 → 41.
     // 06.09, package 43: «Проверьте заказ · 08» ink-2 = продукт — typed 41 → 40.
-    typedMismatch: [40, 'c974d197e836c730'],
+    // 07.09, package 47: четыре typed «≠» сведены в «=» — typed 40 → 36.
+    typedMismatch: [36, '53351aa2be9a0f07'],
   }),
   'tab-activity': Object.freeze({
     // 06.09, полоса 2/4: 43 legacy «≠» типизированы reasonCode — mismatch 43 → 0,

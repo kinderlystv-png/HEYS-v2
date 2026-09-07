@@ -83,6 +83,7 @@ const ROLE = new Map(Object.entries({
   '--gr': '--v4-ok-text',
   '--gr-bg': '--v4-ok-bg',
   '--red': '--v4-bad-text',
+  '--ink-2': '--v4-ink-2',
 }));
 
 // Прозрачные чернила канваса значат разное в разных местах: у линии это роль
@@ -94,7 +95,7 @@ function inkRole(alpha, prop) {
     if (alpha === 0.18) return '--v4-edge';
     return '--v4-line';
   }
-  if (alpha === 0.56) return '--v4-ink-data';
+  if (alpha === 0.56) return '--v4-ink-2';
   if (alpha >= 0.55) return '--v4-ink-2';
   if (alpha >= 0.38) return '--v4-ink-3';
   return '--v4-line';
@@ -381,10 +382,10 @@ describe('кабинет куратора · единая роль данных'
     '.cur-cab__queue-state',
   ];
 
-  it('изменённые строки canvas используют --v4-ink-data (56 %)', () => {
+  it('изменённые строки canvas используют --v4-ink-2 (56 %)', () => {
     for (const selector of selectors) {
       expect(declarations(product.get(selector)).color, selector)
-        .toContain('--v4-ink-data');
+        .toContain('--v4-ink-2');
     }
   });
 });
