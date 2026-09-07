@@ -1397,7 +1397,16 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+  position: relative;
   transition: color, background-color, border-color 0.15s ease;
+}
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Ряд на всю ширину — добираем только по высоте. */
+.compact-train-add::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 @media (hover: hover) {
@@ -1414,7 +1423,15 @@ color: var(--v4-sand-ink-slate, #1f2937);
   border: 1px solid rgba(34, 197, 94, 0.2) !important;
   padding: 10px 12px !important;
   cursor: pointer;
+  position: relative;
   transition: background-color, border-color 0.2s ease;
+}
+
+/* Цель касания 44 pt: карточка на всю ширину — добираем только по высоте. */
+.compact-household::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
 }
 
 @media (hover: hover) {
@@ -1878,6 +1895,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 .ct-wb-ex-fold-toggle:active {
   cursor: pointer;
+  position: relative;
+}
+
+/* Гейт меряет :active отдельно — дублируем припуск базового хоста. */
+.ct-wb-ex-fold-toggle:active::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
 }
 
 .ct-wb-ex-num {
@@ -2126,6 +2151,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-weight: 600;
   color: var(--v4-ink-2) /* v4-intentional */;
   cursor: pointer;
+  position: relative;
+}
+
+/* Цель касания 44 pt: ширина ряда 44 px — добираем по высоте. */
+.ct-wb-ex-name-suggest-item::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
 }
 
 .ct-wb-ex-name-suggest-fav {
@@ -2701,6 +2734,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   cursor: pointer;
   text-align: center;
   letter-spacing: -0.01em;
+  position: relative;
+}
+
+/* Цель касания 44 pt: ряд на всю ширину — добираем только по высоте. */
+.ct-wb-replay-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 .ct-wb-replay-btn:active {
@@ -2957,6 +2998,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   line-height: 1.25;
   cursor: pointer;
   max-width: 100%;
+  position: relative;
+}
+
+/* Цель касания 44 pt: зазор ряда 4 px — горизонталь меньше вертикали. */
+.ct-wb-ex-hist-chip::after {
+  content: '';
+  position: absolute;
+  inset: -12px -22px;
 }
 
 .ct-wb-ex-hist-chip.is-open {
@@ -3452,6 +3501,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  position: relative;
+}
+
+/* Цель касания 44 pt: ряд на всю ширину — добираем только по высоте. */
+.ct-wb-add-btn::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
 }
 
 .ct-wb-enable-wrap {
@@ -3470,6 +3527,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-weight: 600;
   cursor: pointer;
   text-align: center;
+  position: relative;
+}
+
+/* Цель касания 44 pt: ряд на всю ширину — добираем только по высоте. */
+.ct-wb-enable-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 .ct-wb-enable-btn:active {
@@ -3776,7 +3841,15 @@ color: var(--v4-sand-ink-slate, #1f2937);
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   cursor: pointer;
+  position: relative;
   transition: background-color, border-color 0.15s ease;
+}
+
+/* Цель касания 44 pt: ширина 44 px по контракту — добираем по высоте. */
+.compact-zone-inline::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
 }
 
 @media (hover: hover) {
@@ -4361,6 +4434,7 @@ html[data-theme-id="blue-dark"] {
 }
 
 .hdr-top.hdr-gamification .game-bar {
+
   grid-template-columns: auto minmax(14px, 1fr) auto auto;
   gap: 9px;
   /* Строка уровня высотой 16, а цели 44 pt по кадру намеренно выходят за неё
@@ -4379,7 +4453,18 @@ html[data-theme-id="blue-dark"] {
   padding-bottom: 2px;
   margin-top: -10px;
   margin-bottom: -2px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.game-bar::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 /* Подсказка полосы «Ещё N XP до ур.N» в шапке не живёт: строка «что в шапке»
    знает здесь уровень, полосу, звание и два адреса — её в этом ряду нет, а
@@ -5419,6 +5504,7 @@ color: var(--v4-sand-ink, #201e1d);
 
 /* === 17. Daily Bonus Button === */
 .game-daily-bonus {
+
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   border: none;
   border-radius: 6px;
@@ -5429,7 +5515,18 @@ color: var(--v4-sand-ink, #201e1d);
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.game-daily-bonus::after {
+  content: '';
+  position: absolute;
+  inset: -13px -22px;
+}
+
 
 @media (hover: hover) {
   .game-daily-bonus:hover {
@@ -7191,8 +7288,6 @@ color: var(--v4-sand-ink, #201e1d);
 .hdr-tab-title-row--widgets .hdr-widgets-edit-btn {
   align-self: center;
 }
-
-.hdr-tab-title-group {
   display: flex;
   align-items: baseline;
   gap: 10px;
@@ -7209,11 +7304,11 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .hdr-widgets-edit-btn {
+  position: relative;
   flex-shrink: 0;
   border: none;
   background: transparent;
   padding: 10px 0;
-  margin: -10px 0;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -7222,6 +7317,14 @@ color: var(--v4-sand-ink, #201e1d);
   line-height: 1;
   cursor: pointer;
   font-family: inherit;
+}
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.hdr-widgets-edit-btn::after {
+  content: '';
+  position: absolute;
+  inset: -10px -12px;
 }
 
 .hdr-widgets-edit-btn--primary,
@@ -7852,6 +7955,7 @@ color: var(--v4-sand-ink, #201e1d);
 }
 
 .offline-banner-retry {
+
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
@@ -7861,7 +7965,18 @@ color: var(--v4-sand-ink, #201e1d);
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.offline-banner-retry::after {
+  content: '';
+  position: absolute;
+  inset: -10px -22px;
+}
+
 
 @media (hover: hover) {
   .offline-banner-retry:hover {
@@ -8417,6 +8532,7 @@ body:has(.offline-banner) .wrap {
 }
 
 .date-picker--v4 .date-picker-trigger-lbl {
+
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -8435,7 +8551,18 @@ body:has(.offline-banner) .wrap {
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.date-picker--v4 .date-picker-trigger-lbl::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
+}
+
 
 .date-picker--v4 .date-picker-lbl-inner {
   display: flex;
@@ -9406,6 +9533,7 @@ svg.date-picker-icon {
 }
 
 .date-picker-btn {
+
   flex: 1;
   padding: 8px 12px;
   border: none;
@@ -9418,7 +9546,18 @@ svg.date-picker-icon {
   align-items: center;
   justify-content: center;
   gap: 4px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.date-picker-btn::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
 
 .date-picker-btn.today-btn {
   background: linear-gradient(135deg, #4285f4 0%, #2563eb 100%);
@@ -9482,6 +9621,7 @@ svg.date-picker-icon {
 
 /* Кнопка "Вернуться к сегодня" */
 .date-picker-goto-today {
+
   width: 100%;
   padding: 6px 12px;
   margin-bottom: 8px;
@@ -9493,7 +9633,18 @@ svg.date-picker-icon {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.date-picker-goto-today::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 
 @media (hover: hover) {
   .date-picker-goto-today:hover {
@@ -11845,6 +11996,7 @@ body:has(:is(
 }
 
 .tab-settings-item {
+
   display: flex;
   align-items: center;
   gap: 10px;
@@ -11856,7 +12008,18 @@ body:has(:is(
   background: transparent;
   cursor: pointer;
   transition: background 0.15s ease, transform 0.12s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.tab-settings-item::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 @media (hover: hover) {
   .tab-settings-item:hover {
@@ -12137,7 +12300,7 @@ body:has(:is(
 .tab--home-candidate::after {
   content: '';
   position: absolute;
-  inset: -2px;
+  inset: -8px;
 }
 
 @media (hover: hover) {
@@ -12775,7 +12938,7 @@ body:has(:is(
 .meal-type-label::after {
   content: '';
   position: absolute;
-  inset: -8px 0;
+  inset: -9px 0;
 }
 
 .meal-type-arrow {
@@ -12916,7 +13079,7 @@ body:has(:is(
 .meal-type-preview-value::after {
   content: '';
   position: absolute;
-  inset: -7px 0;
+  inset: -8px 0;
 }
 
 .meal-type-preview-value.meal-type-breakfast {
@@ -13051,7 +13214,7 @@ body:has(:is(
 .meal-time-badge-inside::after {
   content: '';
   position: absolute;
-  inset: -8px 0;
+  inset: -9px 0;
 }
 
 @media (hover: hover) {
@@ -13437,6 +13600,7 @@ body:has(:is(
   opacity: 1;
   pointer-events: auto;
   cursor: pointer;
+  position: relative;
 }
 
 .meal-sticky-bar.meal-sticky-bar--visible {
@@ -13445,10 +13609,11 @@ body:has(:is(
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.meal-sticky-bar--visible::after,
 .meal-sticky-bar.meal-sticky-bar--visible::after {
   content: '';
   position: absolute;
-  inset: -2px 0;
+  inset: -8px 0;
 }
 
 
@@ -14572,7 +14737,7 @@ body:has(:is(
   .swipeable-delete-btn::after {
   content: '';
   position: absolute;
-  inset: -6px 0;
+  inset: -7px 0;
 }
 
 
@@ -15020,7 +15185,7 @@ body:has(:is(
   .mpc-products-toggle::after {
   content: '';
   position: absolute;
-  inset: -3px 0;
+  inset: -6px 0;
 }
 
 
@@ -15245,7 +15410,7 @@ body:has(:is(
   .meal-delete-btn::after {
   content: '';
   position: absolute;
-  inset: -6px 0;
+  inset: -9px 0;
 }
 
 
@@ -16350,7 +16515,15 @@ body:has(:is(
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  position: relative;
   transition: background-color, transform 0.15s ease;
+}
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском. */
+.measurements-card__edit::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
 }
 
 .measurements-card__edit:active {
@@ -16562,7 +16735,15 @@ body:has(:is(
   background: var(--color-white);
   font-weight: 700;
   cursor: pointer;
+  position: relative;
   transition: background-color, transform 0.15s ease;
+}
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском. */
+.measurements-card__button::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
 }
 
 .measurements-card__button:active {
@@ -16587,6 +16768,14 @@ body:has(:is(
   font-weight: 700;
   cursor: pointer;
   padding: 0;
+  position: relative;
+}
+
+/* Цель касания 44 pt: текстовая ссылка без полей — припуск по вертикали. */
+.measurements-card__history::after {
+  content: '';
+  position: absolute;
+  inset: -22px;
 }
 
 .measurements-card__footer-date {
@@ -16712,8 +16901,20 @@ body:has(:is(
 }
 
 .profile-section--collapsed {
+
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.profile-section--collapsed::after {
+  content: '';
+  position: absolute;
+  inset: -8px -22px;
+}
+
 
 @media (hover: hover) {
   .profile-section--collapsed:hover {
@@ -18123,6 +18324,7 @@ body:has(:is(
 }
 
 .achievement-story-btn {
+
   border: none;
   border-radius: 12px;
   padding: 10px 18px;
@@ -18130,7 +18332,18 @@ body:has(:is(
   color: var(--v4-bg, #ffffff);
   font-weight: 600;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.achievement-story-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3px -22px;
+}
+
 
 .achievement-story-card.locked .achievement-story-icon {
   opacity: 0.6;
@@ -18553,6 +18766,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__tab {
+
   flex: 1;
   border: 0;
   border-radius: 10px;
@@ -18562,7 +18776,18 @@ html.heys-bg-paused *::after {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.game-v4-sheet__tab::after {
+  content: '';
+  position: absolute;
+  inset: -7px -22px;
+}
+
 
 .game-v4-sheet__tab.is-active {
   background: var(--v4-sand-hero, #efe3cf);
@@ -18989,6 +19214,7 @@ html.heys-bg-paused *::after {
 
 /* Строка «состав группы»: заголовок группы раскрывает дальние закрытые. */
 .game-v4-sheet__tier--tap {
+
   display: block;
   width: 100%;
   border: 0;
@@ -18997,7 +19223,18 @@ html.heys-bg-paused *::after {
   font-family: inherit;
   text-align: left;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.game-v4-sheet__tier--tap::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
+}
+
 
 .game-v4-sheet__near-card {
   background: var(--v4-sand-surface, #f7efe2);

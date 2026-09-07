@@ -7091,6 +7091,14 @@
   font-variant-numeric: tabular-nums;
   text-align: left;
   cursor: pointer;
+  position: relative;
+}
+
+/* Цель касания 44 pt: ячейка таблицы весов — текст без полей. */
+.sb-tw-cell::after {
+  content: '';
+  position: absolute;
+  inset: -22px;
 }
 
 .sb-tw-cell.is-done {
@@ -7315,6 +7323,14 @@
   font: 700 11.5px/1 Figtree, sans-serif;
   color: var(--sb-acc);
   cursor: pointer;
+  position: relative;
+}
+
+/* Цель касания 44 pt: текстовая ссылка «повторить» — припуск по вертикали. */
+.sb-cur-sync-retry::after {
+  content: '';
+  position: absolute;
+  inset: -22px;
 }
 
 .sb-cur-sync-foot {

@@ -2502,8 +2502,20 @@
 }
 
 .sleep-time-display.clickable {
+
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sleep-time-display.clickable::after {
+  content: '';
+  position: absolute;
+  inset: -8px -22px;
+}
+
 
 .sleep-time-display.clickable:active {
   opacity: 0.7;
@@ -2582,10 +2594,22 @@
 }
 
 button.sleep-breakdown-item {
+
   appearance: none;
   cursor: pointer;
   transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+button.sleep-breakdown-item::after {
+  content: '';
+  position: absolute;
+  inset: -8px -22px;
+}
+
 
 button.sleep-breakdown-item:focus-visible {
   outline: none;
@@ -2839,6 +2863,14 @@ button.sleep-breakdown-item:focus-visible {
 .day-score-display.clickable {
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+}
+
+/* Цель касания 44 pt: блок оценки дня — добираем по высоте. */
+.day-score-display.clickable::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
 }
 
 .day-score-display.clickable:active {

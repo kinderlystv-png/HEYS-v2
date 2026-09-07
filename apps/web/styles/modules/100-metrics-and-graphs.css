@@ -4784,6 +4784,14 @@
   text-decoration: underline;
   padding: 0;
   font-size: inherit;
+  position: relative;
+}
+
+/* Цель касания 44 pt: текстовая ссылка в подсказке — припуск по вертикали. */
+.weight-goal-hint-link::after {
+  content: '';
+  position: absolute;
+  inset: -22px;
 }
 
 @media (hover: hover) {

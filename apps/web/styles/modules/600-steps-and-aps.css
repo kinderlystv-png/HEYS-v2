@@ -1488,11 +1488,11 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.aps-brand-extract-btn,
+.aps-brand-extract-btn::after,
 .pe-brand-tool::after {
   content: '';
   position: absolute;
-  inset: -8.1px -0px;
+  inset: -9px 0;
 }
 
 
@@ -2360,7 +2360,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .aps-similar-warn__dismiss::after {
   content: '';
   position: absolute;
-  inset: -16px 0;
+  inset: -22px;
 }
 
 [data-theme$='dark'] .aps-similar-warn {
@@ -2584,7 +2584,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .aps-v4-notsent-chip__retry::after {
   content: '';
   position: absolute;
-  inset: -15px 0;
+  inset: -22px;
 }
 
 .aps-v4-notsent-chip__retry:disabled {

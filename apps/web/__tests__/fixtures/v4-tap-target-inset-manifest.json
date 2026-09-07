@@ -894,6 +894,54 @@
     "inset": "-3px 0"
   },
   {
+    "zone": "home-widgets",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".compact-train-add",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".compact-household",
+    "inset": "-2px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".compact-zone-inline",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".measurements-card__edit",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".measurements-card__button",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".measurements-card__history",
+    "inset": "-22px"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/100-metrics-and-graphs.css",
+    "host": ".weight-goal-hint-link",
+    "inset": "-22px"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/200-dark-and-effects.css",
+    "host": ".day-score-display.clickable",
+    "inset": "-8px 0"
+  },
+  {
     "zone": "date-remainders",
     "file": "styles/modules/000-base-and-gamification.css",
     "host": ".yesterday-quick-btn",
