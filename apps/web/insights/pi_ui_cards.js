@@ -591,9 +591,12 @@
               h('div', {
                 key: i,
                 className: `adv-analytics__energy-bar adv-analytics__energy-bar--${hr.level}`,
-                style: { height: `${hr.energy}%` },
                 title: `${hr.hour}:00 — ${hr.energy}%`
               },
+                h('div', {
+                  className: 'adv-analytics__energy-bar-fill',
+                  style: { height: `${hr.energy}%` }
+                }),
                 h('span', { className: 'adv-analytics__energy-label' }, hr.hour)
               )
             )

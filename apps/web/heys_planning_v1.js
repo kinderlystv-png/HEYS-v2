@@ -3135,16 +3135,29 @@
                                 readModel.goalTasks.map((task) => h('div', {
                                     key: task.id,
                                     className: 'planning-goals-workspace__task' + (task.id === nextTask?.id ? ' is-focus' : ''),
+                                    role: 'button',
+                                    tabIndex: 0,
+                                    onClick: () => selectGoalFocus(goal, task.id),
+                                    onKeyDown: (event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            selectGoalFocus(goal, task.id);
+                                        }
+                                    },
                                 },
                                     h('input', {
                                         type: 'checkbox',
                                         checked: task.status === 'done',
-                                        onChange: () => state.updateTask?.(task.id, {
-                                            status: task.status === 'done' ? 'in_progress' : 'done',
-                                        }),
+                                        onClick: (event) => event.stopPropagation(),
+                                        onChange: (event) => {
+                                            event.stopPropagation();
+                                            state.updateTask?.(task.id, {
+                                                status: task.status === 'done' ? 'in_progress' : 'done',
+                                            });
+                                        },
                                         'aria-label': (task.status === 'done' ? 'Вернуть задачу: ' : 'Выполнить задачу: ') + task.title,
                                     }),
-                                    h('button', { type: 'button', onClick: () => selectGoalFocus(goal, task.id) }, task.title || 'Задача'),
+                                    h('span', { className: 'planning-goals-workspace__task-title' }, task.title || 'Задача'),
                                     task.id === nextTask?.id && h('small', null, 'фокус'),
                                 )),
                             ),

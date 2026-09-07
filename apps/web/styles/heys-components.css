@@ -758,6 +758,7 @@
 }
 
 .tour-btn {
+  position: relative;
   border: none;
   background: none;
   cursor: pointer;
@@ -766,6 +767,14 @@
   padding: 8px 12px;
   border-radius: 8px;
   transition: background 0.2s;
+}
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.tour-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
 }
 
 .tour-btn-skip {
@@ -7901,44 +7910,6 @@ body.tour-active .ios-pwa-banner {
   gap: 6px;
 }
 
-.monthly-week-card__expand-btn {
-
-  border: 1px solid var(--v4-accent-bg, #f0dcc6);
-  background: #eff6ff;
-  color: var(--v4-act-text, #8a4a20);
-  border-radius: 7px;
-  padding: 2px 7px;
-  font-size: 9px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  cursor: pointer;
-  line-height: 1.2;
-  transition: all 0.15s ease;
-  position: relative;
-
-}
-
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.monthly-week-card__expand-btn::after {
-  content: '';
-  position: absolute;
-  inset: -15px -22px;
-}
-
-
-.monthly-week-card__expand-btn--open {
-  background: var(--v4-accent-bg, #f0dcc6);
-}
-
-.monthly-week-card__expand-btn-icon {
-  font-size: 8px;
-}
-
 .monthly-week-card__badge {
   font-size: 9px;
   font-weight: 600;
@@ -8385,16 +8356,6 @@ body.tour-active .ios-pwa-banner {
 [data-theme$="dark"] .monthly-week-card__badge {
   color: #93c5fd;
   background: #1e3a8a;
-}
-
-[data-theme$="dark"] .monthly-week-card__expand-btn {
-  background: #1e3a8a;
-  border-color: #1d4ed8;
-  color: #dbeafe;
-}
-
-[data-theme$="dark"] .monthly-week-card__expand-btn--open {
-  background: #1d4ed8;
 }
 
 [data-theme$="dark"] .monthly-metric-block {

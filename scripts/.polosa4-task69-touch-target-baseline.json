@@ -1,9 +1,8 @@
 {
   "captured": "2026-09-07",
-  "totalViolations": 2,
-  "unknownViolations": 1,
+  "totalViolations": 0,
+  "unknownViolations": 0,
   "byZone": {
-    "tab-activity": 1,
     "date-remainders": 0,
     "settings-system": 0,
     "food-meal": 0,
@@ -11,14 +10,13 @@
     "messenger": 0,
     "checkin-morning": 0,
     "water-add": 0,
+    "tab-activity": 0,
     "reports-insights": 0,
     "nutrition-tab": 0,
     "strength-builder": 0,
     "planning": 0,
     "product-card": 0
   },
-  "byFile": {
-    "000-base-and-gamification.css": 2
-  },
-  "violationKeys": ["000-base-and-gamification.css::.program-next-line", "000-base-and-gamification.css::.theme-fab"]
+  "byFile": {},
+  "violationKeys": []
 }

@@ -3623,7 +3623,7 @@
 
 .adv-analytics__energy-graph {
   display: flex;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 4px;
   height: 100px;
   padding: 10px;
@@ -3637,25 +3637,25 @@
   background: var(--v4-hero, #2f2820);
 }
 
+/* Сборка 48: цель — вся колонка дня на высоту графика; припуск ±8 запрещён. */
 .adv-analytics__energy-bar {
-
   flex: 1;
   min-width: 16px;
-  border-radius: 3px 3px 0 0;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
   position: relative;
   cursor: pointer;
   transition: opacity 0.2s;
-
+  background: transparent;
 }
 
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.adv-analytics__energy-bar::after {
-  content: '';
-  position: absolute;
-  inset: -8px -14px;
+.adv-analytics__energy-bar-fill {
+  width: 100%;
+  border-radius: 3px 3px 0 0;
+  flex-shrink: 0;
 }
-
 
 @media (hover: hover) {
   .adv-analytics__energy-bar:hover {
@@ -3663,19 +3663,19 @@
 }
 }
 
-.adv-analytics__energy-bar--peak {
+.adv-analytics__energy-bar--peak .adv-analytics__energy-bar-fill {
   background: linear-gradient(180deg, #22c55e, #16a34a);
 }
 
-.adv-analytics__energy-bar--good {
+.adv-analytics__energy-bar--good .adv-analytics__energy-bar-fill {
   background: linear-gradient(180deg, #3b82f6, #2563eb);
 }
 
-.adv-analytics__energy-bar--moderate {
+.adv-analytics__energy-bar--moderate .adv-analytics__energy-bar-fill {
   background: linear-gradient(180deg, var(--v4-act, #c67139), var(--v4-warn-3, #a1471c));
 }
 
-.adv-analytics__energy-bar--low {
+.adv-analytics__energy-bar--low .adv-analytics__energy-bar-fill {
   background: linear-gradient(180deg, #94a3b8, #64748b);
 }
 

@@ -1023,10 +1023,11 @@
 
 .planning-goals-workspace__task {
     display: grid;
-    grid-template-columns: 18px minmax(0, 1fr) auto;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
     align-items: center;
     gap: 7px;
-    min-height: 34px;
+    min-height: 44px;
+    cursor: pointer;
     padding: 4px 7px;
     border-radius: 7px;
     color: var(--planning-text);
@@ -1036,30 +1037,20 @@
     background: rgba(67, 69, 135, 0.07);
 }
 
-.planning-goals-workspace__task button {
-
+.planning-goals-workspace__task-title {
     min-width: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: inherit;
     font-size: 11px;
     line-height: 1.25;
     font-weight: 700;
     text-align: left;
-    cursor: pointer;
-  position: relative;
-
 }
 
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.planning-goals-workspace__task button::after {
-  content: '';
-  position: absolute;
-  inset: -22px;
+.planning-goals-workspace__task input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    justify-self: center;
 }
-
 
 .planning-goals-workspace__task small {
     color: #434587;
@@ -5628,7 +5619,6 @@ body.planning-quick-event-modal-open .widgets-fab-left,
 body.planning-quick-event-modal-open .planning-subnav,
 body.planning-quick-event-modal-open .planning-tasks-scale-fab,
 body.planning-quick-event-modal-open .planning-checklists-archive-badge,
-body.planning-quick-event-modal-open .theme-fab,
 body.planning-quick-event-modal-open .tabs,
 body.planning-quick-event-modal-open .crs-bar-container,
 body.planning-checklist-modal-open .fab-group,
@@ -5637,7 +5627,6 @@ body.planning-checklist-modal-open .widgets-fab-left,
 body.planning-checklist-modal-open .planning-subnav,
 body.planning-checklist-modal-open .planning-tasks-scale-fab,
 body.planning-checklist-modal-open .planning-checklists-archive-badge,
-body.planning-checklist-modal-open .theme-fab,
 body.planning-checklist-modal-open .tabs,
 body.planning-checklist-modal-open .crs-bar-container {
     visibility: hidden !important;
@@ -5657,7 +5646,6 @@ body:has(.planning-modal-overlay) .widgets-fab-left,
 body:has(.planning-modal-overlay) .planning-subnav,
 body:has(.planning-modal-overlay) .planning-tasks-scale-fab,
 body:has(.planning-modal-overlay) .planning-checklists-archive-badge,
-body:has(.planning-modal-overlay) .theme-fab,
 body:has(.planning-modal-overlay) .tabs,
 body:has(.planning-modal-overlay) .crs-bar-container,
 body:has(.planning-checklists-modal-overlay) .fab-group,
@@ -5666,7 +5654,6 @@ body:has(.planning-checklists-modal-overlay) .widgets-fab-left,
 body:has(.planning-checklists-modal-overlay) .planning-subnav,
 body:has(.planning-checklists-modal-overlay) .planning-tasks-scale-fab,
 body:has(.planning-checklists-modal-overlay) .planning-checklists-archive-badge,
-body:has(.planning-checklists-modal-overlay) .theme-fab,
 body:has(.planning-checklists-modal-overlay) .tabs,
 body:has(.planning-checklists-modal-overlay) .crs-bar-container,
 body:has(.planning-slot-delete-overlay) .fab-group,
@@ -5675,7 +5662,6 @@ body:has(.planning-slot-delete-overlay) .widgets-fab-left,
 body:has(.planning-slot-delete-overlay) .planning-subnav,
 body:has(.planning-slot-delete-overlay) .planning-tasks-scale-fab,
 body:has(.planning-slot-delete-overlay) .planning-checklists-archive-badge,
-body:has(.planning-slot-delete-overlay) .theme-fab,
 body:has(.planning-slot-delete-overlay) .tabs,
 body:has(.planning-slot-delete-overlay) .crs-bar-container,
 body:has(.planning-calendar-task-picker-overlay) .fab-group,
@@ -5684,7 +5670,6 @@ body:has(.planning-calendar-task-picker-overlay) .widgets-fab-left,
 body:has(.planning-calendar-task-picker-overlay) .planning-subnav,
 body:has(.planning-calendar-task-picker-overlay) .planning-tasks-scale-fab,
 body:has(.planning-calendar-task-picker-overlay) .planning-checklists-archive-badge,
-body:has(.planning-calendar-task-picker-overlay) .theme-fab,
 body:has(.planning-calendar-task-picker-overlay) .tabs,
 body:has(.planning-calendar-task-picker-overlay) .crs-bar-container,
 body:has(.gantt-quick-edit-backdrop) .fab-group,
@@ -5693,7 +5678,6 @@ body:has(.gantt-quick-edit-backdrop) .widgets-fab-left,
 body:has(.gantt-quick-edit-backdrop) .planning-subnav,
 body:has(.gantt-quick-edit-backdrop) .planning-tasks-scale-fab,
 body:has(.gantt-quick-edit-backdrop) .planning-checklists-archive-badge,
-body:has(.gantt-quick-edit-backdrop) .theme-fab,
 body:has(.gantt-quick-edit-backdrop) .tabs,
 body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     display: none !important;
