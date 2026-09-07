@@ -6,17 +6,21 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   EXEMPTION_REGISTRY,
   MIN_TOUCH_PX,
+  buildMeasurementStylesheet,
   compareRatchet,
   effectiveTouchSize,
   findPseudoExpander,
   hasNegativeMarginExpander,
   isVisibleTouchOk,
+  lineBoxHeightFromBlock,
   matchesExemption,
   measureElement,
+  measureFromDeclarations,
   parseCssRules,
   parsePx,
   resolveTouchZone,
   spansContainerWidth,
+  spansContainerWidthFromBlock,
   visibleAxis,
 } from '../../../scripts/ui-v4-check-touch-target-visible.mjs';
 
@@ -180,6 +184,35 @@ describe('ui-v4 touch-target visible gate', () => {
 
   it('spansContainerWidth · calc(100% - N) — полная ширина', () => {
     expect(spansContainerWidth({ display: 'flex', width: 'calc(100% - 36px)' })).toBe(true);
+    expect(spansContainerWidthFromBlock('display: flex; width: calc(100% - 36px);')).toBe(true);
+  });
+
+  it('measureFromDeclarations · full-row padding даёт высоту ≥44', () => {
+    const block = `
+      display: flex;
+      width: 100%;
+      padding: 12px 16px;
+      min-height: 44px;
+      cursor: pointer;
+    `;
+    const size = measureFromDeclarations(block);
+    expect(size.height).toBeGreaterThanOrEqual(MIN_TOUCH_PX);
+    expect(size.heightChecked).toBe(true);
+    expect(size.fromDeclarations).toBe(true);
+  });
+
+  it('lineBoxHeightFromBlock · padding + font-size без height', () => {
+    const h = lineBoxHeightFromBlock('padding: 10px 13px; font-size: 13px; border: 1px solid #ccc;');
+    expect(h).toBeGreaterThan(0);
+  });
+
+  it('buildMeasurementStylesheet · подтягивает ::after хоста', () => {
+    const css = `
+      .foo { position: relative; cursor: pointer; width: 30px; height: 30px; }
+      .foo::after { content: ''; position: absolute; inset: -7px; }
+    `;
+    const sheet = buildMeasurementStylesheet(css, '.foo', 'position: relative; cursor: pointer; width: 30px; height: 30px;');
+    expect(sheet).toContain('.foo::after');
   });
 
   it('matchesExemption · ios-toggle и mood-slider', () => {

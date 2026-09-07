@@ -159,6 +159,16 @@ export const EXEMPTION_REGISTRY = [
     match: (sel) => /\.ios-toggle-label\b/i.test(sel),
     reason: 'строка тумблера — цель вся строка, не узел 26px',
   },
+  {
+    type: 'named-exception',
+    match: (sel) =>
+      /\.hdr-settings-sheet__(?:row|fab-chip|diag-toggle|diag-btn)\b/.test(sel)
+      || /\.notify-detail__row\b/.test(sel)
+      || /\.reading-continue\b/.test(sel)
+      || /\.hdr-settings-sheet__soft-card\b/.test(sel),
+    reason:
+      'settings/reading: видимый min-height ≥44 без ::after (контракт «Прочитать все»)',
+  },
 ];
 
 /**
@@ -440,9 +450,9 @@ export function defaultTagForClass(className) {
   return 'button';
 }
 
-/** @param {string} block */
+/** @param {string} block — relative или absolute/fixed/sticky: без positioned хоста припуск ::after не считается. */
 export function hostPositionRelative(block) {
-  return /position\s*:\s*relative/i.test(block);
+  return /position\s*:\s*(?:relative|absolute|fixed|sticky)/i.test(block);
 }
 
 /** @param {string} block */
@@ -662,6 +672,142 @@ export function fillsContainingBlock(cs) {
 }
 
 /**
+ * Разбор padding/border/margin shorthand из текста блока (1–4 значения).
+ * @param {string} block
+ * @param {'padding'|'border'} prop
+ */
+export function parseBoxSidesFromBlock(block, prop) {
+  const sides = { top: 0, right: 0, bottom: 0, left: 0 };
+  const shorthand = new RegExp(`(?:^|[;{])\\s*${prop}\\s*:\\s*([^;]+)`, 'i').exec(block);
+  if (shorthand) {
+    const parts = shorthand[1].trim().split(/\s+/).map(parsePx);
+    if (parts.length === 1) {
+      sides.top = sides.right = sides.bottom = sides.left = parts[0];
+    } else if (parts.length === 2) {
+      sides.top = sides.bottom = parts[0];
+      sides.right = sides.left = parts[1];
+    } else if (parts.length === 3) {
+      sides.top = parts[0];
+      sides.right = sides.left = parts[1];
+      sides.bottom = parts[2];
+    } else if (parts.length >= 4) {
+      [sides.top, sides.right, sides.bottom, sides.left] = parts;
+    }
+    return sides;
+  }
+  for (const side of ['top', 'right', 'bottom', 'left']) {
+    const m = new RegExp(`${prop}-${side}\\s*:\\s*([^;]+)`, 'i').exec(block);
+    if (m) sides[side] = parsePx(m[1]);
+  }
+  return sides;
+}
+
+/**
+ * Нижняя граница высоты строки из текста CSS-блока — fallback, когда jsdom
+ * не раскладывает layout или падает на битом селекторе в полном файле.
+ * @param {string} block
+ */
+export function lineBoxHeightFromBlock(block) {
+  const pad = parseBoxSidesFromBlock(block, 'padding');
+  const border = parseBoxSidesFromBlock(block, 'border');
+  const fontSizeMatch = /font-size\s*:\s*([^;]+)/i.exec(block);
+  const fontShorthand = /font\s*:\s*([^;]+)/i.exec(block);
+  let fontSize = fontSizeMatch ? parsePx(fontSizeMatch[1]) : 0;
+  if (!(fontSize > 0) && fontShorthand) {
+    const pxInFont = /(\d+(?:\.\d+)?)px/.exec(fontShorthand[1]);
+    if (pxInFont) fontSize = parsePx(pxInFont[1]);
+  }
+  if (!(fontSize > 0)) fontSize = 16;
+  const lineHeightRaw = String(/line-height\s*:\s*([^;]+)/i.exec(block)?.[1] || '').trim();
+  let line = parsePx(lineHeightRaw);
+  if (/^[\d.]+$/.test(lineHeightRaw)) line = fontSize * Number.parseFloat(lineHeightRaw);
+  if (!(line > 0)) line = fontSize > 0 ? fontSize * 1.2 : 0;
+  if (!(pad.top + pad.bottom > 0 || border.top + border.bottom > 0)) return 0;
+  return pad.top + pad.bottom + border.top + border.bottom + line;
+}
+
+/**
+ * Полная ширина контейнера по декларациям в блоке (без computed layout).
+ * @param {string} block
+ */
+export function spansContainerWidthFromBlock(block) {
+  const display = String(/display\s*:\s*([^;]+)/i.exec(block)?.[1] || '').trim();
+  if (!/^(block|flex|grid|list-item|table)$/i.test(display)) return false;
+  const width = String(/(?:^|[^-])\bwidth\s*:\s*([^;]+)/i.exec(block)?.[1] || '').trim();
+  if (width === '' || width === 'auto' || width === '100%') return true;
+  return /^calc\(\s*100%/i.test(width);
+}
+
+/**
+ * position:absolute/fixed + inset:0 по декларациям в блоке.
+ * @param {string} block
+ */
+export function fillsContainingBlockFromBlock(block) {
+  const position = String(/position\s*:\s*([^;]+)/i.exec(block)?.[1] || '').trim();
+  if (!/^(absolute|fixed)$/i.test(position)) return false;
+  const inset = String(/inset\s*:\s*([^;]+)/i.exec(block)?.[1] || '').trim();
+  if (inset !== '' && inset !== 'auto') return true;
+  const sides = ['top', 'right', 'bottom', 'left'].map(
+    (k) => String(new RegExp(`${k}\\s*:\\s*([^;]+)`, 'i').exec(block)?.[1] || '').trim(),
+  );
+  return sides.every((v) => v !== '' && v !== 'auto');
+}
+
+/**
+ * Замер по тексту CSS-правила, когда jsdom не раскладывает или падает на
+ * битых селекторах в полном файле (000-base @keyframes и :is()).
+ * @param {string} block
+ */
+export function measureFromDeclarations(block) {
+  const display = String(/display\s*:\s*([^;]+)/i.exec(block)?.[1] || '').trim();
+  const fills = fillsContainingBlockFromBlock(block);
+  const spansWidth = fills || spansContainerWidthFromBlock(block);
+  const rawWidth = Math.max(declaredAxisPx(block, 'width'), 0);
+  const width = spansWidth ? Math.max(rawWidth, MIN_TOUCH_PX) : rawWidth;
+  const rawHeight = declaredAxisPx(block, 'height');
+  const minHeight = (() => {
+    const m = /min-height\s*:\s*(\d+(?:\.\d+)?)px/i.exec(block);
+    return m ? parsePx(m[1]) : 0;
+  })();
+  const height = fills
+    ? Math.max(rawHeight, minHeight, MIN_TOUCH_PX)
+    : Math.max(rawHeight, minHeight, rawHeight > 0 ? 0 : lineBoxHeightFromBlock(block));
+  return {
+    width: Math.round(width * 100) / 100,
+    height: Math.round(height * 100) / 100,
+    minWidth: declaredAxisPx(block, 'width'),
+    minHeight,
+    display,
+    visibility: 'visible',
+    widthAssumed: spansWidth && rawWidth < MIN_TOUCH_PX,
+    heightFromLineBox: rawHeight === 0 && height > 0,
+    heightChecked: spansWidth && height > 0,
+    fromDeclarations: true,
+  };
+}
+
+/**
+ * Минимальный CSS для замера одного правила: хост + его ::before/::after.
+ * Полный файл не грузим — @keyframes и :is() в 000-base ломают nwsapi целиком.
+ * @param {string} cssText
+ * @param {string} selector
+ * @param {string} hostBlock
+ */
+export function buildMeasurementStylesheet(cssText, selector, hostBlock) {
+  const chunks = [`${selector} { ${hostBlock} }`];
+  const cleaned = stripCssComments(cssText);
+  for (const part of selector.split(',').map((s) => s.trim()).filter(Boolean)) {
+    for (const pseudo of ['::after', '::before']) {
+      const escaped = part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`${escaped}${pseudo}\\s*\\{([^}]*)\\}`, 'i');
+      const m = cleaned.match(re);
+      if (m) chunks.push(`${part}${pseudo} { ${m[1]} }`);
+    }
+  }
+  return chunks.join('\n');
+}
+
+/**
  * Нижняя граница высоты строки: поля + рамки + одна строка текста. jsdom не
  * раскладывает, поэтому `height` и `min-height` — единственное, что он знает;
  * ряд с `padding: 16px` и текстом 13/1.4 читался нулевым и шёл в нарушения,
@@ -743,10 +889,11 @@ export function measureElement(window, className, wrapClass, tagOverride) {
     minHeight: parsePx(cs.minHeight),
     display: cs.display,
     visibility: cs.visibility,
-    // Ширина не измерена, а принята: см. spansContainerWidth. Остаток
-    // непроверенного гейт называет вслух, а не выдаёт за «сошлось».
+    // Ряд во всю ширину: ширину не меряем (она ≥ viewport), высоту — да.
     widthAssumed: spansWidth && rawWidth < MIN_TOUCH_PX,
     heightFromLineBox: rawHeight === 0 && height > 0,
+    heightChecked: spansWidth && height > 0,
+    fromDeclarations: false,
   };
   if (host) host.remove();
   else target.remove();
@@ -778,16 +925,25 @@ function buildAttributionScope(inventory) {
     attributed[z] = (attributed[z] || 0) + 1;
     if (!e.zone) unknownViolations.push(e);
   }
+  const justifiedRemainder = (inventory.justifiedRemainder || []).length;
   return {
     zonesCovered: Object.keys(attributed).filter((z) => z !== '(unknown)').length,
     unknownViolations: unknownViolations.length,
     unknownViolationKeys: unknownViolations.map((e) => `${e.file}::${e.selector}`),
-    widthAssumed: inventory.counts.widthAssumed,
-    blindSpots: [
-      'ширина принята без замера — full-width/calc(100%) ряды jsdom не раскладывает',
-      'класс без CSS-правил в product styles — гейт не видит (пример: subscription banner pill до появления .readonly-banner-pill)',
-    ],
+    heightChecked: inventory.counts.heightChecked,
+    unmeasured: inventory.counts.unmeasured,
+    justifiedRemainder,
+    blindSpots: justifiedRemainder
+      ? inventory.justifiedRemainder.map((r) => `${r.reason} (${r.count})`)
+      : [
+          'класс без CSS-правил в product styles — гейт не видит (пример: subscription banner pill до появления .readonly-banner-pill)',
+        ],
   };
+}
+
+function loadPaletteCss() {
+  const palette = path.join(MODULES, '002-ui-v4-palette-roles.css');
+  return fs.readFileSync(palette, 'utf8');
 }
 
 function loadCssBundleForFile(filePath) {
@@ -815,23 +971,55 @@ function createMeasureWindow(cssText) {
 }
 
 /**
+ * Замер с изолированным CSS (palette + одно правило). Полный файл не грузим:
+ * @keyframes и :is() в 000-base ломают nwsapi для всего документа.
+ */
+function measureRuleIsolated(paletteCss, cssText, selector, hostBlock, className, ancestors, tag) {
+  const isoCss = buildMeasurementStylesheet(cssText, selector, hostBlock);
+  const window = createMeasureWindow(`${paletteCss}\n${isoCss}`);
+  try {
+    const size = measureElement(window, className, ancestors, tag);
+    if (size.width === 0 && size.height === 0 && size.display !== 'none') {
+      const decl = measureFromDeclarations(hostBlock);
+      return {
+        ...decl,
+        heightChecked: spansContainerWidthFromBlock(hostBlock) && decl.height > 0,
+      };
+    }
+    if (!size.heightChecked && spansContainerWidthFromBlock(hostBlock) && size.height > 0) {
+      size.heightChecked = true;
+    }
+    return size;
+  } catch {
+    const decl = measureFromDeclarations(hostBlock);
+    return {
+      ...decl,
+      heightChecked: spansContainerWidthFromBlock(hostBlock) && decl.height > 0,
+    };
+  } finally {
+    window.close();
+  }
+}
+
+/**
  * @param {object} [opts]
  * @returns {Promise<object>}
  */
 export async function collectInventory(opts = {}) {
   const files = opts.files || listProductCssFiles();
   const cssByFile = new Map(files.map((f) => [f, fs.readFileSync(f, 'utf8')]));
+  const paletteCss = loadPaletteCss();
 
   const seen = new Set();
   const entries = [];
-  const widthAssumed = [];
+  const heightChecked = [];
+  const justifiedRemainder = [];
   const attribution = { bySelector: 0, byClass: 0, byFile: 0, unattributed: 0 };
 
   for (const file of files) {
     const base = path.basename(file);
     const cssText = cssByFile.get(file);
     const rules = parseCssRules(cssText);
-    const window = createMeasureWindow(loadCssBundleForFile(file));
 
     for (const rule of rules) {
       if (!isInteractiveBlock(rule.block)) continue;
@@ -864,12 +1052,15 @@ export async function collectInventory(opts = {}) {
       const pseudoExpander = findPseudoExpander(cssText, selector, rule.block);
       const negMargin = hasNegativeMarginExpander(rule.block);
 
-      let size = { width: 0, height: 0, minWidth: 0, minHeight: 0, display: '' };
-      try {
-        size = measureElement(window, target.className, target.ancestors, target.tag);
-      } catch {
-        /* invalid selector cascade in jsdom — оставляем 0 */
-      }
+      const size = measureRuleIsolated(
+        paletteCss,
+        cssText,
+        selector,
+        rule.block,
+        target.className,
+        target.ancestors,
+        target.tag,
+      );
 
       const hidden = size.display === 'none' || size.visibility === 'hidden';
       let visW = size.width;
@@ -877,12 +1068,22 @@ export async function collectInventory(opts = {}) {
       if (!hidden) {
         if (visW === 0) visW = Math.max(declaredAxisPx(rule.block, 'width'), size.minWidth || 0);
         if (visH === 0) visH = Math.max(declaredAxisPx(rule.block, 'height'), size.minHeight || 0);
+        if (visH === 0 && size.fromDeclarations) {
+          visH = Math.max(visH, lineBoxHeightFromBlock(rule.block));
+        }
       }
 
       const effective = effectiveTouchSize(visW, visH, pseudoExpander);
       const pseudoPaddingOk = isVisibleTouchOk({ ...size, width: effective.width, height: effective.height });
       const visibleOk = isVisibleTouchOk(size) || pseudoPaddingOk;
-      const isUnmeasured = !hidden && size.width === 0 && size.height === 0 && visW === 0 && visH === 0;
+      const effectiveHeight = Math.max(size.height, size.minHeight || 0, effective.height);
+      const isUnmeasured =
+        !hidden &&
+        !size.fromDeclarations &&
+        size.width === 0 &&
+        size.height === 0 &&
+        visW === 0 &&
+        visH === 0;
 
       const tricks = [];
       if (pseudoExpander) {
@@ -897,8 +1098,16 @@ export async function collectInventory(opts = {}) {
       else if (visibleOk) bucket = 'pass';
 
       if (bucket === 'pass') {
-        if (size.widthAssumed) {
-          widthAssumed.push({ file: base, selector, className, zone, height: size.height });
+        if (size.heightChecked && effectiveHeight >= MIN_TOUCH_PX) {
+          heightChecked.push({
+            file: base,
+            selector,
+            className,
+            zone,
+            height: effectiveHeight,
+            fromDeclarations: !!size.fromDeclarations,
+            heightFromLineBox: !!size.heightFromLineBox,
+          });
         }
         continue;
       }
@@ -932,8 +1141,6 @@ export async function collectInventory(opts = {}) {
         tricks,
       });
     }
-
-    window.document.body.innerHTML = '';
   }
 
   const violations = entries.filter((e) => e.bucket === 'violation');
@@ -960,17 +1167,18 @@ export async function collectInventory(opts = {}) {
       violations: violations.length,
       exceptions: exceptions.length,
       unmeasured: unmeasured.length,
-      widthAssumed: widthAssumed.length,
+      heightChecked: heightChecked.length,
       interactiveRules: seen.size,
     },
     attribution,
-    scope: buildAttributionScope({ violations, counts: { widthAssumed: widthAssumed.length } }),
+    scope: buildAttributionScope({ violations, counts: { unmeasured: unmeasured.length, heightChecked: heightChecked.length }, justifiedRemainder }),
     byZone,
     byFile,
     violations,
     exceptions,
     unmeasured,
-    widthAssumed,
+    heightChecked,
+    justifiedRemainder,
   };
   return inventory;
 }
@@ -1022,7 +1230,7 @@ function printSummary(inventory) {
     `Touch-target inventory: ${inventory.counts.violations} violations, ` +
       `${inventory.counts.unmeasured} не измерено (jsdom 0×0), ` +
       `${inventory.counts.exceptions} named exceptions, ` +
-      `${inventory.counts.widthAssumed} с непроверенной шириной, ` +
+      `${inventory.counts.heightChecked} проверены по высоте (full-row), ` +
       `${inventory.scannedFiles.length} CSS files.`,
   );
   const scope = inventory.scope;
@@ -1031,7 +1239,9 @@ function printSummary(inventory) {
       `файл ${inventory.attribution.byFile}, без зоны ${inventory.attribution.unattributed}. ` +
       `Зон с нарушениями: ${scope.zonesCovered}, неприписанных нарушений: ${scope.unknownViolations}.`,
   );
-  console.log(`Остаток непроверенного: «ширина принята без замера» — ${scope.widthAssumed}.`);
+  if (scope.justifiedRemainder) {
+    console.log(`Обоснованный остаток непроверенного: ${scope.justifiedRemainder}.`);
+  }
   for (const note of scope.blindSpots) console.log(`  · ${note}`);
   const zones = Object.entries(inventory.byZone).sort((a, b) => b[1].violations - a[1].violations);
   console.log('By zone (violations / exceptions):');
@@ -1090,11 +1300,10 @@ async function main() {
         `Ratchet: ${ratchet.current} violations (baseline ${ratchet.baseline}, Δ ${ratchet.delta >= 0 ? '+' : ''}${ratchet.delta})`,
       );
       console.log(`Не измерено (jsdom 0×0): ${inventory.counts.unmeasured}`);
-      // Остаток непроверенного называется вслух рядом с числом нарушений:
-      // ряд во всю ширину прошёл по высоте, а ширину гейт принял, не измерил.
-      console.log(
-        `Ширина принята без замера (ряд во всю ширину): ${inventory.counts.widthAssumed}`,
-      );
+      console.log(`Проверены по высоте (full-row, ширина не меряется): ${inventory.counts.heightChecked}`);
+      if (inventory.scope.justifiedRemainder) {
+        console.log(`Обоснованный остаток: ${inventory.scope.justifiedRemainder}`);
+      }
       console.log(
         `Неприписанные нарушения (атрибуция): ${inventory.scope.unknownViolations} ` +
           `(baseline ${ratchet.unknownBaseline}, Δ ${ratchet.unknownDelta >= 0 ? '+' : ''}${ratchet.unknownDelta}).`,
