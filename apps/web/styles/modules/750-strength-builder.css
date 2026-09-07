@@ -130,6 +130,7 @@
 
 /* Служебные кнопки шапки — 36 px (решение 7). */
 .sb-icon-btn {
+  position: relative;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -142,6 +143,14 @@
   color: var(--sb-tx);
   font-size: 16px;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-icon-btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
 }
 
 .sb-stats {
@@ -1316,6 +1325,7 @@
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-unit-badge {
+  position: relative;
   flex: 0 0 auto;
   padding: 4px 7px;
   border: 0;
@@ -1326,6 +1336,14 @@
   letter-spacing: 0.06em;
   text-transform: lowercase;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-unit-badge::after {
+  content: '';
+  position: absolute;
+  inset: -7.9px -8px;
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-unit-badge.is-on {
@@ -1341,6 +1359,7 @@
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-badge {
+  position: relative;
   flex: 0 0 auto;
   padding: 4px 7px;
   border: 0;
@@ -1351,6 +1370,14 @@
   letter-spacing: 0.06em;
   text-transform: lowercase;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-badge::after {
+  content: '';
+  position: absolute;
+  inset: -7.9px -8px;
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-badge.is-on {
@@ -1381,6 +1408,7 @@
 }
 
 .sb-suggest {
+  position: relative;
   min-height: 36px;
   padding: 0 11px;
   border-radius: 9px;
@@ -1390,6 +1418,14 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-suggest::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 /* ── Состояния строк подходов: один сигнал на одно состояние ────────────── */
@@ -1443,6 +1479,7 @@
 }
 
 .sb-rest-manual {
+  position: relative;
   margin-left: auto;
   min-height: 36px;
   padding: 0 12px;
@@ -1453,6 +1490,14 @@
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-rest-manual::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 .sb-rest-manual.is-on {
@@ -2608,6 +2653,7 @@
 }
 
 .obtn {
+  position: relative;
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
@@ -2618,6 +2664,14 @@
   border-radius: 999px;
   font: 700 11.5px/1 Figtree, -apple-system, system-ui, sans-serif;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.obtn::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 .sb-order-screen .sb-head {
@@ -2820,6 +2874,7 @@
 
 /* legacy alias kept for older selectors */
 .sb-order-done {
+  position: relative;
   min-height: 36px;
   padding: 0 14px;
   border-radius: 9px;
@@ -2829,6 +2884,14 @@
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-order-done::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 /* ── Пустая тренировка · Б1 ──────────────────────────────────────────────── */
@@ -5476,12 +5539,21 @@
 }
 
 .sb-ex-card-action {
+  position: relative;
   flex: 0 0 auto;
   border: 0;
   background: transparent;
   font: 700 11.5px/1 Figtree, sans-serif;
   color: var(--ac);
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-ex-card-action::after {
+  content: '';
+  position: absolute;
+  inset: -13.8px 0;
 }
 
 .sb-ex-card-save {
@@ -5501,6 +5573,7 @@
 }
 
 .sb-ex-card-picker-done {
+  position: relative;
   width: 100%;
   min-height: 36px;
   margin-top: 4px;
@@ -5510,6 +5583,14 @@
   font: 700 12px/1 Figtree, sans-serif;
   color: var(--ac);
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-ex-card-picker-done::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 .sb-time-summary {
@@ -5717,6 +5798,7 @@
 }
 
 .sb-move-day {
+  position: relative;
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
@@ -5729,6 +5811,14 @@
   background: var(--sb-card, #fff);
   color: var(--sb-tx, #0f172a);
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-move-day::after {
+  content: '';
+  position: absolute;
+  inset: -2.4px 0;
 }
 
 .sb-move-day b {
@@ -5770,6 +5860,7 @@
 }
 
 .sb-move-skip {
+  position: relative;
   width: 100%;
   margin-top: 10px;
   padding: 8px;
@@ -5778,6 +5869,14 @@
   color: var(--sb-mut, #64748b);
   font-size: 12.5px;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-move-skip::after {
+  content: '';
+  position: absolute;
+  inset: -6.5px 0;
 }
 
 .sb-plan-card.is-moved {
@@ -7253,6 +7352,7 @@
 }
 
 .sb-sheet-menu-row {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -7266,6 +7366,14 @@
   background: transparent;
   text-align: left;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.sb-sheet-menu-row::after {
+  content: '';
+  position: absolute;
+  inset: -6.4px 0;
 }
 
 .sb-sheet-menu-row:first-of-type {

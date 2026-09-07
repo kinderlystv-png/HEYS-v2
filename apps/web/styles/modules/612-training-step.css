@@ -31,6 +31,7 @@
 }
 
 .ts-strength-mode-btn {
+  position: relative;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -45,6 +46,14 @@
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ts-strength-mode-btn::after {
+  content: '';
+  position: absolute;
+  inset: -0.4px 0;
 }
 
 .ts-strength-mode-btn:active {
@@ -157,6 +166,7 @@
 }
 
 .ts-wb-ex-remove {
+  position: relative;
   border: none;
   background: var(--v4-chip, #efe3cf);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -166,6 +176,14 @@
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ts-wb-ex-remove::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
 }
 
 .ts-wb-ex-name {
@@ -214,6 +232,7 @@
 }
 
 .ts-wb-add-ex {
+  position: relative;
   width: 100%;
   margin-top: 4px;
   padding: 10px;
@@ -224,6 +243,14 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ts-wb-add-ex::after {
+  content: '';
+  position: absolute;
+  inset: -4.2px 0;
 }
 
 [data-theme$='dark'] .ts-strength-mode-btn,
@@ -252,6 +279,7 @@
 }
 
 .ts-type-btn {
+  position: relative;
   flex: 1 1 76px;
   min-width: 72px;
   display: flex;
@@ -264,6 +292,14 @@
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ts-type-btn::after {
+  content: '';
+  position: absolute;
+  inset: -2.4px 0;
 }
 
 .ts-type-btn:active {
@@ -345,6 +381,7 @@
 }
 
 .ts-time-btn {
+  position: relative;
   width: 28px;
   height: 28px;
   display: flex;
@@ -358,6 +395,14 @@
   cursor: pointer;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ts-time-btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
 }
 
 .ts-time-btn:active {
@@ -493,6 +538,7 @@
 }
 
 .ts-zone-btn {
+  position: relative;
   width: 26px;
   height: 26px;
   display: flex;
@@ -506,6 +552,14 @@
   cursor: pointer;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ts-zone-btn::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
 }
 
 .ts-zone-btn:active {
@@ -545,6 +599,7 @@
 }
 
 .ts-quick-btn {
+  position: relative;
   padding: 5px 12px;
   font-size: 12px;
   font-weight: 500;
@@ -554,6 +609,14 @@
   cursor: pointer;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transition: all 0.15s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ts-quick-btn::after {
+  content: '';
+  position: absolute;
+  inset: -9.8px 0;
 }
 
 .ts-quick-btn:active {

@@ -6861,6 +6861,7 @@
   inset: -4px 0;
 }
 
+
 @media (hover: hover) {
   .household-activity-card:hover {
   border-color: var(--v4-ok-fill, #7a8a5e);
@@ -7372,6 +7373,7 @@
 }
 
 .zone-formula-edit-btn {
+  position: relative;
   width: 100%;
   padding: 10px;
   background: linear-gradient(135deg, #3b82f6, #2563eb);
@@ -7382,6 +7384,14 @@
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.zone-formula-edit-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3.6px 0;
 }
 
 .zone-formula-edit-btn:active {
@@ -8210,6 +8220,7 @@
 }
 
 .steps-goal-preset {
+  position: relative;
   padding: 6px 12px;
   font-size: 12px;
   font-weight: 600;
@@ -8219,6 +8230,14 @@
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.steps-goal-preset::after {
+  content: '';
+  position: absolute;
+  inset: -8.8px 0;
 }
 
 .steps-goal-preset:active {
@@ -9208,6 +9227,3 @@
 }
 }
 
-/* MODULE 02 — Metrics & Graphs
- * Scope: metrics cards, sparkline, heatmap, sliders/brush, correlation/weight charts.
- */

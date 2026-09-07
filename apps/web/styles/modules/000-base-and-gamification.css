@@ -1633,6 +1633,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-ss-pick-cancel {
+  position: relative;
   box-sizing: border-box;
   width: 26px;
   height: 26px;
@@ -1649,6 +1650,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   justify-content: center;
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-ss-pick-cancel::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
 }
 
 @media (hover: hover) {
@@ -1700,6 +1709,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-ss-break {
+  position: relative;
   box-sizing: border-box;
   width: 28px;
   height: 26px;
@@ -1715,6 +1725,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-ss-break::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
 }
 
 @media (hover: hover) {
@@ -1825,6 +1843,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 
 /* Как СС: та же высота/рамка, текст «Свернуть» / «Развернуть» */
 .ct-wb-ex-fold-toggle {
+  position: relative;
   cursor: pointer;
   touch-action: manipulation;
   min-width: 56px;
@@ -1836,6 +1855,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   line-height: 1.15;
   white-space: normal;
   text-align: center;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-fold-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
 }
 
 .ct-wb-ex-fold-toggle.is-collapsed {
@@ -1869,6 +1896,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-remove {
+  position: relative;
   box-sizing: border-box;
   border: 1px solid color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
   background: var(--v4-accent-bg, #f0dcc6); /* v4-intentional */
@@ -1883,6 +1911,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   align-items: center;
   justify-content: center;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-remove::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
 }
 
 @media (hover: hover) {
@@ -2093,6 +2129,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-name-suggest-fav {
+  position: relative;
   flex: 0 0 36px;
   width: 36px;
   height: 36px;
@@ -2108,6 +2145,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-name-suggest-fav::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
 }
 
 .ct-wb-ex-name-suggest-fav.is-on {
@@ -2159,6 +2204,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-rpe-chip {
+  position: relative;
   min-width: 32px;
   height: 28px;
   padding: 0 8px;
@@ -2171,6 +2217,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   cursor: pointer;
 }
 
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-rpe-chip::after {
+  content: '';
+  position: absolute;
+  inset: -8px -6px;
+}
+
 .ct-wb-ex-rpe-chip.is-on {
   border-color: color-mix(in srgb, var(--v4-act, #c67139) 35%, transparent); /* v4-intentional */
   background: var(--v4-accent-bg, #f0dcc6);
@@ -2178,6 +2232,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-rest-chip {
+  position: relative;
   margin-left: auto;
   height: 28px;
   padding: 0 10px;
@@ -2192,6 +2247,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   align-items: center;
   gap: 4px;
   white-space: nowrap;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-rest-chip::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
 }
 
 .ct-wb-ex-rest-chip:active {
@@ -2294,6 +2357,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-rest-watch-btn {
+  position: relative;
   height: 32px;
   min-width: 56px;
   padding: 0 10px;
@@ -2306,6 +2370,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   cursor: pointer;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-rest-watch-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
 }
 
 .ct-wb-rest-watch-btn:active {
@@ -3053,6 +3125,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-ap-done-btn {
+  position: relative;
   width: 32px;
   height: 32px;
   padding: 0;
@@ -3067,6 +3140,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   align-items: center;
   justify-content: center;
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-ap-done-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
 }
 
 .ct-wb-ex-ap-done-btn:active {
@@ -3114,6 +3195,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-ex-ap-remove {
+  position: relative;
   flex: 0 0 auto;
   width: 26px;
   height: 26px;
@@ -3126,6 +3208,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-ex-ap-remove::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
 }
 
 .ct-wb-ex-ap-remove:active {
@@ -3230,6 +3320,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-add-approach-btn {
+  position: relative;
   display: block;
   width: 100%;
   margin-top: 4px;
@@ -3244,6 +3335,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   font-weight: 600;
   line-height: 1.25;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: jsdom не видит min-height — припуск по declared
+   высоте. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-add-approach-btn::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
 }
 
 .ct-wb-add-approach-btn:active {
@@ -3285,6 +3384,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 }
 
 .ct-wb-stepper-btn {
+  position: relative;
   flex: 0 0 30px;
   width: 30px;
   min-width: 30px;
@@ -3301,6 +3401,14 @@ color: var(--v4-sand-ink-slate, #1f2937);
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ct-wb-stepper-btn::after {
+  content: '';
+  position: absolute;
+  inset: -22px -7px;
 }
 
 @media (hover: hover) {
@@ -7530,6 +7638,7 @@ color: var(--v4-sand-ink, #201e1d);
    ═══════════════════════════════════════════════════════════════════ */
 
 .ews-badge {
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7544,8 +7653,17 @@ color: var(--v4-sand-ink, #201e1d);
   transition: background-color, transform, box-shadow 0.2s ease;
   animation: ewsBadgeAppear 0.4s ease;
   flex-shrink: 0;
-  margin-left: -2px;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ews-badge::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
 
 .ews-badge__icon {
   font-size: 14px;
@@ -7891,12 +8009,12 @@ body:has(.offline-banner) .wrap {
 }
 
 .offline-nodata-retry {
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   min-height: 52px;
-  margin-top: 10px;
   padding: 0 22px;
   border: none;
   border-radius: 999px;
@@ -7907,6 +8025,8 @@ body:has(.offline-banner) .wrap {
   line-height: 1;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+
 }
 
 .offline-nodata-retry:active {
@@ -8035,7 +8155,7 @@ body:has(.offline-banner) .wrap {
 .hdr-btn::after {
   content: '';
   position: absolute;
-  inset: -4px -0px;
+  inset: -4px 0;
 }
 
 
@@ -8849,7 +8969,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
 .past-day-banner__today::after {
   content: '';
   position: absolute;
-  inset: -21.5px -0px;
+  inset: -22px 0;
 }
 
 
@@ -10535,7 +10655,7 @@ body:has(:is(
 .tab-switch-group::after {
   content: '';
   position: absolute;
-  inset: -2px -0px;
+  inset: -2px 0;
 }
 
 
@@ -13027,7 +13147,7 @@ body:has(:is(
 .meal-header-collapse-btn::after {
   content: '';
   position: absolute;
-  inset: -8px -0px;
+  inset: -8px 0;
 }
 
 
@@ -13131,6 +13251,7 @@ body:has(:is(
 }
 
 .meal-collapsed-plaque {
+
   width: 100%;
   min-height: 52px;
   display: grid;
@@ -13146,6 +13267,8 @@ body:has(:is(
   cursor: pointer;
   text-align: left;
   transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+  position: relative;
+
 }
 
 @media (hover: hover) {
@@ -14490,7 +14613,7 @@ body:has(:is(
 .swipeable-action-btn::after {
   content: '';
   position: absolute;
-  inset: -21.4px -0px;
+  inset: -22px 0;
 }
 
 
@@ -14561,7 +14684,7 @@ body:has(:is(
 .mpc-grams::after {
   content: '';
   position: absolute;
-  inset: -8px -0px;
+  inset: -8px 0;
 }
 
 
@@ -14589,7 +14712,7 @@ body:has(:is(
 .mpc-grams-btn::after {
   content: '';
   position: absolute;
-  inset: -6px -0px;
+  inset: -6px 0;
 }
 
 
@@ -15027,11 +15150,7 @@ body:has(:is(
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-  .mobile-time-btn::after {
-  content: '';
-  position: absolute;
-  inset: -3px 0;
-}
+  
 
 
   .mobile-time-btn:active {
@@ -15589,7 +15708,7 @@ body:has(:is(
   .delete-confirm-btn::after {
   content: '';
   position: absolute;
-  inset: -0px 0;
+  inset: 0 0;
 }
 
 
@@ -18297,6 +18416,7 @@ html.heys-bg-paused *::after {
 }
 
 .mpc-action-sheet__btn {
+
   display: flex;
   align-items: center;
   gap: 9px;
@@ -18312,6 +18432,8 @@ html.heys-bg-paused *::after {
   line-height: 1.2;
   text-align: left;
   cursor: pointer;
+  position: relative;
+
 }
 
 .mpc-action-sheet__btn:active {
@@ -19189,4 +19311,28 @@ html.heys-bg-paused *::after {
   content: '';
   position: absolute;
   inset: -14px 0;
+}
+
+.offline-nodata-retry::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+.meal-collapsed-plaque::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+.mobile-time-btn::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
+.mpc-action-sheet__btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
 }

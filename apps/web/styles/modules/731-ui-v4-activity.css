@@ -107,6 +107,7 @@ body:has(.activity-v4) .hdr::after {
    отступ сверху 9, без разделителя сверху (контракт строка 34). Прежняя
    редакция отбивала их линией #e2e8f0 — она из набора выпадала. */
 .activity-v4-hero__footer {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -121,6 +122,14 @@ body:has(.activity-v4) .hdr::after {
   /* Кадр просит 50 %, ближайшая ступень набора — 55 %. */
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.activity-v4-hero__footer::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
 }
 
 .activity-v4-hero__footer-link {
@@ -287,7 +296,16 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-today__row--action {
+  position: relative;
   cursor: pointer;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.activity-v4-today__row--action::after {
+  content: '';
+  position: absolute;
+  inset: -7.9px 0;
 }
 
 .activity-v4-today__key {
@@ -759,12 +777,21 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-period-nav {
+  position: relative;
   border: 0;
   background: none;
   cursor: pointer;
   padding: 4px 10px;
   font: 700 13px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ma-habit-cal--activity-v4 .ma-habit-cal-period-nav::after {
+  content: '';
+  position: absolute;
+  inset: -11.5px 0;
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-period-label--month {
@@ -786,6 +813,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-history__row--action {
+  position: relative;
   width: 100%;
   border-left: none;
   border-right: none;
@@ -793,6 +821,14 @@ body:has(.activity-v4) .hdr::after {
   background: none;
   cursor: pointer;
   text-align: left;
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.activity-v4-history__row--action::after {
+  content: '';
+  position: absolute;
+  inset: -7.9px 0;
 }
 
 .activity-v4-history__row--last {
@@ -1361,6 +1397,7 @@ body:has(.activity-v4) .hdr::after {
 
 /* Полный разбор — второй слой, ссылкой под кнопками, а не главным действием. */
 .activity-v4-program .sb-proposal-review-link {
+  position: relative;
   display: block;
   width: 100%;
   margin-top: 10px;
@@ -1371,6 +1408,14 @@ body:has(.activity-v4) .hdr::after {
   text-align: center;
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
+}
+
+/* Площадь нажатия ≥44 pt: видимый размер меньше — добираем прозрачным
+   припуском ::after, не размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.activity-v4-program .sb-proposal-review-link::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
 }
 
 /* Карточка силовой: спокойная поверхность для обычного состояния и явный
