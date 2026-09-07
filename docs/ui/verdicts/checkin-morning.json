@@ -1446,7 +1446,7 @@
     },
     "Чек-ин · вес · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:7250 .mc-wheel-picker--compact — flex 1, text-align center; капсула веса",
+      "f": "500-pwa-and-offline.css:7351 .mc-weight-pickers .mc-wheel-picker — flex 1 1 0, min-width 0; ряд 7344-7348 justify-content center; колёса с --compact",
       "h": "184b8000b218"
     },
     "Чек-ин · вес · 19": {
