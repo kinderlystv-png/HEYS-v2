@@ -49,12 +49,13 @@ const WINDOW = 60; // строк в обе стороны — файлы пра�
  * выключат в первый день. Поэтому фиксируем текущее и падаем на росте, а
  * уменьшение просим переписать.
  */
+// 07.09 p47 reports-insights: зона moved 273→0; глобально moved 285→283, absent 32→4.
 const BASELINE = {
   truncated: 0,
   missing: 0,
   beyond: 0,
-  absent: 32,
-  moved: 273,
+  absent: 4,
+  moved: 283,
 };
 
 const args = process.argv.slice(2);

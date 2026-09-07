@@ -20,7 +20,7 @@ const CLUSTER_BASELINE = Object.freeze([
   {
     zoneId: 'reports-insights',
     decisionRef: 'docs/ui/UI_V4_DESIGNER_REQUEST.md:1217',
-    rowCount: 17,
+    rowCount: 16,
   },
   {
     zoneId: 'reports-insights',
@@ -61,13 +61,13 @@ const CLUSTER_BASELINE = Object.freeze([
     zoneId: 'subscription',
     decisionRef:
       'docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06',
-    rowCount: 13,
+    rowCount: 10,
   },
   {
     zoneId: 'tab-activity',
     decisionRef:
       'docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-calendar-decisions-2026-08-31',
-    rowCount: 6,
+    rowCount: 5,
   },
 ]);
 

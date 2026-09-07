@@ -454,10 +454,10 @@
     },
     "вид · панель и состояния": {
       "v": "≠",
-      "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47; пакет 47 уточнил скелет #f4f4f3, продукт его не рисует",
+      "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:51; пакет 47 уточнил скелет #f4f4f3, продукт его не рисует",
       "h": "6df2e4fa4f5c",
       "reasonCode": "platform",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4537"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "куратор видит клиентский вид": {
       "v": "=",
@@ -708,7 +708,7 @@
       "f": "heys_day_stats_v1.js:1468 .reports-v4-score-slot + heys-score-tile — Score отдельным блоком с дельтой и входом в разбор, не первой из трёх равных плиток 30/800 кадра «Итог периода»; пакет 47 уточнил контракт, продукт не менялся",
       "h": "98483be625eb",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4337"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-p47-score-tile"
     },
     "карточка · плитки «дней в норме» и «средняя оценка»": {
       "v": "=",
@@ -727,10 +727,10 @@
     },
     "карточка · график «съедено против плана»": {
       "v": "≠",
-      "f": "733-ui-v4-reports.css .reports-v4-dynamics-card__chart svg 360×158 по контейнеру; «+205 в день» снято 31.08, линии 262×52 сведены; размер холста — отступление, пакет 47 зафиксировал решение без правки svg",
+      "f": "733-ui-v4-reports.css:443-445 .reports-v4-dynamics-card .sparkline-svg--reports-v4 — контейнер графика; «+205 в день» снято 31.08, линии 262×52 сведены; размер холста — отступление, пакет 47 зафиксировал решение без правки svg",
       "h": "6282f7ea4243",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4341"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-p47-chart-eaten"
     },
     "карточка · график веса": {
       "v": "≠",
@@ -763,10 +763,10 @@
     },
     "карточка · каскад разбора Score": {
       "v": "≠",
-      "f": "heys_cascade_card_v1.js:4311-4314 минус вклада на --v4-ink, не --val-bad; строка «роли цвета» пакета 47 приведена к этому, но строка «карточка · каскад» ещё называет --val-bad — код следует роли, не частной строке",
+      "f": "heys_cascade_card_v1.js:4307-4314 heys-score-screen__row-value — минус вклада на чернилах, не --val-bad; строка «роли цвета» пакета 47 приведена к этому, строка «карточка · каскад» ещё называет --val-bad — код следует роли",
       "h": "beea2adc6f0f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4329"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-cascade-minus-ink-2026-08-31"
     },
     "карточка · заглушка «мало данных»": {
       "v": "=",
@@ -822,10 +822,10 @@
     },
     "карточка · Ритм приёмов": {
       "v": "≠",
-      "f": "734-ui-v4-insights.css:963-987 .insights-v4-nutrition__rhythm-track — дорожка --v4-track высотой 6; контракт просит пропорциональные полосы 8 px --gr2; кадр «до 20:30» переснимается, продукт показывает края окна",
+      "f": "734-ui-v4-insights.css:1007-1011 .insights-v4-nutrition__rhythm-bar height 6 --v4-track; контракт просит пропорциональные полосы 8 px --gr2; кадр «до 20:30» переснимается, продукт показывает края окна",
       "h": "e27cfe574dda",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4359"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-p47-rhythm-meals"
     },
     "карточка · БЖУ по приёмам": {
       "v": "≠",
@@ -856,10 +856,10 @@
     },
     "карточка · абзац раскрывашки": {
       "v": "≠",
-      "f": "734-ui-v4-insights.css .insights-v4-detail__body 12/1.55 --v4-ink-2, зазор 10; кнопка «Понятно» на --v4-act (--acs), контракт просит --c2; ярус «На чём основано» из реестра — typed ≠ по критерию 6 сентября",
+      "f": "734-ui-v4-insights.css:1808-1816 .insights-v4-sheet__text 12/1.55 --v4-ink-2, зазор 10; кнопка «Понятно» .insights-v4-sheet__ok:1869-1878 на --v4-act (--acs), контракт просит --c2; ярус «На чём основано» — typed ≠",
       "h": "6891deb83d12",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4370"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-p47-detail-paragraph"
     },
     "карточка · скелетон расчёта": {
       "v": "≠",
@@ -920,10 +920,10 @@
     },
     "карточка · «Что из этого следует»": {
       "v": "≠",
-      "f": "insights/pi_ui_dashboard.js:2559 — одна проза вместо трёх строк .row «что/где»; пакет 47 уточнил ярус, разметка двух колонок не реализована",
+      "f": "pi_ui_dashboard.js:2714-2730 insights-v4-pheno__uses — одна проза на ось вместо трёх строк .row «что/где»; пакет 47 уточнил ярус, разметка двух колонок не реализована",
       "h": "3910c5793c16",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4375"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-p47-phenotype-follows"
     },
     "карточка · «Где они работают»": {
       "v": "=",
@@ -1211,10 +1211,10 @@
     },
     "вид · лист раскрывашки": {
       "v": "≠",
-      "f": "734-ui-v4-insights.css .insights-v4-detail-sheet — scrim blur 2.5px ролью --scrim, лист --v4-bg radius 28; кнопка «Понятно» 48 на --v4-act, контракт --c2; библиография ярусом — typed ≠",
+      "f": "734-ui-v4-insights.css:1781-1798 .insights-v4-sheet-scrim/.insights-v4-sheet + pi_ui_dashboard.js:2282-2296 — scrim blur 2.5px ролью --scrim, лист --v4-bg radius 28; кнопка «Понятно» 48 на --v4-act, контракт --c2; библиография ярусом — typed ≠",
       "h": "9b2716fc0c0f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4428"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-p47-detail-sheet"
     },
     "снято · состав порогов одной таблицей": {
       "v": "—",
@@ -2520,7 +2520,7 @@
     },
     "Инсайты · подробно · 05": {
       "v": "=",
-      "f": "ярус «Прогноз веса» — CollapsibleSection без значка: в v4 их нет ни на одном ярусе зоны (apps/web/insights/pi_ui_dashboard.js:3379)",
+      "f": "ярус «Прогноз веса» — margin-top 8px у .insights-v4-weight__tier (734-ui-v4-insights.css:384-386); в v4 нет значков у ярусов — CollapsibleSection без icon (pi_ui_dashboard.js:3542+)",
       "h": "29e0d9c336dc"
     },
     "Инсайты · подробно · 06": {
@@ -2662,7 +2662,7 @@
     },
     "Инсайты · ярус Питание · 06": {
       "v": "≠",
-      "f": "720-predictive-insights.css:8993-9010 .meal-rec-card__title/.meal-rec-card__subtitle — пре-v4 карточка рекомендации; кегль/тон не сведены с кадром яруса Питание ·06",
+      "f": "720-predictive-insights.css:9293-9310 .meal-rec-card__title/.meal-rec-card__subtitle — пре-v4 карточка рекомендации; кегль/тон не сведены с кадром яруса Питание ·06",
       "h": "d8a3b1fa0b2d",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4876"
