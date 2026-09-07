@@ -39,16 +39,16 @@
     "heys-components.css"
   ],
   "counts": {
-    "violations": 62,
-    "exceptions": 116,
+    "violations": 61,
+    "exceptions": 117,
     "unmeasured": 0,
     "heightChecked": 252,
-    "interactiveRules": 999
+    "interactiveRules": 998
   },
   "attribution": {
     "bySelector": 81,
     "byClass": 833,
-    "byFile": 56,
+    "byFile": 55,
     "unattributed": 29
   },
   "scope": {
@@ -96,11 +96,11 @@
       "exceptions": 6
     },
     "food-meal": {
-      "violations": 10,
-      "exceptions": 12
+      "violations": 9,
+      "exceptions": 13
     },
     "messenger": {
-      "violations": 4,
+      "violations": 3,
       "exceptions": 1
     },
     "checkin-morning": {
@@ -112,7 +112,7 @@
       "exceptions": 0
     },
     "reports-insights": {
-      "violations": 2,
+      "violations": 3,
       "exceptions": 5
     },
     "login": {
@@ -147,12 +147,13 @@
   "byFile": {
     "000-base-and-gamification.css": 33,
     "100-metrics-and-graphs.css": 1,
-    "1000-messenger.css": 4,
+    "1000-messenger.css": 3,
     "200-dark-and-effects.css": 3,
     "500-pwa-and-offline.css": 2,
-    "600-steps-and-aps.css": 4,
+    "600-steps-and-aps.css": 3,
     "725-metabolic-intelligence.css": 1,
     "733-ui-v4-login-theme.css": 2,
+    "733-ui-v4-reports.css": 1,
     "750-strength-builder.css": 2,
     "900-planning.css": 3,
     "heys-components.css": 7
@@ -603,18 +604,6 @@
       "tricks": []
     },
     {
-      "file": "1000-messenger.css",
-      "selector": ".messenger-search__filter",
-      "className": "messenger-search__filter",
-      "zone": "messenger",
-      "width": 0,
-      "height": 34,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
       "file": "200-dark-and-effects.css",
       "selector": ".sleep-time-display.clickable",
       "className": "sleep-time-display clickable",
@@ -688,18 +677,6 @@
     },
     {
       "file": "600-steps-and-aps.css",
-      "selector": ".meals-day-sparkline circle",
-      "className": "meals-day-sparkline",
-      "zone": "food-meal",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "600-steps-and-aps.css",
       "selector": ".aps-similar-warn__dismiss",
       "className": "aps-similar-warn__dismiss",
       "zone": "food-meal",
@@ -757,6 +734,18 @@
       "exemptionType": null,
       "exemptionReason": null,
       "tricks": []
+    },
+    {
+      "file": "733-ui-v4-reports.css",
+      "selector": ".reports-v4-period-pill",
+      "className": "reports-v4-period-pill",
+      "zone": "reports-insights",
+      "width": 44,
+      "height": 44,
+      "bucket": "violation",
+      "exemptionType": null,
+      "exemptionReason": null,
+      "tricks": ["negative-margin-expander"]
     },
     {
       "file": "750-strength-builder.css",
@@ -1466,6 +1455,18 @@
       "bucket": "named-exception",
       "exemptionType": "slider-node",
       "exemptionReason": "узел ползунка — отдельный контракт геометрии",
+      "tricks": []
+    },
+    {
+      "file": "610-aps-meal-flow.css",
+      "selector": ".meal-transfer-v4__range",
+      "className": "meal-transfer-v4__range",
+      "zone": "food-meal",
+      "width": 100,
+      "height": 14,
+      "bucket": "named-exception",
+      "exemptionType": "range-slider",
+      "exemptionReason": "ползунок диапазона — не полноразмерная кнопка, контракт отдельной геометрии",
       "tricks": []
     },
     {
