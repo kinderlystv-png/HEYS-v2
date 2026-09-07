@@ -10508,7 +10508,6 @@ body:has(:is(
 )) :is(
   .tabs,
   .crs-bar-container,
-  .theme-fab,
   .fab-group,
   #tour-fab-buttons,
   .widgets-fab-left,

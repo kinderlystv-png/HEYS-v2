@@ -908,7 +908,7 @@ body:has(:is(
   .advice-list-overlay,
   .fingers-fs-rpe-overlay,
   .drums-ft-modal
-)) :is(.tabs, .crs-bar-container, .theme-fab, .fab-group, #tour-fab-buttons, .widgets-fab-left, .planning-subnav, .planning-tasks-scale-fab, .planning-checklists-archive-badge) {
+)) :is(.tabs, .crs-bar-container, .fab-group, #tour-fab-buttons, .widgets-fab-left, .planning-subnav, .planning-tasks-scale-fab, .planning-checklists-archive-badge) {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
