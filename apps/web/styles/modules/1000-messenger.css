@@ -41,6 +41,7 @@
 }
 
 .message-fab-icon {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3008,7 +3009,7 @@ button.messenger-day-checklist__chip:active {
   flex: none;
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
+  min-height: 44px;
   padding: 0 11px;
   border: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
   border-radius: 999px;

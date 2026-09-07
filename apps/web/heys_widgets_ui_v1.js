@@ -668,7 +668,8 @@
     }, [isEditMode, widget.id]);
 
     const handleClick = useCallback(() => {
-      if (isEditMode && removePickActive) {
+      if (isEditMode) {
+        if (HEYS.Widgets.dnd?.isDragging?.()) return;
         onRemove?.(widget.id);
         return;
       }
@@ -682,7 +683,7 @@
         }
         HEYS.Widgets.emit('widget:click', { widget });
       }
-    }, [isEditMode, removePickActive, onRemove, widget]);
+    }, [isEditMode, onRemove, widget]);
 
     const hasVariantPicker = useMemo(() => {
       const catalog = HEYS.Widgets.VariantsV4?.getCatalog?.(widget.type) || [];
@@ -9549,13 +9550,15 @@
     },
       done
         ? React.createElement('span', { className: 'widgets-settings-fab__label' }, 'Готово')
-        : React.createElement('svg', {
-          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
-          stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
-          'aria-hidden': 'true'
-        },
-          React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
-          React.createElement('path', { d: 'M14 6l4 4' })
+        : React.createElement('span', { className: 'widgets-settings-fab__host' },
+          React.createElement('svg', {
+            width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.6, strokeLinecap: 'round', strokeLinejoin: 'round',
+            'aria-hidden': 'true'
+          },
+            React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
+            React.createElement('path', { d: 'M14 6l4 4' })
+          )
         )
     );
   }
@@ -9979,12 +9982,14 @@
           hideAction(key);
         }
       },
+        React.createElement('span', { className: 'widgets-quick-minus__host' },
         React.createElement('svg', {
           className: 'widgets-quick-minus__glyph',
           width: 12, height: 12, viewBox: '0 0 24 24', fill: 'none',
           stroke: 'currentColor', strokeWidth: 3.2, strokeLinecap: 'round',
           'aria-hidden': 'true'
         }, React.createElement('path', { d: 'M6 12h12' }))
+        )
       );
     };
 
@@ -10066,13 +10071,15 @@
           'aria-label': `Вернуть в список: ${labelOf(key)}`,
           onClick: () => restoreAction(key)
         },
-          React.createElement('svg', {
-            className: 'widgets-quick-chip__plus',
-            width: 10, height: 10, viewBox: '0 0 24 24', fill: 'none',
-            stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round',
-            'aria-hidden': 'true'
-          }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
-          React.createElement('span', { className: 'widgets-quick-chip__label' }, labelOf(key))
+          React.createElement('span', { className: 'widgets-quick-chip__host' },
+            React.createElement('svg', {
+              className: 'widgets-quick-chip__plus',
+              width: 10, height: 10, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round',
+              'aria-hidden': 'true'
+            }, React.createElement('path', { d: 'M12 5v14M5 12h14' })),
+            React.createElement('span', { className: 'widgets-quick-chip__label' }, labelOf(key))
+          )
         ))
       )
       : null;
@@ -10105,14 +10112,16 @@
             setEditing(true);
           }
         }
-      },
-        React.createElement('svg', {
-          width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
-          stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round',
-          'aria-hidden': 'true'
         },
-          React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
-          React.createElement('path', { d: 'M14 6l4 4' })
+        React.createElement('span', { className: 'widgets-quick-pencil__host' },
+          React.createElement('svg', {
+            width: 17, height: 17, viewBox: '0 0 24 24', fill: 'none',
+            stroke: 'currentColor', strokeWidth: 2.5, strokeLinecap: 'round', strokeLinejoin: 'round',
+            'aria-hidden': 'true'
+          },
+            React.createElement('path', { d: 'M4 20h4l10-10-4-4L4 16z' }),
+            React.createElement('path', { d: 'M14 6l4 4' })
+          )
         )
       )
       : null;

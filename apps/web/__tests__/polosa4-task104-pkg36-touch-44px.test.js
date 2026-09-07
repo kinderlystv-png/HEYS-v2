@@ -128,6 +128,7 @@ describe('polosa4 task104 pkg36 · touch targets 44px', () => {
     const deleteBlock = ruleBlock(CSS_730, '.widgets-tab--editing .widget__delete-btn');
     expect(prop(deleteBlock, 'width')).toBe('22px');
     expect(prop(deleteBlock, 'height')).toBe('22px');
-    expect(ruleBlock(CSS_730, '.widgets-tab--editing .widget__delete-btn::after')).toContain('inset: -11px');
+    expect(prop(deleteBlock, 'pointer-events')).toBe('none');
+    expect(ruleBlock(CSS_730, '.widgets-grid--remove-pick .widget::after')).toContain('inset: -4px');
   });
 });

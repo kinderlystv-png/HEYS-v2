@@ -150,6 +150,7 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(UI_SRC).toContain('catalogRemovePick');
     expect(UI_SRC).toContain('widgets-grid--remove-pick');
     expect(UI_SRC).toContain('onStartRemovePick');
+    expect(UI_SRC).toMatch(/if \(isEditMode\)[\s\S]*onRemove\?\.\(widget\.id\)/);
   });
 
   it('CSS: размеры FAB и правила прокрутки сетки', () => {
@@ -164,6 +165,11 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(sheetIn?.[1]).not.toContain('transform');
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab-wrap[\s\S]*width:\s*52px/);
     expect(CSS_SRC).toMatch(/\.widgets-quick-fab-wrap[\s\S]*height:\s*52px/);
+    expect(CSS_SRC).toMatch(/\.widgets-settings__scale-slider[\s\S]*height:\s*4px/);
+    expect(CSS_SRC).toMatch(/\.widgets-settings__scale-slider::-webkit-slider-thumb[\s\S]*width:\s*44px/);
+    expect(CSS_SRC).toContain('widgets-quick-pencil__host');
+    expect(CSS_SRC).toContain('widgets-quick-minus__host');
+    expect(CSS_SRC).toContain('widgets-settings-fab__host');
     expect(CSS_SRC).toContain('var(--heys-primary-nav-height');
     expect(CSS_SRC).toMatch(/\.widgets-quick-sheet[\s\S]*position:\s*absolute/);
     expect(CSS_SRC).toContain('@keyframes widgets-quick-scrim-in');

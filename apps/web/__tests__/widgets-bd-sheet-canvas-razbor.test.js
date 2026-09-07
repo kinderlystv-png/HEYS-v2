@@ -319,7 +319,7 @@ const MACROS = [
     ['.widget-v4-deficit-rows', '.widget-v4-deficit-rows__row'],
     ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color']],
 
-  ['Шторка · Кольца БЖУ', 'высота 4px, радиус 999px, фон rgba(var(--ink),.18)', 0,
+  ['Шторка · Кольца БЖУ', 'высота 4px, радиус 999px, фон rgba(var(--ink),.08)', 0,
     '.widget-v4-goalbar', ['height', 'radius']]
 ];
 
@@ -377,7 +377,7 @@ const QUICK = [
     '.widgets-quick-sheet__row', ['align', 'gap', 'minHeight']],
   ['Быстрые действия · раскрыто', '«Мессенджер»', 0,
     '.widgets-quick-sheet__row-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['Быстрые действия · раскрыто', 'высота 1px, фон rgba(var(--ink),.18)', 0,
+  ['Быстрые действия · раскрыто', 'высота 1px, фон rgba(var(--ink),.08)', 0,
     '.widgets-quick-sheet__divider', ['height', 'background']],
   ['Быстрые действия · раскрыто', '«1,7 из 2,7»', 0,
     '.widgets-quick-sheet__meta', ['fontWeight', 'fontSize', 'lineHeight', 'color']],

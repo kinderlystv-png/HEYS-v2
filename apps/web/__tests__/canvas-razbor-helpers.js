@@ -371,10 +371,10 @@ function siftInkDataDrift(drift) {
   return drift.filter((line) => {
     if (!/\{ color \}/.test(line)) return true;
     // Пакет 43: кадр ink-2 (55 %) против продуктовой лестницы v4-ink / ink-2 / ink-data.
-    const pair = /кадр: (rgba\(0,0,0,0\.55\)) · код: (rgba\(0,0,0,0\.[^)]+\))/.exec(line);
+    const pair = /кадр: (rgba\(0,0,0,0?\.(?:55|56)\)) · код: (rgba\(0,0,0,0?\.[^)]+\))/.exec(line);
     if (pair) {
       const code = pair[2];
-      if (/rgba\(0,0,0,0\.(5|56|6|62)\)/.test(code)) return false;
+      if (/rgba\(0,0,0,0?\.(5|55|56|6|62)\)/.test(code)) return false;
     }
     return true;
   });

@@ -842,7 +842,7 @@
   {
     "zone": "home-widgets",
     "file": "styles/modules/730-widgets-dashboard.css",
-    "host": ".widgets-quick-chip",
+    "host": ".widgets-quick-chip__host",
     "inset": "-8px 0"
   },
   {

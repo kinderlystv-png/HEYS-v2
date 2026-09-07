@@ -65,8 +65,8 @@
     },
     "вид плитки": {
       "v": "=",
-      "f": "730-widgets-dashboard.css задаёт радиус 16, поля 11/14 и типографику rem-эквивалентами контрактных px; widgets-v4-canvas-geometry.test.js сверяет базовую плитку, kicker/value/unit, а widgets-v4-ink-ladder-contract.test.js отдельно разворачивает семантические роли цвета",
-      "h": "558910da23dd"
+      "f": "730-widgets-dashboard.css .widget — radius 16, padding 11px; hero calories 14px; kicker/value/unit по строке",
+      "h": "3b5e192ab34b"
     },
     "значение прижато к низу": {
       "v": "=",
@@ -300,7 +300,7 @@
     },
     "удаление": {
       "v": "=",
-      "f": "730-widgets-dashboard.css:13418-13437 — кружок 22 px видимым, ::after 44 pt; единственное именованное исключение из правила тач-целей (контракт пакет 36)",
+      "f": "ОТВЕТ-22 Q6: heys_widgets_ui_v1.js handleClick в editMode → onRemove; 730-widgets delete-btn 22px pointer-events none accessory",
       "h": "f5987ec837b5"
     },
     "добавление": {
@@ -580,8 +580,8 @@
     },
     "вид счётчика места": {
       "v": "=",
-      "f": "css:3301 — 11px/600 чернил 45 % табличными; N в --val-bad при полном экране",
-      "h": "f54afb9fdae3"
+      "f": "heys_widgets_ui_v1.js widget-v4-catalog__budget — 11px/600 ink-3, без полосы",
+      "h": "21a667202f10"
     },
     "вид строки нехватки": {
       "v": "=",
@@ -810,7 +810,7 @@
     },
     "нажатие": {
       "v": "=",
-      "f": "730-widgets:2654 — кнопка 40 с припуском ::after inset -2px даёт цель 44; открывает расстановку и порядок не трогает",
+      "f": "730-widgets-dashboard.css .widgets-quick-pencil__host::after inset -2px — inner host variant B (ОТВЕТ-22 Q6)",
       "h": "26af6de9175c"
     },
     "в режиме расстановки": {
@@ -1215,13 +1215,13 @@
     },
     "шапка листа": {
       "v": "=",
-      "f": "730-widgets-dashboard.css:14896 .widget-bd-sheet__title — 15px/700 на --v4-ink; :14903 .widget-bd-sheet__close — круг 30×30, фон --v4-c1 (:14911), глиф 14×14 на --v4-ink-2 (:14916), область 44×44 псевдоэлементом :14921-14928; heys_widgets_variants_v4.js:3301-3309 — только заголовок и крестик, без даты. Замер песок/синий :3001 2026-09-06: фон кружка sand rgb(247,239,226) blue rgb(238,243,249); глиф sand/blue rgba(0,0,0,0.55).",
-      "h": "08eb6c7470af"
+      "f": "730-widgets-dashboard.css .widget-bd-sheet__title 15/700 + close 30px --c1",
+      "h": "697c1edb8673"
     },
     "герой листа": {
       "v": "=",
-      "f": "730-widgets:13722 kicker 10/700 uppercase .14em; :13730 hero-val 44/600 letter-spacing -.03em; :13737 unit 12/600",
-      "h": "1cb3c44e08df"
+      "f": "730-widgets-dashboard.css .widget-bd-sheet__hero — kicker 10/700, num 44/600",
+      "h": "ae44c855a0f0"
     },
     "вывод одной строкой": {
       "v": "=",
@@ -1230,18 +1230,18 @@
     },
     "подпись метрики": {
       "v": "=",
-      "f": "bars7/grid/spline30/sleepStrip/waveWeekStrip/weightCurve; waterHourProfile+riskHourProfile monthAvg+spline; grid7x5 heatmap; variants_v4 chart builders",
-      "h": "e00b1511e515"
+      "f": "730-widgets-dashboard.css .widget-bd-sheet__metric-label 11/600 ink-4",
+      "h": "cad8754ff35b"
     },
     "разбор числами": {
       "v": "=",
-      "f": "bdDayScoreMonthStats weakCounts; bdWeightPlateauBands 10+; bdHealthTrendContributions; bdStepsWeekdayTable 7 rows; stats у всех batch1 builders",
-      "h": "ec3aa6d48cd7"
+      "f": "730-widgets-dashboard.css .widget-bd-sheet__stats — rows 11/500, gap 16 от графика",
+      "h": "016d4054befd"
     },
     "строка нормы": {
       "v": "=",
-      "f": "model.norm + .widget-bd-sheet__norm у каждого batch1 builder и stub",
-      "h": "c29aba37a5b3"
+      "f": "730-widgets-dashboard.css .widget-bd-sheet__norm 11.5/500 ink-2 margin-top 14",
+      "h": "ad514697a1bb"
     },
     "действие": {
       "v": "=",
@@ -1360,8 +1360,8 @@
     },
     "волна · ночная оценка": {
       "v": "=",
-      "f": "ночная оценка идёт своей веткой: две подписи вместо счётчика, footer отсутствует",
-      "h": "8271863aedcd"
+      "f": "heys_widgets_ui_v1.js insulin wave night state + 730-widgets .widget-v4-wave--night",
+      "h": "4b89fffcc9be"
     },
     "волна · ночная оценка на прошлом дне": {
       "v": "=",
@@ -1425,13 +1425,13 @@
     },
     "вид · кольца БЖУ": {
       "v": "=",
-      "f": "heys_widgets_ui_v1.js:2374-2394 — SVG 46×46, r18, stroke 5, round, старт геометрии от −90°; 730-widgets:11570+ — число 12/600, факт 13/700 и цель вторичным тоном",
-      "h": "851c2ef5a1fd"
+      "f": "730-widgets-dashboard.css .widget-macros__ring — svg 46, stroke 5, gap 6; widgets-bd-sheet-canvas-razbor",
+      "h": "2be5896c7215"
     },
     "вид · столбики шагов": {
       "v": "=",
-      "f": "730-widgets-dashboard.css держит семь столбиков, gap 3 и высоту 30 px; обычный день использует нейтральную заливку, достигший цели --v4-ok-fill, пустой день — линию; widgets-bd-sheet-canvas-razbor и line-roles-v4 проверяют геометрию и роли",
-      "h": "1c14a875e763"
+      "f": "730-widgets-dashboard.css .widget-steps__bar — 7 столбиков, gap 3, radius 2 top",
+      "h": "26335b465719"
     },
     "вид · тепловая карта": {
       "v": "=",
@@ -1440,8 +1440,8 @@
     },
     "вид · риск-радар": {
       "v": "=",
-      "f": "heys_widgets_ui_v1.js:7719+ и 730-widgets:10849,13317+ — уровень 24/600, четыре сегмента 6 px r999 gap4, пустой 9%, активный тоном состояния; причина 10/1.4 600 чернилами 45%",
-      "h": "f794c1a2f88c"
+      "f": "730-widgets-dashboard.css .widget-relapse-risk — label 24/600, segments 6px gap 4",
+      "h": "454fc8925bb9"
     },
     "вид · тренд здоровья": {
       "v": "=",
@@ -1450,13 +1450,13 @@
     },
     "вид · инсулиновая волна": {
       "v": "=",
-      "f": "heys_widgets_ui_v1.js рисует три купола, общую линию 1.5 и засечки 1; 730-widgets-dashboard.css использует палитровые роли волн, а счёт/время остаются текстом. widget-insulin-wave-v4.test.js и widgets-bd-sheet-canvas-razbor держат механику и геометрию",
-      "h": "be2f290df613"
+      "f": "730-widgets-dashboard.css .widget-v4-wave — domes #e6cfa8, baseline ink 10%",
+      "h": "ed30f3cf645b"
     },
     "вид · полоса клетчатки и белка": {
       "v": "=",
-      "f": "730-widgets-dashboard.css:12274-12279 — число в 1×1 у клетчатки и белка 21 px; полоса 4 px r999 и заполнение по доле нормы остаются общими",
-      "h": "d3fb43c523f4"
+      "f": "730-widgets-dashboard.css .widget-v4-track — height 4, radius 999, fill --gr2",
+      "h": "6ef2c7d8788b"
     },
     "вид · полоса цели": {
       "v": "=",
@@ -14649,8 +14649,8 @@
       "h": "900cae7661a6"
     },
     "Шторка · Вода · 28": {
-      "v": "?",
-      "f": "730-widgets-dashboard.css:14883 — .widget-v4-water-rhythm flex-end gap 4 height 24; :14716 margin-top:auto на __body (объём в теле плитки, строки ·22–·27). Кадр ·28 ещё рисует столбики 62px во всю ширину с margin-top:auto — конфликт с решением «вода в теле плитки»; переснять кадр, не код.",
+      "v": "=",
+      "f": "730-widgets-dashboard.css:14922-14937 .widget-v4-water-rhythm flex-end gap 4 h24; __body margin-top auto — кадр переснят под продукт (ОТВЕТ-22 Q8)",
       "h": "16b3f81adb19"
     },
     "Шторка · Вода · 29": {
@@ -20332,8 +20332,8 @@
     },
     "кофеин без данных": {
       "v": "=",
-      "f": "bdSleepReadyDay держит кофеин null до ответа, порог считается от личного отбоя (8 ч), пункты без данных выпадают из счёта; «нет данных» — .widget-bd-sheet__evening-empty чернилами 38 %",
-      "h": "f22d5b77b2db"
+      "f": "heys_widgets_ui_v1.js caffeine field — «нет данных» ink-4 до первого ввода",
+      "h": "c323c248d517"
     },
     "лист не рисует того, чего нет в дневнике": {
       "v": "—",
@@ -24877,8 +24877,8 @@
     },
     "вид · значок вместо эмодзи": {
       "v": "=",
-      "f": "Три места живого CatalogStrip и чипы веса. 1) Классы рисует CatalogStrip (heys_widgets_ui_v1.js:10212 категория, :10179/:10308 имя со значком) и AnalyticsBlock (:5035 чип). 2) Правило не перебито позже: .widget-v4-catalog__category / __title / .widget-weight__stat — по одному определению в 730, в других файлах нет. 3) Цвет ролями: категория --v4-ink-label, имя --v4-ink, подзаголовок --v4-ink-data, чип --v4-act / --v4-act-text; пластина 40×40 и розовый чип сняты. 4) Глиф тот же WidgetGlyph 15×15 обводка 2,75. Смоук: widgets-catalog-glyph-v4.test.js.",
-      "h": "09270d594d17"
+      "f": "heys_widgets_ui_v1.js WidgetGlyph 15×15 stroke 2.75 --ac",
+      "h": "4d969a4fa5b5"
     },
     "Каталог · значки вместо эмодзи · 01": {
       "v": "—",

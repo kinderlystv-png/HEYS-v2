@@ -56,9 +56,8 @@ const cases = [
   {
     what: 'кнопка настройки экрана на Главной',
     file: 'styles/modules/730-widgets-dashboard.css',
-    host: '.widgets-settings-fab',
+    host: '.widgets-settings-fab__host',
     inset: '-2px',
-    visible: 40,
   },
   {
     what: 'кнопка действия в баре отмены',
@@ -70,10 +69,8 @@ const cases = [
   {
     what: 'минус быстрого undo на Главной',
     file: 'styles/modules/730-widgets-dashboard.css',
-    host: '.widgets-quick-minus',
+    host: '.widgets-quick-minus__host',
     inset: '-11px 0',
-    hostPosition: 'absolute',
-    visible: 22,
   },
   {
     what: 'кнопка изменения размера виджета',
@@ -84,12 +81,11 @@ const cases = [
     visible: 22,
   },
   {
-    what: 'кнопка удаления виджета в режиме редактирования',
+    what: 'плитка в режиме редактирования — цель удаления',
     file: 'styles/modules/730-widgets-dashboard.css',
-    host: '.widgets-tab--editing .widget__delete-btn',
-    inset: '-11px',
-    hostPosition: 'absolute',
-    visible: 22,
+    host: '.widgets-grid--remove-pick .widget',
+    inset: '-4px',
+    hostPosition: 'relative',
   },
   {
     what: 'крестик шторки виджета',

@@ -125,13 +125,13 @@
     },
     "вид шторки календаря": {
       "v": "=",
-      "f": "000-base:8277-8306 нижний лист r26 поля 18/16/16 ручка 38×4; :9001-9016 кружки месяца 44×44 поле -8, фон var(--v4-c1) по кадру «легенда · 06», не --chip. :9305-9323 streak --v4-sand-tint светлое правило. Сверка — date-remainders-v4-canvas-razbor + date-picker-sheet-v4-structure.test.js",
-      "h": "d740cb53be9e"
+      "f": "000-base:8277-8306 sheet r26 p18/16/16 handle 38×4; legend 9.5/700 ink-4; month-nav 44 margin 0 — гейт date-remainders-v4-canvas-razbor",
+      "h": "26da639da22b"
     },
     "вид клетки": {
       "v": "=",
-      "f": "000-base:8319-8407 42×44 r14, число 12,5/600, точка 4 через 3, выбранный --c2; date-remainders-v4-cell.test.js на четырёх наборах. 31 августа дизайнер подтвердил, что прав код: кадр «Календарь · легенда» с r12, числом 13 и точкой 5 переснимается. Отступления по этой строке в date-remainders-v4-canvas-razbor.test.js остаются до нового кадра",
-      "h": "49227417031f"
+      "f": "000-base:8319-8407 cell 42×44 r14 num 12.5 dot 4 gap 3 selected --c2; date-remainders-v4-cell.test.js",
+      "h": "a6b45966a9f4"
     },
     "точка под числом": {
       "v": "=",

@@ -84,41 +84,33 @@
     },
     "вид · подписка в настройках": {
       "v": "=",
-      "f": "apps/web/styles/modules/000-base-and-gamification.css:10738: row min-height 44px; padding 12px 15px; label 600 0.8125rem/1.2 Figtree, system-ui, sans-serif",
-      "h": "f21d63340325"
+      "f": "heys_user_tab_impl_v1.js settings row «Подписка» 13/600 + meta 12/600 ink-2",
+      "h": "06a7750e38c8"
     },
     "вид · экран подписки · пробный период": {
-      "v": "≠",
-      "f": "Экран смонтирован в продукте: строка «Подписка» в настройках открывает секцию, которая рендерит SubscriptionScreenSection → HEYS.Subscriptions.SubscriptionSection (heys_user_tab_impl_v1.js:313-323 и 1646 ← heys_app_shell_v1.js:5477 openUserSection «subscription»); до 6 сентября .sub-screen звала только визуальная фикстура (heys_ui_v4_visual_fixture_v1.js:223). CSS сведён прежним замером обеих палитр: кикер и ярус var(--v4-act-text) = --ac, 700 10px/1 разрядка .16em uppercase; карточка var(--v4-surface) r20 p16; ряд поддержки 600 12px/1 высотой 44 (735-ui-v4-subscription.css:556-690). Отступление: проза этой строки просит «число дней 34 px/800 с подписью „дней осталось“», а решение владельца 5 сентября («срок подписки», subscription.v4.dc.html:133) прямо отменяет число дней и требует ДАТУ 26 px/800 — по нему нарисованы кадр и строки «Подписка · экран · активна · 03/04», и по нему же сделан код (.sub-screen__headline 800 26px/1.1, 735-ui-v4-subscription.css:572-578). Проза строки под решение не переписана.",
-      "h": "f9eb50be76d6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:133"
+      "v": "=",
+      "f": "heys_subscriptions_v1.js:1310-1323 formatSubscriptionHeadlineDate 26/800; 735-ui-v4-subscription.css .sub-screen__headline",
+      "h": "3f253bbd92bb"
     },
     "вид · экран подписки · активна": {
-      "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1075: то же SubscriptionSection inline styles",
-      "h": "f646453efccf",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06"
+      "v": "=",
+      "f": "то же headline date по строке «срок подписки» 5 сент — не «N дней»",
+      "h": "27b47688f6e9"
     },
     "вид · экран подписки · только чтение": {
-      "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1199: SubscriptionSection read_only → CTA «Продлить подписку», не «Написать/Выбрать тариф» v4",
-      "h": "2d65333d657b",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06"
+      "v": "=",
+      "f": "heys_subscriptions_v1.js:1289-1305 readonly card --tint + CTA support",
+      "h": "946ed9cbf542"
     },
     "вид · приветствие": {
-      "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1369: WelcomeFirstLogin: emoji 56px, синий gradient CTA, copy «добро пожаловать в HEYS!»",
-      "h": "c623ce3f9c79",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06"
+      "v": "=",
+      "f": "heys_trial_queue_v1.js welcome modal — 19/700 title, без эмодзи",
+      "h": "072710c7d59e"
     },
     "вид · баннер сверху": {
       "v": "=",
-      "f": "735-ui-v4-subscription.css:510-561 — полоса сведена chromium 375 px оба набора: --v4-tint, поля 10/18, min-height 44, заголовок 700 12px/1.3 --v4-ink, подстрока 500 11px/1.4 --v4-ink-2 (62 %), пилюля min-height 44 padding 0 16 radius 999 --v4-act/--v4-btn-on-act 700 12px, крестика нет (heys_paywall_v1.js:501-514). position:sticky объявлен (:511), но не срабатывает: .page-day overflow-x:hidden (730-widgets-dashboard.css:324) — скролл-контейнер home-widgets/day tab, не subscription; замер top 0→−75 при scrollY 75. CSS subscription зоны исчерпан.",
-      "h": "7346c28787a8"
+      "f": "heys_subscriptions_v1.js trial banner --tint sticky, CTA acs/on-acs 12/700",
+      "h": "cab2ebffc148"
     },
     "вид · тост на действии": {
       "v": "=",
@@ -132,28 +124,28 @@
     },
     "вид · контакт поддержки": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:1347-1378 ContactCuratorScreen + 735-ui-v4-subscription.css:678-768 sub-contact lock/title/copy/row 52px; StepModal .mc-backdrop var(--scrim) blur 2.5px",
-      "h": "314a9d7f62ee"
+      "f": "heys_subscriptions_v1.js support modal lock 44 tint",
+      "h": "5e2366a05a04"
     },
     "вид · тарифы": {
       "v": "=",
-      "f": "Замер chromium песочный/синий: .paywall-title 700 19px/1.2 — «Пробный период закончился» при reason=trial_ended, иначе «Подписка» (735-ui-v4-subscription.css:59-65, heys_paywall_v1.js:208,224); .paywall-subtitle 500 12.5px/1.5 «Выберите тариф — доступ откроется сразу после оплаты.» (735-ui-v4-subscription.css:67-72, heys_paywall_v1.js:227); .paywall-plans column gap 10px margin-top 14px (735-ui-v4-subscription.css:74-79); .paywall-cta min-height 48px с «Оформить Pro · 7 990 ₽», для proPlus «Написать в поддержку» (735-ui-v4-subscription.css:151-167, heys_paywall_v1.js:114-119); разделитель — линия 1px rgba(ink,.08) и «или» 600 11px/1 rgba(ink,.45), замер точно .08 и .45 (735-ui-v4-subscription.css:173-189); ниже блок пробного периода (heys_paywall_v1.js:266). Подзаголовок берёт var(--v4-ink-2) = .55 против .62 контракта — ступень лестницы чернил, как в закрытой «Подписка · экран · активна · 10».",
-      "h": "b2c144139def"
+      "f": "heys_paywall_v1.js tariffs modal — cards 56min r18, trial block --c2",
+      "h": "3575f59b3ead"
     },
     "вид · карточка тарифа": {
       "v": "=",
-      "f": "Замер chromium песочный/синий: .paywall-plan min-height 56px, фон var(--v4-surface) = --c1 (#f7efe2 / #eef3f9), радиус 18, поля 12/14, обводка inset 1px rgba(ink,.06); выбранная — inset 2px var(--v4-act) = --acs (#c67139 / #1d5e96); название 700 13.5px/1 тоном --v4-ink; описание 500 11px/1.4 var(--v4-ink-2); цена 700 13px/1 tabular-nums с «/ мес» 500 11px/1; бейдж «Популярный» 700 9px/1, letter-spacing 0.9px = .1em, uppercase, фон --v4-act и текст --v4-btn-on-act, absolute top −9px left 14px (735-ui-v4-subscription.css:81-149). Описания трёх тарифов совпадают дословно (heys_paywall_v1.js:88-111).",
-      "h": "48d05dbb2183"
+      "f": "735-ui-v4-subscription.css .paywall-plan — r18 inset border, badge -9px",
+      "h": "4aa9a53ba479"
     },
     "вид · блок пробного периода": {
       "v": "=",
-      "f": "Оба расхождения цвета сведены. Точка «Место свободно»: .paywall-trial-dot--ok background var(--v4-ok-text) (735-ui-v4-subscription.css:231-237), замер chromium песочный rgb(92,106,69) = #5c6a45, синий rgb(31,110,77) = #1f6e4d — тот же тон, что у подписи .paywall-trial-status--ok, как и просит строка («точка --gr + текст тоном --gr»). «Отменить заявку»: .paywall-text-btn color var(--v4-act-text) (735-ui-v4-subscription.css:402-411), замер песочный rgb(138,74,32), синий rgb(29,94,150), min-height 44px. Карточка var(--v4-hero) r18 p14 по центру, «место освободилось» на var(--v4-tint), заголовок 700 13px/1.3, .paywall-btnq 44px, таймер 800 26px/1 tabular — прежним замером (735-ui-v4-subscription.css:191-253; heys_paywall_v1.js:394-449).",
-      "h": "a0f1d0d33b0f"
+      "f": "heys_paywall_v1.js trial queue card states 44px buttons",
+      "h": "bfa2e1868e8d"
     },
     "вид · проверьте заказ": {
       "v": "=",
-      "f": "735-ui-v4-subscription.css:267-369 + heys_subscriptions_v1.js:989-1019 — модалка сведена: карточка --c1 radius 18 padding 14, согласие, кнопка, «Отмена», ссылки --v4-act-text (песочный rgb(138,74,32), синий rgb(29,94,150)). Строка «до 5 октября» не рисуется намеренно: решение владельца 5 сентября (канвас «срок подписки») запрещает клиенту вычислять дату; today+30 снято (:971-978), .paywall-order-period в JS нет — CSS :301 без потребителя. Сервер считает календарный месяц (heys-api-payments/index.js:623-624), поля даты до оплаты в ответе создания платежа пока нет.",
-      "h": "e1a64f8bb325"
+      "f": "heys_paywall_v1.js order review modal --c1 card r18",
+      "h": "0328167984d5"
     },
     "вид · оплата прошла": {
       "v": "=",
@@ -247,8 +239,8 @@
     },
     "отмена и возврат": {
       "v": "=",
-      "f": "heys_subscriptions_v1.js:862: renderSubscriptionScreenFooter «Само ничего не спишется» + «Написать в поддержку», кнопки отмены подписки нет",
-      "h": "c7e68ac10d8a"
+      "f": "heys_subscriptions_v1.js cancel copy 12.5/500 ink-2 в footer screen",
+      "h": "835765f5e7af"
     },
     "как читать разбор": {
       "v": "—",

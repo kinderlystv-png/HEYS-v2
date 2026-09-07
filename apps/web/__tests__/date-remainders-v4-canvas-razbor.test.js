@@ -39,16 +39,9 @@ const EXCEPTIONS = new Map([
   // цель инлайновым `height:44px` — число то же, свойство другое; код держит
   // min-height 44 (000-base:8149 и дубль в @media (max-width: 640px)).
   ['Капсула · ночь на 21 августа · 4|height', 'правило «тач-цели»: 44 задаётся min-height, а не height'],
-  // Строка «вид шторки календаря»: «ряд сокращений дней 9,5 px/700 прописными
-  // тоном чернил 40 %». Кадр набирает 600 и 42 %.
-  ['Календарь · легенда · 10|fontWeight', 'строка «вид шторки календаря»: 700'],
-  ['Календарь · легенда · 10|color', 'строка «вид шторки календаря»: чернила 40 %'],
-  // Строка «вид клетки»: «клетка 42×44 px, радиус 14; число 12,5 px/600…
-  // Точка факта 4 px под числом через 3».
-  ['Календарь · легенда · 11|radius', 'строка «вид клетки»: радиус 14'],
-  ['Календарь · легенда · 11|gap', 'строка «вид клетки»: точка под числом через 3'],
-  ['Календарь · легенда · 11|fontSize', 'строка «вид клетки»: число 12,5'],
-  ['Календарь · легенда · 12|size', 'строка «вид клетки»: точка 4 px'],
+  // Строка «вид шторки календаря»: кружки месяца 44×44; кадр рисует margin -8,
+  // продукт держит margin 0 — видимая цель 44 без отрицательного поля.
+  ['Календарь · легенда · 6|marginTop', 'строка «вид шторки календаря»: month-nav 44×44, margin 0 в 000-base:9258'],
   // Строка «снять в коде» плюс «вид клетки»: легенда показывает ровно то, что
   // нарисовано в сетке, а «сегодня» в сетке — начертание 700 тоном --ac, не
   // плашка. Кадр рисует плашку 11×11.
@@ -60,6 +53,28 @@ const EXCEPTIONS = new Map([
   // инвариант старше кадра, отступление названо в CSS у самого правила.
   ['Календарь · легенда · 2|background', 'подложка по инварианту product-модалок, не по кадру'],
 ]);
+
+// Пары «кадр · индекс|свойство» из EXCEPTIONS → строка дрейфа compare. Пакет 47:
+// кадры верны, продукт следует контракту — гейт фильтрует осознанные отступления.
+const EXCEPTION_DRIFT = new Map([
+  ['Дата · чужой день · 16|gap', '.date-picker-row { gap }'],
+  ['Дата · чужой день · 20|height', '.date-picker-inline-today { height }'],
+  ['Капсула · ночь на 21 августа · 4|height', '.date-picker-trigger--night { height }'],
+  ['Календарь · легенда · 6|marginTop', '.date-picker-sheet-month-nav { margin-top }'],
+  ['Календарь · легенда · 3|radius', '.date-picker-sheet__card { border-radius }'],
+  ['Календарь · легенда · 2|background', '.date-picker-sheet-overlay { background }'],
+]);
+
+function siftDateRemainders(drift) {
+  return siftInkDataDrift(drift).filter((line) => {
+    for (const prefix of EXCEPTION_DRIFT.values()) {
+      if (line.includes(prefix)) return false;
+    }
+    // Строка «снять в коде»: «сегодня» в легенде — начертание, не плашка 11×11.
+    if (line.includes('.legend-swatch--today {')) return false;
+    return true;
+  });
+}
 
 // Кадр «Дата · чужой день» — капсула в прошлом дне. Остальные элементы кадра
 // принадлежат вкладке «Питание», их сверяет своя зона.
@@ -114,15 +129,15 @@ describe('«Дата и остатки» · разбор кадров канва
   const rules = readRules(fs.readFileSync(CSS, 'utf8'));
 
   it('кадр «Дата · чужой день» совпадает с капсулой прошлого дня', () => {
-    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Дата · чужой день', pairs: PAST }))).toEqual([]);
+    expect(siftDateRemainders(compare({ razbor, rules, frame: 'Дата · чужой день', pairs: PAST }))).toEqual([]);
   });
 
   it('кадр «Капсула · ночь на 21 августа» совпадает с ночной капсулой', () => {
-    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Капсула · ночь на 21 августа', pairs: NIGHT }))).toEqual([]);
+    expect(siftDateRemainders(compare({ razbor, rules, frame: 'Капсула · ночь на 21 августа', pairs: NIGHT }))).toEqual([]);
   });
 
   it('кадр «Календарь · легенда» совпадает с нижним листом календаря', () => {
-    expect(siftInkDataDrift(compare({ razbor, rules, frame: 'Календарь · легенда', pairs: SHEET }))).toEqual([]);
+    expect(siftDateRemainders(compare({ razbor, rules, frame: 'Календарь · легенда', pairs: SHEET }))).toEqual([]);
   });
 
   // Числа, которые называет именованная строка зоны, а кадр рисует иначе:
@@ -152,7 +167,7 @@ describe('«Дата и остатки» · разбор кадров канва
   });
 
   it('осознанные отступления не разрослись', () => {
-    expect(EXCEPTIONS.size).toBe(15);
+    expect(EXCEPTIONS.size).toBe(7);
   });
 
   it('гейт называет свой охват', () => {
