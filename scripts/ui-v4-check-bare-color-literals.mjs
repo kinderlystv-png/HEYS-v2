@@ -73,8 +73,8 @@ const BASELINE = {
   // 05.09: вошёл в охват, когда вердикты мессенджера начали называть его по
   // имени. «Было 0» значило «не смотрели», а не «чисто»: 201 место жило в нём
   // и раньше, без охраны. Счёт только падал — 235 до ce6880f76, 204 до
-  // aa9bb7cc0, 201 сейчас. Это впервые зафиксированный долг, не регресс.
-  '1000-messenger.css': 201,
+  // aa9bb7cc0, 201 до ce6880f76; 0 с 7 сентября после миграции на роли.
+  '1000-messenger.css': 0,
   '300-modals-and-day.css': 143,
   '500-pwa-and-offline.css': 58,
   '600-steps-and-aps.css': 45,
@@ -83,7 +83,8 @@ const BASELINE = {
   '715-yesterday-verify.css': 26,
   '730-widgets-dashboard.css': 94,
   '733-ui-v4-login-theme.css': 12,
-  '200-dark-and-effects.css': 141,
+  // 7 сентября: 141 → 0 после миграции bare literals на var(--v4-*, fallback).
+  '200-dark-and-effects.css': 0,
   '740-cascade-card.css': 13,
   '750-strength-builder.css': 3,
   'critical.css': 23,

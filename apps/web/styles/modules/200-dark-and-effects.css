@@ -222,7 +222,7 @@
 [data-theme$="dark"] .macro-badge-popup-rec {
   background: linear-gradient(135deg, #166534 0%, #15803d 100%);
   border-color: var(--v4-ok-text, #4ade80);
-  color: #bbf7d0;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 [data-theme$="dark"] .macro-badge-popup-close {
@@ -335,17 +335,17 @@
 
 [data-theme$="dark"] .meal-sep.meal-type-lunch .meal-kcal-badge {
   background: rgba(74, 222, 128, 0.2);
-  color: #86efac;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 [data-theme$="dark"] .meal-sep.meal-type-dinner .meal-kcal-badge {
   background: rgba(96, 165, 250, 0.2);
-  color: #93c5fd;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .meal-sep.meal-type-night .meal-kcal-badge {
   background: rgba(139, 92, 246, 0.2);
-  color: #c4b5fd;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* ============================================
@@ -521,12 +521,12 @@
 }
 
 [data-theme$="dark"] .insulin-wave-label {
-  color: #67e8f9;
+  color: var(--v4-act-text, #8a4a20);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme$="dark"] .insulin-lipolysis .insulin-wave-label {
-  color: #6ee7b7;
+  color: var(--v4-ok-text, #5c6a45);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
@@ -550,12 +550,12 @@
 }
 
 [data-theme$="dark"] .insulin-time-end {
-  color: #67e8f9;
+  color: var(--v4-act-text, #8a4a20);
   font-weight: 600;
 }
 
 [data-theme$="dark"] .insulin-lipolysis .insulin-time-end {
-  color: #6ee7b7;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 [data-theme$="dark"] .insulin-almost .insulin-time-end {
@@ -568,13 +568,13 @@
 
 [data-theme$="dark"] .insulin-wave-suggestion {
   background: rgba(6, 182, 212, 0.15);
-  color: #a5f3fc;
+  color: var(--v4-act-text, #8a4a20);
   border-left: 3px solid #22d3ee;
 }
 
 [data-theme$="dark"] .insulin-lipolysis .insulin-wave-suggestion {
   background: rgba(52, 211, 153, 0.15);
-  color: #6ee7b7;
+  color: var(--v4-ok-text, #5c6a45);
   border-left-color: #34d399;
 }
 
@@ -644,7 +644,7 @@
 /* Kcal sparkline */
 [data-theme$="dark"] .kcal-sparkline-container {
   background: linear-gradient(135deg, #065f46 0%, #047857 100%);
-  border-color: #10b981;
+  border-color: var(--v4-ok-fill, #7a8a5e);
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
   --sparkline-bg-start: #065f46;
   --sparkline-bg-end: #047857;
@@ -659,7 +659,7 @@
 }
 
 [data-theme$="dark"] .kcal-period-pill.active {
-  background: #10b981;
+  background: var(--v4-ok-fill, #7a8a5e);
   box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
 }
 
@@ -683,7 +683,7 @@
 }
 
 [data-theme$="dark"] .sparkline-dot-ok {
-  stroke: #065f46;
+  stroke: var(--v4-ok-fill, #7a8a5e);
   stroke-width: 1.5;
 }
 
@@ -693,7 +693,7 @@
 }
 
 [data-theme$="dark"] .sparkline-dot-over {
-  stroke: #7f1d1d;
+  stroke: var(--v4-val-bad, #a8382b);
   stroke-width: 1.5;
 }
 
@@ -702,7 +702,7 @@
 }
 
 [data-theme$="dark"] .sparkline-day-weekend {
-  fill: #f87171;
+  fill: var(--v4-bad-text, #a83c22);
 }
 
 [data-theme$="dark"] .sparkline-day-forecast {
@@ -743,7 +743,7 @@
 }
 
 [data-theme$="dark"] .sparkline-today-label {
-  fill: #93c5fd;
+  fill: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .sparkline-brush-overlay {
@@ -754,7 +754,7 @@
 
 [data-theme$="dark"] .sparkline-brush-stats {
   background: rgba(96, 165, 250, 0.2);
-  color: #93c5fd;
+  color: var(--v4-act-text, #8a4a20);
   border: 1px solid rgba(96, 165, 250, 0.3);
 }
 
@@ -780,7 +780,7 @@
 }
 
 [data-theme$="dark"] .sparkline-slider-tooltip-ratio.ratio-ok {
-  color: #6ee7b7;
+  color: var(--v4-ok-text, #5c6a45);
   border-left: 3px solid #10b981;
 }
 
@@ -797,12 +797,12 @@
 }
 
 [data-theme$="dark"] .sparkline-slider-tooltip-tag.good {
-  color: #6ee7b7;
-  border-color: #10b981;
+  color: var(--v4-ok-text, #5c6a45);
+  border-color: var(--v4-ok-fill, #7a8a5e);
 }
 
 [data-theme$="dark"] .sparkline-slider-tooltip-tag.bad {
-  border-color: #f87171;
+  border-color: var(--v4-val-bad, #a8382b);
 }
 
 [data-theme$="dark"] .sparkline-week-separator {
@@ -899,12 +899,12 @@
 
 [data-theme$="dark"] .caloric-debt-day.positive {
   background: rgba(52, 211, 153, 0.15);
-  border-color: #10b981;
+  border-color: var(--v4-ok-fill, #7a8a5e);
 }
 
 [data-theme$="dark"] .caloric-debt-day.negative {
   background: rgba(248, 113, 113, 0.15);
-  border-color: #ef4444;
+  border-color: var(--v4-val-bad, #a8382b);
 }
 
 [data-theme$="dark"] .caloric-debt-recommendation {
@@ -914,7 +914,7 @@
 
 [data-theme$="dark"] .caloric-debt-warning {
   background: rgba(248, 113, 113, 0.15);
-  color: #fca5a5;
+  color: var(--v4-bad-text, #a83c22);
   border-left: 3px solid #ef4444;
 }
 
@@ -936,7 +936,7 @@
 }
 
 [data-theme$="dark"] .caloric-excess-recommendation .caloric-debt-rec-text {
-  color: #6ee7b7;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* Insights card */
@@ -993,7 +993,7 @@
 
 [data-theme$="dark"] .caloric-insight-item-v2.severity-critical {
   background: rgba(248, 113, 113, 0.15);
-  border-color: #ef4444;
+  border-color: var(--v4-val-bad, #a8382b);
 }
 
 [data-theme$="dark"] .caloric-insight-item-v2.severity-warning {
@@ -1002,7 +1002,7 @@
 
 [data-theme$="dark"] .caloric-insight-item-v2.severity-positive {
   background: rgba(52, 211, 153, 0.12);
-  border-color: #10b981;
+  border-color: var(--v4-ok-fill, #7a8a5e);
 }
 
 [data-theme$="dark"] .caloric-insight-item-v2.severity-info {
@@ -1027,7 +1027,7 @@
 /* Group-specific backgrounds */
 [data-theme$="dark"] .caloric-insight-item-v2.group-sleep {
   background: rgba(129, 140, 248, 0.12);
-  border-color: #6366f1;
+  border-color: var(--v4-act, #c67139);
 }
 
 [data-theme$="dark"] .caloric-insight-item-v2.group-metabolism {
@@ -1036,27 +1036,27 @@
 
 [data-theme$="dark"] .caloric-insight-item-v2.group-timing {
   background: rgba(34, 211, 238, 0.12);
-  border-color: #06b6d4;
+  border-color: var(--v4-act, #c67139);
 }
 
 [data-theme$="dark"] .caloric-insight-item-v2.group-nutrition {
   background: rgba(52, 211, 153, 0.12);
-  border-color: #10b981;
+  border-color: var(--v4-ok-fill, #7a8a5e);
 }
 
 [data-theme$="dark"] .caloric-insight-item-v2.group-activity {
   background: rgba(244, 114, 182, 0.12);
-  border-color: #ec4899;
+  border-color: var(--v4-act, #c67139);
 }
 
 [data-theme$="dark"] .caloric-insight-item-v2.group-hormones {
   background: rgba(167, 139, 250, 0.12);
-  border-color: #8b5cf6;
+  border-color: var(--v4-act, #c67139);
 }
 
 [data-theme$="dark"] .caloric-insight-item-v2.group-pattern {
   background: linear-gradient(135deg, rgba(167, 139, 250, 0.15) 0%, rgba(96, 165, 250, 0.15) 100%);
-  border-color: #a78bfa;
+  border-color: var(--v4-act, #c67139);
 }
 
 /* Balance day popup */
@@ -1085,13 +1085,13 @@
 
 [data-theme$="dark"] .weight-sparkline-container {
   background: linear-gradient(135deg, #312e81 0%, #3730a3 100%);
-  border-color: #6366f1;
+  border-color: var(--v4-act, #c67139);
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
 }
 
 [data-theme$="dark"] .weight-sparkline-container.trend-down {
   background: linear-gradient(135deg, #065f46 0%, #047857 100%);
-  border-color: #10b981;
+  border-color: var(--v4-ok-fill, #7a8a5e);
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
 }
 
@@ -1125,15 +1125,15 @@
 }
 
 [data-theme$="dark"] .weight-forecast-badge.down {
-  border-color: #10b981;
+  border-color: var(--v4-ok-fill, #7a8a5e);
 }
 
 [data-theme$="dark"] .weight-forecast-badge.up {
-  border-color: #ef4444;
+  border-color: var(--v4-val-bad, #a8382b);
 }
 
 [data-theme$="dark"] .weight-sparkline-line {
-  stroke: #a78bfa;
+  stroke: var(--v4-act, #c67139);
   stroke-width: 2.5;
   filter: drop-shadow(0 1px 3px rgba(167, 139, 250, 0.4));
 }
@@ -1165,7 +1165,7 @@
 }
 
 [data-theme$="dark"] .weight-period-pills .kcal-period-pill.active {
-  background: #312e81;
+  background: var(--v4-accent-bg, #f0dcc6);
   box-shadow: 0 2px 4px rgba(99, 102, 241, 0.4);
 }
 
@@ -1194,7 +1194,7 @@
 
 [data-theme$="dark"] .weight-clean-trend-badge {
   background: rgba(244, 114, 182, 0.2);
-  color: #f9a8d4;
+  color: var(--v4-warn-soft, #c9922e);
   border: 1px solid rgba(244, 114, 182, 0.4);
 }
 
@@ -1205,15 +1205,15 @@
 }
 
 [data-theme$="dark"] .weight-retention-note-text {
-  color: #f9a8d4;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .weight-retention-note-text b {
-  color: #fbcfe8;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .weight-retention-forecast {
-  color: #f9a8d4;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .weight-retention-insight {
@@ -1226,7 +1226,7 @@
 }
 
 [data-theme$="dark"] .weight-retention-stats b {
-  color: #f9a8d4;
+  color: var(--v4-warn-soft, #c9922e);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1273,7 +1273,7 @@
 }
 
 [data-theme$="dark"] .mood-hint-change {
-  color: #0a84ff;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .mood-label,
@@ -1282,13 +1282,13 @@
 }
 
 [data-theme$="dark"] .mood-slider-value {
-  color: #0a84ff;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .mood-preset {
-  background: #2c2c2e;
-  border-color: #48484a;
-  color: #e5e5ea;
+  background: var(--v4-chip, #efe3cf);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
+  color: var(--v4-ink, #201e1d);
 }
 
 [data-theme$="dark"] .mood-diff.diff-up {
@@ -1301,34 +1301,34 @@
 
 [data-theme$="dark"] .mood-diff.diff-same {
   background: rgba(142, 142, 147, 0.25);
-  color: #8e8e93;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .mood-slider-footer .mood-hint-change {
-  color: #636366;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .mood-slider::-webkit-slider-thumb {
-  background: #e5e5ea;
+  background: var(--v4-ink, #201e1d);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 [data-theme$="dark"] .mood-face-text {
-  color: #8e8e93;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .mood-time-hint {
-  color: #8e8e93;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .mood-ai-insight {
   background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
   border-color: rgba(99, 102, 241, 0.3);
-  color: #a5b4fc;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .yesterday-mark {
-  color: #636366;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .mood-journal-prompt {
@@ -1337,16 +1337,16 @@
 }
 
 [data-theme$="dark"] .mood-journal-text {
-  color: #a1a1aa;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .bottom-sheet-handle::before {
-  background: #48484a;
+  background: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 [data-theme$="dark"] .wheel-column-item,
 [data-theme$="dark"] .wheel-item {
-  color: #8e8e93;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .wheel-column-item.selected,
@@ -1357,8 +1357,8 @@
 /* Dark theme for training picker */
 
 [data-theme$="dark"] .training-type-btn {
-  background: #2c2c2e;
-  border-color: #38383a;
+  background: var(--v4-chip, #efe3cf);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 [data-theme$="dark"] .compact-train {
@@ -1373,8 +1373,8 @@
 }
 
 [data-theme$="dark"] .compact-train-time {
-  background: #2c2c2e;
-  color: #8e8e93;
+  background: var(--v4-chip, #efe3cf);
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 /* Dark theme for training card summary */
@@ -1385,7 +1385,7 @@
 [data-theme$="dark"] .training-card-duration {
   background: linear-gradient(135deg, #14532d 0%, #166534 100%);
   border-color: var(--v4-ok-fill, #22c55e);
-  color: #86efac;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 [data-theme$="dark"] .training-card-rating.quality {
@@ -1423,18 +1423,18 @@
 
 [data-theme$="dark"] .training-card-comment {
   background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 100%);
-  border-color: #38383a;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 /* Dark theme: Minimal training card */
 [data-theme$="dark"] .compact-zone-inline {
-  border-color: #38383a;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .compact-zone-inline:hover {
-  background: #3a3a3c;
-  border-color: #48484a;
+  background: var(--v4-chip, #efe3cf);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 }
 
@@ -1462,19 +1462,19 @@
 [data-theme$="dark"] .meal-rating-mini.mood {
   background: var(--v4-ok-bg, #14532d);
   border-color: var(--v4-ok-fill, #22c55e);
-  color: #86efac;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 [data-theme$="dark"] .meal-rating-mini.wellbeing {
-  background: #2e1065;
+  background: var(--v4-accent-bg, #f0dcc6);
   border-color: var(--v4-act, #3b82f6);
-  color: #93c5fd;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .meal-rating-mini.stress {
-  background: #1e3a8a;
+  background: var(--v4-accent-bg, #f0dcc6);
   border-color: var(--v4-act, #3b82f6);
-  color: #93c5fd;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .meal-rating-empty {
@@ -1482,7 +1482,7 @@
 }
 
 [data-theme$="dark"] .mobile-mood-btn {
-  border-color: #38383a;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 /* Dark theme for training zones */
@@ -1497,25 +1497,25 @@
 }
 
 [data-theme$="dark"] .training-preset-btn {
-  border-color: #38383a;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 /* === 02. TONE CARDS - DARK === */
 [data-theme$="dark"] .tone-violet,
 [data-theme$="dark"] .card.tone-violet {
-  border-color: #4c3d6e;
+  border-color: var(--v4-act, #c67139);
 }
 
 [data-theme$="dark"] .tone-green {
-  border-color: #2d4a2d;
+  border-color: var(--v4-ok-fill, #7a8a5e);
 }
 
 [data-theme$="dark"] .tone-green label {
-  color: #86efac;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 [data-theme$="dark"] .tone-amber {
-  border-color: #4a4020;
+  border-color: var(--v4-warn-soft, #c9922e);
 }
 
 [data-theme$="dark"] .tone-blue {
@@ -1566,8 +1566,8 @@
 
 [data-theme$="dark"] .mpc-grams-btn.grams-danger {
   background: linear-gradient(135deg, rgba(254, 226, 226, 0.12) 0%, rgba(254, 202, 202, 0.12) 100%);
-  border-color: #ef4444;
-  color: #fca5a5;
+  border-color: var(--v4-val-bad, #a8382b);
+  color: var(--v4-bad-text, #a83c22);
 }
 
 [data-theme$="dark"] .mpc-grams {
@@ -1583,11 +1583,11 @@
 
 [data-theme$="dark"] .mpc-alternative {
   background: rgba(3, 105, 161, 0.15);
-  color: #7dd3fc;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .mpc-alternative strong {
-  color: #bae6fd;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .mpc-totals-wrap {
@@ -1595,7 +1595,7 @@
 }
 
 [data-theme$="dark"] .mpc-totals-wrap .mpc-header {
-  color: #93c5fd;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Серые mpc-totals внутри прошедших приёмов (dark theme) */
@@ -1615,23 +1615,23 @@
 
 /* Violet main-violet card */
 [data-theme$="dark"] .card.tone-violet.main-violet {
-  background: #1e1a2e;
-  border-color: #3d3560;
+  background: var(--v4-accent-bg, #f0dcc6);
+  border-color: var(--v4-act, #c67139);
 }
 
 [data-theme$="dark"] .card.tone-violet.main-violet .violet-table th {
-  background: #2a2445;
-  color: #93c5fd;
+  background: var(--v4-accent-bg, #f0dcc6);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$="dark"] .card.tone-violet.main-violet .violet-table td {
-  border-color: #4c3d6e;
+  border-color: var(--v4-act, #c67139);
   color: var(--v4-ink-4); /* v4-intentional */
 }
 
 [data-theme$="dark"] .card.tone-violet.main-violet .stat {
   background: rgba(45, 38, 64, 0.5);
-  border-color: #4c3d6e;
+  border-color: var(--v4-act, #c67139);
 }
 
 /* Header bottom — v4: плоская строка названия вкладки, без плашки и тени
@@ -1683,7 +1683,7 @@
 
 [data-theme$="dark"] .ews-badge--high {
   background: rgba(248, 113, 113, 0.2);
-  color: #f87171;
+  color: var(--v4-bad-text, #a83c22);
 }
 
 @media (hover: hover) {
@@ -1710,14 +1710,14 @@
 
 /* Yesterday quick button in header */
 [data-theme$="dark"] .yesterday-quick-btn {
-  background: #2c2c2e;
-  border-color: #3c3c3e;
-  color: #e5e5e5;
+  background: var(--v4-chip, #efe3cf);
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
+  color: var(--v4-ink, #201e1d);
 }
 
 @media (hover: hover) {
   [data-theme$="dark"] .yesterday-quick-btn:hover {
-  background: #3c3c3e;
+  background: var(--v4-chip, #efe3cf);
 }
 }
 
@@ -1751,7 +1751,7 @@
 }
 
 [data-theme$="dark"] .tabs .tab {
-  color: #aeaeb2;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 @media (hover: hover) {
@@ -1954,13 +1954,13 @@
 .sparkline-empty-text {
   font-size: 14px;
   font-weight: 600;
-  color: #166534;
+  color: var(--v4-ok-text, #5c6a45);
   margin-bottom: 4px;
 }
 
 .sparkline-empty-hint {
   font-size: 12px;
-  color: #15803d;
+  color: var(--v4-ok-text, #5c6a45);
   opacity: 0.7;
   margin-bottom: 12px;
 }
@@ -1988,7 +1988,7 @@
 .sparkline-empty-progress-text {
   font-size: 11px;
   font-weight: 500;
-  color: #15803d;
+  color: var(--v4-ok-text, #5c6a45);
   white-space: nowrap;
 }
 
@@ -2028,7 +2028,7 @@
 
 /* Weight empty state - фиолетовая тема */
 .sparkline-empty-state.weight-empty .sparkline-empty-text {
-  color: #7c3aed;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .sparkline-empty-state.weight-empty .sparkline-empty-hint {
@@ -2046,7 +2046,7 @@
 }
 
 .sparkline-empty-state.weight-empty .sparkline-empty-progress-text {
-  color: #7c3aed;
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Dark mode */
@@ -2055,11 +2055,11 @@
 }
 
 [data-theme$="dark"] .sparkline-empty-hint {
-  color: #86efac;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 [data-theme$="dark"] .sparkline-empty-progress-text {
-  color: #86efac;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* === 06. SPARKLINE SKELETON === */
@@ -2411,7 +2411,7 @@
 }
 
 .compact-sleep .compact-card-header {
-  color: #be185d;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 .sleep-section .compact-card-header,
@@ -2452,7 +2452,7 @@
 .sleep-card-title {
   font-size: 13px;
   font-weight: 600;
-  color: #be185d;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 /* Время сна */
@@ -2478,7 +2478,7 @@
 
 .sleep-time-input:focus {
   outline: none;
-  border-color: #ec4899;
+  border-color: var(--v4-act, #c67139);
   background: var(--color-white);
   box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.1);
 }
@@ -2497,7 +2497,7 @@
   font-weight: 600;
   text-align: center;
   background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
-  color: #be185d;
+  color: var(--v4-warn-text, #a1471c);
   transition: all 0.15s ease;
 }
 
@@ -2511,7 +2511,7 @@
 }
 
 .sleep-arrow {
-  color: #f9a8d4;
+  color: var(--v4-warn-text, #a1471c);
   font-size: 14px;
 }
 
@@ -2538,7 +2538,7 @@
 .sleep-quality-value-big {
   font-size: 36px;
   font-weight: 700;
-  color: #7c3aed;
+  color: var(--v4-act-text, #8a4a20);
   line-height: 1;
 }
 
@@ -2575,8 +2575,8 @@
   padding: 7px 10px;
   border: 1px solid #f3e8ff;
   border-radius: 10px;
-  background: #faf5ff;
-  color: #6d28d9;
+  background: var(--v4-accent-bg, #f0dcc6);
+  color: var(--v4-act-text, #8a4a20);
   font-size: 12px;
   line-height: 1.2;
 }
@@ -2590,23 +2590,23 @@ button.sleep-breakdown-item {
 button.sleep-breakdown-item:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  background: #f3e8ff;
-  border-color: #d8b4fe;
+  background: var(--v4-accent-bg, #f0dcc6);
+  border-color: var(--v4-act, #c67139);
 }
 
 @media (hover: hover) {
   button.sleep-breakdown-item:hover {
   outline: none;
   transform: translateY(-1px);
-  background: #f3e8ff;
-  border-color: #d8b4fe;
+  background: var(--v4-accent-bg, #f0dcc6);
+  border-color: var(--v4-act, #c67139);
 }
 }
 
 .sleep-breakdown-item--nap.has-value {
   background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-  border-color: #c4b5fd;
-  color: #5b21b6;
+  border-color: var(--v4-act, #c67139);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .sleep-breakdown-cta {
@@ -2619,7 +2619,7 @@ button.sleep-breakdown-item:focus-visible {
   border: 1px solid #d8b4fe;
   border-radius: 12px;
   background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-  color: #5b21b6;
+  color: var(--v4-act-text, #8a4a20);
   font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
@@ -2653,8 +2653,8 @@ button.sleep-breakdown-item:focus-visible {
 
 .sleep-breakdown-cta.subtle {
   background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
-  border-color: #e9d5ff;
-  color: #6d28d9;
+  border-color: var(--v4-act, #c67139);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .sleep-breakdown-cta.recommended {
@@ -2666,8 +2666,8 @@ button.sleep-breakdown-item:focus-visible {
 
 .sleep-breakdown-cta.has-value {
   background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-  border-color: #a78bfa;
-  color: #4c1d95;
+  border-color: var(--v4-act, #c67139);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .sleep-breakdown-reason {
@@ -2751,12 +2751,12 @@ button.sleep-breakdown-item:focus-visible {
 
 .sleep-note:focus {
   outline: none;
-  border-color: #ec4899;
+  border-color: var(--v4-act, #c67139);
   background: var(--color-white);
 }
 
 .sleep-note::placeholder {
-  color: #f9a8d4;
+  color: var(--v4-warn-text, #a1471c);
 }
 
 /* Оценка дня (автоматическая) */
@@ -2775,7 +2775,7 @@ button.sleep-breakdown-item:focus-visible {
 .day-score-value-big {
   font-size: 36px;
   font-weight: 700;
-  color: #be185d;
+  color: var(--v4-warn-text, #a1471c);
   line-height: 1;
 }
 
@@ -2787,7 +2787,7 @@ button.sleep-breakdown-item:focus-visible {
 
 .day-score-auto-hint {
   font-size: 11px;
-  color: #a855f7;
+  color: var(--v4-act-text, #8a4a20);
   margin-left: 8px;
   padding: 2px 6px;
   background: rgba(168, 85, 247, 0.1);
@@ -2833,7 +2833,7 @@ button.sleep-breakdown-item:focus-visible {
 
 [data-theme='dark'] .curator-authored-hint {
   background: rgba(142, 142, 147, 0.2);
-  color: #8e8e93;
+  color: var(--v4-ink-3) /* v4-intentional */;
 }
 
 .day-score-display.clickable {
@@ -2908,7 +2908,7 @@ button.sleep-breakdown-item:focus-visible {
   background: var(--color-white);
   font-size: 14px;
   font-weight: 600;
-  color: #374151;
+  color: var(--v4-ink-2) /* v4-intentional */;
   cursor: pointer;
   transition: all 0.15s ease;
   position: relative;
@@ -2963,13 +2963,13 @@ button.sleep-breakdown-item:focus-visible {
 /* === 11. Measurements card — Dark mode === */
 [data-theme$="dark"] .measurements-card {
   background: var(--v4-bg, #0b1220);
-  border-color: #1f2937;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 [data-theme$="dark"] .measurements-card__row {
   background: var(--v4-bg, #0f172a);
-  border-color: #1f2937;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 [data-theme$="dark"] .measurement-spark line {
@@ -2977,7 +2977,7 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 [data-theme$="dark"] .measurement-spark circle {
-  fill: #1f2937;
+  fill: var(--v4-hero, #efe3cf);
 }
 
 [data-theme$="dark"] .measurement-spark circle:last-of-type {
@@ -2989,17 +2989,17 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 [data-theme$="dark"] .measurements-card__empty {
-  border-color: #1f2937;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 [data-theme$="dark"] .measurements-card__button {
   background: var(--v4-bg, #0f172a);
-  border-color: #1f2937;
-  color: #e2e8f0;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
+  color: var(--v4-ink-4) /* v4-intentional */;
 }
 
 [data-theme$="dark"] .measurements-card__edit {
-  border-color: #1f2937;
+  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
 [data-theme$="dark"] .measurement-spark-empty {
@@ -3012,6 +3012,7 @@ button.sleep-breakdown-item:focus-visible {
  * ============================================================ */
 
 .ndte-badge {
+
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3023,11 +3024,22 @@ button.sleep-breakdown-item:focus-visible {
   transition: all 0.2s ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.ndte-badge::after {
+  content: '';
+  position: absolute;
+  inset: -10.4px -0px;
+}
+
 
 .ndte-badge--active {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(34, 197, 94, 0.1));
-  color: #059669;
+  color: var(--v4-ok-text, #5c6a45);
   animation: ndtePulse 2.5s ease-in-out infinite;
 }
 
@@ -3112,7 +3124,7 @@ button.sleep-breakdown-item:focus-visible {
 .ndte-expand__title {
   font-size: 15px;
   font-weight: 700;
-  color: #059669;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .ndte-expand__subtitle {
@@ -3150,7 +3162,7 @@ button.sleep-breakdown-item:focus-visible {
 .ndte-expand__stat-value {
   font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .ndte-expand__stat-label {
@@ -3177,7 +3189,7 @@ button.sleep-breakdown-item:focus-visible {
 .ndte-expand__decay-time {
   font-size: 12px;
   font-weight: 600;
-  color: #059669;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 .ndte-expand__decay-bar {
@@ -3197,7 +3209,7 @@ button.sleep-breakdown-item:focus-visible {
 /* Dark theme */
 [data-theme$="dark"] .ndte-badge--active {
   background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(34, 197, 94, 0.15));
-  color: #34d399;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 [data-theme$="dark"] .ndte-expand {
@@ -3214,7 +3226,7 @@ button.sleep-breakdown-item:focus-visible {
 }
 
 [data-theme$="dark"] .ndte-expand__title {
-  color: #34d399;
+  color: var(--v4-ok-text, #5c6a45);
 }
 
 /* MODULE 03 — Dark Theme & Effects
