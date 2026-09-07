@@ -7,6 +7,7 @@ import {
   EXEMPTION_REGISTRY,
   MIN_TOUCH_PX,
   compareRatchet,
+  effectiveTouchSize,
   findPseudoExpander,
   hasNegativeMarginExpander,
   isVisibleTouchOk,
@@ -98,9 +99,15 @@ describe('ui-v4 touch-target visible gate', () => {
     expect(isVisibleTouchOk(size)).toBe(false);
   });
 
-  it('findPseudoExpander · невидимый ::after hit-area', () => {
-    const hit = findPseudoExpander(FIXTURE_CSS, '.touch-after-trick');
-    expect(hit).toMatchObject({ pseudo: '::after', kind: 'invisible-pseudo-hit-area' });
+  it('findPseudoExpander · прозрачный ::after припуск по контракту', () => {
+    const rules = parseCssRules(FIXTURE_CSS);
+    const hostBlock = rules.find((r) => r.selectors.includes('.touch-after-trick')).block;
+    const hit = findPseudoExpander(FIXTURE_CSS, '.touch-after-trick', hostBlock);
+    expect(hit).toMatchObject({ pseudo: '::after', kind: 'pseudo-padding-expander', expand: { top: 7 } });
+    const size = effectiveTouchSize(30, 30, hit);
+    expect(size.width).toBe(44);
+    expect(size.height).toBe(44);
+    expect(isVisibleTouchOk({ width: size.width, height: size.height, display: 'inline-block' })).toBe(true);
   });
 
   it('findPseudoExpander · content:none не считается expander', () => {

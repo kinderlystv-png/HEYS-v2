@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 /**
- * ui-v4-check-touch-target-visible.mjs — гейт видимых тач-целей ≥44px (полоса 4 · задача 69).
+ * ui-v4-check-touch-target-visible.mjs — гейт тач-целей ≥44px (полоса 4 · задача 69).
  *
- * Считает layout box элемента с видимым фоном/контентом. НЕ засчитывает:
- * - ::after/::before hit-area без видимого фона;
- * - отрицательный margin как расширитель;
- * - padding/area без видимого габарита кнопки.
+ * Контракт v4-tap-target-contract: рисунок может быть меньше 44 px, цель
+ * добирается прозрачным припуском ::after/::before (host position:relative,
+ * pseudo position:absolute + inset или четыре смещения). Видимый размер кнопки
+ * при этом не меняется — засчитывается итоговая зона ≥44×44.
+ *
+ * НЕ засчитывает:
+ * - отрицательный margin (двигает соседей, а не цель);
+ * - припуск псевдоэлемента без position:relative на хосте или без ≥44 по обеим осям.
+ *
+ * jsdom не раскладывает layout: width=0 и height=0 вместе — «не измерено», не нарушение.
  *
  * Флаги:
  *   --inventory          полный инвентарь → JSON + stdout summary
@@ -434,11 +440,107 @@ export function defaultTagForClass(className) {
   return 'button';
 }
 
+/** @param {string} block */
+export function hostPositionRelative(block) {
+  return /position\s*:\s*relative/i.test(block);
+}
+
+/** @param {string} block */
+export function pseudoPositionAbsolute(block) {
+  return /position\s*:\s*absolute/i.test(block);
+}
+
+/** @param {string} value */
+function insetValueToExpandPx(value) {
+  const n = parsePx(value);
+  return n < 0 ? -n : 0;
+}
+
+/**
+ * Отрицательный inset/offset псевдоэлемента → припуск в px по сторонам.
+ * @param {string} block
+ * @returns {{ top: number, right: number, bottom: number, left: number } | null}
+ */
+export function parsePseudoPaddingExpand(block) {
+  const insetMatch = /inset\s*:\s*([^;]+)/i.exec(block);
+  if (insetMatch) {
+    const parts = insetMatch[1].trim().split(/\s+/);
+    const values = parts.map(insetValueToExpandPx);
+    if (values.length === 1) {
+      const v = values[0];
+      return { top: v, right: v, bottom: v, left: v };
+    }
+    if (values.length === 2) {
+      return { top: values[0], right: values[1], bottom: values[0], left: values[1] };
+    }
+    if (values.length === 3) {
+      return { top: values[0], right: values[1], bottom: values[2], left: values[1] };
+    }
+    if (values.length >= 4) {
+      return { top: values[0], right: values[1], bottom: values[2], left: values[3] };
+    }
+  }
+  const top = /(?:^|[;{])\s*top\s*:\s*([^;]+)/i.exec(block);
+  const right = /(?:^|[;{])\s*right\s*:\s*([^;]+)/i.exec(block);
+  const bottom = /(?:^|[;{])\s*bottom\s*:\s*([^;]+)/i.exec(block);
+  const left = /(?:^|[;{])\s*left\s*:\s*([^;]+)/i.exec(block);
+  if (top || right || bottom || left) {
+    return {
+      top: insetValueToExpandPx(top?.[1] ?? '0'),
+      right: insetValueToExpandPx(right?.[1] ?? '0'),
+      bottom: insetValueToExpandPx(bottom?.[1] ?? '0'),
+      left: insetValueToExpandPx(left?.[1] ?? '0'),
+    };
+  }
+  return null;
+}
+
 /**
  * @param {string} cssText
  * @param {string} selector
+ * @returns {string | null}
  */
-export function findPseudoExpander(cssText, selector) {
+export function findHostBlock(cssText, selector) {
+  const cleaned = stripCssComments(cssText);
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'i');
+  const m = cleaned.match(re);
+  return m ? m[1] : null;
+}
+
+/**
+ * @param {number} w
+ * @param {number} h
+ * @param {{ top: number, right: number, bottom: number, left: number }} expand
+ */
+export function touchBoundsWithPseudoPadding(w, h, expand) {
+  return {
+    width: w + expand.left + expand.right,
+    height: h + expand.top + expand.bottom,
+  };
+}
+
+/** @param {string} block @param {'width'|'height'} axis */
+export function declaredAxisPx(block, axis) {
+  const props = axis === 'width' ? ['width', 'min-width'] : ['height', 'min-height'];
+  let max = 0;
+  for (const prop of props) {
+    const m = new RegExp(`${prop}\\s*:\\s*(\\d+(?:\\.\\d+)?)px`, 'i').exec(block);
+    if (m) max = Math.max(max, parsePx(m[1]));
+  }
+  return max;
+}
+
+/**
+ * Прозрачный припуск ::after/::before по контракту v4-tap-target-contract.
+ * @param {string} cssText
+ * @param {string} selector
+ * @param {string} [hostBlock]
+ */
+export function findPseudoExpander(cssText, selector, hostBlock) {
+  const host = hostBlock ?? findHostBlock(cssText, selector);
+  if (!host || !hostPositionRelative(host)) return null;
+
   const cleaned = stripCssComments(cssText);
   for (const pseudo of ['::after', '::before']) {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -448,19 +550,58 @@ export function findPseudoExpander(cssText, selector) {
     const block = m[1];
     if (/content\s*:\s*none/i.test(block)) continue;
     if (!/content\s*:/i.test(block)) continue;
+    if (!pseudoPositionAbsolute(block)) continue;
     const hasBg =
       /background(?:-color)?\s*:\s*(?!transparent\b|none\b)[^;]+/i.test(block) ||
       /box-shadow\s*:/i.test(block) ||
       /border\s*:\s*(?!none\b|0\b)/i.test(block);
-    const hasInset =
-      /inset\s*:\s*-?\d/i.test(block) ||
-      /(?:top|left|right|bottom)\s*:\s*-/i.test(block) ||
-      /width\s*:\s*\d{2,}/i.test(block);
-    if (hasInset && !hasBg) {
-      return { pseudo, kind: 'invisible-pseudo-hit-area', block: block.trim() };
+    if (hasBg) continue;
+
+    const expand = parsePseudoPaddingExpand(block);
+    if (expand && expand.top + expand.right + expand.bottom + expand.left > 0) {
+      return {
+        pseudo,
+        kind: 'pseudo-padding-expander',
+        block: block.trim(),
+        expand,
+      };
+    }
+
+    const widthMatch = /width\s*:\s*(\d+(?:\.\d+)?)px/i.exec(block);
+    const heightMatch = /height\s*:\s*(\d+(?:\.\d+)?)px/i.exec(block);
+    if (widthMatch && heightMatch) {
+      const pw = parsePx(widthMatch[1]);
+      const ph = parsePx(heightMatch[1]);
+      if (pw >= MIN_TOUCH_PX && ph >= MIN_TOUCH_PX) {
+        return {
+          pseudo,
+          kind: 'pseudo-padding-expander',
+          block: block.trim(),
+          explicitSize: { width: pw, height: ph },
+        };
+      }
     }
   }
   return null;
+}
+
+/**
+ * @param {number} visW
+ * @param {number} visH
+ * @param {ReturnType<typeof findPseudoExpander>} pseudoExpander
+ */
+export function effectiveTouchSize(visW, visH, pseudoExpander) {
+  if (!pseudoExpander) return { width: visW, height: visH };
+  if (pseudoExpander.explicitSize) {
+    return {
+      width: Math.max(visW, pseudoExpander.explicitSize.width),
+      height: Math.max(visH, pseudoExpander.explicitSize.height),
+    };
+  }
+  if (pseudoExpander.expand) {
+    return touchBoundsWithPseudoPadding(visW, visH, pseudoExpander.expand);
+  }
+  return { width: visW, height: visH };
 }
 
 /** @param {string} block */
@@ -720,7 +861,7 @@ export async function collectInventory(opts = {}) {
       }
 
       const exemption = matchesExemption(selector);
-      const pseudoExpander = findPseudoExpander(cssText, selector);
+      const pseudoExpander = findPseudoExpander(cssText, selector, rule.block);
       const negMargin = hasNegativeMarginExpander(rule.block);
 
       let size = { width: 0, height: 0, minWidth: 0, minHeight: 0, display: '' };
@@ -730,20 +871,51 @@ export async function collectInventory(opts = {}) {
         /* invalid selector cascade in jsdom — оставляем 0 */
       }
 
-      const visibleOk = isVisibleTouchOk(size);
+      const hidden = size.display === 'none' || size.visibility === 'hidden';
+      let visW = size.width;
+      let visH = size.height;
+      if (!hidden) {
+        if (visW === 0) visW = Math.max(declaredAxisPx(rule.block, 'width'), size.minWidth || 0);
+        if (visH === 0) visH = Math.max(declaredAxisPx(rule.block, 'height'), size.minHeight || 0);
+      }
+
+      const effective = effectiveTouchSize(visW, visH, pseudoExpander);
+      const pseudoPaddingOk = isVisibleTouchOk({ ...size, width: effective.width, height: effective.height });
+      const visibleOk = isVisibleTouchOk(size) || pseudoPaddingOk;
+      const isUnmeasured = !hidden && size.width === 0 && size.height === 0 && visW === 0 && visH === 0;
+
       const tricks = [];
-      if (pseudoExpander) tricks.push(pseudoExpander.kind);
+      if (pseudoExpander) {
+        tricks.push(pseudoPaddingOk ? 'pseudo-padding-expander' : 'invisible-pseudo-hit-area');
+      }
       if (negMargin) tricks.push('negative-margin-expander');
 
       let bucket = 'violation';
       if (exemption) bucket = 'named-exception';
-      else if (visibleOk && tricks.length === 0) bucket = 'pass';
-      else if (tricks.length > 0) bucket = 'violation';
+      else if (isUnmeasured) bucket = 'unmeasured';
+      else if (negMargin) bucket = 'violation';
+      else if (visibleOk) bucket = 'pass';
 
       if (bucket === 'pass') {
         if (size.widthAssumed) {
           widthAssumed.push({ file: base, selector, className, zone, height: size.height });
         }
+        continue;
+      }
+
+      if (bucket === 'unmeasured') {
+        entries.push({
+          file: base,
+          selector,
+          className,
+          zone,
+          width: size.width,
+          height: size.height,
+          bucket,
+          exemptionType: null,
+          exemptionReason: null,
+          tricks,
+        });
         continue;
       }
 
@@ -766,6 +938,7 @@ export async function collectInventory(opts = {}) {
 
   const violations = entries.filter((e) => e.bucket === 'violation');
   const exceptions = entries.filter((e) => e.bucket === 'named-exception');
+  const unmeasured = entries.filter((e) => e.bucket === 'unmeasured');
   const byZone = {};
   for (const e of [...violations, ...exceptions]) {
     const z = e.zone || '(unknown)';
@@ -786,6 +959,7 @@ export async function collectInventory(opts = {}) {
     counts: {
       violations: violations.length,
       exceptions: exceptions.length,
+      unmeasured: unmeasured.length,
       widthAssumed: widthAssumed.length,
       interactiveRules: seen.size,
     },
@@ -795,6 +969,7 @@ export async function collectInventory(opts = {}) {
     byFile,
     violations,
     exceptions,
+    unmeasured,
     widthAssumed,
   };
   return inventory;
@@ -845,6 +1020,7 @@ function writeJson(target, data) {
 function printSummary(inventory) {
   console.log(
     `Touch-target inventory: ${inventory.counts.violations} violations, ` +
+      `${inventory.counts.unmeasured} не измерено (jsdom 0×0), ` +
       `${inventory.counts.exceptions} named exceptions, ` +
       `${inventory.counts.widthAssumed} с непроверенной шириной, ` +
       `${inventory.scannedFiles.length} CSS files.`,
@@ -913,6 +1089,7 @@ async function main() {
       console.log(
         `Ratchet: ${ratchet.current} violations (baseline ${ratchet.baseline}, Δ ${ratchet.delta >= 0 ? '+' : ''}${ratchet.delta})`,
       );
+      console.log(`Не измерено (jsdom 0×0): ${inventory.counts.unmeasured}`);
       // Остаток непроверенного называется вслух рядом с числом нарушений:
       // ряд во всю ширину прошёл по высоте, а ширину гейт принял, не измерил.
       console.log(
