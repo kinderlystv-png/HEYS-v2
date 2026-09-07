@@ -454,7 +454,7 @@
       "f": "кадр 30×30 play; продукт .msg-audio-play 44×44 — accessibility, тач-цели 6 сентября (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "5085f47d4f9c",
       "reasonCode": "accessibility",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-22-вопроса.md#3"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#messenger-voice-recording-play-exception"
     },
     "Мессенджер · запись голосового · 10": {
       "v": "=",
@@ -1062,7 +1062,7 @@
       "f": "кадр play SVG 13×13 M8 5v14l11-7z; продукт .msg-audio-play — glyph ▶ 44px — canvas-conflict до SVG play (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "c2b4d247a149",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/messenger.v4.dc.html:512"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#messenger-voice-recording-play-exception"
     },
     "Мессенджер · запись голосового · рисунок 08": {
       "v": "=",

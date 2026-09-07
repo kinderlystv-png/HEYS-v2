@@ -224,7 +224,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 05.09: одна строка «—» получила naKind handoff — долг типизирован: 37 → 36.
     // 06.09, package 43 agent-9: «строка поправки · 14» — naKind handoff;
     // legacy notApplicable 36 → 35.
-    notApplicable: [35, '99a78e2e7b6a685d'],
+    // 07.09: «строка поправки · 14» закрыта в «=» — legacy notApplicable 35 → 34.
+    notApplicable: [34, '98b03887a32503b1'],
   }),
   'nutrition-tab': Object.freeze({
     // 04.09: 9e3fc6c3d типизировал 26 legacy «≠» (31 → 5). «—» выросло 168 → 211:
