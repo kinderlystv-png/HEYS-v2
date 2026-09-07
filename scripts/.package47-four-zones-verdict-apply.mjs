@@ -24,7 +24,7 @@ const ROWS = {
     ['строка нормы', '=', '730-widgets-dashboard.css .widget-bd-sheet__norm 11.5/500 ink-2 margin-top 14'],
     ['кофеин без данных', '=', 'heys_widgets_ui_v1.js caffeine field — «нет данных» ink-4 до первого ввода'],
     ['Шторка · Вода · 28', '=', '730-widgets-dashboard.css:14922-14937 .widget-v4-water-rhythm flex-end gap 4 h24; __body margin-top auto — кадр переснят под продукт (ОТВЕТ-22 Q8)'],
-    ['удаление', '=', 'ОТВЕТ-22 Q6: heys_widgets_ui_v1.js handleClick в editMode → onRemove; 730-widgets delete-btn 22px pointer-events none accessory'],
+    ['удаление', '=', 'ОТВЕТ-22 Q6: heys_widgets_ui_v1.js tryEditRemoveTap в editMode → onRemove; 730-widgets delete-btn 22px pointer-events none accessory'],
     ['нажатие', '=', '730-widgets-dashboard.css .widgets-quick-pencil__host::after inset -2px — inner host variant B (ОТВЕТ-22 Q6)'],
   ],
   'checkin-morning': [

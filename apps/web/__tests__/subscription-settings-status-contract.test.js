@@ -12,17 +12,17 @@ const sources = [
 }));
 
 function normalizedSettingsHelpers(source) {
-  const start = source.indexOf('function formatSubscriptionDaysLeft');
+  const start = source.indexOf('function formatSubscriptionEndHeadline');
   const end = source.indexOf('// === SubscriptionStatusSection', start);
   if (start < 0 || end < 0) return '';
   return source.slice(start, end).replace(/\s+/g, ' ').trim();
 }
 
 function loadSettingsHelpers(source) {
-  const start = source.indexOf('function formatSubscriptionDaysLeft');
+  const start = source.indexOf('function formatSubscriptionEndHeadline');
   const end = source.indexOf('// === SubscriptionStatusSection', start);
   const helperSource = source.slice(start, end);
-  return Function(`${helperSource}; return { formatSubscriptionDaysLeft, getSubscriptionSettingsSubtitle };`)();
+  return Function(`${helperSource}; return { formatSubscriptionEndHeadline, getSubscriptionSettingsSubtitle };`)();
 }
 
 describe('subscription settings status contract', () => {

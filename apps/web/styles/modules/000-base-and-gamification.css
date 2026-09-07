@@ -4305,7 +4305,6 @@ html[data-theme-id="blue-dark"] {
 
 /* === 13. Theme FAB (Phase 0 Gamification) === */
 .theme-fab {
-  position: relative;
   position: fixed;
   top: 12px;
   right: 12px;
@@ -4319,16 +4318,25 @@ html[data-theme-id="blue-dark"] {
   backdrop-filter: blur(10px);
   font-size: 18px;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   transition: box-shadow, transform 0.2s ease;
 
 }
 
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.theme-fab::after {
+/* ОТВЕТ-22 Q6, вариант B: припуск на внутреннем host, не на fixed-кнопке. */
+.theme-fab__host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.theme-fab__host::after {
   content: '';
   position: absolute;
   inset: -2px;

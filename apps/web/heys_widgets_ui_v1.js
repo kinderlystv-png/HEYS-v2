@@ -668,22 +668,16 @@
     }, [isEditMode, widget.id]);
 
     const handleClick = useCallback(() => {
-      if (isEditMode) {
-        if (HEYS.Widgets.dnd?.isDragging?.()) return;
-        onRemove?.(widget.id);
+      if (isEditMode) return;
+      if (
+        widget.type === 'crashRisk'
+        && widget.size === '2x1'
+        && HEYS.Widgets.weightDynamicsClickGuard?.isBlocked?.(widget.id)
+      ) {
         return;
       }
-      if (!isEditMode) {
-        if (
-          widget.type === 'crashRisk'
-          && widget.size === '2x1'
-          && HEYS.Widgets.weightDynamicsClickGuard?.isBlocked?.(widget.id)
-        ) {
-          return;
-        }
-        HEYS.Widgets.emit('widget:click', { widget });
-      }
-    }, [isEditMode, onRemove, widget]);
+      HEYS.Widgets.emit('widget:click', { widget });
+    }, [isEditMode, widget]);
 
     const hasVariantPicker = useMemo(() => {
       const catalog = HEYS.Widgets.VariantsV4?.getCatalog?.(widget.type) || [];
@@ -692,6 +686,19 @@
 
     const editLpTimerRef = useRef(null);
     const editLpStartRef = useRef(null);
+    const editRemoveTapRef = useRef(null);
+
+    const tryEditRemoveTap = useCallback((event) => {
+      if (!isEditMode || resizeDragRef.current?.active) return;
+      if (HEYS.Widgets.dnd?.isDragging?.()) return;
+      const start = editRemoveTapRef.current;
+      if (!start) return;
+      editRemoveTapRef.current = null;
+      const x = event?.clientX ?? event?.changedTouches?.[0]?.clientX ?? start.x;
+      const y = event?.clientY ?? event?.changedTouches?.[0]?.clientY ?? start.y;
+      if (Math.abs(x - start.x) > 10 || Math.abs(y - start.y) > 10) return;
+      onRemove?.(widget.id);
+    }, [isEditMode, onRemove, widget.id]);
 
     const cancelEditLongPress = useCallback(() => {
       if (editLpTimerRef.current) {
@@ -1392,6 +1399,12 @@
       onClick: handleClick,
       onPointerDown: (e) => {
         handleViewPointerDown(e);
+        if (isEditMode && !resizeDragRef.current?.active) {
+          editRemoveTapRef.current = {
+            x: e.clientX || e.touches?.[0]?.clientX || 0,
+            y: e.clientY || e.touches?.[0]?.clientY || 0,
+          };
+        }
         handlePointerDown(e);
       },
       onPointerEnter: isEditMode && HEYS.Widgets._catalogDragType
@@ -1410,10 +1423,12 @@
       },
       onPointerUp: (e) => {
         handleViewPointerUp();
+        tryEditRemoveTap(e);
         handlePointerUp(e);
       },
       onPointerCancel: (e) => {
         handleViewPointerUp();
+        editRemoveTapRef.current = null;
         handlePointerUp(e);
       }
     },

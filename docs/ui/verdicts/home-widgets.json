@@ -300,7 +300,7 @@
     },
     "удаление": {
       "v": "=",
-      "f": "ОТВЕТ-22 Q6: heys_widgets_ui_v1.js handleClick в editMode → onRemove; 730-widgets delete-btn 22px pointer-events none accessory",
+      "f": "ОТВЕТ-22 Q6: heys_widgets_ui_v1.js tryEditRemoveTap в editMode → onRemove; 730-widgets delete-btn 22px pointer-events none accessory",
       "h": "f5987ec837b5"
     },
     "добавление": {

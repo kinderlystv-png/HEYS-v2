@@ -150,7 +150,7 @@ describe('home-widgets v4 · бюджет экрана и вход в расст
     expect(UI_SRC).toContain('catalogRemovePick');
     expect(UI_SRC).toContain('widgets-grid--remove-pick');
     expect(UI_SRC).toContain('onStartRemovePick');
-    expect(UI_SRC).toMatch(/if \(isEditMode\)[\s\S]*onRemove\?\.\(widget\.id\)/);
+    expect(UI_SRC).toMatch(/tryEditRemoveTap|onRemove\?\.\(widget\.id\)/);
   });
 
   it('CSS: размеры FAB и правила прокрутки сетки', () => {

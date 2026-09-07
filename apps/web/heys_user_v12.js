@@ -291,15 +291,18 @@
     );
   }
 
-  function formatSubscriptionDaysLeft(daysLeft) {
-    const days = Number(daysLeft);
-    if (!Number.isFinite(days) || days <= 0) return '';
-    const mod10 = days % 10;
-    const mod100 = days % 100;
-    const unit = mod10 === 1 && mod100 !== 11
-      ? 'день'
-      : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'дня' : 'дней');
-    return `${days} ${unit}`;
+  function formatSubscriptionEndHeadline(statusData) {
+    const status = statusData?.status;
+    const endDate = status === 'trial'
+      ? statusData?.trial_ends_at
+      : status === 'active'
+        ? (statusData?.subscription_ends_at || statusData?.subscription_expires_at)
+        : null;
+    if (!endDate) return '';
+    const d = new Date(endDate);
+    if (Number.isNaN(d.getTime())) return '';
+    const short = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace(/\.$/, '');
+    return short ? `до ${short}` : '';
   }
 
   function getSubscriptionSettingsSubtitle(subscription) {
@@ -347,7 +350,7 @@
 
     const status = statusData?.status || 'none';
     const meta = window.HEYS.Subscription.getStatusMeta(status);
-    const daysLeft = statusData?.days_left || 0;
+    const endHeadline = formatSubscriptionEndHeadline(statusData);
 
     return React.createElement('div', { className: 'profile-section__fields' },
       // Статус карточка
@@ -372,8 +375,7 @@
           )
         ),
 
-        // Дни до окончания
-        (status === 'trial' || status === 'active') && daysLeft > 0 &&
+        (status === 'trial' || status === 'active') && endHeadline &&
         React.createElement('div', {
           style: {
             backgroundColor: 'rgba(0,0,0,0.05)',
@@ -384,10 +386,7 @@
           }
         },
           React.createElement('div', { style: { fontSize: '24px', fontWeight: '700', color: meta?.color } },
-            daysLeft
-          ),
-          React.createElement('div', { style: { fontSize: '12px', color: 'var(--gray-600)' } },
-            daysLeft === 1 ? 'день осталось' : (daysLeft < 5 ? 'дня осталось' : 'дней осталось')
+            endHeadline
           )
         ),
 
