@@ -1035,13 +1035,13 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
     expect(prop(cascade, 'padding')).toBe('13px 0');
   });
 
-  it('шапка карточки .mvH: 10.5px/600, чернила 55%, без капса', () => {
+  it('шапка карточки .mvH: 10.5px/600, роль --ink-2, без капса', () => {
     const mvH = canvas.match(/\.mvH b\{([^}]*)\}/);
     expect(mvH && mvH[1]).toContain('10.5px');
     const head = cssBlock(insightsCss, 'insights-v4-nutrition__head');
     expect(prop(head, 'font')).toContain('10.5px');
     expect(prop(head, 'text-transform')).toBe(null);
-    expect(prop(head, 'color')).toContain('0.55');
+    expect(prop(head, 'color')).toMatch(/var\(--v4-ink-2\b/);
   });
 
   it('строка БЖУ .mrow: имя 96, число 58 вправо, полоса 8px', () => {
