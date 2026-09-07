@@ -12,6 +12,26 @@
   /** Как в шаге «Зоны пульса» / настройках профиля (индекс 0…3). */
   const WB_KCAL_ZONE_LABELS = ['Разминка', 'Жиросжигание', 'Аэробная', 'Анаэробная'];
 
+  function LucideStarIcon(props) {
+    const filled = !!(props && props.filled);
+    const size = (props && props.size) || 16;
+    const className = (props && props.className) || '';
+    return React.createElement('svg', {
+      className: className || undefined,
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: filled ? 'currentColor' : 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    }, React.createElement('path', {
+      d: 'M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z'
+    }));
+  }
+
   /**
    * Цена минуты быта — над покоем, как в расчёте дня (TDEE `householdKcal`).
    * Брутто-MET на бейдже давал 60 мин при 80 кг = 210 ккал против 126 в строке
@@ -1046,6 +1066,33 @@
     return {
       ...training,
       plan: { ...training.plan, status: 'done' }
+    };
+  }
+
+  /**
+   * «Завершить вчерашним»: закрывает брошенную сессию на последней отметке.
+   * Дата дня не меняется — тренировка остаётся на дне начала (dateKey), а не
+   * на дне закрытия. Автозавершения и выдуманного времени окончания нет.
+   */
+  function finishPastDay(training) {
+    if (!training || typeof training !== 'object') return training;
+    const wl0 = training.workoutLog && typeof training.workoutLog === 'object'
+      ? { ...training.workoutLog }
+      : {};
+    const closedAt = Number.isFinite(+wl0.lastMarkAt) ? +wl0.lastMarkAt : 0;
+    if (!(closedAt > 0)) return training;
+    wl0.completedAt = closedAt;
+    delete wl0.activeRest;
+    return finishStartedWorkoutPlan({ ...training, workoutLog: wl0 });
+  }
+
+  /** «Удалить сессию»: убирает тренировку с дня без переноса на сегодня. */
+  function deletePastSession(dayData, trainingIndex) {
+    const trainings = Array.isArray(dayData && dayData.trainings) ? dayData.trainings : [];
+    if (trainingIndex < 0 || trainingIndex >= trainings.length) return dayData;
+    return {
+      ...dayData,
+      trainings: trainings.filter(function (_, index) { return index !== trainingIndex; }),
     };
   }
 
@@ -2927,7 +2974,7 @@
             }
             if (typeof haptic === 'function') haptic('light');
           }
-        }, headerIsFav ? '★' : '☆')
+        }, React.createElement(LucideStarIcon, { filled: headerIsFav, size: 16 }))
       ),
       open && suggestions.length > 0 && React.createElement('ul', {
         id: listId,
@@ -2957,7 +3004,7 @@
             }
             if (typeof haptic === 'function') haptic('light');
           }
-        }, isFav ? '★' : '☆');
+        }, React.createElement(LucideStarIcon, { filled: isFav, size: 16 }));
         const labelEl = React.createElement('span', {
           className: 'ct-wb-ex-name-suggest-label',
           onMouseDown: function (e) {
@@ -4902,14 +4949,7 @@
                 },
                 onCloseAtLastMark: function (e) {
                   if (e && e.stopPropagation) e.stopPropagation();
-                  patchTraining(ti, function (t0) {
-                    const wl0 = ensureWorkoutLogShape(t0);
-                    const closedAt = Number.isFinite(+wl0.lastMarkAt) ? +wl0.lastMarkAt : 0;
-                    if (!(closedAt > 0)) return t0;
-                    wl0.completedAt = closedAt;
-                    delete wl0.activeRest;
-                    return finishStartedWorkoutPlan(applyWorkoutLogToTraining(t0, wl0));
-                  });
+                  patchTraining(ti, function (t0) { return finishPastDay(t0); });
                 }
               });
             }
@@ -5206,6 +5246,8 @@
     cloneExercisesForReplay,
     mergeWorkoutLifecyclePatch,
     finishStartedWorkoutPlan,
+    finishPastDay,
+    deletePastSession,
     exerciseRecordsFromApproaches,
     workoutCompositionKey,
     findLastWorkoutBuilderExercises,

@@ -1262,8 +1262,7 @@ describe('сохраняемый отдых', () => {
     expect(daySource).toContain('return prevDay;');
     expect(daySource).toContain("plan: { ...t0.plan, status: 'started' }");
     expect(daySource).toContain('onCloseAtLastMark: function (e)');
-    expect(daySource).toContain('wl0.completedAt = closedAt');
-    expect(daySource).toContain('delete wl0.activeRest');
+    expect(daySource).toContain('finishPastDay(t0)');
     expect(daySource).toContain('removeTraining(ti)');
   });
 });
@@ -1354,7 +1353,7 @@ describe('lifecycle силовой сессии', () => {
       expect(screen.getByText('таймер остановлен на последней отметке в 19:24, чтобы не мотать всю ночь')).toBeTruthy();
       act(() => { vi.advanceTimersByTime(6 * 60 * 60 * 1000); });
       expect(screen.getByText('таймер остановлен на последней отметке в 19:24, чтобы не мотать всю ночь')).toBeTruthy();
-      for (const label of ['удалить', 'дописать', 'закрыть']) fireEvent.click(screen.getByText(label));
+      for (const label of ['Удалить сессию', 'Дописать', 'Завершить вчерашним']) fireEvent.click(screen.getByText(label));
       expect(actions).toEqual(['delete', 'edit', 'close']);
       expect(screen.getByText(/Таймер привязан к подходу, который его запустил/)).toBeTruthy();
     } finally {

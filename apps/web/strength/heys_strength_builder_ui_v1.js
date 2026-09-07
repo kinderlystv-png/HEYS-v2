@@ -1037,6 +1037,13 @@
             || (Array.isArray(openExLocal.approaches) ? openExLocal.approaches.length : 0);
           return (openExLocal.name || 'Без названия') + ' · ' + approachCountLabel(count);
         }
+        if (openUnitLocal === 'weight_reps' || openUnitLocal === 'bodyweight') {
+          const progress = exerciseWorkProgress(openExLocal);
+          if (progress.total) {
+            return (openExLocal.name || 'Без названия') + ' · '
+              + progress.current + ' из ' + progress.total;
+          }
+        }
       }
       return wl.title || (typeof PartsLocal.sessionTitle === 'function'
         ? PartsLocal.sessionTitle(exercises)

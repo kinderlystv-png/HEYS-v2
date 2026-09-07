@@ -38,7 +38,7 @@ describe('subscription settings status contract', () => {
   });
 
   it.each(sources)('$name shows trial meta by end date', ({ source }) => {
-    const { getSubscriptionSettingsSubtitle } = loadSettingsHelpers(source);
+    const { getSubscriptionSettingsSubtitle, formatSubscriptionEndHeadline } = loadSettingsHelpers(source);
     const subscription = {
       getCachedDetails: () => ({ status: 'trial', trial_ends_at: '2026-09-10' }),
       getStatusMeta: () => ({ label: 'Пробный период', shortLabel: 'Триал' }),
@@ -54,6 +54,9 @@ describe('subscription settings status contract', () => {
     expect(getSubscriptionSettingsSubtitle(subscription)).toBe('Триал · до 10 сент');
     globalThis.HEYS = prev;
     expect(source).toContain("(status === 'read_only' || status === 'none')");
+    expect(formatSubscriptionEndHeadline({ status: 'trial', trial_ends_at: '2026-09-10' })).toBe('до 10 сент');
+    expect(formatSubscriptionEndHeadline({ status: 'active', subscription_ends_at: '2026-12-31' })).toMatch(/^до /);
+    expect(source).not.toContain('дней осталось');
   });
 });
 

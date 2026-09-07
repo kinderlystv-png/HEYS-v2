@@ -2256,9 +2256,9 @@
             : 'таймер остановлен, чтобы не мотать всю ночь')
         ),
         h('div', { className: 'sb-offscreen-actions' },
-          h('button', { type: 'button', onClick: onDelete }, 'удалить'),
-          h('button', { type: 'button', onClick: onOpen }, 'дописать'),
-          h('button', { type: 'button', className: 'is-close', onClick: onCloseAtLastMark }, 'закрыть')
+          h('button', { type: 'button', className: 'is-close', onClick: onCloseAtLastMark }, 'Завершить вчерашним'),
+          h('button', { type: 'button', onClick: onOpen }, 'Дописать'),
+          h('button', { type: 'button', onClick: onDelete }, 'Удалить сессию')
         ),
         h('div', { className: 'sb-offscreen-note' },
           'Таймер привязан к подходу, который его запустил, а не к тому, что открыто на экране: тап по закрытому упражнению его не останавливает, кольцо схлопывается в строку. Ночью он не идёт — остановлен на последней отметке.')

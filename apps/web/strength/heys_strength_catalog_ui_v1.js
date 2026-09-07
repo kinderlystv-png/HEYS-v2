@@ -20,6 +20,28 @@
   if (!React) return;
   const h = React.createElement;
 
+  function LucideStarIcon(props) {
+    const filled = !!(props && props.filled);
+    const size = (props && props.size) || 13;
+    const className = (props && props.className) || '';
+    return h('svg', {
+      className: className || undefined,
+      width: size,
+      height: size,
+      viewBox: '0 0 24 24',
+      fill: filled ? 'currentColor' : 'none',
+      stroke: 'currentColor',
+      strokeWidth: 2,
+      strokeLinejoin: 'round',
+      'aria-hidden': 'true',
+      focusable: 'false'
+    }, h('path', {
+      d: 'M12 3.2l2.7 5.5 6 .9-4.35 4.24 1.03 6-5.38-2.83L6.6 19.84l1.03-6L3.28 9.6l6-.9z'
+    }));
+  }
+
+  Cat.LucideStarIcon = LucideStarIcon;
+
   function metaApi() {
     return HEYS.exerciseMeta || null;
   }
@@ -193,7 +215,7 @@
             className: 'sb-chip' + (group === 'fav' ? ' is-on' : ''),
             onClick: function () { setGroup('fav'); },
             'aria-label': 'Избранное'
-          }, '★'),
+          }, h(LucideStarIcon, { filled: group === 'fav', size: 13 })),
           groupChips.map(function (g) {
             return h('button', {
               key: g.id,
@@ -235,7 +257,7 @@
                     }
                   },
                   'aria-label': r.favorite ? 'Убрать из избранного' : 'В избранное'
-                }, '★')
+                }, h(LucideStarIcon, { filled: !!r.favorite, size: 13 }))
               );
             })
           ),
