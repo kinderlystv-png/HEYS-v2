@@ -1914,6 +1914,11 @@
       "v": "=",
       "f": "Ни одной цели ниже 44 в зоне: node scripts/ui-v4-check-touch-target-visible.mjs --inventory на 6 сентября даёт gamification 0 нарушений; гейт в тот же день перестал считать нулевыми ряд во всю ширину, элемент с inset:0 и строку, высоту которой даёт поле с текстом.",
       "h": "823fa2ac6d51"
+    },
+    "имя достижения — полные чернила": {
+      "v": "=",
+      "f": ".game-v4-sheet__ach-name color var(--v4-ink, #201e1d) — apps/web/styles/modules/000-base-and-gamification.css:19146-19154; gamification-v4-ink-ladder-contract.test.js; ПОДТВЕРЖДЕНО 7 сентября: полные чернила --tx, не ступень",
+      "h": "502348415326"
     }
   },
   "frames": {
