@@ -28,6 +28,18 @@ function rule(css, selector) {
   return css.slice(at, css.indexOf('}', at));
 }
 
+/** Найти блок ::after, в том числе в групповом селекторе. */
+function afterRule(css, host) {
+  const direct = rule(css, `${host}::after`);
+  if (direct) return direct;
+  const needle = `${host}::after`;
+  const at = css.indexOf(needle);
+  if (at < 0) return null;
+  const brace = css.indexOf('{', at);
+  if (brace < 0) return null;
+  return css.slice(at, css.indexOf('}', brace));
+}
+
 const cases = [
   {
     what: 'крестик шторки настроек',
@@ -59,10 +71,31 @@ describe('контракт цели касания 44 pt', () => {
     expect(host, `нет правила ${c.host}`).toBeTruthy();
     expect(host).toMatch(/position:\s*relative/);
 
-    const after = rule(css, `${c.host}::after`);
+    const after = afterRule(css, c.host);
     expect(after, `нет припуска ${c.host}::after`).toBeTruthy();
     expect(after).toMatch(/position:\s*absolute/);
     expect(after).toContain(`inset: ${c.inset}`);
+  });
+
+  const manifest = JSON.parse(
+    read('__tests__/fixtures/v4-tap-target-inset-manifest.json'),
+  );
+  const polosa5Zones = new Set(['planning', 'settings-system', 'service-curator']);
+  const polosa5Cases = manifest.filter((c) => polosa5Zones.has(c.zone));
+
+  it.each(polosa5Cases)('полоса 5 · $zone · $host: припуск ::after', (c) => {
+    const css = read(c.file);
+    const hosts = c.host.split(',').map((s) => s.trim());
+    for (const host of hosts) {
+      const block = rule(css, host);
+      expect(block, `нет ${host}`).toBeTruthy();
+      expect(block).toMatch(/position:\s*relative/);
+      const after = afterRule(css, host);
+      expect(after, `нет ${host}::after`).toBeTruthy();
+      expect(after).toMatch(/content:\s*''/);
+      expect(after).toMatch(/position:\s*absolute/);
+      expect(after).toContain('inset:');
+    }
   });
 
   it('видимый размер не менялся — цель растёт припуском, а не кнопкой', () => {

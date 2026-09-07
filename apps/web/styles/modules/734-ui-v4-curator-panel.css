@@ -70,6 +70,7 @@
    красится пилюля-значок (срок, давность), а фильтр — только когда выбран.
    Акцент на всех чипах сразу делал вид, что включены все. */
 .cur-chip {
+  position: relative;
   padding: 4px 7px;
   border: none;
   border-radius: 999px;
@@ -97,7 +98,7 @@
 /* Кадр «Очередь · Анкеты/Решения · 06»: пилюля «закрыть» на --c2 тоном --ink-2,
    а не общий ink-3 фильтров подвкладок. */
 .cur-cab__queue-head > .cur-chip {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cur-chip.is-muted.is-on {
@@ -131,6 +132,7 @@
 }
 
 .cur-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 11px;
@@ -296,6 +298,7 @@
    рисует их тем же card-рядом, что и остальных клиентов. Тинт «идёт хорошо»
    говорил бы, что здесь что-то хорошо, тогда как это просто уже разобранное. */
 .cur-fine__toggle {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -770,7 +773,7 @@
   width: 108px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .cur-sheet__bar {
@@ -949,6 +952,7 @@
 /* Счёт клиентов и состояние системы одной строкой: два отдельных индикатора
    занимали место и спорили за внимание, а вместе читаются как одна сводка. */
 .cur-cab__subtitle {
+  position: relative;
   display: block;
   width: 100%;
   padding: 0;
@@ -966,6 +970,7 @@
 /* Возврат — круглая кнопка, а не квадрат с рамкой: в наборе круг значит
    «увести отсюда», и на тёмной шапке это читалось иначе только из-за фона. */
 .cur-cab__back {
+  position: relative;
   flex: 0 0 auto;
   width: 40px;
   height: 40px;
@@ -990,6 +995,7 @@
 }
 
 .cur-cab__tab {
+  position: relative;
   flex: none;
   padding: 8px 9px;
   border: none;
@@ -1042,6 +1048,7 @@
    Круглая «⋯» остаётся единственной кнопкой в карточке — она открывает, а не
    делает, и потому не спорит с главным действием карточки. */
 .cur-cab__more {
+  position: relative;
   flex: 0 0 auto;
   width: 40px;
   height: 40px;
@@ -1246,6 +1253,7 @@
 }
 
 .cdo-metric {
+  position: relative;
   border: none;
   border-radius: 16px;
   padding: 12px 14px;
@@ -1726,6 +1734,7 @@
 /* Закрытие — круглая кнопка 40 px, как все уводящие кнопки набора: квадрат
    28 px на тёмной шапке был мал для пальца. */
 .cur-cab__sheet-close {
+  position: relative;
   flex: 0 0 auto;
   width: 40px;
   height: 40px;
@@ -2407,3 +2416,59 @@
   line-height: 1;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
+
+/* polosa5-tap-inset */
+.cur-chip::after {
+  content: '';
+  position: absolute;
+  inset: -14px 0;
+}
+
+.cur-row::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+
+.cur-fine__toggle::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+
+.cur-cab__back::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
+.cur-cab__tab::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
+.cur-cab__more::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
+.cdo-metric::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
+.cur-cab__sheet-close::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
+.cur-cab__subtitle::after {
+  content: '';
+  position: absolute;
+  inset: -16px 0;
+}
+

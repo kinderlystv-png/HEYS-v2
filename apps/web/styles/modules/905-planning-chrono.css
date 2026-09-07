@@ -134,6 +134,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-timer-banner__control {
+  position: relative;
     color: var(--planning-accent, #2563eb);
 }
 
@@ -353,6 +354,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__timer-chip {
+  position: relative;
     flex: 1 0 calc(50% - 4px);
     padding: 11px 10px;
     border-radius: 12px;
@@ -400,6 +402,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__target-kind-btn {
+  position: relative;
     border: none;
     background: transparent;
     color: var(--planning-muted, #64748b);
@@ -444,6 +447,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-scope-bar__toggle-item {
+  position: relative;
     border: none;
     background: transparent;
     color: var(--planning-muted, #64748b);
@@ -461,6 +465,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-scope-bar__nav-btn {
+  position: relative;
     width: 28px;
     height: 28px;
     border-radius: 50%;
@@ -490,6 +495,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-scope-bar__today {
+  position: relative;
     margin-left: auto;
     padding: 4px 10px;
     border-radius: 999px;
@@ -503,6 +509,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-scope-bar__icon-btn {
+  position: relative;
     width: 34px;
     height: 34px;
     border-radius: 50%;
@@ -544,6 +551,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-strip__item {
+  position: relative;
     --hue: 210deg;
     display: inline-flex;
     align-items: center;
@@ -1080,6 +1088,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__close {
+  position: relative;
     flex: 0 0 auto;
     width: 22px;
     height: 22px;
@@ -1124,6 +1133,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__remove {
+  position: relative;
     flex: 0 0 auto;
     width: 24px;
     height: 24px;
@@ -1181,6 +1191,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__parallel-toggle {
+  position: relative;
     flex: 0 0 auto;
     display: inline-flex;
     align-items: center;
@@ -1229,6 +1240,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-untracked-flow__range {
+  position: relative;
     --chrono-range-fill: var(--v4-ok-text, #16a34a);
     --chrono-range-track: rgba(15, 23, 42, 0.13);
     --chrono-range-shadow: rgba(22, 163, 74, 0.28);
@@ -2004,6 +2016,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-history__tiny-btn {
+  position: relative;
     border: 1px solid rgba(15, 23, 42, 0.1);
     background: rgba(255, 255, 255, 0.92);
     color: var(--planning-text, #0f172a);
@@ -2077,6 +2090,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-picker__archive-toggle {
+  position: relative;
     border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.12));
     background: var(--planning-surface, #fff);
     color: var(--planning-muted, #64748b);
@@ -2114,6 +2128,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-picker__emoji--btn {
+  position: relative;
     background: transparent;
     border: 1px dashed var(--planning-border, rgba(15, 23, 42, 0.12));
     border-radius: 8px;
@@ -2195,6 +2210,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-picker__icon-btn {
+  position: relative;
     width: 30px;
     height: 30px;
     border-radius: 8px;
@@ -2248,6 +2264,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-picker__create-btn {
+  position: relative;
     flex: 0 0 auto;
     padding: 6px 14px;
     background: var(--planning-accent, #2563eb);
@@ -2280,6 +2297,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-emoji-palette__item {
+  position: relative;
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -2364,6 +2382,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-delete__merge-option {
+  position: relative;
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -3060,6 +3079,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__parallel-toggle {
+    position: relative;
     width: 100%;
     border: none;
     background: transparent;
@@ -3176,6 +3196,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__target-unit-btn {
+  position: relative;
     border: none;
     background: transparent;
     color: var(--planning-muted, #64748b);
@@ -3207,6 +3228,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-duration__target-clear {
+  position: relative;
     flex: 0 0 auto;
     border: none;
     background: transparent;
@@ -3227,6 +3249,7 @@ html.chrono-bubble-dragging .chrono-screen {
 /* Кнопка Сохранить/Обновить — синяя, при flash зеленеет на 900мс
    (тот же savedFlash-стейт, что и инпут). */
 .chrono-duration__target-save {
+  position: relative;
     margin-left: auto;
     flex: 0 0 auto;
     border: none;
@@ -3333,6 +3356,7 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-duration__category-chip,
 .chrono-duration__smart-chip {
+    position: relative;
     border: 1px solid var(--planning-border, rgba(15, 23, 42, 0.1));
     background: var(--planning-surface, #fff);
     color: var(--planning-text, #0f172a);
@@ -3389,6 +3413,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-timeline__row {
+  position: relative;
     display: grid;
     grid-template-columns: 52px 12px minmax(0, 1fr) auto;
     gap: 10px;
@@ -3690,6 +3715,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-undo-toast__action {
+    position: relative;
     background: transparent;
     border: none;
     color: #93c5fd;
@@ -3700,6 +3726,7 @@ html.chrono-bubble-dragging .chrono-screen {
 }
 
 .chrono-undo-toast__close {
+    position: relative;
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.7);
@@ -3802,3 +3829,174 @@ html.chrono-bubble-dragging .chrono-screen {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
 }
+
+/* polosa5-tap-inset */
+.chrono-timer-banner__control::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.chrono-duration__timer-chip::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.chrono-duration__target-kind-btn::after {
+  content: '';
+  position: absolute;
+  inset: -13px 0;
+}
+
+.chrono-scope-bar__toggle-item::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+}
+
+.chrono-scope-bar__nav-btn::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.chrono-scope-bar__today::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+}
+
+.chrono-scope-bar__icon-btn::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
+.chrono-strip__item::after {
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}
+
+.chrono-overview__ledger-row::after {
+  content: '';
+  position: absolute;
+  inset: -12px 0;
+}
+
+.chrono-untracked-flow__close::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
+.chrono-untracked-flow__remove::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+.chrono-untracked-flow__parallel-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -10px -3px;
+}
+
+.chrono-untracked-flow__range::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.chrono-history__tiny-btn::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
+}
+
+.chrono-picker__archive-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}
+
+.chrono-picker__emoji--btn::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.chrono-picker__icon-btn::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+}
+
+.chrono-picker__create-btn::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
+.chrono-emoji-palette__item::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+.chrono-delete__merge-option::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+.chrono-duration__target-unit-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px -6px;
+}
+
+.chrono-duration__target-clear::after {
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}
+
+.chrono-duration__target-save::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
+.chrono-timeline__row::after {
+  content: '';
+  position: absolute;
+  inset: -3px 0;
+}
+
+.chrono-duration__category-chip::after,
+.chrono-duration__smart-chip::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
+.chrono-duration__parallel-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+.chrono-undo-toast__action::after {
+  content: '';
+  position: absolute;
+  inset: -15px 0;
+}
+
+.chrono-undo-toast__close::after {
+  content: '';
+  position: absolute;
+  inset: -14px;
+}
+

@@ -1,0 +1,830 @@
+[
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cdo-metric",
+    "inset": "-1px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-delete__merge-option",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-duration__parallel-toggle",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-duration__smart-chip",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-duration__target-clear",
+    "inset": "-10px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-duration__target-kind-btn",
+    "inset": "-13px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-duration__target-save",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-duration__target-unit-btn",
+    "inset": "-11px -6px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-duration__timer-chip",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-emoji-palette__item",
+    "inset": "-4px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-history__tiny-btn",
+    "inset": "-9px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-overview__ledger-row",
+    "inset": "-12px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-picker__archive-toggle",
+    "inset": "-10px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-picker__create-btn",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-picker__emoji--btn",
+    "inset": "-4px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-picker__icon-btn",
+    "inset": "-7px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-scope-bar__icon-btn",
+    "inset": "-5px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-scope-bar__nav-btn",
+    "inset": "-8px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-scope-bar__today",
+    "inset": "-11px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-scope-bar__toggle-item",
+    "inset": "-11px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-strip__item",
+    "inset": "-10px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-timeline__row",
+    "inset": "-3px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-timer-banner__control",
+    "inset": "-8px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-undo-toast__action",
+    "inset": "-15px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-undo-toast__close",
+    "inset": "-14px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-untracked-flow__close",
+    "inset": "-11px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-untracked-flow__parallel-toggle",
+    "inset": "-10px -3px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-untracked-flow__range",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-untracked-flow__remove",
+    "inset": "-10px"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/heys-components.css",
+    "host": ".client-dropdown__close",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cur-cab__back",
+    "inset": "-2px"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cur-cab__more",
+    "inset": "-2px"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cur-cab__sheet-close",
+    "inset": "-2px"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cur-cab__subtitle",
+    "inset": "-16px 0"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cur-cab__tab",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cur-chip",
+    "inset": "-14px 0"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cur-fine__toggle",
+    "inset": "-2px 0"
+  },
+  {
+    "zone": "service-curator",
+    "file": "styles/modules/734-ui-v4-curator-panel.css",
+    "host": ".cur-row",
+    "inset": "-2px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".gantt-quick-edit-progress-slider",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".gantt-quick-edit-seg-btn",
+    "inset": "-2px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".gantt-quick-edit-toggle",
+    "inset": "-10px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/906-planning-goal-map.css",
+    "host": ".goal-map-edge__hit",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "settings-system",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".hdr-settings-sheet__chip",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "settings-system",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".notify-detail__capsule",
+    "inset": "-3px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-action-menu__close",
+    "inset": "-3px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-action-menu__swatch",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-add-btn",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-bg-section__toggle",
+    "inset": "-10px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-bg-swatch",
+    "inset": "-8px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-btn",
+    "inset": "-7px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-calendar-display-settings__close",
+    "inset": "-5px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-calendar-slot",
+    "inset": "-7px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-calendar-slot__carryover",
+    "inset": "-13px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-calendar-slot__complete",
+    "inset": "-13px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-calendar-slot__delete",
+    "inset": "-14px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-calendar-task-picker__action",
+    "inset": "-7px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-calendar-task-picker__close",
+    "inset": "-5px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-calendar-undo-toast__btn",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-archive-badge",
+    "inset": "-7px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-archive-row__restore",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-modal__close",
+    "inset": "-8px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-modal__preset-option",
+    "inset": "-3px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-modal__primary",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-modal__secondary",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-modal__tab",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__bulk-toggle",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__card-toggle",
+    "inset": "-15px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__create",
+    "inset": "-7px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__edit",
+    "inset": "-10px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__empty-add",
+    "inset": "-7px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__facility-option",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__group-edit",
+    "inset": "-12px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__item",
+    "inset": "-13px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__item-edit",
+    "inset": "-13px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__params-collapse",
+    "inset": "-12px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__params-summary",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-checklists-screen__stepper button",
+    "inset": "-11px -12px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-clear-tasks-modal__cancel",
+    "inset": "-1px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-completed-toggle",
+    "inset": "-10px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-date-picker__btn",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-dependency-chip__remove",
+    "inset": "-12px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-dependency-picker__item",
+    "inset": "-7px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-duration-modal__option",
+    "inset": "-3px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-duration-trigger",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-filter-toggle",
+    "inset": "-5px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-gantt-bar",
+    "inset": "-10px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-gantt-group-toggle",
+    "inset": "-11px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-gantt2-backlog__head",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-gantt2-backlog__item",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-gantt2-mini-overview",
+    "inset": "-10px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-gantt2-row--milestone .planning-gantt2-milestone",
+    "inset": "-14px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-gantt2-today-pill",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-gantt2-toggle-btn",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-archive__item button",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-archive__toggle",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-archived-notice button",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-card__archive-action",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-card__done",
+    "inset": "-2px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-card__restore-action",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-card__settings",
+    "inset": "-6px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-new-button",
+    "inset": "-1px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-review button",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-review-panel__actions button",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-review-panel__more",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-settings__back",
+    "inset": "-3px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-wizard__actions button",
+    "inset": "-1px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-wizard__choices button",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-workspace__course button",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-modal__close",
+    "inset": "-11px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-modal__details-summary",
+    "inset": "-3px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-priority-btn",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-project-group__header",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-quick-link-cancel",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-quick-repeat__pick-dates",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-quick-repeat__reset",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-quick-repeat__toggle",
+    "inset": "-10px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-quick-target-menu__cancel",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-quick-target-option",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-quick-target-trigger",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-repeat-calendar__clear",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-repeat-calendar__confirm",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-repeat-calendar__day",
+    "inset": "-11px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-repeat-calendar__nav",
+    "inset": "-6px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-slot-delete-sheet__btn",
+    "inset": "-1px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-slot-edit-duration-link__btn",
+    "inset": "-13px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-status-toggle",
+    "inset": "-14px"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-subnav__item",
+    "inset": "-13px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-task-editor__status-btn",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-task-repeat__dates",
+    "inset": "-6px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-task-repeat__toggle",
+    "inset": "-12px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-task-row__body",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-tasks-scale-fab__btn",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
+    "host": ".planning-weekday-chip",
+    "inset": "-7px -2px"
+  },
+  {
+    "zone": "settings-system",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".profile-advice-chip",
+    "inset": "-7px 0"
+  },
+  {
+    "zone": "settings-system",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".profile-inline-check",
+    "inset": "-14px 0"
+  },
+  {
+    "zone": "settings-system",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".profile-push-status__btn",
+    "inset": "-9px 0"
+  },
+  {
+    "zone": "settings-system",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".profile-section__header",
+    "inset": "-3px 0"
+  },
+  {
+    "zone": "settings-system",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".tab-settings-diary-toggle",
+    "inset": "-1px 0"
+  }
+]

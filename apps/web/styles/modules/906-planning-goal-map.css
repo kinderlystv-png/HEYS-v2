@@ -345,6 +345,7 @@ body.planning-goal-map-open {
 }
 
 .goal-map-edge__hit {
+  position: relative;
     fill: none;
     stroke: transparent;
     stroke-width: 18;
@@ -1027,3 +1028,11 @@ body.planning-goal-map-open {
         animation-iteration-count: 1 !important;
     }
 }
+
+/* polosa5-tap-inset */
+.goal-map-edge__hit::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
