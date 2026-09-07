@@ -46,7 +46,7 @@ describe('package 43 · registration + home-widgets computed ink', () => {
 
     it('consent document body uses --v4-ink-2 on sand and blue', () => {
     expect(LOGIN_CSS).toMatch(
-      /\.consent-doc-body\s*\{[^}]*color:\s*var\(--v4-ink-2,\s*rgba\(0,\s*0,\s*0,\s*0\.55\)\)/,
+      /\.consent-doc-body\s*\{[^}]*color:\s*var\(--v4-ink-2,\s*rgba\(0,\s*0,\s*0,\s*0\.56\)\)/,
     );
     expect(LOGIN_CSS).toMatch(/\.consent-doc-body\s*\{[^}]*line-height:\s*1\.55/);
     // Доли разошлись решением дизайнера 7 сентября: 55 % не держало 4,5 по

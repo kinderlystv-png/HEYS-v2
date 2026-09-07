@@ -276,7 +276,7 @@ describe('А1б · rendered Canvas contract', { timeout: 45_000 }, () => {
         }],
         ['09', '.sb-builder-screen > .sb-stats > .sb-stat:first-child', '⏱ 47:12', {
           display: 'inline-flex', alignItems: 'center', padding: '4px 7px', borderRadius: '999px',
-          backgroundColor: CANVAS.c2, color: CANVAS.ink55, fontSize: '9px', fontWeight: '700',
+          backgroundColor: CANVAS.c2, color: CANVAS.ink56, fontSize: '9px', fontWeight: '700',
           lineHeight: '1', fontVariantNumeric: 'tabular-nums'
         }],
         ['10', '.sb-builder-screen > .sb-stats > .sb-stat:nth-child(2)', '10 / 23 ✓', {
@@ -332,7 +332,7 @@ describe('А1б · rendered Canvas contract', { timeout: 45_000 }, () => {
           display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '9px'
         }],
         ['26', '.sb-list > .sb-ex.is-open .sb-hist > span:first-child', 'Прошлый раз · 22,5 × 12', {
-          backgroundColor: CANVAS.bg, color: CANVAS.ink55
+          backgroundColor: CANVAS.bg, color: CANVAS.ink56
         }],
         ['27', '.sb-list > .sb-ex.is-open .sb-hist > span.is-record', 'Рекорд · 25 × 10', {
           backgroundColor: CANVAS.bg, color: CANVAS.ac
@@ -547,7 +547,7 @@ describe('А2 · rendered Canvas contract', { timeout: 45_000 }, () => {
         }],
         ['10', '.sb-builder-screen > .sb-stats > .sb-stat:first-child', '47:12', {
           paddingTop: '4px', paddingRight: '7px', paddingBottom: '4px', paddingLeft: '7px',
-          borderRadius: '999px', backgroundColor: CANVAS.c2, color: CANVAS.ink55,
+          borderRadius: '999px', backgroundColor: CANVAS.c2, color: CANVAS.ink56,
           fontSize: '9px', fontWeight: '700', lineHeight: '1', fontVariantNumeric: 'tabular-nums'
         }],
         ['11', '.sb-builder-screen > .sb-stats > .sb-stat:nth-child(2)', '10 из 23 подходов', {

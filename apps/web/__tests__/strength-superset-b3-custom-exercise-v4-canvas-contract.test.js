@@ -14,13 +14,13 @@ const PALETTES = Object.freeze({
   sand: {
     bg: '#fffaf1', c1: '#f7efe2', c2: '#efe3cf', tx: '#201e1d',
     ac: '#8a4a20', acs: '#c67139', onAcs: '#2b1608',
-    ink56: 'rgba(0, 0, 0, .56)', ink55: 'rgba(0, 0, 0, .55)', ink62: 'rgba(0, 0, 0, .62)',
+    ink56: 'rgba(0, 0, 0, 0.56)', ink55: 'rgba(0, 0, 0, .55)', ink62: 'rgba(0, 0, 0, .62)',
     br: 'rgba(0, 0, 0, 0.1)',
   },
   blue: {
     bg: '#ffffff', c1: '#eef3f9', c2: '#e2ecf6', tx: '#101826',
     ac: '#1d5e96', acs: '#2e7cc0', onAcs: '#ffffff',
-    ink56: 'rgba(16, 24, 38, .56)', ink55: 'rgba(16, 24, 38, .55)', ink62: 'rgba(16, 24, 38, .62)',
+    ink56: 'rgba(16, 24, 38, 0.56)', ink55: 'rgba(16, 24, 38, .55)', ink62: 'rgba(16, 24, 38, .62)',
     br: 'rgba(16, 24, 38, 0.1)',
   },
 });
@@ -37,7 +37,7 @@ function compileCss(paletteName) {
     --v4-c1:${palette.c1};
     --v4-bg:${palette.bg};
     --v4-ink:${palette.tx};
-    --v4-ink-data:${palette.ink56};
+    --v4-ink-2:${palette.ink56};
     --v4-hero:${palette.c2};
   }\n${CSS
     .replaceAll('var(--sb-card)', palette.c1)
@@ -169,7 +169,7 @@ describe('strength builder · В3 своё упражнение v4 canvas contra
     expectStyle(primaryRow, { paddingTop: '9px', paddingBottom: '9px', borderBottomStyle: 'none' }, '09');
     expectStyle(screen.getByText('Основная'), { color: palette.tx }, '14');
     expectStyle(primaryValue, { fontSize: '11.5px', fontWeight: '700', lineHeight: '1', color: palette.ac }, '15');
-    expectStyle(hint, { fontSize: '12.5px', fontWeight: '600', lineHeight: '1.4', color: palette.ink55 }, '19');
+    expectStyle(hint, { fontSize: '12.5px', fontWeight: '600', lineHeight: '1.4', color: palette.ink56 }, '19');
     expectStyle(finish, { marginTop: '12px' }, '21');
     expectStyle(footnote, { marginTop: '12px', fontSize: '11px', fontWeight: '500', lineHeight: '1.55', color: palette.ink56 }, '23');
   });

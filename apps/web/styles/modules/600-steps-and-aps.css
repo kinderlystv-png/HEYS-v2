@@ -326,30 +326,16 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-action-buttons .aps-new-product-btn {
-
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  background: linear-gradient(135deg, #dbeafe 0%, #ede9fe 100%);
-  border: 1.5px dashed #93c5fd;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--v4-act, #2563eb);
-  position: relative;
-
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  justify-content: center;
+  gap: 5px;
+  padding-inline: 6px;
 }
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.aps-new-product-btn::after {
-  content: '';
-  position: absolute;
-  inset: -7.3px -0px;
-}
 
 
 .aps-action-buttons .aps-new-product-btn > span:not(.aps-new-icon):not(.aps-ready-sets-badge) {
@@ -373,6 +359,9 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   font-size: 12px;
   font-weight: 600;
   color: var(--v4-act, #2563eb);
+  /* Хост припуска ::after ниже: без relative припуск считается от чужого
+     предка и цель 44 не получается. */
+  position: relative;
 }
 
 /* Кнопка "Добавить фото" — зелёная тема */
@@ -2342,11 +2331,6 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.aps-similar-warn__item::after {
-  content: '';
-  position: absolute;
-  inset: -6.8px -0px;
-}
 
 
 .aps-similar-warn__item:active {
@@ -2870,11 +2854,6 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.aps-v4-product-row__pick::after {
-  content: '';
-  position: absolute;
-  inset: -8px 0;
-}
 
 .aps-v4-product-row:last-child {
   border-bottom: none;
@@ -3168,4 +3147,22 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .photo-viewer-action:active {
   opacity: 0.7;
   transition: opacity 120ms ease;
+}
+
+.aps-new-product-btn::after {
+  content: '';
+  position: absolute;
+  inset: -7.3px 0;
+}
+
+.aps-similar-warn__item::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
+}
+
+.aps-v4-product-row__pick::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
 }

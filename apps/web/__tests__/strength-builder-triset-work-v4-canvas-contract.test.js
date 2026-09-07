@@ -156,7 +156,7 @@ describe('З2 · трисет в работе · canvas contract', { timeout: 45
         ['18', '.sb-tw-warmup-tag', 'разм.', { backgroundColor: CANVAS.ink06, color: CANVAS.ink56 }],
         ['19', '.sb-tw-warmup-copy', 'общая для связки · 2 подхода', { color: CANVAS.ink56 }],
         ['21', '.sb-tw-grp > .sb-tw-round .sb-tw-round-num', 'Р1', { color: CANVAS.ink56 }],
-        ['22', '.sb-tw-grp > .sb-tw-round .sb-tw-cell.is-done', '22 × 10 ✓', { color: CANVAS.ink55 }],
+        ['22', '.sb-tw-grp > .sb-tw-round .sb-tw-cell.is-done', '22 × 10 ✓', { color: CANVAS.ink56 }],
         ['25', '.sb-tw-round-closed', 'круг закрыт · отдых 2:00', { color: CANVAS.ac }],
         ['27', '.sb-tw-round.is-current .sb-tw-round-num', 'Р2', { color: CANVAS.ac }],
         ['28', '.sb-tw-round.is-current .sb-tw-cell.is-active', '10 × 12', { color: CANVAS.tx }],
