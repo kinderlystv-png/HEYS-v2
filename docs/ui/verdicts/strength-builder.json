@@ -702,7 +702,7 @@
       "f": "movedFrom/movedTo + MoveSheet есть (superset_ui:2398–2621), но кадр Г3 — композит day shell + PlanCard; 13 строк ≠ по .sb-transfer-follow-verdict-handoff.json (copy/геометрия PlanCard vs канвас). · пакет 47: проза контракта уточнена, код сверен в приёмке.",
       "h": "2d0e6b2281c9",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2360"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#otvet22-g3-plan-card-reresolve-2026-09-07"
     },
     "вид · метка авторства": {
       "v": "=",
