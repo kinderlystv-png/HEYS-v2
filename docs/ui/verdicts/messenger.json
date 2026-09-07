@@ -23,7 +23,7 @@
     },
     "код": {
       "v": "=",
-      "f": "heys_messenger_v1.js:2579 MessengerModal · 2535 DayChecklistRow · 827 MessageBubble (ownStatus) · 2387 shouldShowFoodHint · 1830 SearchPanel · 1745 OfflineQueueBar · 2120 AppliedDayCard · 2198 IntentCard",
+      "f": "heys_messenger_v1.js:2689 MessengerModal · 2535 DayChecklistRow · 827 MessageBubble (ownStatus) · 2387 shouldShowFoodHint · 1830 SearchPanel · 1745 OfflineQueueBar · 2120 AppliedDayCard · 2198 IntentCard",
       "h": "53ac2b3d2a4e"
     },
     "слой": {
@@ -60,12 +60,12 @@
     },
     "подсказка «время и граммы» — рабочая": {
       "v": "=",
-      "f": "FoodHintCard --v4-tint clock 16px --v4-act-text, pills 44px, hide 11.5px/600 --v4-ink-2 — heys_messenger_v1.js:2387-2508",
+      "f": "FoodHintCard --v4-tint clock 16px --v4-act-text, pills 44px, hide 11.5px/600 --v4-ink-2 — heys_messenger_v1.js:2726-2847",
       "h": "ed533ae69e25"
     },
     "карточка «Внесено в дневник» — системная": {
       "v": "=",
-      "f": "AppliedDayCard msg-applied-card --v4-c1 inset border 6% radius 18 — heys_messenger_v1.js:2120-2134",
+      "f": "AppliedDayCard msg-applied-card --v4-c1 inset border 6% radius 18 — heys_messenger_v1.js:2422-2436",
       "h": "ec08258f69f3"
     },
     "карточка намерения — есть, вкладок нет": {
@@ -111,7 +111,7 @@
     },
     "вид · шапка": {
       "v": "=",
-      "f": "1000-messenger.css:148-376 padding 14/12/10/18, avatar 38px, header-button 44×44, subtitle dot 7px --v4-ok-text/--v4-bad-text",
+      "f": "1000-messenger.css:221-449 padding 14/12/10/18, avatar 38px, header-button 44×44, subtitle dot 7px --v4-ok-text/--v4-bad-text",
       "h": "259f43d7b688"
     },
     "вид · строка «Ждём»": {
@@ -136,7 +136,7 @@
     },
     "вид · лист действий": {
       "v": "=",
-      "f": "1000-messenger.css:2926-2983 action sheet radius 26 scrim --scrim blur 2.5px items 48px",
+      "f": "1000-messenger.css:2852-2909 action sheet radius 26 scrim --scrim blur 2.5px items 48px",
       "h": "fc278a5eabf0"
     },
     "вид · удаление": {
@@ -161,7 +161,7 @@
     },
     "фото": {
       "v": "=",
-      "f": "до 10 вложений, compress WebP/JPEG heys_messenger_v1.js:1270+; pending-upload offline queue",
+      "f": "до 10 вложений, compress WebP/JPEG heys_messenger_v1.js:1396+; pending-upload offline queue",
       "h": "5ac3ebbe6e95"
     },
     "голосовое": {

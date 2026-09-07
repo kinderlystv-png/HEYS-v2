@@ -105,7 +105,7 @@
     },
     "замеры на днях 1–7": {
       "v": "=",
-      "f": "heys_steps_v1.js:7020-7030 — строка «Замеры отложены», aria-disabled, без шеврона Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "heys_steps_v1.js:7020-7030 — строка «Замеры отложены», aria-disabled, без шеврона",
       "h": "11f4a9704d10"
     },
     "доступность · строка периода": {
@@ -180,7 +180,7 @@
     },
     "тренд веса": {
       "v": "=",
-      "f": "WEIGHT_TREND_EXCLUDE_DAYS + shouldExcludeFromWeightTrend heys_cycle_v1.js:54,580; heys_day_weight_trends_v1.js:58-76 Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "WEIGHT_TREND_EXCLUDE_DAYS + shouldExcludeFromWeightTrend heys_cycle_v1.js:54,580; heys_day_weight_trends_v1.js:58-76",
       "h": "1ef195731c3c"
     },
     "«Закончились»": {
@@ -210,12 +210,12 @@
     },
     "вид · график калорий": {
       "v": "=",
-      "f": "reports v4: steppedPath targetY 2.4px var(--v4-act), eaten 2px ink 45% без точек, подпись «Съедено и норма» + легенда heys_day_sparklines_v1.js; heys_day_stats_v1.js; 733-ui-v4-reports.css Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "reports v4: steppedPath targetY 2.4px var(--v4-act), eaten 2px ink 45% без точек, подпись «Съедено и норма» + легенда heys_day_sparklines_v1.js; heys_day_stats_v1.js; 733-ui-v4-reports.css",
       "h": "d5f47e176529"
     },
     "вид · график веса": {
       "v": "=",
-      "f": "weight-sparkline-dot-retention + hollow points heys_day_sparklines_v1.js:2050-2082,2265,2305 Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "weight-sparkline-dot-retention + hollow points heys_day_sparklines_v1.js:2050-2082,2265,2305",
       "h": "9a667c9ef0a5"
     },
     "вид · зона задержки на графике веса": {
@@ -280,7 +280,7 @@
     },
     "контраст ленты": {
       "v": "=",
-      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8567",
+      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8500",
       "h": "7c8802aa93e9"
     },
     "прогноз следующего периода": {
@@ -300,32 +300,32 @@
     },
     "вид · кнопки решений": {
       "v": "=",
-      "f": "Вторая кнопка — обводка без заливки: .mc-rest-cycle-btn--secondary держит inset 0 0 0 1,5px чернил 16 % и тон чернил 62 % при заливке --v4-sand-surface-soft (--bg). Заливки --c1 на карточке --c1 больше нет — ровно того, из-за чего кнопки не было видно. Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "Вторая кнопка — обводка без заливки: .mc-rest-cycle-btn--secondary держит inset 0 0 0 1,5px чернил 16 % и тон чернил 62 % при заливке --v4-sand-surface-soft (--bg). Заливки --c1 на карточке --c1 больше нет — ровно того, из-за чего кнопки не было видно.",
       "h": "2e800da92617"
     },
     "вид · вопрос дня 29": {
       "v": "=",
-      "f": "cycle-card-v4--day29 «Ещё нет»/«Да, первый день» heys_cycle_ui_v1.js:448-467 Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "cycle-card-v4--day29 «Ещё нет»/«Да, первый день» heys_cycle_ui_v1.js:448-467",
       "h": "9874b0089f1d"
     },
     "вид · подтверждение выключения": {
       "v": "=",
-      "f": "cycle-v4-dialog «Оставить»/«Выключить» heys_user_tab_impl_v1.js:1367-1394 Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "cycle-v4-dialog «Оставить»/«Выключить» heys_user_tab_impl_v1.js:1367-1394",
       "h": "01ec6bf4d173"
     },
     "вид · предупреждение о сбое": {
       "v": "=",
-      "f": "cycle-card-v4__warn var(--v4-tint) earlyWarn card heys_cycle_ui_v1.js:427-446; 500-pwa CSS:2005-2010 Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "cycle-card-v4__warn var(--v4-tint) earlyWarn card heys_cycle_ui_v1.js:427-446; 500-pwa CSS:2005-2010",
       "h": "4863b600f13f"
     },
     "вид · строка после «Закончились»": {
       "v": "=",
-      "f": "mc-rest-row--cycle-ended + endedLabel heys_steps_v1.js:6530-6539 Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "mc-rest-row--cycle-ended + endedLabel heys_steps_v1.js:6530-6539",
       "h": "4906012212cb"
     },
     "вид · строка прогноза в шапке месяца": {
       "v": "=",
-      "f": "formatForecastMonthLine следующий — N-го heys_cycle_ui_v1.js:161-167 Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "formatForecastMonthLine следующий — N-го heys_cycle_ui_v1.js:161-167",
       "h": "dcd4bfd3ffd5"
     },
     "вид · пометка нормы": {

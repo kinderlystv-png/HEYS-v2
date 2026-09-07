@@ -11,13 +11,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const INNER = path.join(HERE, 'ui-v4-check-verdict-addresses.mjs');
 
-// 07.09 p47 reports-insights: зона reports-insights moved 273→0; глобально moved 285→283, absent 32→4.
+// 07.09 p47 polosa: пересчёт адресов после параллельных правок; hard 0, moved 0.
 const BASELINE = Object.freeze({
   truncated: 0,
   missing: 0,
   beyond: 0,
-  absent: 4,
-  moved: 283,
+  absent: 0,
+  moved: 0,
 });
 
 function countScope() {

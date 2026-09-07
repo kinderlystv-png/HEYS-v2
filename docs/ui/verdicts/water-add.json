@@ -45,7 +45,7 @@
     },
     "капля": {
       "v": "=",
-      "f": "6×6, top 5px, left 50%, 220ms ease-in, к концу scaleY 1.4 — 730-widgets-dashboard.css:10607-10627",
+      "f": "6×6, top 5px, left 50%, 220ms ease-in, к концу scaleY 1.4 — 730-widgets-dashboard.css:11638-11658",
       "h": "075036482511"
     },
     "круг": {
@@ -125,7 +125,7 @@
     },
     "выше 70 %": {
       "v": "=",
-      "f": "waterToneMixPct при pct≥70 возвращает 100 — heys_widgets_ui_v1.js:3669",
+      "f": "waterToneMixPct при pct≥70 возвращает 100 — heys_widgets_ui_v1.js:4249",
       "h": "369101daada9"
     },
     "концы ramp": {
@@ -215,7 +215,7 @@
     },
     "полный вид": {
       "v": "=",
-      "f": "buildWaterCard вызывается в NutritionTabV4 безусловно, чипа у карточки нет — heys_day_nutrition_v1.js:1532",
+      "f": "buildWaterCard вызывается в NutritionTabV4 безусловно, чипа у карточки нет — heys_day_nutrition_v1.js:2006",
       "h": "1ca99ca4d74e"
     },
     "адрес один": {
@@ -281,7 +281,7 @@
     },
     "нет виджета и нет кнопки": {
       "v": "=",
-      "f": "applyOptimistic двигает кольцо и подписи, столбик без якоря-кнопки не выезжает — water_v1.js:199-225, day_handlers:260",
+      "f": "applyOptimistic двигает кольцо и подписи, столбик без якоря-кнопки не выезжает — water_v1.js:263-289, day_handlers:260",
       "h": "e522a4ae3333"
     },
     "якорь": {

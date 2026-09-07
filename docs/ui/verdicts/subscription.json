@@ -99,7 +99,7 @@
     },
     "вид · экран подписки · только чтение": {
       "v": "=",
-      "f": "heys_subscriptions_v1.js:1289-1305 readonly card --tint + CTA support",
+      "f": "heys_subscriptions_v1.js:1289-1305 readonly card sub-screen__status-card--readonly + CTA support",
       "h": "946ed9cbf542"
     },
     "вид · приветствие": {
@@ -159,7 +159,7 @@
     },
     "гейт записи": {
       "v": "=",
-      "f": "heys_paywall_v1.js:1: gateWrite → showBlockedToast, action не выполняется",
+      "f": "heys_paywall_v1.js:683: gateWrite → showBlockedToast, action не выполняется",
       "h": "c2a0e9bbf19c"
     },
     "что решает состояние": {
@@ -250,17 +250,17 @@
     },
     "Подписка · строка в настройках · 01": {
       "v": "=",
-      "f": "000-base-and-gamification.css:10907: .hdr-settings-sheet__row без position — static по умолчанию",
+      "f": "000-base-and-gamification.css:11013: .hdr-settings-sheet__row без position — static по умолчанию",
       "h": "be26b94c0688"
     },
     "Подписка · строка в настройках · 02": {
       "v": "=",
-      "f": "000-base-and-gamification.css:10842: hdr-settings-sheet__tier margin 14px 2px 8px",
+      "f": "000-base-and-gamification.css:10948: hdr-settings-sheet__tier margin 14px 2px 8px",
       "h": "7d89140238fd"
     },
     "Подписка · строка в настройках · 03": {
       "v": "=",
-      "f": "000-base-and-gamification.css:10850: hdr-settings-sheet__group radius 18px",
+      "f": "000-base-and-gamification.css:10956: hdr-settings-sheet__group radius 18px",
       "h": "90c3eca5a44a"
     },
     "Подписка · строка в настройках · 04": {
@@ -272,7 +272,7 @@
     },
     "Подписка · строка в настройках · 05": {
       "v": "=",
-      "f": "000-base-and-gamification.css:10842: hdr-settings-sheet__tier margin 14px 2px 8px",
+      "f": "000-base-and-gamification.css:10948: hdr-settings-sheet__tier margin 14px 2px 8px",
       "h": "c5cfa42e86b2"
     },
     "Подписка · строка в настройках · 06": {
@@ -360,7 +360,7 @@
     },
     "Подписка · приветствие · 02": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1460-1469: WelcomeFirstLogin scrim rgba(0,0,0,.55) inline — нет backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px))",
+      "f": "apps/web/heys_subscriptions_v1.js:1595-1604: WelcomeFirstLogin scrim rgba(0,0,0,.55) inline — нет backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px))",
       "h": "3f52b0853401",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06"
@@ -455,35 +455,35 @@
     },
     "Подписка · контакт поддержки · 02": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1307-1311: ContactCuratorScreen inline padding — нет paywall-overlay scrim blur(var(--v4-modal-backdrop-blur, 2.5px))",
+      "f": "apps/web/heys_subscriptions_v1.js:1466-1470: ContactCuratorScreen inline padding — нет paywall-overlay scrim blur(var(--v4-modal-backdrop-blur, 2.5px))",
       "h": "3f52b0853401",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06"
     },
     "Подписка · контакт поддержки · 03": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
+      "f": "apps/web/heys_subscriptions_v1.js:1466: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
       "h": "6c44248bfacc",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-legacy-paywall-2026-09-05"
     },
     "Подписка · контакт поддержки · 04": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
+      "f": "apps/web/heys_subscriptions_v1.js:1466: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
       "h": "c67ea7824645",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-legacy-paywall-2026-09-05"
     },
     "Подписка · контакт поддержки · 05": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
+      "f": "apps/web/heys_subscriptions_v1.js:1466: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
       "h": "ca284860118a",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-legacy-paywall-2026-09-05"
     },
     "Подписка · контакт поддержки · 06": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1307: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
+      "f": "apps/web/heys_subscriptions_v1.js:1466: ContactCuratorScreen legacy inline (emoji, gradient CTA) — не v4 modal rows",
       "h": "55bfcd532bba",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-legacy-paywall-2026-09-05"
@@ -1104,7 +1104,7 @@
     },
     "Подписка · контакт поддержки · рисунок 02": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:557: paywallCloseIcon path M18 6L6 18M6 6l12 12",
+      "f": "apps/web/heys_paywall_v1.js:223: paywallCloseIcon path M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Подписка · контакт поддержки · рисунок 03": {
@@ -1116,7 +1116,7 @@
     },
     "Подписка · контакт поддержки · рисунок 04": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1310-1345: ContactCuratorScreen без lock rect 18×11 svg; legacy inline gradient CTA",
+      "f": "apps/web/heys_subscriptions_v1.js:1466-1501: ContactCuratorScreen без lock rect 18×11 svg; legacy inline gradient CTA",
       "h": "4739a51e07b6",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06"
@@ -1130,7 +1130,7 @@
     },
     "Подписка · контакт поддержки · рисунок 06": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1330-1345: ContactCuratorScreen <a> gradient button — нет contact-row icon 16×16 svg",
+      "f": "apps/web/heys_subscriptions_v1.js:1466-1481: ContactCuratorScreen <a> gradient button — нет contact-row icon 16×16 svg",
       "h": "ddf4bd54ba6a",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06"
@@ -1163,7 +1163,7 @@
     },
     "Подписка · тарифы · места есть · рисунок 02": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:557: paywallCloseIcon path M18 6L6 18M6 6l12 12",
+      "f": "apps/web/heys_paywall_v1.js:223: paywallCloseIcon path M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Подписка · тарифы · мест нет · рисунок 01": {
@@ -1173,7 +1173,7 @@
     },
     "Подписка · тарифы · мест нет · рисунок 02": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:557: paywallCloseIcon path M18 6L6 18M6 6l12 12",
+      "f": "apps/web/heys_paywall_v1.js:223: paywallCloseIcon path M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Подписка · тарифы · Pro Спорт · рисунок 01": {
@@ -1183,37 +1183,37 @@
     },
     "Подписка · тарифы · Pro Спорт · рисунок 02": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:557: paywallCloseIcon path M18 6L6 18M6 6l12 12",
+      "f": "apps/web/heys_paywall_v1.js:223: paywallCloseIcon path M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Подписка · проверьте заказ · рисунок 01": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:713: paywallCloseIconMarkup svg 15×15 viewBox 0 0 24 24",
+      "f": "apps/web/heys_subscriptions_v1.js:921: paywallCloseIconMarkup svg 15×15 viewBox 0 0 24 24",
       "h": "7d9d1119f1bb"
     },
     "Подписка · проверьте заказ · рисунок 02": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:722: paywallCloseIconMarkup path M18 6L6 18M6 6l12 12",
+      "f": "apps/web/heys_subscriptions_v1.js:921: paywallCloseIconMarkup path M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Подписка · проверьте заказ · рисунок 03": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:686: paywallCheckIcon svg 13×13 viewBox 0 0 24 24",
+      "f": "apps/web/heys_subscriptions_v1.js:893: paywallCheckIcon svg 13×13 viewBox 0 0 24 24",
       "h": "c2b4d247a149"
     },
     "Подписка · проверьте заказ · рисунок 04": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:695: paywallCheckIcon path M20 6L9 17l-5-5",
+      "f": "apps/web/heys_subscriptions_v1.js:893: paywallCheckIcon path M20 6L9 17l-5-5",
       "h": "2f2b6477120d"
     },
     "Подписка · оплата прошла · рисунок 01": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:700: paywallSuccessCheckIcon svg 26×26 viewBox 0 0 24 24",
+      "f": "apps/web/heys_subscriptions_v1.js:907: paywallSuccessCheckIcon svg 26×26 viewBox 0 0 24 24",
       "h": "c9e176031528"
     },
     "Подписка · оплата прошла · рисунок 02": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:709: paywallSuccessCheckIcon path M20 6L9 17l-5-5",
+      "f": "apps/web/heys_subscriptions_v1.js:907: paywallSuccessCheckIcon path M20 6L9 17l-5-5",
       "h": "2f2b6477120d"
     },
     "Подписка · экран · активна · рисунок 01": {
@@ -1264,7 +1264,7 @@
     },
     "Подписка · очередь · заявка подана · рисунок 02": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:557: paywallCloseIcon path M18 6L6 18M6 6l12 12",
+      "f": "apps/web/heys_paywall_v1.js:223: paywallCloseIcon path M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "Подписка · очередь · место освободилось · рисунок 01": {
@@ -1274,7 +1274,7 @@
     },
     "Подписка · очередь · место освободилось · рисунок 02": {
       "v": "=",
-      "f": "apps/web/heys_paywall_v1.js:557: paywallCloseIcon path M18 6L6 18M6 6l12 12",
+      "f": "apps/web/heys_paywall_v1.js:223: paywallCloseIcon path M18 6L6 18M6 6l12 12",
       "h": "49950e24d175"
     },
     "как читать текст": {

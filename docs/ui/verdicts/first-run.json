@@ -75,14 +75,14 @@
     },
     "карточка шага": {
       "v": "≠",
-      "f": "createTooltip (heys_ui_onboarding_v1.js:407-450): нет кикера «Шаг N из 4», .tour-tooltip-content radius 16 padding 20 (heys-components.css:695-701), носика 14px Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "createTooltip (heys_ui_onboarding_v1.js:407-450): нет кикера «Шаг N из 4», .tour-tooltip-content radius 16 padding 20 (heys-components.css:695-701), носика 14px",
       "h": "89f98637bfc1",
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:90"
     },
     "две кнопки, и обе понятны": {
       "v": "≠",
-      "f": "кнопки «Далее →» / «Готово! 🎉» и точки .tour-dot вместо словесного счёта (heys_ui_onboarding_v1.js:431-441); на последнем шаге «Пропустить» скрывается, но основная с эмодзи Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "кнопки «Далее →» / «Готово! 🎉» и точки .tour-dot вместо словесного счёта (heys_ui_onboarding_v1.js:431-441); на последнем шаге «Пропустить» скрывается, но основная с эмодзи",
       "h": "074c6f9b9b7b",
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:91"
@@ -150,7 +150,7 @@
     },
     "вид · карточка шага": {
       "v": "≠",
-      "f": "см. «карточка шага»: .tour-tooltip-content без v4-геометрии кадра (radius 16, padding 20, без носика 14px) Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "см. «карточка шага»: .tour-tooltip-content без v4-геометрии кадра (radius 16, padding 20, без носика 14px)",
       "h": "62bd605b7d7b",
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:103"
@@ -164,7 +164,7 @@
     },
     "вид · вход с компьютера": {
       "v": "≠",
-      "f": "Экран всё ещё legacy-gradient DesktopGateScreen, не v4-колонка 480/QR 198; тач-цели пакета 36 закрыты: copy/logout 44px видимым в heys_app_gates_v1.js + 500-pwa-and-offline.css Пакет 47: проза контракта на var(--ink-2); --v4-ink-prose снят (ОТВЕТ-22 §2).",
+      "f": "Экран всё ещё legacy-gradient DesktopGateScreen, не v4-колонка 480/QR 198; тач-цели пакета 36 закрыты: copy/logout 44px видимым в heys_app_gates_v1.js + 500-pwa-and-offline.css",
       "h": "28c95a64eb48",
       "reasonCode": "logic-invariant",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:105"

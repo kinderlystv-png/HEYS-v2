@@ -242,7 +242,7 @@
     },
     "вид полосы": {
       "v": "=",
-      "f": "heys-components.css:12470 — left/right 12, nav-aware bottom 76, --v4-surface (--c1), radius 22, padding 11/13, только inset-обводка 1 px без внешней тени",
+      "f": "heys-components.css:12534 — left/right 12, nav-aware bottom 76, --v4-surface (--c1), radius 22, padding 11/13, только inset-обводка 1 px без внешней тени",
       "h": "95e403a1ff2d"
     },
     "как читать разбор": {
