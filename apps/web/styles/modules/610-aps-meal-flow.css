@@ -3179,9 +3179,20 @@
   flex-wrap: wrap;
 }
 
-/* Бейдж качества в meal-meta-row (кликабельный) */
-button.meal-quality-badge {
+/* Бейдж качества — только визуал; тап по всей .meal-meta-row--quality-tap
+   (решение дизайнера пакет 47 / ОТВЕТ-22 №5). */
+.meal-meta-row--quality-tap {
+  min-height: 44px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
 
+.meal-meta-row--quality-tap:active {
+  opacity: 0.7;
+  transition: opacity 120ms ease;
+}
+
+.meal-meta-row--quality-tap .meal-quality-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3190,33 +3201,17 @@ button.meal-quality-badge {
   border: none;
   font-size: 13px;
   font-weight: 700;
-  cursor: pointer;
+  pointer-events: none;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
-  position: relative;
-
 }
-
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-button.meal-quality-badge::after {
-  content: '';
-  position: absolute;
-  inset: -15.6px -0px;
-}
-
 
 @media (hover: hover) {
-  button.meal-quality-badge:hover {
+  .meal-meta-row--quality-tap:hover .meal-quality-badge {
     transform: scale(1.05);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   }
-}
-
-button.meal-quality-badge:active {
-  opacity: 0.7;
-  transition: opacity 120ms ease;
 }
 
 /* Маленькие бейджи проблем */
@@ -4776,15 +4771,6 @@ button.meal-quality-badge:active {
   position: relative;
 
 }
-
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.meal-transfer-v4__range::after {
-  content: '';
-  position: absolute;
-  inset: -15px -0px;
-}
-
 
 .meal-transfer-v4__range::-webkit-slider-runnable-track {
   height: 4px;

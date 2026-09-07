@@ -1778,14 +1778,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   transition:
     r 0.15s ease,
     filter 0.15s ease;
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .meals-day-sparkline circle:hover {
-    r: 6;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-  }
+  pointer-events: none;
 }
 
 .meals-day-sparkline path {

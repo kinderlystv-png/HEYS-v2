@@ -1151,7 +1151,19 @@ return React.createElement('div', { key: it.id, className: 'mpc', style: { margi
 
   // Компактный блок: бейдж качества + оценки + удаление (перенесено под инсулиновую волну)
   React.createElement('div', {
-    className: 'meal-meta-row',
+    className: 'meal-meta-row' + (mealQuality ? ' meal-meta-row--quality-tap' : ''),
+    onClick: mealQuality ? (e) => {
+      if (e.target.closest('.mobile-mood-btn, .meal-meta-field, .compact-input')) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      setMealQualityPopup({
+        meal,
+        quality: mealQuality,
+        mealTypeInfo,
+        x: rect.left + rect.width / 2,
+        y: rect.bottom + 8
+      });
+    } : undefined,
+    title: mealQuality ? 'Качество приёма — нажми для деталей' : undefined,
     style: {
       display: 'flex',
       flexWrap: 'wrap',
@@ -1160,32 +1172,18 @@ return React.createElement('div', { key: it.id, className: 'mpc', style: { margi
       padding: '8px 0'
     }
   },
-    // Бейдж качества приёма (кликабельный для попапа)
-    mealQuality && React.createElement('button', {
+    // Бейдж качества приёма (визуал; тап — по всей строке)
+    mealQuality && React.createElement('span', {
       className: 'meal-quality-badge',
-      onClick: (e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setMealQualityPopup({
-          meal,
-          quality: mealQuality,
-          mealTypeInfo,
-          x: rect.left + rect.width / 2,
-          y: rect.bottom + 8
-        });
-      },
-      title: 'Качество приёма — нажми для деталей',
       style: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         padding: '2px 6px',
         borderRadius: '8px',
-        border: 'none',
         background: mealQuality.color + '20',
         color: mealQuality.color,
-        cursor: 'pointer',
         marginRight: '4px',
-        transition: 'transform 0.15s, box-shadow 0.15s',
         flexShrink: 0,
         minWidth: '28px'
       }
@@ -1199,7 +1197,10 @@ return React.createElement('div', { key: it.id, className: 'mpc', style: { margi
     isMobile
       ? React.createElement('div', {
         className: 'mobile-mood-btn',
-        onClick: () => openMoodEditor(mealIndex),
+        onClick: (e) => {
+          e.stopPropagation();
+          openMoodEditor(mealIndex);
+        },
         title: 'Изменить оценки',
         style: {
           display: 'flex',

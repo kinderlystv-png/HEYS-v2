@@ -135,7 +135,7 @@
           if (metricPopup && !e.target.closest('.metric-popup')) {
             setMetricPopup(null);
           }
-          if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container')) {
+          if (mealQualityPopup && !e.target.closest('.meal-quality-popup') && !e.target.closest('.meal-bar-container') && !e.target.closest('.meal-meta-row--quality-tap')) {
             setMealQualityPopup(null);
           }
           if (tdeePopup && !e.target.closest('.tdee-popup')) {

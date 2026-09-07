@@ -61,7 +61,7 @@ export const EXEMPTION_REGISTRY = [
   {
     type: 'range-slider',
     match: (sel) =>
-      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|aps-grams-slider|meal-mood-scale__slider|outcome-modal__slider|reading-reader__font-control|whatif-custom__field input\[type=["']range["']\])/i.test(
+      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|aps-grams-slider|meal-mood-scale__slider|meal-transfer-v4__range|outcome-modal__slider|reading-reader__font-control|whatif-custom__field input\[type=["']range["']\])/i.test(
         sel,
       ),
     reason: 'ползунок диапазона — не полноразмерная кнопка, контракт отдельной геометрии',
@@ -111,6 +111,11 @@ export const EXEMPTION_REGISTRY = [
   },
   {
     type: 'named-exception',
+    selector: '.meals-day-sparkline circle',
+    reason: 'food-meal пакет 47 / ОТВЕТ-22 №5: sparkline — картинка, тапа нет ни в кадре, ни в решении',
+  },
+  {
+    type: 'named-exception',
     selector: '.date-picker-day',
     reason: 'date-remainders: ячейка календаря — сетка дней, не кнопка 44×44',
   },
@@ -137,7 +142,7 @@ export const EXEMPTION_REGISTRY = [
   {
     type: 'named-exception',
     selector: '.widgets-settings__scale-slider',
-    reason: 'home-widgets FINDINGS: дорожка 4 px, thumb 18 px — не full-row 44',
+    reason: 'home-widgets ОТВЕТ-22 Q6: дорожка 4 px, thumb 44 px — как range-slider чек-ина',
   },
   {
     type: 'named-exception',
