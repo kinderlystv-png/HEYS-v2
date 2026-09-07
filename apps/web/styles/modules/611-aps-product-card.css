@@ -1407,11 +1407,6 @@
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.aps-v4-create-advanced-toggle::after {
-  content: '';
-  position: absolute;
-  inset: -6.8px -0px;
-}
 
 
 .aps-v4-create-advanced-grid {
@@ -2338,4 +2333,10 @@
 /* Кадр «Продукт · порции · 20»: подвал с зазором 8 и отступом сверху 18 px. */
 .aps-v4-portions-step > .aps-v4-footer {
   margin: 18px -4px 0;
+}
+
+.aps-v4-create-advanced-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -7px 0;
 }

@@ -126,6 +126,21 @@ export const EXEMPTION_REGISTRY = [
   },
   {
     type: 'named-exception',
+    selector: '.widget',
+    reason: 'home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят',
+  },
+  {
+    type: 'named-exception',
+    selector: '.widgets-grid--remove-pick .widget',
+    reason: 'home-widgets FINDINGS: режим удаления — цель = вся плитка',
+  },
+  {
+    type: 'named-exception',
+    selector: '.widgets-settings__scale-slider',
+    reason: 'home-widgets FINDINGS: дорожка 4 px, thumb 18 px — не full-row 44',
+  },
+  {
+    type: 'named-exception',
     match: (sel) => /\.widget__(?:delete|settings|resize)-btn\b/.test(sel),
     reason: 'home-widgets: edit-mode chrome скрыт display:none до .widget--editing — гейт меряет покой',
   },
@@ -518,6 +533,16 @@ export function findHostBlock(cssText, selector) {
   return m ? m[1] : null;
 }
 
+/** @param {string} cssText @param {string} selector @param {'width'|'height'} axis */
+export function mergedDeclaredAxisPx(cssText, selector, axis) {
+  let max = 0;
+  for (const part of selectorParts(selector)) {
+    const block = findHostBlock(cssText, part);
+    if (block) max = Math.max(max, declaredAxisPx(block, axis));
+  }
+  return max;
+}
+
 /**
  * @param {number} w
  * @param {number} h
@@ -542,53 +567,77 @@ export function declaredAxisPx(block, axis) {
 }
 
 /**
+ * @param {string} selector
+ * @returns {string[]}
+ */
+function selectorParts(selector) {
+  return selector
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/**
  * Прозрачный припуск ::after/::before по контракту v4-tap-target-contract.
  * @param {string} cssText
  * @param {string} selector
  * @param {string} [hostBlock]
  */
 export function findPseudoExpander(cssText, selector, hostBlock) {
-  const host = hostBlock ?? findHostBlock(cssText, selector);
-  if (!host || !hostPositionRelative(host)) return null;
+  const parts = selectorParts(selector);
+  const host =
+    hostBlock
+    ?? parts.map((part) => findHostBlock(cssText, part)).find(Boolean)
+    ?? findHostBlock(cssText, selector);
+  const hostOk =
+    (host && hostPositionRelative(host))
+    || parts.some((part) => {
+      const block = findHostBlock(cssText, part);
+      return block && hostPositionRelative(block);
+    });
+  if (!hostOk) return null;
 
   const cleaned = stripCssComments(cssText);
+  const selectorCandidates = [selector, ...parts];
   for (const pseudo of ['::after', '::before']) {
-    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const re = new RegExp(`${escaped}${pseudo}\\s*\\{([^}]*)\\}`, 'i');
-    const m = cleaned.match(re);
-    if (!m) continue;
-    const block = m[1];
-    if (/content\s*:\s*none/i.test(block)) continue;
-    if (!/content\s*:/i.test(block)) continue;
-    if (!pseudoPositionAbsolute(block)) continue;
-    const hasBg =
-      /background(?:-color)?\s*:\s*(?!transparent\b|none\b)[^;]+/i.test(block) ||
-      /box-shadow\s*:/i.test(block) ||
-      /border\s*:\s*(?!none\b|0\b)/i.test(block);
-    if (hasBg) continue;
+    for (const candidate of selectorCandidates) {
+      const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp(`${escaped}${pseudo}\\s*\\{([^}]*)\\}`, 'i');
+      const m = cleaned.match(re);
+      if (!m) continue;
+      const block = m[1];
+      if (/content\s*:\s*none/i.test(block)) continue;
+      if (!/content\s*:/i.test(block)) continue;
+      if (!pseudoPositionAbsolute(block)) continue;
+      const hasBg =
+        /background(?:-color)?\s*:\s*(?!transparent\b|none\b)[^;]+/i.test(block) ||
+        /box-shadow\s*:/i.test(block) ||
+        /border\s*:\s*(?!none\b|0\b)/i.test(block);
+      if (hasBg) continue;
 
-    const expand = parsePseudoPaddingExpand(block);
-    if (expand && expand.top + expand.right + expand.bottom + expand.left > 0) {
-      return {
-        pseudo,
-        kind: 'pseudo-padding-expander',
-        block: block.trim(),
-        expand,
-      };
-    }
-
-    const widthMatch = /width\s*:\s*(\d+(?:\.\d+)?)px/i.exec(block);
-    const heightMatch = /height\s*:\s*(\d+(?:\.\d+)?)px/i.exec(block);
-    if (widthMatch && heightMatch) {
-      const pw = parsePx(widthMatch[1]);
-      const ph = parsePx(heightMatch[1]);
-      if (pw >= MIN_TOUCH_PX && ph >= MIN_TOUCH_PX) {
+      const expand = parsePseudoPaddingExpand(block);
+      if (expand && expand.top + expand.right + expand.bottom + expand.left > 0) {
         return {
           pseudo,
           kind: 'pseudo-padding-expander',
           block: block.trim(),
-          explicitSize: { width: pw, height: ph },
+          expand,
         };
+      }
+
+      const widthMatch = /width\s*:\s*(\d+(?:\.\d+)?)px/i.exec(block);
+      const heightMatch = /height\s*:\s*(\d+(?:\.\d+)?)px/i.exec(block);
+      if (widthMatch && heightMatch) {
+        const pw = parsePx(widthMatch[1]);
+        const ph = parsePx(heightMatch[1]);
+        if (pw >= MIN_TOUCH_PX && ph >= MIN_TOUCH_PX) {
+          return {
+            pseudo,
+            kind: 'pseudo-padding-expander',
+            block: block.trim(),
+            explicitSize: { width: pw, height: ph },
+          };
+        }
       }
     }
   }
@@ -1066,17 +1115,33 @@ export async function collectInventory(opts = {}) {
       let visW = size.width;
       let visH = size.height;
       if (!hidden) {
-        if (visW === 0) visW = Math.max(declaredAxisPx(rule.block, 'width'), size.minWidth || 0);
-        if (visH === 0) visH = Math.max(declaredAxisPx(rule.block, 'height'), size.minHeight || 0);
-        if (visH === 0 && size.fromDeclarations) {
+        visW = Math.max(
+          visW,
+          declaredAxisPx(rule.block, 'width'),
+          mergedDeclaredAxisPx(cssText, selector, 'width'),
+          size.minWidth || 0,
+        );
+        visH = Math.max(
+          visH,
+          declaredAxisPx(rule.block, 'height'),
+          mergedDeclaredAxisPx(cssText, selector, 'height'),
+          size.minHeight || 0,
+        );
+        if (visH === 0) {
           visH = Math.max(visH, lineBoxHeightFromBlock(rule.block));
         }
       }
 
       const effective = effectiveTouchSize(visW, visH, pseudoExpander);
-      const pseudoPaddingOk = isVisibleTouchOk({ ...size, width: effective.width, height: effective.height });
+      const effectiveHeight = Math.max(visH, effective.height, size.minHeight || 0);
+      const effectiveWidth = Math.max(visW, effective.width, size.minWidth || 0);
+      const pseudoPaddingOk =
+        isVisibleTouchOk({ ...size, width: effective.width, height: effective.height })
+        || (
+          effectiveHeight >= MIN_TOUCH_PX
+          && (effectiveWidth >= MIN_TOUCH_PX || size.heightChecked || size.widthAssumed)
+        );
       const visibleOk = isVisibleTouchOk(size) || pseudoPaddingOk;
-      const effectiveHeight = Math.max(size.height, size.minHeight || 0, effective.height);
       const isUnmeasured =
         !hidden &&
         !size.fromDeclarations &&

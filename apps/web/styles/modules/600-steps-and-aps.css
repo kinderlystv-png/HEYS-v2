@@ -2852,6 +2852,12 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
   position: relative;
 }
 
+.aps-v4-product-row__pick::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
+}
+
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
 
@@ -3152,17 +3158,11 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 .aps-new-product-btn::after {
   content: '';
   position: absolute;
-  inset: -7.3px 0;
+  inset: -8px 0;
 }
 
 .aps-similar-warn__item::after {
   content: '';
   position: absolute;
   inset: -7px 0;
-}
-
-.aps-v4-product-row__pick::after {
-  content: '';
-  position: absolute;
-  inset: -8px 0;
 }

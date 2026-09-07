@@ -39,7 +39,7 @@
     "heys-components.css"
   ],
   "counts": {
-    "violations": 75,
+    "violations": 62,
     "exceptions": 116,
     "unmeasured": 0,
     "heightChecked": 252,
@@ -52,7 +52,7 @@
     "unattributed": 29
   },
   "scope": {
-    "zonesCovered": 19,
+    "zonesCovered": 18,
     "unknownViolations": 0,
     "unknownViolationKeys": [],
     "heightChecked": 252,
@@ -68,7 +68,7 @@
       "exceptions": 3
     },
     "home-widgets": {
-      "violations": 9,
+      "violations": 8,
       "exceptions": 51
     },
     "strength-builder": {
@@ -76,7 +76,7 @@
       "exceptions": 1
     },
     "gamification": {
-      "violations": 6,
+      "violations": 5,
       "exceptions": 0
     },
     "shared": {
@@ -96,7 +96,7 @@
       "exceptions": 6
     },
     "food-meal": {
-      "violations": 12,
+      "violations": 10,
       "exceptions": 12
     },
     "messenger": {
@@ -108,7 +108,7 @@
       "exceptions": 17
     },
     "cycle": {
-      "violations": 2,
+      "violations": 1,
       "exceptions": 0
     },
     "reports-insights": {
@@ -119,12 +119,8 @@
       "violations": 2,
       "exceptions": 0
     },
-    "service-curator": {
-      "violations": 1,
-      "exceptions": 0
-    },
     "planning": {
-      "violations": 10,
+      "violations": 3,
       "exceptions": 5
     },
     "undo-bar": {
@@ -149,21 +145,16 @@
     }
   },
   "byFile": {
-    "000-base-and-gamification.css": 34,
+    "000-base-and-gamification.css": 33,
     "100-metrics-and-graphs.css": 1,
     "1000-messenger.css": 4,
     "200-dark-and-effects.css": 3,
     "500-pwa-and-offline.css": 2,
     "600-steps-and-aps.css": 4,
-    "610-aps-meal-flow.css": 2,
-    "613-cycle-ui.css": 1,
     "725-metabolic-intelligence.css": 1,
-    "730-widgets-dashboard.css": 1,
     "733-ui-v4-login-theme.css": 2,
-    "734-ui-v4-curator-panel.css": 1,
     "750-strength-builder.css": 2,
-    "900-planning.css": 7,
-    "905-planning-chrono.css": 3,
+    "900-planning.css": 3,
     "heys-components.css": 7
   },
   "violations": [
@@ -529,18 +520,6 @@
     },
     {
       "file": "000-base-and-gamification.css",
-      "selector": ".achievement-badge",
-      "className": "achievement-badge",
-      "zone": "gamification",
-      "width": 0,
-      "height": 28.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "000-base-and-gamification.css",
       "selector": ".achievement-story-btn",
       "className": "achievement-story-btn",
       "zone": "gamification",
@@ -744,42 +723,6 @@
       "tricks": ["invisible-pseudo-hit-area"]
     },
     {
-      "file": "610-aps-meal-flow.css",
-      "selector": ".meal-rating-emoji-lg",
-      "className": "meal-rating-emoji-lg",
-      "zone": "food-meal",
-      "width": 0,
-      "height": 28.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "610-aps-meal-flow.css",
-      "selector": ".mpr-header-edit-btn",
-      "className": "mpr-header-edit-btn",
-      "zone": "food-meal",
-      "width": 52,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "613-cycle-ui.css",
-      "selector": ".cycle-card__header",
-      "className": "cycle-card__header",
-      "zone": "cycle",
-      "width": 0,
-      "height": 28.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
       "file": "725-metabolic-intelligence.css",
       "selector": ".adv-analytics__energy-bar",
       "className": "adv-analytics__energy-bar",
@@ -790,18 +733,6 @@
       "exemptionType": null,
       "exemptionReason": null,
       "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".reports-fullscreen-modal__close-text,\n.reports-fullscreen-modal__close-icon",
-      "className": "reports-fullscreen-modal__close-text",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 26.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
     },
     {
       "file": "733-ui-v4-login-theme.css",
@@ -826,18 +757,6 @@
       "exemptionType": null,
       "exemptionReason": null,
       "tricks": []
-    },
-    {
-      "file": "734-ui-v4-curator-panel.css",
-      "selector": ".cur-cab__subtitle",
-      "className": "cur-cab__subtitle",
-      "zone": "service-curator",
-      "width": 100,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
     },
     {
       "file": "750-strength-builder.css",
@@ -865,30 +784,6 @@
     },
     {
       "file": "900-planning.css",
-      "selector": ".planning-subnav__item",
-      "className": "planning-subnav__item",
-      "zone": "planning",
-      "width": 0,
-      "height": 18.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "900-planning.css",
-      "selector": ".planning-goals-card__done,\n.planning-goals-advanced-toggle",
-      "className": "planning-goals-card__done",
-      "zone": "planning",
-      "width": 0,
-      "height": 34,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "900-planning.css",
       "selector": ".planning-goals-workspace__task button",
       "className": "planning-goals-workspace__task",
       "zone": "planning",
@@ -898,18 +793,6 @@
       "exemptionType": null,
       "exemptionReason": null,
       "tricks": []
-    },
-    {
-      "file": "900-planning.css",
-      "selector": ".planning-checklists-screen__card-toggle",
-      "className": "planning-checklists-screen__card-toggle",
-      "zone": "planning",
-      "width": 44,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
     },
     {
       "file": "900-planning.css",
@@ -925,18 +808,6 @@
     },
     {
       "file": "900-planning.css",
-      "selector": ".planning-quick-link-cancel",
-      "className": "planning-quick-link-cancel",
-      "zone": "planning",
-      "width": 0,
-      "height": 32.8,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "900-planning.css",
       "selector": ".planning-gantt2-bar",
       "className": "planning-gantt2-bar",
       "zone": "planning",
@@ -946,42 +817,6 @@
       "exemptionType": null,
       "exemptionReason": null,
       "tricks": []
-    },
-    {
-      "file": "905-planning-chrono.css",
-      "selector": ".chrono-duration__parallel-toggle",
-      "className": "chrono-duration__parallel-toggle",
-      "zone": "planning",
-      "width": 100,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "905-planning-chrono.css",
-      "selector": ".chrono-undo-toast__action",
-      "className": "chrono-undo-toast__action",
-      "zone": "planning",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
-    },
-    {
-      "file": "905-planning-chrono.css",
-      "selector": ".chrono-undo-toast__close",
-      "className": "chrono-undo-toast__close",
-      "zone": "planning",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": ["invisible-pseudo-hit-area"]
     },
     {
       "file": "heys-components.css",
@@ -2496,7 +2331,7 @@
       "selector": ".date-picker:not(.date-picker--v4) .date-picker-trigger",
       "className": "date-picker-trigger",
       "zone": "date-remainders",
-      "height": 50.2,
+      "height": 56,
       "fromDeclarations": false,
       "heightFromLineBox": true
     },
@@ -3054,7 +2889,7 @@
       "selector": ".aps-new-product-btn",
       "className": "aps-new-product-btn",
       "zone": "food-meal",
-      "height": 45.4,
+      "height": 64,
       "fromDeclarations": false,
       "heightFromLineBox": true
     },

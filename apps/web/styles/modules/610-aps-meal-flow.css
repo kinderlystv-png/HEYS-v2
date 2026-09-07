@@ -401,13 +401,14 @@
 
 }
 
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
 .flow-selection-row .flow-selection-btn::after {
   content: '';
   position: absolute;
-  inset: -7.9px -0px;
+  inset: -22px 0;
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
 
 
 .flow-selection-btn__copy {
@@ -810,11 +811,6 @@
 
 /* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
    размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.meal-rating-emoji-lg::after {
-  content: '';
-  position: absolute;
-  inset: -5px;
-}
 
 
 .meal-rating-emoji-lg.bounce {
@@ -1176,6 +1172,13 @@
 .meal-rating-emoji-lg {
   cursor: pointer;
   user-select: none;
+  position: relative;
+}
+
+.meal-rating-emoji-lg::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
 }
 
 .meal-rating-emoji-lg.emoji-tap {
@@ -1379,13 +1382,14 @@
 
 }
 
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
 .mpr-header-edit-btn::after {
   content: '';
   position: absolute;
-  inset: -21.5px -0px;
+  inset: -22px 0;
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
 
 
 .mpr-header-edit-btn.is-active {

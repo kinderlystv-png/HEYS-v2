@@ -513,8 +513,9 @@ body:has(.page-reports) .hdr::after {
 .widgets-tab__btn::after {
   content: '';
   position: absolute;
-  inset: -11px 0;
+  inset: -14px 0;
 }
+
 
 @media (hover: hover) {
   .widgets-tab__btn:hover {
@@ -12373,8 +12374,9 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-catalog__item::after {
   content: '';
   position: absolute;
-  inset: -1px 0;
+  inset: -2px 0;
 }
+
 
 
 /* «Готовится»: строка в полную яркость — приглушённое обещание читается как

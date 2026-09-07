@@ -74,6 +74,7 @@
 }
 
 .pwa-banner-install {
+
   flex-shrink: 0;
   min-height: 36px;
   padding: 0 16px;
@@ -85,6 +86,8 @@
   border-radius: 999px;
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
+  position: relative;
+
 }
 
 .pwa-banner-install:active {
@@ -93,6 +96,7 @@
 }
 
 .pwa-banner-later {
+
   width: 100%;
   padding: 0;
   background: transparent;
@@ -102,6 +106,8 @@
   font-weight: 600;
   text-align: center;
   cursor: pointer;
+  position: relative;
+
 }
 
 .pwa-banner-later:active {
@@ -564,6 +570,7 @@
 }
 
 .update-toast-update {
+
   padding: 8px 16px;
   background: var(--v4-bg, #ffffff);
   color: #059669;
@@ -574,6 +581,8 @@
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+
 }
 
 .update-toast-update:active {
@@ -582,6 +591,7 @@
 }
 
 .update-toast-dismiss {
+
   width: 28px;
   height: 28px;
   display: flex;
@@ -594,6 +604,8 @@
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
 
 .update-toast-dismiss:active {
@@ -5981,6 +5993,7 @@
 }
 
 .wn-close {
+
   width: 32px;
   height: 32px;
   display: flex;
@@ -5994,6 +6007,8 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
+  position: relative;
+
 }
 
 .wn-close:active {
@@ -6153,6 +6168,7 @@
 }
 
 .wn-got-it {
+
   display: block;
   width: 100%;
   padding: 12px;
@@ -6165,6 +6181,8 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s, opacity 0.15s;
+  position: relative;
+
 }
 
 .wn-got-it:active {
@@ -6295,6 +6313,7 @@
 }
 
 .ca-banner__dismiss {
+
   width: 28px;
   height: 28px;
   flex-shrink: 0;
@@ -6308,6 +6327,8 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+
 }
 
 .ca-banner__dismiss:active {
@@ -6427,9 +6448,9 @@
 }
 
 .ca-modal__close {
+
   width: 44px;
   height: 44px;
-  margin: -12px -12px 0 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6439,6 +6460,8 @@
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 28%, transparent);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+
 }
 .ca-modal__close-svg {
   width: 17px;
@@ -7486,3 +7509,63 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 /* MODULE 06 — PWA & Offline
  * Scope: install banners, offline/empty states, service prompts.
  */
+
+.pwa-banner-install::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.pwa-banner-later::after {
+  content: '';
+  position: absolute;
+  inset: -22px 0;
+}
+
+.update-toast-update::after {
+  content: '';
+  position: absolute;
+  inset: -6.2px 0;
+}
+
+.update-toast-dismiss::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.profile-v4-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -10px -2px;
+}
+
+.wn-close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.wn-got-it::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
+.ca-banner::after {
+  content: '';
+  position: absolute;
+  inset: -1.4px 0;
+}
+
+.ca-banner__dismiss::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+.ca-modal__close::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
