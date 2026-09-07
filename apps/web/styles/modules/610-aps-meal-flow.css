@@ -386,6 +386,7 @@
 }
 
 .flow-selection-row .flow-selection-btn {
+
   flex: 1;
   min-width: 0;
   display: flex;
@@ -396,7 +397,18 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.flow-selection-row .flow-selection-btn::after {
+  content: '';
+  position: absolute;
+  inset: -7.9px -0px;
+}
+
 
 .flow-selection-btn__copy {
   flex: 1;
@@ -784,6 +796,7 @@
 
 /* Большой emoji слева */
 .meal-rating-emoji-lg {
+
   font-size: 28px;
   width: 34px;
   height: 34px;
@@ -791,7 +804,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.meal-rating-emoji-lg::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
 
 .meal-rating-emoji-lg.bounce {
   animation: meal-emoji-bounce 0.4s ease;
@@ -857,9 +881,10 @@
 }
 
 .meal-preset-btn {
+
   width: 32px;
   height: 32px;
-  border: 1px solid var(--v4-line, #e2e8f0); /* v4-intentional */
+  border: 1px solid var(--v4-line, #e2e8f0); 
   border-radius: 8px;
   background: white;
   font-size: 16px;
@@ -868,7 +893,18 @@
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.meal-preset-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 .meal-preset-btn:active {
   opacity: 0.7;
@@ -1035,16 +1071,28 @@
 }
 
 .meal-comment-chip {
+
   padding: 5px 10px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--v4-ink-2, #64748b); /* v4-intentional */
+  color: var(--v4-ink-2, #64748b); 
   background: white;
   border: 1px solid #d1d5db;
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.meal-comment-chip::after {
+  content: '';
+  position: absolute;
+  inset: -8.8px -0px;
+}
+
 
 .meal-comment-chip:active {
   opacity: 0.7;
@@ -1316,6 +1364,7 @@
 }
 
 .mpr-header-edit-btn {
+
   border: 0;
   background: transparent;
   padding: 0;
@@ -1326,7 +1375,18 @@
   color: var(--v4-sand-act-deep, #8a4a20);
   cursor: pointer;
   text-align: right;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.mpr-header-edit-btn::after {
+  content: '';
+  position: absolute;
+  inset: -21.5px -0px;
+}
+
 
 .mpr-header-edit-btn.is-active {
   font-weight: 700;
@@ -1456,8 +1516,20 @@
 }
 
 .mpr-my-set-row--editable {
+
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.mpr-my-set-row--editable::after {
+  content: '';
+  position: absolute;
+  inset: -7.9px -0px;
+}
+
 
 .mpr-my-set-row__main {
   flex: 1;
@@ -1534,6 +1606,7 @@
 }
 
 .mpr-card {
+
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1543,7 +1616,18 @@
   border-radius: 16px;
   gap: 10px;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.mpr-card::after {
+  content: '';
+  position: absolute;
+  inset: -0.4px -0px;
+}
+
 
 .mpr-card-info {
   flex: 1;
@@ -1655,6 +1739,7 @@
 }
 
 .mpr-create-btn {
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1670,7 +1755,18 @@
   color: var(--v4-sand-act-deep, #8a4a20);
   transition: all 0.2s;
   margin-top: 4px;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.mpr-create-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3.2px -0px;
+}
+
 
 @media (hover: hover) {
   .mpr-create-btn:hover {
@@ -1756,6 +1852,7 @@
 }
 
 .mpr-search-result-item {
+
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1768,7 +1865,18 @@
   gap: 2px;
   transition: background 0.12s;
   width: 100%;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.mpr-search-result-item::after {
+  content: '';
+  position: absolute;
+  inset: -3.4px -0px;
+}
+
 
 @media (hover: hover) {
   .mpr-search-result-item:hover {
@@ -2333,6 +2441,7 @@
 /* Секция рекомендаций */
 /* 💾 Save Preset button in meal row */
 .mpc-save-preset-btn {
+
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2346,7 +2455,18 @@
   font-size: 15px;
   transition: all 0.2s;
   self-align: center;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.mpc-save-preset-btn::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
 
 @media (hover: hover) {
   .mpc-save-preset-btn:hover {
@@ -2412,6 +2532,7 @@
 }
 
 .aps-search-barcode-btn {
+
   position: absolute;
   right: 14px;
   top: 50%;
@@ -2419,13 +2540,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Контракт «вид · строка поиска»: иконка штрихкода 22 px тоном чернил 55 % в
-     области нажатия 44 × 44 с отрицательными полями. Тон был #434587 — цвет
-     снятой системы; область 40 × 44 не дотягивала до минимальной цели касания,
-     и отрицательные поля нужны, чтобы цель не растянула саму строку. */
+  
   width: 44px;
   height: 44px;
-  margin: -13px -6px -13px 0;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -2438,6 +2555,7 @@
   transition:
     opacity 0.15s ease,
     transform 0.15s ease;
+
 }
 
 @media (hover: hover) {
@@ -2605,6 +2723,7 @@
 }
 
 .aps-grams-btn {
+
   width: 40px;
   height: 40px;
   border: 1px solid var(--border);
@@ -2615,7 +2734,18 @@
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.aps-grams-btn::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
 
 @media (hover: hover) {
   .aps-grams-btn:hover {
@@ -2687,6 +2817,7 @@
 /* === 10. APS OPEN BUTTON (Кнопка вызова модалки) === */
 
 .aps-open-btn {
+
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -2700,7 +2831,18 @@
   color: var(--v4-act, #2563eb);
   transition: all 0.2s ease;
   white-space: nowrap;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.aps-open-btn::after {
+  content: '';
+  position: absolute;
+  inset: -2.6px -0px;
+}
+
 
 @media (hover: hover) {
   .aps-open-btn:hover {
@@ -3035,6 +3177,7 @@
 
 /* Бейдж качества в meal-meta-row (кликабельный) */
 button.meal-quality-badge {
+
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -3047,7 +3190,18 @@ button.meal-quality-badge {
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+button.meal-quality-badge::after {
+  content: '';
+  position: absolute;
+  inset: -15.6px -0px;
+}
+
 
 @media (hover: hover) {
   button.meal-quality-badge:hover {
@@ -3082,11 +3236,23 @@ button.meal-quality-badge:active {
 
 /* Micro-interaction при клике */
 .meal-bar-container {
+
   transition:
     transform 0.1s ease,
     box-shadow 0.2s ease;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.meal-bar-container::after {
+  content: '';
+  position: absolute;
+  inset: -7.9px -0px;
+}
+
 
 @media (hover: hover) {
   .meal-bar-container:hover {
@@ -3323,7 +3489,7 @@ button.meal-quality-badge:active {
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-search-state--start .aps-v4-search-state__body {
@@ -3609,7 +3775,7 @@ button.meal-quality-badge:active {
   font-size: 12px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -3973,7 +4139,7 @@ button.meal-quality-badge:active {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.45;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Кадр ставит «Повторить» и «Создать продукт» в строку по половине ширины:
@@ -4078,7 +4244,7 @@ button.meal-quality-badge:active {
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-search-field.is-focused {
@@ -4275,7 +4441,7 @@ button.meal-quality-badge:active {
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-preset-confirm__field {
@@ -4343,19 +4509,20 @@ button.meal-quality-badge:active {
 }
 
 .meal-transfer-v4__close {
+
   display: inline-flex;
   flex: 0 0 44px;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
-  margin: -14px -8px -14px 0;
   padding: 0;
   color: rgba(var(--v4-ink-rgb), 0.35); /* v4-intentional */
   background: transparent;
   border: 0;
   border-radius: 999px;
   cursor: pointer;
+
 }
 
 .meal-transfer-v4__items {
@@ -4384,7 +4551,6 @@ button.meal-quality-badge:active {
 
 .meal-transfer-v4__select-all {
   min-height: 44px;
-  margin: -17px -8px -17px 0;
   padding: 0 8px;
   color: var(--v4-act-text); /* v4-intentional */
   font-size: 11px;
@@ -4422,12 +4588,24 @@ button.meal-quality-badge:active {
 }
 
 .meal-transfer-v4__product-main {
+
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.meal-transfer-v4__product-main::after {
+  content: '';
+  position: absolute;
+  inset: -7.9px -0px;
+}
+
 
 .meal-transfer-v4__native-control {
   position: absolute;
@@ -4580,6 +4758,7 @@ button.meal-quality-badge:active {
 }
 
 .meal-transfer-v4__range {
+
   flex: 1 1 auto;
   width: 100%;
   height: 14px !important;
@@ -4590,7 +4769,18 @@ button.meal-quality-badge:active {
   background: transparent;
   border: 0;
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.meal-transfer-v4__range::after {
+  content: '';
+  position: absolute;
+  inset: -15px -0px;
+}
+
 
 .meal-transfer-v4__range::-webkit-slider-runnable-track {
   height: 4px;
@@ -4800,7 +4990,7 @@ button.meal-quality-badge:active {
   flex: 0 0 auto;
   min-height: 44px;
   padding: 0 20px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12.5px;
   background: var(--v4-card); /* v4-intentional */
 }
@@ -4925,7 +5115,7 @@ button.meal-quality-badge:active {
   font-size: 12.5px;
   font-weight: 500;
   line-height: 1;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .aps-v4-preset-confirm__row.is-last {

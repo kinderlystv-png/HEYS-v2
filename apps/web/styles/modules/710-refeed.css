@@ -405,6 +405,7 @@
    ============================================================ */
 
 .refeed-toggle {
+
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -417,7 +418,18 @@
   color: var(--v4-ink-2, #6b7280);
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.refeed-toggle::after {
+  content: '';
+  position: absolute;
+  inset: -8.8px -0px;
+}
+
 
 @media (hover: hover) {
   .refeed-toggle:hover {

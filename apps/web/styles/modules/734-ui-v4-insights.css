@@ -175,7 +175,7 @@
 .insights-priority-action__freeze-label {
   flex: none;
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-attention {
@@ -189,7 +189,7 @@
   font-size: 12.5px;
   font-weight: 500;
   line-height: 1.45;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-attention__list {
@@ -255,7 +255,7 @@
   border-radius: 0;
   background: none;
   font: 600 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
 
@@ -283,7 +283,7 @@
 }
 
 .insights-v4-patterns__immature-title {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-patterns__immature-meta {
@@ -602,7 +602,7 @@
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: none;
   font: 600 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: left;
   cursor: pointer;
 }
@@ -675,7 +675,7 @@
 
 .insights-v4-maturity--forecast {
   background: var(--v4-chip, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-attention__meta {
@@ -793,7 +793,7 @@
   flex: 1;
   min-width: 0;
   font: 700 12.5px/1.35 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-patterns__support {
@@ -821,7 +821,7 @@
   align-items: baseline;
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 12px;
 }
 
@@ -854,7 +854,7 @@
   gap: 8px;
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 12px;
 }
 
@@ -901,7 +901,7 @@
 .meal-rec-v4__why {
   margin-top: 12px;
   font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .meal-rec-v4__cta {
@@ -924,6 +924,7 @@
    11,5/700 тоном --ac. Стояло 600 на чернилах 55 %, и строка, ради которой
    рекомендация перестаёт быть приказом, была тише всего в карточке. */
 .meal-rec-v4__how {
+
   display: block;
   width: 100%;
   min-height: 40px;
@@ -933,7 +934,18 @@
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
+  position: relative;
+
 }
+
+/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
+   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
+.meal-rec-v4__how::after {
+  content: '';
+  position: absolute;
+  inset: -2px -0px;
+}
+
 
 .meal-rec-v4__how-body {
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
@@ -943,7 +955,7 @@
 .meal-rec-v4__how-line {
   margin: 0 0 8px;
   font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .meal-rec-v4__how-line:last-child {
@@ -973,7 +985,7 @@
 .insights-v4-nutrition__rhythm-time {
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Перемычка между временами — дорожкой, а не поверхностью чипа: --v4-chip
@@ -1046,7 +1058,7 @@
   text-align: right;
   font: 600 11.5px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-nutrition__legend {
@@ -1057,7 +1069,7 @@
 
 .insights-v4-nutrition__legend-item {
   font: 500 10px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -1218,7 +1230,7 @@
   width: 74px;
   text-align: right;
   font: 500 10.5px/1.2 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Оба кадра — «метаболизм · 13» и «подробно · 17» — просят этим строкам
@@ -1249,7 +1261,7 @@
   padding: 12px 0;
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   font: 500 12px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-pheno__use:last-child {
@@ -1337,7 +1349,7 @@
 }
 
 .insights-v4-thresh__mine--calc {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-thresh__head .insights-v4-thresh__mine--calc {
@@ -1362,7 +1374,7 @@
 
 /* Третий ярус: имя приглушено, справа причина словом, колонок нет вовсе. */
 .insights-v4-thresh__name.is-muted {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-thresh__why {
@@ -1385,7 +1397,7 @@
 .insights-v4-thresh__where {
   margin-top: 2px;
   font: 500 12px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1462,7 +1474,7 @@
   min-width: 0;
   /* Элемент 27: 500 12/1,45. */
   font: 500 12px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-outcomes,
@@ -1508,7 +1520,7 @@
 .insights-v4-whatif__locked {
   margin: 0;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* «Инсайты · что если»: inline-сценарий живёт внутри второго слоя, а не
@@ -1561,7 +1573,7 @@
   border: 0;
   border-radius: 999px;
   background: var(--v4-surface, #f7efe2);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font: 600 12px/1 Figtree, sans-serif;
   cursor: pointer;
 }
@@ -1693,7 +1705,7 @@
   border: 0;
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: transparent;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font: 600 12.5px/1 Figtree, sans-serif;
   text-align: left;
   cursor: pointer;
@@ -1758,7 +1770,7 @@
 .insights-v4-sheet__text {
   margin: 0 0 10px;
   font: 500 12px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   /* Абзацы листа состоят из чисел («больше 1500 ккал не копим», «от 80, от
      100, от 150», «возвращаем 75 %»), и человек сравнивает их между собой
      по ходу чтения. Пропорциональные цифры в таком тексте пляшут. */
@@ -1931,7 +1943,7 @@
 .insights-v4-fail__ask {
   margin-top: 9px;
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-fail__tier {
@@ -2028,7 +2040,7 @@
   font: 700 9px/1 ui-monospace, Menlo, monospace;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .meal-rec-done__hint {
