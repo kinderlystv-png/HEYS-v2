@@ -120,7 +120,7 @@ body:has(.activity-v4) .hdr::after {
   text-align: left;
   /* Кадр просит 50 %, ближайшая ступень набора — 55 %. */
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-hero__footer-link {
@@ -191,7 +191,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-breakdown__value--aside {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-breakdown__row--total .activity-v4-breakdown__name {
@@ -220,7 +220,7 @@ body:has(.activity-v4) .hdr::after {
   border-radius: 999px;
   background: var(--v4-surface, #f7efe2);
   font: 500 9px/1.4 ui-monospace, Menlo, monospace;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Ноль шагов — вся запись приглушена до 38 %, как в кадре «новый человек»:
@@ -231,7 +231,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-steps__value--estimated {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Оценочная заливка не должна выглядеть достижением; используем именованную
@@ -326,7 +326,7 @@ body:has(.activity-v4) .hdr::after {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-today__value--chevron i {
@@ -718,7 +718,7 @@ body:has(.activity-v4) .hdr::after {
   align-items: center;
   gap: 6px;
   font: 500 10.5px/1.2 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot {
@@ -974,7 +974,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-program .sb-plan-meta {
   margin: 8px 0 0;
   font: 500 12px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-program .sb-btn.sb-plan-cta {
@@ -1001,7 +1001,7 @@ body:has(.activity-v4) .hdr::after {
   background: var(--v4-hero, #efe3cf);
   font: 700 12.5px/1 Figtree, system-ui, sans-serif;
   /* Кадр просит 58 %, ближайшая ступень набора — 55 %. */
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Будущий план в ленте: состав виден до действия, потому что перенос выбирают
@@ -1148,12 +1148,12 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-program .sb-plan-week-days i {
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
   font-style: normal;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-program .sb-plan-week-days b {
   font: 700 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-program .sb-plan-week-days .is-done b {
@@ -1182,7 +1182,7 @@ body:has(.activity-v4) .hdr::after {
   gap: 10px 12px;
   margin-top: 10px;
   font: 600 10.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-program .sb-plan-week-legend span {
@@ -1222,7 +1222,7 @@ body:has(.activity-v4) .hdr::after {
   display: block;
   margin-top: 10px;
   font: 500 11px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-program .sb-plan-feed > .sb-plan-trace {
@@ -1440,7 +1440,7 @@ body:has(.activity-v4) .hdr::after {
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
   /* Кадр просит 58 %, ближайшая ступень набора — 55 %. */
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4 .sb-card--running .sb-card-cta {
@@ -1485,7 +1485,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-history-empty__text {
   margin-top: 8px;
   font: 500 12px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Нагрузка: первый слой предупреждает, второй раскрывает модель по запросу. */
@@ -1770,7 +1770,7 @@ body:has(.activity-v4) .hdr::after {
 .sb-plan-vs-done .sb-plan-vs-summary-sub {
   margin: 6px 0 0;
   font: 500 11.5px/1.4 Figtree, sans-serif;
-  color: rgba(var(--ink), 0.55);
+  color: rgba(var(--ink), 0.56);
 }
 
 .sb-plan-vs-done .sb-plan-vs-list {
@@ -1874,7 +1874,7 @@ body:has(.activity-v4) .hdr::after {
 
 .sb-plan-vs-done .sb-plan-vs-cd-val.is-muted {
   font-weight: 600;
-  color: rgba(var(--ink), 0.55);
+  color: rgba(var(--ink), 0.56);
 }
 
 .sb-plan-vs-done .sb-plan-vs-actions {

@@ -705,7 +705,7 @@
 
 .cycle-card__cancel-btn {
   background: rgba(0, 0, 0, 0.05);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 @media (hover: hover) {
@@ -748,5 +748,5 @@
 
 [data-theme$='dark'] .cycle-card__cancel-btn {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }

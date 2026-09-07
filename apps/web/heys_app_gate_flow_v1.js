@@ -2769,7 +2769,7 @@
                 React.createElement('p', {
                     style: {
                         margin: '0',
-                        color: 'var(--v4-ink-2, rgba(0, 0, 0, 0.55))',
+                        color: 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))',
                         fontSize: '16px',
                         lineHeight: 1.5,
                     },
@@ -2795,7 +2795,7 @@
                             : 'var(--v4-hero, #efe3cf)',
                         color: idx === 0
                             ? 'var(--v4-btn-on-act, #2b1608)'
-                            : 'var(--v4-ink-2, rgba(0, 0, 0, 0.55))',
+                            : 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))',
                         fontSize: '16px',
                         fontWeight: 600,
                         cursor: 'pointer',

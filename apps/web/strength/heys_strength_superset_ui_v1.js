@@ -3306,7 +3306,7 @@
     '}',
     '.sb-custom-exercise-screen .sb-custom-ex-hint {',
     'font:600 12.5px/1.4 Figtree,sans-serif;',
-    'color:rgba(var(--ink), .55);',
+    'color:rgba(var(--ink), 0.56);',
     '}'
   ].join('');
 

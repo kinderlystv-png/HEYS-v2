@@ -807,7 +807,7 @@
 }
 
 .mc-recorded-row > span:first-child {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-recorded-row__value {
@@ -850,7 +850,7 @@
 }
 
 [data-theme$="dark"] .mc-recorded-row > span:first-child {
-  color: var(--v4-ink-2, rgba(242, 237, 230, 0.55));
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.56));
 }
 
 [data-theme$="dark"] .mc-recorded-row__value {
@@ -885,7 +885,7 @@
 .mc-daily-footer-secondary {
   flex: 1;
   background: var(--v4-sand-surface, #f7efe2);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-daily-footer-primary {
@@ -1236,7 +1236,7 @@
      и это уже не выбор, а соответствие. */
   background: var(--v4-bg, #fffaf1);
   /* Пакет 43: кадры пилюли-ответа просят var(--ink-2) (55 %). */
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 700;
   /* Кадры «Остального» рисуют этой рамке чернила 16 % — и кнопке выбора, и
      чипу кофе, и «Сделал». Стояло 22 %: своих чисел контракт рамке не даёт,
@@ -1256,7 +1256,7 @@
   flex: none;
   min-width: 96px;
   background: var(--v4-chip, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 600;
   font-size: 12px;
 }
@@ -1845,7 +1845,7 @@
 .mc-rest-cycle-week-hint {
   margin-top: 5px;
   font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-cycle-expanded-head {
@@ -1859,7 +1859,7 @@
   border: none;
   background: transparent;
   font: 700 11px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   min-height: 44px;
   display: inline-flex;
@@ -1926,7 +1926,7 @@
 .mc-rest-cycle-btn--secondary {
   background: var(--v4-sand-surface-soft, #fffaf1);
   box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.16);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-cycle-auto-hint {
@@ -1947,7 +1947,7 @@
 .mc-rest-row--cold .mc-rest-card-title,
 .mc-rest-row--measurements-deferred .mc-rest-card-title {
   font: 600 13px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-row-actions {
@@ -1969,7 +1969,7 @@
 }
 
 .mc-rest-card-title--muted {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-rest-card-hint--muted {
@@ -2609,7 +2609,7 @@
   background: transparent;
   cursor: pointer;
   font: 700 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   -webkit-appearance: none;
   appearance: none;
 }
@@ -3356,7 +3356,7 @@
 
 .mc-btn-back {
   background: transparent;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-btn-back:active {
@@ -3460,7 +3460,7 @@
 
 .mc-step-label {
   font-size: 14px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
   margin-bottom: 12px;
   /* Вопрос/подпись шага — служебный текст, не выделяется (см. .mc-step-title). */
@@ -3484,7 +3484,7 @@
 .mc-weight-unit {
   font-size: 20px;
   font-weight: 500;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Weight pickers */
@@ -3600,7 +3600,7 @@
 .mc-sleep-unit {
   font-size: 18px;
   font-weight: 500;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-sleep-times {
@@ -3621,7 +3621,7 @@
 .mc-sleep-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-sleep-pickers {
@@ -3652,7 +3652,7 @@
 .mc-steps-unit {
   font-size: 18px;
   font-weight: 500;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-picker {
@@ -3668,7 +3668,7 @@
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: var(--v4-chip, #efe3cf);
   border: 2px solid transparent;
   border-radius: 12px;
@@ -3722,7 +3722,7 @@
 .deficit-label {
   font-size: 15px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .deficit-slider-container {
@@ -3741,7 +3741,7 @@
   border: none;
   border-radius: 8px;
   background: var(--v4-chip, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 20px;
   font-weight: 600;
   cursor: pointer;
@@ -3839,13 +3839,13 @@
 .household-unit {
   font-size: 16px;
   margin-left: 4px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .household-kcal {
   font-size: 14px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .household-status {
@@ -3935,7 +3935,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   padding: 0 4px;
 }
 
@@ -3982,7 +3982,7 @@
 
 .household-example {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: transparent;
   border: none;
   min-height: 44px;
@@ -4031,7 +4031,7 @@
 
 .household-hint {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
   line-height: 1.4;
 }
@@ -4056,7 +4056,7 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   font-size: 10px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
   line-height: 1.2;
 }
@@ -4106,7 +4106,7 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
   font-size: 10px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
   padding: 0 2px 4px;
 }
@@ -4179,7 +4179,7 @@
 .household-time-hint {
   font-size: 11px;
   font-weight: 400;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .household-time-picker {
@@ -4246,7 +4246,7 @@
 
 .household-time-minutes {
   font-size: 16px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 500;
 }
 
@@ -4256,7 +4256,7 @@
   border-radius: 10px;
   border: 1.5px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: var(--v4-bg, #fff);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -4353,7 +4353,7 @@
 }
 
 .household-summary-time {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .household-summary-kcal {
@@ -4363,7 +4363,7 @@
 .household-examples-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 8px;
 }
 
@@ -4453,7 +4453,7 @@
   border-radius: 50%;
   border: none;
   background: var(--v4-chip, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 14px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -4492,7 +4492,7 @@
   padding: 8px 14px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: var(--v4-chip, #efe3cf);
   border: 2px solid transparent;
   border-radius: 10px;
@@ -4760,7 +4760,7 @@
 .mc-quality-btn-label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-quality-btn.active .mc-quality-btn-label {
@@ -5052,7 +5052,7 @@
 
 .mc-step-hint {
   font-size: 14px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin: 0;
 }
 
@@ -5233,7 +5233,7 @@
 }
 
 .mc-delta-same {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: rgba(100, 116, 139, 0.1);
 }
 
@@ -5713,7 +5713,7 @@
   text-align: center;
   margin-top: 12px;
   font-size: 13px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-style: italic;
   min-height: 36px;
   /* Фикс для 2 строк текста */
@@ -5815,7 +5815,7 @@
   margin-top: 16px;
   padding: 10px 16px;
   font-size: 13px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: var(--v4-accent-bg, #f0dcc6);
   border-radius: 8px;
   border: 1px solid color-mix(in srgb, var(--v4-act, #c67139) 45%, var(--v4-accent-bg, #f0dcc6));
@@ -5891,7 +5891,7 @@
 
 .mc-btn--secondary {
   background: var(--v4-chip, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .mc-btn--secondary {
@@ -5903,7 +5903,7 @@
 .mc-tip {
   padding: 12px 24px 20px;
   font-size: 13px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
   border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
@@ -5990,7 +5990,7 @@
   background: rgba(0, 0, 0, 0.05);
   border-radius: 50%;
   font-size: 14px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
@@ -6099,7 +6099,7 @@
 .wn-item-desc {
   font-size: 13px;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 8px;
 }
 
@@ -6305,7 +6305,7 @@
   background: rgba(0, 0, 0, 0.05);
   border-radius: 50%;
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -6608,7 +6608,7 @@
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.6;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -6673,7 +6673,7 @@
      цвет не следовал набору ни в одном из четырёх. Роль ещё и инвертируется
      в тёмных, чего color-mix от --v4-ink здесь не делал: тёмное
      переопределение ниже задавало свои .5 руками. */
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .ca-modal__type-members {

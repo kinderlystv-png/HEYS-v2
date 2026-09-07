@@ -644,7 +644,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available {
   background: var(--v4-surface, #f7efe2);
   border: 0;
   box-shadow: none;
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
   font-size: 17px;
 }
 
@@ -795,7 +795,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-card--new-device .heys-auth-notice-body {
   margin-top: 9px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Maintenance gate (canvas lk2) */
@@ -875,7 +875,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-maintenance-block__body {
   margin-top: 9px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
@@ -1049,7 +1049,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
 
 .heys-auth-support-text {
   margin-bottom: 16px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12.5px;
   line-height: 1.5;
 }
@@ -1989,7 +1989,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 .heys-consent-sign-sheet--sign .heys-auth-key.heys-auth-key--delete,
 .heys-consent-sign-sheet--sign .heys-auth-key.heys-auth-key--delete.is-available {
   background: transparent;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 13px;
   font-weight: 600;
 }
@@ -2076,7 +2076,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 
 .heys-consent-sign-sheet__done-note {
   margin: 10px 0 0;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font: 500 12.5px/1.55 Figtree, system-ui, sans-serif;
   text-align: center;
   text-wrap: pretty;
@@ -2262,7 +2262,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   font-size: 12px;
   font-weight: 500;
   line-height: 1.55;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -2335,7 +2335,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   border-radius: 999px;
   padding: 12px 16px;
   background: transparent;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -2423,7 +2423,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1.3;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .consent-fulltext__progress-label {
@@ -2520,7 +2520,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 }
 
 .consent-doc-body {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12.5px;
   line-height: 1.55;
   text-wrap: pretty;
@@ -2609,7 +2609,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   border-radius: 16px;
   background: var(--v4-sand-surface, #f7efe2);
   font-style: normal;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .consent-doc-contact-card {

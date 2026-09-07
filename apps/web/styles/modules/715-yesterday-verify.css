@@ -707,7 +707,7 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 1.5;
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
   text-wrap: pretty;
 }
 
@@ -757,7 +757,7 @@
 .yv-pack-secondary {
   flex: 1;
   background: var(--v4-c1, #f7efe2);
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
 }
 
 /* Кадры развилки: data-строка под карточкой сводки и списком дней через 12. */
@@ -805,7 +805,7 @@
 /* Кадр «Чек-ин · вчерашний день», элемент 09: подпись слева («Еда» и др.) —
    тон rgba(var(--ink),.55), не значение справа. */
 .yv-food-label {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .yv-food-row + .yv-food-row {
@@ -1056,7 +1056,7 @@
 
 .yv-pack-day-meta {
   font: 500 11px/1.4 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 2px;
 }
 

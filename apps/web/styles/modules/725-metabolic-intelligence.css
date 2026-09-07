@@ -3034,7 +3034,7 @@
 
 .adv-analytics__confidence-label {
   font-size: 13px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-weight: 500;
 }
 
@@ -3066,7 +3066,7 @@
 
 .adv-analytics__confidence-advice {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   padding-top: 10px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
@@ -3233,7 +3233,7 @@
 .adv-analytics__corr-value {
   font-size: 11px;
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   min-width: 40px;
   text-align: right;
 }
@@ -3306,12 +3306,12 @@
   padding: 2px 8px;
   border-radius: 10px;
   background: rgba(0, 0, 0, 0.06);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .adv-analytics__pattern-insight {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   line-height: 1.4;
 }
 
@@ -3416,7 +3416,7 @@
 
 .adv-analytics__risk-prediction {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .adv-analytics__risk-factors {
@@ -3459,7 +3459,7 @@
 
 .adv-analytics__risk-factor-header span:last-child {
   font-weight: 600;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .adv-analytics__risk-factor-bar {
@@ -3728,7 +3728,7 @@
 
 .adv-analytics__science-detail {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 4px;
 }
 
@@ -3760,7 +3760,7 @@
 
 .adv-analytics__science-recs>div {
   font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   padding: 4px 8px;
   background: rgba(34, 197, 94, 0.08);
   border-radius: 6px;
@@ -3787,7 +3787,7 @@
   background: rgba(148, 163, 184, 0.1);
   border-radius: 6px;
   font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .dark .adv-analytics__al-component,
@@ -3843,7 +3843,7 @@
 .adv-analytics__ews-insight {
   grid-column: 1 / -1;
   font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 2px;
 }
 
@@ -3934,7 +3934,7 @@
 
 .adv-analytics__causality-detail {
   font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   grid-column: 1 / -1;
 }
 
@@ -5694,7 +5694,7 @@
 }
 
 .phenotype-expandable-card--empty .phenotype-expandable-card__subtitle {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .phenotype-expandable-card--empty .phenotype-expandable-card__icon {

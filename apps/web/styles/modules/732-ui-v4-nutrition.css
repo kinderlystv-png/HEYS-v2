@@ -423,7 +423,7 @@
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__title,
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__kcal {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .nutrition-v4-meal-row--empty .nutrition-v4-meal-row__add {
@@ -1769,6 +1769,6 @@
   border-radius: 999px;
   box-shadow: inset 0 0 0 1px var(--v4-track, rgba(0, 0, 0, 0.12));
   font: 600 9.5px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: transparent;
 }

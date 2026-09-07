@@ -146,14 +146,14 @@
 
 .cascade-card__subtitle {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   padding-right: 24px;
   line-height: 1.4;
 }
 
 .cascade-card__hint {
   font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: color-mix(in srgb, var(--v4-warn-1, #d99a63) 8%, transparent);
   border-radius: 6px;
   padding: 4px 8px;
@@ -175,7 +175,7 @@
   top: 14px;
   font-size: 18px;
   font-weight: 700;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   transform: rotate(90deg);
   transition: transform 0.2s ease;
   line-height: 1;
@@ -222,7 +222,7 @@
 .cascade-card__copy-btn {
   border: 1px solid rgba(100, 116, 139, 0.28);
   background: var(--v4-bg, #fffaf1);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 11px;
   font-weight: 600;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
@@ -589,7 +589,7 @@
   gap: 8px;
   padding: 6px 0;
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
@@ -664,7 +664,7 @@
   background: var(--v4-bg, #fffaf1);
   border-radius: 8px;
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   display: flex;
   align-items: flex-start;
   gap: 6px;
@@ -778,7 +778,7 @@
   font-size: 13px;
   line-height: 1.3;
   font-weight: 700;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -786,7 +786,7 @@
 .cascade-card__stats-hero-note {
   font-size: 11px;
   line-height: 1.4;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   overflow-wrap: anywhere;
 }
 
@@ -826,7 +826,7 @@
 
 .cascade-card__stats-caption {
   font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   line-height: 1.35;
   text-align: right;
 }
@@ -837,7 +837,7 @@
 
 .cascade-card__stat-label {
   font-size: 11px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   line-height: 1.35;
 }
 
@@ -873,7 +873,7 @@
   border: 1px solid rgba(148, 163, 184, 0.14);
   font-size: 10px;
   line-height: 1.35;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   overflow-wrap: anywhere;
 }
 
@@ -1127,7 +1127,7 @@
 
 .heys-score-tile__entry-label {
   font: 600 12px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .heys-score-tile__entry-chevron {
@@ -1147,14 +1147,14 @@
 .heys-score-tile__label {
   font-size: 12px;
   font-weight: 700;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Фраза состояния стоит под числом в одной колонке с ним, поэтому
    отступ задаёт колонка (зазор 5), а не сама фраза. */
 .heys-score-tile__state {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .heys-score-tile__curve {
@@ -1172,7 +1172,7 @@
   flex: none;
   font: 700 11.5px/1 Figtree, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .heys-score-tile__delta.is-up {
@@ -1188,7 +1188,7 @@
 .heys-score-tile__detail-intro {
   font-size: 12px;
   font-weight: 700;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 6px;
 }
 
@@ -1208,7 +1208,7 @@
 
 .heys-score-tile__detail-loading {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .heys-score-tile {
@@ -1318,7 +1318,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 10px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 4px;
 }
 
@@ -1360,7 +1360,7 @@
 
 .heys-score-insights-card__contribution {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 

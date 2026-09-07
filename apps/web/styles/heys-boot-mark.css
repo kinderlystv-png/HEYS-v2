@@ -37,7 +37,7 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: var(
     --boot-stroke: var(--v4-act, #c67139);
     --boot-letter: var(--v4-act-text, #8a4a20);
     --boot-ink: var(--v4-ink, #201e1d);
-    --boot-muted: var(--v4-ink-2, rgba(0, 0, 0, .55));
+    --boot-muted: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
     --boot-ink-50: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
     --boot-ink-58: color-mix(in srgb, var(--v4-ink, #201e1d) 58%, transparent);
     --boot-fail-disc: var(--v4-tint, #f6e6dd);

@@ -209,7 +209,7 @@ body:has(.widgets-quick-fab-wrap) .fab-group--messenger-only {
 }
 
 .messenger-subtitle--search-count {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-subtitle__dot {
@@ -379,7 +379,7 @@ button.messenger-day-checklist__chip:active {
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
@@ -901,7 +901,7 @@ button.messenger-day-checklist__chip:active {
   align-items: flex-end;
   gap: 2px;
   min-width: 44px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 11px;
   font-weight: 600;
   opacity: 0.82;
@@ -1007,7 +1007,7 @@ button.messenger-day-checklist__chip:active {
   gap: 8px;
   padding: 14px;
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
   font-size: 13px;
   font-weight: 600;
@@ -1180,7 +1180,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-recording-time {
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -1213,7 +1213,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-audio-status {
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -1229,7 +1229,7 @@ button.messenger-day-checklist__chip:active {
   border: none;
   border-radius: 50%;
   background: color-mix(in srgb, var(--v4-ink, #201e1d) 8%, transparent);
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   font-size: 13px;
   flex-shrink: 0;
@@ -1362,7 +1362,7 @@ button.messenger-day-checklist__chip:active {
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1645,7 +1645,7 @@ button.messenger-day-checklist__chip:active {
   height: 44px;
   background: transparent;
   border: none;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 16px;
   cursor: pointer;
   padding: 0;
@@ -1731,7 +1731,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inapp-toast__copy span {
   overflow: hidden;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.25;
@@ -1762,7 +1762,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inapp-toast__later {
   background: transparent;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-inapp-toast__read {
@@ -1843,7 +1843,7 @@ button.messenger-day-checklist__chip:active {
   padding: 0 4px;
   border: none;
   background: transparent;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
@@ -2233,7 +2233,7 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme$="dark"] .msg-attachment-error {
   background: var(--v4-bg, #141210);
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .msg-attachment-error button {
@@ -2365,7 +2365,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme$="dark"] .messenger-inapp-toast__copy span {
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 
@@ -2387,11 +2387,11 @@ button.messenger-day-checklist__chip:active {
 
 [data-theme$="dark"] .msg-bubble-theirs .msg-audio-transcript,
 [data-theme$="dark"] .messenger-audio-draft .msg-audio-transcript {
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .messenger-consent-text {
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .messenger-input {
@@ -2472,7 +2472,7 @@ button.messenger-day-checklist__chip:active {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.3;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -2550,18 +2550,18 @@ button.messenger-day-checklist__chip:active {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-apply__time {
   font-size: 11.5px;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-apply__empty {
   font-size: 12.5px;
   line-height: 1.45;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-apply__row {
@@ -2627,7 +2627,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-apply__total {
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
 
@@ -2664,7 +2664,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-apply__cancel {
   border: 1px solid var(--v4-line, rgba(0 0 0 / 0.08));
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-apply__submit {
@@ -2954,7 +2954,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-search__icon {
   flex: none;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-search__input {
@@ -3192,7 +3192,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-offline-bar__retry:disabled {
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: default;
 }
 
@@ -3215,7 +3215,7 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme$="dark"] .messenger-offline-bar__text {
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 [data-theme$="dark"] .messenger-offline-bar__retry {
@@ -3313,12 +3313,12 @@ button.messenger-day-checklist__chip:active {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-transcript-draft__note {
   font-size: 10.5px;
-  color: var(--v4-ink-2, rgba(0 0 0 / 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-transcript-draft__field {
@@ -3448,7 +3448,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-inbox__subtitle {
   margin-top: 2px;
   font-size: 12px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-inbox__filters {
@@ -3495,7 +3495,7 @@ button.messenger-day-checklist__chip:active {
   padding: 24px 18px;
   text-align: center;
   font-size: 13px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-inbox__row {
@@ -3539,7 +3539,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inbox__row.is-done .messenger-inbox__avatar {
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-inbox__badge {
@@ -3587,7 +3587,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inbox__row.is-done .messenger-inbox__name {
   font-weight: 500;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .messenger-inbox__time {
@@ -3598,7 +3598,7 @@ button.messenger-day-checklist__chip:active {
 
 .messenger-inbox__preview {
   font-size: 13px;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3615,7 +3615,7 @@ button.messenger-day-checklist__chip:active {
   padding: 2px 7px;
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 10.5px;
   font-weight: 600;
 }

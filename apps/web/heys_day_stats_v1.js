@@ -3546,7 +3546,7 @@
                     React.createElement('span', { style: ncName },
                       'Поправка на факт',
                       React.createElement('span', {
-                        style: Object.assign({}, ncPill, { background: 'transparent', color: 'var(--v4-ink-2, rgba(0, 0, 0, 0.55))' })
+                        style: Object.assign({}, ncPill, { background: 'transparent', color: 'var(--v4-ink-2, rgba(0, 0, 0, 0.56))' })
                       }, 'копим данные')
                     ),
                     React.createElement('span', {

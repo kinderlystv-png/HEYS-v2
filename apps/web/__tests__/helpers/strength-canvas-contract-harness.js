@@ -89,11 +89,11 @@ export function createStyleHost() {
 /** @typedef {{ ink55?: string, ink30?: string, ink38?: string, ink55Blue?: string }} StrengthInkRoles */
 
 const V4_INK_BEFORE_INK = Object.freeze([
-  ['var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.55))', 'ink55'],
-  ['var(--v4-ink-2, rgba(var(--ink, 0, 0, 0), 0.55))', 'ink55'],
-  ['var(--v4-ink-2, rgba(var(--ink, 15, 23, 42), 0.55))', 'ink55'],
-  ['var(--v4-ink-2, rgba(var(--ink), 0.55))', 'ink55'],
-  ['var(--v4-ink-2, rgba(var(--ink), .55))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--ink, 0, 0, 0), 0.56))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--ink, 15, 23, 42), 0.56))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--ink), 0.56))', 'ink55'],
+  ['var(--v4-ink-2, rgba(var(--ink), 0.56))', 'ink55'],
   ['var(--v4-ink-30, rgba(var(--ink, 0, 0, 0), 0.3))', 'ink30'],
   ['var(--v4-ink-30, rgba(var(--ink), 0.3))', 'ink30'],
   ['var(--v4-ink-4, rgba(var(--ink), .38))', 'ink38'],
@@ -101,9 +101,9 @@ const V4_INK_BEFORE_INK = Object.freeze([
 ]);
 
 const V4_INK_AFTER_INK = Object.freeze([
-  ['var(--v4-ink-2, rgba(0, 0, 0, 0.55))', 'ink55'],
-  ['var(--v4-ink-2, rgba(0, 0, 0, .55))', 'ink55'],
-  ['var(--v4-ink-2, rgba(15, 23, 42, 0.55))', 'ink55Blue'],
+  ['var(--v4-ink-2, rgba(0, 0, 0, 0.56))', 'ink55'],
+  ['var(--v4-ink-2, rgba(0, 0, 0, 0.56))', 'ink55'],
+  ['var(--v4-ink-2, rgba(15, 23, 42, 0.56))', 'ink55Blue'],
   ['var(--v4-ink-30, rgba(0, 0, 0, 0.3))', 'ink30'],
   ['var(--v4-ink-30, rgba(0, 0, 0, .3))', 'ink30'],
   ['var(--v4-ink-4, rgba(0, 0, 0, .38))', 'ink38'],
@@ -111,10 +111,10 @@ const V4_INK_AFTER_INK = Object.freeze([
 ]);
 
 const DEFAULT_INK_ROLES = Object.freeze({
-  ink55: 'rgba(0, 0, 0, .55)',
+  ink55: 'rgba(0, 0, 0, .56)',
   ink30: 'rgba(0, 0, 0, .3)',
   ink38: 'rgba(0, 0, 0, .38)',
-  ink55Blue: 'rgba(16, 24, 38, .55)',
+  ink55Blue: 'rgba(16, 24, 38, .56)',
 });
 
 function applyInkRoleMap(css, map, roles) {

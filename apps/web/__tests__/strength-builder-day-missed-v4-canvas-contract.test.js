@@ -49,8 +49,8 @@ function paletteCss(name) {
     .replaceAll('var(--v4-act, var(--sb-acc-strong, #c67139))', p.acs)
     .replaceAll('var(--v4-act, #c67139)', p.acs)
     .replaceAll('var(--v4-btn-on-act, #2b1608)', p.onAcs)
-    .replaceAll('var(--v4-ink-2, var(--sb-mut, rgba(0, 0, 0, 0.55)))', p.ink56)
-    .replaceAll('var(--v4-ink-2, rgba(0, 0, 0, 0.55))', p.ink56);
+    .replaceAll('var(--v4-ink-2, var(--sb-mut, rgba(0, 0, 0, 0.56)))', p.ink56)
+    .replaceAll('var(--v4-ink-2, rgba(0, 0, 0, 0.56))', p.ink56);
   return `:root{--v4-ink-rgb:${inkRgb};--ink:${inkRgb};}\n${BASE_CSS}\n${scoped}`;
 }
 

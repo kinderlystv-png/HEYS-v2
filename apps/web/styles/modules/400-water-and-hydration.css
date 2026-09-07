@@ -2265,7 +2265,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   min-width: 44px;
   padding: 4px;
   cursor: pointer;
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
   display: inline-flex;
 }
 
@@ -2328,7 +2328,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-service-row__title {
   display: block;
   font: 600 12.5px/1 Figtree, sans-serif;
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
 }
 
 .advice-service-row__hint {
@@ -3039,7 +3039,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-v4-disclaimer-card__text {
   margin: 0;
   font: 500 12.5px/1.6 Figtree, sans-serif;
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
   text-wrap: pretty;
 }
 
@@ -3051,7 +3051,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   min-height: 44px;
   /* Элемент 14 (был 29): подпись 600 12/1,4 чернилами 55 %. */
   font: 600 12px/1.4 Figtree, sans-serif;
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
   cursor: pointer;
 }
 
@@ -3399,7 +3399,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   padding: 14px 15px;
   border-radius: 18px;
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
 }
 
 .advice-v4-science__footnote-icon {

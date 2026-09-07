@@ -213,7 +213,7 @@
         style: { fontSize: 13.5, fontWeight: 700, color: 'var(--v4-warn-3, #a1471c)', marginBottom: 4 }
       }, 'Этот день не учитывается в статистике'),
       React.createElement('div', {
-        style: { fontSize: 12, color: 'var(--v4-ink-2, rgba(0,0,0,0.55))', marginBottom: 10 }
+        style: { fontSize: 12, color: 'var(--v4-ink-2, rgba(0,0,0,0.56))', marginBottom: 10 }
       }, descLine),
       React.createElement('div', {
         style: { display: 'flex', flexWrap: 'wrap', gap: 8 }
@@ -263,7 +263,7 @@
           flex: 1,
           fontWeight: 600,
           lineHeight: 1.35,
-          color: muted ? 'var(--v4-ink-2, rgba(0,0,0,0.55))' : 'var(--v4-ink, #201e1d)'
+          color: muted ? 'var(--v4-ink-2, rgba(0,0,0,0.56))' : 'var(--v4-ink, #201e1d)'
         }
       }, label),
       React.createElement('button', {
