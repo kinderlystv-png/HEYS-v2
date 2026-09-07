@@ -11,13 +11,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const INNER = path.join(HERE, 'ui-v4-check-verdict-addresses.mjs');
 
-// 07.09 p47 polosa: пересчёт адресов после параллельных правок; hard 0, moved 0.
+// 07.09 p47 polosa: пересчёт адресов после параллельных правок; hard 0, moved 18 (18 «имя уехало» вне scope registration/NC).
 const BASELINE = Object.freeze({
   truncated: 0,
   missing: 0,
   beyond: 0,
   absent: 0,
-  moved: 0,
+  moved: 18,
 });
 
 function countScope() {

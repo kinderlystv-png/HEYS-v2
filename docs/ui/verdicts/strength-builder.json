@@ -1429,7 +1429,8 @@
     "Конструктор · каталог · 04": {
       "v": "=",
       "f": "Текст «Каталог упражнений» — heys_strength_catalog_ui_v1.js:131 b.",
-      "h": "e2f2441e7bcd"
+      "h": "e2f2441e7bcd",
+      "evidence": ["dom: apps/web/__tests__/strength-builder-ui.test.js"]
     },
     "Конструктор · каталог · 05": {
       "v": "=",

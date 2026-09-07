@@ -135,6 +135,10 @@ describe('registration · разбор кадра «персональные д�
     expect(drift).toEqual([]);
   });
 
+  it('элемент 01 — шапка шага .mc-header--nav grid 44px колонки', () => {
+    expect(pwaCss).toMatch(/\.mc-modal--daily \.mc-header--nav \{[^}]*grid-template-columns: 44px 1fr 44px/s);
+  });
+
   it('элемент 02 — отрицательные поля кнопки назад', () => {
     expect(pwaCss).toMatch(/\.mc-modal--daily \.mc-header-btn--back \{[^}]*margin: -8px 0/s);
   });

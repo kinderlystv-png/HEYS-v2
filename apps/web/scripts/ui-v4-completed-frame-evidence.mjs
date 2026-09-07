@@ -10,6 +10,7 @@ const TESTS = Object.freeze({
   normVisual: 'apps/web/scripts/ui-v4-visual-capture.mjs',
   normUnit: 'apps/web/__tests__/norm-correction.test.js',
   registration: 'apps/web/__tests__/registration-v4-contract-sweep.test.js',
+  registrationRazbor: 'apps/web/__tests__/registration-v4-canvas-razbor.test.js',
   builderCalm: 'apps/web/__tests__/strength-builder-calm-canvas-contract.test.js',
 });
 
@@ -59,6 +60,42 @@ const FINISH_LABEL = 'Конструктор · итоги';
 const LOWERED_LABEL = 'Сверка · норма снизилась';
 const LOWERED_NO_GIRTHS_LABEL = 'Сверка · норма снизилась · без обхватов';
 const REGISTRATION_PERSONAL_LABEL = 'Регистрация · персональные данные';
+const REG1_CSS_PAIRS = Object.freeze([
+  '02', '03', '08', '10', '16', '18', '19', '25',
+]);
+const REG1_ROWS = Object.freeze({
+  ...Object.fromEntries(REG1_CSS_PAIRS.map((suffix) => [
+    `${REGISTRATION_PERSONAL_LABEL} · ${suffix}`,
+    exactMany([
+      `computed-style: ${TESTS.registrationRazbor}`,
+      `dom: ${TESTS.registrationRazbor}`,
+    ], `Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · ${suffix}.`),
+  ])),
+  ...suffixRows(REGISTRATION_PERSONAL_LABEL, {
+    '01': 'Шапка шага — общая .mc-header--nav grid 44px 1fr 44px (500-pwa-and-offline.css:697; registration-v4-canvas-razbor.test.js).',
+    '04': 'Область прокрутки — .mc-step-content overflow auto padding 16/18/0 (500-pwa-and-offline.css:756; registration-v4-canvas-razbor.test.js).',
+    '05': '«Расскажите о себе» — 700 20/1.3 var(--v4-ink) marginTop 6 (heys_profile_step_v1.js:561-563; registration-v4-canvas-razbor.test.js).',
+    '06': 'Первый блок поля — gap-4 16px + profile-personal-name margin-top 0 (500-pwa-and-offline.css:5371; registration-v4-canvas-razbor.test.js).',
+    '07': '«*» — color #8a4a20 / var(--v4-sand-act-text) у обязательных меток (heys_profile_step_v1.js:567; registration-v4-canvas-razbor.test.js).',
+    '09': 'Блок фамилии — gap-4 + profile-personal-family margin-top −4 → 12px (500-pwa-and-offline.css:5375).',
+    '11': 'Пояснение пола — 500 11/1.5 INK_DATA marginTop 6 (heys_profile_step_v1.js:669; registration-v4-canvas-razbor.test.js).',
+    '13': 'Колесо даты — profile-personal-wheel-card position relative (500-pwa-and-offline.css:5402).',
+    '14': 'Верхний градиент приглушения — ::before height 14px linear-gradient (500-pwa-and-offline.css:5418).',
+    '15': 'Нижний градиент приглушения — ::after height 14px linear-gradient (500-pwa-and-offline.css:5423).',
+    '17': 'Колонка дня — flex 1 1 0 (500-pwa-and-offline.css:5428; registration-v4-canvas-razbor.test.js).',
+    '20': 'Колонка месяца — flex-grow 1.3 (500-pwa-and-offline.css:5433; registration-v4-canvas-razbor.test.js).',
+    '21': 'Соседний месяц — те же 600 12.5/2.1 ink 40% что у дня (500-pwa-and-offline.css:5451).',
+    '22': 'Выбранный месяц — 700 15.5/2 var(--v4-ink) (500-pwa-and-offline.css:5463; registration-v4-canvas-razbor.test.js).',
+    '24': 'Подвал — .mc-daily-footer padding 12/18/20 (500-pwa-and-offline.css:871).',
+    'рисунок 01': 'Шеврон назад — svg 17×17 viewBox 0 0 24 24 (.mc-header-back-icon; heys_step_modal_v1.js:1417).',
+    'рисунок 02': 'Путь M15 18l-6-6 6-6 (heys_step_modal_v1.js:1425; registration-v4-canvas-razbor.test.js).',
+    'текст': 'Копия сверена пословно в registration-v4-canvas-razbor.test.js; «Дальше» — nextLabel шага.',
+  }, 'semantic-test', TESTS.registrationRazbor),
+  [`${REGISTRATION_PERSONAL_LABEL} · 12`]: exact('computed-style', TESTS.registration,
+    'DOM-тест подтверждает весь контракт капсулы колёс: фон, радиус, поля и верхний отступ.'),
+  [`${REGISTRATION_PERSONAL_LABEL} · 23`]: exact('computed-style', TESTS.registration,
+    'DOM-тест подтверждает точный текст возраста, выключку, шрифт, цвет и верхний отступ под колесом.'),
+});
 const ACTIVE_CALM_LABEL = 'Конструктор · тренировка идёт · спокойнее';
 const CATALOG_LABEL = 'Конструктор · каталог';
 const ACTIVE_CALM_PROVEN_SUFFIXES = Object.freeze(
@@ -119,10 +156,7 @@ const FINISH_ROWS = Object.freeze(Object.fromEntries(FINISH_PROVEN_SUFFIXES.map(
 export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
   Object.freeze({
     zoneId: 'registration', label: REGISTRATION_PERSONAL_LABEL, oid: 'REG1',
-    rows: suffixRows(REGISTRATION_PERSONAL_LABEL, {
-      12: 'DOM-тест подтверждает весь контракт капсулы колёс: фон, радиус, поля и верхний отступ.',
-      23: 'DOM-тест подтверждает точный текст возраста, выключку, шрифт, цвет и верхний отступ под колесом.',
-    }, 'computed-style', TESTS.registration),
+    rows: REG1_ROWS,
   }),
   Object.freeze({
     zoneId: 'strength-builder', label: ACTIVE_CALM_LABEL, oid: 'А1б',
@@ -206,6 +240,7 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
         '01': 'Live Canvas pair checks the exact header geometry and contents.',
         '02': 'Live Canvas pair checks the exact screen title text and typography.',
         '03': 'Live Canvas pair checks the exact range text and tabular-number typography.',
+        '04': 'Live Canvas pair checks the scroll area padding.',
         '05': 'Live Canvas pair checks the real summary card, 12px top offset and its geometry.',
         '11': 'Live Canvas pair checks the facts card and its 12px top offset.',
         '12': 'Live Canvas pair checks the exact facts row geometry and typography.',
@@ -217,9 +252,9 @@ export const COMPLETED_FRAME_EVIDENCE = Object.freeze([
         verdict: '?',
         evidence: Object.freeze([
           'unsupported: get_curator_clients_window returns waist but not biceps/thigh',
-          'semantic-test: apps/web/__tests__/curator-panel-rows.test.js',
+          'semantic-test: apps/web/__tests__/norm-correction-owner-flow.test.js',
         ]),
-        fact: 'The production owner cannot currently supply the stable-girth evidence required by this exact Canvas copy.',
+        fact: 'Canvas требует stable_girths (≥2 обхвата за 14 дней), но owner-flow до расширения server RPC недостижим; ждём решения в docs/ui/UI_V4_FINDINGS.md#norm-correction-nc5-stable-girths',
       }),
       [`${LOWERED_LABEL} \u00b7 \u0442\u0435\u043a\u0441\u0442`]: exactMany([
         `computed-style: ${TESTS.normVisual}`,
