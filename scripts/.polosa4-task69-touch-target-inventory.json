@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-06",
+  "captured": "2026-09-07",
   "minTouchPx": 44,
   "scannedFiles": [
     "000-base-and-gamification.css",
@@ -39,9 +39,9 @@
     "heys-components.css"
   ],
   "counts": {
-    "violations": 41,
-    "exceptions": 59,
-    "widthAssumed": 129,
+    "violations": 36,
+    "exceptions": 63,
+    "widthAssumed": 130,
     "interactiveRules": 995
   },
   "attribution": {
@@ -51,10 +51,10 @@
     "unattributed": 29
   },
   "scope": {
-    "zonesCovered": 7,
+    "zonesCovered": 6,
     "unknownViolations": 0,
     "unknownViolationKeys": [],
-    "widthAssumed": 129,
+    "widthAssumed": 130,
     "blindSpots": [
       "ширина принята без замера — full-width/calc(100%) ряды jsdom не раскладывает",
       "класс без CSS-правил в product styles — гейт не видит (пример: subscription banner pill до появления .readonly-banner-pill)"
@@ -72,10 +72,6 @@
     "food-meal": {
       "violations": 3,
       "exceptions": 12
-    },
-    "home-widgets": {
-      "violations": 5,
-      "exceptions": 4
     },
     "planning": {
       "violations": 23,
@@ -96,6 +92,10 @@
     "(unknown)": {
       "violations": 0,
       "exceptions": 7
+    },
+    "home-widgets": {
+      "violations": 0,
+      "exceptions": 8
     },
     "checkin-morning": {
       "violations": 0,
@@ -123,7 +123,6 @@
     "1000-messenger.css": 3,
     "600-steps-and-aps.css": 1,
     "610-aps-meal-flow.css": 2,
-    "730-widgets-dashboard.css": 5,
     "900-planning.css": 17,
     "905-planning-chrono.css": 5,
     "906-planning-goal-map.css": 1,
@@ -209,66 +208,6 @@
       "zone": "food-meal",
       "width": 100,
       "height": 14,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widget__delete-btn",
-      "className": "widget__delete-btn",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widget__settings-btn",
-      "className": "widget__settings-btn",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widget__resize-btn",
-      "className": "widget__resize-btn",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-catalog__item",
-      "className": "widgets-catalog__item",
-      "zone": "home-widgets",
-      "width": 44,
-      "height": 43.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-settings__field input[type=\"checkbox\"]",
-      "className": "widgets-settings__field",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 25.2,
       "bucket": "violation",
       "exemptionType": null,
       "exemptionReason": null,
@@ -1178,6 +1117,54 @@
     },
     {
       "file": "730-widgets-dashboard.css",
+      "selector": ".widget__delete-btn",
+      "className": "widget__delete-btn",
+      "zone": "home-widgets",
+      "width": 0,
+      "height": 0,
+      "bucket": "named-exception",
+      "exemptionType": "named-exception",
+      "exemptionReason": "home-widgets: edit-mode chrome скрыт display:none до .widget--editing — гейт меряет покой",
+      "tricks": []
+    },
+    {
+      "file": "730-widgets-dashboard.css",
+      "selector": ".widget__settings-btn",
+      "className": "widget__settings-btn",
+      "zone": "home-widgets",
+      "width": 0,
+      "height": 0,
+      "bucket": "named-exception",
+      "exemptionType": "named-exception",
+      "exemptionReason": "home-widgets: edit-mode chrome скрыт display:none до .widget--editing — гейт меряет покой",
+      "tricks": []
+    },
+    {
+      "file": "730-widgets-dashboard.css",
+      "selector": ".widget__resize-btn",
+      "className": "widget__resize-btn",
+      "zone": "home-widgets",
+      "width": 0,
+      "height": 0,
+      "bucket": "named-exception",
+      "exemptionType": "named-exception",
+      "exemptionReason": "home-widgets: edit-mode chrome скрыт display:none до .widget--editing — гейт меряет покой",
+      "tricks": []
+    },
+    {
+      "file": "730-widgets-dashboard.css",
+      "selector": ".widgets-settings__field input[type=\"checkbox\"]",
+      "className": "widgets-settings__field",
+      "zone": "home-widgets",
+      "width": 0,
+      "height": 25.2,
+      "bucket": "named-exception",
+      "exemptionType": "named-exception",
+      "exemptionReason": "home-widgets: гейт меряет input с классом поля; видимый чекбокс 44px в правиле input[type=checkbox]",
+      "tricks": []
+    },
+    {
+      "file": "730-widgets-dashboard.css",
       "selector": ".widgets-settings__scale-slider::-webkit-slider-thumb",
       "className": "widgets-settings__scale-slider",
       "zone": "home-widgets",
@@ -1856,6 +1843,13 @@
       "file": "730-widgets-dashboard.css",
       "selector": ".widgets-empty__btn",
       "className": "widgets-empty__btn",
+      "zone": "home-widgets",
+      "height": 44
+    },
+    {
+      "file": "730-widgets-dashboard.css",
+      "selector": ".widgets-catalog__item",
+      "className": "widgets-catalog__item",
       "zone": "home-widgets",
       "height": 44
     },

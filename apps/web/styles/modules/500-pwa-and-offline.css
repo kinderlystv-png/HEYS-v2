@@ -2026,6 +2026,7 @@
 .profile-v4-toggle {
   width: 40px;
   height: 24px;
+  min-height: 44px;
   border: none;
   border-radius: 999px;
   background: var(--v4-track, rgba(0, 0, 0, 0.12));
@@ -2037,8 +2038,6 @@
 
 .profile-v4-toggle.is-on {
   background: var(--v4-act, #c67139);
-  min-height: 44px;
-  min-width: 44px;
 }
 
 .profile-v4-toggle__thumb {
@@ -6264,6 +6263,8 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   animation: ca-banner-in 0.25s ease-out;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @keyframes ca-banner-in {

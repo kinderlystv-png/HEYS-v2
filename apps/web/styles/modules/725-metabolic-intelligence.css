@@ -512,6 +512,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 32px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .reason-card__science-toggle:active {
@@ -981,8 +983,8 @@
 }
 
 .predictive-dashboard__timeline-btn {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -993,6 +995,7 @@
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
+  min-height: 44px;
 }
 
 .predictive-dashboard__timeline-btn:disabled {
@@ -1030,6 +1033,8 @@
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -1079,6 +1084,8 @@
   color: var(--text-secondary, #64748b);
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -1427,6 +1434,8 @@
   border: 2px solid transparent;
   transition: all 0.2s ease;
   min-width: 140px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -1544,6 +1553,8 @@
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2063,6 +2074,8 @@
   color: var(--v4-water, #7d98a6);
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2224,6 +2237,8 @@
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2291,6 +2306,8 @@
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2323,8 +2340,8 @@
 }
 
 .feedback-prompt__btn {
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2335,6 +2352,7 @@
   cursor: pointer;
   transition: all 0.15s ease;
   opacity: 0.6;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -2950,6 +2968,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   opacity: 0.6;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -3512,6 +3532,7 @@
   position: relative;
   cursor: pointer;
   transition: opacity 0.2s;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -4132,6 +4153,8 @@
   cursor: pointer;
   transition: all 0.2s ease;
   -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -4284,6 +4307,8 @@
   white-space: nowrap;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -4367,6 +4392,8 @@
   color: var(--text-secondary, #64748b);
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -4512,6 +4539,8 @@
   padding: 4px 8px;
   border-radius: 6px;
   transition: background 0.2s;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -4539,6 +4568,8 @@
   transition: all 0.2s;
   font-size: 12px;
   min-width: 72px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .dark .whatif-card__quick-btn,
@@ -4707,6 +4738,8 @@
   transition: all 0.2s;
   white-space: nowrap;
   color: var(--text-primary, #1e293b);
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .dark .whatif-simulator__category,
@@ -4815,6 +4848,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-height: 44px;
 }
 
 .whatif-custom__field--wide {
@@ -4853,6 +4887,9 @@
 .whatif-custom__field input[type="range"] {
   width: 100%;
   height: 6px;
+  min-height: 44px;
+  box-sizing: content-box;
+  padding: 19px 0;
   -webkit-appearance: none;
   background: linear-gradient(to right, #22c55e 0%, var(--v4-warn-soft, #c9922e) 50%, #ef4444 100%);
   border-radius: 3px;
@@ -5028,6 +5065,8 @@
   color: var(--text-primary, #1e293b);
   cursor: pointer;
   transition: background 0.2s;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .dark .whatif-result__advice-item,
@@ -5119,6 +5158,7 @@
 
 .phenotype-card--clickable {
   cursor: pointer;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -5332,8 +5372,8 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.2);
@@ -5344,6 +5384,7 @@
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  min-height: 44px;
 }
 
 @media (hover: hover) {

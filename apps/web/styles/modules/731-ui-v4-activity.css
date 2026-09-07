@@ -121,6 +121,8 @@ body:has(.activity-v4) .hdr::after {
   /* Кадр просит 50 %, ближайшая ступень набора — 55 %. */
   font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .activity-v4-hero__footer-link {

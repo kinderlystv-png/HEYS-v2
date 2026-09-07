@@ -611,12 +611,6 @@
   box-sizing: border-box;
 }
 
-.heys-score-insights-v4__reports-link::before {
-  content: '';
-  position: absolute;
-  inset: -12px 0;
-}
-
 .heys-score-insights-v4__reports-link > svg {
   flex: none;
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
@@ -1732,6 +1726,8 @@
   cursor: pointer;
   text-align: left;
   min-height: 44px;
+  display: inline-flex;
+  align-items: center;
   box-sizing: border-box;
 }
 

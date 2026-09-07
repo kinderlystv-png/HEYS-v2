@@ -82,6 +82,8 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .insights-card__tab:active {
@@ -336,6 +338,7 @@
 .insights-total--clickable {
   cursor: pointer;
   transition: transform 0.2s ease, opacity 0.2s ease;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -870,6 +873,8 @@
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
   min-height: 32px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .insights-priority-action__simulate:focus-visible {
@@ -1826,6 +1831,8 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 [data-theme$="dark"] .insights-tab__tab {
@@ -2478,6 +2485,8 @@ body:has(.insights-tab) .hdr::after {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2538,6 +2547,8 @@ body:has(.insights-tab) .hdr::after {
   border: 1px solid rgba(100, 116, 139, 0.25);
   background: var(--v4-bg, #ffffff);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2587,6 +2598,8 @@ body:has(.insights-tab) .hdr::after {
   transition: all 0.18s ease;
   background: var(--v4-bg, #ffffff);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -2727,6 +2740,8 @@ body:has(.insights-tab) .hdr::after {
   transition: all 0.2s ease;
   border: 1px solid rgba(0, 0, 0, 0.04);
   position: relative;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 [data-theme$="dark"] .insights-ring-mini {
@@ -3145,6 +3160,7 @@ body:has(.insights-tab) .hdr::after {
   font-size: 9px;
   cursor: pointer;
   white-space: nowrap;
+  min-height: 44px;
 }
 
 /* =============================================================================
@@ -3183,6 +3199,7 @@ body:has(.insights-tab) .hdr::after {
   font-size: 9px;
   cursor: pointer;
   white-space: nowrap;
+  min-height: 44px;
 }
 
 /* =============================================================================
@@ -3262,6 +3279,7 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   white-space: nowrap;
   min-width: 0;
+  min-height: 44px;
 }
 
 .tab-switch-labels--sext .tab-switch-label {
@@ -3715,8 +3733,8 @@ body:has(.insights-tab) .hdr::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 44px;
+  height: 44px;
   margin-left: 4px;
   border: none;
   border-radius: 50%;
@@ -3727,6 +3745,7 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.15s ease;
   -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
 }
 
 .info-button:focus {
@@ -3821,8 +3840,8 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .info-modal__close {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3833,6 +3852,7 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.15s;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -3895,6 +3915,8 @@ body:has(.insights-tab) .hdr::after {
   justify-content: space-between;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -5404,8 +5426,11 @@ body:has(.insights-tab) .hdr::after {
 }
 
 .weekly-wrap-card__close {
-  width: 32px;
-  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+width: 44px;
+  height: 44px;
   border: none;
   background: rgba(0, 0, 0, 0.05);
   border-radius: 50%;
@@ -5413,6 +5438,7 @@ body:has(.insights-tab) .hdr::after {
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -5441,6 +5467,8 @@ body:has(.insights-tab) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   cursor: pointer;
   transition: all 0.2s;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -6072,6 +6100,8 @@ body:has(.insights-tab) .hdr::after {
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.2s;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -6782,13 +6812,14 @@ body:has(.insights-tab) .hdr::after {
   line-height: 1;
   cursor: pointer;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 10px;
   transition: all 0.15s ease;
+  min-height: 44px;
 }
 
 [data-theme$="dark"] .pattern-debug-modal__close {
@@ -6836,6 +6867,8 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -7005,8 +7038,8 @@ body:has(.insights-tab) .hdr::after {
   background: rgba(37, 99, 235, 0.08);
   color: var(--v4-act-text, #8a4a20);
   border-radius: 8px;
-  width: 22px;
-  height: 22px;
+  width: 44px;
+  height: 44px;
   font-size: 10px;
   line-height: 1;
   cursor: pointer;
@@ -7014,6 +7047,7 @@ body:has(.insights-tab) .hdr::after {
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
+  min-height: 44px;
 }
 
 @media (hover: hover) {
@@ -7070,6 +7104,8 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.16s ease;
   text-align: left;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -7159,6 +7195,8 @@ body:has(.insights-tab) .hdr::after {
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -7655,13 +7693,14 @@ body:has(.insights-tab) .hdr::after {
   color: var(--v4-ok-text, #5c6a45);
   border-radius: 8px;
   min-width: 18px;
-  height: 18px;
+  min-height: 44px;
   padding: 0 5px;
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   line-height: 1;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -8147,6 +8186,8 @@ body:has(.insights-tab) .hdr::after {
   padding: 4px 8px;
   border-radius: 8px;
   transition: all 0.2s ease;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
@@ -8710,6 +8751,8 @@ body:has(.insights-tab) .hdr::after {
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
   padding: 4px 8px;
   border-radius: 8px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {

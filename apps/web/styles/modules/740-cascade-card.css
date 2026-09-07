@@ -97,6 +97,8 @@
   gap: 4px;
   position: relative;
   -webkit-tap-highlight-color: transparent;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .cascade-card__header:focus-visible {
@@ -1089,6 +1091,8 @@
   padding: 12px 14px;
   margin-top: 4px;
   box-shadow: 0 12px 24px -22px rgba(15, 23, 42, 0.35);
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 /* Шапка плитки — ключ и дельта по краям (элемент 30 кадра). Зазор 12,

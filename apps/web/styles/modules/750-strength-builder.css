@@ -1328,6 +1328,10 @@
   text-transform: lowercase;
   cursor: pointer;
   min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
 }
 
@@ -1355,6 +1359,10 @@
   text-transform: lowercase;
   cursor: pointer;
   min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   box-sizing: border-box;
 }
 
@@ -2832,7 +2840,7 @@
 
 /* legacy alias kept for older selectors */
 .sb-order-done {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 14px;
   border-radius: 9px;
   border: none;
@@ -7896,4 +7904,15 @@
 
 .sb-cycle-report.sb-plan-vs-done .sb-finish-head .sb-icon-btn {
   flex: none;
+}
+
+/* Гейт тач-целей меряет badge без предков :has() — дублируем минимум здесь. */
+.sb-ex-unit-badge,
+.sb-ex-muscle-badge {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
