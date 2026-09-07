@@ -67,8 +67,8 @@
     },
     "вид · где единицы учёта видны": {
       "v": "=",
-      "f": "weight_reps .sb-ap 44px; bodyweight ownWeightLabel «свой вес» (superset_ui:712–715); time/distance заголовки колонок; drop padding-left 34px (750:5831); round .sb-round-num 36px «Р1» (750:624–627, superset_ui:236).",
-      "h": "26e2f70f1a4d"
+      "f": "weight_reps .sb-ap 44px; bodyweight ownWeightLabel «свой вес» (superset_ui:712–715); time/distance заголовки колонок; drop padding-left 34px (750:5831); round .sb-round-num 36px «Р1» (750:624–627, superset_ui:236). · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "62ed43dca520"
     },
     "список и раскрытое упражнение — один экран": {
       "v": "=",
@@ -102,8 +102,8 @@
     },
     "состояние живёт в номере": {
       "v": "=",
-      "f": "Подтверждено source и focused regression: apps/web/_kernel/heys_kernel_strength_v1.js, apps/web/strength/heys_strength_builder_ui_v1.js, apps/web/__tests__/kernel-strength*.test.js, apps/web/__tests__/strength-builder-ui.test.js.",
-      "h": "2202b186700e"
+      "f": "А1б: .is-exercise-open .sb-ap-num ink .62/bg (750:3854-3862); Г4 gr/acs только .is-weight-entry (750:5260+); класс is-weight-entry — weightEditSessionContext (builder_ui:2034+).",
+      "h": "5a16bcb53558"
     },
     "шапка сессии": {
       "v": "=",
@@ -383,20 +383,20 @@
     },
     "вид · карточка упражнения": {
       "v": "=",
-      "f": "view === 'exercise-card' монтирует ExerciseCardScreen (builder_ui:1542-1548); reachable из каталога через .sb-builder-catalog-bridge делегирование клика по .sb-cat-title (builder_ui:1549-1568).",
-      "h": "1cb687c91f16"
+      "f": "view === 'exercise-card' монтирует ExerciseCardScreen (builder_ui:1542-1548); reachable из каталога через .sb-builder-catalog-bridge делегирование клика по .sb-cat-title (builder_ui:1549-1568). · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "9593c74a4c35"
     },
     "вид · выбор групп мышц": {
       "v": "≠",
-      "f": "Канвас :2278 (пилюли 44, превью объёма). Поведение ExerciseMuscleGroupsScreen catalog_ui:446-493 =; геометрия пилюль ·08-10 ≠ (scripts/.sb-catalog-exercise-muscles-handoff.json). Агрегат ≠ из-за носителя, не копии.",
-      "h": "0fc799bb198f",
+      "f": "Канвас :2278 (пилюли 44, превью объёма). Поведение ExerciseMuscleGroupsScreen catalog_ui:446-493 =; геометрия пилюль ·08-10 ≠ (scripts/.sb-catalog-exercise-muscles-handoff.json). Агрегат ≠ из-за носителя, не копии. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "7d614cf9b845",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2278"
     },
     "вид · коэффициент своего веса": {
       "v": "=",
-      "f": "ExerciseSimilarScreen (М3): bodyweightSimilarOptions, copy «· свой вес», «сколько тела поднимается», «Не знаю» — heys_strength_catalog_ui_v1.js:506+; strength-builder-exercise-similar-v4-canvas-contract.test.js.",
-      "h": "76bf7192e652"
+      "f": "ExerciseSimilarScreen (М3): bodyweightSimilarOptions, copy «· свой вес», «сколько тела поднимается», «Не знаю» — heys_strength_catalog_ui_v1.js:506+; strength-builder-exercise-similar-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "3247c1f4617a"
     },
     "четыре единицы, одна таблица": {
       "v": "=",
@@ -460,8 +460,8 @@
     },
     "вид · клетка раунда": {
       "v": "=",
-      "f": "Капсула .sb-cell 44 r999 bg --bg inset 1px ink 10%; текущая inset 2px --acs; пустая dashed 1.5px — 750:619-651; superset_ui roundCellDisplay; strength-superset-rounds-v4-canvas-contract.test.js.",
-      "h": "a044086f6b54"
+      "f": "Капсула .sb-cell 44 r999 bg --bg inset 1px ink 10%; текущая inset 2px --acs; пустая dashed 1.5px — 750:619-651; superset_ui roundCellDisplay; strength-superset-rounds-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "af5ced3a4511"
     },
     "прочерк — пустой подход": {
       "v": "=",
@@ -579,8 +579,8 @@
     },
     "вид · экран истории": {
       "v": "=",
-      "f": "HistoryScreen .sb-history-screen: hero --gr-bg, «Последние тренировки», строки .sb-list — heys_strength_finish_ui_v1.js; strength-builder-history-v4-canvas-contract.test.js.",
-      "h": "df34e4ed2eff"
+      "f": "HistoryScreen .sb-history-screen: hero --gr-bg, «Последние тренировки», строки .sb-list — heys_strength_finish_ui_v1.js; strength-builder-history-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "121516efe1e4"
     },
     "рост рабочего веса": {
       "v": "=",
@@ -604,18 +604,18 @@
     },
     "вид · шапка сессии": {
       "v": "=",
-      "f": "Шапка активной сессии: .sb-head 16/18/0, имя 15px/700, .sb-head-sub 10.5px моно, пилюли .sb-stat и badge «идёт» — apps/web/styles/modules/750-strength-builder.css:sb-head/sb-stats; А1 protocol не реализуется, prod = А1б apps/web/__tests__/strength-builder-calm-canvas-contract.test.js rows 01-10.",
-      "h": "1ada421bed5f"
+      "f": "А1б BuilderScreen: дата/время в .sb-head-sub, не «подход N из M» без правки куратора; Г4 ключ только при is-weight-entry (ОТВЕТ-22 #14).",
+      "h": "cc8bcd8beb9e"
     },
     "вид · строка упражнения": {
       "v": "=",
-      "f": "Кадр А2 «список свёрнут»: свёрнутые .sb-ex без раскрытия, состояния is-complete/is-current/is-pending и нижняя панель — apps/web/strength/heys_strength_builder_ui_v1.js; 26 numbered rows apps/web/__tests__/strength-builder-calm-canvas-contract.test.js describe('А2 · rendered Canvas contract').",
-      "h": "cc3c64c9100a"
+      "f": "Кадр А2 «список свёрнут»: свёрнутые .sb-ex без раскрытия, состояния is-complete/is-current/is-pending и нижняя панель — apps/web/strength/heys_strength_builder_ui_v1.js; 26 numbered rows apps/web/__tests__/strength-builder-calm-canvas-contract.test.js describe('А2 · rendered Canvas contract'). · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "9e1b936ce088"
     },
     "вид · раскрытое упражнение": {
       "v": "=",
-      "f": "Канвас :2342 (.ex.is-open, ⠿, счётчик 2/4, ✕ 36 data-svc). Продукт ExerciseCard superset_ui:1697-1802 + 750 .sb-builder-screen.is-exercise-open .sb-ex.is-open (:3480-3547); без overlay/scrim. Отличие рамки 1.5px vs 2px — в исключениях calm/geometry, поведение =.",
-      "h": "23f4a3fd065c"
+      "f": "Канвас :2342 (.ex.is-open, ⠿, счётчик 2/4, ✕ 36 data-svc). Продукт ExerciseCard superset_ui:1697-1802 + 750 .sb-builder-screen.is-exercise-open .sb-ex.is-open (:3480-3547); без overlay/scrim. Отличие рамки 1.5px vs 2px — в исключениях calm/geometry, поведение =. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "c21c7db7811f"
     },
     "вид · чипы контекста": {
       "v": "=",
@@ -629,8 +629,8 @@
     },
     "вид · строка отдыха": {
       "v": "=",
-      "f": "Ряд flex gap 8: .sb-rest-copy 44 r12 на --bg 11.5px/1.3 ink 55% + .sb-rest-manual 44 r12 на --c1 11.5px/700 --tx — 750:3727-3747; superset_ui ExerciseCard .sb-rest-line; calm rows 40-42.",
-      "h": "3074c3ef26cc"
+      "f": "Ряд flex gap 8: .sb-rest-copy 44 r12 на --bg 11.5px/1.3 ink 55% + .sb-rest-manual 44 r12 на --c1 11.5px/700 --tx — 750:3727-3747; superset_ui ExerciseCard .sb-rest-line; calm rows 40-42. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "7418d67456f9"
     },
     "вид · нижняя панель сессии": {
       "v": "=",
@@ -644,13 +644,13 @@
     },
     "вид · строка подхода": {
       "v": "=",
-      "f": "Кадры A1б/Е1: .sb-ap-num 26×26 r9, .sb-ap-field/.sb-ap-check 44×44 r999 — 750-strength-builder.css:3745; prose :2349 (r12) устарела, продукт = кадру.",
-      "h": "27d50ec315ae"
+      "f": "Кадры A1б/Е1: .sb-ap-num 26×26 r9, .sb-ap-field/.sb-ap-check 44×44 r999 — 750-strength-builder.css:3745; prose :2349 (r12) устарела, продукт = кадру. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "8adee798fb2c"
     },
     "вид · разминка и дроп-сет": {
       "v": "=",
-      "f": "WarmupDropScreen (strength/heys_strength_superset_ui_v1.js): сетка 56/1fr/1fr/44, разм. 10px ink 56%, дроп padding-left 34px и .sb-wd-drop-tag на --c2/--ac; объём .sb-wd-volume; вход view=warmup-drop из шторки и карточки. Смоук: strength-builder-warmup-drop-v4-canvas-contract.test.js.",
-      "h": "5f9ecc0d36e9"
+      "f": "WarmupDropScreen (strength/heys_strength_superset_ui_v1.js): сетка 56/1fr/1fr/44, разм. 10px ink 56%, дроп padding-left 34px и .sb-wd-drop-tag на --c2/--ac; объём .sb-wd-volume; вход view=warmup-drop из шторки и карточки. Смоук: strength-builder-warmup-drop-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "6d44775adea0"
     },
     "вид · пустая тренировка": {
       "v": "=",
@@ -664,43 +664,43 @@
     },
     "вид · каталог упражнений": {
       "v": "=",
-      "f": "Разметка и классы: ‹ .sb-icon-btn, .sb-search с ⌕, .sb-chips, .sb-cat-row/.sb-cat-create, сноска .sb-catalog-note. Цвета — CATALOG_V4_BRIDGE (:37–55) + 750-strength-builder.css:4358–4962 (вне scope правки); v4-роли на корне, не голые литералы в JS.",
-      "h": "15984102c607"
+      "f": "DOM title → add → star (heys_strength_catalog_ui_v1.js:216-239); звезда последней — ОТВЕТ-22 #10 от 6 сентября.",
+      "h": "5c0df6f6f83e"
     },
     "вид · итоги сессии": {
       "v": "=",
-      "f": "FinishScreen (strength/heys_strength_finish_ui_v1.js:301-409): шапка ✕ 36 + «Тренировка завершена» + sessionTitle·дата; hero .sb-finish-hero на --gr-bg с сеткой 2×2 метрик; .sb-finish-detail четыре строки; ярусы feedback/chart/day-total/other; «Готово» .sb-finish-done 48 на --acs. Смоук: strength-builder-finish-v4-canvas-contract.test.js.",
-      "h": "d479483724e4"
+      "f": "FinishScreen (strength/heys_strength_finish_ui_v1.js:301-409): шапка ✕ 36 + «Тренировка завершена» + sessionTitle·дата; hero .sb-finish-hero на --gr-bg с сеткой 2×2 метрик; .sb-finish-detail четыре строки; ярусы feedback/chart/day-total/other; «Готово» .sb-finish-done 48 на --acs. Смоук: strength-builder-finish-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "55a5f521c345"
     },
     "вид · связка раундами": {
       "v": "=",
-      "f": "SupersetBlock (heys_strength_superset_ui_v1.js:96-186): шапка .sb-ss-top с ttl/key/badge; ряд .sb-ss-member-row карточек на --c2; строки .sb-round с меткой Рn и клетками .sb-cell; текущий раунд .sb-round-num.is-current + .sb-cell.is-current inset 2px --acs; прочерк .is-blank dashed; список .sb-ss-detail (разминка/отдых); сноска .sb-ss-footnote — 750-strength-builder.css:505-680.",
-      "h": "5e226a125cf5"
+      "f": "SupersetBlock (heys_strength_superset_ui_v1.js:96-186): шапка .sb-ss-top с ttl/key/badge; ряд .sb-ss-member-row карточек на --c2; строки .sb-round с меткой Рn и клетками .sb-cell; текущий раунд .sb-round-num.is-current + .sb-cell.is-current inset 2px --acs; прочерк .is-blank dashed; список .sb-ss-detail (разминка/отдых); сноска .sb-ss-footnote — 750-strength-builder.css:505-680. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "5c4cf4ace644"
     },
     "вид · создание упражнения": {
       "v": "=",
-      "f": "Удалён мёртвый onCreate на CatalogScreen (бывш. builder_ui:1458 → setView('new')). Live create = CatalogScreen createDraft → NewExerciseScreen catalog_ui:140-151. view==='new' → CatUI.NewExerciseScreen сохранён для контракт-теста :79, без ExerciseCardScreen.",
-      "h": "36f0e1cdbdd4"
+      "f": "Удалён мёртвый onCreate на CatalogScreen (бывш. builder_ui:1458 → setView('new')). Live create = CatalogScreen createDraft → NewExerciseScreen catalog_ui:140-151. view==='new' → CatUI.NewExerciseScreen сохранён для контракт-теста :79, без ExerciseCardScreen. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "44bc3ab15350"
     },
     "вид · экран цикла": {
       "v": "=",
-      "f": "Кадр Г1 stop: CycleScreen DOM+CSS сверен strength-builder-cycle-v4-canvas-contract.test.js; вход ProgramNextLine › программа.",
-      "h": "5313399ce044"
+      "f": "Кадр Г1 stop: CycleScreen DOM+CSS сверен strength-builder-cycle-v4-canvas-contract.test.js; вход ProgramNextLine › программа. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "31c497fb45a5"
     },
     "вид · отчёт цикла": {
       "v": "=",
-      "f": "Короткие роли на .sb-root (750:12-32); chromium 375 px sand+blue — .sb-plan-vs-dot.is-summary background rgb(92,106,69)/rgb(31,110,77), .sb-plan-vs-cell.is-done.is-positive .sb-plan-vs-cell-val color те же (731:1729-1860). Пункт шторки «Назначено против сделано» снят из sheetRows — superset_ui:2497+.",
-      "h": "fbe8cd3bfc93"
+      "f": "Г2 — CycleReportScreen (heys_strength_proposal_ui_v1.js:1776+): полноэкранный .sb-cycle-report, вход «Отчёт по циклу ›» с CycleScreen; in-session plan-vs-done снят из builder_ui (ОТВЕТ-22 #15, вариант B).",
+      "h": "e0b81f76a8fb"
     },
     "вид · итог программы": {
       "v": "=",
-      "f": "ProgramDoneScreen: hero «9 из 12» 30px, три карточки, «Что выросло» — heys_strength_proposal_ui_v1.js; strength-proposal-v4-canvas-contract.test.js ProgramDoneScreen.",
-      "h": "cbfff8955272"
+      "f": "ProgramDoneScreen: hero «9 из 12» 30px, три карточки, «Что выросло» — heys_strength_proposal_ui_v1.js; strength-proposal-v4-canvas-contract.test.js ProgramDoneScreen. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "29e0a6cbbf96"
     },
     "вид · след переноса": {
       "v": "≠",
-      "f": "movedFrom/movedTo + MoveSheet есть (superset_ui:2398–2621), но кадр Г3 — композит day shell + PlanCard; 13 строк ≠ по .sb-transfer-follow-verdict-handoff.json (copy/геометрия PlanCard vs канвас).",
-      "h": "f381a18a4925",
+      "f": "movedFrom/movedTo + MoveSheet есть (superset_ui:2398–2621), но кадр Г3 — композит day shell + PlanCard; 13 строк ≠ по .sb-transfer-follow-verdict-handoff.json (copy/геометрия PlanCard vs канвас). · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "2d0e6b2281c9",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2360"
     },
@@ -711,48 +711,48 @@
     },
     "вид · история упражнения": {
       "v": "=",
-      "f": "HistoryScreen рендерит .sb-history-screen с шапкой ‹, тремя плитками, списком сессий, ростом, графиком Эпли и сноской — heys_strength_finish_ui_v1.js:530–634; кадр Д1 data-demo=stop сверен структурой DOM.",
-      "h": "61db05f6834a"
+      "f": "HistoryScreen рендерит .sb-history-screen с шапкой ‹, тремя плитками, списком сессий, ростом, графиком Эпли и сноской — heys_strength_finish_ui_v1.js:530–634; кадр Д1 data-demo=stop сверен структурой DOM. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "d85951167474"
     },
     "вид · что не легло": {
       "v": "=",
-      "f": "ProposalOutcome (heys_strength_proposal_ui_v1.js:366) встроен в FinishScreen finish_ui:349",
-      "h": "732aa029b29b"
+      "f": "ProposalOutcome (heys_strength_proposal_ui_v1.js:366) встроен в FinishScreen finish_ui:349 · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "34630684f8d4"
     },
     "вид · замена связки": {
       "v": "=",
-      "f": "Кадр Д3: SupersetBoundariesScreen — .sb-ss-bound-pair с колонками was/will, .sb-ss-bound-tier, .sb-ss-bound-list и badge на --sb-okbg/--sb-okTx; в разборе правки тот же SupersetBoundariesBody в .sb-proposal-boundaries — apps/web/strength/heys_strength_superset_ui_v1.js:2686-2750, apps/web/strength/heys_strength_proposal_ui_v1.js:363-383, apps/web/styles/modules/750-strength-builder.css:4484-4610; геометрия+цвет apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
-      "h": "df752e8f5407"
+      "f": "Кадр Д3: SupersetBoundariesScreen — .sb-ss-bound-pair с колонками was/will, .sb-ss-bound-tier, .sb-ss-bound-list и badge на --sb-okbg/--sb-okTx; в разборе правки тот же SupersetBoundariesBody в .sb-proposal-boundaries — apps/web/strength/heys_strength_superset_ui_v1.js:2686-2750, apps/web/strength/heys_strength_proposal_ui_v1.js:363-383, apps/web/styles/modules/750-strength-builder.css:4484-4610; геометрия+цвет apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "31f61b68c58d"
     },
     "вид · таблица ввода": {
       "v": "=",
-      "f": "Раскрытая ExerciseCard: таблица .sb-aps-head/.sb-ap без разминки и дроп-ступеней; пилюли .sb-approach-pills; контрактные слои .sb-context-chips/.sb-rest-cd/.sb-ex-footnote в DOM (скрыты, А1б держит .sb-hist/.sb-rest-copy). Смоук: strength-builder-approach-table-v4-canvas-contract.test.js + calm A1б.",
-      "h": "40a08c4650a1"
+      "f": "Раскрытая ExerciseCard: таблица .sb-aps-head/.sb-ap без разминки и дроп-ступеней; пилюли .sb-approach-pills; контрактные слои .sb-context-chips/.sb-rest-cd/.sb-ex-footnote в DOM (скрыты, А1б держит .sb-hist/.sb-rest-copy). Смоук: strength-builder-approach-table-v4-canvas-contract.test.js + calm A1б. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "2b00c14025e1"
     },
     "вид · галочка и пустые поля": {
       "v": "=",
-      "f": "Два состояния в ApproachRow: .is-reps-missing 1.5px --val-bad + .is-blocked «○» 24%; пустой вес — .is-bw «свой вес» 12px/600 ink 50% — apps/web/strength/heys_strength_superset_ui_v1.js:670-740, apps/web/styles/modules/750-strength-builder.css:355-372,3144-3172; смоук strength-builder-validation-v4-canvas-contract.test.js.",
-      "h": "550bf3ed1cee"
+      "f": "Два состояния в ApproachRow: .is-reps-missing 1.5px --val-bad + .is-blocked «○» 24%; пустой вес — .is-bw «свой вес» 12px/600 ink 50% — apps/web/strength/heys_strength_superset_ui_v1.js:670-740, apps/web/styles/modules/750-strength-builder.css:355-372,3144-3172; смоук strength-builder-validation-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "f25ac48f2c98"
     },
     "вид · кольцо отдыха": {
       "v": "=",
-      "f": "RestRing 168×168, stroke 9px --v4-track/--acs, центр 38px/800 + «осталось» 9.5px, meta/actions 44px — apps/web/strength/heys_strength_superset_ui_v1.js:276-336, 750-strength-builder.css:1022-1090; смоук strength-builder-validation-v4-canvas-contract.test.js + calm Е3.",
-      "h": "b167567f055f"
+      "f": "RestRing 168×168, stroke 9px --v4-track/--acs, центр 38px/800 + «осталось» 9.5px, meta/actions 44px — apps/web/strength/heys_strength_superset_ui_v1.js:276-336, 750-strength-builder.css:1022-1090; смоук strength-builder-validation-v4-canvas-contract.test.js + calm Е3. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "7d4808960abe"
     },
     "вид · таймер вне экрана": {
       "v": "=",
-      "f": "Четыре поверхности Е4: RestRing collapsed, RestEndedPocket, SummaryCard resume/stale — superset_ui:1109-1590 + builder Notification при document.hidden:659-661; смоук apps/web/__tests__/strength-builder-offscreen-renumber-v4-canvas-contract.test.js describe Е4.",
-      "h": "82dde861837e"
+      "f": "Четыре поверхности Е4: RestRing collapsed, RestEndedPocket, SummaryCard resume/stale — superset_ui:1109-1590 + builder Notification при document.hidden:659-661; смоук apps/web/__tests__/strength-builder-offscreen-renumber-v4-canvas-contract.test.js describe Е4. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "c21569585b3f"
     },
     "вид · перенумерация": {
       "v": "=",
-      "f": "Экран RenumberScreen было/стало с тоннажем 744→480 и −264 кг — superset_ui RenumberScreen:831-858, toggleType→view renumber builder:517-528; смоук apps/web/__tests__/strength-builder-offscreen-renumber-v4-canvas-contract.test.js describe Е5.",
-      "h": "1a8ce6842e59"
+      "f": "Экран RenumberScreen было/стало с тоннажем 744→480 и −264 кг — superset_ui RenumberScreen:831-858, toggleType→view renumber builder:517-528; смоук apps/web/__tests__/strength-builder-offscreen-renumber-v4-canvas-contract.test.js describe Е5. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "c0ed2188c2b2"
     },
     "вид · режим порядка": {
       "v": "=",
-      "f": "Кадр stop Ж1 — OrderScreen DOM+CSS+undoToast; смоук apps/web/__tests__/strength-builder-order-v4-canvas-contract.test.js 3/3.",
-      "h": "58371593f5a2"
+      "f": "sheetRows без «Назначено против сделано» (superset_ui:2497+); builder_ui без view plan-vs-done/BuilderPlanVsDoneScreen — пакет 47 / ОТВЕТ-22 #15.",
+      "h": "943cd7671b83"
     },
     "вид · типы подходов": {
       "v": "=",
@@ -761,8 +761,8 @@
     },
     "вид · экран дропа": {
       "v": "=",
-      "f": "Кадр Ж3: DropSetScreen + .sb-ds-* apps/web/styles/modules/750-strength-builder.css:5093-5220; геометрия+цвет apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js 2/2; route apps/web/strength/heys_strength_builder_ui_v1.js view drop-set.",
-      "h": "da893498c416"
+      "f": "Кадр Ж3: DropSetScreen + .sb-ds-* apps/web/styles/modules/750-strength-builder.css:5093-5220; геометрия+цвет apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js 2/2; route apps/web/strength/heys_strength_builder_ui_v1.js view drop-set. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "4aee9d21fc41"
     },
     "вид · создание связки": {
       "v": "=",
@@ -771,39 +771,39 @@
     },
     "вид · трисет в работе": {
       "v": "=",
-      "f": "Кадр З2: TriSetWorkScreen — шапка с badge, местами/разъединить, A1–A3, общая разминка, раунды-строки с inset текущего, +Раунд — apps/web/strength/heys_strength_superset_ui_v1.js:1344-1465, apps/web/styles/modules/750-strength-builder.css:5291-5524; геометрия+цвет apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js.",
-      "h": "f75a710c47a1"
+      "f": "Кадр З2: TriSetWorkScreen — шапка с badge, местами/разъединить, A1–A3, общая разминка, раунды-строки с inset текущего, +Раунд — apps/web/strength/heys_strength_superset_ui_v1.js:1344-1465, apps/web/styles/modules/750-strength-builder.css:5291-5524; геометрия+цвет apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "ad6c26cc6a7e"
     },
     "вид · куратор в зале": {
       "v": "=",
-      "f": "ProposalStrip в идущей тренировке (proposal_ui :431–443); не модалка. Смоук strength-proposal-ui.test.js.",
-      "h": "2ee6e3d76c83"
+      "f": "ProposalStrip в идущей тренировке (proposal_ui :431–443); не модалка. Смоук strength-proposal-ui.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "41182ff8ad14"
     },
     "вид · шторка": {
       "v": "=",
-      "f": "Scrim .sb-sheet-back var(--v4-modal-backdrop-dim)+blur 2.5px (750:6820–6823); .sb-sheet radius 20/c1 (6825–6830); grip 38×4 ink 18% (6832–6838); .sb-sheet-menu на --bg (6840–6845); строки .sb-sheet-menu-copy b 12.5px/span 11px mut/chevron 35% (6856–6906); builder_ui:1982–2046; menu-sheet test grip 38×4.",
-      "h": "f36f0bbb85d4"
+      "f": "Scrim .sb-sheet-back var(--v4-modal-backdrop-dim)+blur 2.5px (750:6820–6823); .sb-sheet radius 20/c1 (6825–6830); grip 38×4 ink 18% (6832–6838); .sb-sheet-menu на --bg (6840–6845); строки .sb-sheet-menu-copy b 12.5px/span 11px mut/chevron 35% (6856–6906); builder_ui:1982–2046; menu-sheet test grip 38×4. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "eb2fb6fe1601"
     },
     "вид · план в ленте": {
       "v": "=",
-      "f": "PlanCard future feed: .sb-plan-card--future, letter 34, badge «план», exercises, week tiles — superset_ui:2770+; strength-builder-day-feed-v4-canvas-contract.test.js sand+blue.",
-      "h": "cc32b2cf1924"
+      "f": "PlanCard future feed: .sb-plan-card--future, letter 34, badge «план», exercises, week tiles — superset_ui:2770+; strength-builder-day-feed-v4-canvas-contract.test.js sand+blue. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "f80a9dfd1e83"
     },
     "вид · день не состоялся": {
       "v": "=",
-      "f": "PlanCard missed superset_ui:2412–2483 + day_trainings handlers; геометрия ·06–16 = strength-builder-day-missed-v4-canvas-contract.test.js. Composite ·01–05 day shell — —.",
-      "h": "7b476fac97af"
+      "f": "PlanCard missed superset_ui:2412–2483 + day_trainings handlers; геометрия ·06–16 = strength-builder-day-missed-v4-canvas-contract.test.js. Composite ·01–05 day shell — —. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "e7700f905692"
     },
     "вид · кадры спорных состояний": {
       "v": "—",
-      "f": "Мета-описание 12 canvas-кадров «Случай N»; отдельный VID-screen не рендерится — поведение закрыто dispute-k тестами на builder_ui.",
-      "h": "dc326432d245",
+      "f": "Мета-описание 12 canvas-кадров «Случай N»; отдельный VID-screen не рендерится — поведение закрыто dispute-k тестами на builder_ui. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "995f9c8aed51",
       "naKind": "demo-only"
     },
     "вид · кадры правки куратора": {
       "v": "—",
-      "f": "Мета frame spec Л1–Л9; runtime в proposal_ui; кадровые строки Л* закрыты curator handoff, не builder_ui VID.",
-      "h": "f51a8a72eadd",
+      "f": "Мета frame spec Л1–Л9; runtime в proposal_ui; кадровые строки Л* закрыты curator handoff, не builder_ui VID. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "178db584f457",
       "naKind": "handoff"
     },
     "вид · исходы предложения": {
@@ -815,8 +815,8 @@
     },
     "вид · сравнение ветвей принятия": {
       "v": "—",
-      "f": "Протокол: ветка А (кнопка в чате) снята; реализована ветка Б (карточка дня). Кадры оставлены для сравнения, не для прода. Не scope proposal_ui.",
-      "h": "b62c488c6362",
+      "f": "Протокол: ветка А (кнопка в чате) снята; реализована ветка Б (карточка дня). Кадры оставлены для сравнения, не для прода. Не scope proposal_ui. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "e94f7107ae96",
       "naKind": "foreign-zone"
     },
     "все кадры статичны": {
@@ -8662,15 +8662,15 @@
     },
     "вид · шкала тяжести": {
       "v": "≠",
-      "f": "Канвас :2345 — единые .hv/.hvOn 44px; продукт .sb-rpe/.sb-rpe-dot 6–10 в ExerciseCard superset_ui:1905–1924, 750:406+ — классы и геометрия ≠ stop-кадра.",
-      "h": "388a069469b9",
+      "f": "Канвас :2345 — единые .hv/.hvOn 44px; продукт .sb-rpe/.sb-rpe-dot 6–10 в ExerciseCard superset_ui:1905–1924, 750:406+ — классы и геометрия ≠ stop-кадра. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "ba30fc492f2f",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2345"
     },
     "вид · отчёт за период": {
       "v": "=",
-      "f": ".sb-period-outcomes приведён к канвасному .cd: фон var(--c1), радиус 20px, поля 2px 16px, без рамки (750:7780-7787); chromium 375 px sand rgb(247,239,226)/blue rgb(238,243,249). Тона исходов и долга — strength-proposal-v4-canvas-contract.test.js PeriodReportScreen computed.",
-      "h": "8bbd8e2085da"
+      "f": ".sb-period-outcomes приведён к канвасному .cd: фон var(--c1), радиус 20px, поля 2px 16px, без рамки (750:7780-7787); chromium 375 px sand rgb(247,239,226)/blue rgb(238,243,249). Тона исходов и долга — strength-proposal-v4-canvas-contract.test.js PeriodReportScreen computed. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "67cfbdc83a76"
     },
     "снято · проверка «класс красится инлайном не везде»": {
       "v": "—",
@@ -9535,8 +9535,8 @@
     },
     "вид · старая связка": {
       "v": "=",
-      "f": "Кадр В2 сведён: при supersetRounds=null SupersetBlock рисует шапку с датой, ключ неравных подходов, пилюлю «история», плоские списки A/B с чипами и сноску без выравнивания задним числом — superset_ui:121-183 + 750:703-758; ядро supersetRounds возвращает null при разном числе workApproaches (_kernel/heys_kernel_strength_v1.js:385-387).",
-      "h": "6817cf7dbec7"
+      "f": "Кадр В2 сведён: при supersetRounds=null SupersetBlock рисует шапку с датой, ключ неравных подходов, пилюлю «история», плоские списки A/B с чипами и сноску без выравнивания задним числом — superset_ui:121-183 + 750:703-758; ядро supersetRounds возвращает null при разном числе workApproaches (_kernel/heys_kernel_strength_v1.js:385-387). · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "9dd90842c6ae"
     },
     "Конструктор · пусто · плана нет · 01": {
       "v": "=",

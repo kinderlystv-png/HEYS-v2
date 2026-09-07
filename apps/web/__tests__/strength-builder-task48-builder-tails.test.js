@@ -79,10 +79,9 @@ describe('task48 · builder_ui sheet tails', () => {
     expect(screen.getByText('Круговой режим')).toBeTruthy();
   });
 
-  it('view plan-vs-done не делегирует в Parts.PlanVsDoneScreen', () => {
-    expect(BUILDER_SRC).not.toMatch(/Parts\.PlanVsDoneScreen/);
-    expect(BUILDER_SRC).toMatch(/if \(view === 'plan-vs-done' && Parts\.buildPlanVsDoneSnapshot\)/);
-    expect(BUILDER_SRC).toMatch(/return h\(BuilderPlanVsDoneScreen,/);
-    expect(BUILDER_SRC).toMatch(/function BuilderPlanVsDoneScreen\(/);
+  it('builder_ui не держит in-session plan-vs-done (Г2 — CycleReportScreen)', () => {
+    expect(BUILDER_SRC).not.toMatch(/BuilderPlanVsDoneScreen/);
+    expect(BUILDER_SRC).not.toMatch(/view === 'plan-vs-done'/);
+    expect(BUILDER_SRC).not.toMatch(/openPlanVsDone/);
   });
 });

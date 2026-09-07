@@ -174,19 +174,9 @@ function lastRule(selector) {
 const CANVAS_CONFLICTS = Object.freeze({
   'А1б': Object.freeze({
     '05': 'шапка: Г4 «подход N из M» вместо «пн, 8 авг · начата в 18:40»',
-    '28': 'Г4: .is-weight-entry.is-exercise-open .sb-aps-head padding 0 — класс вешается на любое весовое (builder_ui:1886)',
-    '30': 'Г4: .is-weight-entry .sb-aps-head > span:last-child цвет --gr против ink .56',
-    '31': 'Г4: .is-weight-entry.is-exercise-open .sb-aps gap 0 против 6px',
-    '33': 'Г4: .is-weight-entry .sb-ap.is-done .sb-ap-num цвет --gr против ink-2',
-    '35': 'Г4: .is-weight-entry .sb-ap.is-current .sb-ap-num --acs против bg',
-    '36': 'Г4: кольцо активного поля 1.5px против 2px',
-    '14': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — свёрнутая завершённая карточка',
     'текст 1/2': 'составная строка несёт шапку из строк 04/05',
   }),
-  'А2': Object.freeze({
-    '15': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — свёрнутая завершённая карточка',
-    '23': 'К «Спорное · тап по закрытому во время отдыха · 14»: .sb-ex--collapsed .sb-ex-title b 12.5px против 13px — ожидающая карточка',
-  }),
+  'А2': Object.freeze({}),
 });
 
 // Делит расхождения на ожидаемые (спор канвасов) и настоящие; исключение без

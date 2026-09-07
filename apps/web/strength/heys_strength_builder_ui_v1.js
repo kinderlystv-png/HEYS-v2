@@ -714,100 +714,6 @@
     };
   }
 
-  const PLAN_VS_DONE_FOOTNOTE = 'Перенос и пропуск — разные исходы: перенос освобождает исходный день заранее и пропуском не считается, пропуск остаётся навсегда — прошедший день не переигрываем.';
-  const PLAN_VS_HOLE_TITLE = 'Пропущенная не считается сделанной';
-  const PLAN_VS_HOLE_BODY = 'Сейчас в счёт объёма попадает и пропущенная запись — отчёт говорит об этом прямо, а не делает вид, что работает.';
-
-  // Обёртка вокруг снимка plan-vs-done: disclosure «дыра в объёме» живёт
-  // в builder_ui, потому что экран открывается из шторки конструктора.
-  function BuilderPlanVsDoneScreen(props) {
-    const Parts = HEYS.StrengthBuilderParts || {};
-    const { training, onBack, onClose, onMessageCurator, onWeekReport } = props;
-    const snapshot = Parts.buildPlanVsDoneSnapshot
-      ? Parts.buildPlanVsDoneSnapshot(training || {})
-      : { rows: [], headerKey: '', percent: 0, summarySub: '', plannedVolume: 0, doneVolume: 0 };
-    const rows = snapshot.rows || [];
-    return h('div', { className: 'sb-root sb-plan-vs-done' },
-      h('div', { className: 'sb-cycle-top sb-plan-vs-top' },
-        h('span', { className: 'sb-cycle-top-main' },
-          h('span', { className: 'sb-cycle-title' }, 'Назначено против сделано'),
-          snapshot.headerKey && h('span', { className: 'sb-cycle-key' }, snapshot.headerKey)
-        )
-      ),
-      h('div', { className: 'sb-plan-vs-scroll' },
-        rows.length && h('div', { className: 'sb-plan-vs-summary' },
-          h('div', { className: 'sb-plan-vs-summary-head' },
-            h('span', { className: 'sb-plan-vs-dot is-summary', 'aria-hidden': 'true' }),
-            h('span', { className: 'sb-plan-vs-summary-title' },
-              'План выполнен на ' + snapshot.percent + ' %')
-          ),
-          snapshot.summarySub && h('p', { className: 'sb-plan-vs-summary-sub' }, snapshot.summarySub)
-        ),
-        rows.length
-          ? h('div', { className: 'sb-plan-vs-list' },
-            rows.map(function (row, i) {
-              const doneCellClass = row.doneTone === 'positive'
-                ? ' is-positive'
-                : row.doneTone === 'skip'
-                  ? ' is-skip'
-                  : row.doneTone === 'neutral'
-                    ? ' is-neutral'
-                    : '';
-              return h('div', {
-                key: row.name + i,
-                className: 'sb-plan-vs-row is-' + row.status
-              },
-                h('div', { className: 'sb-plan-vs-row-head' },
-                  h('span', { className: 'sb-plan-vs-dot is-' + row.status, 'aria-hidden': 'true' }),
-                  h('b', null, row.name)
-                ),
-                row.note && h('p', { className: 'sb-plan-vs-note' }, row.note),
-                h('div', { className: 'sb-plan-vs-cols' },
-                  h('div', { className: 'sb-plan-vs-cell is-assigned' },
-                    h('span', { className: 'sb-plan-vs-cell-label' }, 'Назначено'),
-                    h('span', { className: 'sb-plan-vs-cell-val' }, row.planned)
-                  ),
-                  h('div', { className: 'sb-plan-vs-cell is-done' + doneCellClass },
-                    h('span', { className: 'sb-plan-vs-cell-label' }, 'Сделано'),
-                    h('span', { className: 'sb-plan-vs-cell-val' }, row.actual)
-                  )
-                )
-              );
-            }))
-          : h('p', { className: 'sb-plan-vs-empty' }, 'План куратора для сравнения не найден.'),
-        rows.length && h('div', { className: 'sb-plan-vs-cd' },
-          h('div', { className: 'sb-plan-vs-cd-row' },
-            h('span', { className: 'sb-plan-vs-cd-label' }, 'Объём назначенного'),
-            h('span', { className: 'sb-plan-vs-cd-val is-muted' }, fmtVolumeKg(snapshot.plannedVolume))
-          ),
-          h('div', { className: 'sb-plan-vs-cd-row is-last' },
-            h('span', { className: 'sb-plan-vs-cd-label' }, 'Объём сделанного'),
-            h('span', { className: 'sb-plan-vs-cd-val' }, fmtVolumeKg(snapshot.doneVolume))
-          )
-        ),
-        rows.length && h('div', { className: 'sb-grp sb-plan-vs-hole' },
-          h('b', { className: 'sb-plan-vs-hole-title' }, PLAN_VS_HOLE_TITLE),
-          h('p', { className: 'sb-plan-vs-hole-body' }, PLAN_VS_HOLE_BODY)
-        ),
-        rows.length && h('div', { className: 'sb-plan-vs-actions' },
-          h('button', {
-            type: 'button',
-            className: 'sb-btn sb-plan-cta',
-            onClick: onMessageCurator || undefined
-          }, 'Написать куратору'),
-          h('button', {
-            type: 'button',
-            className: 'sb-btn is-accent sb-plan-cta',
-            onClick: onWeekReport || onBack || onClose || undefined
-          }, 'Отчёт за неделю')
-        ),
-        rows.length && h('p', { className: 'sb-plan-vs-foot' }, PLAN_VS_DONE_FOOTNOTE)
-      )
-    );
-  }
-
-  SB.BuilderPlanVsDoneScreen = BuilderPlanVsDoneScreen;
-
   // ——— Экран целиком ———
 
   function BuilderScreen(props) {
@@ -1581,6 +1487,7 @@
     function FinUIRef() { return HEYS.StrengthFinishUI || {}; }
 
     const pendingProposal = SK && SK.pendingPlanProposal ? SK.pendingPlanProposal(training) : null;
+    const proposalWho = pendingProposal && pendingProposal.proposedBy ? pendingProposal.proposedBy : null;
 
     function handleProposalAccept() {
       if (typeof onProposalAccept === 'function') {
@@ -1786,13 +1693,6 @@
         undoToast: approachUndo,
         onApply: function (next) { patchExercises(next); setView('list'); },
         onCancel: function () { setView('list'); }
-      });
-    }
-    if (view === 'plan-vs-done' && Parts.buildPlanVsDoneSnapshot) {
-      return h(BuilderPlanVsDoneScreen, {
-        training: training,
-        onBack: function () { setView('list'); },
-        onClose: onClose
       });
     }
     if (view === 'superset' && CatUI.SupersetScreen) {
@@ -2132,7 +2032,9 @@
 
     const openEx = openIdx >= 0 ? exercises[openIdx] : null;
     const openUnit = openEx ? (openEx.unit || 'weight_reps') : '';
-    const proposalWho = pendingProposal && pendingProposal.proposedBy ? pendingProposal.proposedBy : null;
+    const weightEditCtxRoot = openEx && pendingProposal && startedAt > 0 && !completedAt
+      ? weightEditSessionContext(exercises, openEx, pendingProposal)
+      : null;
 
     return h('div', {
       className: 'sb-root sb-builder-screen'
@@ -2140,7 +2042,7 @@
         + (openUnit === 'time' ? ' is-time-entry' : '')
         + (openUnit === 'distance' ? ' is-distance-entry' : '')
         + (openUnit === 'bodyweight' ? ' is-bodyweight-entry' : '')
-        + (openIdx >= 0 && openUnit === 'weight_reps' ? ' is-weight-entry' : '')
+        + (weightEditCtxRoot ? ' is-weight-entry' : '')
         + (rest
         ? ' sb-root--rest-docked ' + (rest.collapsed ? 'sb-root--rest-collapsed' : 'sb-root--rest-expanded')
         : '')
@@ -2253,7 +2155,6 @@
               bodyWeightKg: Number.isFinite(+(profile && profile.weight))
                 ? +(profile.weight)
                 : null,
-              openPlanVsDone: function () { setView('plan-vs-done'); },
               setLinkFrom: setLinkFrom,
               setHistoryName: setHistoryName,
               setWarmupDropIdx: setWarmupDropIdx,

@@ -130,7 +130,7 @@ describe('Г4 · Правка веса в сессии · canvas contract', () =
     }
   });
 
-  it('gr/acs на weight_reps следуют палитре на синем наборе', () => {
+  it('без правки куратора is-weight-entry не вешается на открытое weight_reps', () => {
     const training = {
       workoutLog: {
         exercises: [ex('ex1', 'Жим', [ap('a1', 60, 10, true), ap('a2', 60, 10, false)])],
@@ -148,10 +148,10 @@ describe('Г4 · Правка веса в сессии · canvas contract', () =
         onPatch: () => {},
         onClose: () => {},
       }));
-      const doneNum = container.querySelector('.is-weight-entry .sb-ap.is-done .sb-ap-num');
+      expect(container.querySelector('.sb-builder-screen.is-weight-entry')).toBeNull();
+      const doneNum = container.querySelector('.sb-ap.is-done .sb-ap-num');
       expect(doneNum).toBeTruthy();
-      expect(getComputedStyle(doneNum).backgroundColor).toBe(BLUE.grBg);
-      expect(getComputedStyle(doneNum).color).toBe(BLUE.gr);
+      expect(getComputedStyle(doneNum).backgroundColor).not.toBe(BLUE.grBg);
     } finally {
       style.remove();
     }

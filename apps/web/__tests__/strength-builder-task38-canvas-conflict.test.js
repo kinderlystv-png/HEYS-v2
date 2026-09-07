@@ -20,6 +20,7 @@ function loadModules() {
   ev('_kernel/heys_kernel_strength_v1.js');
   ev('heys_exercise_catalog_v1.js');
   ev('strength/heys_strength_superset_ui_v1.js');
+  ev('strength/heys_strength_proposal_ui_v1.js');
   ev('strength/heys_strength_catalog_ui_v1.js');
   ev('strength/heys_strength_finish_ui_v1.js');
   ev('strength/heys_strength_builder_ui_v1.js');
@@ -89,14 +90,20 @@ describe('task38 · builder_ui canvas-conflict-feature', () => {
     expect(document.querySelector('.sb-cur-plan-actions')).toBeTruthy();
   });
 
-  it('Г2 «отчёт называет дыру»: disclosure про пропущенную в объёме', () => {
-    render(React.createElement(HEYS.StrengthBuilder.BuilderPlanVsDoneScreen, {
-      training: canvasPlanVsDoneTraining(),
-      onBack: () => {},
-      onClose: () => {}
+  it('Г2 «отчёт по циклу»: полноэкранный CycleReportScreen, не in-session plan-vs-done', () => {
+    const Parts = HEYS.StrengthBuilderParts;
+    const program = { weekRange: 'недели 1–2' };
+    const days = [{ date: '2026-08-08', status: 'done' }];
+    const snapshot = Parts.buildCycleReportSnapshot(program, days, function () {
+      return { trainings: [canvasPlanVsDoneTraining()] };
+    });
+    render(React.createElement(Parts.CycleReportScreen, {
+      snapshot,
+      onClose: () => {},
     }));
-    expect(screen.getByText('Пропущенная не считается сделанной')).toBeTruthy();
-    expect(screen.getByText(/Сейчас в счёт объёма попадает и пропущенная запись/)).toBeTruthy();
-    expect(document.querySelector('.sb-plan-vs-hole')).toBeTruthy();
+    expect(screen.getByText('Отчёт по циклу')).toBeTruthy();
+    expect(screen.getByText(/План выполнен на \d+ %/)).toBeTruthy();
+    expect(document.querySelector('.sb-cycle-report.sb-plan-vs-done')).toBeTruthy();
+    expect(screen.queryByText('Назначено против сделано')).toBeNull();
   });
 });
