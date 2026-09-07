@@ -50,33 +50,33 @@
     },
     "состояние своего сообщения — одна строка": {
       "v": "=",
-      "f": "heys_messenger_v1.js:855-865 ownStatus sent→seen→acked→applied; msg-status под msg-row-mine, не внутри пузыря",
-      "h": "06bb7bc1bad3"
+      "f": "ownStatus line 10.5px/600 --v4-ink-2 only under latest own bubble — heys_messenger_v1.js MessageBubble + 1000-messenger.css:612-617",
+      "h": "c488f7b51704"
     },
     "«Ждём» — вторая строка шапки": {
       "v": "=",
-      "f": "heys_messenger_v1.js:2535-2578 DayChecklistRow — порядок/шаблоны/скрытие без missing без изменений; 1000-messenger.css:308-340 .messenger-day-checklist__chip min-height 44px padding 0 11px, --missing на --v4-c1, --done прозрачный с обводкой ink 10% и --v4-ink-data; touch 44px sand+blue — scripts/.tmp-messenger-computed-probe.mjs",
-      "h": "fae5109d02d4"
+      "f": "DayChecklistRow chips 44px templates on missing — heys_messenger_v1.js:2387+; 1000-messenger.css:308-340",
+      "h": "d5e3059464b3"
     },
     "подсказка «время и граммы» — рабочая": {
       "v": "=",
-      "f": "heys_messenger_v1.js:2387-2508 shouldShowFoodHint/FOOD_HINT_LEARNED_STREAK=10 и четыре пилюли без изменений; текст :2446 «…сразу.» без дописки; 1000-messenger.css:1859-1889 pill min-height 44 padding 0 11px, text 12px/500, hide 11.5px/600 --v4-ink-data; touch 44px — probe",
-      "h": "3362411b3228"
+      "f": "FoodHintCard --v4-tint clock 16px --v4-act-text, pills 44px, hide 11.5px/600 --v4-ink-2 — heys_messenger_v1.js:2387-2508",
+      "h": "ed533ae69e25"
     },
     "карточка «Внесено в дневник» — системная": {
       "v": "=",
-      "f": "AppliedDayCard msg-applied-card (heys_messenger_v1.js:2120-2134); onOpenDay → вкладка «Питание»",
-      "h": "631d1c67cace"
+      "f": "AppliedDayCard msg-applied-card --v4-c1 inset border 6% radius 18 — heys_messenger_v1.js:2120-2134",
+      "h": "ec08258f69f3"
     },
     "карточка намерения — есть, вкладок нет": {
       "v": "=",
-      "f": "buildIntentCard + IntentCard (2165,2198); вкладок meal/training над композером нет — свободный текст",
-      "h": "966c3f917d9e"
+      "f": "IntentCard inside bubble kicker 9.5px --v4-act-text, value 20px/800 — heys_messenger_v1.js; intent tabs removed",
+      "h": "f1ca2ff03324"
     },
     "первое сообщение": {
       "v": "=",
-      "f": "EmptyThread + EMPTY_THREAD_PROMPTS (2297); messenger-states-redesign.test.js: заголовок и «Вес утром»",
-      "h": "c3291b4f9dd3"
+      "f": "EmptyThread badge 56px --v4-c2, three pills 44px templates — heys_messenger_v1.js EMPTY_THREAD_PROMPTS",
+      "h": "fac867e5bcbb"
     },
     "действия над сообщением — лист снизу": {
       "v": "=",
@@ -85,8 +85,8 @@
     },
     "поиск — режим, а не оверлей": {
       "v": "=",
-      "f": "SearchPanel SEARCH_DEBOUNCE_MS=300 (1789); фильтры + jump; messenger-search.test.js",
-      "h": "55a5b121b720"
+      "f": "SearchPanel replaces thread; field 44px; filter chips 44px (.messenger-search__filter min-height 44) — 1000-messenger.css:2995-3027; debounce 300ms",
+      "h": "8bc181ce5212"
     },
     "без сети": {
       "v": "=",
@@ -111,48 +111,48 @@
     },
     "вид · шапка": {
       "v": "=",
-      "f": "1000-messenger.css:148-376 — padding 14/12/10/18, border ink 6%, avatar 38px --v4-hero + 12.5px/700 --v4-act-text, title 14.5px/700, subtitle 11px/500 --v4-ink-data, dot 7px --v4-ok-text/--v4-bad-text offline, header-button 44×44 круг без ::before, ink-2 55%; sand+blue probe",
-      "h": "d9d5046ca0b5"
+      "f": "1000-messenger.css:148-376 padding 14/12/10/18, avatar 38px, header-button 44×44, subtitle dot 7px --v4-ok-text/--v4-bad-text",
+      "h": "259f43d7b688"
     },
     "вид · строка «Ждём»": {
       "v": "=",
-      "f": "002-ui-v4-palette-roles.css:59 — row padding 8/18/10, label 9.5px/700 .14em --v4-ink-data, chip min-height 44 padding 0 11px radius 999 text 11.5px/600 gap 7 scroll hidden; touch 44px — probe",
-      "h": "38d69e082b93"
+      "f": "1000-messenger.css:308-340 row padding 8/18/10, label 9.5px/700 .14em --v4-ink-2, chip min-height 44 padding 0 11 gap 7",
+      "h": "d248e8d61728"
     },
     "вид · тред": {
       "v": "=",
-      "f": "1000-messenger.css:409-415 .messenger-thread padding 6px 14px 0; gap 8px; пузырь 561-583 без изменений — messenger-thread-padding.test.js sand+blue",
-      "h": "227880662fc6"
+      "f": "1000-messenger.css:409-432 thread padding 6/14/0 gap 8 bg --v4-hero; meta/time --v4-ink-2 (56%) — messenger-thread-padding.test.js",
+      "h": "a69f96ea8dff"
     },
     "вид · композер": {
-      "v": "?",
-      "f": "Кадр data-screen-label «Мессенджер · запись голосового» data-vid «вид · композер»: контракт «поля 8/12/14, верх — линия 1 px чернил 6 %, фон --bg. Камера и микрофон — круги 40 px ч…». Закроет CSS-сверка блока с stop-кадром (CSS lane).",
-      "h": "396a83c9049b"
+      "v": "=",
+      "f": ".messenger-composer padding 8/12/14 border-top 6% --v4-bg; attach/voice 44×44; input min-height 44 radius 22 --v4-c1; live recording above field .messenger-recording-live — 1000-messenger.css:1146-1200,1854-2007; канон блок над полем ОТВЕТ-22 #13",
+      "h": "2c1192fa3b2e"
     },
     "вид · меню «Ещё»": {
       "v": "=",
-      "f": "1000-messenger.css:231-272 .messenger-header-menu 232px right 12 radius 18 shadow 24% items 44px; label 13px hint 11px",
-      "h": "3ef820184d51"
+      "f": "1000-messenger.css:231-272 menu 232px radius 18 items 44px label 13px hint 11px --v4-ink-2",
+      "h": "32146abf4fe5"
     },
     "вид · лист действий": {
       "v": "=",
-      "f": "1000-messenger.css:2926-2983 .messenger-action-sheet* + backdrop --scrim blur(2.5px); heys_messenger_v1.js MessageActionSheet long-press",
-      "h": "3cb970bbbbe3"
+      "f": "1000-messenger.css:2926-2983 action sheet radius 26 scrim --scrim blur 2.5px items 48px",
+      "h": "fc278a5eabf0"
     },
     "вид · удаление": {
       "v": "=",
-      "f": "1000-messenger.css:1243-1345 .messenger-confirm-* column actions gap 8; heys_messenger_v1.js:1185-1246 DeleteConfirmDialog без preview/icon; messenger-deletion-confirm.test.js",
-      "h": "a75fb6a127ef"
+      "f": "1000-messenger.css:1243-1345 confirm dialog column actions; messenger-deletion-confirm.test.js",
+      "h": "685d1792bfa8"
     },
     "вид · поиск": {
-      "v": "?",
-      "f": "поле/результаты сведены (1000-messenger.css .messenger-search*; SearchPanel); чипы min-height 34px без изменений — конфликт 44pt, docs/ui/UI_V4_FINDINGS.md#две-цели-messenger-контракт-зоны-просит-36-и-34-px-против-решения-о-44",
-      "h": "54e0abb5aa17"
+      "v": "=",
+      "f": "1000-messenger.css:2949-3070 field 44px radius 22; .messenger-search__filter min-height 44 padding 0 11 (пакет 47, ОТВЕТ-22 #3); results + empty state --v4-ink-2",
+      "h": "b4ea1b2ce37e"
     },
     "вид · согласие": {
       "v": "=",
-      "f": "1000-messenger.css:1243-1345 .messenger-consent-* radius 26 padding 22/18/18 scrim blur(2.5px); heys_messenger_v1.js:4785-4816 consent prompt + consent-doc-body; messenger-transcription-revoke-sheet.test.js",
-      "h": "b62f79fbdc7a"
+      "f": "1000-messenger.css:1246-1268 consent dialog radius 26 padding 22/18/18 scrim blur 2.5px",
+      "h": "48a86ff765ae"
     },
     "отправка": {
       "v": "=",
@@ -166,8 +166,8 @@
     },
     "голосовое": {
       "v": "=",
-      "f": "тап mic toggle (не hold); AudioAttachment + transcript; messenger-audio-contract.test.js",
-      "h": "db5abe08c78f"
+      "f": "tap mic toggle; AudioAttachment + .messenger-recording-live above composer — messenger-audio-contract.test.js",
+      "h": "59b6b08e2609"
     },
     "принять": {
       "v": "=",
@@ -454,7 +454,7 @@
       "f": "кадр 30×30 play; продукт .msg-audio-play 44×44 — accessibility, тач-цели 6 сентября (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
       "h": "5085f47d4f9c",
       "reasonCode": "accessibility",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#messenger-targets-below-44"
+      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/ОТВЕТ-22-вопроса.md#3"
     },
     "Мессенджер · запись голосового · 10": {
       "v": "=",
@@ -537,58 +537,58 @@
       "h": "d9d98437fb72"
     },
     "Мессенджер · запись голосового · 24": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "b3938d3c0473"
     },
     "Мессенджер · запись голосового · 25": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "fb1bd4fc795d"
     },
     "Мессенджер · запись голосового · 26": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "25e363cec4d9"
     },
     "Мессенджер · запись голосового · 27": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "e504378cffa1"
     },
     "Мессенджер · запись голосового · 28": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "b78b22d51003"
     },
     "Мессенджер · запись голосового · 29": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "5e2f53b45830"
     },
     "Мессенджер · запись голосового · 30": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "99cf20a9fd95"
     },
     "Мессенджер · запись голосового · 31": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "c6fb9db54f96"
     },
     "Мессенджер · запись голосового · 32": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "f79ddc9cbf65"
     },
     "Мессенджер · запись голосового · 33": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "e1020eb671e9"
     },
     "Мессенджер · запись голосового · 34": {
-      "v": "?",
-      "f": "кадр: inline pill в композере (radius 22, tint, waveform, «Стоп» --ac); продукт: .messenger-recording-live над полем — docs/ui/UI_V4_FINDINGS.md — «Запись голосового: полоса в композере vs блок над полем» (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
+      "v": "=",
+      "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
       "h": "f3c881391720"
     },
     "Мессенджер · лист действий · 01": {
@@ -1422,7 +1422,7 @@
     },
     "тач-цели": {
       "v": "=",
-      "f": "node scripts/ui-v4-check-touch-target-visible.mjs collectInventory(files=1000-messenger.css) → 0 violations; header-button/chip/pill/retry видимые 44px, ::before expanders сняты (:364, :1285); было 31 в baseline messenger",
+      "f": "ui-v4-check-touch-target-visible 0 violations on 1000-messenger.css; search filter chips 44px visible (1000-messenger.css:3007-3011); header/chip/pill 44px; dot 7px + avatar 38px — не цели (ОТВЕТ-22 #3)",
       "h": "fb2555e9a93f"
     }
   },
