@@ -63,13 +63,18 @@
 }
 
 .planning-subnav__item {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
+    width: 36px;
     width: var(--planning-fab-size);
+    min-width: 36px;
     min-width: var(--planning-fab-size);
+    height: 36px;
     height: var(--planning-fab-size);
+    min-height: 36px;
     min-height: var(--planning-fab-size);
     gap: 0;
     padding: 0;
@@ -768,6 +773,7 @@
 
 .planning-goals-card__done,
 .planning-goals-advanced-toggle {
+    position: relative;
     min-height: 34px;
     border-radius: 8px;
     font-size: 12px;
@@ -1002,33 +1008,6 @@
 
 .planning-goals-workspace__focus > small.is-critical {
     color: #be123c;
-}
-
-.planning-goals-workspace__focus-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 7px;
-    margin-top: 5px;
-}
-
-.planning-goals-workspace__focus-actions button,
-.planning-goals-schedule-panel > button {
-    min-height: 38px;
-    padding: 0 11px;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.8);
-    color: #434587;
-    font-size: 11px;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.planning-goals-workspace__focus-actions button.is-primary,
-.planning-goals-schedule-panel > button.is-primary {
-    border-color: rgba(29, 112, 183, 0.24);
-    background: #1d70b7;
-    color: var(--v4-bg, #fffaf1);
 }
 
 .planning-goals-workspace__section {
@@ -1546,8 +1525,6 @@
     background: rgba(225, 29, 72, 0.12);
 }
 
-[data-theme$="dark"] .planning-goals-workspace__focus-actions button,
-[data-theme$="dark"] .planning-goals-schedule-panel > button,
 [data-theme$="dark"] .planning-goals-workspace__slots > div {
     border-color: rgba(148, 163, 184, 0.18);
     background: rgba(15, 23, 42, 0.64);
@@ -4163,23 +4140,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.planning-filter-btn {
-    padding: 5px 12px;
-    border-radius: 16px;
-    border: 1px solid var(--planning-border);
-    background: var(--planning-surface);
-    font-size: 12px;
-    color: var(--planning-muted);
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.planning-filter-btn.active {
-    background: var(--planning-accent-soft);
-    color: var(--planning-accent);
-    border-color: rgba(37, 99, 235, 0.16);
-}
-
 /* --- Tasks list --- */
 .planning-tasks-list {
     display: flex;
@@ -6444,6 +6404,9 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 }
 
 .planning-quick-link-cancel {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
     border: none;
     background: transparent;
     padding: 8px 4px;
@@ -6884,35 +6847,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     display: flex;
     flex-direction: column;
     gap: 8px;
-}
-
-.planning-modal__segment-control {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin-bottom: 8px;
-}
-
-.planning-modal__segment-button {
-    min-width: 0;
-    min-height: 28px;
-    padding: 0 8px;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    background: rgba(248, 250, 252, 0.92);
-    color: var(--planning-muted);
-    font-size: 9px;
-    font-weight: 700;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
-}
-
-.planning-modal__segment-button.active {
-    background: rgba(37, 99, 235, 0.1);
-    color: var(--v4-act-text, #8a4a20);
-    border-color: rgba(37, 99, 235, 0.2);
-    box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.08);
 }
 
 .planning-modal__card-grid {
@@ -7536,43 +7470,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     font-weight: 600;
 }
 
-.planning-modal__icon-btn {
-    width: 24px;
-    min-width: 24px;
-    height: 24px;
-    padding: 0;
-    border-radius: 8px;
-    border: 1px solid rgba(37, 99, 235, 0.14);
-    background: rgba(37, 99, 235, 0.08);
-    color: var(--planning-accent);
-    font-size: 12px;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 0.15s, transform 0.15s, border-color 0.15s;
-}
-
-.planning-modal__icon-btn:focus-visible {
-    background: rgba(37, 99, 235, 0.14);
-    border-color: rgba(37, 99, 235, 0.24);
-    transform: translateY(-1px);
-}
-
-@media (hover: hover) {
-  .planning-modal__icon-btn:hover {
-    background: rgba(37, 99, 235, 0.14);
-    border-color: rgba(37, 99, 235, 0.24);
-    transform: translateY(-1px);
-}
-}
-
-.planning-modal__icon-btn--inline {
-    width: 20px;
-    min-width: 20px;
-    height: 20px;
-    border-radius: 7px;
-    font-size: 11px;
-}
-
 .planning-linked-banner--empty {
     justify-content: flex-start;
     align-items: flex-start;
@@ -7610,18 +7507,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     .planning-modal__time-row {
         grid-template-columns: 1.2fr 0.82fr 0.72fr 0.72fr;
         gap: 4px;
-    }
-
-    .planning-modal__segment-control {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 4px;
-        margin-bottom: 6px;
-    }
-
-    .planning-modal__segment-button {
-        min-height: 24px;
-        padding: 0 6px;
-        font-size: 8px;
     }
 
     .planning-modal__hero,
@@ -11925,37 +11810,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
     background: linear-gradient(180deg, rgba(59, 130, 246, 0.22) 0%, rgba(29, 78, 216, 0.1) 100%);
 }
 
-[data-theme$="dark"] .planning-modal__segment-button {
-    background: rgba(15, 23, 42, 0.78);
-    border-color: rgba(148, 163, 184, 0.22);
-    color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
-}
-
-[data-theme$="dark"] .planning-modal__segment-button.active {
-    background: rgba(59, 130, 246, 0.24);
-    color: #bfdbfe;
-    border-color: rgba(96, 165, 250, 0.4);
-    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.22);
-}
-
-[data-theme$="dark"] .planning-modal__icon-btn {
-    background: rgba(59, 130, 246, 0.16);
-    border-color: rgba(96, 165, 250, 0.32);
-    color: #93c5fd;
-}
-
-[data-theme$="dark"] .planning-modal__icon-btn:focus-visible {
-    background: rgba(59, 130, 246, 0.28);
-    border-color: rgba(147, 197, 253, 0.42);
-}
-
-@media (hover: hover) {
-  [data-theme$="dark"] .planning-modal__icon-btn:hover {
-    background: rgba(59, 130, 246, 0.28);
-    border-color: rgba(147, 197, 253, 0.42);
-}
-}
-
 [data-theme$="dark"] .planning-quick-link-cancel--danger {
     color: #f87171;
 }
@@ -12522,7 +12376,7 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 .planning-subnav__item::after {
   content: '';
   position: absolute;
-  inset: -13px 0;
+  inset: -4px;
 }
 
 .planning-goals-new-button::after {
@@ -12549,10 +12403,11 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
   inset: -6px;
 }
 
-.planning-goals-card__done::after {
+.planning-goals-card__done::after,
+.planning-goals-advanced-toggle::after {
   content: '';
   position: absolute;
-  inset: -2px 0;
+  inset: -2px;
 }
 
 .planning-goals-settings__back::after {
@@ -12715,12 +12570,6 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
   content: '';
   position: absolute;
   inset: -12px 0;
-}
-
-.planning-task-repeat__dates::after {
-  content: '';
-  position: absolute;
-  inset: -6px 0;
 }
 
 .planning-filter-toggle::after {
@@ -13073,5 +12922,5 @@ body:has(.gantt-quick-edit-backdrop) .crs-bar-container {
 .planning-checklists-screen__card-toggle::after {
   content: '';
   position: absolute;
-  inset: -15px 0;
+  inset: -22px 0;
 }

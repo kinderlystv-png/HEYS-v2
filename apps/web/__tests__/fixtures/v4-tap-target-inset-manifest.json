@@ -56,6 +56,12 @@
   {
     "zone": "planning",
     "file": "styles/modules/905-planning-chrono.css",
+    "host": ".chrono-picker__target-period-btn",
+    "inset": "-11px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/905-planning-chrono.css",
     "host": ".chrono-emoji-palette__item",
     "inset": "-4px"
   },
@@ -141,13 +147,13 @@
     "zone": "planning",
     "file": "styles/modules/905-planning-chrono.css",
     "host": ".chrono-undo-toast__action",
-    "inset": "-15px 0"
+    "inset": "-22px"
   },
   {
     "zone": "planning",
     "file": "styles/modules/905-planning-chrono.css",
     "host": ".chrono-undo-toast__close",
-    "inset": "-14px"
+    "inset": "-22px"
   },
   {
     "zone": "planning",
@@ -201,7 +207,7 @@
     "zone": "service-curator",
     "file": "styles/modules/734-ui-v4-curator-panel.css",
     "host": ".cur-cab__subtitle",
-    "inset": "-16px 0"
+    "inset": "-22px 0"
   },
   {
     "zone": "service-curator",
@@ -590,6 +596,12 @@
   {
     "zone": "planning",
     "file": "styles/modules/900-planning.css",
+    "host": ".planning-goals-advanced-toggle",
+    "inset": "-2px 0"
+  },
+  {
+    "zone": "planning",
+    "file": "styles/modules/900-planning.css",
     "host": ".planning-goals-card__restore-action",
     "inset": "-4px 0"
   },
@@ -759,19 +771,13 @@
     "zone": "planning",
     "file": "styles/modules/900-planning.css",
     "host": ".planning-subnav__item",
-    "inset": "-13px 0"
+    "inset": "-4px"
   },
   {
     "zone": "planning",
     "file": "styles/modules/900-planning.css",
     "host": ".planning-task-editor__status-btn",
     "inset": "-5px 0"
-  },
-  {
-    "zone": "planning",
-    "file": "styles/modules/900-planning.css",
-    "host": ".planning-task-repeat__dates",
-    "inset": "-6px 0"
   },
   {
     "zone": "planning",

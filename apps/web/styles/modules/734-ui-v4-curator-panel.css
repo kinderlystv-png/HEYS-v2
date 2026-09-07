@@ -2469,6 +2469,6 @@
 .cur-cab__subtitle::after {
   content: '';
   position: absolute;
-  inset: -16px 0;
+  inset: -22px 0;
 }
 

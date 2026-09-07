@@ -695,58 +695,6 @@ html.chrono-bubble-dragging .chrono-screen {
     padding: 0 0 10px;
 }
 
-.chrono-overview__toggle {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 14px;
-    background: transparent;
-    border: none;
-    color: var(--planning-text, #0f172a);
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-    width: 100%;
-    transition: background 0.15s ease;
-}
-
-@media (hover: hover) {
-  .chrono-overview__toggle:hover {
-    background: rgba(15, 23, 42, 0.04);
-}
-}
-
-.chrono-overview__toggle-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--planning-muted, #64748b);
-}
-
-.chrono-overview__toggle-hint {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--planning-text, #0f172a);
-    letter-spacing: -0.01em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.chrono-overview__toggle-chevron {
-    margin-left: auto;
-    font-size: 11px;
-    color: var(--planning-muted, #64748b);
-    transition: transform 0.18s ease;
-}
-
-.chrono-overview:not(.is-collapsed) .chrono-overview__toggle-chevron {
-    transform: rotate(180deg);
-}
-
 .chrono-overview__ledger {
     display: flex;
     flex-direction: column;
@@ -2755,8 +2703,8 @@ html.chrono-bubble-dragging .chrono-screen {
     flex: 0 0 auto;
 }
 
-.chrono-duration__target-period-btn,
 .chrono-picker__target-period-btn {
+    position: relative;
     border: none;
     background: transparent;
     color: var(--planning-muted, #64748b);
@@ -2769,7 +2717,6 @@ html.chrono-bubble-dragging .chrono-screen {
     min-width: 44px;
 }
 
-.chrono-duration__target-period-btn.active,
 .chrono-picker__target-period-btn.active {
     background: var(--planning-accent, #2563eb);
     color: var(--v4-bg, #fff);
@@ -3716,6 +3663,8 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-undo-toast__action {
     position: relative;
+    display: inline-flex;
+    align-items: center;
     background: transparent;
     border: none;
     color: #93c5fd;
@@ -3727,6 +3676,9 @@ html.chrono-bubble-dragging .chrono-screen {
 
 .chrono-undo-toast__close {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
     border: none;
     color: rgba(255, 255, 255, 0.7);
@@ -3975,28 +3927,33 @@ html.chrono-bubble-dragging .chrono-screen {
   inset: -3px 0;
 }
 
-.chrono-duration__category-chip::after,
 .chrono-duration__smart-chip::after {
   content: '';
   position: absolute;
   inset: -9px 0;
 }
 
+.chrono-picker__target-period-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+}
+
 .chrono-duration__parallel-toggle::after {
   content: '';
   position: absolute;
-  inset: -6px 0;
+  inset: -22px 0;
 }
 
 .chrono-undo-toast__action::after {
   content: '';
   position: absolute;
-  inset: -15px 0;
+  inset: -22px;
 }
 
 .chrono-undo-toast__close::after {
   content: '';
   position: absolute;
-  inset: -14px;
+  inset: -22px;
 }
 
