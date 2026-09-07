@@ -3219,7 +3219,7 @@
     },
     "Связка · границы правки · 06": {
       "v": "=",
-      "f": "Карточка пары: .sb-ss-bound-grp { margin-top:12px } — apps/web/styles/modules/750-strength-builder.css:5580-4497.",
+      "f": "Карточка пары: .sb-ss-bound-grp { margin-top:12px } — apps/web/styles/modules/750-strength-builder.css:5662-4497.",
       "h": "81d6d8e40a85"
     },
     "Связка · границы правки · 07": {
@@ -4102,7 +4102,7 @@
     },
     "Типы подходов · честный тоннаж · 07": {
       "v": "=",
-      "f": ".sb-at-scroll { flex:1; overflow-y:auto; padding:0 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6413-4950.",
+      "f": ".sb-at-scroll { flex:1; overflow-y:auto; padding:0 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6513-4950.",
       "h": "c629f84f9712"
     },
     "Типы подходов · честный тоннаж · 08": {
@@ -4197,7 +4197,7 @@
     },
     "Типы подходов · честный тоннаж · 26": {
       "v": "=",
-      "f": ".sb-at-units { gap:8px } — apps/web/styles/modules/750-strength-builder.css:6524-5076.",
+      "f": ".sb-at-units { gap:8px } — apps/web/styles/modules/750-strength-builder.css:6624-5076.",
       "h": "45cfeef56a64"
     },
     "Типы подходов · честный тоннаж · 27": {
@@ -4262,7 +4262,7 @@
     },
     "Дроп-сет · свой экран · 07": {
       "v": "=",
-      "f": ".sb-ds-scroll { flex:1; overflow-y:auto; padding:0 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6569-5110.",
+      "f": ".sb-ds-scroll { flex:1; overflow-y:auto; padding:0 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6669-5110.",
       "h": "c629f84f9712"
     },
     "Дроп-сет · свой экран · 08": {
@@ -4567,12 +4567,12 @@
     },
     "Трисет в работе · 08": {
       "v": "=",
-      "f": ".sb-tw-scroll { flex:1; overflow-y:auto; padding 6px 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6855-5608.",
+      "f": ".sb-tw-scroll { flex:1; overflow-y:auto; padding 6px 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6955-5608.",
       "h": "c629f84f9712"
     },
     "Трисет в работе · 09": {
       "v": "=",
-      "f": ".sb-tw-actions { gap 7px; margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:6861-5614.",
+      "f": ".sb-tw-actions { gap 7px; margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:6961-5614.",
       "h": "77e4b4025f38"
     },
     "Трисет в работе · 10": {
@@ -4592,7 +4592,7 @@
     },
     "Трисет в работе · 13": {
       "v": "=",
-      "f": ".sb-tw-member-row { gap 6px } — apps/web/styles/modules/750-strength-builder.css:6893-5645.",
+      "f": ".sb-tw-member-row { gap 6px } — apps/web/styles/modules/750-strength-builder.css:6993-5645.",
       "h": "45cfeef56a64"
     },
     "Трисет в работе · 14": {
@@ -4642,12 +4642,12 @@
     },
     "Трисет в работе · 23": {
       "v": "=",
-      "f": ".sb-tw-round-footer { border-bottom none } — apps/web/styles/modules/750-strength-builder.css:7008-5760.",
+      "f": ".sb-tw-round-footer { border-bottom none } — apps/web/styles/modules/750-strength-builder.css:7108-5760.",
       "h": "7395c82cd118"
     },
     "Трисет в работе · 24": {
       "v": "=",
-      "f": ".sb-tw-round-spacer { flex none; width 36px } — apps/web/styles/modules/750-strength-builder.css:7013-5765.",
+      "f": ".sb-tw-round-spacer { flex none; width 36px } — apps/web/styles/modules/750-strength-builder.css:7113-5765.",
       "h": "28ebeb6164a9"
     },
     "Трисет в работе · 25": {
@@ -9059,7 +9059,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 15": {
       "v": "=",
@@ -9187,7 +9187,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 29": {
       "v": "=",
@@ -9207,7 +9207,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 31": {
       "v": "≠",
@@ -9218,7 +9218,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 32": {
       "v": "=",
@@ -9238,7 +9238,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 34": {
       "v": "=",
@@ -9258,7 +9258,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 36": {
       "v": "≠",
@@ -9269,7 +9269,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 37": {
       "v": "=",
@@ -10564,9 +10564,9 @@
       "scope": "owner-batch",
       "note": "Решение владельца от 6 сентября 2026: расхождение видно и принято без построчного разбора по критерию дизайнера — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Кластер намеренно один на зону: это ОДНО решение, а не одинаковая отписка под разными строками. Отбор сделал scripts/ui-v4-classify-legacy-mismatch.mjs, человек строки не читал — сказано и здесь, и в каждом факте."
     },
-    "docs/ui/UI_V4_FINDINGS.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06": {
+    "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06": {
       "scope": "zone",
-      "note": "Finding 6 сентября (UI_V4_FINDINGS): А1б/А2 vs Г4/К — одно DOM-состояние «открытое весовое упражнение», три кадра расходятся; 7 строк ≠ ждут выбор источника дизайнером. CANVAS_CONFLICTS в strength-builder-calm-canvas-contract.test.js."
+      "note": "Пакет 47, вопрос № 14: А1б/А2 — общий случай открытого весового; Г4/К сужаются в коде (is-weight-entry, sb-root--rest-docked). Семь строк «спокойнее» ·14/28/30/31/33/35/36 — ≠ canvas-conflict с этой ссылкой."
     }
   }
 }
