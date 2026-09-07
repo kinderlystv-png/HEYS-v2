@@ -827,8 +827,8 @@
       "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 04": {
-      "v": "=",
-      "f": "Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "?",
+      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
       "h": "c629f84f9712",
       "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
     },
@@ -845,8 +845,8 @@
       "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 07": {
-      "v": "=",
-      "f": "Текст и ветка реализованы для evidence.kind=stable_girths, но текущее кураторское RPC отдаёт только талию и не может доказать стабильность минимум двух обхватов в момент решения. До расширения server contract реальный owner-flow сохраняет missing/waist_only и не достигает этого Canvas-state.",
+      "v": "?",
+      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: Текст и ветка реализованы для evidence.kind=stable_girths, но текущее кураторское RPC отдаёт только талию и не может доказать стабильность минимум двух обхватов в момент решения. До расширения server contract реальный owner-flow сохраняет missing/waist_only и не достигает этого Canvas-state.",
       "h": "755acd2651a3",
       "evidence": [
         "unsupported: get_curator_clients_window returns waist but not biceps/thigh",

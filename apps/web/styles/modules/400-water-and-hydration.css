@@ -2799,9 +2799,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   color: var(--v4-ink, #201e1d);
 }
 
+/* Кадр просит видимый круг 30 — цель 44 pt добирается прозрачным припуском,
+   а не размером кнопки (контракт v4-tap-target: «рисунок меньше 44, нажимается
+   44»). Поднятый до 44 круг был правкой по неверному правилу. */
 .advice-v4-detail__close {
-  width: 44px;
-  height: 44px;
+  position: relative;
+  width: 30px;
+  height: 30px;
   flex: none;
   border: none;
   border-radius: 999px;
@@ -2811,6 +2815,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+/* Цель касания 44 pt при видимом круге 30 — прозрачным припуском. */
+.advice-v4-detail__close::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
 }
 
 .advice-v4-detail__body {
@@ -3507,11 +3518,12 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   min-width: 0;
 }
 
-/* Кадр «Совет · всплывающий · 12»: круг 44×44 видимой целью (было 26);
-   глиф крестика 12×12 — размер SVG ниже, не общий 14 px детали. */
+/* Кадр «Совет · всплывающий · 12»: видимый круг 26, глиф крестика 12×12.
+   Цель 44 pt — прозрачным припуском ниже, а не размером круга. */
 .advice-v4-toast-card__close {
-  width: 44px;
-  height: 44px;
+  position: relative;
+  width: 26px;
+  height: 26px;
   flex: none;
   border: none;
   border-radius: 999px;
@@ -3521,6 +3533,13 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+/* Цель касания 44 pt при видимом круге 26 — прозрачным припуском. */
+.advice-v4-toast-card__close::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
 }
 
 .advice-v4-toast-card__close svg {

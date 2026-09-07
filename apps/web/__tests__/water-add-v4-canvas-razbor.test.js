@@ -48,7 +48,9 @@ describe('water-add · разбор кадров канваса', () => {
 
   it('кадр «Кольцо» — минус в ряду объёмов, не в шапке', () => {
     expect(razbor.get('Вода · карточка · Кольцо|2')).toContain('«−200»');
-    expect(waterCss).toMatch(/\.water-review__chip--in-row[\s\S]*height:\s*2\.75rem/);
+    // 2,75rem и 44px — одно значение при базовом кегле 16, а код набирает в px.
+    // Сверка по одной форме записи звала это расхождением с первого дня.
+    expect(waterCss).toMatch(/\.water-review__chip--in-row[\s\S]*height:\s*(?:44px|2\.75rem)/);
     expect(waterCss).toMatch(/\.water-review__chip--quick[\s\S]*flex:\s*1/);
     expect(waterCss).not.toMatch(/\.water-review__chip::after/);
   });

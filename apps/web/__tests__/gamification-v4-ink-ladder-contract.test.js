@@ -33,11 +33,17 @@ describe('gamification v4 · ink-2 ladder', () => {
     expect(heroMuted).toContain('var(--v4-ink-2');
   });
 
-  it('.game-v4-sheet__ach-name uses ink-2 per package 43 row ·15', () => {
+  it('.game-v4-sheet__ach-name держит полные чернила по строке «Достижения · 15»', () => {
+    // Проверка стояла на ink-2 со ссылкой на строку ·15 пакета 43, но сама
+    // строка просит другое: «„Клетчатка-чемпион“ — шрифт 700 13px/1.3 Figtree,
+    // цвет var(--tx)», то есть полные чернила. Имя достижения — название строки,
+    // а не подпись под ней; на вспомогательной ступени 12,5/700 читалось как
+    // подпись. Кадр разбора говорит то же (#201e1d), и до этой правки два наших
+    // теста требовали друг против друга.
     const achName = rule('.game-v4-sheet__ach-name');
     expect(achName).toContain('font-size: 12.5px');
     expect(achName).toContain('font-weight: 700');
-    expect(achName).toContain('var(--v4-ink-2');
+    expect(achName).toContain('var(--v4-ink,');
   });
 
   it('keeps mission progress captions contextual instead of changing every card', () => {

@@ -62,7 +62,7 @@ const SHEET = [
   [6, `${V4} .advice-list-title`, ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   // «Прочитать все» держит 44 своим min-height: пакет 6 сентября снял
   // прозрачный припуск ::after inset −16px, которым цель набиралась прежде.
-  [8, `${V4} .advice-list-header-link--read-all`,
+  [8, ['.advice-list-header-link--read-all', `${V4} .advice-list-header-link--read-all`],
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'minHeight', 'align']],
   [9, `${V4} .advice-group-header`, ['fontWeight', 'fontSize', 'tracking', 'color']],
   [10, [`${V4} .advice-list-item-wrapper`, `${V4} .advice-list-item-v4`],
@@ -81,7 +81,7 @@ const SHEET = [
 const RATING = [
   // Тот же элемент, что в шторке: кадр называет его числа и здесь, поэтому
   // строка сверяется, а не остаётся вне пар с вердиктом «сведено соседом».
-  [8, `${V4} .advice-list-header-link--read-all`,
+  [8, ['.advice-list-header-link--read-all', `${V4} .advice-list-header-link--read-all`],
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'minHeight', 'align']],
   [10, [`${V4} .advice-list-item-wrapper`, '.advice-v4-rate-panel'], ['marginTop', 'radius', 'background']],
   [12, '.advice-v4-rate-panel', ['width', 'align', 'justify']],
@@ -304,7 +304,9 @@ describe('«Советы» · разбор кадров канваса', () => {
     expect(start).toBeGreaterThan(-1);
     expect(end).toBeGreaterThan(start);
     expect(darkPanels).toContain('background: var(--v4-c1');
-    expect(darkPanels).toContain('color: var(--v4-ink-data');
+    // --v4-ink-data снята 7 сентября: продукт переведён на ступень лестницы
+    // --v4-ink-2 (та же доля 56 % в песочном, своя в синем и тёмных).
+    expect(darkPanels).toContain('color: var(--v4-ink-2');
     expect(darkPanels).toContain('background: var(--v4-ok-bg');
     expect(darkPanels).toContain('background: var(--v4-chip');
   });
