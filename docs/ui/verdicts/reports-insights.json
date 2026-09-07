@@ -681,7 +681,7 @@
     },
     "графики": {
       "v": "≠",
-      "f": "heys_day_stats_v1.js:641-647 svg по контейнеру W=296 H=96 против 262×52–56 в строке; план --v4-edge 18 % сведён 01.09, разрыв данных линией не рисуется",
+      "f": "000-base-and-gamification.css:366 svg по контейнеру W=296 H=96 против 262×52–56 в строке; план --v4-edge 18 % сведён 01.09, разрыв данных линией не рисуется",
       "h": "fac1eb63e7c0",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4332"
@@ -2515,7 +2515,7 @@
     },
     "Инсайты · подробно · 04": {
       "v": "=",
-      "f": "область прокрутки экрана (.insights-v4-detail__content, apps/web/insights/pi_ui_dashboard.js:3454)",
+      "f": "область прокрутки экрана (.insights-v4-detail__content, apps/web/insights/pi_ui_dashboard.js:3533)",
       "h": "c629f84f9712"
     },
     "Инсайты · подробно · 05": {
@@ -4902,7 +4902,7 @@
     },
     "Инсайты · подробно · рисунок 01": {
       "v": "=",
-      "f": "стрелка назад — поле 17×17 при системе координат 24 (.insights-v4-detail__back, apps/web/insights/pi_ui_dashboard.js:3449)",
+      "f": "стрелка назад — поле 17×17 при системе координат 24 (.insights-v4-detail__back, apps/web/insights/pi_ui_dashboard.js:3528)",
       "h": "57f7c5e99afc"
     },
     "Инсайты · подробно · рисунок 02": {

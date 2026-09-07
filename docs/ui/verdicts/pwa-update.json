@@ -220,7 +220,7 @@
     },
     "safe-area и кнопка назад": {
       "v": "=",
-      "f": "heys-components.css:5831-5846 подложки .heys-update-modal__backdrop/.heys-update-prompt__backdrop уже держат врезки max(20px, calc(20px+env(safe-area-inset-top/bottom,0px))) с явным комментарием на строку контракта; кнопка назад модалку не закрывает намеренно (обновление необратимо, крестика нет) — совпадает",
+      "f": "heys-components.css:6686 подложки .heys-update-modal__backdrop/.heys-update-prompt__backdrop уже держат врезки max(20px, calc(20px+env(safe-area-inset-top/bottom,0px))) с явным комментарием на строку контракта; кнопка назад модалку не закрывает намеренно (обновление необратимо, крестика нет) — совпадает",
       "h": "1a7091545d8a"
     },
     "язык, выделение, часовой пояс": {
@@ -315,12 +315,12 @@
     },
     "Обновление · загрузка · 06": {
       "v": "=",
-      "f": "heys-components.css:6274-6286 .heys-update-modal__icon — круг 56 радиусом 999, заливка --v4-hero, это и есть --c2 набора",
+      "f": "heys-components.css:6200 .heys-update-modal__icon — круг 56 радиусом 999, заливка --v4-hero, это и есть --c2 набора",
       "h": "e532a757d823"
     },
     "Обновление · загрузка · 07": {
       "v": "=",
-      "f": "heys-components.css:6296-6300 .heys-update-modal__glyph — слой поверх круга по центру, без своей заливки",
+      "f": "heys-components.css:6779 .heys-update-modal__glyph — слой поверх круга по центру, без своей заливки",
       "h": "5faaf2ff38fd"
     },
     "Обновление · загрузка · 08": {
@@ -355,12 +355,12 @@
     },
     "Обновление · готово · 06": {
       "v": "=",
-      "f": "heys-components.css:6291-6294 .heys-update-modal__icon--done — на последней стадии круг заливается --v4-act (--acs)",
+      "f": "heys-components.css:5970 .heys-update-modal__icon--done — на последней стадии круг заливается --v4-act (--acs)",
       "h": "d9d251d784b8"
     },
     "Обновление · готово · 07": {
       "v": "=",
-      "f": "heys-components.css:6293 — галочка тоном --v4-btn-on-act, тон текста на акценте (--on-acs)",
+      "f": "heys-components.css:6776 — галочка тоном --v4-btn-on-act, тон текста на акценте (--on-acs)",
       "h": "b746fd585053"
     },
     "Обновление · перезагрузка · 01": {
@@ -390,12 +390,12 @@
     },
     "Обновление · перезагрузка · 06": {
       "v": "=",
-      "f": "heys-components.css:6274-6286 .heys-update-modal__icon — круг 56 радиусом 999, заливка --v4-hero (--c2 набора)",
+      "f": "heys-components.css:6200 .heys-update-modal__icon — круг 56 радиусом 999, заливка --v4-hero (--c2 набора)",
       "h": "e532a757d823"
     },
     "Обновление · перезагрузка · 07": {
       "v": "=",
-      "f": "heys-components.css:6296-6300 .heys-update-modal__glyph — слой поверх круга по центру, своей заливки не несёт",
+      "f": "heys-components.css:6779 .heys-update-modal__glyph — слой поверх круга по центру, своей заливки не несёт",
       "h": "5faaf2ff38fd"
     },
     "Обновление · перезагрузка · 08": {
@@ -430,12 +430,12 @@
     },
     "Обновление · перезагрузка одиночная · 06": {
       "v": "=",
-      "f": "heys-components.css:6274-6286 .heys-update-modal__icon — круг 56 радиусом 999, заливка --v4-hero (--c2 набора)",
+      "f": "heys-components.css:6200 .heys-update-modal__icon — круг 56 радиусом 999, заливка --v4-hero (--c2 набора)",
       "h": "e532a757d823"
     },
     "Обновление · перезагрузка одиночная · 07": {
       "v": "=",
-      "f": "heys-components.css:6296-6300 .heys-update-modal__glyph — слой поверх круга по центру, своей заливки не несёт",
+      "f": "heys-components.css:6779 .heys-update-modal__glyph — слой поверх круга по центру, своей заливки не несёт",
       "h": "5faaf2ff38fd"
     },
     "Обновление · перезагрузка одиночная · 08": {
@@ -480,12 +480,12 @@
     },
     "Требуется обновление · с версией · 07": {
       "v": "=",
-      "f": "heys-components.css:6274-6286 .heys-update-modal__icon — круг 56 заливкой --v4-hero (--c2)",
+      "f": "heys-components.css:6200 .heys-update-modal__icon — круг 56 заливкой --v4-hero (--c2)",
       "h": "e532a757d823"
     },
     "Требуется обновление · с версией · 08": {
       "v": "=",
-      "f": "heys-components.css:6285 — тон знака --v4-act (--acs)",
+      "f": "heys-components.css:5970 — тон знака --v4-act (--acs)",
       "h": "f5b96df191e3"
     },
     "Требуется обновление · с версией · 09": {
@@ -525,12 +525,12 @@
     },
     "Требуется обновление · без версии · 07": {
       "v": "=",
-      "f": "heys-components.css:6274-6286 .heys-update-modal__icon — круг 56 заливкой --v4-hero (--c2)",
+      "f": "heys-components.css:6200 .heys-update-modal__icon — круг 56 заливкой --v4-hero (--c2)",
       "h": "e532a757d823"
     },
     "Требуется обновление · без версии · 08": {
       "v": "=",
-      "f": "heys-components.css:6285 — тон знака --v4-act (--acs)",
+      "f": "heys-components.css:5970 — тон знака --v4-act (--acs)",
       "h": "f5b96df191e3"
     },
     "Требуется обновление · без версии · 09": {
@@ -570,12 +570,12 @@
     },
     "Требуется обновление · iOS · 07": {
       "v": "=",
-      "f": "heys-components.css:6392-6395 .heys-update-prompt__steps — ряд по центру, зазор 9, отступ снизу 16",
+      "f": "heys-components.css:6876 .heys-update-prompt__steps — ряд по центру, зазор 9, отступ снизу 16",
       "h": "1244c45005ec"
     },
     "Требуется обновление · iOS · 08": {
       "v": "=",
-      "f": "heys-components.css:6396-6399 .heys-update-prompt__step — 42×42, заливка --v4-hero (--c2)",
+      "f": "heys-components.css:6200 .heys-update-prompt__step — 42×42, заливка --v4-hero (--c2)",
       "h": "255e195e3d73"
     },
     "Требуется обновление · iOS · 09": {

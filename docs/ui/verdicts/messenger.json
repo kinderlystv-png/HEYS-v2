@@ -116,7 +116,7 @@
     },
     "вид · строка «Ждём»": {
       "v": "=",
-      "f": "1000-messenger.css:281-340 — row padding 8/18/10, label 9.5px/700 .14em --v4-ink-data, chip min-height 44 padding 0 11px radius 999 text 11.5px/600 gap 7 scroll hidden; touch 44px — probe",
+      "f": "002-ui-v4-palette-roles.css:59 — row padding 8/18/10, label 9.5px/700 .14em --v4-ink-data, chip min-height 44 padding 0 11px radius 999 text 11.5px/600 gap 7 scroll hidden; touch 44px — probe",
       "h": "38d69e082b93"
     },
     "вид · тред": {
@@ -181,7 +181,7 @@
     },
     "история": {
       "v": "=",
-      "f": "THREAD_PAGE_LIMIT=50 (23); LoadEarlier «Показать ранее» heys_messenger_v1.js:1778+",
+      "f": "THREAD_PAGE_LIMIT=50 (23); LoadEarlier «Показать ранее» heys_messenger_v1.js:3155+",
       "h": "623ba6464951"
     },
     "новое сообщение вне мессенджера": {
@@ -608,12 +608,12 @@
     },
     "Мессенджер · лист действий · 04": {
       "v": "=",
-      "f": "1000-messenger.css:1041+ .msg-meta-row .msg-meta left-aligned time under bubble",
+      "f": "1000-messenger.css:675+ .msg-meta-row .msg-meta left-aligned time under bubble",
       "h": "bc41ea7a7b39"
     },
     "Мессенджер · лист действий · 05": {
       "v": "=",
-      "f": "1000-messenger.css:2926-2933 .messenger-action-sheet-backdrop absolute inset 0 --scrim blur(2.5px)",
+      "f": "1000-messenger.css:2847 .messenger-action-sheet-backdrop absolute inset 0 --scrim blur(2.5px)",
       "h": "3f52b0853401"
     },
     "Мессенджер · лист действий · 06": {
@@ -648,7 +648,7 @@
     },
     "Мессенджер · меню Ещё · 05": {
       "v": "=",
-      "f": "1000-messenger.css:1041+ .msg-meta time left under theirs bubble in кадре",
+      "f": "1000-messenger.css:675+ .msg-meta time left under theirs bubble in кадре",
       "h": "bc41ea7a7b39"
     },
     "Мессенджер · поиск · 01": {
@@ -668,12 +668,12 @@
     },
     "Мессенджер · поиск · 04": {
       "v": "=",
-      "f": "1000-messenger.css:3074-3080 .messenger-search__filters gap 7px padding 10/14/8 overflow hidden",
+      "f": "1000-messenger.css:3003 .messenger-search__filters gap 7px padding 10/14/8 overflow hidden",
       "h": "a93c02b7f852"
     },
     "Мессенджер · поиск · 05": {
       "v": "=",
-      "f": "1000-messenger.css:3108-3129 .messenger-search__results + __scroll flex 1 overflow-y auto",
+      "f": "1000-messenger.css:3029 .messenger-search__results + __scroll flex 1 overflow-y auto",
       "h": "2994d88978f7"
     },
     "Мессенджер · без сети · 01": {
@@ -1081,7 +1081,7 @@
     },
     "Мессенджер · лист действий · рисунок 01": {
       "v": "=",
-      "f": "heys_messenger_v1.js:1596 Icon more size 19 viewBox 0 0 24 24",
+      "f": "heys_messenger_v1.js:1501 Icon more size 19 viewBox 0 0 24 24",
       "h": "6c769f161d19"
     },
     "Мессенджер · лист действий · рисунок 02": {
@@ -1236,7 +1236,7 @@
     },
     "Мессенджер · без сети · рисунок 01": {
       "v": "=",
-      "f": "heys_messenger_v1.js:1604 Icon more size 19 viewBox 0 0 24 24",
+      "f": "heys_messenger_v1.js:1501 Icon more size 19 viewBox 0 0 24 24",
       "h": "6c769f161d19"
     },
     "Мессенджер · без сети · рисунок 02": {
@@ -1256,7 +1256,7 @@
     },
     "Мессенджер · без сети · рисунок 05": {
       "v": "=",
-      "f": "heys_messenger_v1.js:1614 Icon close size 18 viewBox 0 0 24 24",
+      "f": "heys_messenger_v1.js:1501 Icon close size 18 viewBox 0 0 24 24",
       "h": "099c32fbc998"
     },
     "Мессенджер · без сети · рисунок 06": {

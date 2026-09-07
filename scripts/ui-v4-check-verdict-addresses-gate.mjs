@@ -11,13 +11,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const INNER = path.join(HERE, 'ui-v4-check-verdict-addresses.mjs');
 
-// 05.09 recount: moved 273→305 — файлы выросли, имена остались, но дальше WINDOW.
+// 07.09 recount: moved 438→92 после пересчёта адресов; hard debt снят.
 const BASELINE = Object.freeze({
   truncated: 0,
   missing: 0,
   beyond: 0,
-  absent: 32,
-  moved: 305,
+  absent: 0,
+  moved: 92,
 });
 
 function countScope() {

@@ -269,7 +269,7 @@
     },
     "свайпа во флоу нет": {
       "v": "=",
-      "f": "Решение 3 сентября выполнено кодом: свайп из строки состава снят. MealProductRow (heys_day_nutrition_v1.js:1294-1320) — тап по строке открывает граммовку, удаление крестиком 14×14 обводкой 2,75 с aria-label; класса nutrition-v4-sheet__swipe и обработчиков copyItem/moveItem в файле больше нет. Копирование и перенос переехали в лист действий приёма, как и требует решение. Прежний ≠ снят.",
+      "f": "Решение 3 сентября выполнено кодом: свайп из строки состава снят. MealProductRow (heys_day_nutrition_v1.js:1358) — тап по строке открывает граммовку, удаление крестиком 14×14 обводкой 2,75 с aria-label; класса nutrition-v4-sheet__swipe и обработчиков copyItem/moveItem в файле больше нет. Копирование и перенос переехали в лист действий приёма, как и требует решение. Прежний ≠ снят.",
       "h": "c2555e33d5a0"
     },
     "вес четырёх действий": {
@@ -931,7 +931,7 @@
     },
     "Добавление · поиск · 03": {
       "v": "≠",
-      "f": "Кадр — штрихкод 44×44 в шапке margin -14/-8. Продукт: сканер в .aps-search-barcode-btn внутри строки поиска (610:2430), headerRight на search null — heys_add_product_step_v1.js:11372. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Кадр — штрихкод 44×44 в шапке margin -14/-8. Продукт: сканер в .aps-search-barcode-btn внутри строки поиска (610:2430), headerRight на search null — heys_add_product_step_v1.js:6067. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "6100afd8bfd7",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:263"
@@ -1145,7 +1145,7 @@
     },
     "Добавление · порция · 03": {
       "v": "≠",
-      "f": "Кадр — svg-звезда 16×16 в шапке grams. Код: .mc-header-btn--fav с текстом ★/☆, без svg 16×16 — heys_add_product_step_v1.js:11391. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Кадр — svg-звезда 16×16 в шапке grams. Код: .mc-header-btn--fav с текстом ★/☆, без svg 16×16 — heys_add_product_step_v1.js:11499. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "5c3e0bfccbc6",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
@@ -1194,7 +1194,7 @@
     },
     "Добавление · порция · 12": {
       "v": "=",
-      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px, min-height 44; 610-aps-meal-flow.css:3569",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px, min-height 44; 610-aps-meal-flow.css:3729",
       "h": "090500da6d68"
     },
     "Добавление · порция · 13": {
@@ -1338,7 +1338,7 @@
     },
     "Порция · ввод в калориях · 12": {
       "v": "=",
-      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3569",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729",
       "h": "090500da6d68"
     },
     "Порция · ввод в калориях · 13": {
@@ -1482,7 +1482,7 @@
     },
     "Порция · продукт уже в приёме · 12": {
       "v": "=",
-      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3569",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729",
       "h": "090500da6d68"
     },
     "Порция · продукт уже в приёме · 13": {
@@ -1636,7 +1636,7 @@
     },
     "Порция · перебор нормы · 12": {
       "v": "=",
-      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3569",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729",
       "h": "090500da6d68"
     },
     "Порция · перебор нормы · 13": {
@@ -2033,7 +2033,7 @@
     },
     "Приём · правка · 17": {
       "v": "=",
-      "f": ".nutrition-v4-sheet__row-remove — 44×44, margin -13/-8/-13/2, center, ink 30% (732:1325–1338); heys_day_nutrition_v1.js:1294–1320 без swipe; nutrition-v4-canvas-razbor «крестик удаления» + «свайпа во флоу нет» =. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": ".nutrition-v4-sheet__row-remove — 44×44, margin -13/-8/-13/2, center, ink 30% (732:1325–1338); heys_day_nutrition_v1.js:1374–1320 без swipe; nutrition-v4-canvas-razbor «крестик удаления» + «свайпа во флоу нет» =. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "702acb71a569"
     },
     "Приём · правка · 18": {
@@ -2150,7 +2150,7 @@
     },
     "Приём · время и тип · 10": {
       "v": "=",
-      "f": "«11» prev в листе — .meal-time-step--sheet .mc-wheel-value--prev 600 12px/1 color var(--v4-ink-30) (610-aps-meal-flow.css:4211-4215).",
+      "f": "«11» prev в листе — .meal-time-step--sheet .mc-wheel-value--prev 600 12px/1 color var(--v4-ink-30) (610-aps-meal-flow.css:4377).",
       "h": "8cddd7ffd314"
     },
     "Приём · время и тип · 11": {
@@ -2165,7 +2165,7 @@
     },
     "Приём · время и тип · 13": {
       "v": "=",
-      "f": "«55» next в листе — .meal-time-step--sheet .mc-wheel-value--next 600 12px/1 color var(--v4-ink-30) (610-aps-meal-flow.css:4211-4215).",
+      "f": "«55» next в листе — .meal-time-step--sheet .mc-wheel-value--next 600 12px/1 color var(--v4-ink-30) (610-aps-meal-flow.css:4378).",
       "h": "d6982cae7b78"
     },
     "Приём · время и тип · 14": {
@@ -2405,7 +2405,7 @@
     },
     "Действие · копировать без целей · 14": {
       "v": "=",
-      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4581",
+      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4744",
       "h": "6dd9a6fd1579"
     },
     "Действие · копировать без целей · 15": {
@@ -3242,7 +3242,7 @@
     },
     "Набор · удаление · 07": {
       "v": "=",
-      "f": ".aps-v4-preset-confirm__actions — gap 8px, margin-top 20px (610-aps-meal-flow.css:4943-4947).",
+      "f": ".aps-v4-preset-confirm__actions — gap 8px, margin-top 20px (610-aps-meal-flow.css:5133).",
       "h": "20694ebbb333"
     },
     "Набор · удаление · 08": {
@@ -5236,7 +5236,7 @@
     },
     "Действие · копировать · чего не знаем · 14": {
       "v": "=",
-      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4581",
+      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4744",
       "h": "6dd9a6fd1579"
     },
     "Действие · копировать · чего не знаем · 15": {

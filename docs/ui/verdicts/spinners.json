@@ -151,7 +151,7 @@
     },
     "двух ожиданий подряд нет": {
       "v": "=",
-      "f": "Подписка едет — пустой кадр под boot-знаком heys_app_gate_flow_v1.js:2967-2971; AppLoader не подключён, app-tab-skeletons:53",
+      "f": "Подписка едет — пустой кадр под boot-знаком; AppLoader не подключён — heys_app_gates_v1.js:194-205 HEYS.AppLoader, app-tab-skeletons.test.js:57",
       "h": "14f1ec9a227e"
     },
     "полный экран": {
@@ -221,12 +221,12 @@
     },
     "режим куратора": {
       "v": "=",
-      "f": "loading_progress:66 renderWaitMarkStatic роли не знает; index.html:1531 один знак на всех",
+      "f": "loading_progress:66 renderWaitMarkStatic роли не знает; index.html:523 один знак на всех",
       "h": "9488e58e4682"
     },
     "что пишется": {
       "v": "=",
-      "f": "loading_progress:285 cold fail counter; index.html:727 boot mark",
+      "f": "loading_progress:285 cold fail counter; index.html:523 boot mark",
       "h": "4cf4f47bb059"
     },
     "откуда данные": {
@@ -896,7 +896,7 @@
     },
     "Спиннер · ошибка · текст": {
       "v": "=",
-      "f": "heys_loading_progress_v1.js:98-99 и 184 failLabel — подписи отказа приходят от вызывающего экрана",
+      "f": "heys_loading_progress_v1.js:184 и 184 failLabel — подписи отказа приходят от вызывающего экрана",
       "h": "76c5d000bed8"
     },
     "Спиннер · версия с превращением · текст": {

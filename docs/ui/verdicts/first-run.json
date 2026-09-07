@@ -435,7 +435,7 @@
     },
     "Первый вход · с компьютера · 11": {
       "v": "—",
-      "f": "Тот же legacy desktop-gate без var(--v4-ink-2) строк ·11 — apps/web/heys_app_gates_v1.js:128-136.",
+      "f": "Тот же legacy desktop-gate без var(--v4-ink-2) строк ·11 — apps/web/heys_app_gate_flow_v1.js:2772-136.",
       "h": "6701bc05017b",
       "naKind": "demo-only"
     },

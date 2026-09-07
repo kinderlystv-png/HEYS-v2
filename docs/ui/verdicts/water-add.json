@@ -5,7 +5,7 @@
   "rows": {
     "фича": {
       "v": "=",
-      "f": "Тап по .water-fab раскрывает ряд −200/+200/+500, одиночного +250 нет — heys_day_page_shell.js:203-233",
+      "f": "Тап по .water-fab раскрывает ряд −200/+200/+500, одиночного +250 нет — 1000-messenger.css:9",
       "h": "64564bc22120"
     },
     "носители": {
@@ -55,7 +55,7 @@
     },
     "уровень": {
       "v": "=",
-      "f": "Класс --adding: height 320ms cubic-bezier(.45,0,.35,1) с задержкой 240ms; высота — доля нормы — apps/web/styles/modules/730-widgets-dashboard.css:11287",
+      "f": "Класс --adding: height 320ms cubic-bezier(.45,0,.35,1) с задержкой 240ms; высота — доля нормы — 730-widgets-dashboard.css:11407",
       "h": "ec030e82e246"
     },
     "норма дня": {
@@ -90,7 +90,7 @@
     },
     "цвет": {
       "v": "=",
-      "f": "--water-tone #7d98a6 / #8fb3c2 / #3d7f9e / #7fb6d0 — 730-widgets-dashboard.css:10437,10517,10525,10533",
+      "f": "--water-tone #7d98a6 / #8fb3c2 / #3d7f9e / #7fb6d0 — 730-widgets-dashboard.css:11390,10517,10525,10533",
       "h": "6b63375b115a"
     },
     "раскладка плитки": {
@@ -120,7 +120,7 @@
     },
     "тон по объёму": {
       "v": "=",
-      "f": "color-mix in oklab по --water-tone-mix, линейно до 70%, background 320ms — widgets_ui:3667, apps/web/styles/modules/730-widgets-dashboard.css:11277",
+      "f": "color-mix in oklab по --water-tone-mix, линейно до 70%, background 320ms — widgets_ui:3667, 730-widgets-dashboard.css:11537",
       "h": "3ee53ee71d3d"
     },
     "выше 70 %": {
@@ -296,7 +296,7 @@
     },
     "вид чипов": {
       "v": "=",
-      "f": "Добавить — заливка, убавить — обводка 2px; height 44px; FAB/ряд — radius 999 и 11.5/700, карточные .water-review__chip--quick — radius 12 и 11px/700 — 400-water-and-hydration.css:171-335, 1570-1610",
+      "f": "Добавить — заливка, убавить — обводка 2px; height 44px; FAB/ряд — radius 999 и 11.5/700, карточные .water-review__chip--quick — radius 12 и 11px/700 — 400-water-and-hydration.css:319, 1570-1610",
       "h": "b64bbdb1e34f"
     },
     "цвета чипов": {
@@ -366,7 +366,7 @@
     },
     "касание": {
       "v": "=",
-      "f": ".water-column { pointer-events: none } — 400-water-and-hydration.css:3267",
+      "f": ".water-column { pointer-events: none } — 400-water-and-hydration.css:3666",
       "h": "8d106d8420cf"
     },
     "держатель места": {

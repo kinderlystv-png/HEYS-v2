@@ -117,7 +117,7 @@
     },
     "каталог": {
       "v": "≠",
-      "f": "Поведение =; расхождение в строке «каталог»: контракт «60 кг × 8», кадр/код «60 × 8». catalog_ui:78-89,164-167; strength-builder-ui.test.js:512.",
+      "f": "Поведение =; расхождение в строке «каталог»: контракт «60 кг × 8», кадр/код «60 × 8». catalog_ui:78-89,164-167; strength-builder-ui.test.js:30.",
       "h": "7f47f0ab839a",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2208"
@@ -286,7 +286,7 @@
     },
     "инвариант · одна главная кнопка на экран": {
       "v": "=",
-      "f": ".sb-finish без is-ready пока notClosed>0 (builder_ui:2093–2103); is-ready accent --sb-acc-strong (750:3448–3451); тест strength-builder-ui.test.js:356–363.",
+      "f": ".sb-finish без is-ready пока notClosed>0 (builder_ui:2093–2103); is-ready accent --sb-acc-strong (750:3448–3451); тест strength-builder-ui.test.js:32–363.",
       "h": "33b632dc87db"
     },
     "инвариант · мишени и приглушение": {
@@ -644,7 +644,7 @@
     },
     "вид · строка подхода": {
       "v": "=",
-      "f": "Кадры A1б/Е1: .sb-ap-num 26×26 r9, .sb-ap-field/.sb-ap-check 44×44 r999 — 750-strength-builder.css:3614-3680; prose :2349 (r12) устарела, продукт = кадру.",
+      "f": "Кадры A1б/Е1: .sb-ap-num 26×26 r9, .sb-ap-field/.sb-ap-check 44×44 r999 — 750-strength-builder.css:3745; prose :2349 (r12) устарела, продукт = кадру.",
       "h": "27d50ec315ae"
     },
     "вид · разминка и дроп-сет": {
@@ -664,7 +664,7 @@
     },
     "вид · каталог упражнений": {
       "v": "=",
-      "f": "Разметка и классы: ‹ .sb-icon-btn, .sb-search с ⌕, .sb-chips, .sb-cat-row/.sb-cat-create, сноска .sb-catalog-note. Цвета — CATALOG_V4_BRIDGE (:37–55) + 750-strength-builder.css:4722–4962 (вне scope правки); v4-роли на корне, не голые литералы в JS.",
+      "f": "Разметка и классы: ‹ .sb-icon-btn, .sb-search с ⌕, .sb-chips, .sb-cat-row/.sb-cat-create, сноска .sb-catalog-note. Цвета — CATALOG_V4_BRIDGE (:37–55) + 750-strength-builder.css:4358–4962 (вне scope правки); v4-роли на корне, не голые литералы в JS.",
       "h": "15984102c607"
     },
     "вид · итоги сессии": {
@@ -716,7 +716,7 @@
     },
     "вид · что не легло": {
       "v": "=",
-      "f": "ProposalOutcome (heys_strength_proposal_ui_v1.js:451-495) встроен в FinishScreen finish_ui:349",
+      "f": "ProposalOutcome (heys_strength_proposal_ui_v1.js:366) встроен в FinishScreen finish_ui:349",
       "h": "732aa029b29b"
     },
     "вид · замена связки": {
@@ -909,7 +909,7 @@
     },
     "где это живёт сейчас": {
       "v": "—",
-      "f": "Контракт :2415: адреса миграции — .sb-plan-card 750-strength-builder.css:4065+, PlanCard/SkipSheet superset_ui:620–690, mobileSubTab==='stats', ReportsTab. Справочник «откуда переносим», не acceptance одного компонента.",
+      "f": "Контракт :2415: адреса миграции — .sb-plan-card 750-strength-builder.css:4209+, PlanCard/SkipSheet superset_ui:620–690, mobileSubTab==='stats', ReportsTab. Справочник «откуда переносим», не acceptance одного компонента.",
       "h": "722dc13bffd5"
     },
     "тёмный ряд ложится на существующие токены клиента": {
@@ -1539,7 +1539,7 @@
     "Конструктор · итоги · 01": {
       "v": "=",
       "h": "175bdcc2e73a",
-      "f": "Шапка финала: .sb-finish-screen .sb-finish-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 18px 0 } — 750-strength-builder.css:1713-1719; computed в тесте row 01."
+      "f": "Шапка финала: .sb-finish-screen .sb-finish-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:16px 18px 0 } — 750-strength-builder.css:2066; computed в тесте row 01."
     },
     "Конструктор · итоги · 02": {
       "v": "=",
@@ -1669,7 +1669,7 @@
     "Конструктор · итоги · 27": {
       "v": "=",
       "h": "54643961e08d",
-      "f": "Геометрия/акцент сведены: .sb-finish-feedback-card (750-strength-builder.css:2288-2294)."
+      "f": "Геометрия/акцент сведены: .sb-finish-feedback-card (750-strength-builder.css:2120)."
     },
     "Конструктор · итоги · 28": {
       "v": "=",
@@ -1794,12 +1794,12 @@
     "Конструктор · итоги · 52": {
       "v": "=",
       "h": "0aa733f23349",
-      "f": "Геометрия/акцент сведены: .sb-finish-day-total b --tx (750-strength-builder.css:2215-2221)."
+      "f": "Геометрия/акцент сведены: .sb-finish-day-total b --tx (750-strength-builder.css:2484)."
     },
     "Конструктор · итоги · 53": {
       "v": "=",
       "h": "d9a337aab838",
-      "f": "Геометрия/акцент сведены: .sb-finish-other list --c1 (750-strength-builder.css:2420-2426)."
+      "f": "Геометрия/акцент сведены: .sb-finish-other list --c1 (750-strength-builder.css:2492)."
     },
     "Конструктор · итоги · 54": {
       "v": "=",
@@ -1809,7 +1809,7 @@
     "Конструктор · итоги · 55": {
       "v": "=",
       "h": "efb9ecff5e94",
-      "f": "Геометрия/акцент сведены: .sb-finish-other b --tx (750-strength-builder.css:2215-2221)."
+      "f": "Геометрия/акцент сведены: .sb-finish-other b --tx (750-strength-builder.css:2492)."
     },
     "Конструктор · итоги · 56": {
       "v": "=",
@@ -2115,7 +2115,7 @@
     },
     "Своё упражнение · 18": {
       "v": "=",
-      "f": ".sb-block обёртка шага 3 — heys_strength_catalog_ui_v1.js:328–331, 336–353; 750 .sb-block :1879–1884.",
+      "f": ".sb-block обёртка шага 3 — heys_strength_catalog_ui_v1.js:430–331, 336–353; 750 .sb-block :1879–1884.",
       "h": "54643961e08d"
     },
     "Своё упражнение · 19": {
@@ -2310,7 +2310,7 @@
     },
     "Программа · назначено против сделано · 01": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2327 — .sb-cycle-top.sb-plan-vs-top без .sb-icon-btn ‹/✕; vitest queryByLabelText null",
+      "f": "heys_strength_superset_ui_v1.js:2411 — .sb-cycle-top.sb-plan-vs-top без .sb-icon-btn ‹/✕; vitest queryByLabelText null",
       "h": "175bdcc2e73a"
     },
     "Программа · назначено против сделано · 02": {
@@ -2320,7 +2320,7 @@
     },
     "Программа · назначено против сделано · 03": {
       "v": "=",
-      "f": "heys_strength_proposal_ui_v1.js:1862 — заголовок «Отчёт по циклу» на CycleReportScreen (Г2), не in-session PlanVsDoneScreen",
+      "f": "heys_strength_proposal_ui_v1.js:1932 — заголовок «Отчёт по циклу» на CycleReportScreen (Г2), не in-session PlanVsDoneScreen",
       "h": "73bfa3bf46c4"
     },
     "Программа · назначено против сделано · 04": {
@@ -2330,7 +2330,7 @@
     },
     "Программа · назначено против сделано · 05": {
       "v": "=",
-      "f": ".sb-plan-vs-done .sb-plan-vs-scroll — flex:1, overflow-y:auto, padding 12px 16px 24px (750-strength-builder.css:6556–6560); jsdom: overflowY=auto, flex=1 1 0%, padding=12px 16px 24px.",
+      "f": ".sb-plan-vs-done .sb-plan-vs-scroll — flex:1, overflow-y:auto, padding 12px 16px 24px (750-strength-builder.css:7324–6560); jsdom: overflowY=auto, flex=1 1 0%, padding=12px 16px 24px.",
       "h": "c629f84f9712"
     },
     "Программа · назначено против сделано · 06": {
@@ -2355,7 +2355,7 @@
     },
     "Программа · назначено против сделано · 10": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2346 — summarySub «N подходов из M · K отклонений» (.sb-plan-vs-summary-sub)",
+      "f": "heys_strength_superset_ui_v1.js:2424 — summarySub «N подходов из M · K отклонений» (.sb-plan-vs-summary-sub)",
       "h": "087e88e16716"
     },
     "Программа · назначено против сделано · 11": {
@@ -2420,7 +2420,7 @@
     },
     "Программа · назначено против сделано · 23": {
       "v": "=",
-      "f": "731-ui-v4-activity.css:1709–1711 — is-match dot rgba(ink,.22) + .is-neutral done cell",
+      "f": "731-ui-v4-activity.css:1837–1711 — is-match dot rgba(ink,.22) + .is-neutral done cell",
       "h": "954e0f4dbe05"
     },
     "Программа · назначено против сделано · 24": {
@@ -2445,12 +2445,12 @@
     },
     "Программа · назначено против сделано · 28": {
       "v": "=",
-      "f": "750-strength-builder.css:6936–6938 — .sb-plan-vs-cd margin-top 10px",
+      "f": "750-strength-builder.css:7351–6938 — .sb-plan-vs-cd margin-top 10px",
       "h": "d641122bb122"
     },
     "Программа · назначено против сделано · 29": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2373–2380 — две строки объёма .sb-plan-vs-cd-row",
+      "f": "heys_strength_superset_ui_v1.js:2459–2380 — две строки объёма .sb-plan-vs-cd-row",
       "h": "af81bb6e54c6"
     },
     "Программа · назначено против сделано · 30": {
@@ -2460,7 +2460,7 @@
     },
     "Программа · назначено против сделано · 31": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2375 — fmtPlanVolume(plannedVolume) .is-muted 600 12.5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "heys_strength_superset_ui_v1.js:2461 — fmtPlanVolume(plannedVolume) .is-muted 600 12.5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "52278d30f39b"
     },
     "Программа · назначено против сделано · 32": {
@@ -2470,7 +2470,7 @@
     },
     "Программа · назначено против сделано · 33": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2379 — fmtPlanVolume(doneVolume) 700 12.5px var(--tx)",
+      "f": "heys_strength_superset_ui_v1.js:2462 — fmtPlanVolume(doneVolume) 700 12.5px var(--tx)",
       "h": "f68d35b8e75e"
     },
     "Программа · назначено против сделано · 34": {
@@ -2480,17 +2480,17 @@
     },
     "Программа · назначено против сделано · 35": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2383–2387 — «Написать куратору» .sb-btn.sb-plan-cta flex 1",
+      "f": "heys_strength_superset_ui_v1.js:2473–2387 — «Написать куратору» .sb-btn.sb-plan-cta flex 1",
       "h": "360ec188c412"
     },
     "Программа · назначено против сделано · 36": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2388–2392 — «Отчёт за неделю» .sb-btn.is-accent.sb-plan-cta flex 1",
+      "f": "heys_strength_superset_ui_v1.js:2473–2392 — «Отчёт за неделю» .sb-btn.is-accent.sb-plan-cta flex 1",
       "h": "e0de6908271d"
     },
     "Программа · назначено против сделано · 37": {
       "v": "=",
-      "f": "heys_strength_superset_ui_v1.js:2394 + :672 — PLAN_VS_DONE_FOOTNOTE → .sb-plan-vs-foot",
+      "f": "heys_strength_superset_ui_v1.js:2482 + :672 — PLAN_VS_DONE_FOOTNOTE → .sb-plan-vs-foot",
       "h": "e58e91e8da45"
     },
     "Перенос · след в обе стороны · 01": {
@@ -2544,7 +2544,7 @@
     },
     "Перенос · след в обе стороны · 09": {
       "v": "≠",
-      "f": "Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:226-229.",
+      "f": "Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:33.",
       "h": "6911b98d3ef4",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2871"
@@ -2558,7 +2558,7 @@
     },
     "Перенос · след в обе стороны · 11": {
       "v": "=",
-      "f": "Ярус «Куда перенести · выбор дня»: h('b','Куда перенести · выбор дня') в MoveSheet — superset_ui:2300; открывается по «Перенести» — activity-plan-card-frame.test.js:232-238.",
+      "f": "Ярус «Куда перенести · выбор дня»: h('b','Куда перенести · выбор дня') в MoveSheet — superset_ui:2300; открывается по «Перенести» — activity-plan-card-frame.test.js:33.",
       "h": "fdd60f9a8e98"
     },
     "Перенос · след в обе стороны · 12": {
@@ -2610,7 +2610,7 @@
     },
     "Перенос · след в обе стороны · 19": {
       "v": "=",
-      "f": "Последняя строка без разделителя: .sb-move-day:last-child { border-bottom:none } — 731:1242-1244; кадр row style border-bottom:none — strength-builder.v4.dc.html:651.",
+      "f": "Последняя строка без разделителя: .sb-move-day:last-child { border-bottom:none } — 731:1242-1244; кадр row style border-bottom:none — heys_strength_superset_ui_v1.js:2657.",
       "h": "6b286135ed76"
     },
     "Перенос · след в обе стороны · 20": {
@@ -2639,7 +2639,7 @@
     },
     "Правка веса в сессии · 02": {
       "v": "=",
-      "f": ".sb-builder-screen .sb-head-title { flex-direction: column; gap: 3px; } — 750-strength-builder.css:3246–3251.",
+      "f": ".sb-builder-screen .sb-head-title { flex-direction: column; gap: 3px; } — 750-strength-builder.css:3323–3251.",
       "h": "07ffbada0ee7"
     },
     "Правка веса в сессии · 03": {
@@ -2754,7 +2754,7 @@
     },
     "Программа пройдена · 05": {
       "v": "=",
-      "f": "Л05 badge .program-done-badge --gr-bg/--gr — 750-strength-builder.css:5686-5693; contract test sand palette",
+      "f": "Л05 badge .program-done-badge --gr-bg/--gr — 750-strength-builder.css:5796; contract test sand palette",
       "h": "a9e2a1582436"
     },
     "Программа пройдена · 06": {
@@ -2784,27 +2784,27 @@
     },
     "Программа пройдена · 11": {
       "v": "=",
-      "f": "Л11 .program-done-stats gap 8px margin-top 10px — 750-strength-builder.css:5728-5732",
+      "f": "Л11 .program-done-stats gap 8px margin-top 10px — 750-strength-builder.css:5838",
       "h": "2c2ec98a753e"
     },
     "Программа пройдена · 12": {
       "v": "=",
-      "f": "Л12 .program-done-stat flex column gap 4px padding 10px 12px radius 14px --c1 — 750-strength-builder.css:5734-5742",
+      "f": "Л12 .program-done-stat flex column gap 4px padding 10px 12px radius 14px --c1 — 750-strength-builder.css:5838",
       "h": "37fc97688d19"
     },
     "Программа пройдена · 13": {
       "v": "=",
-      "f": "Л13 .program-done-stat-label 600 9.5px/.12em uppercase — 750-strength-builder.css:5744-5749 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Л13 .program-done-stat-label 600 9.5px/.12em uppercase — 750-strength-builder.css:5854 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "8e22582b6fd4"
     },
     "Программа пройдена · 14": {
       "v": "=",
-      "f": "Л14 .program-done-stat b 800 19px tabular-nums --tx — 750-strength-builder.css:5751-5755",
+      "f": "Л14 .program-done-stat b 800 19px tabular-nums --tx — 750-strength-builder.css:5838",
       "h": "132e4802acef"
     },
     "Программа пройдена · 15": {
       "v": "=",
-      "f": "Л15 .program-done-tier ярус «Что выросло» color var(--ac) — 750-strength-builder.css:5757-5763",
+      "f": "Л15 .program-done-tier ярус «Что выросло» color var(--ac) — 750-strength-builder.css:5867",
       "h": "0df9cd1034dd"
     },
     "Программа пройдена · 16": {
@@ -2814,7 +2814,7 @@
     },
     "Программа пройдена · 17": {
       "v": "=",
-      "f": "Л17 .program-done-growth-row flex baseline space-between — 750-strength-builder.css:5771-5780",
+      "f": "Л17 .program-done-growth-row flex baseline space-between — 750-strength-builder.css:5881",
       "h": "af81bb6e54c6"
     },
     "Программа пройдена · 18": {
@@ -2824,17 +2824,17 @@
     },
     "Программа пройдена · 19": {
       "v": "=",
-      "f": "Л19 .program-done-growth-val 700 12.5px color var(--gr) — 750-strength-builder.css:5786-5791; sand+blue contract test",
+      "f": "Л19 .program-done-growth-val 700 12.5px color var(--gr) — 750-strength-builder.css:5896; sand+blue contract test",
       "h": "6ee53d9dc46a"
     },
     "Программа пройдена · 20": {
       "v": "=",
-      "f": "Л20 .program-done-growth-row.is-last border-bottom none — 750-strength-builder.css:5782-5784",
+      "f": "Л20 .program-done-growth-row.is-last border-bottom none — 750-strength-builder.css:5881",
       "h": "6b286135ed76"
     },
     "Программа пройдена · 21": {
       "v": "=",
-      "f": "Л21 .program-done-secondary margin-top 9px min-height 48px — 750-strength-builder.css:5793-5805",
+      "f": "Л21 .program-done-secondary margin-top 9px min-height 48px — 750-strength-builder.css:5903",
       "h": "f38afd86fac9"
     },
     "Программа пройдена · 22": {
@@ -2844,12 +2844,12 @@
     },
     "Программа пройдена · 23": {
       "v": "=",
-      "f": "Л23 .program-done-cta margin-top 10px min-height 48px — 750-strength-builder.css:5814-5818",
+      "f": "Л23 .program-done-cta margin-top 10px min-height 48px — 750-strength-builder.css:5924",
       "h": "aa179f90ff30"
     },
     "Программа пройдена · 24": {
       "v": "=",
-      "f": "Л24 .program-done-note 500 11px/1.4 center margin-top 6px — 750-strength-builder.css:5820-5825 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Л24 .program-done-note 500 11px/1.4 center margin-top 6px — 750-strength-builder.css:5930 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "4cab453f3930"
     },
     "История упражнения · 01": {
@@ -3219,12 +3219,12 @@
     },
     "Связка · границы правки · 06": {
       "v": "=",
-      "f": "Карточка пары: .sb-ss-bound-grp { margin-top:12px } — apps/web/styles/modules/750-strength-builder.css:4495-4497.",
+      "f": "Карточка пары: .sb-ss-bound-grp { margin-top:12px } — apps/web/styles/modules/750-strength-builder.css:5580-4497.",
       "h": "81d6d8e40a85"
     },
     "Связка · границы правки · 07": {
       "v": "=",
-      "f": "Ряд было→станет: .sb-ss-bound-pair { display:flex; gap:9px; align-items:stretch } — apps/web/styles/modules/750-strength-builder.css:4499-4503.",
+      "f": "Ряд было→станет: .sb-ss-bound-pair { display:flex; gap:9px; align-items:stretch } — apps/web/styles/modules/750-strength-builder.css:5564-4503.",
       "h": "dab99132536b"
     },
     "Связка · границы правки · 08": {
@@ -3299,7 +3299,7 @@
     },
     "Связка · границы правки · 22": {
       "v": "=",
-      "f": "Нижняя сноска про начатую связку: .sb-ss-bound-note после списка — текст apps/web/strength/heys_strength_superset_ui_v1.js:2727-2728.",
+      "f": "Нижняя сноска про начатую связку: .sb-ss-bound-note после списка — текст apps/web/strength/heys_strength_superset_ui_v1.js:3224-2728.",
       "h": "48c244229e17"
     },
     "Подход · таблица ввода · 01": {
@@ -4102,12 +4102,12 @@
     },
     "Типы подходов · честный тоннаж · 07": {
       "v": "=",
-      "f": ".sb-at-scroll { flex:1; overflow-y:auto; padding:0 18px 18px } — apps/web/styles/modules/750-strength-builder.css:4946-4950.",
+      "f": ".sb-at-scroll { flex:1; overflow-y:auto; padding:0 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6413-4950.",
       "h": "c629f84f9712"
     },
     "Типы подходов · честный тоннаж · 08": {
       "v": "=",
-      "f": ".sb-at-grp { margin-top:12px; padding:12px 14px; border-radius:20px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:4952-4957.",
+      "f": ".sb-at-grp { margin-top:12px; padding:12px 14px; border-radius:20px; background:var(--sb-card) } — apps/web/styles/modules/750-strength-builder.css:6419-4957.",
       "h": "81d6d8e40a85"
     },
     "Типы подходов · честный тоннаж · 09": {
@@ -4132,7 +4132,7 @@
     },
     "Типы подходов · честный тоннаж · 13": {
       "v": "=",
-      "f": "«40» muted weight: .sb-ap.is-warmup-row .sb-ap-value color var(--sb-mut) — warmup row ApproachRow — apps/web/strength/heys_strength_superset_ui_v1.js:709-745. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "«40» muted weight: .sb-ap.is-warmup-row .sb-ap-value color var(--sb-mut) — warmup row ApproachRow — apps/web/strength/heys_strength_superset_ui_v1.js:978-745. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "03fb2d397978"
     },
     "Типы подходов · честный тоннаж · 14": {
@@ -4147,7 +4147,7 @@
     },
     "Типы подходов · честный тоннаж · 16": {
       "v": "=",
-      "f": "Таблица 56/1fr/1fr/44 без разделителя: .sb-approach-types-screen .sb-ap/.sb-drop — apps/web/styles/modules/750-strength-builder.css:4959-4964.",
+      "f": "Таблица 56/1fr/1fr/44 без разделителя: .sb-approach-types-screen .sb-ap/.sb-drop — apps/web/styles/modules/750-strength-builder.css:6407-4964.",
       "h": "2d6fa86e818e"
     },
     "Типы подходов · честный тоннаж · 17": {
@@ -4162,17 +4162,17 @@
     },
     "Типы подходов · честный тоннаж · 19": {
       "v": "=",
-      "f": ".sb-at-tonnage { margin-top:10px; padding:10px 12px; border-radius:16px } — apps/web/styles/modules/750-strength-builder.css:5028-5033.",
+      "f": ".sb-at-tonnage { margin-top:10px; padding:10px 12px; border-radius:16px } — apps/web/styles/modules/750-strength-builder.css:6481-5033.",
       "h": "d641122bb122"
     },
     "Типы подходов · честный тоннаж · 20": {
       "v": "=",
-      "f": ".sb-at-tonnage-row flex space-between — apps/web/styles/modules/750-strength-builder.css:5035-5041; без border-bottom как .sb-wd-volume-row.",
+      "f": ".sb-at-tonnage-row flex space-between — apps/web/styles/modules/750-strength-builder.css:6369-5041; без border-bottom как .sb-wd-volume-row.",
       "h": "6b286135ed76"
     },
     "Типы подходов · честный тоннаж · 21": {
       "v": "=",
-      "f": ".sb-at-tonnage-copy { column gap 3px } — apps/web/styles/modules/750-strength-builder.css:5043-5055 b+span.",
+      "f": ".sb-at-tonnage-copy { column gap 3px } — apps/web/styles/modules/750-strength-builder.css:6497-5055 b+span.",
       "h": "07ffbada0ee7"
     },
     "Типы подходов · честный тоннаж · 22": {
@@ -4197,7 +4197,7 @@
     },
     "Типы подходов · честный тоннаж · 26": {
       "v": "=",
-      "f": ".sb-at-units { gap:8px } — apps/web/styles/modules/750-strength-builder.css:5071-5076.",
+      "f": ".sb-at-units { gap:8px } — apps/web/styles/modules/750-strength-builder.css:6524-5076.",
       "h": "45cfeef56a64"
     },
     "Типы подходов · честный тоннаж · 27": {
@@ -4207,12 +4207,12 @@
     },
     "Типы подходов · честный тоннаж · 28": {
       "v": "=",
-      "f": "Пилюли единиц flex:1 через .sb-pill — apps/web/strength/heys_strength_superset_ui_v1.js:1175-1181 unitOptions map.",
+      "f": "Пилюли единиц flex:1 через .sb-pill — apps/web/strength/heys_strength_superset_ui_v1.js:1430-1181 unitOptions map.",
       "h": "61dcba226e95"
     },
     "Типы подходов · честный тоннаж · 29": {
       "v": "=",
-      "f": ".sb-at-plates card margin-top:10px — apps/web/styles/modules/750-strength-builder.css:5083-5088.",
+      "f": ".sb-at-plates card margin-top:10px — apps/web/styles/modules/750-strength-builder.css:6536-5088.",
       "h": "1627a654aedc"
     },
     "Типы подходов · честный тоннаж · 30": {
@@ -4242,7 +4242,7 @@
     },
     "Дроп-сет · свой экран · 03": {
       "v": "=",
-      "f": ".sb-head-title column gap 3px — apps/web/styles/modules/750-strength-builder.css:2747-2752.",
+      "f": ".sb-head-title column gap 3px — apps/web/styles/modules/750-strength-builder.css:2647-2752.",
       "h": "f143b5d4e1e4"
     },
     "Дроп-сет · свой экран · 04": {
@@ -4262,12 +4262,12 @@
     },
     "Дроп-сет · свой экран · 07": {
       "v": "=",
-      "f": ".sb-ds-scroll { flex:1; overflow-y:auto; padding:0 18px 18px } — apps/web/styles/modules/750-strength-builder.css:5106-5110.",
+      "f": ".sb-ds-scroll { flex:1; overflow-y:auto; padding:0 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6569-5110.",
       "h": "c629f84f9712"
     },
     "Дроп-сет · свой экран · 08": {
       "v": "=",
-      "f": ".sb-ds-grp card margin-top:12px — apps/web/styles/modules/750-strength-builder.css:5112-5117.",
+      "f": ".sb-ds-grp card margin-top:12px — apps/web/styles/modules/750-strength-builder.css:6575-5117.",
       "h": "81d6d8e40a85"
     },
     "Дроп-сет · свой экран · 09": {
@@ -4287,7 +4287,7 @@
     },
     "Дроп-сет · свой экран · 12": {
       "v": "=",
-      "f": "Дроп-строка .sb-drop.is-ds-drop без разделителя — ApproachRow variant drop-set — apps/web/strength/heys_strength_superset_ui_v1.js:711,1229.",
+      "f": "Дроп-строка .sb-drop.is-ds-drop без разделителя — ApproachRow variant drop-set — apps/web/strength/heys_strength_superset_ui_v1.js:980,1229.",
       "h": "7395c82cd118"
     },
     "Дроп-сет · свой экран · 13": {
@@ -4302,12 +4302,12 @@
     },
     "Дроп-сет · свой экран · 15": {
       "v": "=",
-      "f": ".sb-ds-volume-row border-top — apps/web/styles/modules/750-strength-builder.css:5147-5157.",
+      "f": ".sb-ds-volume-row border-top — apps/web/styles/modules/750-strength-builder.css:6611-5157.",
       "h": "6b286135ed76"
     },
     "Дроп-сет · свой экран · 16": {
       "v": "=",
-      "f": ".sb-ds-volume-copy column gap — apps/web/styles/modules/750-strength-builder.css:5159-5171.",
+      "f": ".sb-ds-volume-copy column gap — apps/web/styles/modules/750-strength-builder.css:6623-5171.",
       "h": "07ffbada0ee7"
     },
     "Дроп-сет · свой экран · 17": {
@@ -4337,12 +4337,12 @@
     },
     "Дроп-сет · свой экран · 22": {
       "v": "=",
-      "f": ".sb-ds-rule flex row — apps/web/styles/modules/750-strength-builder.css:5190-5196.",
+      "f": ".sb-ds-rule flex row — apps/web/styles/modules/750-strength-builder.css:6650-5196.",
       "h": "af81bb6e54c6"
     },
     "Дроп-сет · свой экран · 23": {
       "v": "=",
-      "f": ".sb-ds-rule { gap:8px; align-items baseline } — apps/web/styles/modules/750-strength-builder.css:5190-5196.",
+      "f": ".sb-ds-rule { gap:8px; align-items baseline } — apps/web/styles/modules/750-strength-builder.css:6650-5196.",
       "h": "a1a9ab3930c3"
     },
     "Дроп-сет · свой экран · 24": {
@@ -4377,7 +4377,7 @@
     },
     "Связка · создание · 02": {
       "v": "=",
-      "f": "Колонка заголовка: .sb-head-title { flex-direction:column; gap:3px; padding:0 } — apps/web/styles/modules/750-strength-builder.css:2747-2752,3297-3299; computed row 02.",
+      "f": "Колонка заголовка: .sb-head-title { flex-direction:column; gap:3px; padding:0 } — apps/web/styles/modules/750-strength-builder.css:2647-2752,3297-3299; computed row 02.",
       "h": "07ffbada0ee7"
     },
     "Связка · создание · 03": {
@@ -4407,12 +4407,12 @@
     },
     "Связка · создание · 08": {
       "v": "=",
-      "f": "Строка списка: .sb-radio { display:flex; align-items:center; gap:10px; padding:13.5px 0 } — apps/web/styles/modules/750-strength-builder.css:3337-3345; computed row 08.",
+      "f": "Строка списка: .sb-radio { display:flex; align-items:center; gap:10px; padding:13.5px 0 } — apps/web/styles/modules/750-strength-builder.css:4017-3345; computed row 08.",
       "h": "af81bb6e54c6"
     },
     "Связка · создание · 09": {
       "v": "=",
-      "f": "Ряд выбора: align-items:center; gap:10px на .sb-radio — apps/web/styles/modules/750-strength-builder.css:3337-3340; computed row 09.",
+      "f": "Ряд выбора: align-items:center; gap:10px на .sb-radio — apps/web/styles/modules/750-strength-builder.css:4017-3340; computed row 09.",
       "h": "869d1e5dd696"
     },
     "Связка · создание · 10": {
@@ -4452,12 +4452,12 @@
     },
     "Связка · создание · 17": {
       "v": "=",
-      "f": "Последняя строка без разделителя: .sb-radio:last-child { box-shadow:none } — apps/web/styles/modules/750-strength-builder.css:3347-3349; computed row 17.",
+      "f": "Последняя строка без разделителя: .sb-radio:last-child { box-shadow:none } — apps/web/styles/modules/750-strength-builder.css:4017-3349; computed row 17.",
       "h": "6b286135ed76"
     },
     "Связка · создание · 18": {
       "v": "=",
-      "f": "Блоки раундов и отдыха: .sb-superset-controls { display:flex; gap:8px; margin-bottom:21px } — apps/web/styles/modules/750-strength-builder.css:3400-3404; .sb-superset-kinds margin-bottom:10px — :3331.",
+      "f": "Блоки раундов и отдыха: .sb-superset-controls { display:flex; gap:8px; margin-bottom:21px } — apps/web/styles/modules/750-strength-builder.css:4080-3404; .sb-superset-kinds margin-bottom:10px — :3331.",
       "h": "2c2ec98a753e"
     },
     "Связка · создание · 19": {
@@ -4467,7 +4467,7 @@
     },
     "Связка · создание · 20": {
       "v": "=",
-      "f": "Степпер раундов: .sb-stepper { align-items:center; gap:7px; margin-top:8px } — apps/web/styles/modules/750-strength-builder.css:3420-3423; computed row 20.",
+      "f": "Степпер раундов: .sb-stepper { align-items:center; gap:7px; margin-top:8px } — apps/web/styles/modules/750-strength-builder.css:4100-3423; computed row 20.",
       "h": "14e3d8779b29"
     },
     "Связка · создание · 21": {
@@ -4507,7 +4507,7 @@
     },
     "Связка · создание · 28": {
       "v": "=",
-      "f": "Плитки прогноза: .sb-tiles { gap:6px; margin-top:10px } — apps/web/styles/modules/750-strength-builder.css:3481-3485; computed row 28.",
+      "f": "Плитки прогноза: .sb-tiles { gap:6px; margin-top:10px } — apps/web/styles/modules/750-strength-builder.css:4161-3485; computed row 28.",
       "h": "3ae4b3ce70b5"
     },
     "Связка · создание · 29": {
@@ -4542,7 +4542,7 @@
     },
     "Трисет в работе · 03": {
       "v": "=",
-      "f": ".sb-head-title { flex:1; min-width:0; column; gap 3px; padding 0 10px } — apps/web/styles/modules/750-strength-builder.css:5579-5586.",
+      "f": ".sb-head-title { flex:1; min-width:0; column; gap 3px; padding 0 10px } — apps/web/styles/modules/750-strength-builder.css:5974-5586.",
       "h": "f143b5d4e1e4"
     },
     "Трисет в работе · 04": {
@@ -4567,12 +4567,12 @@
     },
     "Трисет в работе · 08": {
       "v": "=",
-      "f": ".sb-tw-scroll { flex:1; overflow-y:auto; padding 6px 18px 18px } — apps/web/styles/modules/750-strength-builder.css:5604-5608.",
+      "f": ".sb-tw-scroll { flex:1; overflow-y:auto; padding 6px 18px 18px } — apps/web/styles/modules/750-strength-builder.css:6855-5608.",
       "h": "c629f84f9712"
     },
     "Трисет в работе · 09": {
       "v": "=",
-      "f": ".sb-tw-actions { gap 7px; margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:5610-5614.",
+      "f": ".sb-tw-actions { gap 7px; margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:6861-5614.",
       "h": "77e4b4025f38"
     },
     "Трисет в работе · 10": {
@@ -4592,7 +4592,7 @@
     },
     "Трисет в работе · 13": {
       "v": "=",
-      "f": ".sb-tw-member-row { gap 6px } — apps/web/styles/modules/750-strength-builder.css:5642-5645.",
+      "f": ".sb-tw-member-row { gap 6px } — apps/web/styles/modules/750-strength-builder.css:6893-5645.",
       "h": "45cfeef56a64"
     },
     "Трисет в работе · 14": {
@@ -4612,7 +4612,7 @@
     },
     "Трисет в работе · 17": {
       "v": "=",
-      "f": ".sb-tw-warmup { margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:5679-5681.",
+      "f": ".sb-tw-warmup { margin-top 12px } — apps/web/styles/modules/750-strength-builder.css:6930-5681.",
       "h": "7f9aee8f3e6d"
     },
     "Трисет в работе · 18": {
@@ -4642,12 +4642,12 @@
     },
     "Трисет в работе · 23": {
       "v": "=",
-      "f": ".sb-tw-round-footer { border-bottom none } — apps/web/styles/modules/750-strength-builder.css:5757-5760.",
+      "f": ".sb-tw-round-footer { border-bottom none } — apps/web/styles/modules/750-strength-builder.css:7008-5760.",
       "h": "7395c82cd118"
     },
     "Трисет в работе · 24": {
       "v": "=",
-      "f": ".sb-tw-round-spacer { flex none; width 36px } — apps/web/styles/modules/750-strength-builder.css:5762-5765.",
+      "f": ".sb-tw-round-spacer { flex none; width 36px } — apps/web/styles/modules/750-strength-builder.css:7013-5765.",
       "h": "28ebeb6164a9"
     },
     "Трисет в работе · 25": {
@@ -4688,7 +4688,7 @@
     "Куратор и зал · 02": {
       "h": "07ffbada0ee7",
       "v": "=",
-      "f": "Заголовок колонкой: .sb-head-title { display:flex; flex-direction:column; gap:3px } — 750-strength-builder.css:3186-3190."
+      "f": "Заголовок колонкой: .sb-head-title { display:flex; flex-direction:column; gap:3px } — 750-strength-builder.css:3093."
     },
     "Куратор и зал · 03": {
       "h": "fde93b8307ff",
@@ -4712,22 +4712,22 @@
     "Куратор и зал · 06": {
       "h": "81d6d8e40a85",
       "v": "=",
-      "f": "Карточка плана: .sb-cur-plan-strip.sb-grp { margin-top:12px } — 750-strength-builder.css:5548-5550; CuratorPlanStrip superset_ui:2018."
+      "f": "Карточка плана: .sb-cur-plan-strip.sb-grp { margin-top:12px } — 750-strength-builder.css:7051; CuratorPlanStrip superset_ui:2018."
     },
     "Куратор и зал · 07": {
       "h": "869d1e5dd696",
       "v": "=",
-      "f": "Ряд буквы плана: .sb-cur-plan-head { align-items:center; gap:10px } — 750-strength-builder.css:5552-5556."
+      "f": "Ряд буквы плана: .sb-cur-plan-head { align-items:center; gap:10px } — 750-strength-builder.css:7055."
     },
     "Куратор и зал · 08": {
       "h": "addb1ad16c00",
       "v": "=",
-      "f": "Буква дня: .sb-cur-plan-letter 34×34, radius 11px, color var(--sb-acc) — 750-strength-builder.css:5558-5569; тест strength-builder-curator-gym-v4-canvas-contract sand+blue."
+      "f": "Буква дня: .sb-cur-plan-letter 34×34, radius 11px, color var(--sb-acc) — 750-strength-builder.css:7061; тест strength-builder-curator-gym-v4-canvas-contract sand+blue."
     },
     "Куратор и зал · 09": {
       "h": "b4a4fa9ae422",
       "v": "=",
-      "f": "Копия плана: .sb-cur-plan-copy { flex:1; flex-direction:column; gap:3px } — 750-strength-builder.css:5571-5576."
+      "f": "Копия плана: .sb-cur-plan-copy { flex:1; flex-direction:column; gap:3px } — 750-strength-builder.css:7074."
     },
     "Куратор и зал · 10": {
       "h": "927ef58b2e57",
@@ -5019,7 +5019,7 @@
     },
     "План в ленте дня · 06": {
       "v": "=",
-      "f": "margin-top 12px у .sb-plan-card--future: 750-strength-builder.css:5852-5854; dom-contract ·06 + day-feed contract test sand/blue.",
+      "f": "margin-top 12px у .sb-plan-card--future: 750-strength-builder.css:7395; dom-contract ·06 + day-feed contract test sand/blue.",
       "h": "81d6d8e40a85"
     },
     "План в ленте дня · 07": {
@@ -5271,12 +5271,12 @@
     },
     "Спорное · тап по закрытому во время отдыха · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · тап по закрытому во время отдыха · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · тап по закрытому во время отдыха · 03": {
@@ -5328,7 +5328,7 @@
     },
     "Спорное · тап по закрытому во время отдыха · 12": {
       "v": "=",
-      "f": ".sb-ex-head — align-items center gap 10px; 750-strength-builder.css:3311-3315.",
+      "f": ".sb-ex-head — align-items center gap 10px; 750-strength-builder.css:3466.",
       "h": "869d1e5dd696"
     },
     "Спорное · тап по закрытому во время отдыха · 13": {
@@ -5363,12 +5363,12 @@
     },
     "Спорное · подход добавлен к закрытому · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · подход добавлен к закрытому · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · подход добавлен к закрытому · 03": {
@@ -5450,7 +5450,7 @@
     },
     "Спорное · подход добавлен к закрытому · 18": {
       "v": "=",
-      "f": ".sb-finish «Завершить · N не закрыто» margin-top 9px — 750-strength-builder.css:3384-3398.",
+      "f": ".sb-finish «Завершить · N не закрыто» margin-top 9px — 750-strength-builder.css:3553.",
       "h": "21c64c87457f"
     },
     "Спорное · подход добавлен к закрытому · 19": {
@@ -5460,12 +5460,12 @@
     },
     "Спорное · рабочий стал разминкой · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · рабочий стал разминкой · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · рабочий стал разминкой · 03": {
@@ -5527,12 +5527,12 @@
     },
     "Спорное · вес правят после галочки · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · вес правят после галочки · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · вес правят после галочки · 03": {
@@ -5614,12 +5614,12 @@
     },
     "Спорное · дроп или разминка в связке · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · дроп или разминка в связке · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · дроп или разминка в связке · 03": {
@@ -5681,12 +5681,12 @@
     },
     "Спорное · галочка при пустых полях · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · галочка при пустых полях · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · галочка при пустых полях · 03": {
@@ -5738,12 +5738,12 @@
     },
     "Спорное · запись куратора поверх вашей · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · запись куратора поверх вашей · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · запись куратора поверх вашей · 03": {
@@ -5830,12 +5830,12 @@
     },
     "Спорное · в связке разное число подходов · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · в связке разное число подходов · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · в связке разное число подходов · 03": {
@@ -5897,12 +5897,12 @@
     },
     "Спорное · тяжесть не отмечена · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · тяжесть не отмечена · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · тяжесть не отмечена · 03": {
@@ -5989,12 +5989,12 @@
     },
     "Спорное · старая связка неравная · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · старая связка неравная · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · старая связка неравная · 03": {
@@ -6056,12 +6056,12 @@
     },
     "Спорное · участник добавлен по ходу · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · участник добавлен по ходу · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · участник добавлен по ходу · 03": {
@@ -6143,12 +6143,12 @@
     },
     "Спорное · свой вес без коэффициента · 01": {
       "v": "=",
-      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3198-3208; dispute-k test K* row 01.",
+      "f": ".sb-builder-screen > .sb-head — flex gap 10px padding 16px 18px 0; 750-strength-builder.css:3323; dispute-k test K* row 01.",
       "h": "175bdcc2e73a"
     },
     "Спорное · свой вес без коэффициента · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3211-3217.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
       "h": "07ffbada0ee7"
     },
     "Спорное · свой вес без коэффициента · 03": {
@@ -7362,7 +7362,7 @@
     },
     "Правка · сторона куратора · 01": {
       "v": "=",
-      "f": ".sb-cycle-top.sb-curator-edit-head — шапка кадра Л9; heys_strength_proposal_ui_v1.js:661; jsdom display:flex (contract test row 01).",
+      "f": ".sb-cycle-top.sb-curator-edit-head — шапка кадра Л9; heys_strength_proposal_ui_v1.js:580; jsdom display:flex (contract test row 01).",
       "h": "175bdcc2e73a",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
@@ -7371,7 +7371,7 @@
     },
     "Правка · сторона куратора · 02": {
       "v": "=",
-      "f": ".sb-curator-edit-head-main.sb-cycle-top-main — flex-direction:column, gap:3px; proposal_ui:665 + 750-strength-builder.css:6977-6982; contract test row 02.",
+      "f": ".sb-curator-edit-head-main.sb-cycle-top-main — flex-direction:column, gap:3px; proposal_ui:665 + 750-strength-builder.css:7523; contract test row 02.",
       "h": "07ffbada0ee7",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
@@ -8075,12 +8075,12 @@
     },
     "Сессия · вернулись через час · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2405-2414) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2627) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Сессия · вернулись через час · 03": {
       "v": "=",
-      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2436-2440).",
+      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2638).",
       "h": "07ffbada0ee7"
     },
     "Сессия · вернулись через час · 04": {
@@ -8105,32 +8105,32 @@
     },
     "Сессия · вернулись через час · 08": {
       "v": "=",
-      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2447-2452).",
+      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
       "h": "f06d6e12de2e"
     },
     "Сессия · вернулись через час · 09": {
       "v": "=",
-      "f": "Строка списка — .sb-interrupted-row: флекс, space-between, выравнивание center, зазор 12, поля 13px 0, 600 12.5px/1 (750-strength-builder.css:2454-2463); те же числа, что у .row кадра.",
+      "f": "Строка списка — .sb-interrupted-row: флекс, space-between, выравнивание center, зазор 12, поля 13px 0, 600 12.5px/1 (750-strength-builder.css:3125); те же числа, что у .row кадра.",
       "h": "af81bb6e54c6"
     },
     "Сессия · вернулись через час · 10": {
       "v": "=",
-      "f": "«Последняя отметка» — span строки тоном --v4-ink, то есть --tx кадра (750-strength-builder.css:2462).",
+      "f": "«Последняя отметка» — span строки тоном --v4-ink, то есть --tx кадра (750-strength-builder.css:2382).",
       "h": "707f0cf19ab8"
     },
     "Сессия · вернулись через час · 11": {
       "v": "=",
-      "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2469-2474). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2382). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "0a9cda93cbdb"
     },
     "Сессия · вернулись через час · 12": {
       "v": "=",
-      "f": "Разделитель у последней строки снят — .sb-interrupted-row:last-child border-bottom 0 (750-strength-builder.css:2465-2467); у первой он есть, 1px чернил 7 %, как в кадре.",
+      "f": "Разделитель у последней строки снят — .sb-interrupted-row:last-child border-bottom 0 (750-strength-builder.css:3125); у первой он есть, 1px чернил 7 %, как в кадре.",
       "h": "6b286135ed76"
     },
     "Сессия · вернулись через час · 13": {
       "v": "=",
-      "f": "Ряд кнопок — .sb-interrupted-actions: зазор 7px, отступ сверху 12px (750-strength-builder.css:2476-2480).",
+      "f": "Ряд кнопок — .sb-interrupted-actions: зазор 7px, отступ сверху 12px (750-strength-builder.css:3146).",
       "h": "77e4b4025f38"
     },
     "Сессия · вернулись через час · 14": {
@@ -8799,7 +8799,7 @@
     },
     "Конструктор · тренировка идёт · снято · 25": {
       "v": "—",
-      "f": "Кадр А1 data-demo=protocol «снято» — демо-стоп, не BuilderScreen (strength-builder.v4.dc.html:104).",
+      "f": "Кадр А1 data-demo=protocol «снято» — демо-стоп, не runtime-экран конструктора (strength-builder.v4.dc.html:104).",
       "h": "b805c2ad0650",
       "naKind": "demo-only"
     },
@@ -9027,7 +9027,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 11": {
       "v": "≠",
-      "f": "⠿ намеренно не рендерится (нет reorder persistence); calm-canvas-contract.test.js:243-244, UI_V4_CODEX § intentional. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "⠿ намеренно не рендерится (нет reorder persistence); calm-canvas-contract.test.js:243-244 .sb-builder-screen rows fixture. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "4e98855729cb",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2520"
@@ -9052,7 +9052,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 14": {
       "v": "≠",
-      "f": "А1б ·14: .sb-ex--collapsed .sb-ex-title b 12.5px (750-strength-builder.css:3391) vs 13px канваса. calm-canvas-contract CANVAS_CONFLICTS А1б:14.",
+      "f": "А1б ·14: .sb-ex--collapsed .sb-ex-title b 12.5px (750-strength-builder.css:3511) vs 13px канваса. calm-canvas-contract CANVAS_CONFLICTS А1б:14.",
       "h": "a45ee30c055e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9447,12 +9447,12 @@
     },
     "Программа · отчёт за период · 16": {
       "v": "=",
-      "f": "heys_strength_proposal_ui_v1.js:1979 PERIOD_REPORT_DEBT_TITLE ac2 12.5px/700",
+      "f": "heys_strength_proposal_ui_v1.js:1905 PERIOD_REPORT_DEBT_TITLE ac2 12.5px/700",
       "h": "caa48b8f23b8"
     },
     "Программа · отчёт за период · 17": {
       "v": "=",
-      "f": "heys_strength_proposal_ui_v1.js:1980 PERIOD_REPORT_DEBT_PROSE 12px ink 60%",
+      "f": "heys_strength_proposal_ui_v1.js:1906 PERIOD_REPORT_DEBT_PROSE 12px ink 60%",
       "h": "d82aff77f2cc"
     },
     "Программа · отчёт за период · 18": {
@@ -9462,7 +9462,7 @@
     },
     "Программа · отчёт за период · 19": {
       "v": "=",
-      "f": "heys_strength_proposal_ui_v1.js:1987 PERIOD_REPORT_FOOTNOTE сноска",
+      "f": "heys_strength_proposal_ui_v1.js:1913 PERIOD_REPORT_FOOTNOTE сноска",
       "h": "c17297c7846f"
     },
     "Спорное · тап по закрытому во время отдыха · 19": {
@@ -9545,7 +9545,7 @@
     },
     "Конструктор · пусто · плана нет · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, по центру, тон rgba(--ink,.45) — .sb-head.is-empty .sb-icon-btn--close (750-strength-builder.css:2201-2210). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, по центру, тон rgba(--ink,.45) — .sb-head.is-empty .sb-icon-btn--close (750-strength-builder.css:2627). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Конструктор · пусто · плана нет · 03": {
@@ -9560,17 +9560,17 @@
     },
     "Конструктор · пусто · плана нет · 05": {
       "v": "=",
-      "f": "Ключ «пусто · 0 подходов» — .sb-head-sub при отсутствии плана (strength/heys_strength_builder_ui_v1.js:834).",
+      "f": "Ключ «пусто · 0 подходов» — .sb-head-sub при отсутствии плана (strength/heys_strength_builder_ui_v1.js:641).",
       "h": "bb76086712c2"
     },
     "Конструктор · пусто · плана нет · 06": {
       "v": "=",
-      "f": "Область прокрутки — .sb-empty-scroll: overflow-y auto, flex 1 1 auto, поля 7px 18px 18px (750-strength-builder.css:2231-2237).",
+      "f": "Область прокрутки — .sb-empty-scroll: overflow-y auto, flex 1 1 auto, поля 7px 18px 18px (750-strength-builder.css:2874).",
       "h": "c629f84f9712"
     },
     "Конструктор · пусто · плана нет · 07": {
       "v": "=",
-      "f": "Карточка .grp — .sb-empty-card: отступ сверху 12px, поля 16, радиус 20, фон --v4-c1 (750-strength-builder.css:2239-2244).",
+      "f": "Карточка .grp — .sb-empty-card: отступ сверху 12px, поля 16, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
       "h": "81d6d8e40a85"
     },
     "Конструктор · пусто · плана нет · 08": {
@@ -9590,12 +9590,12 @@
     },
     "Конструктор · пусто · плана нет · 11": {
       "v": "=",
-      "f": "Список .cd — .sb-empty-options: отступ сверху 10, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2333-2338).",
+      "f": "Список .cd — .sb-empty-options: отступ сверху 10, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
       "h": "d641122bb122"
     },
     "Конструктор · пусто · плана нет · 12": {
       "v": "=",
-      "f": "Единственная строка списка без разделителя: .sb-empty-option границ не рисует вовсе (750-strength-builder.css:2340-2356).",
+      "f": "Единственная строка списка без разделителя: .sb-empty-option границ не рисует вовсе (750-strength-builder.css:3003).",
       "h": "6b286135ed76"
     },
     "Конструктор · пусто · плана нет · 13": {
@@ -9605,7 +9605,7 @@
     },
     "Конструктор · пусто · плана нет · 14": {
       "v": "=",
-      "f": "«7 упр.» — b строки: 700 11.5px/1 тоном --v4-act-text, то есть --ac кадра (750-strength-builder.css:2358-2364).",
+      "f": "«7 упр.» — b строки: 700 11.5px/1 тоном --v4-act-text, то есть --ac кадра (750-strength-builder.css:2665).",
       "h": "57090ba62a2d"
     },
     "Конструктор · пусто · плана нет · 15": {
@@ -9620,7 +9620,7 @@
     },
     "Конструктор · пусто · план назначен · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, по центру, тон rgba(--ink,.45) — .sb-head.is-empty .sb-icon-btn--close (750-strength-builder.css:2201-2210). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, по центру, тон rgba(--ink,.45) — .sb-head.is-empty .sb-icon-btn--close (750-strength-builder.css:2627). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Конструктор · пусто · план назначен · 03": {
@@ -9635,17 +9635,17 @@
     },
     "Конструктор · пусто · план назначен · 05": {
       "v": "=",
-      "f": "Ключ «план на день · 0 подходов» — .sb-head-sub при валидном плане (strength/heys_strength_builder_ui_v1.js:834).",
+      "f": "Ключ «план на день · 0 подходов» — .sb-head-sub при валидном плане (strength/heys_strength_builder_ui_v1.js:641).",
       "h": "8fc1e07e271a"
     },
     "Конструктор · пусто · план назначен · 06": {
       "v": "=",
-      "f": "Область прокрутки — .sb-empty-scroll: overflow-y auto, flex 1 1 auto, поля 7px 18px 18px (750-strength-builder.css:2231-2237).",
+      "f": "Область прокрутки — .sb-empty-scroll: overflow-y auto, flex 1 1 auto, поля 7px 18px 18px (750-strength-builder.css:2874).",
       "h": "c629f84f9712"
     },
     "Конструктор · пусто · план назначен · 07": {
       "v": "=",
-      "f": "Карточка .grp — .sb-empty-card: отступ сверху 12px, поля 16, радиус 20, фон --v4-c1 (750-strength-builder.css:2239-2244).",
+      "f": "Карточка .grp — .sb-empty-card: отступ сверху 12px, поля 16, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
       "h": "81d6d8e40a85"
     },
     "Конструктор · пусто · план назначен · 08": {
@@ -9660,12 +9660,12 @@
     },
     "Конструктор · пусто · план назначен · 10": {
       "v": "=",
-      "f": "Первая строка превью: .sb-empty-plan-preview li:first-child { align-items: baseline; gap: 8px; margin-top: 10px } — 750-strength-builder.css:2270-2278.",
+      "f": "Первая строка превью: .sb-empty-plan-preview li:first-child { align-items: baseline; gap: 8px; margin-top: 10px } — 750-strength-builder.css:2907.",
       "h": "3e063fda0792"
     },
     "Конструктор · пусто · план назначен · 11": {
       "v": "=",
-      "f": "Номер «1»: .sb-empty-plan-preview-num — flex:none, font 700 10px/1.3 ui-monospace tabular-nums, rgba(var(--v4-ink-rgb),.56) — 750-strength-builder.css:2281-2288. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Номер «1»: .sb-empty-plan-preview-num — flex:none, font 700 10px/1.3 ui-monospace tabular-nums, rgba(var(--v4-ink-rgb),.56) — 750-strength-builder.css:2600. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "8e722b871c83"
     },
     "Конструктор · пусто · план назначен · 12": {
@@ -9675,12 +9675,12 @@
     },
     "Конструктор · пусто · план назначен · 13": {
       "v": "=",
-      "f": "Доза «4 × 8»: .sb-empty-plan-preview-dose — flex:none, font 500 10.5px/1.3 Figtree tabular-nums, rgba(var(--v4-ink-rgb),.56) — 750-strength-builder.css:2301-2309. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Доза «4 × 8»: .sb-empty-plan-preview-dose — flex:none, font 500 10.5px/1.3 Figtree tabular-nums, rgba(var(--v4-ink-rgb),.56) — 750-strength-builder.css:2600. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "adb0f8b49c72"
     },
     "Конструктор · пусто · план назначен · 14": {
       "v": "=",
-      "f": "Вторая/третья строки: .sb-empty-plan-preview li { margin-top: 6px } без override — 750-strength-builder.css:2270-2275.",
+      "f": "Вторая/третья строки: .sb-empty-plan-preview li { margin-top: 6px } без override — 750-strength-builder.css:2907.",
       "h": "372a5dee1615"
     },
     "Конструктор · пусто · план назначен · 15": {
@@ -9695,7 +9695,7 @@
     },
     "Конструктор · пусто · план назначен · 17": {
       "v": "=",
-      "f": "Подпись «N упражнений · назначил …»: .sb-empty-plan-meta — margin-top 6px, text-align center, font 500 11px/1.4, var(--v4-ink-data) — 750-strength-builder.css:2350-2357; JS:896-898. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Подпись «N упражнений · назначил …»: .sb-empty-plan-meta — margin-top 6px, text-align center, font 500 11px/1.4, var(--v4-ink-data) — 750-strength-builder.css:2993; JS:896-898. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "fb794ba8e15e"
     },
     "Сессия · вернулись через час · 16": {
@@ -9710,12 +9710,12 @@
     },
     "Сессия · вернулись через час · без таймера · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2405-2414) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2627) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Сессия · вернулись через час · без таймера · 03": {
       "v": "=",
-      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2436-2440).",
+      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2638).",
       "h": "07ffbada0ee7"
     },
     "Сессия · вернулись через час · без таймера · 04": {
@@ -9740,32 +9740,32 @@
     },
     "Сессия · вернулись через час · без таймера · 08": {
       "v": "=",
-      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2447-2452).",
+      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
       "h": "f06d6e12de2e"
     },
     "Сессия · вернулись через час · без таймера · 09": {
       "v": "=",
-      "f": "Строка списка — .sb-interrupted-row: флекс, space-between, выравнивание center, зазор 12, поля 13px 0, 600 12.5px/1 (750-strength-builder.css:2454-2463); те же числа, что у .row кадра.",
+      "f": "Строка списка — .sb-interrupted-row: флекс, space-between, выравнивание center, зазор 12, поля 13px 0, 600 12.5px/1 (750-strength-builder.css:3125); те же числа, что у .row кадра.",
       "h": "af81bb6e54c6"
     },
     "Сессия · вернулись через час · без таймера · 10": {
       "v": "=",
-      "f": "«Последняя отметка» — span строки тоном --v4-ink, то есть --tx кадра (750-strength-builder.css:2462).",
+      "f": "«Последняя отметка» — span строки тоном --v4-ink, то есть --tx кадра (750-strength-builder.css:2382).",
       "h": "707f0cf19ab8"
     },
     "Сессия · вернулись через час · без таймера · 11": {
       "v": "=",
-      "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2469-2474). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2382). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "0a9cda93cbdb"
     },
     "Сессия · вернулись через час · без таймера · 12": {
       "v": "=",
-      "f": "Разделитель у последней строки снят — .sb-interrupted-row:last-child border-bottom 0 (750-strength-builder.css:2465-2467); у первой он есть, 1px чернил 7 %, как в кадре.",
+      "f": "Разделитель у последней строки снят — .sb-interrupted-row:last-child border-bottom 0 (750-strength-builder.css:3125); у первой он есть, 1px чернил 7 %, как в кадре.",
       "h": "6b286135ed76"
     },
     "Сессия · вернулись через час · без таймера · 13": {
       "v": "=",
-      "f": "Ряд кнопок — .sb-interrupted-actions: зазор 7px, отступ сверху 12px (750-strength-builder.css:2476-2480).",
+      "f": "Ряд кнопок — .sb-interrupted-actions: зазор 7px, отступ сверху 12px (750-strength-builder.css:3146).",
       "h": "77e4b4025f38"
     },
     "Сессия · вернулись через час · без таймера · 14": {
@@ -9790,12 +9790,12 @@
     },
     "Сессия · вернулись через час · таймер идёт · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2405-2414) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2627) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Сессия · вернулись через час · таймер идёт · 03": {
       "v": "=",
-      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2436-2440).",
+      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2638).",
       "h": "07ffbada0ee7"
     },
     "Сессия · вернулись через час · таймер идёт · 04": {
@@ -9820,32 +9820,32 @@
     },
     "Сессия · вернулись через час · таймер идёт · 08": {
       "v": "=",
-      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2447-2452).",
+      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
       "h": "f06d6e12de2e"
     },
     "Сессия · вернулись через час · таймер идёт · 09": {
       "v": "=",
-      "f": "Строка списка — .sb-interrupted-row: флекс, space-between, выравнивание center, зазор 12, поля 13px 0, 600 12.5px/1 (750-strength-builder.css:2454-2463); те же числа, что у .row кадра.",
+      "f": "Строка списка — .sb-interrupted-row: флекс, space-between, выравнивание center, зазор 12, поля 13px 0, 600 12.5px/1 (750-strength-builder.css:3125); те же числа, что у .row кадра.",
       "h": "af81bb6e54c6"
     },
     "Сессия · вернулись через час · таймер идёт · 10": {
       "v": "=",
-      "f": "«Последняя отметка» — span строки тоном --v4-ink, то есть --tx кадра (750-strength-builder.css:2462).",
+      "f": "«Последняя отметка» — span строки тоном --v4-ink, то есть --tx кадра (750-strength-builder.css:2382).",
       "h": "707f0cf19ab8"
     },
     "Сессия · вернулись через час · таймер идёт · 11": {
       "v": "=",
-      "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2469-2474). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2382). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "0a9cda93cbdb"
     },
     "Сессия · вернулись через час · таймер идёт · 12": {
       "v": "=",
-      "f": "Разделитель у последней строки снят — .sb-interrupted-row:last-child border-bottom 0 (750-strength-builder.css:2465-2467); у первой он есть, 1px чернил 7 %, как в кадре.",
+      "f": "Разделитель у последней строки снят — .sb-interrupted-row:last-child border-bottom 0 (750-strength-builder.css:3125); у первой он есть, 1px чернил 7 %, как в кадре.",
       "h": "6b286135ed76"
     },
     "Сессия · вернулись через час · таймер идёт · 13": {
       "v": "=",
-      "f": "Ряд кнопок — .sb-interrupted-actions: зазор 7px, отступ сверху 12px (750-strength-builder.css:2476-2480).",
+      "f": "Ряд кнопок — .sb-interrupted-actions: зазор 7px, отступ сверху 12px (750-strength-builder.css:3146).",
       "h": "77e4b4025f38"
     },
     "Сессия · вернулись через час · таймер идёт · 14": {
@@ -9920,7 +9920,7 @@
     },
     "Конструктор · пусто · план назначен · текст": {
       "v": "=",
-      "f": "Сборка с планом: ключ «план на день · 0 подходов», «План на сегодня готов», ol.sb-empty-plan-preview, «Начать по плану · …», meta, «Собрать свою» вторичная, сноска — heys_strength_builder_ui_v1.js:849-941.",
+      "f": "Сборка с планом: ключ «план на день · 0 подходов», «План на сегодня готов», ol.sb-empty-plan-preview, «Начать по плану · …», meta, «Собрать свою» вторичная, сноска — heys_strength_builder_ui_v1.js:1861.",
       "h": "43a03ffae6cc"
     },
     "Сессия · вернулись через час · без таймера · текст": {
@@ -9940,27 +9940,27 @@
     },
     "Конструктор · пусто · план назначен · 19": {
       "v": "=",
-      "f": "Список повтора: .sb-empty-options { margin-top: 10px; padding: 2px 16px; border-radius: 20px } — 750-strength-builder.css:2360-2365.",
+      "f": "Список повтора: .sb-empty-options { margin-top: 10px; padding: 2px 16px; border-radius: 20px } — 750-strength-builder.css:3003.",
       "h": "d641122bb122"
     },
     "Конструктор · пусто · план назначен · 20": {
       "v": "=",
-      "f": "Строка без разделителя: .sb-empty-option { border: 0; box-shadow: none } — 750-strength-builder.css:2367-2375.",
+      "f": "Строка без разделителя: .sb-empty-option { border: 0; box-shadow: none } — 750-strength-builder.css:3003.",
       "h": "6b286135ed76"
     },
     "Конструктор · пусто · план назначен · 21": {
       "v": "=",
-      "f": "«Повторить …»: span внутри .sb-empty-option, color var(--v4-ink) — heys_strength_builder_ui_v1.js:936; тон --v4-ink через --sb-tx.",
+      "f": "«Повторить …»: span внутри .sb-empty-option, color var(--v4-ink) — heys_strength_builder_ui_v1.js:1920; тон --v4-ink через --sb-tx.",
       "h": "20b0b089c5bd"
     },
     "Конструктор · пусто · план назначен · 22": {
       "v": "=",
-      "f": "«7 упр.»: .sb-empty-option b — font 700 11.5px/1, color var(--v4-act-text) — 750-strength-builder.css:2386-2391; last.exercises.length — JS:937.",
+      "f": "«7 упр.»: .sb-empty-option b — font 700 11.5px/1, color var(--v4-act-text) — 750-strength-builder.css:2665; last.exercises.length — JS:937.",
       "h": "57090ba62a2d"
     },
     "Конструктор · пусто · план назначен · 23": {
       "v": "=",
-      "f": "Сноска: p.sb-empty-note при canStartPlan — текст JS:940-941; вид 11px/1.55 var(--v4-ink-data) — 750-strength-builder.css:2394-2401.",
+      "f": "Сноска: p.sb-empty-note при canStartPlan — текст JS:940-941; вид 11px/1.55 var(--v4-ink-data) — 750-strength-builder.css:3037.",
       "h": "9b6597f4be95"
     },
     "карточка плана Г3 — кадр устарел": {

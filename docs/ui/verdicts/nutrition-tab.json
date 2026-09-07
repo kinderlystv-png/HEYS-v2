@@ -40,7 +40,7 @@
     },
     "прокрутка": {
       "v": "=",
-      "f": "Прокрутка вкладки хранится в scrollMemoryRef и сбрасывается по selectedDate — heys_app_shell_v1.js:5790-5813",
+      "f": "Прокрутка вкладки хранится в scrollMemoryRef и сбрасывается по selectedDate — heys_app_shell_v1.js:5790 · .create",
       "h": "6966d09c4b95"
     },
     "вертикальный ритм": {
@@ -95,7 +95,7 @@
     },
     "формат чисел": {
       "v": "=",
-      "f": "formatNumber ставит неразрывный пробел, formatDecimal — запятую — heys_day_nutrition_v1.js:52-60",
+      "f": "formatNumber ставит неразрывный пробел, formatDecimal — запятую — heys_day_nutrition_v1.js:112",
       "h": "2ca649aa1f51"
     },
     "нет данных": {
@@ -120,7 +120,7 @@
     },
     "состав героя": {
       "v": "=",
-      "f": "buildHeroState + разметка героя, полоса 6 px, процент только при переборе — heys_day_nutrition_v1.js:219-281, 1400-1420",
+      "f": "buildHeroState + разметка героя, полоса 6 px, процент только при переборе — heys_day_nutrition_v1.js:316, 1400-1420",
       "h": "16662d2151fc"
     },
     "цвет числа": {
@@ -130,12 +130,12 @@
     },
     "перебор": {
       "v": "=",
-      "f": "zoneOf + kcalZoneThresholds, пороги правит куратор — heys_day_nutrition_v1.js:193-215, 255-269",
+      "f": "zoneOf + kcalZoneThresholds, пороги правит куратор — heys_day_nutrition_v1.js:290, 255-269",
       "h": "81ead806e6b3"
     },
     "окно героя": {
       "v": "=",
-      "f": "resolveEatingWindow общий у героя и итогов — heys_day_nutrition_v1.js:320-330",
+      "f": "resolveEatingWindow общий у героя и итогов — heys_day_nutrition_v1.js:417",
       "h": "59961debb6e7"
     },
     "закрытый день": {
@@ -150,7 +150,7 @@
     },
     "что показывает": {
       "v": "=",
-      "f": "buildWindowState даёт все названные строки состояния — heys_day_nutrition_v1.js:287-308",
+      "f": "buildWindowState даёт все названные строки состояния — heys_day_nutrition_v1.js:384",
       "h": "78fe6ec24fdf"
     },
     "вид блока окна": {
@@ -185,7 +185,7 @@
     },
     "название приёма": {
       "v": "=",
-      "f": "Фиксация только по mealTypePinned, иначе динамика — heys_day_nutrition_v1.js:158-166",
+      "f": "Фиксация только по mealTypePinned, иначе динамика — heys_day_nutrition_v1.js:258",
       "h": "43dc53b11803"
     },
     "кнопка в строке": {
@@ -200,7 +200,7 @@
     },
     "порядок приёмов": {
       "v": "=",
-      "f": "sortMealsAscending, приёмы без времени в конец — heys_day_nutrition_v1.js:168-178",
+      "f": "sortMealsAscending, приёмы без времени в конец — heys_day_nutrition_v1.js:265",
       "h": "66c78da23db9"
     },
     "пустой день": {
@@ -220,7 +220,7 @@
     },
     "прошлый день · кнопка": {
       "v": "=",
-      "f": "confirmMealCreationDate стоит до шторки, выход «Перейти на сегодня» по умолчанию — day/_meals.js:95-139, 5693",
+      "f": "confirmMealCreationDate стоит до шторки, выход «Перейти на сегодня» по умолчанию — day/_meals.js:214, 5693",
       "h": "23be6d9a2adc"
     },
     "гейт и только чтение": {
@@ -250,7 +250,7 @@
     },
     "форма": {
       "v": "=",
-      "f": "TOTAL_ROWS — пять строк списком — heys_day_nutrition_v1.js:312-318",
+      "f": "TOTAL_ROWS — пять строк списком — heys_day_nutrition_v1.js:409",
       "h": "40ad71cdd1fb"
     },
     "строка": {
@@ -260,7 +260,7 @@
     },
     "шкала зон": {
       "v": "=",
-      "f": "totalRowDeviationZone: 8/25 вниз, 110/130 вверх, границы в мягкой зоне — heys_day_nutrition_v1.js:362-377",
+      "f": "totalRowDeviationZone: 8/25 вниз, 110/130 вверх, границы в мягкой зоне — heys_day_nutrition_v1.js:459",
       "h": "0355cfc51cc4"
     },
     "ожидаемое к этому часу": {
@@ -280,7 +280,7 @@
     },
     "закрытый день · итоги": {
       "v": "=",
-      "f": "progressK=1 и showTick=false на закрытом дне — heys_day_nutrition_v1.js:381-382",
+      "f": "progressK=1 и showTick=false на закрытом дне — heys_day_nutrition_v1.js:459",
       "h": "e95c4d91e68b"
     },
     "одна шкала на пять строк": {
@@ -295,7 +295,7 @@
     },
     "ширина полосы": {
       "v": "=",
-      "f": "Дорожка 5 px radius 999 фоном --v4-line, заливка факт к норме — 732-ui-v4-nutrition.css:464-473",
+      "f": "Дорожка 5 px radius 999 фоном --v4-line, заливка факт к норме — 732-ui-v4-nutrition.css:560",
       "h": "ef233b4837bc"
     },
     "полоса при переборе": {
@@ -345,12 +345,12 @@
     },
     "клетчатка": {
       "v": "=",
-      "f": "fiber есть только в TOTAL_ROWS, в качестве его нет — heys_day_nutrition_v1.js:317",
+      "f": "fiber есть только в TOTAL_ROWS, в качестве его нет — heys_day_nutrition_v1.js:409",
       "h": "904e6ee72c86"
     },
     "гликемический индекс": {
       "v": "=",
-      "f": "giStepLabel: низкий до 40, средний до 60, дальше высокий — heys_day_nutrition_v1.js:412-417",
+      "f": "giStepLabel: низкий до 40, средний до 60, дальше высокий — heys_day_nutrition_v1.js:509",
       "h": "663eec690e69"
     },
     "оценка": {
@@ -400,7 +400,7 @@
     },
     "серия приёмов": {
       "v": "=",
-      "f": "buildMealStreak, полноценный приём — не меньше 15 % бюджета — heys_day_nutrition_v1.js:423-446",
+      "f": "buildMealStreak, полноценный приём — не меньше 15 % бюджета — heys_day_nutrition_v1.js:523",
       "h": "9c0c6e268d08"
     },
     "один приём и пустой день": {
@@ -475,7 +475,7 @@
     },
     "хранение": {
       "v": "=",
-      "f": "Чипы живут в heys_profile, отдельного раздела «Ещё → Дневник» в коде нет — heys_day_nutrition_v1.js:488-506",
+      "f": "Чипы живут в heys_profile, отдельного раздела «Ещё → Дневник» в коде нет — heys_day_nutrition_v1.js:591",
       "h": "a42476a04398"
     },
     "дубль в настройках": {
@@ -645,7 +645,7 @@
     },
     "снятая с курса позиция": {
       "v": "=",
-      "f": "staleTaken рисуется последним, .is-stale с «· не в курсе», вне счётчиков — heys_day_nutrition_v1.js:787, 858, 902",
+      "f": "staleTaken рисуется последним, .is-stale с «· не в курсе», вне счётчиков — heys_day_nutrition_v1.js:1162, 858, 902",
       "h": "6f1612be00a3"
     },
     "напоминаний в блоке нет": {
@@ -670,7 +670,7 @@
     },
     "куратор": {
       "v": "=",
-      "f": "supplements_mark и supplements_unmark есть в MCP — yandex-cloud-functions/heys-mcp/lib/tools.js:2531-2535",
+      "f": "supplements_mark и supplements_unmark есть в MCP — yandex-cloud-functions/heys-mcp/lib/tools.js:2817-2535",
       "h": "43285eb5fa33"
     },
     "геймификация": {
@@ -755,7 +755,7 @@
     },
     "название после переноса": {
       "v": "=",
-      "f": "Автоимя пересчитывается mealTypeLabel по времени, pinned сохраняется — heys_day_nutrition_v1.js:158-166",
+      "f": "Автоимя пересчитывается mealTypeLabel по времени, pinned сохраняется — heys_day_nutrition_v1.js:255",
       "h": "13369ee14a27"
     },
     "советы приёма": {
@@ -770,7 +770,7 @@
     },
     "сколько советов": {
       "v": "=",
-      "f": "Один лучший совет + «+N» остальных: heys_day_meal_optimizer_section.js:130-147; лимит slice(5) в getMealOptimization",
+      "f": "Один лучший совет + «+N» остальных: heys_day_meal_optimizer_section.js:69; лимит slice(5) в getMealOptimization",
       "h": "2b50e8023aeb"
     },
     "совет с заменой": {
@@ -800,7 +800,7 @@
     },
     "два вида карточки": {
       "v": "=",
-      "f": "isCompact от кнопки воды, чипы, минус и совет только в полном виде — heys_day_water_v1.js:282, 354-360, 408-412, 463",
+      "f": "isCompact от кнопки воды, чипы, минус и совет только в полном виде — heys_day_water_v1.js:346, 354-360, 408-412, 463",
       "h": "734647556652"
     },
     "геометрия кольца": {
@@ -850,7 +850,7 @@
     },
     "неделя графиком": {
       "v": "=",
-      "f": "catmullRomPath, толщина 1,8, заливка .14, высота 56, ряд дней 8 px с полями 3 — heys_day_water_v1.js:177-193, 400-water:344-358",
+      "f": "catmullRomPath, толщина 1,8, заливка .14, высота 56, ряд дней 8 px с полями 3 — heys_day_water_v1.js:241, 400-water:344-358",
       "h": "b5c3a6d6d518"
     },
     "пунктир нормы — тоже кривая": {
@@ -865,7 +865,7 @@
     },
     "день с набранной нормой": {
       "v": "=",
-      "f": "Чип 12×12 --wr-ok с белой галочкой при факте не меньше нормы того дня — heys_day_water_v1.js:450-460",
+      "f": "Чип 12×12 --wr-ok с белой галочкой при факте не меньше нормы того дня — 400-water-and-hydration.css:26",
       "h": "66996e3c7e8e"
     },
     "неделя на прошлом дне": {
@@ -965,12 +965,12 @@
     },
     "мета-строка шапки": {
       "v": "=",
-      "f": "formatTabMetaLine без метки синхронизации, у куратора имя клиента и та же мета — heys_day_nutrition_v1.js:99-107",
+      "f": "formatTabMetaLine без метки синхронизации, у куратора имя клиента и та же мета — heys_day_nutrition_v1.js:162",
       "h": "b42aca3aafe4"
     },
     "только чтение": {
       "v": "=",
-      "f": "Плашка называет причину и что делать, кнопки записи гаснут до 0.4 — heys_paywall_v1.js:794-801, 732-ui-v4-nutrition.css:965-968",
+      "f": "Плашка называет причину и что делать, кнопки записи гаснут до 0.4 — heys_paywall_v1.js:485-510 ReadOnlyBanner readonly-banner; 732-ui-v4-nutrition.css:1680-1685",
       "h": "758a9a2bfadb"
     },
     "офлайн без данных": {
@@ -1085,7 +1085,7 @@
     },
     "уменьшенное движение": {
       "v": "=",
-      "f": "732-ui-v4-nutrition.css:1027-1033 @media (prefers-reduced-motion: reduce) backdrop-filter none на .nutrition-v4-sheet-backdrop",
+      "f": "732-ui-v4-nutrition.css:1119 @media (prefers-reduced-motion: reduce) backdrop-filter none на .nutrition-v4-sheet-backdrop",
       "h": "488e88ddf474"
     },
     "слова на экране": {

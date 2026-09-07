@@ -90,7 +90,7 @@
     },
     "порядок в стопке": {
       "v": "=",
-      "f": "cycleRow в morningRest после measurements/shower heys_steps_v1.js:6978",
+      "f": "cycleRow в morningRest после measurements/shower heys_steps_v1.js:7055",
       "h": "fcd630117410"
     },
     "свёрнутое состояние": {
@@ -280,7 +280,7 @@
     },
     "контраст ленты": {
       "v": "=",
-      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8473",
+      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8567",
       "h": "7c8802aa93e9"
     },
     "прогноз следующего периода": {
@@ -613,7 +613,7 @@
     },
     "Цикл · день 29, вопрос · 02": {
       "v": "=",
-      "f": "heys_cycle_ui_v1.js:486 .cycle-card-v4__day29-title — «Период начался?» 700 12,5/1.4 чернилами",
+      "f": "heys_cycle_ui_v1.js:582 .cycle-card-v4__day29-title — «Период начался?» 700 12,5/1.4 чернилами",
       "h": "52b4213cbc73"
     },
     "Цикл · день 29, вопрос · 03": {
@@ -638,7 +638,7 @@
     },
     "Цикл · карточка дня, пусто · 03": {
       "v": "=",
-      "f": "heys_cycle_ui_v1.js:560 .nutrition-v4-block__meta — «Указать день» 700 12px/1 акцентом, не сжимается",
+      "f": "heys_cycle_ui_v1.js:657 .nutrition-v4-block__meta — «Указать день» 700 12px/1 акцентом, не сжимается",
       "h": "d813322303bd"
     },
     "Цикл · карточка дня, заполнено · 01": {
@@ -1105,7 +1105,7 @@
     },
     "Цикл · другой день, календарь · 10": {
       "v": "=",
-      "f": "heys_day_pickers.js:776-777,866 .cycle-date-picker-sheet__selected-copy — «Период встанет на … Их нормы пересчитаются…»; 500-pwa:2454-2457 margin-top 4, 500 11/1.45, --v4-ink-data Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "heys_day_pickers.js:866,866 .cycle-date-picker-sheet__selected-copy — «Период встанет на … Их нормы пересчитаются…»; 500-pwa:2454-2457 margin-top 4, 500 11/1.45, --v4-ink-data Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "3a1e93a35853"
     },
     "Цикл · другой день, календарь · 11": {

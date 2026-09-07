@@ -1461,7 +1461,7 @@
     },
     "Чек-ин · вес · 21": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:7315 .mc-weight-comma — font 700 32px/1, color sand #8a4a20 / blue #8a4a20, padding 0 1px",
+      "f": "500-pwa-and-offline.css:7398 .mc-weight-comma — font 700 32px/1, color sand #8a4a20 / blue #8a4a20, padding 0 1px",
       "h": "dbed66587b5c"
     },
     "Чек-ин · вес · 22": {
@@ -2041,7 +2041,7 @@
     },
     "Чек-ин · цель по шагам · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:5610 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
+      "f": "500-pwa-and-offline.css:5691 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
       "h": "85e238f32b60"
     },
     "Чек-ин · цель по шагам · 12": {
@@ -3580,7 +3580,7 @@
     },
     "Чек-ин · шаги при коротком сне · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:5610 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
+      "f": "500-pwa-and-offline.css:5691 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
       "h": "85e238f32b60"
     },
     "Чек-ин · шаги при коротком сне · 12": {
@@ -3690,7 +3690,7 @@
     },
     "Чек-ин · шаги при тяжёлом утре · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:5610 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
+      "f": "500-pwa-and-offline.css:5691 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
       "h": "85e238f32b60"
     },
     "Чек-ин · шаги при тяжёлом утре · 12": {
@@ -3800,7 +3800,7 @@
     },
     "Чек-ин · шаги после тренировки · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:5610 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
+      "f": "500-pwa-and-offline.css:5691 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
       "h": "85e238f32b60"
     },
     "Чек-ин · шаги после тренировки · 12": {
@@ -3910,7 +3910,7 @@
     },
     "Чек-ин · шаги на потолке · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:5610 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
+      "f": "500-pwa-and-offline.css:5691 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
       "h": "85e238f32b60"
     },
     "Чек-ин · шаги на потолке · 12": {
@@ -4020,7 +4020,7 @@
     },
     "Чек-ин · шаги без истории · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:5610 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
+      "f": "500-pwa-and-offline.css:5691 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
       "h": "85e238f32b60"
     },
     "Чек-ин · шаги без истории · 12": {
@@ -4130,7 +4130,7 @@
     },
     "Чек-ин · шаги своё число · 11": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:5610 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
+      "f": "500-pwa-and-offline.css:5691 .mc-steps-slider-labels — justify space-between, margin-top 8px, font 600 9.5px/1, color sand rgba(0,0,0,0.56) / blue rgba(0,0,0,0.56)",
       "h": "85e238f32b60"
     },
     "Чек-ин · шаги своё число · 12": {
