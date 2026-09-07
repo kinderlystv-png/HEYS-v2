@@ -25,13 +25,19 @@ const CLUSTER_BASELINE = Object.freeze([
   {
     zoneId: 'reports-insights',
     decisionRef:
-      'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4346',
-    rowCount: 5,
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#graph-cloud-arrow-spec-2026-09-05',
+    rowCount: 7,
+  },
+  {
+    zoneId: 'reports-insights',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05',
+    rowCount: 9,
   },
   {
     zoneId: 'norm-correction',
     decisionRef:
-      'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715',
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05',
     rowCount: 10,
   },
   {
@@ -46,17 +52,25 @@ const CLUSTER_BASELINE = Object.freeze([
     rowCount: 4,
   },
   {
+    zoneId: 'home-widgets',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#home-widgets-background-redraw-x17-2026-09-05',
+    rowCount: 4,
+  },
+  {
+    zoneId: 'strength-builder',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-abandoned-session-x22-2026-09-05',
+    rowCount: 14,
+  },
+  {
     zoneId: 'date-remainders',
     decisionRef:
       'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149',
     rowCount: 4,
   },
-  // 07.09: эти два кластера не новый долг, а прежний под новым адресом. Решения
-  // жили якорями в файлах дизайнера (subscription.v4.dc.html, tab-activity.v4.dc.html,
-  // ОТВЕТ-47-находок.md); пакет 45 переписал канвасы, якорей не стало, и 24
-  // вердикта повисли на ссылках в никуда. Решения перенесены в наш архив со
-  // стабильными якорями — по одному адресу на зону вместо россыпи, отсюда и
-  // цифры 13 и 6 там, где раньше стояли мелкие кластеры вне scope гейта.
+  // 07.09: subscription/tab-activity — ранний перенос якорей; strength-builder,
+  // norm-correction, home-widgets×2, reports-insights×2 — этот коммит (ОТВЕТ-47/263).
   {
     zoneId: 'subscription',
     decisionRef:

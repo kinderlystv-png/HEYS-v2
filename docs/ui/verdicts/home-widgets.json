@@ -22423,14 +22423,14 @@
       "f": "Кадр всё ещё пишет ключ «Недосып за 7 дней». Контракт «вид · сон «Окно сна»» (канвас :189) требует «Недосып · 7 дней»: длинная шапка даёт 127 px при 121 px внутренней ширины 2×1. Продукт следует контракту, v4Kicker('Недосып · 7 дней') :4623. Кадр нужно переснять. Смоук: home-widgets-owner-batch.test.js / widgets-sleep-debt-v4.test.js.",
       "h": "9dccfe7c4cfb",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/home-widgets.v4.dc.html:189"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#home-widgets-background-redraw-x17-2026-09-05"
     },
     "Сон · Долг за неделю · 04": {
       "v": "≠",
       "f": "Кадр пишет «норма 7,5». Контракт :189 требует мету «7,5 ч» без слова «норма». Продукт: formatRuUnit(formatRuDecimal(target, 1), 'ч') :4625 на .widget-v4-row__meta — 600 9px/--v4-ink-data уже совпали (730:10829). Спор только слово «норма». Кадр нужно переснять. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "a119acc6ac73",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/home-widgets.v4.dc.html:189"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#home-widgets-background-redraw-x17-2026-09-05"
     },
     "Сон · Долг за неделю · 05": {
       "v": "=",
@@ -24505,7 +24505,7 @@
       "f": "Кадр: «14 › Недосып за 7 дней › норма 7,5 › −3,2». «14» — .num клетки. «−3,2» — демо долга. Ключ и мета — старая копия; контракт :189 требует «Недосып · 7 дней» / «7,5 ч». Продукт следует контракту. Кадр нужно переснять.",
       "h": "8c3c7b4c88b7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/home-widgets.v4.dc.html:189"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#home-widgets-background-redraw-x17-2026-09-05"
     },
     "Сон · Окно сна · текст": {
       "v": "=",
@@ -24975,7 +24975,7 @@
       "f": "Кадр ставит ряд чипов в колонку каталога (зазор 8, поля 2 2 0), чтобы показать третье место глифа. Продукт чипы держит на плитке веса (.widget-weight__stats / __stat, 730:4723, AnalyticsBlock :5032) — строка 19 уже =. Ряд в CatalogStrip не заводил: это композит трёх мест, не раскладка карточки.",
       "h": "de499f380534",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/home-widgets.v4.dc.html:345"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#home-widgets-background-redraw-x17-2026-09-05"
     },
     "Каталог · значки вместо эмодзи · 19": {
       "v": "=",

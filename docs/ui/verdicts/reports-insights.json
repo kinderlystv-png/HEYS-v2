@@ -328,7 +328,7 @@
       "f": "контракт :4461 требует вход «Обсудить норму с куратором»; ReportsV4ZeroActions удалён 30.08 — apps/web/__tests__/reports-tiers-contract.test.js:27-28; вместо него heys_day_stats_v1.js:809-833 «Записать замер»",
       "h": "9cc898e1fdf0",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4346"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#graph-cloud-arrow-spec-2026-09-05"
     },
     "порог строки недели": {
       "v": "=",
@@ -684,7 +684,7 @@
       "f": "000-base-and-gamification.css:366 svg по контейнеру W=296 H=96 против 262×52–56 в строке; план --v4-edge 18 % сведён 01.09, разрыв данных линией не рисуется",
       "h": "fac1eb63e7c0",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4332"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "пустое место в блоке": {
       "v": "≠",
@@ -1366,7 +1366,7 @@
       "f": "733-ui-v4-reports.css:101-108 продукт 44/600; кадр «·23» ещё 60/.9 — строка «вид · Баланс за период» :4421 требует пересъёмку кадра",
       "h": "522e555374e0",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4421"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#graph-cloud-arrow-spec-2026-09-05"
     },
     "Визуал v4 · Отчёты · 24": {
       "v": "≠",
@@ -1608,7 +1608,7 @@
       "f": "кадр «91,1 кг» в контексте снятого блока «Замеры тела»; в продукте вес в карточке динамики, не в том же кадре",
       "h": "531c4056ec64",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4346"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#graph-cloud-arrow-spec-2026-09-05"
     },
     "Визуал v4 · Отчёты · 69": {
       "v": "=",
@@ -1824,7 +1824,7 @@
       "f": "Кадр рисует правую пилюлю «Заполнить» рядом с заголовком «Замеры тела»; продукт даёт кнопку «Записать замер» во всю ширину карточки (heys_day_stats_v1.js:821, .reports-v4-measure__cta в apps/web/styles/modules/733-ui-v4-reports.css:1316). Так прямо требует именованная строка зоны «карточка · призыв о замерах»: «кнопка „Записать замер\" 44 радиусом 999 на --c2 тоном --ac во всю ширину карточки. Кнопка не --acs: это напоминание, а не главное действие вкладки». Что пакет 42 добавил в строку — высоту, — код уже держит: замер chromium 375 px 06.09 даёт min-height 44px и высоту 44 (набранной из padding нет), радиус 999px, фон роль --v4-hero (--c2) rgb(239,227,207) песочный и rgb(226,236,246) синий, тон --v4-act-text (--ac) rgb(138,74,32) и rgb(29,94,150). Отступление — ширина, заливка не --acs, поля 0 16 вместо 0 17 и кегль 12 вместо 11,5: всё следствия перестройки пилюли в кнопку во всю ширину.",
       "h": "5220cd45081f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4346"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#graph-cloud-arrow-spec-2026-09-05"
     },
     "Визуал v4 · Отчёты · 106": {
       "v": "—",
@@ -2419,7 +2419,7 @@
       "f": "Невыбранный чип «30» — color var(--v4-ink-30) (734-ui-v4-insights.css:744), min-height 44px (734-ui-v4-insights.css:737) против 34px кадра ·63; 734-ui-v4-insights.css:744 .insights-v4-window__chip:not(.is-active) color; 734-ui-v4-insights.css:744 .insights-v4-window__chip:not(.is-active) color; 734-ui-v4-insights.css:744 .insights-v4-window__chip:not(.is-active) color; sand rgba(0,0,0/0.3) blue rgba(0,0,0/0.3) — computed :3001 2026-09-06",
       "h": "d334efd7ed7a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4330"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "Инсайты · 64": {
       "v": "=",
@@ -2501,7 +2501,7 @@
       "f": "734-ui-v4-insights.css:313 .insights-v4-detail__head — padding 16/18/0 в кадре нет; экран держится .insights-v4__content :67",
       "h": "ae2a25b2fc10",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4876"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "Инсайты · подробно · 02": {
       "v": "=",
@@ -2648,7 +2648,7 @@
       "f": "734-ui-v4-insights.css:865-869 .meal-rec-v4__title 700 13.5/1.35; кадр «·03» 600 13.5/1.4 — начертание",
       "h": "73eb58b45d29",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4876"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "Инсайты · ярус Питание · 04": {
       "v": "=",
@@ -2665,7 +2665,7 @@
       "f": "720-predictive-insights.css:9293-9310 .meal-rec-card__title/.meal-rec-card__subtitle — пре-v4 карточка рекомендации; кегль/тон не сведены с кадром яруса Питание ·06",
       "h": "d8a3b1fa0b2d",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4876"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "Инсайты · ярус Питание · 07": {
       "v": "=",
@@ -3564,7 +3564,7 @@
       "f": "heys_discipline_matrix_v1.js — доля строки матрицы; кадр width 46% --gr2 против контракта нулевой строки",
       "h": "5b7480a50894",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4461"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#graph-cloud-arrow-spec-2026-09-05"
     },
     "Отчёты · нулевая строка матрицы · 23": {
       "v": "=",
@@ -3607,7 +3607,7 @@
       "f": "кадр «30 мл на кг веса» из списка нулевой строки; продукт показывает среднюю долю нормы в матрице, не тот список — heys_discipline_matrix_v1.js",
       "h": "0983acf71662",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4346"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#graph-cloud-arrow-spec-2026-09-05"
     },
     "Отчёты · нулевая строка матрицы · 31": {
       "v": "—",
@@ -3626,7 +3626,7 @@
       "f": "пояснение «Месяц без единого дня…» из кадра нулевой строки; в продукте нет яруса советов ReportsV4ZeroActions — __tests__/reports-tiers-contract.test.js:27",
       "h": "9ba2e2d36e90",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4346"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#graph-cloud-arrow-spec-2026-09-05"
     },
     "Стоит внимания · голос куратора · 01": {
       "v": "=",
@@ -4235,14 +4235,14 @@
       "f": "кадр rgba(var(--ink),.1) = 10 % на полоске 26×8; контракт «Ритм приёмов» :4358 — занятый приём --gr2, не 10 % чернил",
       "h": "002049220dff",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4358"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "Ярус Питание · после последнего приёма · 16": {
       "v": "≠",
       "f": "кадр полоска 40×8 rgba(ink,.1); продукт .insights-v4-nutrition__rhythm-bar --v4-track 12 % — другая форма ритма",
       "h": "82b6dae8596b",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4358"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "Ярус Питание · после последнего приёма · 17": {
       "v": "=",
@@ -4526,7 +4526,7 @@
       "f": "100-metrics-and-graphs.css:371-374 .kcal-realdata-card__button--secondary --v4-ink-2 (55 %); строка «кнопки и области нажатия» :4330 просит вторичную 58 % — ближайшая ступень набора",
       "h": "9edaca2297a3",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4330"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "Мало калорий · подтверждение · 17": {
       "v": "=",
@@ -4735,7 +4735,7 @@
       "f": "733-ui-v4-reports.css:534-538 .reports-v4-wellbeing__chart height 96px; кадр столбик 30×6 заливка rgba(ink,.08) = 8 % — трек wellbeing, не тот рисунок",
       "h": "7ed31d71c513",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/reports-insights.v4.dc.html:4332"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#verdict-equals-same-result-2026-09-05"
     },
     "Визуал v4 · Отчёты · рисунок 24": {
       "v": "≠",

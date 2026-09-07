@@ -703,7 +703,7 @@
       "f": "Кадр просит «Назад» 700 12px/1 var(--ink-2), но первый шаг правки рисует крест закрытия потока, не .mc-header-btn--back — heys_products flow edit step 1.",
       "h": "4b90b4798835",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/product-card.v4.dc.html:321"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#product-card-two-ratings-x7-2026-09-05"
     },
     "Правка продукта · основные · 03": {
       "v": "=",

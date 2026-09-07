@@ -827,10 +827,10 @@
       "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 04": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: Точное утверждение строки пока не покрыто построчным DOM/computed-style/semantic evidence; диагностический pixel-diff сам по себе не доказывает совпадение.",
+      "v": "=",
+      "f": "Live Canvas pair checks the scroll area padding.",
       "h": "c629f84f9712",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for NC5"]
+      "evidence": ["computed-style: apps/web/scripts/ui-v4-visual-capture.mjs"]
     },
     "Сверка · норма снизилась · 05": {
       "v": "=",
@@ -846,11 +846,11 @@
     },
     "Сверка · норма снизилась · 07": {
       "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: Текст и ветка реализованы для evidence.kind=stable_girths, но текущее кураторское RPC отдаёт только талию и не может доказать стабильность минимум двух обхватов в момент решения. До расширения server contract реальный owner-flow сохраняет missing/waist_only и не достигает этого Canvas-state.",
+      "f": "Canvas требует stable_girths (≥2 обхвата за 14 дней), но owner-flow до расширения server RPC недостижим; ждём решения в docs/ui/UI_V4_FINDINGS.md#norm-correction-nc5-stable-girths",
       "h": "755acd2651a3",
       "evidence": [
         "unsupported: get_curator_clients_window returns waist but not biceps/thigh",
-        "semantic-test: apps/web/__tests__/curator-panel-rows.test.js"
+        "semantic-test: apps/web/__tests__/norm-correction-owner-flow.test.js"
       ]
     },
     "Сверка · норма снизилась · 08": {
@@ -2179,14 +2179,14 @@
       "f": "шапку понедельничной шторки рисует шторка, не карточка; пилюли состояния в шапке нет — состояние в заголовке карточки",
       "h": "175bdcc2e73a",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 02": {
       "v": "≠",
       "f": "то же: имя экрана принадлежит шторке недели",
       "h": "d6b7cb71c8ce",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 03": {
       "v": "=",
@@ -2208,14 +2208,14 @@
       "f": "кадра в продукте нет: решение куратора «не менять» до клиента не доезжает — движок знает только исходы своего расчёта. Что для него нужно — отдельная запись в UI_V4_FINDINGS",
       "h": "de17b0906aaa",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 07": {
       "v": "≠",
       "f": "кадра в продукте нет: решение куратора «не менять» до клиента не доезжает — движок знает только исходы своего расчёта. Что для него нужно — отдельная запись в UI_V4_FINDINGS",
       "h": "c9f33d58b83d",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 08": {
       "v": "=",
@@ -2227,7 +2227,7 @@
       "f": "кадра в продукте нет: решение куратора «не менять» до клиента не доезжает — движок знает только исходы своего расчёта. Что для него нужно — отдельная запись в UI_V4_FINDINGS Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "6f6ceb49976e",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 10": {
       "v": "=",
@@ -2249,21 +2249,21 @@
       "f": "кадра в продукте нет: решение куратора «не менять» до клиента не доезжает — движок знает только исходы своего расчёта. Что для него нужно — отдельная запись в UI_V4_FINDINGS",
       "h": "c862dbd3b2bf",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 14": {
       "v": "≠",
       "f": "кадра в продукте нет: решение куратора «не менять» до клиента не доезжает — движок знает только исходы своего расчёта. Что для него нужно — отдельная запись в UI_V4_FINDINGS Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "15c715df5d5f",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 15": {
       "v": "≠",
       "f": "кадра в продукте нет: решение куратора «не менять» до клиента не доезжает — движок знает только исходы своего расчёта. Что для него нужно — отдельная запись в UI_V4_FINDINGS Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "f7ab7da86939",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 16": {
       "v": "=",
@@ -2275,7 +2275,7 @@
       "f": "кадра нет: канал «исход решения куратора доезжает до клиента» не построен; кнопка «Спросить куратора» на других кадрах — .weekly-wrap-correction__btn 48 px на --v4-hero",
       "h": "041d6d038b79",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "Pro · куратор решил не менять · 18": {
       "v": "=",
@@ -2438,7 +2438,7 @@
       "f": "кадра в продукте нет: решение куратора «не менять» до клиента не доезжает — движок знает только исходы своего расчёта. Что для него нужно — отдельная запись в UI_V4_FINDINGS",
       "h": "534cc62361ed",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/norm-correction.v4.dc.html:715"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#norm-correction-curator-decision-2026-09-05"
     },
     "как читать графику": {
       "v": "—",

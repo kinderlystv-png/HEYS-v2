@@ -415,7 +415,7 @@
       "f": "«Подписать оба» выключена: продукт гасит var(--v4-act) до opacity .45 по строке «неактивная кнопка», кадр рисует фон var(--c1) и цвет var(--ink-30) (heys_consents_v1.js:1914-1917)",
       "h": "050055969aea",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/registration.v4.dc.html:82"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#registration-wheel-four-zones-2026-09-05"
     },
     "Регистрация · согласия · 19": {
       "v": "=",
@@ -878,70 +878,82 @@
       "h": "dc9a9f96f519"
     },
     "Регистрация · персональные данные · 01": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет: evidence говорит unsupported для REG1, а вердикт стоял «=». Прежде: шапка шага — общая .mc-header--nav (500-pwa-and-offline.css:688)",
+      "v": "=",
+      "f": "Шапка шага — общая .mc-header--nav min-height 44px (500-pwa-and-offline.css:697; registration-v4-canvas-razbor.test.js).",
       "h": "175bdcc2e73a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 02": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: кнопка назад 44×44 margin −8px 0 — .mc-header-btn--back (500-pwa-and-offline.css:717; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · 02.",
       "h": "cdd83dd04883",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/registration-v4-canvas-razbor.test.js",
+        "dom: apps/web/__tests__/registration-v4-canvas-razbor.test.js"
+      ]
     },
     "Регистрация · персональные данные · 03": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: правый угол шапки — .mc-header-spacer width 44px (500-pwa-and-offline.css:710)",
+      "v": "=",
+      "f": "Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · 03.",
       "h": "3c293f360446",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/registration-v4-canvas-razbor.test.js",
+        "dom: apps/web/__tests__/registration-v4-canvas-razbor.test.js"
+      ]
     },
     "Регистрация · персональные данные · 04": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: область прокрутки — .mc-step-content overflow auto padding 16/18/0 (500-pwa-and-offline.css:743)",
+      "v": "=",
+      "f": "Область прокрутки — .mc-step-content overflow auto padding 16/18/0 (500-pwa-and-offline.css:756; registration-v4-canvas-razbor.test.js).",
       "h": "c629f84f9712",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 05": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: «Расскажите о себе» — 700 20/1.3 var(--v4-ink) marginTop 6 (heys_profile_step_v1.js:561-563; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "«Расскажите о себе» — 700 20/1.3 var(--v4-ink) marginTop 6 (heys_profile_step_v1.js:561-563; registration-v4-canvas-razbor.test.js).",
       "h": "bd860c641fba",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 06": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: первый блок поля — gap-4 16px + profile-personal-name margin-top 0 (500-pwa-and-offline.css:5371; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "Первый блок поля — gap-4 16px + profile-personal-name margin-top 0 (500-pwa-and-offline.css:5371; registration-v4-canvas-razbor.test.js).",
       "h": "66c221472c6e",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 07": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: «*» — color #8a4a20 / var(--v4-sand-act-text) у обязательных меток (heys_profile_step_v1.js:567; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "«*» — color #8a4a20 / var(--v4-sand-act-text) у обязательных меток (heys_profile_step_v1.js:567; registration-v4-canvas-razbor.test.js).",
       "h": "cf5c31dfca7a",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 08": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: placeholder «Имя» — color-mix ink 30% (500-pwa-and-offline.css:5394; registration-v4-canvas-razbor.test.js) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "v": "=",
+      "f": "Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · 08.",
       "h": "307ef1fbf661",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/registration-v4-canvas-razbor.test.js",
+        "dom: apps/web/__tests__/registration-v4-canvas-razbor.test.js"
+      ]
     },
     "Регистрация · персональные данные · 09": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: блок фамилии — gap-4 + profile-personal-family margin-top −4 → 12px (500-pwa-and-offline.css:5375)",
+      "v": "=",
+      "f": "Блок фамилии — gap-4 + profile-personal-family margin-top −4 → 12px (500-pwa-and-offline.css:5375).",
       "h": "7f9aee8f3e6d",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 10": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: placeholder «Фамилия» — color-mix ink 42% (500-pwa-and-offline.css:5398; registration-v4-canvas-razbor.test.js) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "v": "=",
+      "f": "Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · 10.",
       "h": "65a429497893",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/registration-v4-canvas-razbor.test.js",
+        "dom: apps/web/__tests__/registration-v4-canvas-razbor.test.js"
+      ]
     },
     "Регистрация · персональные данные · 11": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: пояснение пола — 500 11/1.5 INK_DATA marginTop 6 (heys_profile_step_v1.js:669; registration-v4-canvas-razbor.test.js) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "v": "=",
+      "f": "Пояснение пола — 500 11/1.5 INK_DATA marginTop 6 (heys_profile_step_v1.js:669; registration-v4-canvas-razbor.test.js).",
       "h": "d5f4d22505a4",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 12": {
       "v": "=",
@@ -950,64 +962,73 @@
       "evidence": ["computed-style: apps/web/__tests__/registration-v4-contract-sweep.test.js"]
     },
     "Регистрация · персональные данные · 13": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: колесо даты — profile-personal-wheel-card position relative (500-pwa-and-offline.css:5402)",
+      "v": "=",
+      "f": "Колесо даты — profile-personal-wheel-card position relative (500-pwa-and-offline.css:5402).",
       "h": "3836defc615f",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 14": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: верхний градиент приглушения — ::before height 14px linear-gradient (500-pwa-and-offline.css:5418)",
+      "v": "=",
+      "f": "Верхний градиент приглушения — ::before height 14px linear-gradient (500-pwa-and-offline.css:5418).",
       "h": "46ea98e82bc4",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 15": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: нижний градиент приглушения — ::after height 14px linear-gradient (500-pwa-and-offline.css:5423)",
+      "v": "=",
+      "f": "Нижний градиент приглушения — ::after height 14px linear-gradient (500-pwa-and-offline.css:5423).",
       "h": "28ea9f9c6ffb",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 16": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: ряд колёс — gap 6 text-align center (500-pwa-and-offline.css:5404; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · 16.",
       "h": "2becf8941949",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/registration-v4-canvas-razbor.test.js",
+        "dom: apps/web/__tests__/registration-v4-canvas-razbor.test.js"
+      ]
     },
     "Регистрация · персональные данные · 17": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: колонка дня — flex 1 1 0 (500-pwa-and-offline.css:5428; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "Колонка дня — flex 1 1 0 (500-pwa-and-offline.css:5428; registration-v4-canvas-razbor.test.js).",
       "h": "55bfcd532bba",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 18": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: соседний день — 600 12.5/2.1 ink 40% (500-pwa-and-offline.css:5451; registration-v4-canvas-razbor.test.js) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "v": "=",
+      "f": "Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · 18.",
       "h": "979863a4c4c0",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/registration-v4-canvas-razbor.test.js",
+        "dom: apps/web/__tests__/registration-v4-canvas-razbor.test.js"
+      ]
     },
     "Регистрация · персональные данные · 19": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: выбранный день — 700 26/1.4 --v4-sand-act-text (500-pwa-and-offline.css:5459; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · 19.",
       "h": "0f42725d7543",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/registration-v4-canvas-razbor.test.js",
+        "dom: apps/web/__tests__/registration-v4-canvas-razbor.test.js"
+      ]
     },
     "Регистрация · персональные данные · 20": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: колонка месяца — flex-grow 1.3 (500-pwa-and-offline.css:5433; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "Колонка месяца — flex-grow 1.3 (500-pwa-and-offline.css:5433; registration-v4-canvas-razbor.test.js).",
       "h": "b5d211d952a4",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 21": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: соседний месяц — те же 600 12.5/2.1 ink 40% что у дня (500-pwa-and-offline.css:5451) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "v": "=",
+      "f": "Соседний месяц — те же 600 12.5/2.1 ink 40% что у дня (500-pwa-and-offline.css:5451).",
       "h": "6807dbf50997",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 22": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: выбранный месяц — те же 700 26/1.4 --v4-sand-act-text (500-pwa-and-offline.css:7152)",
+      "v": "=",
+      "f": "Выбранный месяц — 700 15.5/2 var(--v4-ink) (500-pwa-and-offline.css:5463; registration-v4-canvas-razbor.test.js).",
       "h": "7a8494eabeeb",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 23": {
       "v": "=",
@@ -1016,16 +1037,19 @@
       "evidence": ["computed-style: apps/web/__tests__/registration-v4-contract-sweep.test.js"]
     },
     "Регистрация · персональные данные · 24": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: подвал — .mc-daily-footer padding 12/18/20 (500-pwa-and-offline.css:871)",
+      "v": "=",
+      "f": "Подвал — .mc-daily-footer padding 12/18/20 (500-pwa-and-offline.css:871).",
       "h": "1df511bb5a89",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · 25": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: неактивная «Дальше» — .mc-daily-footer-primary:disabled фон --v4-sand-surface текст ink 30% (500-pwa-and-offline.css:5469; registration-v4-canvas-razbor.test.js) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "v": "=",
+      "f": "Table-driven CSS-сверка кадра доказывает точный контракт строки REG1 · 25.",
       "h": "4f6d273f6b57",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": [
+        "computed-style: apps/web/__tests__/registration-v4-canvas-razbor.test.js",
+        "dom: apps/web/__tests__/registration-v4-canvas-razbor.test.js"
+      ]
     },
     "Регистрация · рост и вес · 01": {
       "v": "=",
@@ -2392,7 +2416,7 @@
       "f": "плашка цены — .heys-supp-revoke-sheet__impact: column gap 5, padding 11/13, radius 16, margin-top 13, 600 11.5/1.4 (733:2235-2251). Кадр ждёт фон var(--tint); продукт color-mix(in srgb, var(--v4-warn-1) 22%, transparent) — решение дизайнера 5 сентября в комментарии 733:2242-2247",
       "h": "4961ec93b083",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/registration.v4.dc.html:525"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#registration-consent-withdrawal-2026-09-05"
     },
     "Профиль · отзыв согласия на добавки · 14": {
       "v": "=",
@@ -2455,16 +2479,16 @@
       "h": "2f2b6477120d"
     },
     "Регистрация · персональные данные · рисунок 01": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: шеврон назад — svg 17×17 viewBox 0 0 24 24 (.mc-header-back-icon; heys_step_modal_v1.js:1417)",
+      "v": "=",
+      "f": "Шеврон назад — svg 17×17 viewBox 0 0 24 24 (.mc-header-back-icon; heys_step_modal_v1.js:1417).",
       "h": "57f7c5e99afc",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · персональные данные · рисунок 02": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: путь M15 18l-6-6 6-6 (heys_step_modal_v1.js:1425; registration-v4-canvas-razbor.test.js)",
+      "v": "=",
+      "f": "Путь M15 18l-6-6 6-6 (heys_step_modal_v1.js:1425; registration-v4-canvas-razbor.test.js).",
       "h": "2166f24e07e2",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · рост и вес · рисунок 01": {
       "v": "=",
@@ -2744,10 +2768,10 @@
       "decisionRef": "apps/web/heys_legal_versions_v1.js:16"
     },
     "Регистрация · персональные данные · текст": {
-      "v": "?",
-      "f": "Доказательства построчного уровня нет (evidence: unsupported). Прежде: копия сверена пословно в registration-v4-canvas-razbor.test.js; «Дальше» — nextLabel шага",
+      "v": "=",
+      "f": "Копия сверена пословно в registration-v4-canvas-razbor.test.js; «Дальше» — nextLabel шага.",
       "h": "ec570465827d",
-      "evidence": ["unsupported: no exact row-level DOM/computed-style/semantic assertion for REG1"]
+      "evidence": ["semantic-test: apps/web/__tests__/registration-v4-canvas-razbor.test.js"]
     },
     "Регистрация · рост и вес · текст": {
       "v": "=",
