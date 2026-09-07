@@ -3091,7 +3091,7 @@
 .caloric-balance-card::after {
   content: '';
   position: absolute;
-  inset: -2px 0;
+  inset: -3px 0;
 }
 
 
@@ -3174,6 +3174,13 @@
   cursor: pointer;
   transition: all 0.2s ease;
   user-select: none;
+  position: relative;
+}
+
+.caloric-balance-card::after {
+  content: '';
+  position: absolute;
+  inset: -3px 0;
 }
 
 @media (hover: hover) {
@@ -3248,12 +3255,6 @@
 .caloric-balance-viz-inline.caloric-balance-viz-large .balance-viz-bar {
   font-size: 18px !important;
   position: relative;
-}
-
-.balance-viz-bar::after {
-  content: '';
-  position: absolute;
-  inset: -8px 0;
 }
 
 
@@ -4179,6 +4180,13 @@
 .balance-viz-bar {
   cursor: pointer;
   transition: transform 0.15s ease, text-shadow 0.15s ease;
+  position: relative;
+}
+
+.balance-viz-bar::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
 }
 
 @media (hover: hover) {
@@ -6844,6 +6852,13 @@
   display: flex;
   flex-direction: column;
   contain: layout style paint;
+  position: relative;
+}
+
+.household-activity-card::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 
 @media (hover: hover) {
@@ -6989,6 +7004,13 @@
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
+  position: relative;
+}
+
+.add-training-btn::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
 }
 
 @media (hover: hover) {

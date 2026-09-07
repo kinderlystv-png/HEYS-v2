@@ -6999,15 +6999,7 @@ color: var(--v4-sand-ink, #201e1d);
 @media (max-width: 380px) {
   .yesterday-quick-btn {
     display: none;
-  position: relative;
-}
-
-.yesterday-quick-btn::after {
-  content: '';
-  position: absolute;
-  inset: -11px;
-}
-
+  }
 
   .hdr-bottom {
     gap: 8px;
@@ -8210,6 +8202,7 @@ body:has(.offline-banner) .wrap {
   justify-content: center;
   gap: 3px;
   padding: 0 12px;
+  position: relative;
   /* v4-intentional */
   background: var(--v4-surface);
   border: none;
@@ -8220,15 +8213,7 @@ body:has(.offline-banner) .wrap {
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
-  position: relative;
 }
-
-.date-picker--v4 .date-picker-trigger::after {
-  content: '';
-  position: absolute;
-  inset: -11px;
-}
-
 
 @media (hover: hover) {
   .date-picker--v4 .date-picker-trigger:hover {
@@ -8377,6 +8362,7 @@ body:has(.offline-banner) .wrap {
   padding: 0;
   border: none;
   background: transparent;
+  position: relative;
   /* Запасное — песочное значение САМОЙ роли (002-ui-v4-palette-roles.css:147),
      а не соседней поверхности. Прежде голую роль легализовал маркер
      v4-intentional, но он стоял НАД строкой фона и уехал вместе с ней, когда
@@ -8389,15 +8375,7 @@ body:has(.offline-banner) .wrap {
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  position: relative;
 }
-
-.date-picker--v4 .date-picker-inline-today::after {
-  content: '';
-  position: absolute;
-  inset: -11px;
-}
-
 
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
   /* v4-intentional */
@@ -13872,6 +13850,13 @@ body:has(:is(
   align-items: center;
   justify-content: center;
   transition: background 0.15s, transform 0.1s, box-shadow 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.yesterday-quick-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
 }
 
 @media (hover: hover) {

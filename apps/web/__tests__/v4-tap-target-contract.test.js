@@ -23,9 +23,14 @@ const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
 /** Вернуть тело правила `selector { ... }` из CSS. */
 function rule(css, selector) {
-  const at = css.indexOf(`${selector} {`);
-  if (at < 0) return null;
-  return css.slice(at, css.indexOf('}', at));
+  const needle = `${selector} {`;
+  let at = 0;
+  while ((at = css.indexOf(needle, at)) >= 0) {
+    const block = css.slice(at, css.indexOf('}', at));
+    if (!/display:\s*none/.test(block) || block.length > 48) return block;
+    at += needle.length;
+  }
+  return null;
 }
 
 /** Найти блок ::after, в том числе в групповом селекторе. */
@@ -62,6 +67,37 @@ const cases = [
     inset: '-11px 0',
     visible: 34,
   },
+  {
+    what: 'минус быстрого undo на Главной',
+    file: 'styles/modules/730-widgets-dashboard.css',
+    host: '.widgets-quick-minus',
+    inset: '-11px 0',
+    hostPosition: 'absolute',
+    visible: 22,
+  },
+  {
+    what: 'кнопка изменения размера виджета',
+    file: 'styles/modules/730-widgets-dashboard.css',
+    host: '.widget__resize-btn',
+    inset: '-11px',
+    hostPosition: 'absolute',
+    visible: 22,
+  },
+  {
+    what: 'кнопка удаления виджета в режиме редактирования',
+    file: 'styles/modules/730-widgets-dashboard.css',
+    host: '.widgets-tab--editing .widget__delete-btn',
+    inset: '-11px',
+    hostPosition: 'absolute',
+    visible: 22,
+  },
+  {
+    what: 'крестик шторки виджета',
+    file: 'styles/modules/730-widgets-dashboard.css',
+    host: '.widget-bd-sheet__close',
+    inset: '-7px',
+    visible: 30,
+  },
 ];
 
 describe('контракт цели касания 44 pt', () => {
@@ -69,7 +105,8 @@ describe('контракт цели касания 44 pt', () => {
     const css = read(c.file);
     const host = rule(css, c.host);
     expect(host, `нет правила ${c.host}`).toBeTruthy();
-    expect(host).toMatch(/position:\s*relative/);
+    const pos = c.hostPosition ?? 'relative';
+    expect(host).toMatch(new RegExp(`position:\\s*${pos}`));
 
     const after = afterRule(css, c.host);
     expect(after, `нет припуска ${c.host}::after`).toBeTruthy();
@@ -80,7 +117,14 @@ describe('контракт цели касания 44 pt', () => {
   const manifest = JSON.parse(
     read('__tests__/fixtures/v4-tap-target-inset-manifest.json'),
   );
-  const polosa5Zones = new Set(['planning', 'settings-system', 'service-curator']);
+  const polosa5Zones = new Set([
+    'planning',
+    'settings-system',
+    'service-curator',
+    'home-widgets',
+    'gamification',
+    'date-remainders',
+  ]);
   const polosa5Cases = manifest.filter((c) => polosa5Zones.has(c.zone));
 
   it.each(polosa5Cases)('полоса 5 · $zone · $host: припуск ::after', (c) => {
@@ -133,5 +177,27 @@ describe('контракт цели касания 44 pt', () => {
     expect(rule(css, '.advice-list-header-link::after')).toBeNull();
     expect(rule(css, '.advice-list-header-link--read-all'))
       .toMatch(/min-height:\s*44px/);
+  });
+
+  const dateRemaindersVisible44 = [
+    '.date-picker--v4 .date-picker-trigger',
+    '.date-picker--v4 .date-picker-inline-today',
+  ];
+
+  it.each(dateRemaindersVisible44)(
+    'date-remainders · %s держит 44 видимым min-height без ::after',
+    (host) => {
+      const css = read('styles/modules/000-base-and-gamification.css');
+      expect(afterRule(css, host)).toBeNull();
+      expect(rule(css, host)).toMatch(/min-height:\s*44px/);
+    },
+  );
+
+  it('date-remainders · «Вчера» добирает 44 припуском, видимый размер 33', () => {
+    const css = read('styles/modules/000-base-and-gamification.css');
+    const host = rule(css, '.yesterday-quick-btn');
+    expect(host).toMatch(/position:\s*relative/);
+    expect(host).toMatch(/height:\s*33px/);
+    expect(afterRule(css, '.yesterday-quick-btn')).toContain('inset: -6px 0');
   });
 });

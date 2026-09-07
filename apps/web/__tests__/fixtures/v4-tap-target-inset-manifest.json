@@ -826,5 +826,71 @@
     "file": "styles/modules/000-base-and-gamification.css",
     "host": ".tab-settings-diary-toggle",
     "inset": "-1px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widgets-tab__btn",
+    "inset": "-11px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widgets-quick-chip",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widget-v4-add",
+    "inset": "-14px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widget-v4-catalog__item",
+    "inset": "-1px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widget-v4-catalog__bar-cancel",
+    "inset": "-5px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widgets-grid--remove-pick .widget",
+    "inset": "-4px"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/100-metrics-and-graphs.css",
+    "host": ".balance-viz-bar",
+    "inset": "-8px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/100-metrics-and-graphs.css",
+    "host": ".add-training-btn",
+    "inset": "-1px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/100-metrics-and-graphs.css",
+    "host": ".household-activity-card",
+    "inset": "-4px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/100-metrics-and-graphs.css",
+    "host": ".caloric-balance-card",
+    "inset": "-3px 0"
+  },
+  {
+    "zone": "date-remainders",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".yesterday-quick-btn",
+    "inset": "-6px 0"
   }
 ]

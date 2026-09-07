@@ -507,6 +507,13 @@ body:has(.page-reports) .hdr::after {
   align-items: center;
   gap: 4px;
   transition: all 0.2s ease;
+  position: relative;
+}
+
+.widgets-tab__btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
 }
 
 @media (hover: hover) {
@@ -885,7 +892,15 @@ body:has(.page-reports) .hdr::after {
   gap: 4px;
   transition: all 0.2s ease;
   color: var(--text-primary, #1f2937);
+  position: relative;
 }
+
+.widgets-header__btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
 
 [data-theme$="dark"] .widgets-header__btn {
   color: var(--text-primary, #e5e7eb);
@@ -1302,7 +1317,15 @@ body:has(.page-reports) .hdr::after {
   border: none;
   cursor: pointer;
   transition: all var(--widget-transition-fast);
+  position: relative;
 }
+
+.widget__quick-action::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 @media (hover: hover) {
   .widget__quick-action:hover {
@@ -2318,6 +2341,12 @@ body:has(.page-reports) .hdr::after {
   transition: opacity 120ms ease;
 }
 
+.widget__resize-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
+}
+
 @media (hover: hover) {
   .widget__settings-btn:hover {
   background: var(--v4-water, #7d98a6);
@@ -2391,6 +2420,13 @@ body:has(.page-reports) .hdr::after {
   transition: opacity 0.2s ease, transform 0.12s ease;
   z-index: 12;
 }
+
+.widget__resize-handle::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 /* Меньшие resize handles для компактных виджетов */
 .widget--1x1 .widget__resize-handle,
@@ -2941,7 +2977,15 @@ body:has(.page-reports) .hdr::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
+
+.widgets-quick-sheet__chip::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
+}
+
 
 [data-theme$="dark"] .widgets-quick-sheet__chip {
   background: #2f2820;
@@ -3040,8 +3084,7 @@ body:has(.page-reports) .hdr::after {
 .widgets-quick-minus {
   position: absolute;
   left: 0;
-  top: 50%;
-  margin-top: -11px;
+  top: calc(50% - 11px);
   width: 22px;
   height: 22px;
   border-radius: 999px;
@@ -3057,10 +3100,10 @@ body:has(.page-reports) .hdr::after {
 
 /* «круг минуса и чип возврата — не меньше 44×44 за счёт прозрачных полей
    вокруг видимого круга 22 и чипа 28» (строка «области нажатия в карточке»). */
-.widgets-quick-minus::before {
+.widgets-quick-minus::after {
   content: '';
   position: absolute;
-  inset: -11px;
+  inset: -11px 0;
 }
 
 @keyframes widgets-quick-minus-in {
@@ -3106,7 +3149,7 @@ body:has(.page-reports) .hdr::after {
   animation: widgets-quick-chip-in 140ms ease-out;
 }
 
-.widgets-quick-chip::before {
+.widgets-quick-chip::after {
   content: '';
   position: absolute;
   inset: -8px 0;
@@ -3157,6 +3200,13 @@ body:has(.page-reports) .hdr::after {
     background 140ms ease,
     box-shadow 140ms ease;
 }
+
+.widgets-quick-pencil::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+}
+
 
 .widgets-quick-pencil.is-editing {
   background: var(--v4-tint, #f6e6dd);
@@ -3762,7 +3812,15 @@ body:has(.page-reports) .hdr::after {
   align-items: center;
   gap: 8px;
   transition: background 0.2s ease;
+  position: relative;
 }
+
+.widgets-empty__btn::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
 
 @media (hover: hover) {
   .widgets-empty__btn:hover {
@@ -6817,7 +6875,15 @@ body:has(.page-reports) .hdr::after {
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
+  position: relative;
 }
+
+.widgets-catalog__close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 @media (hover: hover) {
   .widgets-catalog__close:hover {
@@ -7600,7 +7666,15 @@ body:has(.page-reports) .hdr::after {
   font-size: 16px;
   cursor: pointer;
   transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  position: relative;
 }
+
+.widget-relapse-risk__modal-close::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
 
 @media (hover: hover) {
   .widget-relapse-risk__modal-close:hover {
@@ -7922,7 +7996,15 @@ body:has(.page-reports) .hdr::after {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  position: relative;
 }
+
+.widget-relapse-risk__dev-disclosure-summary::after {
+  content: '';
+  position: absolute;
+  inset: -10px 0;
+}
+
 
 .widget-relapse-risk__dev-disclosure-summary::-webkit-details-marker {
   display: none;
@@ -8052,7 +8134,15 @@ body:has(.page-reports) .hdr::after {
   cursor: pointer;
   transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  position: relative;
 }
+
+.widget-relapse-risk__modal-copy-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3px 0;
+}
+
 
 @media (hover: hover) {
   .widget-relapse-risk__modal-copy-btn:hover {
@@ -8362,7 +8452,15 @@ body:has(.page-reports) .hdr::after {
   align-items: center;
   justify-content: center;
   transition: background 0.15s ease;
+  position: relative;
 }
+
+.widget-crash-risk__popup-close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 @media (hover: hover) {
   .widget-crash-risk__popup-close:hover {
@@ -8907,7 +9005,16 @@ body.reports-fullscreen-open {
   color: var(--v4-act, #c67139);
   box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
   cursor: pointer;
+  position: relative;
 }
+
+.reports-fullscreen-modal__close-text,
+.reports-fullscreen-modal__close-icon::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
+}
+
 
 .reports-fullscreen-modal__close-text {
   min-height: 40px;
@@ -9553,7 +9660,15 @@ body.reports-fullscreen-open {
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
+
+.widgets-settings__close::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 
 @media (hover: hover) {
   .widgets-settings__close:hover {
@@ -9620,7 +9735,15 @@ body.reports-fullscreen-open {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s;
+  position: relative;
 }
+
+.widgets-settings__size::after {
+  content: '';
+  position: absolute;
+  inset: -9px 0;
+}
+
 
 .widgets-settings__size.active {
   background: var(--accent, #3b82f6);
@@ -9748,7 +9871,15 @@ body.reports-fullscreen-open {
   font-weight: 500;
   cursor: pointer;
   transition: background 0.15s;
+  position: relative;
 }
+
+.widgets-settings__scale-reset::after {
+  content: '';
+  position: absolute;
+  inset: -11px 0;
+}
+
 
 @media (hover: hover) {
   .widgets-settings__scale-reset:hover {
@@ -11963,7 +12094,15 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   cursor: pointer;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
+  position: relative;
 }
+
+.widget-v4-periods__btn::after {
+  content: '';
+  position: absolute;
+  inset: -17px 0;
+}
+
 
 .widget-v4-periods__btn.is-active {
   color: var(--v4-act-text, #8a4a20);
@@ -12052,6 +12191,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-family: inherit;
   grid-row: span 1;
   min-height: 0;
+  position: relative;
+}
+
+.widget-v4-add::after {
+  content: '';
+  position: absolute;
+  inset: -14px 0;
 }
 
 /* В одну колонку остаётся только знак — зазор под слово не нужен. */
@@ -12073,14 +12219,14 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   padding: 16px 18px 0;
 }
 
-.widget-v4-catalog__bar-cancel,
-.widget-v4-catalog__bar-done {
+.widget-v4-catalog__bar-cancel {
   flex: none;
   border: none;
   background: transparent;
   padding: 0;
-  margin: -16px 0;
+  margin: 0;
   min-height: 44px;
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -12089,14 +12235,33 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   line-height: 1;
   font-family: inherit;
   cursor: pointer;
-}
-
-.widget-v4-catalog__bar-cancel {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
 .widget-v4-catalog__bar-done {
+  flex: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  min-height: 44px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
   color: var(--v4-act-text, #8a4a20);
+}
+
+.widget-v4-catalog__bar-cancel::after,
+.widget-v4-catalog__bar-done::after {
+  content: '';
+  position: absolute;
+  inset: -5px 0;
 }
 
 .widget-v4-catalog__bar-mid {
@@ -12202,7 +12367,15 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font: inherit;
   cursor: pointer;
   text-align: left;
+  position: relative;
 }
+
+.widget-v4-catalog__item::after {
+  content: '';
+  position: absolute;
+  inset: -1px 0;
+}
+
 
 /* «Готовится»: строка в полную яркость — приглушённое обещание читается как
    поломка. Ни превью, ни даты; нажатие ничего не делает. */
@@ -12388,7 +12561,15 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font: 700 10.5px/1 Figtree, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
+  position: relative;
 }
+
+.widget-v4-catalog__remove-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
 
 [data-theme$="dark"] .widget-v4-catalog__blocked-text {
   color: #e08a72;
@@ -12402,6 +12583,17 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widgets-grid--remove-pick .widget {
   cursor: pointer;
   box-shadow: 0 0 0 2px color-mix(in srgb, #c67139 55%, transparent);
+  position: relative;
+}
+
+/* В режиме выбора плитки на удаление припуск перекрывает декоративную линию сверху. */
+.widgets-grid--remove-pick .widget::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  height: auto;
+  background: transparent;
+  pointer-events: auto;
 }
 
 .widget-v4-edit-footer {
@@ -12551,7 +12743,15 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
+  position: relative;
 }
+
+.widget-v4-empty__btn::after {
+  content: '';
+  position: absolute;
+  inset: -3px 0;
+}
+
 
 /* «Вернуть стандартный экран» — второй путь из пустоты. Текстом, а не
    заливкой: добавить виджет остаётся главным действием (кадр «Главная ·
@@ -13429,6 +13629,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widgets-tab--editing .widget__delete-btn {
+  position: absolute;
   top: 9px;
   right: 9px;
   width: 22px;
@@ -13443,11 +13644,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widgets-tab--editing .widget__delete-btn::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
+  inset: -11px;
 }
 
 .widgets-tab--editing .widget__settings-btn {
@@ -13947,7 +14144,15 @@ body:has(.widgets-tab) .widget-v4-mini.widget-water--micro {
   text-align: left;
   cursor: pointer;
   font-family: inherit;
+  position: relative;
 }
+
+.widget-wd-sheet__opt::after {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
 
 [data-theme$="dark"] .widget-wd-sheet__opt {
   background: rgba(242, 237, 230, 0.06);
@@ -14931,14 +15136,10 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 /* Кадр рисует круг 30×30, но палец меньше 44 px не ловит: зона нажатия
    растянута псевдоэлементом, сам круг остаётся 30 px. */
-.widget-bd-sheet__close::before {
+.widget-bd-sheet__close::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 44px;
-  height: 44px;
-  transform: translate(-50%, -50%);
+  inset: -7px;
 }
 
 .widget-bd-sheet__close svg {

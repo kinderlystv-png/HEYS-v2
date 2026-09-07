@@ -119,7 +119,10 @@ describe('Каталог · значки вместо эмодзи · шапка
     expect(cancel['font-weight']).toBe('700');
     expect(cancel['line-height']).toBe('1');
     expect(cancel['min-height']).toBe('44px');
-    expect(cancel.margin).toBe('-16px 0');
+    expect(cancel.margin).toBe('0');
+    expect(cancel.position).toBe('relative');
+    const cancelAfter = rules.get('.widget-v4-catalog__bar-cancel::after');
+    expect(cancelAfter.inset).toBe('-5px 0');
     expect(cancel.color).toContain('--v4-ink-3');
     expect(cancel.color).not.toMatch(/^#/);
 
@@ -127,7 +130,10 @@ describe('Каталог · значки вместо эмодзи · шапка
     expect(done['font-size']).toBe('12px');
     expect(done['font-weight']).toBe('700');
     expect(done['min-height']).toBe('44px');
-    expect(done.margin).toBe('-16px 0');
+    expect(done.margin).toBe('0');
+    expect(done.position).toBe('relative');
+    const doneAfter = rules.get('.widget-v4-catalog__bar-done::after');
+    expect(doneAfter.inset).toBe('-5px 0');
     expect(done.color).toContain('--v4-act-text');
 
     const mid = rules.get('.widget-v4-catalog__bar-mid');
