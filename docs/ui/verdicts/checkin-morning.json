@@ -4923,7 +4923,7 @@
       "f": "контракт «слова на экране»: состояния «замер идёт…» нет — кадр переснимается; продукт без этой строки (rg apps/web — 0); остальная копия сведена",
       "h": "6e2151301020",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/checkin-morning.v4.dc.html:82"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#checkin-morning-words-on-screen-2026-08-31"
     },
     "Чек-ин · курс добавок пуст · текст": {
       "v": "=",
@@ -5222,7 +5222,7 @@
       "f": "checkin-reserve-question-v4.test.js: тексты листа (followupStep) совпадают; строка «текст» перечисляет ещё фон «Питание ›…» и сноску 37 — в продукте нет; owner-decision reasonCode, контракт «вид · резервный вопрос после еды»",
       "h": "cd59ede213bc",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/designer-answers/Бриф-слой-шаговых-модалок.md#что-решено"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#checkin-step-modal-center-dialog-2026-09-03"
     },
     "колесо — общий кадр": {
       "v": "=",

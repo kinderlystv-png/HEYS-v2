@@ -175,7 +175,7 @@
       "f": "733-ui-v4-login-theme.css:206 .heys-auth-pep-dock .heys-auth-meta — строка полки 12,5/1,45 по «кегль юридического текста»; data-v этой строки ещё «11 px/500»",
       "h": "008c6bda174f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#login-legal-text-12pt5-2026-09-06"
     },
     "после подписи": {
       "v": "=",
@@ -1493,7 +1493,7 @@
       "f": "heys_client_access_code_setup_v1.js:628-629 .heys-auth-meta «Начнём сначала…» 12,5/1,45; кадр ·12 data-v 10,5/1,5",
       "h": "40d11f429c84",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/login.v4.dc.html:106"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#login-legal-text-12pt5-2026-09-06"
     },
     "Код слишком простой · 01": {
       "v": "=",

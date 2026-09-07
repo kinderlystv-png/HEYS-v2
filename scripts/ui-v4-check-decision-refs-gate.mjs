@@ -11,6 +11,8 @@ import {
 
 // 07.09 p48: dc.html-адреса eight-lane scope → HISTORY; food-meal :1153 и
 // date-remainders :149 сняты с baseline, заменены якорями ниже.
+// 08.09: хвост 24 designer refs (login, checkin, NC, subscription, undo-bar,
+// service-curator, reports-insights DESIGNER_REQUEST) → HISTORY anchors.
 const CLUSTER_BASELINE = Object.freeze([
   {
     zoneId: 'food-meal',
@@ -20,8 +22,9 @@ const CLUSTER_BASELINE = Object.freeze([
   },
   {
     zoneId: 'reports-insights',
-    decisionRef: 'docs/ui/UI_V4_DESIGNER_REQUEST.md:1217',
-    rowCount: 16,
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31',
+    rowCount: 17,
   },
   {
     zoneId: 'reports-insights',

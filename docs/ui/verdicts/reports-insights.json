@@ -435,7 +435,7 @@
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; контракт «расчёт и отказ»: пока считается — скелет той же раскладки, что придёт (полосы 11–13 px радиусом 999 тоном #",
       "h": "b9809394d328",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Отчёты без веса": {
       "v": "=",
@@ -691,7 +691,7 @@
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; контракт «пустое место в блоке»: блок без данных не исчезает и чужого числа не подставляет: рамка 52 высотой радиусом 14 на",
       "h": "5baaf17c1853",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "карточка · чипы окна": {
       "v": "=",
@@ -866,7 +866,7 @@
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; контракт «карточка · скелетон расчёта»: Решение 31 августа (ответ на срез вопросов кодера): Скелетона НЕТ ни одного: знак ожидания",
       "h": "6ae35637d4e5",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "карточка · отказ расчёта": {
       "v": "=",
@@ -3758,91 +3758,91 @@
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 01»: шапка",
       "h": "175bdcc2e73a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 02": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 02»: «Инсайты» — имя экрана",
       "h": "b151400b0a4c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 03": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 03»: «считаем» — ключ",
       "h": "9a6942f86a70",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 04": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 04»: область прокрутки",
       "h": "c629f84f9712",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 05": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 05»: высота 13px, ширина 52%, радиус 999px, фон #f4f4f3, отступ сверху 14px",
       "h": "ba8967170cb0",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 06": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 06»: карточка .grp: отступ сверху 12px",
       "h": "81d6d8e40a85",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 07": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 07»: высота 11px, ширина 70%, радиус 999px, фон #f4f4f3",
       "h": "4c09d694eded",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 08": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 08»: высота 11px, ширина 88%, радиус 999px, фон #f4f4f3, отступ сверху 9px",
       "h": "af2bcabf8568",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 09": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 09»: высота 11px, ширина 44%, радиус 999px, фон #f4f4f3, отступ сверху 9px",
       "h": "038b0152de8d",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 10": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 10»: карточка .grp: отступ сверху 10px",
       "h": "c8f60277f33e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 11": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 11»: высота 11px, ширина 60%, радиус 999px, фон #f4f4f3",
       "h": "b789fd886785",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 12": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 12»: высота 11px, ширина 80%, радиус 999px, фон #f4f4f3, отступ сверху 9px",
       "h": "b9ec51a9dce2",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · считаем · 13": {
       "v": "≠",
       "f": "pi_ui_dashboard.js — SkeletonCard не вызывается; ACCEPTANCE-spinners.md запрещает поблочный skeleton; __tests__/app-tab-skeletons.test.js:47 — вкладка без SkeletonCard; кадр «Инсайты · считаем · 13»: «Скелет держит ту же раскладку, что придёт: шапка з» — шрифт 500 11px/1.5 Figtree, цвет rg Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "5dea15f06408",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_DESIGNER_REQUEST.md:1217"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#reports-insights-skeleton-platform-2026-08-31"
     },
     "Инсайты · не посчиталось · 01": {
       "v": "=",

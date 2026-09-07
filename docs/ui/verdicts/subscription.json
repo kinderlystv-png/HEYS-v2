@@ -429,7 +429,7 @@
       "f": "Совпало всё, кроме позиции: .readonly-toast (735-ui-v4-subscription.css:563-587) — фон var(--v4-surface) = --c1 rgb(247,239,226) / rgb(238,243,249), радиус 22px, поля 11px 13px, align-items center, зазор 11px, обводка inset 0 0 0 1px var(--v4-line) = чернила 8 %; замер chromium обеих палитр. Отступление: кадр рисует position absolute внутри макета телефона, продукт держит position fixed — так же, как общий бар отмены, к правилам которого строка «вид · тост на действии» и отсылает (.heys-undo-bar position fixed, styles/heys-components.css:12258-12281).",
       "h": "ff0d8a9cf1db",
       "reasonCode": "platform",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/subscription.v4.dc.html:104"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-readonly-toast-2026-09-06"
     },
     "Подписка · тост на действии · 07": {
       "v": "=",

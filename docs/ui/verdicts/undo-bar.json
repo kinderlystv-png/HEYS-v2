@@ -73,7 +73,7 @@
       "f": "heys-components.css:12356-12394 — label 12/600, кнопка «Вернуть» 11/700 фон ink 7 %, ::after inset -11px 0; ответ дизайнера 1 сентября в канвасе старше прозы data-v «Отменить» 12 px.",
       "h": "b0350026c344",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/undo-bar.v4.dc.html:92"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#undo-bar-return-button-typography-2026-09-01"
     },
     "вид кольца-таймера": {
       "v": "=",
