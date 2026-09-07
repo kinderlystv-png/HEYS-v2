@@ -223,15 +223,21 @@ describe('cold-start spinner mark', () => {
     );
   });
 
-  it('captions the sign at 15/7/12 with ink 50 percent', () => {
+  it('captions the sign at 15/7/12 with the ink-2 step', () => {
     // Контракт «вид подписи»: 18 px до заголовка 15/700 чернилами, 7 px до
-    // причины 12/500 тоном чернил 50 %. Кадры «не удалось запустить» и
+    // причины 12/500 тоном var(--ink-2). Кадры «не удалось запустить» и
     // «долгий старт» набирали 17/9/12,5 и вторичные 12,5/600 — контракт старше.
+    //
+    // Тон причины сторожится по --boot-muted, а не по прежней --boot-muted:
+    // строка контракта называет РОЛЬ (var(--ink-2)), а --boot-muted и есть её
+    // локальное имя в этом файле (--v4-ink-2 с запасным значением). Пока здесь
+    // стояло --boot-muted — «половина чернил» мимо лестницы, — тест падал на
+    // починке: перевод на ступень он читал как поломку.
     expect(css).toMatch(/\.heys-wait-mark__title \{[\s\S]*?margin-top: 18px;[\s\S]*?font: 700 15px/);
     expect(css).toMatch(/\.heys-boot-mark__title \{[\s\S]*?font: 700 15px/);
     expect(css).toMatch(/\.heys-boot-mark__slow-text \{[\s\S]*?font: 700 15px/);
-    expect(css).toMatch(/\.heys-wait-mark__text \{[\s\S]*?margin-top: 7px;[\s\S]*?font: 500 12px[\s\S]*?--boot-ink-50/);
-    expect(css).toMatch(/\.heys-boot-mark__text \{[\s\S]*?margin-top: 7px;[\s\S]*?font: 500 12px[\s\S]*?--boot-ink-50/);
+    expect(css).toMatch(/\.heys-wait-mark__text \{[\s\S]*?margin-top: 7px;[\s\S]*?font: 500 12px[\s\S]*?--boot-muted/);
+    expect(css).toMatch(/\.heys-boot-mark__text \{[\s\S]*?margin-top: 7px;[\s\S]*?font: 500 12px[\s\S]*?--boot-muted/);
     expect(css).not.toMatch(/font: 700 1[67]px/);
   });
 

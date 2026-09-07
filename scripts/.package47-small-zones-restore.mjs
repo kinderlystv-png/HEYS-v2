@@ -33,6 +33,15 @@ const totals = { eq: 0, neq: 0, total: 0 };
 
 for (const zoneId of ZONES) {
   const rows = readZone(zoneId).rows || {};
+  // Защита чужих строк: снимок всех строк зоны ДО правки. Скрипт трогает только
+  // те ключи, у которых вердикт «?» и в факте стоит «Прежде:», — остальные
+  // обязаны остаться байт в байт. Без этого пакетный писатель вердиктов может
+  // затереть соседнюю строку, и заметить это будет некому: неверный вердикт не
+  // падает, он молча становится правдой для следующего читателя снимка.
+  const beforeForeign = new Map(
+    Object.entries(rows).map(([key, row]) => [key, JSON.stringify(row)]),
+  );
+  const touchedKeys = new Set();
   let eq = 0;
   let neq = 0;
   let n = 0;
@@ -48,10 +57,30 @@ for (const zoneId of ZONES) {
     }
     const fact = appendP47(FACT_OVERRIDE[zoneId]?.[key] || oldFact);
     setVerdictKey(zoneId, key, { verdict, fact, options });
+    touchedKeys.add(key);
     n += 1;
     if (verdict === '=') eq += 1;
     else neq += 1;
   }
+  // assertForeignRowsUnchanged: всё, чего скрипт не трогал намеренно, обязано
+  // совпасть со снимком. Расхождение — foreign key mutation blocked: падаем, а
+  // не дописываем поверх.
+  const afterRows = readZone(zoneId).rows || {};
+  const foreignViolations = [];
+  for (const [key, before] of beforeForeign) {
+    if (touchedKeys.has(key)) continue;
+    const after = afterRows[key] === undefined ? undefined : JSON.stringify(afterRows[key]);
+    if (after !== before) foreignViolations.push(key);
+  }
+  for (const key of Object.keys(afterRows)) {
+    if (!beforeForeign.has(key) && !touchedKeys.has(key)) foreignViolations.push(`${key} (появилась)`);
+  }
+  if (foreignViolations.length) {
+    console.error(`${zoneId}: foreign key mutation blocked — ${foreignViolations.length} строк(и) изменены вне scope:`);
+    for (const key of foreignViolations.slice(0, 10)) console.error(`  ${key}`);
+    process.exit(1);
+  }
+
   totals.eq += eq;
   totals.neq += neq;
   totals.total += n;
