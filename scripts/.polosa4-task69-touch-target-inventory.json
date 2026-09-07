@@ -178,18 +178,6 @@
   "exceptions": [
     {
       "file": "000-base-and-gamification.css",
-      "selector": ".theme-fab",
-      "className": "theme-fab",
-      "zone": "shared",
-      "width": 40,
-      "height": 40,
-      "bucket": "named-exception",
-      "exemptionType": "dead-rule",
-      "exemptionReason": "класс не рендерится — остаток снятой кнопки темы, правила ждут чистки",
-      "tricks": []
-    },
-    {
-      "file": "000-base-and-gamification.css",
       "selector": ".date-picker--v4 .date-picker-day-nav",
       "className": "date-picker-day-nav",
       "zone": "date-remainders",

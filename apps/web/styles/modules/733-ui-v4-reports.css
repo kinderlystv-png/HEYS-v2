@@ -56,6 +56,9 @@
   min-width: 44px;
   min-height: 44px;
   padding: 0 6px;
+  /* Цель уже 44 своим min-height; отрицательное поле не добирает её, а
+     вписывает кнопку в узкий ряд табов. Снятое поле поднимало ряд на 32 px. */
+  margin: -16px -6px;
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
@@ -65,14 +68,6 @@
   white-space: nowrap;
 
 
-}
-
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.reports-v4-period-pill::after {
-  content: '';
-  position: absolute;
-  inset: -16px -6px;
 }
 
 

@@ -67,19 +67,6 @@ export const EXEMPTION_REGISTRY = [
     reason: 'ползунок диапазона — не полноразмерная кнопка, контракт отдельной геометрии',
   },
   {
-    type: 'dead-rule',
-    match: (sel) => /\.theme-fab(?![\w-])/i.test(sel),
-    // Кнопка переключения темы снята: класс не рендерится ни одним файлом.
-    // Проверено четырьмя признаками — поиск по имени в js/html, обход всего
-    // дерева без фильтра расширений, сборка имени по частям, родственные
-    // написания (themeFab / theme_fab). Совпадений только в CSS: само правило,
-    // строки «спрятать при открытой модалке» в critical.css и 900-planning.css
-    // и копии в dist. В строках контракта канвасов имени тоже нет.
-    // Цель у мёртвого класса не бывает; правила удаляются отдельной задачей по
-    // решению дизайнера 7 сентября («удаляйте, задела под будущий экран нет»).
-    reason: 'класс не рендерится — остаток снятой кнопки темы, правила ждут чистки',
-  },
-  {
     type: 'wheel-picker',
     match: (sel) => /(?:wheel-item|mc-wheel-item|mc-wheel-btn|mc-wheel-value)\b/i.test(sel),
     reason: 'элемент колеса выбора — не полноразмерная кнопка',
@@ -304,7 +291,7 @@ export const CLASS_ZONE_RULES = [
   // Общий shell: .btn, шапка, табы, свайп, модалки подтверждения — не одна зона экрана.
   { re: /^btn$|^confirm-modal-btn$|^delete-confirm-btn$/, zone: 'shared' },
   { re: /^hdr-/, zone: 'shared' },
-  { re: /^theme-fab$|^theme-toggle$/, zone: 'shared' },
+  { re: /^theme-toggle$/, zone: 'shared' },
   { re: /^tab$|^tab--/, zone: 'shared' },
   { re: /^tab-switch-group$/, zone: 'shared' },
   { re: /^swipeable-/, zone: 'shared' },
@@ -1177,7 +1164,13 @@ export async function collectInventory(opts = {}) {
       let bucket = 'violation';
       if (exemption) bucket = 'named-exception';
       else if (isUnmeasured) bucket = 'unmeasured';
-      else if (negMargin) bucket = 'violation';
+      // Отрицательное поле — трюк только тогда, когда им ДОБИРАЮТ цель. Если
+      // видимый размер уже ≥44, поле не увеличивает зону нажатия, а вписывает
+      // элемент в узкий ряд: так набраны табы периода в отчётах, кнопка «Назад»
+      // регистрации и кнопки каталога виджетов — у всех троих кадр просит поле
+      // прямо. Прежнее безусловное «negMargin → нарушение» заставляло снимать
+      // его, и ряд вырастал; за день это чинили трижды в трёх зонах.
+      else if (negMargin && !visibleOk) bucket = 'violation';
       else if (visibleOk) bucket = 'pass';
 
       if (bucket === 'pass') {

@@ -1,12 +1,9 @@
 {
   "captured": "2026-09-07",
-  "totalViolations": 3,
-  "unknownViolations": 0,
+  "totalViolations": 2,
+  "unknownViolations": 1,
   "byZone": {
     "tab-activity": 1,
-    "cycle": 1,
-    "undo-bar": 1,
-    "shared": 0,
     "date-remainders": 0,
     "settings-system": 0,
     "food-meal": 0,
@@ -21,13 +18,7 @@
     "product-card": 0
   },
   "byFile": {
-    "000-base-and-gamification.css": 1,
-    "500-pwa-and-offline.css": 1,
-    "heys-components.css": 1
+    "000-base-and-gamification.css": 2
   },
-  "violationKeys": [
-    "000-base-and-gamification.css::.program-next-line",
-    "500-pwa-and-offline.css::.cycle-date-picker-sheet__month-nav",
-    "heys-components.css::.tour-btn"
-  ]
+  "violationKeys": ["000-base-and-gamification.css::.program-next-line", "000-base-and-gamification.css::.theme-fab"]
 }
