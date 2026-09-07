@@ -935,7 +935,7 @@
       "f": "Кадр — штрихкод 44×44 в шапке margin -14/-8. Продукт: сканер в .aps-search-barcode-btn внутри строки поиска (610:2430), headerRight на search null — heys_add_product_step_v1.js:6067. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "6100afd8bfd7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:263"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-search-barcode-header-2026-09-07"
     },
     "Добавление · поиск · 04": {
       "v": "—",
@@ -1047,7 +1047,7 @@
       "f": "Тот же разрыв шапка vs поле поиска, что «Добавление · поиск · 03»; чип «Общие» выключен, кнопка сканера не переехала в шапку. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "6100afd8bfd7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-search-header-barcode-2026-09-07"
     },
     "Поиск · только свои · 04": {
       "v": "—",
@@ -1149,14 +1149,14 @@
       "f": "Кадр — svg-звезда 16×16 в шапке grams. Код: .mc-header-btn--fav с текстом ★/☆, без svg 16×16 — heys_add_product_step_v1.js:11499. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "5c3e0bfccbc6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Добавление · порция · 04": {
       "v": "≠",
       "f": "Кадр — path M12 3l2.5 6.2…; продукт — типографская звезда, path M12 3.2l2.7… только в .aps-v4-product-row__fav на списке, не в шапке порции.",
       "h": "8d6736a7a156",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Добавление · порция · 05": {
       "v": "—",
@@ -1293,14 +1293,14 @@
       "f": "Шапка grams — та же текстовая звезда, не рисунок 03 кадра; см. «Добавление · порция · 03». Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "5c3e0bfccbc6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · ввод в калориях · 04": {
       "v": "≠",
       "f": "Шапка grams без svg-звезды кадра; см. «Добавление · порция · 04».",
       "h": "8d6736a7a156",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · ввод в калориях · 05": {
       "v": "—",
@@ -1437,14 +1437,14 @@
       "f": "Шапка grams — текстовая звезда; см. «Добавление · порция · 03». Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "5c3e0bfccbc6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · продукт уже в приёме · 04": {
       "v": "≠",
       "f": "Шапка grams без svg path кадра; см. «Добавление · порция · 04».",
       "h": "8d6736a7a156",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · продукт уже в приёме · 05": {
       "v": "—",
@@ -1591,14 +1591,14 @@
       "f": "Шапка grams — текстовая звезда; см. «Добавление · порция · 03». Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "5c3e0bfccbc6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · перебор нормы · 04": {
       "v": "≠",
       "f": "Шапка grams без svg path кадра; см. «Добавление · порция · 04».",
       "h": "8d6736a7a156",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · перебор нормы · 05": {
       "v": "—",
@@ -1852,7 +1852,7 @@
       "f": "Кадр food-meal рисует залитую --c2 пилюлю 10,5 px, поля 0 10. Тот же класс .date-picker-inline-today в продукте следует date-remainders «вид чужого дня» (:8256): transparent, 11px/700 --v4-act-text, min-height 44. Строка food-meal «шапка и окно приёмов» отдаёт вид капсулы date-remainders.v4.dc.html.",
       "h": "2c5b4c4db653",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-alien-day-pill-2026-09-06"
     },
     "Приёмы дня · список · 04": {
       "v": "—",
@@ -1925,7 +1925,7 @@
       "f": "Кадр рисует вторую карточку --c1 (padding 13/14, margin-top 8); продукт — одна .nutrition-v4-diary со строками .nutrition-v4-meal-row padding 14/16 без отдельных карточек (heys_day_nutrition_v1.js:1897-1956, контракт «вид · список приёмов дня»).",
       "h": "cb51a22e6b40",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1087"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-meal-list-card-envelope-2026-09-07"
     },
     "Приёмы дня · список · 17": {
       "v": "=",
@@ -3397,7 +3397,7 @@
       "f": "Кадр «фото» даёт .aps-v4-meal-summary__add-more margin-top 16px; без фото — 14px (610:3878). Один класс, разный контекст яруса фото — отступление по кадру фото.",
       "h": "4b87ff06a9cd",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-photo-margin-2026-09-07"
     },
     "Фото · просмотр · 01": {
       "v": "=",
@@ -4198,14 +4198,14 @@
       "f": "Кадр — поле svg 16×16 звезды в шапке; продукт — ★ текст в .mc-header-btn--fav.",
       "h": "ddf4bd54ba6a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Добавление · порция · рисунок 04": {
       "v": "≠",
       "f": "Кадр path M12 3l2.5 6.2…; в шапке grams svg нет.",
       "h": "e674a5dd0d49",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Добавление · порция · рисунок 05": {
       "v": "—",
@@ -4244,14 +4244,14 @@
       "f": "См. «Добавление · порция · рисунок 03».",
       "h": "ddf4bd54ba6a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · ввод в калориях · рисунок 04": {
       "v": "≠",
       "f": "См. «Добавление · порция · рисунок 04».",
       "h": "e674a5dd0d49",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · ввод в калориях · рисунок 05": {
       "v": "—",
@@ -4290,14 +4290,14 @@
       "f": "См. «Добавление · порция · рисунок 03».",
       "h": "ddf4bd54ba6a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · продукт уже в приёме · рисунок 04": {
       "v": "≠",
       "f": "См. «Добавление · порция · рисунок 04».",
       "h": "e674a5dd0d49",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · продукт уже в приёме · рисунок 05": {
       "v": "—",
@@ -4336,14 +4336,14 @@
       "f": "См. «Добавление · порция · рисунок 03».",
       "h": "ddf4bd54ba6a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · перебор нормы · рисунок 04": {
       "v": "≠",
       "f": "См. «Добавление · порция · рисунок 04».",
       "h": "e674a5dd0d49",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07"
     },
     "Порция · перебор нормы · рисунок 05": {
       "v": "—",
@@ -4426,14 +4426,14 @@
       "f": "Кадр — карандаш M4 20h4L19.5…; в листе правки крест удаления, не карандаш — nutrition-v4-sheet__row-remove.",
       "h": "a6f2b399694c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-edit-sheet-icons-2026-09-07"
     },
     "Приём · правка · рисунок 05": {
       "v": "≠",
       "f": "Кадр — штрих M14.5 6.5l3 3 у карандаша; в продукте нет этой пары path.",
       "h": "b763a8671393",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-edit-sheet-icons-2026-09-07"
     },
     "Приём · правка · рисунок 06": {
       "v": "=",
@@ -4670,7 +4670,7 @@
       "f": "Кадр — поле svg 14×14 в строке поиска сборки; .mpr-search-icon — font-size 14px без viewBox 24.",
       "h": "0d870165fdc4",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-search-header-barcode-2026-09-07"
     },
     "Набор · сборка · рисунок 07": {
       "v": "=",

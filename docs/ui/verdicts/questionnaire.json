@@ -1536,14 +1536,14 @@
       "f": "heys_trial_intake_v1.js:442-455 native <select> — шеврон рисует ОС; кадр questionnaire.v4.dc.html:422 поле 13×13 custom SVG",
       "h": "c2b4d247a149",
       "reasonCode": "accessibility",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/questionnaire.v4.dc.html:422"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#questionnaire-native-select-chevrons-2026-09-07"
     },
     "Анкета · шаг 3 · выбор варианта · рисунок 04": {
       "v": "≠",
       "f": "native select chevron path ≠ кадр questionnaire.v4.dc.html:423 M6 9l6 6 6-6",
       "h": "488c6872bb75",
       "reasonCode": "platform",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/questionnaire.v4.dc.html:423"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#questionnaire-native-select-chevrons-2026-09-07"
     },
     "Анкета · шаг 4 · рисунок 01": {
       "v": "=",
@@ -1570,14 +1570,14 @@
       "f": "heys_trial_intake_v1.js:442-455 SelectField — шеврон системы; кадр questionnaire.v4.dc.html:428 поле 13×13",
       "h": "c2b4d247a149",
       "reasonCode": "accessibility",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/questionnaire.v4.dc.html:428"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#questionnaire-native-select-chevrons-2026-09-07"
     },
     "Анкета · шаг 5 · рисунок 04": {
       "v": "≠",
       "f": "native select chevron ≠ кадр questionnaire.v4.dc.html:429 M6 9l6 6 6-6",
       "h": "488c6872bb75",
       "reasonCode": "platform",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/questionnaire.v4.dc.html:429"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#questionnaire-native-select-chevrons-2026-09-07"
     },
     "Анкета отправлена · рисунок 01": {
       "v": "≠",

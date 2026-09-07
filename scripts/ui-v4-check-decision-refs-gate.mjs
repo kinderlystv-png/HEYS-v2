@@ -9,13 +9,14 @@ import {
   runDecisionRefCheck,
 } from './ui-v4-check-decision-refs.mjs';
 
-// 05.09 recount: 5 кластеров в 5 зонах (strength-builder 3 кластера закрыты полосой 2).
+// 07.09 p48: dc.html-адреса eight-lane scope → HISTORY; food-meal :1153 и
+// date-remainders :149 сняты с baseline, заменены якорями ниже.
 const CLUSTER_BASELINE = Object.freeze([
   {
     zoneId: 'food-meal',
     decisionRef:
-      'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/food-meal.v4.dc.html:1153',
-    rowCount: 21,
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#food-meal-portion-header-star-lucide-2026-09-07',
+    rowCount: 16,
   },
   {
     zoneId: 'reports-insights',
@@ -64,13 +65,59 @@ const CLUSTER_BASELINE = Object.freeze([
     rowCount: 14,
   },
   {
-    zoneId: 'date-remainders',
+    zoneId: 'strength-builder',
     decisionRef:
-      'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149',
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07',
+    rowCount: 9,
+  },
+  {
+    zoneId: 'strength-builder',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-aria-hidden-rest-cd-2026-09-05',
     rowCount: 4,
   },
-  // 07.09: subscription/tab-activity — ранний перенос якорей; strength-builder,
-  // norm-correction, home-widgets×2, reports-insights×2 — этот коммит (ОТВЕТ-47/263).
+  {
+    zoneId: 'strength-builder',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-curator-gym-mid-session-2026-09-07',
+    rowCount: 4,
+  },
+  {
+    zoneId: 'date-remainders',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-alien-day-pill-2026-09-06',
+    rowCount: 5,
+  },
+  {
+    zoneId: 'date-remainders',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-sticky-capsule-2026-09-04',
+    rowCount: 4,
+  },
+  {
+    zoneId: 'first-run',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-runtime-rules-2026-09-07',
+    rowCount: 7,
+  },
+  {
+    zoneId: 'first-run',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-navigation-buttons-2026-09-07',
+    rowCount: 4,
+  },
+  {
+    zoneId: 'first-run',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-visual-contract-2026-09-07',
+    rowCount: 4,
+  },
+  {
+    zoneId: 'questionnaire',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#questionnaire-native-select-chevrons-2026-09-07',
+    rowCount: 4,
+  },
   {
     zoneId: 'subscription',
     decisionRef:
@@ -81,7 +128,13 @@ const CLUSTER_BASELINE = Object.freeze([
     zoneId: 'tab-activity',
     decisionRef:
       'docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-calendar-decisions-2026-08-31',
-    rowCount: 5,
+    rowCount: 6,
+  },
+  {
+    zoneId: 'tab-activity',
+    decisionRef:
+      'docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-frame-kcal-unit-2026-09-07',
+    rowCount: 4,
   },
 ]);
 

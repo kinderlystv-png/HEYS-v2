@@ -1993,21 +1993,21 @@
       "f": "зазор 8px у .heys-auth-pin-grid (733-ui-v4-login-theme.css:422); margin-top 7px кадра — у .heys-auth-pin-section 18px (733-ui-v4-login-theme.css:257)",
       "h": "54364aae1ab6",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/curator-cabinet.v4.dc.html:712"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#curator-cabinet-new-client-pin-2026-09-07"
     },
     "Новый клиент · 17": {
       "v": "≠",
       "f": "активная клетка: кадр flex 1/56px/r16/--c1+inset 2px --acs; продукт .heys-auth-pin-box 56x64, focus --v4-bg+inset 2px --v4-act (733-ui-v4-login-theme.css:435-472)",
       "h": "6d4f07cf1892",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/curator-cabinet.v4.dc.html:712"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#curator-cabinet-new-client-pin-2026-09-07"
     },
     "Новый клиент · 18": {
       "v": "≠",
       "f": "вторая клетка: кадр flex 1/56px/r16/--c1; продукт .heys-auth-pin-box 56x64 r16 --v4-surface (733-ui-v4-login-theme.css:435-456)",
       "h": "e066b42342ef",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/curator-cabinet.v4.dc.html:712"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#curator-cabinet-new-client-pin-2026-09-07"
     },
     "Новый клиент · 19": {
       "v": "=",

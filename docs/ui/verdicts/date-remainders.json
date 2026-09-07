@@ -753,14 +753,14 @@
       "f": "Сам липкий ряд капсулы на сегодняшнем дне. Прежнее «—» с обоснованием «капсулы в кадре нет вовсе» ложно: ряд и есть капсула со стрелками, а её подложка разобрана строкой ·47 с вердиктом «=». Замер chromium 375 px 06.09 в .hdr-sticky-strip.is-pinned: .date-picker-row — align-items center, gap 8px (000-base-and-gamification.css:4136 .date-picker-row и :8038 .date-picker--v4 > .date-picker-row), совпало с кадром. Расходится одно: кадр ставит ряду position absolute, продукт держит его в потоке, а липкость даёт подложке — position sticky на .tab-active-viewport > .hdr-sticky-strip (:4002), замер подтверждает sticky. Так требует именованная строка зоны «порог прилипания»: «капсула прилипает position:sticky к верхней врезке», порога в пикселях не существует.",
       "h": "308542032374",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:170"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-sticky-capsule-2026-09-04"
     },
     "Дата · сегодня, прокручено · 46": {
       "v": "≠",
       "f": "Левый кружок липкой капсулы на сегодняшнем дне. Прежний вердикт «—» с обоснованием «капсулы в кадре нет вовсе» ложен: капсула этого же кадра разобрана строкой ·47 и стоит «=». Замер chromium 375 px 06.09 внутри .hdr-sticky-strip: 44×44, радиус 999px, выравнивание и распределение center — сошлось с кадром. Не сошлись фон и тень: кадр рисует бумагу rgba(255,250,241,.88) с двойной тенью на самом кружке, продукт держит роль --v4-surface (rgb(247,239,226) песочный, rgb(238,243,249) синий) без тени (000-base-and-gamification.css:4136). Так требует именованная строка зоны «вид липкого слоя»: тень принадлежит подложке (:3966 .hdr-sticky-strip .is-pinned), а «плавающего ряда с двойной тенью на самой капсуле — нет».",
       "h": "062c71bf405e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:169"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-sticky-capsule-2026-09-04"
     },
     "Дата · сегодня, прокручено · 47": {
       "v": "=",
@@ -772,14 +772,14 @@
       "f": "Надпись «Сегодня, 18 августа» в липкой капсуле. Прежнее «—» («капсулы в кадре нет вовсе») ложно. Замер chromium 375 px 06.09: .date-picker--v4 .date-picker-lbl-inner .date-picker-main (000-base-and-gamification.css:8178) — начертание 700, интерлиньяж 1, тон роль --v4-ink: rgb(32,30,29) песочный и rgb(16,24,38) синий, то есть ровно var(--tx) кадра. Расходится кегль: кадр 13px, код 12,5px. Верен код — тот же элемент в собственном кадре состояния «Дата · сегодня» ·19 назван «шрифт 700 12.5px/1 Figtree, цвет var(--tx)» и стоит там «=»; липкий кадр рисует его на 0,5 px крупнее в одиночку.",
       "h": "7d6e1e3344fe",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:233"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-capsule-label-12pt5-2026-09-07"
     },
     "Дата · сегодня, прокручено · 49": {
       "v": "≠",
       "f": "Правый, погашенный кружок липкой капсулы на сегодняшнем дне. Прежнее «—» с обоснованием «капсулы в кадре нет вовсе» ложно — соседняя строка ·47 того же кадра разбирает капсулу и стоит «=». Замер chromium 375 px 06.09: 44×44, радиус 999px, оба center — сошлось. Кадр гасит кружок ослаблением заливки бумаги (rgba(255,250,241,.6)) и оставляет ему свою тень; продукт гасит прозрачностью 0.4 на .date-picker-day-nav--disabled (000-base-and-gamification.css:8304) поверх роли --v4-surface и тени не ставит. Заливка и тень липкого ряда закреплены строкой «вид липкого слоя»: одна тень на подложке, на капсуле и кружках — нет.",
       "h": "7ae1b8f7831f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:169"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-sticky-capsule-2026-09-04"
     },
     "Дата · сегодня, прокручено · 50": {
       "v": "—",
@@ -1206,42 +1206,42 @@
       "f": "Сам липкий ряд капсулы на прошлом дне. Прежнее «—» («капсулы в кадре нет вовсе») ложно: ряд несёт стрелки ·40, капсулу ·41 и пилюлю ·44. Замер chromium 375 px 06.09 при .date-picker--past внутри .hdr-sticky-strip.is-pinned: .date-picker-row — align-items center, gap 8px, совпало с кадром. Расходится позиционирование: кадр даёт ряду absolute, продукт оставляет его в потоке и вешает липкость на подложку (position sticky, .tab-active-viewport > .hdr-sticky-strip, :4002; замер это подтверждает). Именованная строка зоны «порог прилипания» требует именно sticky и прямо отрицает пиксельный порог.",
       "h": "308542032374",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:170"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-sticky-capsule-2026-09-04"
     },
     "Дата · прошлый день, прокручено · 40": {
       "v": "≠",
       "f": "Левый кружок липкой капсулы на прошлом дне. Прежнее «—» («капсулы в кадре нет вовсе») ложно: этим же кадром нарисованы капсула ·41 и пилюля ·44. Замер chromium 375 px 06.09 при .date-picker--past внутри .hdr-sticky-strip: 44×44, радиус 999px, оба center — сошлось с кадром. Фон и тень не сошлись намеренно: кадр даёт бумагу rgba(255,250,241,.88) с двойной тенью, продукт красит кружок тинтом (000-base-and-gamification.css:8295 .date-picker--v4.date-picker--past .date-picker-day-nav → --v4-tint: rgb(246,230,221) песочный, rgb(251,230,226) синий) и тени не ставит. Так требует именованная строка зоны «вид чужого дня»: «заливка капсулы И ОБОИХ КРУЖКОВ меняется на --tint»; тень липкого ряда живёт на подложке (:3966).",
       "h": "062c71bf405e",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-alien-day-pill-2026-09-06"
     },
     "Дата · прошлый день, прокручено · 41": {
       "v": "≠",
       "f": "Подложка липкой капсулы на прошлом дне. Прежнее «—» («капсулы в кадре нет вовсе») ложно — это и есть капсула. Замер chromium 375 px 06.09: flex 1 1 0%, min-height 44px, радиус 999px, align-items center — сошлось с «флекс 1, высота от 44px, радиус 999px, выравнивание center». Расходятся три вещи, и все три закрыты именованными строками: фон — кадр var(--c2), продукт --v4-tint (rgb(246,230,221) песочный, rgb(251,230,226) синий) по строке «вид чужого дня»; тень — кадр вешает её на капсулу, строка «вид липкого слоя» отдаёт подложке (:3966); зазор и поля — кадр 6px и 5px 5px 5px 12px, продукт 5px и 0 4px 0 11px по кадру «Дата · чужой день» ·18, у которого те же числа и вердикт «=» (000-base-and-gamification.css:8427, дубль :9442).",
       "h": "7f10ffe45cef",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-alien-day-pill-2026-09-06"
     },
     "Дата · прошлый день, прокручено · 42": {
       "v": "≠",
       "f": "Обёртка подписи внутри липкой капсулы прошлого дня. Прежнее «—» («капсулы в кадре нет вовсе») ложно. Замер chromium 375 px 06.09: .date-picker--v4 .date-picker-trigger-lbl (000-base-and-gamification.css:8208) — flex 1 1 0%, align-items center, justify-content center; вложенный .date-picker-lbl-inner (:8229) — те же обе оси. Три числа кадра сошлись. Расходятся два: зазор (кадр 7px, код 6px) и тон (кадр литерал #a8672f, код роль --v4-ink — rgb(32,30,29) песочный, rgb(16,24,38) синий). Оба закрыты: собственный кадр состояния «Дата · чужой день» ·19 даёт этому элементу зазор 6px и стоит «=», а тон задан строкой «вид чужого дня» — «текст остаётся чернилами». Сам канвас в строке «палитры» числит #a8672f среди литералов, которым роли нет.",
       "h": "eb43237cb41c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:327"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-alien-day-pill-2026-09-06"
     },
     "Дата · прошлый день, прокручено · 43": {
       "v": "≠",
       "f": "Надпись «Вчера, 17 августа» в липкой капсуле прошлого дня. Прежнее «—» («капсулы в кадре нет вовсе») ложно. Замер chromium 375 px 06.09: .date-picker--v4 .date-picker-trigger--not-today .date-picker-main--past (000-base-and-gamification.css:8312) — начертание 700, интерлиньяж 1, кегль 12,5px, тон роль --v4-ink: rgb(32,30,29) песочный и rgb(16,24,38) синий. Кадр называет 13px и var(--ac). Оба отступления названы: кегль 12,5 стоит в собственном кадре состояния «Дата · чужой день» ·19 с вердиктом «=», а тон чернил — прямое требование строки «вид чужого дня»: «заливка капсулы и обоих кружков меняется на --tint, текст остаётся чернилами».",
       "h": "33d9a055c1fb",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-alien-day-pill-2026-09-06"
     },
     "Дата · прошлый день, прокручено · 44": {
       "v": "≠",
       "f": "Кадр ·44 требует залитую --acs пилюлю 10,5 px, поля 0 14, тон --on-acs (Замер палитры 06.09: --v4-hero (=--c2) песочный rgb(239, 227, 207) / синий rgb(226, 236, 246); канвас --acs rgb(198, 113, 57) / rgb(29, 94, 150); тон --v4-act-text песочный rgb(138, 74, 32) / синий rgb(29, 94, 150)). Продукт: 000-base:8256 .date-picker-inline-today — transparent, 11px/700 --v4-act-text, min-height 44, padding 0. Именованная строка «вид чужого дня» (1 сентября) в файле-источнике запрещает заливку; кадр ·44 пакета 42 не принят.",
       "h": "09b64dfc0f4d",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/date-remainders.v4.dc.html:149"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#date-remainders-alien-day-pill-2026-09-06"
     },
     "Дата · прошлый день, прокручено · 45": {
       "v": "—",

@@ -83,7 +83,7 @@
       "f": "блок 4: пилюля/приглушение/заливка на месте; контракт просит 50 % и 16 %, в замороженном наборе ближайшие — --v4-ink-2 (55 %) и --v4-plan (22 %)",
       "h": "e0f71a7cf9d1",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:570"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-estimated-steps-2026-09-07"
     },
     "строка тренировок": {
       "v": "=",
@@ -125,7 +125,7 @@
       "f": "блок 11: ярус .cd сведён; разделитель --v4-line 8 % (ступень набора), проза «вид · ярус» ещё называет 7 %; ссылка «28 дней ›» на --v4-ink-data (кадр ·34), проза — 42 %",
       "h": "47c2247ab6bc",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:582"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-history-tier-2026-09-07"
     },
     "режим «Месяц» с листанием": {
       "v": "=",
@@ -159,7 +159,7 @@
       "f": "Решение 31.08 сведено: «Сегодня» — transparent + inset 1.5px --v4-acs; легенда/чипы — .ma-habit-cal--activity-v4. Остаток: календарь вторым слоем .activity-v4-history__cal; легенда 55 % (--v4-ink-2) вместо 50 % прозы кадра",
       "h": "65c27c45ed76",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:589"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-calendar-decisions-2026-08-31"
     },
     "вид · карточка силовой": {
       "v": "=",
@@ -186,7 +186,7 @@
       "f": "блок 1/11: список .cd сведён; разделитель 8 % (--v4-line) вместо 7 % прозы; подписи note на --v4-ink-data по кадру ·19, проза ещё называет 42 %",
       "h": "3a2c9df82ca1",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:596"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-goal-breakdown-2026-09-07"
     },
     "вид · шаги": {
       "v": "=",
@@ -198,14 +198,14 @@
       "f": "блок 4/11: пилюля, приглушённые число/цель и сноска на месте; тона пилюли и заливки — ступени набора 55 % и --v4-plan вместо 50 %/16 % кадра",
       "h": "ac403d87d6b2",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:598"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-estimated-steps-2026-09-07"
     },
     "вид · программа куратора": {
       "v": "≠",
       "f": "карточки плана и правки сведены; проза/кнопки на месте; тона 58/60/10 % кадра заменены ближайшими ступенями набора (--v4-ink-2, --v4-track)",
       "h": "29c9e793fedf",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:599"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-curator-program-card-2026-09-07"
     },
     "вид · строки яруса «Сегодня»": {
       "v": "=",
@@ -217,7 +217,7 @@
       "f": "блок 10: «История» .grp title+prose без кнопок; строки «Сегодня» остаются с «не отмечено»; проза на --v4-ink-2 (55 %) вместо 60 % кадра — ступени 60 % в наборе нет",
       "h": "54dd16f9734c",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:601"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-empty-states-2026-09-07"
     },
     "все кадры статичны": {
       "v": "—",
@@ -269,7 +269,7 @@
       "f": ".activity-v4-hero__label — 10,5/600, трекинг .04em; проза «вид · hero» просит 42 %, продукт --v4-ink-3 (45 %) — ближайшая ступень, набор заморожен",
       "h": "c9c211032362",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:595"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-hero-goal-day-2026-09-07"
     },
     "Актив · день собран · 07": {
       "v": "=",
@@ -286,7 +286,7 @@
       "f": ".activity-v4-hero__unit — 12,5/600 по строке контракта (кадр рисует 13; контракт старше), тон --v4-ink-3 (45 %) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "3472a0eb72b5",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:631"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-frame-kcal-unit-2026-09-07"
     },
     "Актив · день собран · 10": {
       "v": "=",
@@ -453,7 +453,7 @@
       "f": ".activity-v4-hero__label — тон --v4-ink-3 (45 %) вместо 42 % прозы «вид · hero»; ступени 42 % в наборе нет",
       "h": "c9c211032362",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:595"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-hero-goal-day-2026-09-07"
     },
     "Актив · разбор цели · 07": {
       "v": "=",
@@ -470,7 +470,7 @@
       "f": ".activity-v4-hero__unit — 12,5/600, тон --v4-ink-3 (45 %) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "3472a0eb72b5",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:667"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-frame-kcal-unit-2026-09-07"
     },
     "Актив · разбор цели · 10": {
       "v": "=",
@@ -582,7 +582,7 @@
       "f": ".activity-v4-hero__label — тон --v4-ink-3 (45 %) вместо 42 % прозы «вид · hero»",
       "h": "c9c211032362",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:595"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-hero-goal-day-2026-09-07"
     },
     "Актив · новый человек · 07": {
       "v": "=",
@@ -599,7 +599,7 @@
       "f": ".activity-v4-hero__unit — 12,5/600, тон --v4-ink-3 (45 %) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "3472a0eb72b5",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:692"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-frame-kcal-unit-2026-09-07"
     },
     "Актив · новый человек · 10": {
       "v": "=",
@@ -876,7 +876,7 @@
       "f": ".sb-plan-meta — проза и «В расход не идёт…» на месте, тон --v4-ink-2 (55 %); длительности «ориентировочно 50 минут» в данных плана нет — не выдумывается",
       "h": "1bff7e925e18",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:749"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-frame-kcal-unit-2026-09-07"
     },
     "Актив · план назначен · 10": {
       "v": "=",
@@ -893,7 +893,7 @@
       "f": ".sb-plan-skip — flex 1, min-height 48, --v4-hero; тон --v4-ink-2 (55 %) вместо 58 % кадра ·12 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "6893198010f5",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:752"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-frame-cta-buttons-2026-09-07"
     },
     "Актив · план назначен · 13": {
       "v": "=",
@@ -987,7 +987,7 @@
       "f": "«Оставить прежнюю» — inset 1px --v4-track (12 %) вместо 10 % чернил кадра ·10: интерактивная обводка, --v4-line — разделитель Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "aaa3ac74ad97",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:770"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-frame-cta-buttons-2026-09-07"
     },
     "Актив · правка куратора · 11": {
       "v": "=",
@@ -1192,7 +1192,7 @@
       "f": ".ma-habit-cal-legend-item — 500 10,5, gap 6; тон --v4-ink-2 (55 %) вместо 50 % кадра ·16 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "27f705e0bb3e",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:818"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-calendar-legend-2026-09-07"
     },
     "Календарь зарядки · 17": {
       "v": "≠",
@@ -1321,7 +1321,7 @@
       "f": "внутренний состав кадра — журнал с чипами зон; продукт показывает идущую тренировку (таймер, счёт, «Продолжить»)",
       "h": "05b13e4b02d9",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:590"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-strength-card-two-frames-2026-09-07"
     },
     "Тренировки · журнал подходов · 19": {
       "v": "=",
@@ -1353,7 +1353,7 @@
       "f": ".sb-card-cta — min-height 48, r999, --v4-hero; текст зависит от состояния. Тон --v4-ink-2 (55 %) вместо 58 % кадра ·24; журнальный CTA кадра — «Открыть конструктор»",
       "h": "5dfe9f62fa43",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:590"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-strength-card-two-frames-2026-09-07"
     },
     "Тренировки · журнал подходов · 25": {
       "v": "—",
@@ -1435,7 +1435,7 @@
       "f": "копия сведена; при плане на сегодня — карточка «план назначен» (решение 31.08), а не компактная строка кадра ·16–17",
       "h": "1a4f585440ba",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/tab-activity.v4.dc.html:558"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#tab-activity-program-three-elements-2026-09-07"
     },
     "Актив · разбор цели · текст": {
       "v": "=",

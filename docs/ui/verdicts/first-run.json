@@ -43,84 +43,84 @@
       "f": "showWelcomeModal (heys_ui_onboarding_v1.js:223-276) всё ещё рисует вторую welcome-модалку с 👋 и «Да, показать! 🚀»; контракт: одна модалка subscription «Начать» → обзор",
       "h": "16118460a1f5",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:85"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-tour-scope-2026-09-07"
     },
     "один обзор вместо трёх": {
       "v": "≠",
       "f": "в коде три тура: TOUR_STEPS×8, INSIGHTS_TOUR_STEPS×7, WIDGETS_TOUR_STEPS×11 (heys_ui_onboarding_v1.js:43-118, 894-951, 1287-1410); ONBOARDING_TOUR_ENABLED=false, но v4-обзор из 4 шагов не собран",
       "h": "ebeeb692e28d",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:86"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-tour-scope-2026-09-07"
     },
     "четыре шага и их порядок": {
       "v": "≠",
       "f": "TOUR_STEPS — 8 шагов v3 (hero, sparkline, insulin, fab, widgets, stats, diary, insights); заголовки «Динамика», «Инсулиновая волна», «🎛️ Виджеты» вместо 4 шагов контракта",
       "h": "a3675a566e10",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:87"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-tour-scope-2026-09-07"
     },
     "своих чисел, а не демонстрационных": {
       "v": "≠",
       "f": "TOUR_DEMO_DATA + demoData {eaten:1450} в step_hero; при активном туре hero/sparkline читают getDemoData (heys_day_hero_display_v1.js:20-21, heys_day_sparkline_state.js:74-75)",
       "h": "a4b0325c058a",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:88"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-highlight-and-card-2026-09-07"
     },
     "подсветка — окно, а не рамка поверх": {
       "v": "≠",
       "f": "heys-components.css:662-677 .tour-highlight — radius 12px, белая inset-рамка и зелёное свечение; JS добавляет tourPulse (heys_ui_onboarding_v1.js:391). Контракт: radius 20, обводка 2px --acs, без пульса",
       "h": "48a204512076",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:89"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-highlight-and-card-2026-09-07"
     },
     "карточка шага": {
       "v": "≠",
       "f": "createTooltip (heys_ui_onboarding_v1.js:407-450): нет кикера «Шаг N из 4», .tour-tooltip-content radius 16 padding 20 (heys-components.css:695-701), носика 14px",
       "h": "89f98637bfc1",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:90"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-highlight-and-card-2026-09-07"
     },
     "две кнопки, и обе понятны": {
       "v": "≠",
       "f": "кнопки «Далее →» / «Готово! 🎉» и точки .tour-dot вместо словесного счёта (heys_ui_onboarding_v1.js:431-441); на последнем шаге «Пропустить» скрывается, но основная с эмодзи",
       "h": "074c6f9b9b7b",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:91"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-navigation-buttons-2026-09-07"
     },
     "пропуск без переспроса": {
       "v": "≠",
       "f": "skip() закрывает без диалога (heys_ui_onboarding_v1.js:729-738), но ряд «Обзор приложения» в настройках в продукте не найден (rg «Обзор приложения» apps/web — 0)",
       "h": "9c9d73e52f71",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:92"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-navigation-buttons-2026-09-07"
     },
     "прерывание": {
       "v": "≠",
       "f": "INTERRUPTED_STEP_KEY + MIN_HIDDEN_DURATION 500ms есть (161-163, 636-639), но флаг heys_tour_completed только localStorage/HEYS.store (29, 774-778); автопоказ на следующий день и серверный флаг не реализованы",
       "h": "63b685d2024f",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:93"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-navigation-buttons-2026-09-07"
     },
     "обзор пройден": {
       "v": "≠",
       "f": "finish() (heys_ui_onboarding_v1.js:741-779) снимает overlay и пишет флаг, но не показывает undo-bar «Обзор пройден…» 4с; только visual-fixture pushUndoToast (heys_ui_v4_visual_fixture_v1.js:192-197)",
       "h": "76907ae0a95e",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:94"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-navigation-buttons-2026-09-07"
     },
     "вход с компьютера — не заглушка, а короткий путь": {
       "v": "≠",
       "f": "DesktopGateScreen (heys_app_gates_v1.js:69-178): градиент #667eea, emoji 📱, заголовок «Откройте на телефоне», QR 180px, URL текстом без «Скопировать»; порог 768px в heys_app_desktop_gate_v1.js:6 без pointer:fine",
       "h": "859889cc4096",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:95"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-desktop-entry-2026-09-07"
     },
     "QR рисует приложение, а не чужой сервис": {
       "v": "≠",
       "f": "локальный data: GIF через buildDesktopGateQrSrc(origin) без qrserver (desktop-gate-qr.test.js) — ок; но UI не v4: нет блока 198×198, адрес app.heyslab.ru + «Скопировать», кодируется window.location.origin а не фиксированный https://app.heyslab.ru в UI",
       "h": "0f7952b8d5db",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:96"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-desktop-entry-2026-09-07"
     },
     "тихая зона · дефект кода": {
       "v": "=",
@@ -132,42 +132,42 @@
       "f": "TOUR_STEPS: «Уникальная фишка HEYS», эмодзи в заголовках 🎛️📊🍴🔮, восклицания; welcome «Да, показать! 🚀» (heys_ui_onboarding_v1.js:67-113, 243)",
       "h": "b4052666b767",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:98"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-copy-and-icons-2026-09-07"
     },
     "иконки": {
       "v": "≠",
       "f": "тур и desktop gate на emoji (👋🍽️📱💡), Lucide layout-grid/plus/compass/bar-chart-2/copy/smartphone/log-out в onboarding/desktop gate не рендерятся",
       "h": "93d5ad589c9d",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:99"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-copy-and-icons-2026-09-07"
     },
     "вид · окно подсветки": {
       "v": "≠",
       "f": "см. «подсветка — окно…»: radius 12, белая рамка, зелёное свечение, transition 0.4s — не --acs/--scrim 20px",
       "h": "9e553d8ef21e",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:102"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-visual-contract-2026-09-07"
     },
     "вид · карточка шага": {
       "v": "≠",
       "f": "см. «карточка шага»: .tour-tooltip-content без v4-геометрии кадра (radius 16, padding 20, без носика 14px)",
       "h": "62bd605b7d7b",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:103"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-visual-contract-2026-09-07"
     },
     "вид · плашка «обзор пройден»": {
       "v": "≠",
       "f": "продуктовый finish() не монтирует .heys-undo-bar с текстом контракта; только fixture pushUndoToast",
       "h": "a36e74c6a87e",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:104"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-visual-contract-2026-09-07"
     },
     "вид · вход с компьютера": {
       "v": "≠",
       "f": "Экран всё ещё legacy-gradient DesktopGateScreen, не v4-колонка 480/QR 198; тач-цели пакета 36 закрыты: copy/logout 44px видимым в heys_app_gates_v1.js + 500-pwa-and-offline.css",
       "h": "28c95a64eb48",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:105"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-visual-contract-2026-09-07"
     },
     "вид · кадры экрана под затемнением": {
       "v": "—",
@@ -180,28 +180,28 @@
       "f": "ONBOARDING_TOUR_ENABLED=false → start() сразу выходит (553-555); heys_tour_completed в localStorage/HEYS.store, не поле профиля на сервере; связка с subscription Welcome «Начать» не проводится",
       "h": "5e6c0d538a93",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:109"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-runtime-rules-2026-09-07"
     },
     "что доступно во время обзора": {
       "v": "≠",
       "f": ".tour-overlay pointer-events auto блокирует фон (heys-components.css:652-659), но нет role=dialog/aria; аппаратная «назад»=Пропустить и блокировка scroll не найдены в heys_ui_onboarding_v1.js",
       "h": "0996bd93188e",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:110"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-runtime-rules-2026-09-07"
     },
     "цель не найдена": {
       "v": "≠",
       "f": "при !targetEl вызывается next() (673-676), но кикер не пересчитывает «Шаг 2 из 3» — счётчик точек остаётся от TOUR_STEPS.length=8",
       "h": "7aaf29a0506b",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:111"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-runtime-rules-2026-09-07"
     },
     "возврат к обзору": {
       "v": "≠",
       "f": "ряд «Обзор приложения» в settings отсутствует в apps/web (rg 0); OnboardingTour.start({force:true}) только dev/fixture",
       "h": "79c33793e183",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:112"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-runtime-rules-2026-09-07"
     },
     "вибрация": {
       "v": "=",
@@ -213,21 +213,21 @@
       "f": "heys_app_desktop_gate_v1.js:6 innerWidth>768 без matchMedia(pointer:fine); buildDesktopGate в heys_app_gate_flow_v1.js:2624 пропускает куратора и desktopAllowed, но не 1024px",
       "h": "f82d8bfad7a7",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:114"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-runtime-rules-2026-09-07"
     },
     "уменьшенное движение, крупный шрифт, офлайн": {
       "v": "≠",
       "f": "highlight transition 0.3-0.4s всегда (heys_ui_onboarding_v1.js:389, heys-components.css:676); prefers-reduced-motion и офлайн-синк флага обзора не обработаны в onboarding-модуле",
       "h": "ce97e8aa707d",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:115"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-runtime-rules-2026-09-07"
     },
     "доступность": {
       "v": "≠",
       "f": "createTooltip не ставит role=dialog, aria-labelledby, aria-live; highlight без aria-hidden (rg aria в heys_ui_onboarding_v1.js — 0)",
       "h": "c26f22396df7",
       "reasonCode": "logic-invariant",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/first-run.v4.dc.html:116"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#first-run-runtime-rules-2026-09-07"
     },
     "адрес приложения": {
       "v": "—",

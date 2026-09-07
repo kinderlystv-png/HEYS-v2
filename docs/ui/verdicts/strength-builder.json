@@ -120,7 +120,7 @@
       "f": "Поведение =; расхождение в строке «каталог»: контракт «60 кг × 8», кадр/код «60 × 8». catalog_ui:78-89,164-167; strength-builder-ui.test.js:30.",
       "h": "7f47f0ab839a",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2208"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-catalog-weight-format-2026-09-07"
     },
     "таблица, а не поля подряд": {
       "v": "=",
@@ -391,7 +391,7 @@
       "f": "Канвас :2278 (пилюли 44, превью объёма). Поведение ExerciseMuscleGroupsScreen catalog_ui:446-493 =; геометрия пилюль ·08-10 ≠ (scripts/.sb-catalog-exercise-muscles-handoff.json). Агрегат ≠ из-за носителя, не копии. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
       "h": "7d614cf9b845",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2278"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-bodyweight-coefficient-2026-09-07"
     },
     "вид · коэффициент своего веса": {
       "v": "=",
@@ -811,7 +811,7 @@
       "f": "Три полноэкранных исхода (Л10–Л12) не реализованы как отдельные экраны; есть kernel status + ProposalOutcome на finish. 58 frame ? → batch ≠ или отдельная задача на outcome screens.",
       "h": "67419e72a689",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2381"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-proposal-outcome-screens-2026-09-07"
     },
     "вид · сравнение ветвей принятия": {
       "v": "—",
@@ -996,7 +996,7 @@
       "f": "Цвет «сделано больше — зелёный» не рендерится; PlanVsDoneScreen :2143 is-match/is-diff без over-plan green.",
       "h": "4634fca2a383",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2143"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-over-plan-progress-2026-09-07"
     },
     "шторка нужна разработчику первой": {
       "v": "≠",
@@ -1015,7 +1015,7 @@
       "f": "Прочерки «—» в .sb-cell.is-blank (superset_ui:242,718), не .dash 56 % из контракта.",
       "h": "661c1111ceda",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2413"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-dash-blank-cells-2026-09-07"
     },
     "открыто · распределение минут по зонам": {
       "v": "—",
@@ -1262,7 +1262,7 @@
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
       ],
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3386"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · список свёрнут · 24": {
       "v": "=",
@@ -1822,7 +1822,7 @@
       "h": "08f3b8ef67d3",
       "f": "Кнопка «В шаблоны» в FinishScreen отсутствует — только .sb-finish-done «Готово» (heys_strength_finish_ui_v1.js:405-420; finish-v4-canvas row 57).",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2749"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-finish-templates-button-2026-09-07"
     },
     "Конструктор · итоги · 58": {
       "v": "=",
@@ -2541,21 +2541,21 @@
       "f": "Контракт: «7 упражнений · назначил Артём» 500 11.5px/1.4 rgba(ink,.56) margin-top 4px. Runtime: planProse «{dayLabel} · {n} упр. · … В расход не идёт…» — superset_ui:2609-2619; .sb-plan-meta 500 12px/1.55 margin 8px 0 0 — 731:954-957. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "518427e96059",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2870"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 09": {
       "v": "≠",
       "f": "Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:33.",
       "h": "6911b98d3ef4",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2871"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 10": {
       "v": "≠",
       "f": "Контракт: одна вторичная «Не смогу сегодня» margin-top 9px. Runtime: ряд .sb-plan-actions «Перенести»+«Пропустить» margin-top 9px — superset_ui:2626-2634, 731:970-973; осознанный разнос перенос/пропуск — activity-plan-card-frame.test.js:3-7, 225-291.",
       "h": "d690b0422265",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2872"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 11": {
       "v": "=",
@@ -2574,21 +2574,21 @@
       "f": "Контракт: строка .cd .row. Runtime: button.sb-move-day flex row — superset_ui:2305-2316; геометрия 731:1225-1240 (min-height 52px, padding 10px 12px) — не класс .row кадра.",
       "h": "af81bb6e54c6",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2875"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 14": {
       "v": "≠",
       "f": "Контракт: дата свободного дня color var(--tx). CSS задаёт только font на .sb-move-day-copy b (600 12.5px) без color — 731:1255-1258; внутри <button> текст наследует buttontext, не --tx/--v4-ink.",
       "h": "78fa7e55efd8",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2876"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 15": {
       "v": "≠",
       "f": "Контракт: «Свободно» 500 11px/1.3 rgba(ink,.56). CSS: font 500 11px/1.3 на span без color — 731:1260-1262; подпись «Свободно» в MoveSheet — superset_ui:2313. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "785ff4718b9c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2877"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 16": {
       "v": "=",
@@ -2600,14 +2600,14 @@
       "f": "Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопределено в 731 без dim текста. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "5f667de3c140",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2879"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 18": {
       "v": "≠",
       "f": "Контракт: пилюля «занят» color rgba(ink,.4). Runtime: .sb-move-day.is-busy > i с color var(--v4-ink-3)=rgba(0,0,0,.45) + фон --v4-hero — 731:1269-1274; контракт .4 vs .45 и лишняя заливка. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "2c5a97305112",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2880"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 19": {
       "v": "=",
@@ -2619,7 +2619,7 @@
       "f": "Контракт: «выбрано» 500 11px/1.3 color var(--ac). Runtime: span «выбрано» при pick — superset_ui:2313; CSS span без accent-color на .is-on — 731:1260-1262, 1276-1279.",
       "h": "fd2c51fe496c",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2882"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
     },
     "Перенос · след в обе стороны · 21": {
       "v": "=",
@@ -3110,7 +3110,7 @@
       "f": "Кадр: column gap 3px в .top; продукт: row head с icon-btn + title column — 750:1931-1957.",
       "h": "07ffbada0ee7",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2998"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-exercise-history-header-2026-09-07"
     },
     "Правка легла не полностью · 03": {
       "v": "≠",
@@ -3424,7 +3424,7 @@
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "d641122bb122",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3058"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-aria-hidden-rest-cd-2026-09-05"
     },
     "Подход · таблица ввода · 24": {
       "v": "≠",
@@ -3445,21 +3445,21 @@
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "bd065d2633a1",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3061"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-aria-hidden-rest-cd-2026-09-05"
     },
     "Подход · таблица ввода · 27": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "6217fbca8bfe",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3062"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-aria-hidden-rest-cd-2026-09-05"
     },
     "Подход · таблица ввода · 28": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
       "h": "0e262d6e01f8",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3063"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-aria-hidden-rest-cd-2026-09-05"
     },
     "Подход · таблица ввода · 29": {
       "v": "=",
@@ -4703,7 +4703,7 @@
       "v": "≠",
       "f": "подзаголовок fmtTime, без «что приходит от куратора…»: heys_strength_builder_ui_v1.js:1119-1121",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3312"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-curator-gym-mid-session-2026-09-07"
     },
     "Куратор и зал · 05": {
       "h": "c629f84f9712",
@@ -4745,7 +4745,7 @@
       "v": "≠",
       "f": "CuratorPlanStrip showActions:false mid-session: builder_ui:1257-1262.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3320"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-curator-gym-mid-session-2026-09-07"
     },
     "Куратор и зал · 13": {
       "h": "bb59c02daef1",
@@ -4849,7 +4849,7 @@
       "v": "≠",
       "f": "«отправлено в …» — var(--sb-mut), не var(--gr): 750-strength-builder.css:5703-5706.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3340"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-curator-gym-mid-session-2026-09-07"
     },
     "Куратор и зал · 33": {
       "h": "4668dbccd211",
@@ -4871,7 +4871,7 @@
       "v": "≠",
       "f": "«не отправлена» только при notePending+sync pending: buildSyncQueueRows:2071-2077.",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:3344"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-curator-gym-mid-session-2026-09-07"
     },
     "Куратор и зал · 37": {
       "h": "e038ead9bb32",
@@ -8666,7 +8666,7 @@
       "f": "Канвас :2345 — единые .hv/.hvOn 44px; продукт .sb-rpe/.sb-rpe-dot 6–10 в ExerciseCard superset_ui:1905–1924, 750:406+ — классы и геометрия ≠ stop-кадра. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
       "h": "ba30fc492f2f",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2345"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "вид · отчёт за период": {
       "v": "=",
@@ -9031,7 +9031,7 @@
       "f": "⠿ намеренно не рендерится (нет reorder persistence); calm-canvas-contract.test.js:243-244 .sb-builder-screen rows fixture. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "4e98855729cb",
       "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/strength-builder.v4.dc.html:2520"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
     "Конструктор · тренировка идёт · спокойнее · 12": {
       "v": "=",
