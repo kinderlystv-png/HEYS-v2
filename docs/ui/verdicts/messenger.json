@@ -121,8 +121,8 @@
     },
     "вид · тред": {
       "v": "=",
-      "f": "1000-messenger.css:409-432 thread padding 6/14/0 gap 8 bg --v4-hero; meta/time --v4-ink-2 (56%) — messenger-thread-padding.test.js",
-      "h": "a69f96ea8dff"
+      "f": "1000-messenger.css:409-432 padding 6/14/0 gap 8; meta/time/разделитель даты 10.5px/600 --v4-ink-2 (56 %); контракт: минимум 4,5 на --bg/--c1/--c2 — messenger-thread-padding.test.js + messenger-thread-v4-palette.test.js Пакет 48: контракт перечитан, продукт сверен (ОТВЕТ-отступления §тач-цели, ОТВЕТ-findings).",
+      "h": "055e890576df"
     },
     "вид · композер": {
       "v": "=",
@@ -296,8 +296,8 @@
     },
     "Мессенджер · тред с карточкой дня · 05": {
       "v": "=",
-      "f": "1000-messenger.css .messenger-show-older 36px/0 14px/999px/--v4-c1 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
-      "h": "d746e6e19cb9"
+      "f": "1000-messenger.css .messenger-show-older min-height 44px padding 0 14px radius 999px --v4-c1 11.5px/600 --v4-ink-2 center — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark Пакет 48: контракт перечитан, продукт сверен (ОТВЕТ-отступления §тач-цели, ОТВЕТ-findings).",
+      "h": "b57b53b2bdfd"
     },
     "Мессенджер · тред с карточкой дня · 06": {
       "v": "=",
@@ -1422,8 +1422,8 @@
     },
     "тач-цели": {
       "v": "=",
-      "f": "ui-v4-check-touch-target-visible 0 violations on 1000-messenger.css; search filter chips 44px visible (1000-messenger.css:3007-3011); header/chip/pill 44px; dot 7px + avatar 38px — не цели (ОТВЕТ-22 #3)",
-      "h": "fb2555e9a93f"
+      "f": "ui-v4-check-touch-target-visible 0 violations on 1000-messenger.css; шапка/chip/pill/offline 44 px видимым размером; .msg-audio-wave 22 px — не цель (scrub по дорожке, норма 44 к ведению не применяется, пакет 48); .messenger-show-older min-height 44 без ::after — messenger-empty-applied-geometry.test.js Пакет 48: контракт перечитан, продукт сверен (ОТВЕТ-отступления §тач-цели, ОТВЕТ-findings).",
+      "h": "a99a179fc33d"
     }
   },
   "frames": {

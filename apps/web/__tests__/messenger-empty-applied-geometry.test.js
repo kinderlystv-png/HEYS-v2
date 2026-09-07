@@ -203,7 +203,7 @@ describe('messenger empty thread + applied card geometry', () => {
       expect(m.promptsGap, `${id} prompts gap`).toBe('8px');
       expect(m.promptsMt, `${id} prompts mt`).toBe('20px');
       expect(m.promptJc, `${id} prompt jc`).toBe('center');
-      expect(m.showOlderMinH, `${id} show older`).toBe('36px');
+      expect(m.showOlderMinH, `${id} show older`).toBe('44px');
       expect(m.photoW, `${id} photo w`).toBe('170px');
       expect(m.photoH, `${id} photo h`).toBe('118px');
       expect(m.cardHeadGap, `${id} card head gap`).toBe('7px');

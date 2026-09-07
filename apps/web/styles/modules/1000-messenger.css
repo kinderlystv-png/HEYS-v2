@@ -703,7 +703,7 @@ button.messenger-day-checklist__chip:active {
   align-self: center;
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 44px;
   margin: 6px 0 8px;
   appearance: none;
   -webkit-appearance: none;
@@ -721,15 +721,6 @@ button.messenger-day-checklist__chip:active {
   position: relative;
 
 }
-
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.messenger-show-older::after {
-  content: '';
-  position: absolute;
-  inset: -4px -22px;
-}
-
 
 @media (hover: hover) {
   .messenger-show-older:hover {
