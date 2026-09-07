@@ -115,7 +115,7 @@
 .ts-wb-lead {
   font-size: 12px;
   line-height: 1.45;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin: 0 0 12px;
 }
 
@@ -663,7 +663,7 @@
 .ts-rating-label {
   flex: 1;
   font-size: 13px;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .ts-rating-value {

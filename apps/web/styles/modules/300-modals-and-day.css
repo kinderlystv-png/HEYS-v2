@@ -1956,7 +1956,7 @@
   font-size: 11.5px;
   font-weight: 700;
   line-height: 1;
-  color: var(--v4-ink-prose) /* v4-intentional */;
+  color: var(--v4-ink-2) /* v4-intentional */;
   cursor: pointer;
 }
 

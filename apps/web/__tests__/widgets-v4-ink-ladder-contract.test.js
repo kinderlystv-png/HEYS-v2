@@ -20,7 +20,7 @@ function contractValue(html, key) {
 // `.widgets-longpress-hint__sub` в списке нет намеренно: у подсказки жеста есть
 // строка-владелец вида «вид подсказки жеста», и она называет свой тон —
 // «чернилами 60 %». Общая лестница не должна проглатывать элемент, у которого
-// свой контракт называет другую ступень: 60 % ближе к 62 % (`--v4-ink-prose`),
+// свой контракт называет другую ступень: 60 % ближе к `--v4-ink-2`,
 // чем к 56 %. Тон подсказки сторожит `longpress-hint-product-rule.test.js`.
 const SMALL_NEUTRAL_TEXT = `
 .widget-v4-kicker
@@ -134,8 +134,6 @@ describe('семантическая лестница чернил home-widgets'
         expect(block, `${set} · --v4-ink-${step}`).toContain(`--v4-ink-${step}: ${values[i]};`);
       });
     }
-    // --v4-ink-prose ступени не имеет и пока живёт общей долей в :root.
-    expect(palette).toContain('--v4-ink-prose: rgba(var(--v4-ink-rgb), 0.62);');
     expect(palette.match(/--v4-ink-rgb:/g)).toHaveLength(4);
     expect(palette).toContain('--v4-ink-rgb: 0, 0, 0;');
     expect(palette).toContain('--v4-ink-rgb: 242, 237, 230;');
@@ -159,7 +157,7 @@ describe('семантическая лестница чернил home-widgets'
     expect(rules.get('.widget-v4-macro__fact-sep')?.color).toContain('--v4-ink-4');
     expect(rules.get('.widget-v4-macro__fact-tgt')?.color).toContain('--v4-ink-4');
     expect(rules.get('.widget-bd-sheet__hero-unit')?.color).toContain('--v4-ink-4');
-    expect(rules.get('.widget-bd-sheet__insight')?.color).toContain('--v4-ink-prose');
+    expect(rules.get('.widget-bd-sheet__insight')?.color).toContain('--v4-ink-2');
     expect(rules.get('.widget-bd-sheet__hero-track-name')?.color).toContain('--v4-ink-3');
     expect(rules.get('.widget-v4-edit-footer__icon')?.color).toContain('--v4-ink-3');
     expect(rules.get('.widget-v4-edit-footer__icon.is-off')?.color).toContain('--v4-ink-30');

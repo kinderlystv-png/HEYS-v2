@@ -2717,9 +2717,17 @@ body:has(.page-reports) .hdr::after {
   position: relative;
 }
 
-/* Цель касания 44 pt при меньшем рисунке — прозрачным припуском, а не
-   размером кнопки. Приём уже принят у .nutrition-v4-chip. */
-.widgets-settings-fab::after {
+.widgets-settings-fab__host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Цель касания 44 pt — припуск на внутреннем host (ОТВЕТ-22 Q6, вариант B). */
+.widgets-settings-fab__host::after {
   content: '';
   position: absolute;
   inset: -2px;
@@ -3099,9 +3107,19 @@ body:has(.page-reports) .hdr::after {
   animation: widgets-quick-minus-in 180ms ease-out;
 }
 
+.widgets-quick-minus__host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
 /* «круг минуса и чип возврата — не меньше 44×44 за счёт прозрачных полей
-   вокруг видимого круга 22 и чипа 28» (строка «области нажатия в карточке»). */
-.widgets-quick-minus::after {
+   вокруг видимого круга 22 и чипа 28» (строка «области нажатия в карточке»).
+   Припуск на внутреннем host, не на absolute-обёртке (ОТВЕТ-22 Q6, вариант B). */
+.widgets-quick-minus__host::after {
   content: '';
   position: absolute;
   inset: -11px 0;
@@ -3150,7 +3168,14 @@ body:has(.page-reports) .hdr::after {
   animation: widgets-quick-chip-in 140ms ease-out;
 }
 
-.widgets-quick-chip::after {
+.widgets-quick-chip__host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.widgets-quick-chip__host::after {
   content: '';
   position: absolute;
   inset: -8px 0;
@@ -3202,7 +3227,17 @@ body:has(.page-reports) .hdr::after {
     box-shadow 140ms ease;
 }
 
-.widgets-quick-pencil::after {
+.widgets-quick-pencil__host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* Припуск 44 pt на внутреннем host, не на absolute-кнопке (ОТВЕТ-22 Q6, вариант B). */
+.widgets-quick-pencil__host::after {
   content: '';
   position: absolute;
   inset: -2px;
@@ -9918,8 +9953,8 @@ body.reports-fullscreen-open {
 .widgets-settings__scale-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--accent, #3b82f6);
   border: 2px solid var(--v4-bg, #fffaf1);
@@ -9934,8 +9969,8 @@ body.reports-fullscreen-open {
 }
 
 .widgets-settings__scale-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: var(--accent, #3b82f6);
   border: 2px solid var(--v4-bg, #fffaf1);
@@ -13616,6 +13651,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widgets-tab--editing .widget--editing {
   opacity: 0.5;
+  cursor: pointer;
 }
 
 .widgets-tab--editing .widget--dragging {
@@ -13640,14 +13676,10 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   color: var(--v4-sand-act-mid, #a75c2b);
   box-shadow: none;
   backdrop-filter: none;
+  pointer-events: none;
 }
 
-/* Кружок 22 px, область нажатия 44 pt (канвас v4, строка 52). */
-.widgets-tab--editing .widget__delete-btn::after {
-  content: '';
-  position: absolute;
-  inset: -11px;
-}
+/* ОТВЕТ-22 Q6: цель удаления — вся плитка; кружок 22 px только accessory. */
 
 .widgets-tab--editing .widget__settings-btn {
   display: none;
@@ -15186,7 +15218,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
   font-size: 12.5px;
   font-weight: 600;
   line-height: 1.4;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -15931,12 +15963,12 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
    количество». Тот же случай, что «сегодня 16 %» в календаре зарядки: строка
    называет несуществующую ступень.
 
-   Берём ближайшую существующую — 62 % (`--v4-ink-prose`), а не литерал: литерал
+   Берём ступень набора `--v4-ink-2`, а не литерал: литерал
    не следует набору и в тёмных наборах стал бы чёрным по тёмному. Отступление
    на 2 % названо здесь и в вердикте строки. */
 .widgets-longpress-hint__sub {
   font: 500 11px/1.45 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* Источники вклада — кадр «Разбор · Клетчатка», элементы 84–92. */

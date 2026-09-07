@@ -2642,7 +2642,7 @@
   border: 0;
   border-radius: 12px;
   background: var(--v4-hero, var(--sb-soft));
-  color: var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
+  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
   font: 700 11px/1 Figtree, -apple-system, system-ui, sans-serif;
   cursor: pointer;
 }
@@ -2686,7 +2686,7 @@
   background: var(--v4-c1, var(--sb-card));
   font-size: 13px;
   font-weight: 600;
-  color: var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56)); /* v4-intentional */
+  color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56)); /* v4-intentional */
 }
 
 .sb-order-screen .sb-head-title {
@@ -3571,7 +3571,7 @@
   font: 700 13px/1.2 Figtree, sans-serif;
 }
 
-.sb-builder-screen .sb-ex--collapsed .sb-ex-title b {
+.sb-builder-screen.sb-root--rest-docked .sb-ex--collapsed .sb-ex-title b {
   font: 700 12.5px/1.2 Figtree, sans-serif;
 }
 
@@ -3852,13 +3852,14 @@
 }
 
 .sb-builder-screen.is-exercise-open .sb-ap.is-done .sb-ap-num {
-  background: var(--gr-bg);
-  color: var(--gr);
+  background: var(--sb-bg);
+  color: rgba(var(--ink), 0.62);
 }
 
 .sb-builder-screen.is-exercise-open .sb-ap.is-current .sb-ap-num {
-  background: var(--acs);
-  color: var(--on-acs);
+  background: var(--sb-bg);
+  box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.1);
+  color: rgba(var(--ink), 0.62);
 }
 
 .sb-builder-screen.is-exercise-open .sb-ap-check {

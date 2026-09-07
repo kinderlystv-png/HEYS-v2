@@ -18,7 +18,7 @@ const PALETTE = Object.freeze({
 });
 
 function compileCss() {
-  return `:root{--v4-ink-rgb:0,0,0;--v4-ink-prose:${PALETTE.ink62};}\n${RAW_CSS
+  return `:root{--v4-ink-rgb:0,0,0;--v4-ink-2:${PALETTE.ink62};}\n${RAW_CSS
     .replaceAll('var(--sb-card)', PALETTE.c1)
     .replaceAll('var(--sb-bg)', PALETTE.bg)
     .replaceAll('var(--sb-tx)', PALETTE.tx)

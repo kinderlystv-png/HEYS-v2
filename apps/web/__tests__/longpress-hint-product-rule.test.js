@@ -108,13 +108,8 @@ describe('обучение · правило продукта — подсказ
     expect(title).toContain('var(--v4-ink');
     const sub = rule('.widgets-longpress-hint__sub');
     expect(sub).toContain('font: 500 11px/1.45');
-    // Строка-владельца вида просит «чернилами 60 %», но 60 % в лестнице набора
-    // нет: ступени 62 · 56 · 45 · 38 · 30, и дизайнер 1 сентября отказался
-    // заводить промежуточные. Берём ближайшую существующую — 62 %, ту самую,
-    // которую называет соседняя строка «обучение · правило продукта».
-    // Литерал сторожить нельзя: он не следует набору и в тёмных наборах даёт
-    // чёрное по тёмному, а гейт лестницы его прямо запрещает.
-    expect(sub).toContain('var(--v4-ink-prose');
+    // Строка-владельца вида просит var(--ink-2); пакет 47 снял --v4-ink-prose.
+    expect(sub).toContain('var(--v4-ink-2');
     expect(rule('.widgets-longpress-hint__icon')).toContain('var(--v4-act-text');
     expect(UI).toContain('width: 22, height: 22');
     expect(UI).toContain("strokeWidth: 2.4");

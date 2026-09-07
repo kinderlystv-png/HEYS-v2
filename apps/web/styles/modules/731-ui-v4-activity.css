@@ -1555,7 +1555,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-warning__text {
   margin-top: 12px;
   font: 500 12px/1.55 Figtree, system-ui, sans-serif;
-  color: var(--v4-ink-prose, rgba(0, 0, 0, 0.62));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-load-warning__actions {

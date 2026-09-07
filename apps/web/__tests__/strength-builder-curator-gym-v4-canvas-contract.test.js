@@ -28,7 +28,7 @@ const BLUE = Object.freeze({
 function computedCss(paletteName) {
   const palette = paletteName === 'blue' ? BLUE : CANVAS;
   const inkRgb = paletteName === 'blue' ? '16,24,38' : '0,0,0';
-  return `:root{--v4-ink-rgb:${inkRgb};--v4-ink-prose:${palette.ink62};}\n${CSS
+  return `:root{--v4-ink-rgb:${inkRgb};--v4-ink-2:${palette.ink62};}\n${CSS
     .replaceAll('var(--sb-card)', palette.c1 || CANVAS.c1)
     .replaceAll('var(--sb-bg)', palette.bg || CANVAS.bg)
     .replaceAll('var(--sb-tx)', palette.tx)

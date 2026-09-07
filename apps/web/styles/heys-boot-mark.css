@@ -294,7 +294,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
 .heys-boot-mark__text {
     margin-top: 7px;
     font: 500 12px/1.5 Figtree, system-ui, sans-serif;
-    color: var(--boot-ink-50);
+    color: var(--boot-muted);
     text-align: center;
     text-wrap: pretty;
 }
@@ -454,7 +454,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
 .heys-wait-mark__text {
     margin-top: 7px;
     font: 500 12px/1.5 Figtree, system-ui, sans-serif;
-    color: var(--boot-ink-50);
+    color: var(--boot-muted);
     text-align: center;
     text-wrap: pretty;
 }

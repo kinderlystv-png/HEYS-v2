@@ -30,7 +30,7 @@ function compileCss(paletteName) {
   const inkRgb = paletteName === 'blue' ? '16, 24, 38' : '0, 0, 0';
   return `:root{
     --v4-ink-rgb:${inkRgb};
-    --v4-ink-prose:${palette.ink62};
+    --v4-ink-2:${palette.ink62};
     --v4-act-text:${palette.ac};
     --v4-act:${palette.acs};
     --v4-btn-on-act:${palette.onAcs};
@@ -55,7 +55,7 @@ function compileCss(paletteName) {
     .replaceAll('var(--v4-ink, #201e1d)', palette.tx)
     .replaceAll('var(--v4-act-text, #8a4a20)', palette.ac)
     .replaceAll('var(--v4-act, #c67139)', palette.acs)
-    .replaceAll('var(--v4-ink-prose, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62))', palette.ink62)
+    .replaceAll('var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56))', palette.ink62)
     .replaceAll('var(--bg)', palette.bg)
     .replaceAll('var(--c1)', palette.c1)
     .replaceAll('var(--c2)', palette.c2)
