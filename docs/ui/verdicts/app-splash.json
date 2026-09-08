@@ -92,7 +92,7 @@
     },
     "тема": {
       "v": "=",
-      "f": "manifest.json:8-9 единственный песочный цвет без тем; второй кадр красится палитрой heys-boot-mark.css:7-12, 82-136",
+      "f": "Геометрия/конфиг, не цвет набора: manifest и meta задают #fffaf1 до загрузки темы — одинаково на всех наборах по замыслу.",
       "h": "348eebb46070"
     },
     "загрузчик": {
@@ -336,7 +336,7 @@
     },
     "Сплэш · знак v4 · 01": {
       "v": "=",
-      "f": "manifest.json:8-9 background_color и theme_color #fffaf1; index.html:1121 meta theme-color #fffaf1; heys-boot-mark.css:1 html background #fffaf1 — на песочном и синем одинаково (манифест без тем)",
+      "f": "Не зависит от набора: manifest.json background_color #fffaf1, index.html theme-color #fffaf1, heys-boot-mark.css html background #fffaf1 — вне color-аудита палитр.",
       "h": "dd94efac9066"
     },
     "Сплэш · знак v4 · 02": {
@@ -351,7 +351,7 @@
     },
     "Сплэш · знак v4 · 04": {
       "v": "=",
-      "f": "public/icon-v4.svg:18 rect fill #fffaf1, :31 text fill #a1471c; generate-pwa-icons.mjs → icon-192/512.png — цвет не зависит от палитры (песочный=синий #fffaf1 и #a1471c)",
+      "f": "Не зависит от набора: icon-v4.svg #fffaf1 и #a1471c — статичные цвета ярлыка, вне color-аудита палитр.",
       "h": "a97805311644"
     },
     "Сплэш · знак v4 · 05": {
@@ -381,7 +381,7 @@
     },
     "iOS · после правки · 01": {
       "v": "=",
-      "f": "manifest.json:8 background_color #fffaf1; index.html без apple-touch-startup-image (rg 0); heys-boot-mark.css:1 html background #fffaf1 — песочный и синий одинаково до загрузки темы",
+      "f": "Не зависит от набора: manifest background_color #fffaf1 до загрузки темы — вне color-аудита палитр.",
       "h": "dd94efac9066"
     },
     "iOS · после правки · 02": {
@@ -396,7 +396,7 @@
     },
     "Стык · сплэш системы · 01": {
       "v": "=",
-      "f": "manifest.json:8 background_color #fffaf1; index.html:1121 theme-color #fffaf1 — системный кадр Android всегда песочный на обеих палитрах",
+      "f": "Не зависит от набора: Android system splash всегда #fffaf1 из manifest — вне color-аудита палитр.",
       "h": "dd94efac9066"
     },
     "Стык · сплэш системы · 02": {
@@ -411,7 +411,7 @@
     },
     "Стык · сплэш системы · 04": {
       "v": "=",
-      "f": "public/icon-v4.svg:18 #fffaf1, :31 #a1471c — та же иконка ярлыка, что «Сплэш · знак v4 · 04»; цвет один на песочном и синем",
+      "f": "Не зависит от набора: та же icon-v4.svg — вне color-аудита палитр.",
       "h": "a97805311644"
     },
     "Стык · сплэш системы · 05": {

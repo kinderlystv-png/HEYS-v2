@@ -149,7 +149,7 @@
     },
     "вид · оплата прошла": {
       "v": "=",
-      "f": "Замер chromium песочный/синий: PaymentSuccessScreen рисуется без крестика (heys_subscriptions_v1.js:1050-1070); круг 56×56 r999 фоном var(--v4-ok-bg) с глифом 26px тоном var(--v4-ok-text) = --gr (#5c6a45 / #1f6e4d) — 735-ui-v4-subscription.css:367-376; заголовок «Подписка активна» 700 19px/1.2 mt 14 (heys_subscriptions_v1.js:919-923); карточка var(--v4-surface) r18 p14 колонкой gap 6, 500 12.5px/1.4, строки «Тариф — Pro» и «До … · … ₽ в месяц» tabular (735-ui-v4-subscription.css:378-392); .paywall-cta «Продолжить» mt 18 (heys_subscriptions_v1.js:1064). Роль --v4-ok-bg — продуктовое имя канвасного --gr-bg (002-ui-v4-palette-roles.css:150): в песочном совпадает значением (#eaefe0), в синем продукт даёт #e4efe7 против #e6f3ec канваса — это правка файла палитры, не зоны.",
+      "f": "Замер chromium песочный/синий: PaymentSuccessScreen рисуется без крестика (heys_subscriptions_v1.js:1050-1070); круг 56×56 r999 фоном var(--v4-ok-bg) с глифом 26px тоном var(--v4-ok-text) = --gr (#5c6a45 / #1f6e4d) — 735-ui-v4-subscription.css:367-376; заголовок «Подписка активна» 700 19px/1.2 mt 14 (heys_subscriptions_v1.js:919-923); карточка var(--v4-surface) r18 p14 колонкой gap 6, 500 12.5px/1.4, строки «Тариф — Pro» и «До … · … ₽ в месяц» tabular (735-ui-v4-subscription.css:378-392); .paywall-cta «Продолжить» mt 18 (heys_subscriptions_v1.js:1064). Роль --v4-ok-bg — продуктовое имя канвасного --gr-bg (002-ui-v4-palette-roles.css:150): в песочном совпадает значением (#eaefe0), в синем продукт даёт #e4efe7 против #e6f3ec канваса — это правка файла палитры, не зоны. Замер chromium 375 px: карточка --v4-surface песочный rgb(247,239,226), тёмный rgb(35,32,27); --v4-ok-bg песочный #eaefe0, тёмный #242c20.",
       "h": "8da30899465c"
     },
     "точки входа": {
@@ -689,7 +689,7 @@
     },
     "Подписка · проверьте заказ · 05": {
       "v": "=",
-      "f": "«Pro» — .paywall-order-name font 700 15px/1.2 Figtree, color var(--v4-ink) (735-ui-v4-subscription.css:285-288); замер chromium: 700, 15px, line-height 18px = 1.2, песочный rgb(32,30,29) = --tx #201e1d, синий rgb(16,24,38) = #101826. Текст берётся из planName (heys_subscriptions_v1.js:961,982).",
+      "f": "735-ui-v4-subscription.css:289 .paywall-order-name — 700 15px/1.2 color var(--v4-ink). Замер chromium 375 px: песочный rgb(32,30,29), тёмный rgb(242,237,230).",
       "h": "1045720b8968"
     },
     "Подписка · проверьте заказ · 06": {
@@ -699,7 +699,7 @@
     },
     "Подписка · проверьте заказ · 07": {
       "v": "=",
-      "f": "«7 990 ₽» — .paywall-order-price font 800 17px/1, color var(--v4-ink), font-variant-numeric tabular-nums (735-ui-v4-subscription.css:290-295); замер chromium: 800, 17px, line-height 17px, tabular-nums, песочный rgb(32,30,29), синий rgb(16,24,38). Значение — formatPrice(selectedInfo.price) (heys_subscriptions_v1.js:986).",
+      "f": "735-ui-v4-subscription.css:294 .paywall-order-price — 800 17px/1 tabular-nums color var(--v4-ink). Замер chromium 375 px: песочный rgb(32,30,29), тёмный rgb(242,237,230).",
       "h": "78fabf7bf8c3"
     },
     "Подписка · проверьте заказ · 08": {
@@ -714,22 +714,22 @@
     },
     "Подписка · проверьте заказ · 10": {
       "v": "=",
-      "f": "Выбранный квадрат — .paywall-consent-box.is-checked background var(--v4-act), сам .paywall-consent-box color var(--v4-btn-on-act) (735-ui-v4-subscription.css:317-333); замер chromium: песочный фон rgb(198,113,57) = --acs #c67139 и глиф rgb(43,22,8) = --on-acs #2b1608; синий фон rgb(29,94,150) и глиф #ffffff.",
+      "f": "735-ui-v4-subscription.css:317 .paywall-consent-box.is-checked background var(--v4-act). Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "9ef64d224296"
     },
     "Подписка · проверьте заказ · 11": {
       "v": "=",
-      "f": "«Принимаю условия» — .paywall-consent-text font 500 12px/1.45, color var(--v4-ink) (735-ui-v4-subscription.css:335-339); замер chromium: 500, 12px, line-height 17,4px = 1.45, песочный rgb(32,30,29), синий rgb(16,24,38) = --tx.",
+      "f": "735-ui-v4-subscription.css:335 .paywall-consent-text — 500 12px/1.45 color var(--v4-ink). Замер chromium 375 px: песочный rgb(32,30,29), тёмный rgb(242,237,230).",
       "h": "c420a834021d"
     },
     "Подписка · проверьте заказ · 12": {
       "v": "=",
-      "f": ".paywall-consent-link color var(--v4-act-text) (735-ui-v4-subscription.css:345-352); замер chromium песочный rgb(138,74,32) = #8a4a20 = --ac, синий rgb(29,94,150) = #1d5e96; text-decoration underline.",
+      "f": "735-ui-v4-subscription.css:345 .paywall-consent-link color var(--v4-act-text). Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "56d9e6d52361"
     },
     "Подписка · проверьте заказ · 13": {
       "v": "=",
-      "f": "«Оплатить 7 990 ₽» — margin-top 18px задан инлайном (heys_subscriptions_v1.js:1022-1023), остальное даёт класс главной кнопки .paywall-cta: min-height 48px, радиус 999, фон var(--v4-act), текст var(--v4-btn-on-act), 700 13px/1 (735-ui-v4-subscription.css:151-167). Замер chromium: mt 18px, 339×48, песочный фон rgb(198,113,57) и текст rgb(43,22,8), синий rgb(29,94,150) и #ffffff.",
+      "f": "735-ui-v4-subscription.css:151 .paywall-cta — min-height 48, radius 999, фон var(--v4-act), текст var(--v4-btn-on-act). Фон Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); текст песочный rgb(43,22,8), тёмный rgb(26,15,4).",
       "h": "6beee72dee5a"
     },
     "Подписка · оплата прошла · 01": {

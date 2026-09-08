@@ -460,7 +460,7 @@
     },
     "вид чипа": {
       "v": "=",
-      "f": "Замер вычисленных значений на стенде, песочный и синий: 732-ui-v4-nutrition.css:1063 .nutrition-v4-chip — min-height 44 (:1068), измеренная высота 44 и расширителя области нет (::after content: none, :1083-1085); включённый залит --v4-act — rgb(198,113,57) на песочном и rgb(29,94,150) на синем — с галочкой .nutrition-v4-chip__check, которая рисуется только при on (heys_day_nutrition_v1.js:2086-2087); выключенный .is-off (:1087) — фон rgba(0,0,0,0) с обводкой inset 2px тем же --v4-act, то есть обводка без заливки.",
+      "f": "732-ui-v4-nutrition.css:1064 .nutrition-v4-chip — min-height 44 (:1068), расширителя нет (::after content: none). Включённый залит --v4-act — Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); выключенный .is-off — фон rgba(0, 0, 0, 0), обводка inset 2px rgb(198,113,57) / rgb(207,129,68).",
       "h": "5094dd8e68cc"
     },
     "что нельзя выключить": {
@@ -615,7 +615,7 @@
     },
     "вход в настройку курса": {
       "v": "=",
-      "f": "heys_day_nutrition_v1.js:1226-1240 — чип «Курс» стоит в .nutrition-v4-supplements__actions ровно между счётчиком headerMeta и «Всё сразу» и зовёт openCourse (:1099-1103 → api.openMyCourseScreen), то есть тот же экран курса, который открывает вход из чек-ина (heys_supplements_v1.js:1612 openMyCourseScreen, вызовы :2541 и :2991). Замер на стенде, песочный и синий: 732-ui-v4-nutrition.css:1518 пилюля — min-height 44, фон rgba(0,0,0,0); .is-course :1534 берёт обводку --v4-act и тон --v4-act-text — rgb(198,113,57) / rgb(138,74,32) на песочном и rgb(29,94,150) на синем, тогда как соседние пилюли шапки остаются нейтральными (обводка чернил 16 %, тон --v4-ink). Пустой курс: heys_day_nutrition_v1.js:1126-1139 — чипа нет вовсе, а «Настроить курс» становится единственной кнопкой с заливкой (.nutrition-v4-cta) в теле карточки.",
+      "f": "heys_day_nutrition_v1.js:1226-1240 — чип «Курс» между счётчиком и «Всё сразу», openCourse → openMyCourseScreen. 732-ui-v4-nutrition.css:1518 .nutrition-v4-supplements__pill.is-course — min-height 44, обводка и тон --v4-act-text: Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104) (border rgb(198,113,57) / rgb(207,129,68)).",
       "h": "941c06bad8fe"
     },
     "курса нет": {
