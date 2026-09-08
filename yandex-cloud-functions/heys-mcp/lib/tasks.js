@@ -4353,16 +4353,39 @@ function appendChild(text, taskLine, childLine) {
  * требовал байт-в-байт всю строку и отвечал anchor_not_found на живом файле.
  * Несколько совпадений — ошибка с кандидатами, а не молчаливый первый hit.
  *
+ * Уникальность проверяется У ОБЕИХ веток, и точное совпадение здесь опаснее
+ * подстроки: подстрока звучит как догадка и её проверяли с самого начала, а
+ * точная строка звучит как адрес — и потому первый hit брался молча. Инцидент
+ * 08.09: строка `- окно: 2026-09-04..2026-09-08` стоит в projects/heys.md
+ * дважды (у фазы 1 и у фазы 2). Патч с этим якорем в `from` и `to` взял первое
+ * вхождение началом, второе концом и снёс 18 строк между ними — вместе с
+ * задачей «Привести код к макету v4» и шестью соседними. Ошибки не было:
+ * каждый якорь по отдельности «нашёлся». Заметили случайно, grep'ом по
+ * названию задачи; восстанавливали из git show HEAD.
+ *
+ * Отказ дороже одного лишнего хода, молчаливое удаление — дороже всего:
+ * повторяющийся якорь теперь ошибка, а не диапазон.
+ *
  * `fromIndex` — искать только ниже этой строки (для якоря `to`, чтобы не
  * поймать одноимённый заголовок выше `from`).
  */
+/** Текст отказа с номерами строк-кандидатов: чинить якорь без них негде. */
+function ambiguous(label, hits, lines) {
+  const preview = hits.slice(0, 5).map((i) => `${i + 1}:${lines[i].trim().slice(0, 80)}`).join(' | ');
+  return `anchor_ambiguous:${label}:${hits.length}:${preview}`;
+}
+
 function findAnchorLine(lines, raw, { label = 'from', fromIndex = 0 } = {}) {
   const needle = String(raw || '').trim();
   if (!needle) throw new Error(`empty_anchor:${label}`);
   const slice = lines.slice(fromIndex);
 
-  const exactRel = slice.findIndex((line) => line.trim() === needle);
-  if (exactRel !== -1) return fromIndex + exactRel;
+  const exact = [];
+  for (let i = 0; i < slice.length; i += 1) {
+    if (slice[i].trim() === needle) exact.push(fromIndex + i);
+  }
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) throw new Error(ambiguous(label, exact, lines));
 
   const lower = needle.toLowerCase();
   const hits = [];
@@ -4373,8 +4396,7 @@ function findAnchorLine(lines, raw, { label = 'from', fromIndex = 0 } = {}) {
   }
   if (hits.length === 1) return hits[0];
   if (hits.length === 0) throw new Error(`anchor_not_found:${raw}`);
-  const preview = hits.slice(0, 5).map((i) => `${i + 1}:${lines[i].trim().slice(0, 80)}`).join(' | ');
-  throw new Error(`anchor_ambiguous:${label}:${hits.length}:${preview}`);
+  throw new Error(ambiguous(label, hits, lines));
 }
 
 /**
@@ -4385,7 +4407,7 @@ function findAnchorLine(lines, raw, { label = 'from', fromIndex = 0 } = {}) {
  * как «одиночный якорь сломан», хотя start находился. Не нашли или нашли
  * несколько — ошибка, а не повод дописать текст куда-нибудь.
  */
-function patchBlock(text, { from, to = null, replacement = '' }) {
+function patchBlockWithStats(text, { from, to = null, replacement = '' }) {
   const lines = String(text || '').split('\n');
   const start = findAnchorLine(lines, from, { label: 'from' });
   let end = start + 1;
@@ -4398,7 +4420,22 @@ function patchBlock(text, { from, to = null, replacement = '' }) {
   // пустой элемент в конце. Убираем только хвостовой пустой, чтобы «строка\n»
   // и «строка» вели себя одинаково при замене одной строки.
   if (body.length > 1 && body[body.length - 1] === '') body.pop();
-  return [...lines.slice(0, start), ...body, ...lines.slice(end)].join('\n');
+  return {
+    text: [...lines.slice(0, start), ...body, ...lines.slice(end)].join('\n'),
+    // Размер правки возвращается наружу, потому что правка на 18 строк там,
+    // где просили заменить одну, обязана быть видна в ответе, а не в git diff
+    // постфактум. Чистая дельта строк это скрывает: замена трёх строк тремя
+    // даёт ноль. Инцидент 08.09 — см. findAnchorLine.
+    removed: end - start,
+    added: body.length,
+    line: start + 1,
+    removedLines: lines.slice(start, end),
+  };
+}
+
+/** Та же замена, когда размер правки вызывающему не нужен. */
+function patchBlock(text, opts) {
+  return patchBlockWithStats(text, opts).text;
 }
 
 /**
@@ -6256,6 +6293,7 @@ module.exports = {
   applyTaskPatch,
   appendChild,
   patchBlock,
+  patchBlockWithStats,
   findSectionLine,
   keyForPath,
   pathForKey,

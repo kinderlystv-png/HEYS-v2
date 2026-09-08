@@ -188,8 +188,8 @@ const TASKS_WRITE_SCHEMAS = [
       properties: {
         path: { type: 'string', description: 'Файл задачника.' },
         rev: { type: 'integer', description: 'Ревизия из tasks_read, прочитанная перед правкой.' },
-        from: { type: 'string', description: 'Якорь начала: точная строка или уникальный кусок текста строки.' },
-        to: { type: 'string', description: 'Якорь конца блока (не включается). Без него — заменить только строку from.' },
+        from: { type: 'string', description: 'Якорь начала: точная строка или уникальный кусок текста строки. Должен встречаться в файле ровно один раз — повторяющаяся строка вроде «- окно: 2026-09-04..2026-09-08» это отказ, а не первое вхождение.' },
+        to: { type: 'string', description: 'Якорь конца блока (не включается). Без него — заменить только строку from. Одинаковые from и to блок НЕ ограничивают: это два вхождения одной строки, между которыми лежит чужой текст.' },
         replacement: { type: 'string', description: 'Новый текст блока.' },
       },
       required: ['path', 'rev', 'from', 'replacement'],
@@ -2008,9 +2008,9 @@ function createTasksTools({
           { path: file.path, current_rev: file.rev },
         );
       }
-      let nextText;
+      let patched;
       try {
-        nextText = tasks.patchBlock(file.text, { from: args.from, to: args.to || null, replacement: args.replacement });
+        patched = tasks.patchBlockWithStats(file.text, { from: args.from, to: args.to || null, replacement: args.replacement });
       } catch (e) {
         const msg = String(e && e.message || e);
         if (msg.startsWith('anchor_ambiguous:')) {
@@ -2021,10 +2021,22 @@ function createTasksTools({
         }
         throw new ToolError('anchor_not_found', `Якорь не найден: ${msg}. Перечитай файл и возьми точную строку или уникальный кусок.`);
       }
-      const saved = await writeFile(file, nextText);
+      const saved = await writeFile(file, patched.text);
+      // Размер правки называется вслух всегда. 08.09 патч на «замени одну
+      // строку» снёс 18 и отчитался словом «Заменил» — увидеть это было негде,
+      // кроме git diff, куда после успешного ответа никто не смотрит.
+      const scale = patched.removed > 1
+        ? ` Снято строк ${patched.removed} (с ${patched.line}), вписано ${patched.added} — если просил заменить одну, проверь git diff.`
+        : ` Снято строк ${patched.removed} (с ${patched.line}), вписано ${patched.added}.`;
       return {
-        text: `Заменил блок в ${saved.path} (ревизия ${saved.rev}).`,
-        structured: { path: saved.path, rev: saved.rev },
+        text: `Заменил блок в ${saved.path} (ревизия ${saved.rev}).${scale}`,
+        structured: {
+          path: saved.path,
+          rev: saved.rev,
+          removed: patched.removed,
+          added: patched.added,
+          line: patched.line,
+        },
       };
     },
   });
