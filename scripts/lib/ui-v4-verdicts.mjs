@@ -324,9 +324,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // (scripts/.reports-insights-legacy-34-apply.mjs): 6 → «=», 2 → «?»,
     // 7 → «—» designer-removed, 19 typed «≠»; mismatch 34 → 0,
     // typedMismatch 106 → 125.
+    // 08.09: один typed «≠» снят параллельной полосой — typedMismatch 125 → 124.
+    // 08.09: 131 legacy «—» получили naKind (scripts/.reports-insights-nakind-apply.mjs)
+    // — notApplicable 131 → 0.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [125, 'a6dabb6fedb02be6'],
-    notApplicable: [131, '6754e4d70d6ce812'],
+    typedMismatch: [124, 'fdf7c32f70fe25c0'],
+    notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   'service-curator': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
