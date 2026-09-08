@@ -18923,7 +18923,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__card-xp--ok {
-  color: var(--v4-on-ok, #3f4a2e);
+  color: var(--v4-sand-ok-text, #5c6a45);
 }
 
 /* Кадр просит чернила 50 %; у набора три тона — 55 / 45 / 38. Оставлен
@@ -19067,7 +19067,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__list-card {
-  background: var(--v4-c1, #f7efe2);
+  background: var(--v4-sand-surface, #f7efe2);
   border-radius: 20px;
   padding: 2px 16px;
 }
