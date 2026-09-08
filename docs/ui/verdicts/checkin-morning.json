@@ -3138,7 +3138,7 @@
     },
     "Чек-ин · курс добавок пуст · 06": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2857 .mc-supp-flow-empty-icon — 40×40, radius 999px, background --v4-sand-surface",
+      "f": "500-pwa-and-offline.css:2857 .mc-supp-flow-empty-icon — 40×40, radius 999px, background --v4-sand-surface Иконка Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "b7d98d8240b2"
     },
     "Чек-ин · курс добавок пуст · 07": {
@@ -3158,7 +3158,7 @@
     },
     "Чек-ин · курс добавок пуст · 10": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2816 .mc-supp-flow-btn--primary — min-height 44px, radius 999px, background --v4-sand-act Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "500-pwa-and-offline.css:2816 .mc-supp-flow-btn--primary — min-height 44px, radius 999px, background --v4-sand-act Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён. Кнопка Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "24653fadc569"
     },
     "Чек-ин · курс добавок пуст · 11": {
@@ -3495,7 +3495,7 @@
     },
     "Чек-ин · согласие не подписано · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1538 .mc-rest-consent-primary — flex 1.5, min-height 44px, radius 999px, background --v4-sand-act",
+      "f": "500-pwa-and-offline.css:1538 .mc-rest-consent-primary — flex 1.5, min-height 44px, radius 999px, background --v4-sand-act CTA Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "9332de248de1"
     },
     "Чек-ин · согласие не подписано · 19": {
@@ -5124,12 +5124,12 @@
     },
     "Рутина · резервный вопрос после еды · 19": {
       "v": "=",
-      "f": "300-modals-and-day.css:1897-1901 .ma-followup-note border-radius:16px padding:12px 13px margin-top:12px background:var(--v4-ok-bg)",
+      "f": "300-modals-and-day.css:1897-1901 .ma-followup-note border-radius:16px padding:12px 13px margin-top:12px background:var(--v4-ok-bg) Заметка Замер chromium 375 px: песочный rgb(234,239,224), тёмный rgb(36,44,32).",
       "h": "05ca8b75aa5b"
     },
     "Рутина · резервный вопрос после еды · 20": {
       "v": "=",
-      "f": "heys_steps_v1.js:5404 «Утренняя рутина»; 300-modals-and-day.css:1904-1908 .ma-followup-note-title font-size:13px font-weight:700 color:var(--v4-sand-ok-text)",
+      "f": "heys_steps_v1.js:5404 «Утренняя рутина»; 300-modals-and-day.css:1904-1908 .ma-followup-note-title font-size:13px font-weight:700 color:var(--v4-sand-ok-text) Заголовок Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "6f086c82e363"
     },
     "Рутина · резервный вопрос после еды · 21": {
@@ -5214,7 +5214,7 @@
     },
     "Рутина · резервный вопрос после еды · 37": {
       "v": "=",
-      "f": "300-modals-and-day.css:1945-1948 .ma-followup-answer--done min-height:44px border-radius:999px background:var(--v4-ok-bg) color:var(--v4-sand-ok-text) font:700 11.5px/1",
+      "f": "300-modals-and-day.css:1945-1948 .ma-followup-answer--done min-height:44px border-radius:999px background:var(--v4-ok-bg) color:var(--v4-sand-ok-text) font:700 11.5px/1 Ответ Замер chromium 375 px: песочный rgb(234,239,224), тёмный rgb(36,44,32); текст Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "549f58c7e33c"
     },
     "Рутина · резервный вопрос после еды · текст": {

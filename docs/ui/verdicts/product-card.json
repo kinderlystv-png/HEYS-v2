@@ -899,7 +899,7 @@
     },
     "Правка продукта · порции · 12": {
       "v": "=",
-      "f": "чип «½ стакана · 125 г» — .aps-v4-portions-suggest .aps-v4-portions-row--readonly: min-height 44, padding 0/11, radius 999, background var(--v4-hero), 600 11px/1, color var(--v4-act-text) — apps/web/styles/modules/611-aps-product-card.css:2051–2136",
+      "f": "чип «½ стакана · 125 г» — .aps-v4-portions-suggest .aps-v4-portions-row--readonly: min-height 44, padding 0/11, radius 999, background var(--v4-hero), 600 11px/1, color var(--v4-act-text) — apps/web/styles/modules/611-aps-product-card.css:2051–2136 Чип Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32); текст Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "6781e87c7212"
     },
     "Правка продукта · порции · 13": {
@@ -999,7 +999,7 @@
     },
     "Продукт · исходы заявки · 10": {
       "v": "=",
-      "f": "карточка отказа на второй поверхности радиусом 18 полями 15 — .aps-v4-outcome--warn; роль исправлена с --v4-sand-accent-bg на --v4-hero, замерено живьём rgb(239,227,207)",
+      "f": "карточка отказа на второй поверхности радиусом 18 полями 15 — .aps-v4-outcome--warn; роль исправлена с --v4-sand-accent-bg на --v4-hero, замерено живьём rgb(239,227,207) Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "d8e26f80991b"
     },
     "Продукт · исходы заявки · 11": {
@@ -1502,7 +1502,7 @@
     },
     "Штрихкод · состояния · 06": {
       "v": "=",
-      "f": "Карточка ветки «Код не распознан»: .aps-barcode-unrecognized__card — background var(--v4-hero), border-radius 18px, padding 15px (611-aps-product-card.css:809-814).",
+      "f": "Карточка ветки «Код не распознан»: .aps-barcode-unrecognized__card — background var(--v4-hero), border-radius 18px, padding 15px (611-aps-product-card.css:809-814). Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "f845d1a72f95"
     },
     "Штрихкод · состояния · 07": {

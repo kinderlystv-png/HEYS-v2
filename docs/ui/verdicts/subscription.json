@@ -360,7 +360,7 @@
     },
     "Подписка · приветствие · 02": {
       "v": "≠",
-      "f": "apps/web/heys_subscriptions_v1.js:1595-1604: WelcomeFirstLogin scrim rgba(0,0,0,.55) inline — нет backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px))",
+      "f": "apps/web/heys_subscriptions_v1.js:1595-1604: WelcomeFirstLogin scrim rgba(0,0,0,.55) inline — нет backdrop-filter blur(var(--v4-modal-backdrop-blur, 2.5px)) Скрим Замер chromium 375 px: песочный rgba(0,0,0/0.55), тёмный rgba(0,0,0/0.55).",
       "h": "3f52b0853401",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#subscription-canvas-decisions-2026-09-06"
@@ -679,7 +679,7 @@
     },
     "Подписка · проверьте заказ · 03": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:1095: .paywall-order-card background var(--v4-surface); border-radius 18px; padding 14px; margin-top 16px",
+      "f": "apps/web/heys_subscriptions_v1.js:1095: .paywall-order-card background var(--v4-surface); border-radius 18px; padding 14px; margin-top 16px Карточка Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(35,32,27).",
       "h": "f83b80058208"
     },
     "Подписка · проверьте заказ · 04": {
@@ -745,7 +745,7 @@
     },
     "Подписка · оплата прошла · 03": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:1173: .paywall-success-icon 56×56 border-radius 999px; background var(--v4-ok-bg, #eaefe0); color var(--v4-ok-text, #5c6a45); sand bg #eaefe0 text #5c6a45 · blue bg #e4efe7 text #1f6e4d",
+      "f": "apps/web/heys_subscriptions_v1.js:1173: .paywall-success-icon 56×56 border-radius 999px; background var(--v4-ok-bg, #eaefe0); color var(--v4-ok-text, #5c6a45); sand bg #eaefe0 text #5c6a45 · blue bg #e4efe7 text #1f6e4d Иконка Замер chromium 375 px: песочный rgb(234,239,224), тёмный rgb(36,44,32); текст Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "d48f38529ce3"
     },
     "Подписка · оплата прошла · 04": {
@@ -755,7 +755,7 @@
     },
     "Подписка · оплата прошла · 05": {
       "v": "=",
-      "f": "apps/web/heys_subscriptions_v1.js:1179: .paywall-success-card background var(--v4-surface); border-radius 18px; padding 14px; margin-top 14px; gap 6px; font 500 12.5px/1.4",
+      "f": "apps/web/heys_subscriptions_v1.js:1179: .paywall-success-card background var(--v4-surface); border-radius 18px; padding 14px; margin-top 14px; gap 6px; font 500 12.5px/1.4 Карточка Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(35,32,27).",
       "h": "deb774d4356f"
     },
     "Подписка · оплата прошла · 06": {

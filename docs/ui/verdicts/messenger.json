@@ -643,7 +643,7 @@
     },
     "Мессенджер · меню Ещё · 04": {
       "v": "=",
-      "f": "1000-messenger.css:286-288 .messenger-header-button.is-open background --v4-c1",
+      "f": "1000-messenger.css:286-288 .messenger-header-button.is-open background --v4-c1 Кнопка Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(223,216,204).",
       "h": "5edecf6fdc97"
     },
     "Мессенджер · меню Ещё · 05": {
@@ -688,7 +688,7 @@
     },
     "Мессенджер · без сети · 03": {
       "v": "=",
-      "f": "1000-messenger.css:3220-3222 .messenger-subtitle__dot.is-offline background var(--v4-bad-text); heys_messenger_v1.js:4375 offline prop",
+      "f": "1000-messenger.css:3220-3222 .messenger-subtitle__dot.is-offline background var(--v4-bad-text); heys_messenger_v1.js:4375 offline prop Точка Замер chromium 375 px: песочный rgb(168,60,34), тёмный rgb(224,112,79).",
       "h": "f75e427d66d9"
     },
     "Мессенджер · без сети · 04": {
@@ -793,7 +793,7 @@
     },
     "Мессенджер · удаление сообщения · 07": {
       "v": "=",
-      "f": "1000-messenger.css:1335-1337 .messenger-confirm-delete color var(--v4-bad-text) background var(--v4-c1)",
+      "f": "1000-messenger.css:1335-1337 .messenger-confirm-delete color var(--v4-bad-text) background var(--v4-c1) Фон Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(35,32,27); текст Замер chromium 375 px: песочный rgb(168,60,34), тёмный rgb(224,112,79).",
       "h": "302c88280412"
     },
     "как читать графику": {

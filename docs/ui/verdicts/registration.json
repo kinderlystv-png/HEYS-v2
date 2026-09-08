@@ -190,7 +190,7 @@
     },
     "вид карточки итогов": {
       "v": "=",
-      "f": "cardShell background var(--v4-hero, #efe3cf) heys_profile_step_v1.js:1804-1813; computed sand rgb(239,227,207) blue rgb(226,236,246) @375 registration-q7-colors.test.js",
+      "f": "cardShell background var(--v4-hero, #efe3cf) heys_profile_step_v1.js:1804-1813; computed sand rgb(239,227,207) blue rgb(226,236,246) @375 registration-q7-colors.test.js cardShell Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "156f1666d3e5"
     },
     "ожидание": {
@@ -2108,7 +2108,7 @@
     },
     "Регистрация · возврат к незавершённой · 02": {
       "v": "=",
-      "f": ".registration-v4-endpoint-disc 56×56 radius 999 bg var(--v4-hero) 733-ui-v4-login-theme.css:2195-2204; computed sand rgb(239,227,207) blue rgb(226,236,246) registration-q7-colors.test.js",
+      "f": ".registration-v4-endpoint-disc 56×56 radius 999 bg var(--v4-hero) 733-ui-v4-login-theme.css:2195-2204; computed sand rgb(239,227,207) blue rgb(226,236,246) registration-q7-colors.test.js Диск Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "a3acdc62e1e3"
     },
     "Регистрация · возврат к незавершённой · 03": {
@@ -2398,7 +2398,7 @@
     },
     "Профиль · отзыв согласия на добавки · 10": {
       "v": "=",
-      "f": ".heys-supp-revoke-frame прижимает лист снизу с полями 12px + safe-area (733:2194-2203); .heys-supp-revoke-sheet — width 100%, radius 26px, padding 18/16/16, фон --v4-sand-surface-soft (#fffaf1), тень 0 -2px 20px rgba(80,50,20,.1) — 733:2206-2215",
+      "f": ".heys-supp-revoke-frame прижимает лист снизу с полями 12px + safe-area (733:2194-2203); .heys-supp-revoke-sheet — width 100%, radius 26px, padding 18/16/16, фон --v4-sand-surface-soft (#fffaf1), тень 0 -2px 20px rgba(80,50,20,.1) — 733:2206-2215 Лист Замер chromium 375 px: песочный rgb(255,250,241), тёмный rgb(35,32,27).",
       "h": "8944d2d5aa53"
     },
     "Профиль · отзыв согласия на добавки · 11": {

@@ -2670,7 +2670,7 @@
     },
     "Правка веса в сессии · 08": {
       "v": "=",
-      "f": "750 .is-weight-entry.is-exercise-open .sb-aps-head > span:last-child color var(--gr); strength-builder-weight-edit-session-v4-canvas-contract.test.js.",
+      "f": "750 .is-weight-entry.is-exercise-open .sb-aps-head > span:last-child color var(--gr); strength-builder-weight-edit-session-v4-canvas-contract.test.js. Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "13104ec38a12"
     },
     "Правка веса в сессии · 09": {
@@ -2825,7 +2825,7 @@
     },
     "Программа пройдена · 19": {
       "v": "=",
-      "f": "Л19 .program-done-growth-val 700 12.5px color var(--gr) — 750-strength-builder.css:5996; sand+blue contract test",
+      "f": "Л19 .program-done-growth-val 700 12.5px color var(--gr) — 750-strength-builder.css:5996; sand+blue contract test Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "6ee53d9dc46a"
     },
     "Программа пройдена · 20": {
@@ -2905,7 +2905,7 @@
     },
     "История упражнения · 11": {
       "v": "=",
-      "f": "750:2000–2007 .sb-finish-metric — нужен background:var(--c1) у не-accent плиток на экране истории (сейчас var(--bg))",
+      "f": "750:2000–2007 .sb-finish-metric — нужен background:var(--c1) у не-accent плиток на экране истории (сейчас var(--bg)) Замер chromium 375 px: песочный rgba(0, 0, 0, 0), тёмный rgba(0, 0, 0, 0).",
       "h": "c9d2da3b8d57"
     },
     "История упражнения · 12": {
@@ -4438,7 +4438,7 @@
     },
     "Связка · создание · 14": {
       "v": "=",
-      "f": "Цифра «3» в выборе: .sb-radio.is-on .sb-ex-num { background:var(--sb-acc-strong); color:var(--v4-btn-on-act) } — apps/web/styles/modules/750-strength-builder.css:3368-3371.",
+      "f": "Цифра «3» в выборе: .sb-radio.is-on .sb-ex-num { background:var(--sb-acc-strong); color:var(--v4-btn-on-act) } — apps/web/styles/modules/750-strength-builder.css:3368-3371. Цифра Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); текст Замер chromium 375 px: песочный rgb(43,22,8), тёмный rgb(26,15,4).",
       "h": "61464eb844e9"
     },
     "Связка · создание · 15": {
@@ -4483,7 +4483,7 @@
     },
     "Связка · создание · 23": {
       "v": "=",
-      "f": "Кнопка «+»: .sb-stepper .sb-btn.is-accent { background:var(--sb-acc-strong); color:var(--v4-btn-on-act); font:700 18px/1 } — apps/web/styles/modules/750-strength-builder.css:3436-3439; apps/web/strength/heys_strength_catalog_ui_v1.js:416-419.",
+      "f": "Кнопка «+»: .sb-stepper .sb-btn.is-accent { background:var(--sb-acc-strong); color:var(--v4-btn-on-act); font:700 18px/1 } — apps/web/styles/modules/750-strength-builder.css:3436-3439; apps/web/strength/heys_strength_catalog_ui_v1.js:416-419. Плюс Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); текст Замер chromium 375 px: песочный rgb(43,22,8), тёмный rgb(26,15,4).",
       "h": "778be85ef026"
     },
     "Связка · создание · 24": {
@@ -4812,7 +4812,7 @@
     "Куратор и зал · 25": {
       "h": "ed476b615c94",
       "v": "=",
-      "f": "Карточка дискомфорта на tint: .sb-pain--canvas { background var(--v4-accent-bg) } — 750:5660-5666."
+      "f": "Карточка дискомфорта на tint: .sb-pain--canvas { background var(--v4-accent-bg) } — 750:5660-5666. Замер chromium 375 px: песочный rgb(240,220,198), тёмный rgb(58,38,32)."
     },
     "Куратор и зал · 26": {
       "h": "8dcb74bc526f",
@@ -4946,7 +4946,7 @@
     "Шторка ⋯ · 13": {
       "h": "5479c5f8949b",
       "v": "=",
-      "f": "Scrim: .sb-sheet-back inset 0 background var(--v4-modal-backdrop-dim) — 750:5737-5742 + palette roles 2.5px blur."
+      "f": "Scrim: .sb-sheet-back inset 0 background var(--v4-modal-backdrop-dim) — 750:5737-5742 + palette roles 2.5px blur. Замер chromium 375 px: песочный rgba(15,23,42/0.45), тёмный rgba(15,23,42/0.45)."
     },
     "Шторка ⋯ · 14": {
       "h": "305f956b816e",
@@ -5030,7 +5030,7 @@
     },
     "План в ленте дня · 08": {
       "v": "=",
-      "f": "letter B 34×34 r11 var(--v4-act-text): 731 .sb-plan-letter; day-feed test ·08 sand+blue color.",
+      "f": "letter B 34×34 r11 var(--v4-act-text): 731 .sb-plan-letter; day-feed test ·08 sand+blue color. Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "addb1ad16c00"
     },
     "План в ленте дня · 09": {
@@ -7408,7 +7408,7 @@
     },
     "Правка · сторона куратора · 06": {
       "v": "=",
-      "f": ".sb-curator-edit-card.is-primary margin-top:12px border-radius:20px background var(--c1); CURATOR_EDIT_STYLE.card proposal_ui:676-677; contract test row 06.",
+      "f": ".sb-curator-edit-card.is-primary margin-top:12px border-radius:20px background var(--c1); CURATOR_EDIT_STYLE.card proposal_ui:676-677; contract test row 06. Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(35,32,27).",
       "h": "f06d6e12de2e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
@@ -7444,7 +7444,7 @@
     },
     "Правка · сторона куратора · 10": {
       "v": "=",
-      "f": "«✓» .sb-curator-edit-mark.is-ok — 700 12px/1 Figtree color var(--gr); CURATOR_EDIT_STYLE.markOk proposal_ui:510,641; contract test row 10.",
+      "f": "«✓» .sb-curator-edit-mark.is-ok — 700 12px/1 Figtree color var(--gr); CURATOR_EDIT_STYLE.markOk proposal_ui:510,641; contract test row 10. Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "4668dbccd211",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
@@ -7831,7 +7831,7 @@
     },
     "Ввод · время под нагрузкой · 09": {
       "v": "=",
-      "f": ".is-time-entry.is-exercise-open .sb-aps-head > span:last-child color var(--gr); 750-strength-builder.css.",
+      "f": ".is-time-entry.is-exercise-open .sb-aps-head > span:last-child color var(--gr); 750-strength-builder.css. Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "13104ec38a12"
     },
     "Ввод · время под нагрузкой · 10": {
@@ -7941,7 +7941,7 @@
     },
     "Ввод · метры · 09": {
       "v": "=",
-      "f": ".is-distance-entry.is-exercise-open .sb-aps-head > span:last-child justify-self center color var(--gr); 750.",
+      "f": ".is-distance-entry.is-exercise-open .sb-aps-head > span:last-child justify-self center color var(--gr); 750. Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "13104ec38a12"
     },
     "Ввод · метры · 10": {
@@ -8016,7 +8016,7 @@
     },
     "Ввод · свой вес с довесом · 08": {
       "v": "=",
-      "f": ".is-bodyweight-entry.is-exercise-open .sb-aps-head > span:last-child justify-self center color var(--gr); 750.",
+      "f": ".is-bodyweight-entry.is-exercise-open .sb-aps-head > span:last-child justify-self center color var(--gr); 750. Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "13104ec38a12"
     },
     "Ввод · свой вес с довесом · 09": {
@@ -8670,7 +8670,7 @@
     },
     "вид · отчёт за период": {
       "v": "=",
-      "f": ".sb-period-outcomes приведён к канвасному .cd: фон var(--c1), радиус 20px, поля 2px 16px, без рамки (750:7780-7787); chromium 375 px sand rgb(247,239,226)/blue rgb(238,243,249). Тона исходов и долга — strength-proposal-v4-canvas-contract.test.js PeriodReportScreen computed. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "f": ".sb-period-outcomes приведён к канвасному .cd: фон var(--c1), радиус 20px, поля 2px 16px, без рамки (750:7780-7787); chromium 375 px sand rgb(247,239,226)/blue rgb(238,243,249). Тона исходов и долга — strength-proposal-v4-canvas-contract.test.js PeriodReportScreen computed. · пакет 47: проза контракта уточнена, код сверен в приёмке. Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(35,32,27).",
       "h": "67cfbdc83a76"
     },
     "снято · проверка «класс красится инлайном не везде»": {
@@ -9232,7 +9232,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 33": {
       "v": "≠",
-      "f": "Г4 .is-weight-entry .sb-ap.is-done .sb-ap-num color var(--gr) vs ink-2 (750-strength-builder.css:5197-5200); computed sand rgba(92, 106, 69, 1), blue rgba(92, 106, 69, 1) @375px Chromium. CANVAS_CONFLICTS А1б:33.",
+      "f": "Г4 .is-weight-entry .sb-ap.is-done .sb-ap-num color var(--gr) vs ink-2 (750-strength-builder.css:5197-5200); computed sand rgba(92, 106, 69, 1), blue rgba(92, 106, 69, 1) @375px Chromium. CANVAS_CONFLICTS А1б:33. Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(96,111,73).",
       "h": "c949d97f6e9e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9413,7 +9413,7 @@
     },
     "Программа · отчёт за период · 09": {
       "v": "=",
-      "f": "750-strength-builder.css .sb-period-outcome-val.is-ok color var(--gr) 700 12.5px",
+      "f": "750-strength-builder.css .sb-period-outcome-val.is-ok color var(--gr) 700 12.5px Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
       "h": "308ab4b3f76f"
     },
     "Программа · отчёт за период · 10": {

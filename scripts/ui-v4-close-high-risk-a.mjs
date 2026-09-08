@@ -44,6 +44,50 @@ function stripOldPalette(f) {
 
 /** Longest needle first — first match wins. */
 const PROBE_RULES = [
+  { needles: ['.sb-builder-screen.is-weight-entry.is-exercise-open .sb-aps-head > span:last-child', '.is-weight-entry.is-exercise-open .sb-aps-head > span:last-child'], probe: 'sb-weight-head-hint-color', label: 'тон' },
+  { needles: ['.is-time-entry.is-exercise-open .sb-aps-head > span:last-child'], probe: 'sb-time-head-hint-color', label: 'тон' },
+  { needles: ['.is-distance-entry.is-exercise-open .sb-aps-head > span:last-child'], probe: 'sb-distance-head-hint-color', label: 'тон' },
+  { needles: ['.is-bodyweight-entry.is-exercise-open .sb-aps-head > span:last-child'], probe: 'sb-bodyweight-head-hint-color', label: 'тон' },
+  { needles: ['.is-weight-entry .sb-ap.is-done .sb-ap-num', '.is-weight-entry.is-exercise-open .sb-ap.is-done .sb-ap-num'], probe: 'sb-weight-done-ap-num-color', label: 'тон' },
+  { needles: ['.sb-period-outcome-val.is-ok'], probe: 'sb-period-outcome-val-ok-color', label: 'тон' },
+  { needles: ['.sb-period-outcomes'], probe: 'sb-period-outcomes-bg', label: 'фон' },
+  { needles: ['.program-done-growth-val'], probe: 'program-done-growth-val-color', label: 'тон' },
+  { needles: ['.sb-history-metrics .sb-finish-metric'], probe: 'sb-history-metric-bg', label: 'фон' },
+  { needles: ['.sb-radio.is-on .sb-ex-num'], probes: ['sb-radio-on-num-bg', 'sb-radio-on-num-color'], label: 'цифра' },
+  { needles: ['.sb-stepper .sb-btn.is-accent'], probes: ['sb-stepper-accent-bg', 'sb-stepper-accent-color'], label: 'кнопка' },
+  { needles: ['.sb-pain--canvas'], probe: 'sb-pain-canvas-bg', label: 'фон' },
+  { needles: ['.sb-sheet-back'], probe: 'sb-sheet-back-bg', label: 'скрим' },
+  { needles: ['.sb-plan-letter'], probe: 'sb-plan-letter-color', label: 'тон' },
+  { needles: ['.sb-curator-edit-mark.is-ok'], probe: 'sb-curator-mark-ok-color', label: 'тон' },
+  { needles: ['.sb-curator-edit-card.is-primary'], probe: 'sb-curator-card-bg', label: 'фон' },
+  { needles: ['.mc-supp-flow-empty-icon'], probe: 'mc-supp-empty-icon-bg', label: 'фон' },
+  { needles: ['.mc-supp-flow-btn--primary'], probe: 'mc-supp-primary-btn-bg', label: 'фон' },
+  { needles: ['.mc-rest-consent-primary'], probe: 'mc-rest-consent-primary-bg', label: 'фон' },
+  { needles: ['.ma-followup-answer--done'], probes: ['ma-followup-answer-done-bg', 'ma-followup-answer-done-color'], label: 'ответ' },
+  { needles: ['.ma-followup-note-title'], probe: 'ma-followup-note-title-color', label: 'тон' },
+  { needles: ['.ma-followup-note'], probe: 'ma-followup-note-bg', label: 'фон' },
+  { needles: ['.cycle-card-v4__insight-title'], probe: 'cycle-insight-title-color', label: 'тон' },
+  { needles: ['.cycle-card-v4__insight', '500-pwa:2183'], probe: 'cycle-insight-bg', label: 'фон' },
+  { needles: ['.reports-v4-dynamics-card'], probe: 'reports-dynamics-card-bg', label: 'фон' },
+  { needles: ['.cycle-date-picker-sheet'], probe: 'cycle-date-sheet-bg', label: 'фон' },
+  { needles: ['.date-picker-day-nav--disabled'], probe: 'date-nav-disabled-bg', label: 'кружок' },
+  { needles: ['.date-picker-sheet-month-nav', 'легенда · 06'], probe: 'date-sheet-month-nav-bg', label: 'фон' },
+  { needles: ['.game-v4-sheet__hero-ring-path', 'buildCeremonyRingPath'], probe: 'game-hero-ring-stroke', label: 'штрих' },
+  { needles: ['.messenger-header-button.is-open'], probe: 'msg-header-open-bg', label: 'фон' },
+  { needles: ['.messenger-subtitle__dot.is-offline'], probe: 'msg-offline-dot-bg', label: 'точка' },
+  { needles: ['.messenger-confirm-delete'], probes: ['msg-confirm-delete-bg', 'msg-confirm-delete-color'], label: 'удаление' },
+  { needles: ['.aps-v4-portions-row--readonly', '.aps-v4-portions-suggest'], probes: ['aps-portions-readonly-bg', 'aps-portions-readonly-color'], label: 'чип' },
+  { needles: ['.aps-v4-outcome--warn'], probe: 'aps-outcome-warn-bg', label: 'фон' },
+  { needles: ['.aps-barcode-unrecognized__card'], probe: 'barcode-unrecognized-card-bg', label: 'фон' },
+  { needles: ['cardShell background var(--v4-hero'], probe: 'reg-card-shell-bg', label: 'фон' },
+  { needles: ['.registration-v4-endpoint-disc'], probe: 'reg-endpoint-disc-bg', label: 'фон' },
+  { needles: ['.heys-supp-revoke-sheet'], probe: 'reg-revoke-sheet-bg', label: 'фон' },
+  { needles: ['WelcomeFirstLogin scrim rgba(0,0,0,.55)'], probe: 'sub-welcome-scrim-bg', label: 'скрим' },
+  { needles: ['.paywall-success-icon'], probes: ['paywall-success-icon-bg', 'paywall-success-icon-color'], label: 'иконка' },
+  { needles: ['.paywall-success-card'], probe: 'paywall-success-card-bg', label: 'фон' },
+  { needles: ['.paywall-order-card background'], probe: 'paywall-order-card-bg', label: 'фон' },
+  { needles: ['.activity-v4-steps__fill'], probe: 'activity-steps-fill-bg', label: 'заливка' },
+  { needles: ['.advice-v4-toast-card__stripe--ok', '.advice-v4-toast-card__stripe'], probe: 'advice-toast-stripe-ok-bg', label: 'полоса' },
   { needles: ['.yv-v4-slider-fill'], probe: 'yv-slider-fill-bg', label: 'заливка' },
   { needles: ['estimatedBadge', 'mc-estimated-badge', 'расчётный вес'], probes: ['yv-estimated-badge-bg', 'yv-estimated-badge-color'], label: 'плашка' },
   { needles: ['.yv-pack-secondary--feelings'], probe: 'yv-pack-secondary-feelings-bg', label: 'фон' },
@@ -147,11 +191,54 @@ const EXPLICIT = {
       key: 'Чек-ин · вчера по ощущениям · 20',
       fact: (M, base) => `${stripOldPalette(base)} Заливка ${dual(M, 'yv-slider-fill-bg')}.`,
     },
+    {
+      key: 'Чек-ин · курс добавок пуст · 06',
+      fact: (M, base) => `${stripOldPalette(base)} Иконка ${dual(M, 'mc-supp-empty-icon-bg')}.`,
+    },
+    {
+      key: 'Чек-ин · курс добавок пуст · 10',
+      fact: (M, base) => `${stripOldPalette(base)} Кнопка ${dual(M, 'mc-supp-primary-btn-bg')}.`,
+    },
+    {
+      key: 'Чек-ин · согласие не подписано · 18',
+      fact: (M, base) => `${stripOldPalette(base)} CTA ${dual(M, 'mc-rest-consent-primary-bg')}.`,
+    },
+    {
+      key: 'Рутина · резервный вопрос после еды · 19',
+      fact: (M, base) => `${stripOldPalette(base)} Заметка ${dual(M, 'ma-followup-note-bg')}.`,
+    },
+    {
+      key: 'Рутина · резервный вопрос после еды · 20',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Заголовок ${dual(M, 'ma-followup-note-title-color')}.`,
+    },
+    {
+      key: 'Рутина · резервный вопрос после еды · 37',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Ответ ${dual(M, 'ma-followup-answer-done-bg')}; текст ${dual(M, 'ma-followup-answer-done-color')}.`,
+    },
   ],
-  'cycle': [
+  cycle: [
     {
       key: 'контраст ленты',
       fact: (M, base) => `${stripOldPalette(base)} Лента ${dual(M, 'cycle-ribbon-period-bg')}.`,
+    },
+    {
+      key: 'вид · инсайт',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Фон ${dual(M, 'cycle-insight-bg')}; заголовок ${dual(M, 'cycle-insight-title-color')}.`,
+    },
+    {
+      key: 'Цикл · график калорий · 01',
+      fact: (M, base) => `${stripOldPalette(base)} Карточка ${dual(M, 'reports-dynamics-card-bg')}.`,
+    },
+    {
+      key: 'Цикл · график веса · 01',
+      fact: (M, base) => `${stripOldPalette(base)} Карточка ${dual(M, 'reports-dynamics-card-bg')}.`,
+    },
+    {
+      key: 'Цикл · другой день, календарь · 01',
+      fact: (M, base) => `${stripOldPalette(base)} Лист ${dual(M, 'cycle-date-sheet-bg')}.`,
     },
   ],
   'curator-cabinet': [
@@ -216,12 +303,49 @@ const EXPLICIT = {
       fact: (M, base) =>
         `${stripOldPalette(base)} ${dual(M, 'advice-disclaimer-overlay-bg')}.`,
     },
+    {
+      key: 'Совет · всплывающий · 08',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'advice-toast-stripe-ok-bg')}.`,
+    },
   ],
   'date-remainders': [
     {
       key: 'Календарь · легенда · 27',
       fact: (M, base) =>
         `${stripOldPalette(base)} Фон ${dual(M, 'date-today-btn-bg')}; текст ${dual(M, 'date-today-btn-color')}.`,
+    },
+    {
+      key: 'Дата · сегодня, прокручено · 49',
+      fact: (M, base) => `${stripOldPalette(base)} Кружок ${dual(M, 'date-nav-disabled-bg')}.`,
+    },
+    {
+      key: 'Календарь · легенда · 06',
+      fact: (M, base) => `${stripOldPalette(base)} Стрелка ${dual(M, 'date-sheet-month-nav-bg')}.`,
+    },
+    {
+      key: 'Капсула · ночь на 21 августа · 03',
+      fact: (M, base) => `${stripOldPalette(base)} Нав ${dual(M, 'date-past-nav-bg')}.`,
+    },
+  ],
+  gamification: [
+    {
+      key: 'вид линии',
+      fact: (M, base) => `${stripOldPalette(base)} Штрих ${dual(M, 'game-hero-ring-stroke')}.`,
+    },
+  ],
+  messenger: [
+    {
+      key: 'Мессенджер · меню Ещё · 04',
+      fact: (M, base) => `${stripOldPalette(base)} Кнопка ${dual(M, 'msg-header-open-bg')}.`,
+    },
+    {
+      key: 'Мессенджер · без сети · 03',
+      fact: (M, base) => `${stripOldPalette(base)} Точка ${dual(M, 'msg-offline-dot-bg')}.`,
+    },
+    {
+      key: 'Мессенджер · удаление сообщения · 07',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Фон ${dual(M, 'msg-confirm-delete-bg')}; текст ${dual(M, 'msg-confirm-delete-color')}.`,
     },
   ],
   'product-card': [
@@ -243,17 +367,134 @@ const EXPLICIT = {
       key: 'Штрихкод · найден · 15',
       fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'barcode-state-color')}.`,
     },
-  ],
-  'pwa-update': [
     {
-      key: 'вид страховки',
-      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'readonly-toast-bg')}.`,
+      key: 'Правка продукта · порции · 12',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Чип ${dual(M, 'aps-portions-readonly-bg')}; текст ${dual(M, 'aps-portions-readonly-color')}.`,
+    },
+    {
+      key: 'Продукт · исходы заявки · 10',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'aps-outcome-warn-bg')}.`,
+    },
+    {
+      key: 'Штрихкод · состояния · 06',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'barcode-unrecognized-card-bg')}.`,
+    },
+  ],
+  registration: [
+    {
+      key: 'вид карточки итогов',
+      fact: (M, base) => `${stripOldPalette(base)} cardShell ${dual(M, 'reg-card-shell-bg')}.`,
+    },
+    {
+      key: 'Регистрация · возврат к незавершённой · 02',
+      fact: (M, base) => `${stripOldPalette(base)} Диск ${dual(M, 'reg-endpoint-disc-bg')}.`,
+    },
+    {
+      key: 'Профиль · отзыв согласия на добавки · 10',
+      fact: (M, base) => `${stripOldPalette(base)} Лист ${dual(M, 'reg-revoke-sheet-bg')}.`,
+    },
+  ],
+  subscription: [
+    {
+      key: 'Подписка · приветствие · 02',
+      fact: (M, base) => `${stripOldPalette(base)} Скрим ${dual(M, 'sub-welcome-scrim-bg')}.`,
+    },
+    {
+      key: 'Подписка · проверьте заказ · 03',
+      fact: (M, base) => `${stripOldPalette(base)} Карточка ${dual(M, 'paywall-order-card-bg')}.`,
+    },
+    {
+      key: 'Подписка · оплата прошла · 03',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Иконка ${dual(M, 'paywall-success-icon-bg')}; текст ${dual(M, 'paywall-success-icon-color')}.`,
+    },
+    {
+      key: 'Подписка · оплата прошла · 05',
+      fact: (M, base) => `${stripOldPalette(base)} Карточка ${dual(M, 'paywall-success-card-bg')}.`,
+    },
+  ],
+  'tab-activity': [
+    {
+      key: 'Актив · день собран · 25',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Заливка ${dual(M, 'activity-steps-fill-bg')}; трек ${dual(M, 'activity-steps-track-bg')}.`,
+    },
+    {
+      key: 'Актив · день отдыха · 18',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'activity-steps-fill-bg')}.`,
     },
   ],
   'strength-builder': [
     {
       key: 'Программа · цикл · 34',
       fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-plan-vs-cell-val-color')}.`,
+    },
+    {
+      key: 'Правка веса в сессии · 08',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-weight-head-hint-color')}.`,
+    },
+    {
+      key: 'Программа пройдена · 19',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'program-done-growth-val-color')}.`,
+    },
+    {
+      key: 'История упражнения · 11',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-history-metric-bg')}.`,
+    },
+    {
+      key: 'Связка · создание · 14',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Цифра ${dual(M, 'sb-radio-on-num-bg')}; текст ${dual(M, 'sb-radio-on-num-color')}.`,
+    },
+    {
+      key: 'Связка · создание · 23',
+      fact: (M, base) =>
+        `${stripOldPalette(base)} Плюс ${dual(M, 'sb-stepper-accent-bg')}; текст ${dual(M, 'sb-stepper-accent-color')}.`,
+    },
+    {
+      key: 'Куратор и зал · 25',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-pain-canvas-bg')}.`,
+    },
+    {
+      key: 'Шторка ⋯ · 13',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-sheet-back-bg')}.`,
+    },
+    {
+      key: 'План в ленте дня · 08',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-plan-letter-color')}.`,
+    },
+    {
+      key: 'Правка · сторона куратора · 06',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-curator-card-bg')}.`,
+    },
+    {
+      key: 'Правка · сторона куратора · 10',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-curator-mark-ok-color')}.`,
+    },
+    {
+      key: 'Ввод · время под нагрузкой · 09',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-time-head-hint-color')}.`,
+    },
+    {
+      key: 'Ввод · метры · 09',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-distance-head-hint-color')}.`,
+    },
+    {
+      key: 'Ввод · свой вес с довесом · 08',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-bodyweight-head-hint-color')}.`,
+    },
+    {
+      key: 'вид · отчёт за период',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-period-outcomes-bg')}.`,
+    },
+    {
+      key: 'Конструктор · тренировка идёт · спокойнее · 33',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-weight-done-ap-num-color')}.`,
+    },
+    {
+      key: 'Программа · отчёт за период · 09',
+      fact: (M, base) => `${stripOldPalette(base)} ${dual(M, 'sb-period-outcome-val-ok-color')}.`,
     },
   ],
 };

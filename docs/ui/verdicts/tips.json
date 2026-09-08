@@ -771,7 +771,7 @@
     },
     "Совет · всплывающий · 08": {
       "v": "=",
-      "f": "Полоса состояния плашки: ширина 4, радиус 999, флекс none, зелёная заливка успеха — .advice-v4-toast-card__stripe (apps/web/styles/modules/400-water-and-hydration.css:3475) плюс модификатор --ok (apps/web/styles/modules/400-water-and-hydration.css:3484). Замер: 4px, radius 999, #7a8a5e на обоих наборах — роль --v4-sand-ok-fill объявлена и в синем наборе тем же тоном (002-ui-v4-palette-roles.css), это намеренно.",
+      "f": "Полоса состояния плашки: ширина 4, радиус 999, флекс none, зелёная заливка успеха — .advice-v4-toast-card__stripe (apps/web/styles/modules/400-water-and-hydration.css:3475) плюс модификатор --ok (apps/web/styles/modules/400-water-and-hydration.css:3484). Замер: 4px, radius 999, #7a8a5e на обоих наборах — роль --v4-sand-ok-fill объявлена и в синем наборе тем же тоном (002-ui-v4-palette-roles.css), это намеренно. Замер chromium 375 px: песочный rgb(122,138,94), тёмный rgb(143,170,109).",
       "h": "9e7d1c6f8b19"
     },
     "Совет · всплывающий · 09": {
