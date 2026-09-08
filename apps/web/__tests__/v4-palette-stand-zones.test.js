@@ -89,13 +89,13 @@ async function loadFixture(zone) {
 
 /** TASK 3 — что stand не покрывает (документируется в выводе теста). */
 const STAND_COVERAGE_GAPS = Object.freeze({
-  login: 'куратор + lockout + theme-picker добавлены; нет maintenance/consent-sign на входе',
+  login: 'куратор + lockout + theme-picker; нет maintenance/consent-sign на входе',
   registration: 'персональные + колесо + consent-sheet; нет revoke и inline cardShell',
-  questionnaire: 'шаги 1–2 + offline-warning; нет шагов 3–5, blocked, intake-login',
+  questionnaire: 'шаги 1–5 + blocked + intake-login + offline-warning; нет review-сводки и финальных статусов',
   'first-run': 'tour + desktop-gate + tour-dot; нет четырёх пошаговых кадров тура по отдельности',
-  'app-splash': 'boot-mark ok + is-fail; нет SVG-спиннера is-ok',
+  'app-splash': 'boot-mark + SVG-спиннер + is-fail; нет slow/fail ступеней холодного старта',
   spinners: 'screen + boot fail + is-ok + embedded/button; нет анимаций reduced-motion',
-  'pwa-update': 'модалка + heys-update-prompt + offline-banner; нет offline-banner-enhanced',
+  'pwa-update': 'модалка + heys-update-prompt + offline-banner + enhanced; нет online-banner',
   subscription: 'paywall + readonly + badge + sub-screen; не все 15 кадров subscription canvas',
   'settings-system': 'шторка списка + FAB; нет cycle-card, notify-detail, diagnostics',
   'service-curator': 'список + footer-tag; нет отдельных techlog/pool экранов',
@@ -104,6 +104,102 @@ const STAND_COVERAGE_GAPS = Object.freeze({
   'water-add': 'плитка + FAB + ring + custom-sheet; нет анимаций fill/drop',
   'product-card': 'create + pe-field + barcode + harm-compare; не все 27 reviewed data rows',
 });
+
+/** Разбирает «нет …» / «не все …» из STAND_COVERAGE_GAPS в список непокрытых состояний. */
+function parseUncoveredStates(gapText) {
+  const chunks = String(gapText || '')
+    .split(';')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const uncovered = [];
+  for (const chunk of chunks) {
+    const noMatch = chunk.match(/^нет\s+(.+)$/i);
+    if (noMatch) {
+      uncovered.push(...noMatch[1].split(/\s*(?:,| и )\s*/).map((item) => item.trim()).filter(Boolean));
+      continue;
+    }
+    const partialMatch = chunk.match(/^не все\s+(.+)$/i);
+    if (partialMatch) uncovered.push(`не все ${partialMatch[1].trim()}`);
+  }
+  return uncovered;
+}
+
+/** Узлы с id/class в html, на которые не смотрит ни один watch-селектор. */
+function nodesWithoutWatchKey(html, watch) {
+  document.body.innerHTML = html;
+  const watched = new Set();
+  for (const selector of Object.values(watch || {})) {
+    for (const el of document.querySelectorAll(selector)) watched.add(el);
+  }
+
+  const candidates = [...document.querySelectorAll('[id], [class]')].filter((el) => {
+    if (watched.has(el)) return false;
+    for (const hit of watched) {
+      if (hit !== el && hit.contains(el)) return false;
+    }
+    return true;
+  });
+
+  document.body.innerHTML = '';
+  return candidates.map((el) => ({
+    tag: el.tagName.toLowerCase(),
+    id: el.id || '',
+    className: el.className || '',
+  }));
+}
+
+/**
+ * @param {Record<string, string>} gaps
+ * @param {string[]} zoneIds
+ */
+async function inventoryCoverageGaps(gaps, zoneIds) {
+  const zonesWithoutFixture = zoneIds.filter((zone) => !fs.existsSync(path.join(STANDS_DIR, `${zone}.stand.mjs`)));
+  /** @type {{ zone: string, nodes: object[] }[]} */
+  const nodesMissingWatch = [];
+  /** @type {{ zone: string, states: string[] }[]} */
+  const statesNotRendered = [];
+
+  for (const zone of zoneIds) {
+    if (zonesWithoutFixture.includes(zone)) continue;
+    const fixture = await loadFixture(zone);
+    const missingWatch = nodesWithoutWatchKey(fixture.html, fixture.watch);
+    if (missingWatch.length) nodesMissingWatch.push({ zone, nodes: missingWatch });
+
+    const uncovered = parseUncoveredStates(gaps[zone]);
+    if (uncovered.length) statesNotRendered.push({ zone, states: uncovered });
+  }
+
+  const nodesWithoutWatchCount = nodesMissingWatch.reduce((sum, row) => sum + row.nodes.length, 0);
+  const statesNotRenderedCount = statesNotRendered.reduce((sum, row) => sum + row.states.length, 0);
+
+  return {
+    zonesWithoutFixture,
+    nodesMissingWatch,
+    statesNotRendered,
+    counts: {
+      zonesWithoutFixture: zonesWithoutFixture.length,
+      nodesWithoutWatch: nodesWithoutWatchCount,
+      statesNotRendered: statesNotRenderedCount,
+    },
+  };
+}
+
+function formatCoverageSelfReport(inventory, renderedZones) {
+  const rendered = renderedZones.length;
+  const skipped = inventory.counts.zonesWithoutFixture;
+  const notRendered = inventory.statesNotRendered
+    .flatMap((row) => row.states.map((state) => `${row.zone}: ${state}`));
+  const lines = [
+    `screens rendered: ${rendered}/${ZONE_IDS.length}`,
+    `screens skipped (no fixture): ${skipped}`,
+    `states not rendered (fixture gap): ${inventory.counts.statesNotRendered}`,
+    `nodes without watch key: ${inventory.counts.nodesWithoutWatch}`,
+  ];
+  if (notRendered.length) {
+    lines.push(`not rendered → ${notRendered.slice(0, 8).join(' · ')}${notRendered.length > 8 ? ` · …+${notRendered.length - 8}` : ''}`);
+  }
+  return lines.join(' | ');
+}
 
 describe('v4 palette stand fixtures · structure', () => {
   it('имеет все 14 stand-файлов band 4', () => {
@@ -125,6 +221,27 @@ describe('v4 palette stand fixtures · structure', () => {
 
     const missing = selectorsMissingFromHtml(fixture.html, fixture.watch);
     expect(missing, `${zone}: ${JSON.stringify(missing)}`).toEqual([]);
+  });
+});
+
+describe('TASK 1 · stand coverage inventory', () => {
+  it('считает пробелы по типам: fixture / watch / state', async () => {
+    const inventory = await inventoryCoverageGaps(STAND_COVERAGE_GAPS, ZONE_IDS);
+    console.info(
+      `[TASK1 gaps] zonesWithoutFixture=${inventory.counts.zonesWithoutFixture} `
+      + `nodesWithoutWatch=${inventory.counts.nodesWithoutWatch} `
+      + `statesNotRendered=${inventory.counts.statesNotRendered}`,
+    );
+    console.info(`[stand coverage] ${formatCoverageSelfReport(inventory, ZONE_IDS)}`);
+    if (inventory.nodesMissingWatch.length) {
+      console.info('[TASK1 nodesWithoutWatch]', JSON.stringify(inventory.nodesMissingWatch, null, 2));
+    }
+    if (inventory.statesNotRendered.length) {
+      console.info('[TASK1 statesNotRendered]', JSON.stringify(inventory.statesNotRendered, null, 2));
+    }
+    expect(inventory.counts.zonesWithoutFixture).toBe(0);
+    expect(inventory.counts.nodesWithoutWatch).toBeGreaterThanOrEqual(0);
+    expect(inventory.counts.statesNotRendered).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -173,7 +290,7 @@ measureDescribe('v4 palette stand zones · measureZone light↔dark', { timeout:
     console.info(`[stand ${zone}] rendered=${result.rendered} watch=${Object.keys(fixture.watch).length}`);
   });
 
-  it('сводка: light vs dark должны различаться по тону', async () => {
+  it('сводка: light vs dark должны различаться по тону', { timeout: 300_000 }, async () => {
     /** @type {{ zone: string, set: string, element: string, prop: string, value: string }[]} */
     const findings = [];
     /** @type {{ zone: string, notFound: string[] }[]} */

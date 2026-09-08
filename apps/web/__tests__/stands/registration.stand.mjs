@@ -12,7 +12,7 @@ export default {
         <div class="profile-personal-step flex flex-col gap-4">
           <div class="profile-personal-name flex flex-col gap-2">
             <label>Имя
-              <input type="text" placeholder="Иван" value="Иван" />
+              <input type="text" placeholder="Иван" value="Иван" style="color:var(--v4-ink);background:var(--v4-bg)" />
             </label>
           </div>
           <div class="profile-personal-wheel-card flex justify-center gap-2">

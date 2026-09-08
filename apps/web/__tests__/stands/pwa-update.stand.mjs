@@ -32,6 +32,13 @@ export default {
       <span class="heys-system-banner__icon" aria-hidden="true">!</span>
       <span>Нет сети</span>
     </div>
+    <div class="offline-banner offline-banner-enhanced" role="status">
+      <span class="offline-banner-icon pulse">📡</span>
+      <div class="offline-banner-content">
+        <span class="offline-banner-text">Нет сети — работаете с сохранёнными данными</span>
+        <span class="offline-banner-duration">Офлайн 42 сек</span>
+      </div>
+    </div>
   `,
   watch: {
     'Подложка обновления': '.heys-update-modal__backdrop',
@@ -43,5 +50,8 @@ export default {
     'Промпт обновления': '.heys-update-prompt',
     'Карточка промпта': '.heys-update-prompt__card',
     'Баннер offline': '.heys-system-banner--offline',
+    'Баннер offline enhanced': '.offline-banner-enhanced',
+    'Текст enhanced-баннера': '.offline-banner-text',
+    'Длительность offline': '.offline-banner-duration',
   },
 };
