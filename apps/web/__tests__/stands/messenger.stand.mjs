@@ -29,6 +29,31 @@ export default {
         </div>
       </div>
     </div>
+    <div class="messenger-composer">
+      <div class="messenger-input-row">
+        <div class="messenger-input-stack">
+          <textarea class="messenger-input" rows="1">Сообщение</textarea>
+        </div>
+        <button type="button" class="messenger-send">Отправить</button>
+      </div>
+      <div class="messenger-recording-live">
+        <span class="messenger-recording-dot"></span>
+        <span class="messenger-recording-label">Идёт запись</span>
+        <span class="messenger-recording-time">0:12</span>
+        <button type="button" class="messenger-recording-stop">Стоп</button>
+      </div>
+    </div>
+    <div class="messenger-offline-bar" role="status">
+      <span class="messenger-offline-bar__dot" aria-hidden="true"></span>
+      <span class="messenger-offline-bar__text">Нет сети</span>
+      <button type="button" class="messenger-offline-bar__retry">Повторить</button>
+    </div>
+    <div class="messenger-action-sheet-backdrop"></div>
+    <div class="messenger-action-sheet" role="menu">
+      <div class="messenger-action-sheet__quote">Цитата</div>
+      <button type="button" class="messenger-action-sheet__item">Ответить</button>
+      <button type="button" class="messenger-action-sheet__item messenger-action-sheet__item--danger">Удалить</button>
+    </div>
   `,
   watch: {
     'Пустой тред': '.messenger-empty',
@@ -39,5 +64,13 @@ export default {
     'Чужое сообщение': '.msg-bubble-theirs',
     'Мета времени': '.msg-meta',
     'Карточка дня': '.msg-applied-card',
+    'Композер': '.messenger-composer',
+    'Поле ввода': '.messenger-input',
+    'Кнопка отправки': '.messenger-send',
+    'Запись голоса': '.messenger-recording-live',
+    'Точка записи': '.messenger-recording-dot',
+    'Офлайн-бар': '.messenger-offline-bar',
+    'Лист действий': '.messenger-action-sheet',
+    'Опасное действие': '.messenger-action-sheet__item--danger',
   },
 };

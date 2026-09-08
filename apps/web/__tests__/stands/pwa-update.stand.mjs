@@ -3,6 +3,7 @@ export default {
   zone: 'pwa-update',
   cssFiles: [
     'styles/modules/002-ui-v4-palette-roles.css',
+    'styles/modules/000-base-and-gamification.css',
     'styles/heys-components.css',
   ],
   html: `
@@ -20,6 +21,17 @@ export default {
       </div>
     </div>
     </div>
+    <div class="heys-update-prompt">
+      <div class="heys-update-prompt__backdrop"></div>
+      <div class="heys-update-prompt__card">
+        <div class="heys-update-prompt__title">Обновление</div>
+        <p class="heys-update-prompt__text">Подождите</p>
+      </div>
+    </div>
+    <div class="heys-system-banner heys-system-banner--offline" role="status">
+      <span class="heys-system-banner__icon" aria-hidden="true">!</span>
+      <span>Нет сети</span>
+    </div>
   `,
   watch: {
     'Подложка обновления': '.heys-update-modal__backdrop',
@@ -28,5 +40,8 @@ export default {
     'Подпись': '.heys-update-modal__subtitle',
     'Кнопка «Обновить»': '.heys-update-prompt__btn:not(.heys-update-prompt__btn--ghost)',
     'Кнопка «Позже»': '.heys-update-prompt__btn--ghost',
+    'Промпт обновления': '.heys-update-prompt',
+    'Карточка промпта': '.heys-update-prompt__card',
+    'Баннер offline': '.heys-system-banner--offline',
   },
 };

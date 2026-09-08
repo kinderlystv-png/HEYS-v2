@@ -21,6 +21,17 @@ export default {
       <span class="water-review__ring-meta">л</span>
       <button type="button" class="water-review__chip--quick">+250</button>
     </div>
+    <div class="water-custom-sheet widget-wd-sheet">
+      <div class="water-custom-sheet__title">Свой объём</div>
+      <div class="water-custom-sheet__stepper">
+        <button type="button" class="water-custom-sheet__step water-custom-sheet__step--sub">−</button>
+        <span class="water-custom-sheet__value">250</span>
+        <span class="water-custom-sheet__unit">мл</span>
+        <button type="button" class="water-custom-sheet__step water-custom-sheet__step--add">+</button>
+      </div>
+      <button type="button" class="water-custom-sheet__preset is-active">250</button>
+      <button type="button" class="water-custom-sheet__confirm">Добавить</button>
+    </div>
   `,
   watch: {
     'Плитка воды': '.widget-water--v4',
@@ -31,5 +42,10 @@ export default {
     'Чип FAB': '.water-fab-vol:not(.water-fab-vol--minus)',
     'Карточка «Кольцо»': '.water-review.compact-card',
     'Быстрый чип': '.water-review__chip--quick',
+    'Лист своего объёма': '.water-custom-sheet',
+    'Заголовок листа': '.water-custom-sheet__title',
+    'Значение объёма': '.water-custom-sheet__value',
+    'Пресет объёма': '.water-custom-sheet__preset.is-active',
+    'Кнопка «Добавить»': '.water-custom-sheet__confirm',
   },
 };

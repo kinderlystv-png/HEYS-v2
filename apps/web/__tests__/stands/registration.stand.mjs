@@ -2,6 +2,7 @@ export default {
   zone: 'registration',
   cssFiles: [
     'styles/modules/002-ui-v4-palette-roles.css',
+    'styles/modules/000-base-and-gamification.css',
     'styles/modules/500-pwa-and-offline.css',
   ],
   html: `
@@ -30,6 +31,13 @@ export default {
       </div>
     </div>
     </div>
+    <div class="heys-consent-sign-sheet">
+      <button type="button" class="heys-consent-sign-sheet__primary">Подписать</button>
+      <p class="consent-doc-body">Юридический текст</p>
+      <div class="heys-consent-sign-sheet__done">
+        <p class="heys-consent-sign-sheet__done-meta">Подпись — код</p>
+      </div>
+    </div>
   `,
   watch: {
     'модалка регистрации': '.mc-modal[data-heys-step-id="profile-personal"]',
@@ -37,5 +45,9 @@ export default {
     'текущее значение колеса': '.mc-wheel-value--current',
     'сосед колеса': '.mc-wheel-value--prev',
     'кнопка продолжить': '.mc-daily-footer-primary',
+    'лист согласия': '.heys-consent-sign-sheet',
+    'кнопка «Подписать»': '.heys-consent-sign-sheet__primary',
+    'текст документа': '.consent-doc-body',
+    'экран «подписано»': '.heys-consent-sign-sheet__done',
   },
 };

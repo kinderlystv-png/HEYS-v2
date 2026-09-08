@@ -47,10 +47,27 @@ export default {
                 <button type="button" class="heys-auth-key">3</button>
                 <button type="button" class="heys-auth-key heys-auth-key--muted">⌫</button>
               </div>
+              <div class="heys-auth-lockout">
+                <div class="heys-auth-lockout__title">Слишком много попыток входа</div>
+                <div class="heys-auth-lockout__body">Напишите куратору — он снимет блокировку.</div>
+              </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
+    <div id="heys-login-gate-curator" class="heys-auth-shell heys-auth-shell--curator">
+      <div class="heys-auth-card">
+        <div class="heys-auth-title">Вход куратора</div>
+        <button type="button" class="heys-auth-btn heys-auth-btn--primary">Войти</button>
+      </div>
+    </div>
+    <div class="heys-login-theme heys-login-theme--login-only is-expanded">
+      <div class="heys-login-theme__panel">
+        <div class="heys-login-theme__section-label">Палитра</div>
+        <button type="button" class="heys-login-theme__chip is-on">Песочная</button>
+      </div>
+      <button type="button" class="heys-login-theme__done">Готово</button>
     </div>
     </div>
   `,
@@ -62,5 +79,11 @@ export default {
     'поле телефона': '.heys-auth-field',
     'бокс кода': '.heys-auth-pin-box',
     'клавиша PIN': '.heys-auth-key',
+    'блокировка входа': '.heys-auth-lockout',
+    'заголовок блокировки': '.heys-auth-lockout__title',
+    'оболочка куратора': '#heys-login-gate-curator.heys-auth-shell--curator',
+    'кнопка куратора': '.heys-auth-shell--curator .heys-auth-btn--primary',
+    'панель темы': '.heys-login-theme__panel',
+    'кнопка «Готово» темы': '.heys-login-theme__done',
   },
 };

@@ -18,6 +18,7 @@ export default {
       </div>
     </div>
     <div class="advice-service-footer-note">служебный раздел</div>
+    <div class="advice-service-footer-tag">куратор</div>
   `,
   watch: {
     'Шапка раздела': '.advice-service-header',
@@ -28,5 +29,6 @@ export default {
     'Строка действия': '.advice-service-row__title',
     'Подсказка строки': '.advice-service-row__hint',
     'Сноска внизу': '.advice-service-footer-note',
+    'Тег внизу': '.advice-service-footer-tag',
   },
 };

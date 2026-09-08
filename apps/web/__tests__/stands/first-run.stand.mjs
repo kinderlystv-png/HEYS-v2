@@ -12,6 +12,8 @@ export default {
         <div class="tour-title">Первый шаг</div>
         <div class="tour-text">Подсказка тура</div>
         <div class="tour-footer">
+          <span class="tour-dot active"></span>
+          <span class="tour-dot"></span>
           <button type="button" class="tour-btn tour-btn-next">Дальше</button>
         </div>
       </div>
@@ -29,6 +31,7 @@ export default {
     'Заголовок тура': '.tour-title',
     'Текст тура': '.tour-text',
     'Кнопка «Дальше»': '.tour-btn-next',
+    'Точка тура': '.tour-dot.active',
     'Экран с компьютера': '.desktop-gate',
     'Пилюля «Скопировать»': '.desktop-gate__copy-btn',
   },

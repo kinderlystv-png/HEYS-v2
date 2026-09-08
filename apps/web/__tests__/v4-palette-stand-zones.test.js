@@ -89,20 +89,20 @@ async function loadFixture(zone) {
 
 /** TASK 3 — что stand не покрывает (документируется в выводе теста). */
 const STAND_COVERAGE_GAPS = Object.freeze({
-  login: 'клиентский PIN-экран; нет кураторского входа, блокировки, theme-picker',
-  registration: 'шаг «персональные» + колесо; нет consent/revoke и inline cardShell',
-  questionnaire: 'шаг 1 анкеты на ролях; нет шагов 2–5, offline/blocked, intake-login',
-  'first-run': 'tour + desktop-gate; нет четырёх пошаговых кадров тура по отдельности',
-  'app-splash': 'статический boot-mark; нет SVG-спиннера и экрана is-fail',
-  spinners: 'screen + boot fail; нет is-ok и embedded/button режимов',
-  'pwa-update': 'модалка обновления; нет heys-update-prompt и offline-banner',
-  subscription: 'paywall + readonly; не все 15 кадров subscription canvas',
+  login: 'куратор + lockout + theme-picker добавлены; нет maintenance/consent-sign на входе',
+  registration: 'персональные + колесо + consent-sheet; нет revoke и inline cardShell',
+  questionnaire: 'шаги 1–2 + offline-warning; нет шагов 3–5, blocked, intake-login',
+  'first-run': 'tour + desktop-gate + tour-dot; нет четырёх пошаговых кадров тура по отдельности',
+  'app-splash': 'boot-mark ok + is-fail; нет SVG-спиннера is-ok',
+  spinners: 'screen + boot fail + is-ok + embedded/button; нет анимаций reduced-motion',
+  'pwa-update': 'модалка + heys-update-prompt + offline-banner; нет offline-banner-enhanced',
+  subscription: 'paywall + readonly + badge + sub-screen; не все 15 кадров subscription canvas',
   'settings-system': 'шторка списка + FAB; нет cycle-card, notify-detail, diagnostics',
-  'service-curator': 'один кадр «за входом куратора»; нет techlog/pool экранов',
-  messenger: 'empty + bubbles + card; нет composer/recording/offline/action-sheet',
-  'undo-bar': 'видимый бар; нет анимации ухода и safe-area с tabs',
-  'water-add': 'плитка + FAB + ring; нет sheet своего объёма и анимаций',
-  'product-card': 'create + pe-field; не все 27 reviewed data rows и editor frames',
+  'service-curator': 'список + footer-tag; нет отдельных techlog/pool экранов',
+  messenger: 'empty + bubbles + card + composer/recording/offline/action-sheet; нет inbox/search',
+  'undo-bar': 'visible + leaving + tabs-контекст; нет runtime-смещения bottom под tabs',
+  'water-add': 'плитка + FAB + ring + custom-sheet; нет анимаций fill/drop',
+  'product-card': 'create + pe-field + barcode + harm-compare; не все 27 reviewed data rows',
 });
 
 describe('v4 palette stand fixtures · structure', () => {

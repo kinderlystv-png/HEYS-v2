@@ -20,6 +20,7 @@ export default {
             <div class="paywall-plan selected">
               <div class="paywall-plan-main"><div class="paywall-plan-name">Pro</div></div>
               <div class="paywall-plan-price">7 990 ₽</div>
+              <div class="paywall-plan-badge">Популярный</div>
             </div>
           </div>
           <button type="button" class="paywall-cta">Оформить</button>
@@ -29,7 +30,9 @@ export default {
         </div>
       </div>
       <div class="sub-screen">
+        <div class="sub-screen__headline">Подписка</div>
         <div class="sub-screen__status-card"></div>
+        <a class="sub-screen__support-link" href="#">Поддержка</a>
       </div>
     </div>
   `,
@@ -39,6 +42,9 @@ export default {
     'Модалка тарифов': '.paywall-modal',
     'Кнопка «Оформить»': '.paywall-cta',
     'Блок очереди': '.paywall-trial',
+    'Бейдж тарифа': '.paywall-plan-badge',
+    'Заголовок экрана': '.sub-screen__headline',
     'Карточка статуса': '.sub-screen__status-card',
+    'Ссылка поддержки': '.sub-screen__support-link',
   },
 };

@@ -7,6 +7,7 @@ export default {
   ],
   html: `
     <div style="min-height:812px;position:relative;width:375px">
+    <nav class="tabs" aria-label="Навигация"></nav>
     <div class="heys-undo-bar heys-undo-bar--visible">
       <div class="heys-undo-bar__content">
         <svg class="heys-undo-bar__ring" aria-hidden="true">
@@ -17,6 +18,12 @@ export default {
         <button type="button" class="heys-undo-bar__btn">Вернуть</button>
       </div>
     </div>
+    <div class="heys-undo-bar heys-undo-bar--leaving">
+      <div class="heys-undo-bar__content">
+        <span class="heys-undo-bar__label">Уходит</span>
+        <button type="button" class="heys-undo-bar__btn">Вернуть</button>
+      </div>
+    </div>
     </div>
   `,
   watch: {
@@ -24,5 +31,7 @@ export default {
     'Содержимое бара': '.heys-undo-bar__content',
     'Подпись': '.heys-undo-bar__label',
     'Кнопка «Вернуть»': '.heys-undo-bar__btn',
+    'Бар ухода': '.heys-undo-bar--leaving',
+    'Нижняя навигация': '.tabs',
   },
 };

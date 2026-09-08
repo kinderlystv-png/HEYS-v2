@@ -18,6 +18,11 @@ export default {
         </label>
         <button type="button" class="trial-intake-primary" style="margin-top:16px;width:100%;min-height:48px;border:0;border-radius:999px;background:var(--v4-act);color:var(--v4-btn-on-act);font-size:13px;font-weight:700">Продолжить</button>
       </div>
+      <div class="trial-intake-card" style="max-width:680px;margin:24px auto 0;background:var(--v4-bg);border-radius:24px;padding:16px 18px 20px;box-sizing:border-box">
+        <div class="trial-intake-step-caption" style="font-size:12px;font-weight:600;color:var(--v4-ink)">Шаг 2 из 5</div>
+        <h1 class="trial-intake-title" style="font-size:22px;font-weight:700;line-height:1.2;color:var(--v4-ink);margin:8px 0 0">Активность</h1>
+        <div id="intake-warning" style="background:var(--v4-card);color:var(--v4-ink-2);padding:14px 16px;border-radius:18px;margin-top:12px">Нет сети — ответы сохранятся локально</div>
+      </div>
     </div>
   `,
   watch: {
@@ -28,5 +33,7 @@ export default {
     'карточка вопроса': '.trial-intake-question',
     'поле ответа': '.trial-intake-field',
     'кнопка продолжить': '.trial-intake-primary',
+    'шаг 2 заголовок': '.trial-intake-card:nth-of-type(2) .trial-intake-title',
+    'предупреждение offline': '#intake-warning',
   },
 };
