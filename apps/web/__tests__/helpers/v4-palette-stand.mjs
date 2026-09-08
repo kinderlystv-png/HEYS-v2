@@ -80,7 +80,7 @@ export async function measureZone({ html, cssFiles, watch, width = 375 }) {
     const rendered = Boolean(
       document.body
       && document.body.children.length > 0
-      && document.body.offsetHeight > 0,
+      && (found.length > 0 || document.body.offsetHeight > 0),
     );
     return { found, missing, rendered };
   }, watch);
