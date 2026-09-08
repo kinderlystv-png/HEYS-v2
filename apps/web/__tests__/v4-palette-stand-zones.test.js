@@ -1,5 +1,5 @@
 /**
- * Consumer · stand-фикстуры 14 зон band 4 против harness measureZone.
+ * Consumer · stand-фикстуры 28 зон против harness measureZone.
  * Без замороженных hex-таблиц: сверка light↔dark внутри набора (sand/sand-dark, blue/blue-dark).
  */
 import fs from 'node:fs';
@@ -28,6 +28,20 @@ const ZONE_IDS = [
   'undo-bar',
   'water-add',
   'product-card',
+  'home-widgets',
+  'checkin-morning',
+  'nutrition-tab',
+  'food-meal',
+  'gamification',
+  'reports-insights',
+  'curator-cabinet',
+  'curator-edits',
+  'tips',
+  'norm-correction',
+  'strength-builder',
+  'date-remainders',
+  'tab-activity',
+  'cycle',
 ];
 
 const PAIRINGS = [
@@ -103,6 +117,20 @@ const STAND_COVERAGE_GAPS = Object.freeze({
   'undo-bar': 'visible + leaving + tabs-контекст; нет runtime-смещения bottom под tabs',
   'water-add': 'плитка + FAB + ring + custom-sheet; нет анимаций fill/drop',
   'product-card': 'create + pe-field + barcode + harm-compare; не все 27 reviewed data rows',
+  'home-widgets': 'калории + streak + sheet; нет editing overlay и всех 12 виджетов',
+  'checkin-morning': 'greeting + вес + просрочка + footer; нет всех 5 шагов и evening pack',
+  'nutrition-tab': 'hero + meal-row + sheet; нет refeed/overlap/readonly/offline состояний',
+  'food-meal': 'grams-hero + empty row + sheet actions; нет time-step и всех кадров приёма',
+  gamification: 'hero + ach unlocked/locked; нет progress/mission/ladder экранов',
+  'reports-insights': 'insights card + reports tier + cascade dots; не все кадры PI dashboard',
+  'curator-cabinet': 'cur-row + cur-sheet; нет полного листа поправки и всех состояний строки',
+  'curator-edits': 'ca-modal meal-card + ack/later; нет разворота продуктов и multi-day',
+  tips: 'list + rate-panel + sync panel; нет detail/skip/settings toggle',
+  'norm-correction': 'curator_kept hero + facts; нет client/proposal/reject flows',
+  'strength-builder': 'sb-empty card + actions; нет workout/log/superset/menu sheets',
+  'date-remainders': 'sheet + day cells + nav; нет trigger-only и legend states',
+  'tab-activity': 'steps zero + today row + plan card; нет calendar grid и missed states',
+  cycle: 'filled card + insight + norm pill; нет marking panel и empty states',
 });
 
 /** Разбирает «нет …» / «не все …» из STAND_COVERAGE_GAPS в список непокрытых состояний. */
@@ -184,25 +212,37 @@ async function inventoryCoverageGaps(gaps, zoneIds) {
   };
 }
 
-function formatCoverageSelfReport(inventory, renderedZones) {
-  const rendered = renderedZones.length;
+function formatCoverageSelfReport(inventory, renderedCount, notFoundReport = []) {
+  const total = ZONE_IDS.length;
   const skipped = inventory.counts.zonesWithoutFixture;
   const notRendered = inventory.statesNotRendered
     .flatMap((row) => row.states.map((state) => `${row.zone}: ${state}`));
+  const notFoundCount = notFoundReport.reduce((sum, row) => sum + row.notFound.length, 0);
   const lines = [
-    `screens rendered: ${rendered}/${ZONE_IDS.length}`,
+    `screens rendered: ${renderedCount}/${total}`,
     `screens skipped (no fixture): ${skipped}`,
     `states not rendered (fixture gap): ${inventory.counts.statesNotRendered}`,
     `nodes without watch key: ${inventory.counts.nodesWithoutWatch}`,
+    `watch keys notFound: ${notFoundCount}`,
   ];
+  if (skipped) {
+    lines.push(`skipped → ${inventory.zonesWithoutFixture.join(', ')}`);
+  }
   if (notRendered.length) {
     lines.push(`not rendered → ${notRendered.slice(0, 8).join(' · ')}${notRendered.length > 8 ? ` · …+${notRendered.length - 8}` : ''}`);
+  }
+  if (notFoundReport.length) {
+    const detail = notFoundReport
+      .map((row) => `${row.zone}: ${row.notFound.join('+')}`)
+      .slice(0, 8)
+      .join(' · ');
+    lines.push(`notFound → ${detail}${notFoundReport.length > 8 ? ` · …+${notFoundReport.length - 8} zones` : ''}`);
   }
   return lines.join(' | ');
 }
 
 describe('v4 palette stand fixtures · structure', () => {
-  it('имеет все 14 stand-файлов band 4', () => {
+  it('имеет все 28 stand-файлов', () => {
     for (const zone of ZONE_IDS) {
       expect(fs.existsSync(path.join(STANDS_DIR, `${zone}.stand.mjs`)), zone).toBe(true);
     }
@@ -225,37 +265,73 @@ describe('v4 palette stand fixtures · structure', () => {
 });
 
 describe('TASK 1 · stand coverage inventory', () => {
-  it('считает пробелы по типам: fixture / watch / state', async () => {
+  it('считает пробелы по типам: fixture / watch / state / notFound', async () => {
     const inventory = await inventoryCoverageGaps(STAND_COVERAGE_GAPS, ZONE_IDS);
+    /** @type {{ zone: string, notFound: string[] }[]} */
+    const notFoundReport = [];
+    let renderedCount = 0;
+
+    if (harnessExists) {
+      const { measureZone } = await import(pathToFileURL(HARNESS_PATH).href);
+      for (const zone of ZONE_IDS) {
+        if (inventory.zonesWithoutFixture.includes(zone)) continue;
+        const fixture = await loadFixture(zone);
+        const result = await measureZone({
+          html: fixture.html,
+          cssFiles: fixture.cssFiles,
+          watch: fixture.watch,
+          width: 375,
+        });
+        if (result.rendered) renderedCount += 1;
+        if (result.notFound.length) {
+          notFoundReport.push({ zone, notFound: result.notFound });
+        }
+      }
+    } else {
+      renderedCount = ZONE_IDS.length - inventory.counts.zonesWithoutFixture;
+    }
+
     console.info(
       `[TASK1 gaps] zonesWithoutFixture=${inventory.counts.zonesWithoutFixture} `
       + `nodesWithoutWatch=${inventory.counts.nodesWithoutWatch} `
-      + `statesNotRendered=${inventory.counts.statesNotRendered}`,
+      + `statesNotRendered=${inventory.counts.statesNotRendered} `
+      + `watchNotFound=${notFoundReport.reduce((sum, row) => sum + row.notFound.length, 0)}`,
     );
-    console.info(`[stand coverage] ${formatCoverageSelfReport(inventory, ZONE_IDS)}`);
+    console.info(`[stand coverage] ${formatCoverageSelfReport(inventory, renderedCount, notFoundReport)}`);
     if (inventory.nodesMissingWatch.length) {
       console.info('[TASK1 nodesWithoutWatch]', JSON.stringify(inventory.nodesMissingWatch, null, 2));
     }
     if (inventory.statesNotRendered.length) {
       console.info('[TASK1 statesNotRendered]', JSON.stringify(inventory.statesNotRendered, null, 2));
     }
+    if (notFoundReport.length) {
+      console.info('[TASK1 watchNotFound]', JSON.stringify(notFoundReport, null, 2));
+    }
     expect(inventory.counts.zonesWithoutFixture).toBe(0);
+    expect(renderedCount).toBe(ZONE_IDS.length);
+    expect(notFoundReport).toEqual([]);
     expect(inventory.counts.nodesWithoutWatch).toBeGreaterThanOrEqual(0);
     expect(inventory.counts.statesNotRendered).toBeGreaterThanOrEqual(0);
-  });
+  }, 300_000);
 });
 
 describe('TASK 3 · stand coverage gaps', () => {
   it('фиксирует непокрытые экраны/состояния по зонам', () => {
     const lines = ZONE_IDS.map((zone) => `${zone}: ${STAND_COVERAGE_GAPS[zone]}`);
-    console.info(`[TASK3 coverage gaps · band4]\n${lines.join('\n')}`);
-    expect(lines).toHaveLength(14);
+    console.info(`[TASK3 coverage gaps · 28 zones]\n${lines.join('\n')}`);
+    expect(lines).toHaveLength(28);
   });
 });
 
 const measureDescribe = harnessExists ? describe : describe.skip;
 
-measureDescribe('v4 palette stand zones · measureZone light↔dark', { timeout: 120_000 }, () => {
+// 120 000 здесь перекрывали 300 000, выставленные у «сводки» ниже: опция
+// describe в vitest 3.2 выигрывает у опции it, и заявленный запас не работал.
+// Замер 08.09: сводка идёт 190 с сама по себе — то есть падала по таймауту не
+// случайно, а обязана была падать; проходила только когда машина была свободна
+// и она укладывалась в две минуты. Дважды подряд на этом отменялся push всей
+// ветки. Значение выровнено с тем, что просил автор теста.
+measureDescribe('v4 palette stand zones · measureZone light↔dark', { timeout: 300_000 }, () => {
   /** @type {typeof import('./helpers/v4-palette-stand.mjs').measureZone} */
   let measureZone;
   /** @type {string[]} */
