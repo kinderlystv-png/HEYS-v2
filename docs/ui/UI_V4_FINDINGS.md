@@ -253,17 +253,3 @@ service worker, очистку кеша и выход из режима кура
 
 **Чей ход.** Дизайнер — обновить контракт или кадр; после —
 `--rehash service-curator`.
-
-<a id="p48-dead-css-cleanup"></a>
-
-### `!` Полоса 5: мёртвые CSS-классы в инвентаре тач-целей · planning / settings
-
-**Решение дизайнера (пакет 48).** Удалять — задела под будущий экран нет.
-Разбор:
-[`UI_V4_FINDINGS_HISTORY.md#otvet22-dead-css-remove-2026-09-07`](UI_V4_FINDINGS_HISTORY.md#otvet22-dead-css-remove-2026-09-07).
-
-**Что осталось в коде.** Подтвердить мёртвость и вычистить селекторы:
-`.tab-settings-item`, `.planning-filter-btn`, `.planning-modal__segment-button`,
-`.planning-modal__icon-btn`, `.planning-goals-workspace__focus-actions button`,
-`.chrono-overview__toggle`, `.chrono-duration__target-period-btn`,
-`.curator-dropdown-switch__tab`.

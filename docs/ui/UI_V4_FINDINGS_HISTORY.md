@@ -9352,8 +9352,19 @@ file:line нет, потому что отступление — отсутст�
 
 **Зона.** `settings-system`, планирование (dev).
 
-**Что следует.** Удалить мёртвые селекторы после сверки с контрактом. **Код:**
-**НЕ сделано** (нужен проход по списку). **Сделано:** разрешение есть.
+**Что следует.** Удалить мёртвые селекторы после сверки с контрактом.
+
+**Сделано 8 сентября (аудит lane 6).** Семь селекторов вычищены из CSS коммитами
+`490d23fe8` (planning/chrono) и `6e70d6480` (`curator-dropdown-switch` в
+`heys-components.css`). Повторный аудит: ни один из семи не встречается в
+`apps/web/styles`, `heys*.js`, `public/*.js`. Замены живы:
+`planning-filter-toggle`, `chrono-picker__icon-btn`,
+`chrono-picker__target-period-btn`, `client-dropdown` (без switch-tabs).
+Инвентарь тач-целей и гейт-исключения — без этих имён. **`.tab-settings-item`
+оставлен:** класс ставит `apps/mobile/app/web/index.tsx:25`; CSS в
+`000-base-and-gamification.css`. Строк контракта с этими именами нет. Гейты:
+touch-target ratchet Δ+0, brace OK, roles OK, vitest 7886 passed
+(HEYS_DESIGN_GATES=skip).
 
 ---
 
