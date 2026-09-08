@@ -1932,6 +1932,9 @@
               'Пока тренировка идёт, куратор её не правит: правка приходит после — с подписью автора и времени.')
           )
         ),
+        (unit === 'weight_reps' || unit === 'bodyweight') && h('div', { className: 'sb-input-table-head' },
+          h('b', null, exerciseInputTableHeadTitle(ex))
+        ),
         h('div', { className: 'sb-aps-head' },
           h('span', null, ''),
           h('span', null, 'Вес, кг'),
@@ -2099,6 +2102,14 @@
     return 'подход ' + progress.current + ' из ' + progress.total;
   }
 
+  /** ОТВЕТ-47 #23: шапка таблицы ввода — упражнение и подход, не сессия. */
+  function exerciseInputTableHeadTitle(exercise) {
+    const progress = exerciseWorkProgress(exercise);
+    const name = (exercise && exercise.name) || 'Без названия';
+    if (!progress.total) return name;
+    return name + ' · ' + progress.current + ' из ' + progress.total;
+  }
+
   /** Г4/M5/M6: ключ под названием в открытой карточке — единица; weight_reps в .sb-head-sub. */
   function exerciseOpenHeadKey(ex, unit) {
     const PartsLocal = HEYS.StrengthBuilderParts || {};
@@ -2139,6 +2150,7 @@
   Parts.approachTypesHeadKey = approachTypesHeadKey;
   Parts.warmupDropHeadKey = warmupDropHeadKey;
   Parts.exerciseWorkProgressKey = exerciseWorkProgressKey;
+  Parts.exerciseInputTableHeadTitle = exerciseInputTableHeadTitle;
   Parts.exerciseOpenHeadKey = exerciseOpenHeadKey;
   Parts.startedAtMs = startedAtMs;
 

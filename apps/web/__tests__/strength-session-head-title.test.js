@@ -56,8 +56,11 @@ describe('шапка таблицы ввода weight_reps', () => {
       onPatchSession: () => {},
     }));
 
-    const title = document.querySelector('.sb-head-title > b');
-    expect(title?.textContent).toBe('Жим лёжа · 3 из 3');
-    expect(title?.textContent).not.toContain('Силовая');
+    const screenTitle = document.querySelector('.sb-head-title > b');
+    expect(screenTitle?.textContent).toBe('Силовая · грудь');
+
+    const tableHead = document.querySelector('.sb-input-table-head > b');
+    expect(tableHead?.textContent).toBe('Жим лёжа · 3 из 3');
+    expect(tableHead?.textContent).not.toContain('Силовая');
   });
 });

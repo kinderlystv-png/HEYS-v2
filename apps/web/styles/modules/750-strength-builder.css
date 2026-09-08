@@ -310,6 +310,17 @@
   padding: 2px 0;
 }
 
+.sb-input-table-head {
+  margin-top: 10px;
+  padding: 0 8px;
+}
+
+.sb-input-table-head b {
+  font: 700 12.5px/1.2 Figtree, sans-serif;
+  color: var(--sb-tx);
+  font-variant-numeric: tabular-nums;
+}
+
 .sb-ap-num {
   display: inline-flex;
   align-items: center;
