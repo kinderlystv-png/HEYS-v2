@@ -191,7 +191,7 @@
 [data-theme$='dark'] .mc-cycle-toggle {
   background: var(--v4-surface, #23201b);
   border-color: var(--v4-act-text, #8a4a20);
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 @media (hover: hover) {
@@ -211,13 +211,13 @@
 }
 
 [data-theme$='dark'] .mc-cycle-day-label {
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$='dark'] .mc-cycle-day-btn {
   background: var(--v4-surface, #23201b);
   border-color: var(--v4-act-text, #8a4a20);
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 @media (hover: hover) {
@@ -235,7 +235,7 @@
 [data-theme$='dark'] .mc-cycle-input {
   background: var(--v4-surface, #23201b);
   border-color: var(--v4-act-text, #8a4a20);
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$='dark'] .mc-cycle-input:focus {
@@ -248,7 +248,7 @@
 }
 
 [data-theme$='dark'] .mc-cycle-hint-text {
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$='dark'] .mc-cycle-disabled-hint {
@@ -283,7 +283,7 @@
 
 .mc-cycle-status-info {
   font-size: 13px;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-cycle-change-btn {
@@ -295,7 +295,7 @@
   font-weight: 500;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -368,7 +368,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--v4-sand-act-soft, #e2a468);
+  background: var(--v4-act-text, #e2a468);
   border-radius: 50%;
   font-size: 16px;
   font-weight: 700;
@@ -453,7 +453,7 @@
 
 .mc-cycle-auto-hint .mc-cycle-hint-text {
   font-size: 12px;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* Dark theme v2 */
@@ -466,13 +466,13 @@
 }
 
 [data-theme$='dark'] .mc-cycle-status-info {
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-ink-2, rgba(242, 237, 230, 0.63));
 }
 
 [data-theme$='dark'] .mc-cycle-change-btn {
   background: var(--v4-surface, #23201b);
   border-color: var(--v4-act-text, #8a4a20);
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$='dark'] .mc-cycle-picker {
@@ -501,11 +501,11 @@
 }
 
 [data-theme$='dark'] .mc-cycle-option-label {
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$='dark'] .mc-cycle-option-hint {
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$='dark'] .mc-cycle-exact {
@@ -513,13 +513,13 @@
 }
 
 [data-theme$='dark'] .mc-cycle-exact-label {
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$='dark'] .mc-cycle-exact-btn {
   background: var(--v4-surface, #23201b);
   border-color: var(--v4-act-text, #8a4a20);
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 @media (hover: hover) {
@@ -533,7 +533,7 @@
 }
 
 [data-theme$='dark'] .mc-cycle-auto-hint .mc-cycle-hint-text {
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 /* ============================================================
@@ -569,7 +569,7 @@
   margin-left: auto;
   font-size: 13px;
   font-weight: 500;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   background: rgba(236, 72, 153, 0.15);
   padding: 4px 10px;
   border-radius: 12px;
@@ -593,7 +593,7 @@
 /* Dark theme */
 [data-theme$='dark'] .cycle-card {
   background: linear-gradient(135deg, #500724 0%, #831843 100%);
-  border-color: var(--v4-sand-act-deep, #8a4a20);
+  border-color: var(--v4-act-text, #8a4a20);
 }
 
 [data-theme$='dark'] .cycle-card__title {
@@ -607,7 +607,7 @@
 
 [data-theme$='dark'] .cycle-card__badge {
   background: rgba(0, 0, 0, 0.3);
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 /* Режим редактирования и пустое состояние */
@@ -635,7 +635,7 @@
 .cycle-card__empty-hint {
   margin-left: auto;
   font-size: 13px;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   opacity: 0.7;
 }
 
@@ -661,7 +661,7 @@
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
-  color: var(--v4-sand-act-deep, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   transition: all 0.15s;
 }
@@ -722,8 +722,8 @@
 
 [data-theme$='dark'] .cycle-card__day-btn {
   background: rgba(0, 0, 0, 0.3);
-  border-color: var(--v4-sand-act-deep, #8a4a20);
-  color: var(--v4-sand-act-soft, #e2a468);
+  border-color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-act-text, #e2a468);
 }
 
 @media (hover: hover) {
@@ -733,12 +733,12 @@
 }
 
 [data-theme$='dark'] .cycle-card__day-btn--active {
-  background: var(--v4-sand-act-deep, #8a4a20);
+  background: var(--v4-act-text, #8a4a20);
   color: white;
 }
 
 [data-theme$='dark'] .cycle-card__empty-hint {
-  color: var(--v4-sand-act-soft, #e2a468);
+  color: var(--v4-act-text, #e2a468);
 }
 
 [data-theme$='dark'] .cycle-card__clear-btn {

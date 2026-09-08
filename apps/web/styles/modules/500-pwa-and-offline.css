@@ -899,13 +899,13 @@
 
 .mc-daily-footer-secondary {
   flex: 1;
-  background: var(--v4-sand-surface, #f7efe2);
+  background: var(--v4-c1, #f7efe2);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-daily-footer-primary {
   flex: 1.3;
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   box-shadow: none;
   font-size: 13px;
@@ -917,7 +917,7 @@
 
 .mc-modal--daily .mc-daily-footer-primary.mc-btn--primary,
 .mc-modal--daily .mc-btn.mc-daily-footer-primary {
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   box-shadow: none;
 }
@@ -7165,7 +7165,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-daily-greeting-title {
   font: 700 20px/1.25 Figtree, system-ui, sans-serif;
-  color: var(--v4-sand-ink, #201e1d);
+  color: var(--v4-ink, #201e1d);
   text-align: center;
 }
 
@@ -7182,14 +7182,14 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   gap: 10px;
   margin-top: 16px;
   padding: 11px 14px;
-  background: var(--v4-sand-surface, #f7efe2) !important;
+  background: var(--v4-c1, #f7efe2) !important;
   border-radius: 16px !important;
   overflow: hidden;
 }
 
 .mc-modal--daily .mc-daily-streak-count {
   font: 800 15px/1 Figtree, system-ui, sans-serif;
-  color: var(--v4-sand-act-text, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
 }
 
@@ -7217,7 +7217,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-weight-hero-value {
   font: 600 58px/0.9 Figtree, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: -0.045em;
-  color: var(--v4-sand-act-text, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .mc-modal--daily .mc-weight-hero-unit {
@@ -7249,7 +7249,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-weight-kilo-card,
 .mc-modal--daily .mc-sleep-block {
-  background: var(--v4-sand-surface, #f7efe2) !important;
+  background: var(--v4-c1, #f7efe2) !important;
   border-radius: 20px !important;
   overflow: hidden;
 }
@@ -7261,7 +7261,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-scale-card {
-  background: var(--v4-sand-surface, #f7efe2) !important;
+  background: var(--v4-c1, #f7efe2) !important;
   border-radius: 18px !important;
   overflow: hidden;
 }
@@ -7388,14 +7388,14 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-btn.mc-daily-footer-secondary {
   flex: 1;
-  background: var(--v4-sand-surface, #f7efe2);
-  color: rgba(0, 0, 0, 0.55);
+  background: var(--v4-c1, #f7efe2);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font: 700 12px/1 Figtree, system-ui, sans-serif;
 }
 
 .mc-modal--daily .mc-btn.mc-daily-footer-primary {
   flex: 1.3;
-  background: var(--v4-sand-act, #c67139);
+  background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   font: 700 13px/1 Figtree, system-ui, sans-serif;
 }
@@ -7403,7 +7403,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-steps-hero-value {
   font: 600 54px/0.9 Figtree, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: -0.045em;
-  color: var(--v4-sand-act-text, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 .mc-modal--daily .mc-steps-unit {
@@ -7420,7 +7420,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-wheel-value--current {
   font: 700 27px/1.25 Figtree, system-ui, sans-serif;
-  color: var(--v4-sand-act-text, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   letter-spacing: -0.02em;
   height: auto;
   min-width: 0;
@@ -7438,7 +7438,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-weight-comma {
   flex: none;
   margin-top: 0;
-  color: var(--v4-sand-act-text, #8a4a20);
+  color: var(--v4-act-text, #8a4a20);
   padding: 0 1px;
 }
 

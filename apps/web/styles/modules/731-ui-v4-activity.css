@@ -92,7 +92,7 @@ body:has(.activity-v4) .hdr::after {
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
@@ -554,7 +554,7 @@ body:has(.activity-v4) .hdr::after {
   padding: 8px 8px 12px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
 }
 
 .activity-v4-sheet__btn {
@@ -569,7 +569,7 @@ body:has(.activity-v4) .hdr::after {
   background: var(--v4-hero, #f8fafc);
   font-size: 14px;
   font-weight: 600;
-  color: var(--v4-ink, #0f172a);
+  color: var(--v4-ink, #201e1d);
   cursor: pointer;
   text-align: left;
 }

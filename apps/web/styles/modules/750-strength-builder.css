@@ -32,7 +32,7 @@
   --val-bad: var(--v4-bad-text, #a83c22);
   --sb-card: var(--card, #ffffff);
   --sb-bg: var(--bg, #f8fafc);
-  --sb-tx: var(--text, #0f172a);
+  --sb-tx: var(--tx, #201e1d);
   --sb-mut: var(--muted, #64748b);
   --sb-br: var(--border, #e2e8f0);
   --sb-soft: #f1f5f9;
@@ -1541,7 +1541,7 @@
 
 .sb-card {
   --sb-card: var(--card, #fff);
-  --sb-tx: var(--text, #0f172a);
+  --sb-tx: var(--tx, #201e1d);
   --sb-mut: var(--muted, #64748b);
   --sb-br: var(--border, #e2e8f0);
   margin: 8px 0;
@@ -4283,7 +4283,7 @@
 
 .sb-plan-card {
   --sb-card: var(--card, #fff);
-  --sb-tx: var(--text, #0f172a);
+  --sb-tx: var(--tx, #201e1d);
   --sb-mut: var(--muted, #64748b);
   --sb-br: var(--border, #e2e8f0);
   margin: 8px 0;
