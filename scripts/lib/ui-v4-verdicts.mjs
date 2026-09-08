@@ -160,9 +160,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // --c2 против date-remainders «вид чужого дня»; typedMismatch 41 → 42.
     // 07.09, package 47: «что в шапке» получила naKind foreign-zone — шапка
     // карточки живёт в product-card; untyped «—» типизирован: 87 → 86.
+    // 08.09: 86 legacy «—» получили naKind (scripts/.food-meal-nakind-apply.mjs):
+    // handoff 13, demo-only 68, foreign-zone 4, designer-removed 1;
+    // notApplicable 86 → 0.
     mismatch: [0, 'e3b0c44298fc1c14'],
     typedMismatch: [42, 'bc5759cbb0faa849'],
-    notApplicable: [86, 'd1df0e93941b3256'],
+    notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   gamification: Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
