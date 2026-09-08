@@ -7420,7 +7420,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-wheel-value--current {
   font: 700 27px/1.25 Figtree, system-ui, sans-serif;
-  color: var(--v4-act-text, #8a4a20);
+  color: var(--v4-sand-act-text, #8a4a20);
   letter-spacing: -0.02em;
   height: auto;
   min-width: 0;
