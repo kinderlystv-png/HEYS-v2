@@ -237,6 +237,11 @@
   --v4-sand-act-deep: #8a4a20;
   --v4-sand-act-text: #8a4a20;
   --v4-sand-act-mid: #a75c2b;
+  /* Мягкий тёплый акцент: один и тот же #e2a468 во всех четырёх наборах —
+     единственная роль с полным совпадением hex (ui-v4-audit-same-value-roles).
+     На тёмных наборах это читаемый акцентный тон текста (≡ --v4-act-text там);
+     на светлых — рамки/заливки в hero-language и в [data-theme$="dark"]-ветках.
+     Имя «sand» — историческое семейство, не привязка к песочному набору. */
   --v4-sand-act-soft: #e2a468;
   --v4-sand-hero: #efe3cf;
   --v4-sand-hero-cool: #e8ecf1;
