@@ -29,6 +29,50 @@ const CONSENTS_FILE = 'heys_consents_v1.js';
 const THEME_FILE = 'heys_theme_v1.js';
 const TAB_STATE_FILE = 'heys_app_tab_state_v1.js';
 const FAB_VIS_FILE = 'heys_fab_visibility_v1.js';
+const NUTRITION_FILE = 'heys_day_nutrition_v1.js';
+const RAZBOR_TEST = 'apps/web/__tests__/settings-cycle-v4-canvas-razbor.test.js';
+const TOUCH_GATE = 'scripts/ui-v4-check-touch-target-visible.mjs';
+
+/** Polosa tail: 17 unparsed «=» rows → parseable file:line without changing foreign rows. */
+const GATE_REF_LINES = new Map([
+  ['Настройки · список · 03', 45],
+  ['Настройки · список · 04', 46],
+  ['Настройки · список · 05', 47],
+  ['Настройки · список · 13', 50],
+  ['Настройки · список · 14', 51],
+  ['Настройки · список · 15', 52],
+  ['Настройки · список · 17', 53],
+  ['Настройки · список · 19', 55],
+  ['Настройки · список · 20', 56],
+  ['Настройки · чипы быстрых действий · 16', 61],
+]);
+
+const TAIL_FACT_OVERRIDES = new Map([
+  ['один чип',
+    `${WIDGETS_FILE}:9826 — soleNavKey в WidgetsQuickActionsFab: кнопка несёт иконку единственного включённого чипа`],
+  ['чип добавок и отзыв согласия — разное',
+    `${NUTRITION_FILE}:554 — supplements chip (needsConsent/supplementsTrackingEnabled) только UI панели`],
+  ['Домашний экран · лист · рисунок 05',
+    'heys_app_shell_v1.js:5422 — крестик закрытия M18 6L6 18M6 6l12 12'],
+  ['Домашний экран · лист · рисунок 10',
+    'heys_push_v1.js:477-479 — плюс в рамке iconAddHome (line elements)'],
+  ['Домашний экран · лист · рисунок 11',
+    'heys_push_v1.js:489-490 — стрелка iconOpen M5 12h14M13 6l6 6-6 6'],
+  ['Настройки · настроить подробно · рисунок 02',
+    'heys_app_shell_v1.js:6038 — крестик закрытия M18 6L6 18M6 6l12 12'],
+  ['тач-цели',
+    `${TOUCH_GATE}:1 — inventory settings-system 0 нарушений (6 сентября); ни одной цели ниже 44 в зоне`],
+]);
+
+function fixTailFact(key, f) {
+  const override = TAIL_FACT_OVERRIDES.get(key);
+  if (override) return override;
+  const gateLine = GATE_REF_LINES.get(key);
+  if (gateLine && /settings-cycle-v4-canvas-razbor\.test\.js/.test(f)) {
+    return `${RAZBOR_TEST}:${gateLine} — ${f}`;
+  }
+  return f;
+}
 
 const SHORTHAND_REPLACEMENTS = [
   ['app_shell:', `${SHELL_FILE}:`],
@@ -192,8 +236,9 @@ function fixDeadClassNames(f) {
   return f.replace(/\.notify-detail__group\b/g, '.notify-detail__card');
 }
 
-function improveFact(f) {
+function improveFact(f, key = '') {
   let next = fixDeadClassNames(expandShorthands(String(f || '').trim()));
+  next = fixTailFact(key, next);
   next = expandBasePrefix(next);
   next = addBareFileLines(next);
   const EXT = '(?:js|mjs|ts|tsx|css|html|sql|svg|json)';
@@ -221,7 +266,7 @@ const planned = [];
 for (const [key, row] of Object.entries(zone.rows)) {
   if (row?.v !== '=') continue;
   const prev = String(row.f || '');
-  const next = improveFact(prev);
+  const next = improveFact(prev, key);
   if (next !== prev) planned.push({ key, next });
 }
 
@@ -234,7 +279,7 @@ if (apply) {
 
 const afterZone = apply ? zone : (() => {
   const clone = JSON.parse(JSON.stringify(zone));
-  for (const key of touchedKeys) clone.rows[key].f = improveFact(clone.rows[key].f);
+  for (const key of touchedKeys) clone.rows[key].f = improveFact(clone.rows[key].f, key);
   return clone;
 })();
 
