@@ -7,6 +7,7 @@ export default {
     'styles/modules/733-ui-v4-login-theme.css',
   ],
   html: `
+    <div style="min-height:812px;position:relative;width:375px">
     <div id="heys-login-gate" class="heys-auth-shell">
       <div class="heys-auth-shell-client">
         <div class="heys-auth-shell-stage">
@@ -50,6 +51,7 @@ export default {
           </div>
         </div>
       </div>
+    </div>
     </div>
   `,
   watch: {

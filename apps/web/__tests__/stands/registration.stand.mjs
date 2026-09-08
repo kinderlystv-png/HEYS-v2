@@ -5,6 +5,7 @@ export default {
     'styles/modules/500-pwa-and-offline.css',
   ],
   html: `
+    <div style="min-height:812px;position:relative;width:375px">
     <div class="mc-backdrop">
       <div class="mc-modal mc-modal--daily" data-heys-step-id="profile-personal">
         <div class="profile-personal-step flex flex-col gap-4">
@@ -27,6 +28,7 @@ export default {
           <button type="button" class="mc-daily-footer-primary mc-btn--primary">Продолжить</button>
         </div>
       </div>
+    </div>
     </div>
   `,
   watch: {
