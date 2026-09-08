@@ -8,8 +8,8 @@ import { inspectVerdictFacts } from './ui-v4-check-verdict-facts.mjs';
 
 // 05.09 recount: полоса 5 + short CSS module refs (NNN:line).
 const BASELINE = Object.freeze({
-  staleCount: 26,
-  staleDigest: 'ca3c1c601bfc1eac',
+  staleCount: 4,
+  staleDigest: 'ac637bc4ee760ac5',
 });
 
 function runCli() {

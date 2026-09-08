@@ -11,13 +11,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const INNER = path.join(HERE, 'ui-v4-check-verdict-addresses.mjs');
 
-// 08.09: checkin-morning «вес · 18» 7250→7351 (flex weight picker); hard 0, moved 17.
+// 08.09: shared-measurement facts добавили css:line в curator-cabinet/product-card; hard 0, moved 51.
 const BASELINE = Object.freeze({
   truncated: 0,
   missing: 0,
   beyond: 0,
   absent: 0,
-  moved: 17,
+  moved: 51,
 });
 
 function countScope() {
