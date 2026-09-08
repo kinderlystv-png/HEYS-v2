@@ -10973,7 +10973,7 @@ body:has(:is(
   /* Контракт «прокрутка»: шапка внутри скроллера и едет со списком — не липкая */
   padding: 18px 18px 12px;
   background: var(--v4-bg, #fffaf1);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
 }
 
 .hdr-settings-sheet__title {
@@ -10991,7 +10991,7 @@ body:has(:is(
   border-radius: 999px;
   /* v4-intentional */
   background: var(--v4-surface);
-  color: rgba(32, 30, 29, 0.5);
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   display: inline-flex;
   align-items: center;
   justify-content: center;

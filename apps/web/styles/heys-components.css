@@ -6822,7 +6822,7 @@ body.tour-active .ios-pwa-banner {
    rgba(16,24,38): развязать это можно только новой ролью в
    002-ui-v4-palette-roles.css, а он вне этой задачи. */
 .heys-update-prompt__backdrop {
-  background: rgba(42, 26, 12, 0.9);
+  background: rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.9);
 }
 
 [data-theme$="dark"] .heys-update-prompt__backdrop {
@@ -6868,7 +6868,7 @@ body.tour-active .ios-pwa-banner {
   justify-content: center;
   flex: none;
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-act, #c67139);
+  color: var(--v4-act-text, #8a4a20);
 }
 
 /* «на «Готово» она заменяется галочкой тоном --on-acs»: тон текста на акценте

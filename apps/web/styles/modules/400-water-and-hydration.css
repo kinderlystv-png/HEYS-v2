@@ -2314,8 +2314,12 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
   gap: 12px;
   width: 100%;
   padding: 14px 0;
-  border: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 7%, transparent);
+  appearance: none;
+  border-width: 0;
+  border-style: solid;
+  border-color: transparent;
+  border-bottom-width: 1px;
+  border-bottom-color: var(--v4-line, rgba(0, 0, 0, 0.08));
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -2328,7 +2332,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 .advice-service-row__title {
   display: block;
   font: 600 12.5px/1 Figtree, sans-serif;
-  color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .advice-service-row__hint {
@@ -2478,7 +2482,7 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 }
 
 [data-theme$="dark"] .advice-service-row {
-  border-bottom-color: color-mix(in srgb, var(--v4-ink, #f2ede6) 11%, transparent);
+  border-bottom-color: var(--v4-line, rgba(242, 237, 230, 0.08));
 }
 
 [data-theme$="dark"] .advice-rules-pool-row {
@@ -3883,12 +3887,12 @@ html[data-theme-id="blue-dark"] .water-column__target {
 
 .water-custom-sheet__title {
   font: 700 15px/1.2 Figtree, sans-serif;
-  color: var(--inkTxt, #201e1d);
+  color: var(--v4-ink, #201e1d);
 }
 
 .water-custom-sheet__meta {
   font: 600 11px/1 Figtree, sans-serif;
-  color: var(--dimTxt, rgba(32, 30, 29, 0.55));
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .water-custom-sheet__stepper {
