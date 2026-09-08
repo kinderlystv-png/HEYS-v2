@@ -18764,7 +18764,7 @@ html.heys-bg-paused *::after {
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--v4-act-text, #a75c2b);
+  color: var(--v4-act-text, #8a4a20);
   margin: 18px 0 10px;
 }
 
@@ -18923,7 +18923,7 @@ html.heys-bg-paused *::after {
 }
 
 .game-v4-sheet__card-xp--ok {
-  color: var(--v4-on-ok, #5c6a45);
+  color: var(--v4-on-ok, #3f4a2e);
 }
 
 /* Кадр просит чернила 50 %; у набора три тона — 55 / 45 / 38. Оставлен
@@ -18993,7 +18993,7 @@ html.heys-bg-paused *::after {
 
 .game-v4-sheet__card-meta--ok {
   font-weight: 600;
-  color: var(--v4-on-ok, #5c6a45);
+  color: var(--v4-on-ok, #3f4a2e);
 }
 
 .game-v4-sheet__mission-card.is-done {

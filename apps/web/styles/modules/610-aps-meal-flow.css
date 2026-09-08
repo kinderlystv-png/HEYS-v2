@@ -579,7 +579,7 @@
 }
 
 .meal-mood-scale__value--ok {
-  color: var(--v4-on-ok, #5c6a45);
+  color: var(--v4-on-ok, #3f4a2e);
 }
 
 .meal-mood-scale__value--mid {
@@ -2452,7 +2452,7 @@
   flex-shrink: 0;
   width: 34px;
   height: 34px;
-  background: linear-gradient(135deg, var(--v4-tint-warm, #fef3c7) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 25%, var(--v4-tint-warm, #fef3c7)) 100%);
+  background: linear-gradient(135deg, var(--v4-tint-warm, #c67139) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 25%, var(--v4-tint-warm, #c67139)) 100%);
   border: 1.5px solid var(--v4-warn-soft, #c9922e);
   border-radius: 8px;
   cursor: pointer;
@@ -2474,7 +2474,7 @@
 
 @media (hover: hover) {
   .mpc-save-preset-btn:hover {
-    background: linear-gradient(135deg, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 25%, var(--v4-tint-warm, #fef3c7)) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, var(--v4-tint-warm, #fef3c7)) 100%);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 25%, var(--v4-tint-warm, #c67139)) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 45%, var(--v4-tint-warm, #c67139)) 100%);
     border-color: var(--v4-warn-2, #c67139);
   }
 }
@@ -3406,7 +3406,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  background: linear-gradient(90deg, var(--v4-tint-warm, #fef3c7) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 25%, var(--v4-tint-warm, #fef3c7)) 50%, var(--v4-tint-warm, #fef3c7) 100%);
+  background: linear-gradient(90deg, var(--v4-tint-warm, #c67139) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 25%, var(--v4-tint-warm, #c67139)) 50%, var(--v4-tint-warm, #c67139) 100%);
   background-size: 200% 100%;
   border-radius: 10px;
   animation:
