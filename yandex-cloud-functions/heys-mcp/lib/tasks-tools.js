@@ -1189,14 +1189,33 @@ function createTasksTools({
       // по алфавиту, и «по X ничего нет» было неправдой в восемнадцати случаях
       // из двадцати шести. Стоит это не токенов модели, а одного батча: наружу
       // из поиска уходят найденные строки, а не тексты файлов.
-      const { files, skipped } = await readAllWithMeta({ reports: true, max: SEARCH_MAX });
+      const first = await readAllWithMeta({ reports: true, max: SEARCH_MAX });
+      let files = first.files;
+      let skipped = first.skipped;
       // Ссылки собираются один раз и отдаются поиску: без них связанная руками
       // запись остаётся внизу, потому что общих слов у пары обычно нет.
-      const matches = tasks.searchFiles(files, query, {
+      const runSearch = (set) => tasks.searchFiles(set, query, {
         limit: args.limit || 40,
         today: today(),
-        linkPairs: tasks.linkEndpointPairs(files),
+        linkPairs: tasks.linkEndpointPairs(set),
       });
+      let matches = runSearch(files);
+      // Пусто в приоритетном проходе — дочитываем именно то, что не поместилось,
+      // и ищем ещё раз. 08.09.2026: вес сосиски лежал в transcript/2026-08-27,
+      // и он оказался в skipped целиком со всей свежей стенограммой — порядок
+      // прохода ставит её последней, потому что оптимизирован под разбор фразы,
+      // а не под поиск. Пустой ответ прочитался как «такого нет», и куратора
+      // второй раз спросили то, что он уже присылал. Второй батч платится
+      // только когда ответа в голове прохода нет, то есть ровно тогда, когда
+      // разница между «нет» и «не смотрел» и решает дело.
+      if (!matches.length && skipped.length) {
+        const rest = await readAllWithMeta({ paths: skipped, reports: true, max: null });
+        if (rest.files.length) {
+          files = files.concat(rest.files);
+          matches = runSearch(files);
+        }
+        skipped = rest.skipped;
+      }
       // Непрочитанное называется вслух и с именами файлов: иначе «ничего нет»
       // и «не смотрел» звучат одинаково, а решение по ним принимается разное.
       const unread = skipped.length

@@ -3126,7 +3126,27 @@ test('поиск доходит до последнего отчёта, а не 
   assert.match(res.text, /прочитан весь задачник|Нашёл/);
 });
 
-test('непрочитанное поиск называет вслух — «ничего нет» по нему говорить нельзя', async () => {
+test('пусто в голове прохода — поиск дочитывает хвост, а не отвечает «ничего нет»', async () => {
+  // 08.09.2026: вес сосиски лежал в transcript/2026-08-27, вся свежая
+  // стенограмма ушла в skipped, и пустой ответ прочитался как «такого нет» —
+  // куратора второй раз спросили то, что он уже присылал. Теперь пустой первый
+  // проход обязан привести ко второму батчу по пропущенному.
+  const files = {};
+  const date = (i) => new Date(Date.UTC(2026, 7, 2) - i * 86400000).toISOString().slice(0, 10);
+  for (let i = 0; i < 260; i += 1) {
+    const path = `days/${date(i)}.md`;
+    const text = i === 259
+      ? `# День ${date(i)}\n- 10:00 Купил шпиндельный редуктор\n`
+      : `# День ${date(i)}\n- 10:00–11:00 Работа\n`;
+    files[tasks.keyForPath(path)] = { path, text, rev: 1, updatedAt: 1 };
+  }
+  const res = await session(liveApi(files)).tasks_search({ query: 'шпиндельный редуктор' });
+  assert.equal(res.structured.matches.length > 0, true, 'найдено в файле, который первый проход не взял');
+  assert.deepEqual(res.structured.skipped, [], 'после второго батча непрочитанного не осталось');
+  assert.ok(res.structured.searched > 200, `дочитан хвост, а не только голова: searched=${res.structured.searched}`);
+});
+
+test('ничего не нашлось — значит прочитан весь задачник, а не только его голова', async () => {
   const files = {};
   const date = (i) => new Date(Date.UTC(2026, 7, 2) - i * 86400000).toISOString().slice(0, 10);
   for (let i = 0; i < 260; i += 1) {
@@ -3134,10 +3154,9 @@ test('непрочитанное поиск называет вслух — «н
     files[tasks.keyForPath(path)] = { path, text: `# День ${date(i)}\n- 10:00–11:00 Работа\n`, rev: 1, updatedAt: 1 };
   }
   const res = await session(liveApi(files)).tasks_search({ query: 'шпиндельный редуктор' });
-  assert.ok(res.structured.skipped.length > 0, 'часть файлов в проход не поместилась');
-  assert.match(res.text, /в прочитанном ничего нет/, 'не «ничего нет», а «в прочитанном»');
-  assert.match(res.text, /Не поместилось в проход \d+/);
-  assert.match(res.text, /days\/\d{4}-\d{2}-\d{2}\.md/, 'непрочитанные названы поимённо');
+  assert.deepEqual(res.structured.matches, [], 'этого в задачнике действительно нет');
+  assert.deepEqual(res.structured.skipped, [], 'отрицательный ответ разрешён только после полного прохода');
+  assert.match(res.text, /прочитан весь задачник/);
 });
 
 test('названный поимённо список читается целиком, а не по квоте папки', async () => {
