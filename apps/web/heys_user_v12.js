@@ -2632,6 +2632,25 @@
       }));
     };
 
+    // Коэффициент белка — г/кг, не процент: свой диапазон и шаг, clamp(0..100) не годится.
+    // Пусто = считаем по режиму (дефицит / поддержка / набор), как было до heys/798770.
+    const proteinCoeffRaw = norms.proteinCoeffGPerKg;
+    const proteinCoeff = (proteinCoeffRaw === undefined || proteinCoeffRaw === null) ? '' : proteinCoeffRaw;
+    const updateProteinCoeff = (v) => {
+      setLastEditedNorm('proteinCoeffGPerKg');
+      setNormsPending(true);
+      const num = Number(v);
+      const next = (v === '' || !Number.isFinite(num) || num <= 0)
+        ? ''
+        : Math.min(2.4, Math.max(1.2, num));
+      setNorms(prev => ({
+        ...prev,
+        proteinCoeffGPerKg: next,
+        revision: (prev.revision || 0) + 1,
+        updatedAt: Date.now()
+      }));
+    };
+
     const overMacro = (carb + prot) > 100;
     const overFatSplit = (badF + superBadF) > 100;
     const overCarbSplit = simpleC > 100;
@@ -2643,7 +2662,8 @@
       ),
       React.createElement('div', { className: 'field-list' },
         React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Углеводы (%) — вручную'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', min: 0, max: 100, step: '1', value: carb, onChange: e => update('carbsPct', e.target.value), onFocus: e => e.target.select() }), React.createElement(NormFieldStatus, { fieldKey: 'carbsPct' })),
-        React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Белки (%) — вручную'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', min: 0, max: 100, step: '1', value: prot, onChange: e => update('proteinPct', e.target.value), onFocus: e => e.target.select() }), React.createElement(NormFieldStatus, { fieldKey: 'proteinPct' })),
+        React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Белок (г/кг) — вручную, пусто = по режиму'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', min: 1.2, max: 2.4, step: '0.1', placeholder: 'по режиму', value: proteinCoeff, onChange: e => updateProteinCoeff(e.target.value), onFocus: e => e.target.select() }), React.createElement(NormFieldStatus, { fieldKey: 'proteinCoeffGPerKg' })),
+        React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Белки (%) — не норма белка, только дележ остатка У/Ж'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', min: 0, max: 100, step: '1', value: prot, onChange: e => update('proteinPct', e.target.value), onFocus: e => e.target.select() }), React.createElement(NormFieldStatus, { fieldKey: 'proteinPct' })),
         React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Жиры (%) — авто = 100 − У − Б'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { className: 'readOnly', readOnly: true, value: fatAuto })),
         React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Вредные жиры (%) — вручную'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', min: 0, max: 100, step: '1', value: badF, onChange: e => update('badFatPct', e.target.value), onFocus: e => e.target.select() }), React.createElement(NormFieldStatus, { fieldKey: 'badFatPct' })),
         React.createElement('div', { className: 'inline-field' }, React.createElement('label', null, 'Супервредные жиры (%) — вручную'), React.createElement('span', { className: 'sep' }, '-'), React.createElement('input', { type: 'number', min: 0, max: 100, step: '1', value: superBadF, onChange: e => update('superbadFatPct', e.target.value), onFocus: e => e.target.select() }), React.createElement(NormFieldStatus, { fieldKey: 'superbadFatPct' })),
