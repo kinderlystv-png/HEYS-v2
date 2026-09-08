@@ -2000,6 +2000,25 @@ test('штуки без известного веса не угадываютс�
   assert.equal(api.saves.length, 0);
 });
 
+test('вопрос про вес штуки сначала отправляет искать, а не спрашивать', async () => {
+  // 08.09.2026: агент спросил вес сосиски, который куратор присылал 27.08 —
+  // «330 г на 8 сосисок». Значение лежало в стенограмме, но tasks_search
+  // вернул пустое с непустым skipped, и пустота прочиталась как «нет».
+  // Текст этой ошибки — единственное место, которое агент читает в тот момент,
+  // поэтому порядок «сначала поиск, потом вопрос» закреплён здесь.
+  const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 }, overlay: CANDY_OVERLAY });
+  const tools = build(api);
+  await assert.rejects(
+    () => tools.heys_log_meal({ items: [{ product_id: 'own-sausage', pieces: 4 }] }),
+    (e) => {
+      assert.match(e.message, /СНАЧАЛА ПОИЩИ/);
+      assert.match(e.message, /skipped/);
+      assert.match(e.message, /упаковка|упаковк/i);
+      return true;
+    },
+  );
+});
+
 test('названный пользователем вес штуки сохраняется в карточку продукта', async () => {
   const api = fakeApi({ day: { date: '2026-08-01', meals: [], updatedAt: 1 }, overlay: CANDY_OVERLAY });
   const tools = build(api);
