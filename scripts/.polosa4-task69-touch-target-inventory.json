@@ -1,5 +1,5 @@
 {
-  "captured": "2026-09-07",
+  "captured": "2026-09-08",
   "minTouchPx": 44,
   "scannedFiles": [
     "000-base-and-gamification.css",
@@ -39,23 +39,23 @@
     "heys-components.css"
   ],
   "counts": {
-    "violations": 3,
-    "exceptions": 119,
+    "violations": 1,
+    "exceptions": 99,
     "unmeasured": 0,
-    "heightChecked": 262,
-    "interactiveRules": 999
+    "heightChecked": 268,
+    "interactiveRules": 991
   },
   "attribution": {
-    "bySelector": 81,
+    "bySelector": 80,
     "byClass": 834,
     "byFile": 55,
-    "unattributed": 29
+    "unattributed": 22
   },
   "scope": {
-    "zonesCovered": 3,
+    "zonesCovered": 1,
     "unknownViolations": 0,
     "unknownViolationKeys": [],
-    "heightChecked": 262,
+    "heightChecked": 268,
     "unmeasured": 0,
     "justifiedRemainder": 0,
     "blindSpots": [
@@ -63,20 +63,8 @@
     ]
   },
   "byZone": {
-    "tab-activity": {
+    "strength-builder": {
       "violations": 1,
-      "exceptions": 3
-    },
-    "cycle": {
-      "violations": 1,
-      "exceptions": 0
-    },
-    "undo-bar": {
-      "violations": 1,
-      "exceptions": 0
-    },
-    "shared": {
-      "violations": 0,
       "exceptions": 1
     },
     "date-remainders": {
@@ -84,10 +72,6 @@
       "exceptions": 4
     },
     "settings-system": {
-      "violations": 0,
-      "exceptions": 6
-    },
-    "(unknown)": {
       "violations": 0,
       "exceptions": 7
     },
@@ -97,7 +81,7 @@
     },
     "home-widgets": {
       "violations": 0,
-      "exceptions": 52
+      "exceptions": 39
     },
     "messenger": {
       "violations": 0,
@@ -111,15 +95,15 @@
       "violations": 0,
       "exceptions": 2
     },
+    "tab-activity": {
+      "violations": 0,
+      "exceptions": 3
+    },
     "reports-insights": {
       "violations": 0,
       "exceptions": 5
     },
     "nutrition-tab": {
-      "violations": 0,
-      "exceptions": 1
-    },
-    "strength-builder": {
       "violations": 0,
       "exceptions": 1
     },
@@ -133,42 +117,16 @@
     }
   },
   "byFile": {
-    "000-base-and-gamification.css": 1,
-    "500-pwa-and-offline.css": 1,
-    "heys-components.css": 1
+    "000-base-and-gamification.css": 1
   },
   "violations": [
     {
       "file": "000-base-and-gamification.css",
-      "selector": ".program-next-line",
-      "className": "program-next-line",
-      "zone": "tab-activity",
-      "width": 100,
-      "height": 41.2,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "500-pwa-and-offline.css",
-      "selector": ".cycle-date-picker-sheet__month-nav",
-      "className": "cycle-date-picker-sheet__month-nav",
-      "zone": "cycle",
+      "selector": ".ct-wb-ex-fold-toggle:active",
+      "className": "ct-wb-ex-fold-toggle",
+      "zone": "strength-builder",
       "width": 0,
-      "height": 0,
-      "bucket": "violation",
-      "exemptionType": null,
-      "exemptionReason": null,
-      "tricks": []
-    },
-    {
-      "file": "heys-components.css",
-      "selector": ".tour-btn",
-      "className": "tour-btn",
-      "zone": "undo-bar",
-      "width": 0,
-      "height": 32.8,
+      "height": 28.2,
       "bucket": "violation",
       "exemptionType": null,
       "exemptionReason": null,
@@ -288,7 +246,7 @@
       "file": "000-base-and-gamification.css",
       "selector": ".toggle-slider",
       "className": "toggle-slider",
-      "zone": null,
+      "zone": "settings-system",
       "width": 44,
       "height": 44,
       "bucket": "named-exception",
@@ -324,7 +282,7 @@
       "file": "000-base-and-gamification.css",
       "selector": ".photo-processed-checkbox",
       "className": "photo-processed-checkbox",
-      "zone": null,
+      "zone": "food-meal",
       "width": 24,
       "height": 24,
       "bucket": "named-exception",
@@ -360,36 +318,12 @@
       "file": "100-metrics-and-graphs.css",
       "selector": ".dev-clear-weight-mini",
       "className": "dev-clear-weight-mini",
-      "zone": null,
+      "zone": "home-widgets",
       "width": 14,
       "height": 14,
       "bucket": "named-exception",
       "exemptionType": "dev-only",
-      "exemptionReason": "dev-only сброс веса — не prod CTA",
-      "tricks": []
-    },
-    {
-      "file": "100-metrics-and-graphs.css",
-      "selector": ".dev-clear-weight-btn",
-      "className": "dev-clear-weight-btn",
-      "zone": null,
-      "width": 44,
-      "height": 26.4,
-      "bucket": "named-exception",
-      "exemptionType": "dev-only",
-      "exemptionReason": "dev-only сброс веса — не prod CTA",
-      "tricks": []
-    },
-    {
-      "file": "100-metrics-and-graphs.css",
-      "selector": ".dev-clear-weight-btn-mini",
-      "className": "dev-clear-weight-btn-mini",
-      "zone": null,
-      "width": 16,
-      "height": 16,
-      "bucket": "named-exception",
-      "exemptionType": "dev-only",
-      "exemptionReason": "dev-only сброс веса — не prod CTA",
+      "exemptionReason": "dev-only мини-сброс веса на графике — не prod CTA",
       "tricks": []
     },
     {
@@ -461,7 +395,7 @@
       "height": 35.4,
       "bucket": "named-exception",
       "exemptionType": "wheel-picker",
-      "exemptionReason": "элемент колеса выбора — не полноразмерная кнопка",
+      "exemptionReason": "элемент колеса выбора — не полноразмерная кнопка (живые wheel-item / mc-wheel-value)",
       "tricks": []
     },
     {
@@ -492,7 +426,7 @@
       "file": "500-pwa-and-offline.css",
       "selector": ".mc-progress-dot",
       "className": "mc-progress-dot",
-      "zone": null,
+      "zone": "checkin-morning",
       "width": 8,
       "height": 8,
       "bucket": "named-exception",
@@ -509,19 +443,7 @@
       "height": 36,
       "bucket": "named-exception",
       "exemptionType": "wheel-picker",
-      "exemptionReason": "элемент колеса выбора — не полноразмерная кнопка",
-      "tricks": []
-    },
-    {
-      "file": "500-pwa-and-offline.css",
-      "selector": ".mc-wheel-btn",
-      "className": "mc-wheel-btn",
-      "zone": "checkin-morning",
-      "width": 36,
-      "height": 24,
-      "bucket": "named-exception",
-      "exemptionType": "wheel-picker",
-      "exemptionReason": "элемент колеса выбора — не полноразмерная кнопка",
+      "exemptionReason": "элемент колеса выбора — не полноразмерная кнопка (живые wheel-item / mc-wheel-value)",
       "tricks": []
     },
     {
@@ -598,18 +520,6 @@
     },
     {
       "file": "500-pwa-and-offline.css",
-      "selector": ".mc-dot",
-      "className": "mc-dot",
-      "zone": null,
-      "width": 8,
-      "height": 8,
-      "bucket": "named-exception",
-      "exemptionType": "progress-dot",
-      "exemptionReason": "точка прогресса — декор шага, не полноразмерная кнопка",
-      "tricks": []
-    },
-    {
-      "file": "500-pwa-and-offline.css",
       "selector": ".mc-wheel-value",
       "className": "mc-wheel-value",
       "zone": "checkin-morning",
@@ -617,7 +527,7 @@
       "height": 23,
       "bucket": "named-exception",
       "exemptionType": "wheel-picker",
-      "exemptionReason": "элемент колеса выбора — не полноразмерная кнопка",
+      "exemptionReason": "элемент колеса выбора — не полноразмерная кнопка (живые wheel-item / mc-wheel-value)",
       "tricks": []
     },
     {
@@ -690,18 +600,6 @@
       "bucket": "named-exception",
       "exemptionType": "slider-node",
       "exemptionReason": "узел ползунка — отдельный контракт геометрии",
-      "tricks": []
-    },
-    {
-      "file": "610-aps-meal-flow.css",
-      "selector": ".aps-grams-slider",
-      "className": "aps-grams-slider",
-      "zone": "food-meal",
-      "width": 0,
-      "height": 0,
-      "bucket": "named-exception",
-      "exemptionType": "range-slider",
-      "exemptionReason": "ползунок диапазона — не полноразмерная кнопка, контракт отдельной геометрии",
       "tricks": []
     },
     {
@@ -850,42 +748,6 @@
     },
     {
       "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-tab__btn",
-      "className": "widgets-tab__btn",
-      "zone": "home-widgets",
-      "width": 44,
-      "height": 0,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-edit-controls__fab",
-      "className": "widgets-edit-controls__fab",
-      "zone": "home-widgets",
-      "width": 56,
-      "height": 56,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-header__btn",
-      "className": "widgets-header__btn",
-      "zone": "home-widgets",
-      "width": 44,
-      "height": 32.8,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
-    },
-    {
-      "file": "730-widgets-dashboard.css",
       "selector": ".widget",
       "className": "widget",
       "zone": "home-widgets",
@@ -965,31 +827,7 @@
       "height": 40,
       "bucket": "named-exception",
       "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-quick-sheet__chip",
-      "className": "widgets-quick-sheet__chip",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 34,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-quick-sheet__row",
-      "className": "widgets-quick-sheet__row",
-      "zone": "home-widgets",
-      "width": 100,
-      "height": 44,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
+      "exemptionReason": "home-widgets: FAB 40px видимый, тач 44 через .widgets-settings-fab__host::after — гейт меряет button",
       "tricks": []
     },
     {
@@ -1001,7 +839,7 @@
       "height": 22,
       "bucket": "named-exception",
       "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
+      "exemptionReason": "home-widgets quick-sheet: видимый контрол <44px, тач через __host::after на дочернем span",
       "tricks": []
     },
     {
@@ -1013,7 +851,7 @@
       "height": 28,
       "bucket": "named-exception",
       "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
+      "exemptionReason": "home-widgets quick-sheet: видимый контрол <44px, тач через __host::after на дочернем span",
       "tricks": []
     },
     {
@@ -1025,44 +863,8 @@
       "height": 40,
       "bucket": "named-exception",
       "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
+      "exemptionReason": "home-widgets quick-sheet: видимый контрол <44px, тач через __host::after на дочернем span",
       "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-quick-fab",
-      "className": "widgets-quick-fab",
-      "zone": "home-widgets",
-      "width": 52,
-      "height": 52,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-empty__btn",
-      "className": "widgets-empty__btn",
-      "zone": "home-widgets",
-      "width": 44,
-      "height": 43.2,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-catalog__close",
-      "className": "widgets-catalog__close",
-      "zone": "home-widgets",
-      "width": 32,
-      "height": 32,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
     },
     {
       "file": "730-widgets-dashboard.css",
@@ -1073,7 +875,7 @@
       "height": 0,
       "bucket": "named-exception",
       "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
+      "exemptionReason": "home-widgets каталог: чип категории / строка списка — не отдельная кнопка 44×44",
       "tricks": []
     },
     {
@@ -1085,7 +887,7 @@
       "height": 43.2,
       "bucket": "named-exception",
       "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
+      "exemptionReason": "home-widgets каталог: чип категории / строка списка — не отдельная кнопка 44×44",
       "tricks": []
     },
     {
@@ -1138,42 +940,6 @@
     },
     {
       "file": "730-widgets-dashboard.css",
-      "selector": ".widget-crash-risk__popup-close",
-      "className": "widget-crash-risk__popup-close",
-      "zone": "home-widgets",
-      "width": 32,
-      "height": 32,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widget-crash-risk",
-      "className": "widget-crash-risk",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 28.2,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-settings__close",
-      "className": "widgets-settings__close",
-      "zone": "home-widgets",
-      "width": 32,
-      "height": 32,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
-    },
-    {
-      "file": "730-widgets-dashboard.css",
       "selector": ".widgets-settings__field input[type=\"checkbox\"]",
       "className": "widgets-settings__field",
       "zone": "home-widgets",
@@ -1181,44 +947,8 @@
       "height": 25.2,
       "bucket": "named-exception",
       "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
+      "exemptionReason": "home-widgets: гейт меряет input с классом поля; видимый чекбокс 44px в правиле input[type=checkbox]",
       "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-settings__size",
-      "className": "widgets-settings__size",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 27.6,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-settings__btn",
-      "className": "widgets-settings__btn",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 44,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": []
-    },
-    {
-      "file": "730-widgets-dashboard.css",
-      "selector": ".widgets-settings__scale-reset",
-      "className": "widgets-settings__scale-reset",
-      "zone": "home-widgets",
-      "width": 0,
-      "height": 22.4,
-      "bucket": "named-exception",
-      "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
-      "tricks": ["pseudo-padding-expander"]
     },
     {
       "file": "730-widgets-dashboard.css",
@@ -1229,7 +959,7 @@
       "height": 4,
       "bucket": "named-exception",
       "exemptionType": "named-exception",
-      "exemptionReason": "home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят",
+      "exemptionReason": "home-widgets ОТВЕТ-22 Q6: дорожка 4 px, thumb 44 px — как range-slider чек-ина",
       "tricks": []
     },
     {
@@ -1595,6 +1325,15 @@
   ],
   "unmeasured": [],
   "heightChecked": [
+    {
+      "file": "000-base-and-gamification.css",
+      "selector": ".program-next-line",
+      "className": "program-next-line",
+      "zone": "tab-activity",
+      "height": 45.2,
+      "fromDeclarations": false,
+      "heightFromLineBox": true
+    },
     {
       "file": "000-base-and-gamification.css",
       "selector": ".ct-wb-ex-name-suggest-item",
@@ -2839,6 +2578,15 @@
     },
     {
       "file": "725-metabolic-intelligence.css",
+      "selector": ".adv-analytics__energy-bar",
+      "className": "adv-analytics__energy-bar",
+      "zone": "reports-insights",
+      "height": 44,
+      "fromDeclarations": false,
+      "heightFromLineBox": false
+    },
+    {
+      "file": "725-metabolic-intelligence.css",
       "selector": ".category-filter-bar__btn",
       "className": "category-filter-bar__btn",
       "zone": "reports-insights",
@@ -2888,6 +2636,33 @@
       "className": "phenotype-expandable-card__header",
       "zone": "reports-insights",
       "height": 55.2,
+      "fromDeclarations": false,
+      "heightFromLineBox": true
+    },
+    {
+      "file": "730-widgets-dashboard.css",
+      "selector": ".widgets-header__btn",
+      "className": "widgets-header__btn",
+      "zone": "home-widgets",
+      "height": 44.8,
+      "fromDeclarations": false,
+      "heightFromLineBox": true
+    },
+    {
+      "file": "730-widgets-dashboard.css",
+      "selector": ".widgets-quick-sheet__row",
+      "className": "widgets-quick-sheet__row",
+      "zone": "home-widgets",
+      "height": 44,
+      "fromDeclarations": false,
+      "heightFromLineBox": false
+    },
+    {
+      "file": "730-widgets-dashboard.css",
+      "selector": ".widgets-empty__btn",
+      "className": "widgets-empty__btn",
+      "zone": "home-widgets",
+      "height": 45.2,
       "fromDeclarations": false,
       "heightFromLineBox": true
     },
@@ -3529,6 +3304,15 @@
       "height": 44,
       "fromDeclarations": false,
       "heightFromLineBox": true
+    },
+    {
+      "file": "900-planning.css",
+      "selector": ".planning-goals-workspace__task",
+      "className": "planning-goals-workspace__task",
+      "zone": "planning",
+      "height": 44,
+      "fromDeclarations": false,
+      "heightFromLineBox": false
     },
     {
       "file": "900-planning.css",

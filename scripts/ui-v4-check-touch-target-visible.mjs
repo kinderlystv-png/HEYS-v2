@@ -44,13 +44,34 @@ export const FROZEN_CSS = new Set([
 export const SKIP_CSS_PREFIXES = ['908-planning', '909-planning', '910-planning', '911-planning', '912-planning'];
 
 /**
+ * Плитка виджета (`.widget` / `widget__` / `widget-v4-`), не оболочка `.widgets-*`.
+ * `selector.includes('.widget')` ловил `.widgets-tab__btn` и весь shell Главной.
+ * @param {string} selector
+ */
+export function widgetTileTouchExempt(selector) {
+  for (const part of selector.split(',').map((s) => s.trim())) {
+    const last = part.split(/\s+/).pop() || '';
+    if (/^\.widgets-/i.test(last)) continue;
+    if (/^\.widget(?:--[a-z0-9-]+)?$/i.test(last)) return true;
+    if (/^\.widget__[\w-]+$/i.test(last)) return true;
+    if (/^\.widget-v4-[\w-]+$/i.test(last)) return true;
+    if (/^\.widget-relapse-risk/i.test(last)) return true;
+    if (/^\.widget-bd-sheet/i.test(last)) return true;
+    if (/^\.widget-wd-sheet/i.test(last)) return true;
+  }
+  return false;
+}
+
+/**
  * Законные исключения дизайнера. Ложное срабатывание дороже пропуска —
  * каждая запись явно именует класс/тип и причину.
  */
 export const EXEMPTION_REGISTRY = [
   {
     type: 'progress-dot',
-    match: (sel) => /(?:^|\s)\.(?:[^.\s]*-(?:dot|dots|pager-dot|step-dot|progress-dot)|mc-progress-dot|step-modal-dot)/i.test(sel),
+    match: (sel) =>
+      !/(?:^|[\s,>+~])\.mc-dot\b/i.test(sel)
+      && /(?:^|\s)\.(?:[^.\s]*-(?:dot|dots|pager-dot|step-dot|progress-dot)|mc-progress-dot|step-modal-dot)/i.test(sel),
     reason: 'точка прогресса — декор шага, не полноразмерная кнопка',
   },
   {
@@ -61,15 +82,15 @@ export const EXEMPTION_REGISTRY = [
   {
     type: 'range-slider',
     match: (sel) =>
-      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|aps-grams-slider|meal-mood-scale__slider|meal-transfer-v4__range|outcome-modal__slider|reading-reader__font-control|whatif-custom__field input\[type=["']range["']\])/i.test(
+      /(?:mood-slider|steps-slider|mc-steps-slider|mc-quality-slider|household-slider|ts-slider|meal-mood-scale__slider|meal-transfer-v4__range|outcome-modal__slider|reading-reader__font-control|whatif-custom__field input\[type=["']range["']\])/i.test(
         sel,
       ),
     reason: 'ползунок диапазона — не полноразмерная кнопка, контракт отдельной геометрии',
   },
   {
     type: 'wheel-picker',
-    match: (sel) => /(?:wheel-item|mc-wheel-item|mc-wheel-btn|mc-wheel-value)\b/i.test(sel),
-    reason: 'элемент колеса выбора — не полноразмерная кнопка',
+    match: (sel) => /(?:wheel-item|mc-wheel-value)\b/i.test(sel),
+    reason: 'элемент колеса выбора — не полноразмерная кнопка (живые wheel-item / mc-wheel-value)',
   },
   {
     type: 'bar',
@@ -131,7 +152,22 @@ export const EXEMPTION_REGISTRY = [
   },
   {
     type: 'named-exception',
-    selector: '.widget',
+    match: (sel) => /\.widgets-settings-fab\b/.test(sel),
+    reason: 'home-widgets: FAB 40px видимый, тач 44 через .widgets-settings-fab__host::after — гейт меряет button',
+  },
+  {
+    type: 'named-exception',
+    match: (sel) => /\.widgets-quick-(?:minus|chip|pencil)\b/.test(sel),
+    reason: 'home-widgets quick-sheet: видимый контрол <44px, тач через __host::after на дочернем span',
+  },
+  {
+    type: 'named-exception',
+    match: (sel) => /\.widgets-catalog__(?:category|item)\b/.test(sel),
+    reason: 'home-widgets каталог: чип категории / строка списка — не отдельная кнопка 44×44',
+  },
+  {
+    type: 'named-exception',
+    match: widgetTileTouchExempt,
     reason: 'home-widgets FINDINGS: плитка — цель = весь виджет, декоративный ::after занят',
   },
   {
@@ -161,8 +197,8 @@ export const EXEMPTION_REGISTRY = [
   },
   {
     type: 'dev-only',
-    match: (sel) => /dev-clear-weight/i.test(sel),
-    reason: 'dev-only сброс веса — не prod CTA',
+    match: (sel) => /dev-clear-weight-mini\b/i.test(sel),
+    reason: 'dev-only мини-сброс веса на графике — не prod CTA',
   },
   {
     type: 'toggle-knob',
@@ -247,19 +283,19 @@ export const CLASS_ZONE_RULES = [
   { re: /^cycle-|^mc-rest-cycle|^mc-cycle-/, zone: 'cycle' },
   { re: /^yv-/, zone: 'checkin-morning' },
   {
-    re: /^mc-wheel|^mc-steps|^mc-quality|^mc-supp|^mc-header|^mc-close|^mc-skip|^mc-dev|^mc-btn|^mc-rest-measure|^mc-rest-supp/,
+    re: /^mc-wheel|^mc-steps|^mc-quality|^mc-supp|^mc-header|^mc-close|^mc-skip|^mc-dev|^mc-btn|^mc-rest-measure|^mc-rest-supp|^mc-progress-dot$|^mc-dot$/,
     zone: 'checkin-morning',
   },
   { re: /^mood-|^steps-slider|^wheel-item|^quick-chip|^sleep-/, zone: 'checkin-morning' },
   { re: /^widgets-|^widget-/, zone: 'home-widgets' },
   {
-    re: /^hdr-settings-|^tab-settings-|^notify-detail|^profile-section|^profile-advice|^profile-inline|^profile-push/,
+    re: /^hdr-settings-|^tab-settings-|^notify-detail|^profile-section|^profile-advice|^profile-inline|^profile-push|^toggle-slider$/,
     zone: 'settings-system',
   },
   { re: /^messenger-|^msg-/, zone: 'messenger' },
   { re: /^sb-|^ct-wb-/, zone: 'strength-builder' },
   {
-    re: /^aps-|^meal-|^mpc-|^mpr-|^flow-selection|^grams-manual|^mobile-mood|^mobile-time|^photo-confirm|^photo-delete/,
+    re: /^aps-|^meal-|^mpc-|^mpr-|^flow-selection|^grams-manual|^mobile-mood|^mobile-time|^photo-confirm|^photo-delete|^photo-processed/,
     zone: 'food-meal',
   },
   { re: /^pe-|^aps-create|^aps-barcode|^product-name-edit$/, zone: 'product-card' },
@@ -280,7 +316,7 @@ export const CLASS_ZONE_RULES = [
     zone: 'pwa-update',
   },
   {
-    re: /^week-heatmap|^macro-|^weight-|^sparkline|^balance-|^debt-science|^goal-bonus|^kcal-period|^household-|^compact-|^training-|^add-training|^zone-clickable|^caloric-balance|^measurements-card|^correlation-clickable$|^deficit-card-modern$|^metric-popup-close$|^day-score-|^day-subtab$/,
+    re: /^week-heatmap|^macro-|^weight-|^sparkline|^balance-|^debt-science|^goal-bonus|^kcal-period|^household-|^compact-|^training-|^add-training|^zone-clickable|^caloric-balance|^measurements-card|^correlation-clickable$|^deficit-card-modern$|^metric-popup-close$|^day-score-|^day-subtab$|^dev-clear-weight/,
     zone: 'home-widgets',
   },
   { re: /^planning-|^gantt-|^chrono-|^goal-map|^reading-/, zone: 'planning' },

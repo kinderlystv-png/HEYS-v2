@@ -8083,7 +8083,6 @@
   background: rgba(239, 68, 68, 0.1);
   border: 1px dashed var(--v4-wgt-danger-text, #a1471c);
   border-radius: 6px;
-  cursor: pointer;
   transition: all 0.15s ease;
 }
 
@@ -8114,7 +8113,6 @@
   background: transparent;
   border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   border-radius: 50%;
-  cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
   opacity: 0.6;

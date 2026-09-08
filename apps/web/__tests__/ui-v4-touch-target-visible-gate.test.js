@@ -220,6 +220,15 @@ describe('ui-v4 touch-target visible gate', () => {
     expect(matchesExemption('.mood-slider')?.type).toBe('range-slider');
   });
 
+  it('widgetTileTouchExempt · плитка, не shell .widgets-*', async () => {
+    const { widgetTileTouchExempt } = await import('../../../scripts/ui-v4-check-touch-target-visible.mjs');
+    expect(widgetTileTouchExempt('.widget')).toBe(true);
+    expect(widgetTileTouchExempt('.widget__delete-btn')).toBe(true);
+    expect(widgetTileTouchExempt('.widgets-grid--remove-pick .widget')).toBe(true);
+    expect(widgetTileTouchExempt('.widgets-tab__btn')).toBe(false);
+    expect(widgetTileTouchExempt('.widgets-catalog__close')).toBe(false);
+  });
+
   it('EXEMPTION_REGISTRY · каждая запись именует тип и причину', () => {
     for (const row of EXEMPTION_REGISTRY) {
       expect(row.type).toBeTruthy();

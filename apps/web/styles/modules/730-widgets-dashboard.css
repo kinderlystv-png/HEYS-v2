@@ -8643,21 +8643,7 @@ body:has(.page-reports) .hdr::after {
   color: var(--text-dark-primary, #f3f4f6);
 }
 
-/* Кликабельный виджет */
-.widget-crash-risk {
-  cursor: pointer;
-}
-
-@media (hover: hover) {
-  .widget-crash-risk:hover {
-  opacity: 0.95;
-}
-}
-
-.widget-crash-risk:active {
-  opacity: 0.7;
-  transition: opacity 120ms ease;
-}
+/* Кликабельный виджет — снято: widget-crash-risk заменён на widget-relapse-risk, разметки нет */
 
 /* ═══════════════════════════════════════════════════════════════════
    CRASH RISK WIDGET v2.0 — Weight Loss & EWS Integration
