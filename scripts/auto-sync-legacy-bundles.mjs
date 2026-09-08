@@ -292,8 +292,9 @@ async function main() {
     // rebuild на этом коммите — generated собираются в следующем явно
     // разрешённом integration/release проходе. Полезно для атомарных source-only
     // коммитов в параллельных потоках, чтобы не дёргать generated.
-    // Активируется через env HEYS_COMMIT_SOURCE_ONLY=1.
-    if (process.env.HEYS_COMMIT_SOURCE_ONLY === '1') {
+    // Активируется через env HEYS_COMMIT_SOURCE_ONLY=1 (только commit-hook default).
+    // agent-check / integration — явные режимы: не глотать их под source-only.
+    if (process.env.HEYS_COMMIT_SOURCE_ONLY === '1' && mode === 'default') {
         console.info('[legacy-sync] 🪶 source-only mode (HEYS_COMMIT_SOURCE_ONLY=1) — пропускаю bundle rebuild.');
         console.info('[legacy-sync] Generated артефакты соберутся в следующем integration/release проходе.');
         return;
