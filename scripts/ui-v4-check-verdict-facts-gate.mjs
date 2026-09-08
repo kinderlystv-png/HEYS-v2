@@ -4,6 +4,7 @@
 import { pathToFileURL } from 'node:url';
 
 import { readAllZones } from './lib/ui-v4-verdicts.mjs';
+import { classifyVerdictFacts } from './ui-v4-classify-verdict-facts.mjs';
 import { inspectVerdictFacts } from './ui-v4-check-verdict-facts.mjs';
 
 // 05.09 recount: полоса 5 + short CSS module refs (NNN:line).
@@ -12,17 +13,44 @@ const BASELINE = Object.freeze({
   staleDigest: 'ac637bc4ee760ac5',
 });
 
+// 08.09 polosa 5: классификатор остатка + curator-edits file:line (−124 unparsed).
+const CLASSIFIER_BASELINE = Object.freeze({
+  unparsedRows: 8917,
+  buckets: Object.freeze({ a: 1492, b: 3270, c: 2471, g: 1674 }),
+  digest: '4bffcb7858991716',
+});
+
 function runCli() {
   const report = inspectVerdictFacts(readAllZones());
+  const classified = classifyVerdictFacts(readAllZones());
 
   console.log(
     `Факты вердиктов «=»: ${report.equalsRows} строк; разобрано ${report.parsedRows} ` +
       `(${report.parseRate}%); остаток без file:line: ${report.unparsedRows}.`,
   );
   console.log(
+    `Классификация остатка: (a) ${classified.buckets.a} · (b) ${classified.buckets.b} · ` +
+      `(c) ${classified.buckets.c} · (g) ${classified.buckets.g}.`,
+  );
+  console.log(
     `Охват: проверено ${report.factsChecked} ссылок, ${report.anchorsChecked} якорей; ` +
       `протухло ${report.staleCount} (digest ${report.staleDigest}).`,
   );
+
+  if (classified.digest !== CLASSIFIER_BASELINE.digest) {
+    console.error(
+      `\n❌ Классификатор остатка разошёлся с baseline (digest ${CLASSIFIER_BASELINE.digest} → ${classified.digest}).`,
+    );
+    console.error(
+      `  unparsed ${CLASSIFIER_BASELINE.unparsedRows} → ${classified.unparsedRows}; ` +
+        `buckets a ${CLASSIFIER_BASELINE.buckets.a}→${classified.buckets.a} ` +
+        `b ${CLASSIFIER_BASELINE.buckets.b}→${classified.buckets.b} ` +
+        `c ${CLASSIFIER_BASELINE.buckets.c}→${classified.buckets.c} ` +
+        `g ${CLASSIFIER_BASELINE.buckets.g}→${classified.buckets.g}`,
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   if (report.staleCount > BASELINE.staleCount) {
     console.error(
