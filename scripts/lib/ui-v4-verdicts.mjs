@@ -813,6 +813,40 @@ export function readZone(zoneId) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
+function zoneFileStamp(zoneId) {
+  return zoneFileStampFromPath(zonePath(zoneId));
+}
+
+function zoneFileStampFromPath(filePath) {
+  try {
+    const stat = fs.statSync(filePath);
+    return `${stat.mtimeMs}:${stat.size}`;
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
+/** Zone JSON + mtime:size stamp for optimistic concurrency before write. */
+function readZoneSnapshot(zoneId) {
+  const file = zonePath(zoneId);
+  if (!fs.existsSync(file)) return null;
+  const stat = fs.statSync(file);
+  return {
+    zone: JSON.parse(fs.readFileSync(file, 'utf8')),
+    stamp: `${stat.mtimeMs}:${stat.size}`,
+  };
+}
+
+export class ZoneWriteConflictError extends Error {
+  constructor(zoneId) {
+    super(`Файл зоны «${zoneId}» изменился с момента чтения — нужна повторная запись.`);
+    this.name = 'ZoneWriteConflictError';
+    this.code = 'ZONE_WRITE_CONFLICT';
+    this.zoneId = zoneId;
+  }
+}
+
 /**
  * Все зоны разом — в той же форме, что отдавал прежний общий снимок
  * (`{ zones: { id: … } }`), чтобы читателям не пришлось менять код.
@@ -827,27 +861,55 @@ export function readAllZones() {
 }
 
 /** Same-directory temp + rename — readers never see a half-written zone file. */
-function writeFileAtomic(filePath, content) {
+function writeFileAtomic(filePath, content, { expectedStamp = null, zoneId = null } = {}) {
   const dir = path.dirname(filePath);
   const tmpPath = path.join(
     dir,
     `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${crypto.randomBytes(4).toString('hex')}.tmp`,
   );
-  fs.writeFileSync(tmpPath, content, 'utf8');
-  try {
-    fs.renameSync(tmpPath, filePath);
-  } catch (error) {
-    try {
-      fs.unlinkSync(tmpPath);
-    } catch {
-      // ignore cleanup failure
+  if (expectedStamp != null) {
+    const current = zoneFileStampFromPath(filePath);
+    if (current !== expectedStamp) {
+      throw new ZoneWriteConflictError(zoneId || path.basename(filePath, '.json'));
     }
-    throw error;
+  }
+  fs.writeFileSync(tmpPath, content, 'utf8');
+  const renameRetryCodes = new Set(['EACCES', 'EPERM', 'EBUSY']);
+  const maxAttempts = 16;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (expectedStamp != null) {
+      const current = zoneFileStampFromPath(filePath);
+      if (current !== expectedStamp) {
+        try {
+          fs.unlinkSync(tmpPath);
+        } catch {
+          // ignore cleanup failure
+        }
+        throw new ZoneWriteConflictError(zoneId || path.basename(filePath, '.json'));
+      }
+    }
+    try {
+      fs.renameSync(tmpPath, filePath);
+      return;
+    } catch (error) {
+      if (!renameRetryCodes.has(error.code) || attempt === maxAttempts - 1) {
+        try {
+          fs.unlinkSync(tmpPath);
+        } catch {
+          // ignore cleanup failure
+        }
+        throw error;
+      }
+      sleepSync(5 + Math.floor(Math.random() * 15));
+    }
   }
 }
 
 const ZONE_LOCK_DISABLED = process.env.HEYS_VERDICT_DISABLE_ZONE_LOCK === '1';
 const ZONE_RMW_DELAY_MS = Number(process.env.HEYS_VERDICT_RMW_DELAY_MS || 0);
+const WRITE_STAMP_GUARD_DISABLED = process.env.HEYS_VERDICT_DISABLE_WRITE_STAMP_GUARD === '1';
+/** Windows: занятый lock даёт EPERM, не только EEXIST — без ретрая гонка падает. */
+const ZONE_LOCK_CONTENTION_CODES = new Set(['EEXIST', 'EACCES', 'EPERM']);
 
 function zoneLockPath(zoneId) {
   return path.join(VERDICTS_DIR, `.${zoneId}.json.write.lock`);
@@ -888,10 +950,15 @@ function acquireZoneWriteLock(zoneId, { timeoutMs = 60_000 } = {}) {
   while (Date.now() < deadline) {
     try {
       const fd = fs.openSync(lockPath, 'wx');
-      fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, time: Date.now() }), 'utf8');
-      return { lockPath, fd };
+      try {
+        fs.writeFileSync(fd, JSON.stringify({ pid: process.pid, time: Date.now() }), 'utf8');
+      } finally {
+        // Windows: открытый fd lock-файла даёт EPERM второму wx, а не ожидание.
+        fs.closeSync(fd);
+      }
+      return { lockPath };
     } catch (error) {
-      if (error.code !== 'EEXIST') throw error;
+      if (!ZONE_LOCK_CONTENTION_CODES.has(error.code)) throw error;
       if (isStaleZoneLock(lockPath)) {
         try {
           fs.unlinkSync(lockPath);
@@ -908,11 +975,6 @@ function acquireZoneWriteLock(zoneId, { timeoutMs = 60_000 } = {}) {
 
 function releaseZoneWriteLock(handle) {
   if (!handle) return;
-  try {
-    fs.closeSync(handle.fd);
-  } catch {
-    // ignore close failure
-  }
   try {
     fs.unlinkSync(handle.lockPath);
   } catch (error) {
@@ -937,24 +999,37 @@ function maybeRmwDelay() {
 }
 
 /** Re-read zone on disk, mutate one row, write — merges concurrent key updates. */
-function writeZoneRowMutation(zoneId, key, mutateRow) {
-  const fresh = readZone(zoneId);
-  if (!fresh?.rows?.[key]) throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
-  mutateRow(fresh.rows[key], fresh);
-  // Окно гонки для guard-теста — ЗДЕСЬ, между свежим чтением и записью. Снаружи
-  // оно бесполезно: этот повторный `readZone` его и закрывает, поэтому writer B
-  // успевал прочитать уже записанное writer A, потери не случалось и тест
-  // «без лока обновление теряется» падал на «expected 0 to be greater than 0».
-  // Ставили задержку сначала 25 мс, потом 800 — не помогло ни разу, потому что
-  // дело было не в ширине окна, а в его месте. Под HEYS_VERDICT_GUARD_TEST=1,
-  // в проде это ноль.
-  maybeRmwDelay();
-  writeZone(zoneId, fresh);
+function writeZoneRowMutation(zoneId, key, mutateRow, { maxRetries = 32 } = {}) {
+  for (let attempt = 0; attempt < maxRetries; attempt += 1) {
+    const snap = readZoneSnapshot(zoneId);
+    if (!snap?.zone?.rows?.[key]) {
+      throw new Error(`Строки «${key}» в зоне «${zoneId}» нет.`);
+    }
+    mutateRow(snap.zone.rows[key], snap.zone);
+    // Окно гонки для guard-теста — между свежим чтением и записью.
+    maybeRmwDelay();
+    if (!WRITE_STAMP_GUARD_DISABLED && zoneFileStamp(zoneId) !== snap.stamp) continue;
+    try {
+      writeZone(
+        zoneId,
+        snap.zone,
+        { expectedStamp: WRITE_STAMP_GUARD_DISABLED ? null : snap.stamp },
+      );
+      return;
+    } catch (error) {
+      if (error instanceof ZoneWriteConflictError || error?.code === 'ZONE_WRITE_CONFLICT') continue;
+      throw error;
+    }
+  }
+  throw new Error(
+    `Не удалось записать строку «${key}» в зоне «${zoneId}»: файл менялся параллельно (${maxRetries} попыток).`,
+  );
 }
 
-export function writeZone(zoneId, zone) {
+export function writeZone(zoneId, zone, { expectedStamp = null } = {}) {
   fs.mkdirSync(VERDICTS_DIR, { recursive: true });
-  writeFileAtomic(zonePath(zoneId), `${JSON.stringify(zone, null, 2)}\n`);
+  const file = zonePath(zoneId);
+  writeFileAtomic(file, `${JSON.stringify(zone, null, 2)}\n`, { expectedStamp, zoneId });
 }
 
 const VALID_VERDICTS = new Set(['=', '≠', '?', '—']);
@@ -1079,11 +1154,16 @@ export function setVerdictKey(zoneId, key, patch, opts = {}) {
     }
 
     const was = { v: row.v, f: row.f, h: row.h };
-    applyVerdictToRow(row, patch, root);
-    maybeRmwDelay();
     if (!dryRun) {
       writeZoneRowMutation(zoneId, key, (targetRow) => applyVerdictToRow(targetRow, patch, root));
+      const after = readZone(zoneId)?.rows?.[key];
+      return {
+        skipped: false,
+        was,
+        now: after ? { v: after.v, f: after.f, h: after.h } : was,
+      };
     }
+    applyVerdictToRow(row, patch, root);
     return { skipped: false, was, now: { v: row.v, f: row.f, h: row.h } };
   });
 }
@@ -1098,7 +1178,6 @@ export function patchZoneRow(zoneId, key, mutator, { dryRun = false } = {}) {
     const before = JSON.stringify(zone.rows[key]);
     mutator(zone.rows[key], zone);
     const changed = JSON.stringify(zone.rows[key]) !== before;
-    maybeRmwDelay();
     if (changed && !dryRun) {
       writeZoneRowMutation(zoneId, key, (targetRow, freshZone) => mutator(targetRow, freshZone));
     }
@@ -1112,12 +1191,11 @@ export function deleteZoneRow(zoneId, key, { dryRun = false } = {}) {
     const zone = readZone(zoneId);
     if (!zone?.rows?.[key]) return { deleted: false };
     delete zone.rows[key];
-    maybeRmwDelay();
     if (!dryRun) {
-      const fresh = readZone(zoneId);
-      if (!fresh?.rows?.[key]) return { deleted: false };
-      delete fresh.rows[key];
-      writeZone(zoneId, fresh);
+      const snap = readZoneSnapshot(zoneId);
+      if (!snap?.zone?.rows?.[key]) return { deleted: false };
+      delete snap.zone.rows[key];
+      writeZone(zoneId, snap.zone, { expectedStamp: snap.stamp });
     }
     return { deleted: true };
   });

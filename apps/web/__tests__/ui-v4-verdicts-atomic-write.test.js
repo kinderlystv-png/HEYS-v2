@@ -88,6 +88,7 @@ describe('ui-v4 verdict zone atomic write', () => {
     delete process.env.HEYS_VERDICT_GUARD_TEST;
     delete process.env.HEYS_VERDICTS_DIR;
     delete process.env.HEYS_VERDICT_DISABLE_ZONE_LOCK;
+    delete process.env.HEYS_VERDICT_DISABLE_WRITE_STAMP_GUARD;
     delete process.env.HEYS_VERDICT_RMW_DELAY_MS;
   });
 
@@ -124,7 +125,7 @@ describe('ui-v4 verdict zone atomic write', () => {
     expect(zone.rows[KEY_B].v).toBe('=');
   });
 
-  it('without zone lock, parallel RMW on different keys can lose an update', async () => {
+  it('without zone lock or stamp guard, parallel RMW on different keys can lose an update', async () => {
     sandbox = createVerdictGuardSandbox(ROOT, { [ZONE_ID]: fixtureZone() });
     let lossCount = 0;
     let completedCount = 0;
@@ -135,6 +136,7 @@ describe('ui-v4 verdict zone atomic write', () => {
         sandbox,
         {
           HEYS_VERDICT_DISABLE_ZONE_LOCK: '1',
+          HEYS_VERDICT_DISABLE_WRITE_STAMP_GUARD: '1',
           HEYS_VERDICT_RMW_DELAY_MS: String(RMW_DELAY_MS),
         },
         { requireSuccess: false },
@@ -148,6 +150,25 @@ describe('ui-v4 verdict zone atomic write', () => {
     expect(completedCount).toBeGreaterThan(RACE_MIN_COMPLETED - 1);
     expect(lossCount).toBeGreaterThan(0);
   }, 45_000);
+
+  it('in-process stamp guard without zone lock merges concurrent key updates', async () => {
+    sandbox = createVerdictGuardSandbox(ROOT, { [ZONE_ID]: fixtureZone() });
+    process.env.HEYS_VERDICT_GUARD_TEST = '1';
+    process.env.HEYS_VERDICTS_DIR = sandbox.verdictsDir;
+    process.env.HEYS_VERDICT_DISABLE_ZONE_LOCK = '1';
+    process.env.HEYS_VERDICT_RMW_DELAY_MS = String(RMW_DELAY_MS);
+
+    const libUrl = `${pathToFileURL(path.join(ROOT, 'scripts/lib/ui-v4-verdicts.mjs')).href}${importCacheBust()}`;
+    const { setVerdictKey } = await import(libUrl);
+
+    await Promise.all([
+      Promise.resolve().then(() => setVerdictKey(ZONE_ID, KEY_A, { verdict: '=', fact: 'fact a', options: {} })),
+      Promise.resolve().then(() => setVerdictKey(ZONE_ID, KEY_B, { verdict: '=', fact: 'fact b', options: {} })),
+    ]);
+
+    const zone = JSON.parse(fs.readFileSync(sandbox.zonePath(ZONE_ID), 'utf8'));
+    expect(bothWritersApplied(zone)).toBe(true);
+  });
 
   it('with zone lock, repeated parallel writers always keep both keys', async () => {
     sandbox = createVerdictGuardSandbox(ROOT, { [ZONE_ID]: fixtureZone() });
