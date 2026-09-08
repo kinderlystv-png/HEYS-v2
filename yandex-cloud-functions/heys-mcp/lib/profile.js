@@ -74,6 +74,18 @@ const NORMS_FIELDS = {
   superbad_fat_pct: { type: 'number', target: 'superbadFatPct', min: 0, max: 100, label: 'транс-жиры, %' },
   gi_pct: { type: 'number', target: 'giPct', min: 0, max: 100, label: 'гликемический индекс, %' },
   harm_pct: { type: 'number', target: 'harmPct', min: 0, max: 100, label: 'вредность, %' },
+  // Не процент, а граммы на килограмм: цель по белку считается от массы тела,
+  // а не долей от калорий (heys/798770). 0 снимает ручное значение и возвращает
+  // расчёт по режиму — иначе выставленный коэффициент нечем было бы убрать.
+  protein_coeff_g_per_kg: {
+    type: 'number',
+    target: 'proteinCoeffGPerKg',
+    min: 1.2,
+    max: 2.4,
+    resetValue: 0,
+    resetLabel: 'по режиму',
+    label: 'белок, г/кг',
+  },
 };
 
 class ProfileError extends Error {
@@ -130,6 +142,12 @@ function applyFields(current, fields, schema, nowMs) {
       continue;
     }
     const target = spec.target || publicName;
+    if (spec.resetValue !== undefined && Number(raw) === spec.resetValue) {
+      if (base[target] === undefined || base[target] === '') continue;
+      next[target] = '';
+      changed.push(`${spec.label}: ${base[target]} → ${spec.resetLabel || 'снято'}`);
+      continue;
+    }
     const value = coerce(publicName, spec, raw);
     if (base[target] === value) continue;
     next[target] = value;

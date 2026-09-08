@@ -97,6 +97,37 @@ test('нормы патчатся по своему whitelist', () => {
   assert.equal(changed.length, 2);
 });
 
+test('коэффициент белка пишется в г/кг и не трогает проценты', () => {
+  const { value, changed } = profile.applyNormsFields(NORMS, { protein_coeff_g_per_kg: 1.3 }, NOW);
+  assert.equal(value.proteinCoeffGPerKg, 1.3);
+  assert.equal(value.proteinPct, NORMS.proteinPct);
+  assert.equal(changed.length, 1);
+});
+
+test('коэффициент белка вне 1.2–2.4 отклоняется', () => {
+  assert.throws(() => profile.applyNormsFields(NORMS, { protein_coeff_g_per_kg: 3 }, NOW), /диапазон 1.2–2.4/);
+  assert.throws(() => profile.applyNormsFields(NORMS, { protein_coeff_g_per_kg: 0.9 }, NOW), /диапазон 1.2–2.4/);
+});
+
+test('ноль снимает коэффициент белка и возвращает расчёт по режиму', () => {
+  const withCoeff = profile.applyNormsFields(NORMS, { protein_coeff_g_per_kg: 1.3 }, NOW).value;
+  const { value, changed } = profile.applyNormsFields(withCoeff, { protein_coeff_g_per_kg: 0 }, NOW);
+  assert.equal(value.proteinCoeffGPerKg, '');
+  assert.equal(changed.length, 1);
+  assert.match(changed[0], /по режиму/);
+});
+
+test('ноль при уже снятом коэффициенте ничего не меняет', () => {
+  const { changed } = profile.applyNormsFields(NORMS, { protein_coeff_g_per_kg: 0 }, NOW);
+  assert.equal(changed.length, 0);
+});
+
+test('карточка клиента отдаёт коэффициент белка отдельным полем', () => {
+  const withCoeff = profile.applyNormsFields(NORMS, { protein_coeff_g_per_kg: 1.3 }, NOW).value;
+  const card = profile.describeCard(null, withCoeff, null, NOW);
+  assert.equal(card.norms.protein_coeff_g_per_kg, 1.3);
+});
+
 test('зоны правятся по номеру, названия и остальные зоны не трогаются', () => {
   const { value, changed } = profile.applyZonePatches(null, [{ zone: 2, hr_from: 105, hr_to: 125 }]);
   assert.equal(value.length, 4);
