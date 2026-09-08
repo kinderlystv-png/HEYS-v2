@@ -280,7 +280,7 @@ describe('слой обновления PWA взял общий знак ожи�
 
     expect(components).toMatch(/\.heys-update-modal__icon \{[\s\S]*?width: 56px;/);
     expect(components).toMatch(
-      /\.heys-update-modal__icon \{[\s\S]*?background: var\(--v4-hero, #efe3cf\);[\s\S]*?color: var\(--v4-act, #c67139\);/,
+      /\.heys-update-modal__icon \{[^}]*background: var\(--v4-hero, #efe3cf\);[^}]*color: var\(--v4-act, #c67139\);/,
     );
     expect(components).not.toContain('background: rgba(217, 138, 79, 0.14);');
     expect(components).toContain('animation: heys-update-spin 1.1s linear infinite;');

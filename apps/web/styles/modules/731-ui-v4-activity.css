@@ -497,7 +497,7 @@ body:has(.activity-v4) .hdr::after {
 
 [data-palette="blue"] .activity-v4-cta,
 [data-palette="blue-dark"] .activity-v4-cta {
-  color: var(--v4-ink, #ffffff);
+  color: var(--v4-ink, #101826);
 }
 
 /* Ярус «История» — список .cd кадра: на первой поверхности, радиус 20,
@@ -566,7 +566,7 @@ body:has(.activity-v4) .hdr::after {
   padding: 14px 12px;
   border: none;
   border-radius: 14px;
-  background: var(--v4-hero, #f8fafc);
+  background: var(--v4-hero, #efe3cf);
   font-size: 14px;
   font-weight: 600;
   color: var(--v4-ink, #201e1d);
@@ -599,7 +599,7 @@ body:has(.activity-v4) .hdr::after {
   font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--v4-ink-2, #64748b);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-transform: none;
 }
 
@@ -682,7 +682,7 @@ body:has(.activity-v4) .hdr::after {
   padding: 0;
   box-shadow: none;
   text-shadow: none;
-  background: var(--v4-line, #e5e7eb);
+  background: var(--v4-line, rgba(0, 0, 0, 0.08));
   color: transparent;
 }
 
@@ -1162,7 +1162,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-plan-week-days > span.is-done {
-  background: var(--v4-ok-bg, #e6f1df);
+  background: var(--v4-ok-bg, #eaefe0);
 }
 
 .activity-v4-program .sb-plan-week-days > span.is-assigned {

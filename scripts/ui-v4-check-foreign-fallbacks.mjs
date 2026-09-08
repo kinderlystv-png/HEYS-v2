@@ -61,7 +61,6 @@ const BASELINE = {
   '612-training-step.css': 12,
   '710-refeed.css': 25,
   '715-yesterday-verify.css': 35,
-  '731-ui-v4-activity.css': 5,
   '732-ui-v4-nutrition.css': 68,
   '733-ui-v4-login-theme.css': 5,
   '733-ui-v4-reports.css': 18,

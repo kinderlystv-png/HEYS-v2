@@ -257,7 +257,7 @@ describe('cold-start spinner mark', () => {
 
     // Дуга видна сразу, а не проявляется на месте буквы.
     expect(css).not.toMatch(
-      /\.heys-boot-mark__disc \.heys-boot-mark__spin > svg \{[\s\S]*?heys-boot-fadein 150ms ease-out 300ms/,
+      /\.heys-boot-mark__spin[^{]*\{[^}]*heys-boot-fadein 150ms ease-out 300ms/,
     );
 
     // Preload шрифта ставился ради буквы и ушёл вместе с ней: качать файл

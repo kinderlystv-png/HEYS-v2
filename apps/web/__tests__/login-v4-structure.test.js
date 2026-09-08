@@ -44,7 +44,7 @@ describe('login v4 canvas structure', () => {
     expect(css).toMatch(/\.heys-auth-error-slot:not\(:empty\)[\s\S]*?-webkit-line-clamp:\s*2/);
     // Строка «вид слота ошибки»: заливки у слота нет — только текст.
     expect(css).toMatch(/\.heys-auth-error-slot:not\(:empty\)[\s\S]*?background:\s*transparent/);
-    expect(css).not.toMatch(/#hlg-client-err\.is-pin-error\s*\{[\s\S]*?position:\s*fixed/);
+    expect(css).toMatch(/\.heys-auth-error\.is-pin-error:not\(:empty\)[\s\S]*?position:\s*static/);
     expect(html).toMatch(/hlg-client-err[\s\S]*?hlg-pin-keypad/);
     expect(login.indexOf('heys-auth-error-slot')).toBeLessThan(login.indexOf('heys-auth-keypad'));
   });
