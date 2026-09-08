@@ -608,7 +608,7 @@
     },
     "Чек-ин · вчерашний день · 05": {
       "v": "=",
-      "f": "715-yesterday-verify.css:696-702 .yv-hero-title — 700 20px/1.25 color var(--v4-sand-ink); гейт FORK_FRAMES элемент 05",
+      "f": "715-yesterday-verify.css:696-702 .yv-hero-title — 700 20px/1.25 color var(--v4-ink); гейт FORK_FRAMES элемент 05 Замер chromium 375 px: песочный rgb(32,30,29), тёмный rgb(242,237,230).",
       "h": "726e19f1582e"
     },
     "Чек-ин · вчерашний день · 06": {
@@ -1065,7 +1065,7 @@
     },
     "Чек-ин · день из пачки · 06": {
       "v": "=",
-      "f": "715-yesterday-verify.css:696-702 .yv-hero-title — font-weight 700 font-size 20px line-height 1.25 color var(--v4-sand-ink); гейт checkin-v4-canvas-razbor элемент 06",
+      "f": "715-yesterday-verify.css:696-702 .yv-hero-title — font-weight 700 font-size 20px line-height 1.25 color var(--v4-ink); гейт checkin-v4-canvas-razbor элемент 06 Замер chromium 375 px: песочный rgb(32,30,29), тёмный rgb(242,237,230).",
       "h": "d8f005232dbe"
     },
     "Чек-ин · день из пачки · 07": {
