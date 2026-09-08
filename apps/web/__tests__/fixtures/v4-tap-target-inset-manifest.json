@@ -946,5 +946,65 @@
     "file": "styles/modules/000-base-and-gamification.css",
     "host": ".yesterday-quick-btn",
     "inset": "-6px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widgets-catalog__item",
+    "inset": "-2px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widget__delete-btn",
+    "inset": "-6px"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widget__settings-btn",
+    "inset": "-6px"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widgets-tab--editing .widget__delete-btn",
+    "inset": "-11px"
+  },
+  {
+    "zone": "food-meal",
+    "file": "styles/modules/000-base-and-gamification.css",
+    "host": ".photo-processed-checkbox",
+    "inset": "-10px"
+  },
+  {
+    "zone": "product-card",
+    "file": "styles/heys-components.css",
+    "host": ".pe-portions-remove-btn",
+    "inset": "-2px"
+  },
+  {
+    "zone": "product-card",
+    "file": "styles/modules/611-aps-product-card.css",
+    "host": ".aps-create-barcode-clear",
+    "inset": "-3px"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widgets-settings-fab__host",
+    "inset": "-2px"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widgets-quick-minus__host",
+    "inset": "-11px 0"
+  },
+  {
+    "zone": "home-widgets",
+    "file": "styles/modules/730-widgets-dashboard.css",
+    "host": ".widgets-quick-pencil__host",
+    "inset": "-2px"
   }
 ]

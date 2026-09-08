@@ -2242,6 +2242,12 @@ body:has(.page-reports) .hdr::after {
   transition: opacity 120ms ease;
 }
 
+.widget__delete-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
 /* 1x1 edit mode: кнопки остаются ВНУТРИ виджета на уровне выше resize handles.
    overflow: visible для shake animation (corner handles выступают за bbox). */
 .widget--1x1.widget--editing {
@@ -2358,6 +2364,12 @@ body:has(.page-reports) .hdr::after {
 .widget__settings-btn:active {
   opacity: 0.7;
   transition: opacity 120ms ease;
+}
+
+.widget__settings-btn::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
 }
 
 /* Size Badge (edit-mode) — компактный индикатор NxM внизу справа внутри виджета */
@@ -7003,6 +7015,12 @@ body:has(.page-reports) .hdr::after {
 .widgets-catalog__item:active {
   opacity: 0.7;
   transition: opacity 120ms ease;
+}
+
+.widgets-catalog__item::after {
+  content: '';
+  position: absolute;
+  inset: -2px 0;
 }
 
 .widgets-catalog__item-title {
@@ -13663,6 +13681,12 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   box-shadow: none;
   backdrop-filter: none;
   pointer-events: none;
+}
+
+.widgets-tab--editing .widget__delete-btn::after {
+  content: '';
+  position: absolute;
+  inset: -11px;
 }
 
 /* ОТВЕТ-22 Q6: цель удаления — вся плитка; кружок 22 px только accessory. */

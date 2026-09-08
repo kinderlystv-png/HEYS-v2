@@ -21,14 +21,20 @@ import { describe, expect, it } from 'vitest';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
-/** Вернуть тело правила `selector { ... }` из CSS. */
+/** Вернуть тело правила `selector { ... }` из CSS (точное совпадение селектора, не подстрока). */
 function rule(css, selector) {
-  const needle = `${selector} {`;
-  let at = 0;
-  while ((at = css.indexOf(needle, at)) >= 0) {
-    const block = css.slice(at, css.indexOf('}', at));
-    if (!/display:\s*none/.test(block) || block.length > 48) return block;
-    at += needle.length;
+  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(`(?:^|[\\n\\r])\\s*${esc}\\s*\\{([^}]*)\\}`, 'gm'),
+    new RegExp(`(?:^|[\\n\\r])\\s*${esc}\\s*,[^\\{]*\\{([^}]*)\\}`, 'gm'),
+  ];
+  for (const re of patterns) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(css)) !== null) {
+      const block = `${selector} {${m[1]}}`;
+      if (!/display:\s*none/.test(block) || block.length > 48) return block;
+    }
   }
   return null;
 }
@@ -102,6 +108,50 @@ const cases = [
     hostPosition: 'relative',
   },
   {
+    what: 'кнопка удаления виджета в режиме правки',
+    file: 'styles/modules/730-widgets-dashboard.css',
+    host: '.widgets-tab--editing .widget__delete-btn',
+    inset: '-11px',
+    hostPosition: 'absolute',
+    visible: 22,
+  },
+  {
+    what: 'кнопка настроек виджета',
+    file: 'styles/modules/730-widgets-dashboard.css',
+    host: '.widget__settings-btn',
+    inset: '-6px',
+    hostPosition: 'absolute',
+    visible: 32,
+  },
+  {
+    what: 'строка каталога виджетов',
+    file: 'styles/modules/730-widgets-dashboard.css',
+    host: '.widgets-catalog__item',
+    inset: '-2px 0',
+  },
+  {
+    what: 'чекбокс обработки фото',
+    file: 'styles/modules/000-base-and-gamification.css',
+    host: '.photo-processed-checkbox',
+    inset: '-10px',
+    hostPosition: 'absolute',
+    visible: 24,
+  },
+  {
+    what: 'удаление порции в карточке продукта',
+    file: 'styles/heys-components.css',
+    host: '.pe-portions-remove-btn',
+    inset: '-2px',
+    visible: 40,
+  },
+  {
+    what: 'очистка штрихкода при создании продукта',
+    file: 'styles/modules/611-aps-product-card.css',
+    host: '.aps-create-barcode-clear',
+    inset: '-3px',
+    visible: 38,
+  },
+  {
     what: 'крестик шторки виджета',
     file: 'styles/modules/730-widgets-dashboard.css',
     host: '.widget-bd-sheet__close',
@@ -143,7 +193,7 @@ describe('контракт цели касания 44 pt', () => {
     for (const host of hosts) {
       const block = rule(css, host);
       expect(block, `нет ${host}`).toBeTruthy();
-      expect(block).toMatch(/position:\s*relative/);
+      expect(block).toMatch(/position:\s*(?:relative|absolute)/);
       const after = afterRule(css, host);
       expect(after, `нет ${host}::after`).toBeTruthy();
       expect(after).toMatch(/content:\s*''/);
@@ -155,7 +205,11 @@ describe('контракт цели касания 44 pt', () => {
   it('видимый размер не менялся — цель растёт припуском, а не кнопкой', () => {
     for (const c of cases.filter((x) => x.visible)) {
       const host = rule(read(c.file), c.host);
-      expect(host).toMatch(new RegExp(`(width|min-height):\\s*${c.visible}px`));
+      expect(host).toMatch(
+        new RegExp(
+          `(width|min-height):\\s*${c.visible}px|flex:\\s*0\\s+0\\s+${c.visible}px`,
+        ),
+      );
     }
   });
 

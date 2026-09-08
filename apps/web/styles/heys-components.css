@@ -5142,6 +5142,7 @@ body.tour-active .ios-pwa-banner {
    Прежде 34 радиусом 8, и цвет брался ролью предупреждения с запасным #ef4444
    прежней системы — не та роль и не тот цвет. */
 .pe-portions-remove-btn {
+  position: relative;
   width: 40px;
   height: 40px;
   border: none;
@@ -5151,6 +5152,12 @@ body.tour-active .ios-pwa-banner {
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
+}
+
+.pe-portions-remove-btn::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
 }
 
 /* Добавление порции: пунктир ролью линии на подложке набора. Прежде

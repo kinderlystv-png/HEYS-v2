@@ -15448,6 +15448,12 @@ body:has(:is(
     transition: all 0.15s ease;
   }
 
+  .photo-processed-checkbox::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+
   .photo-processed-checkbox:active {
     opacity: 0.7;
     transition: opacity 120ms ease;

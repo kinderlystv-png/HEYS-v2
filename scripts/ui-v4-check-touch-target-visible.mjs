@@ -112,18 +112,8 @@ export const EXEMPTION_REGISTRY = [
   },
   {
     type: 'named-exception',
-    selector: '.pe-portions-remove-btn',
-    reason: 'product-card task63: кадр правки ·26 — осознанно 40×40',
-  },
-  {
-    type: 'named-exception',
     selector: '.pe-field--inline',
     reason: 'product-card: поле витаминов — не нажимают',
-  },
-  {
-    type: 'named-exception',
-    selector: '.aps-create-barcode-clear',
-    reason: 'product-card: 38px внутри строки 44px — видимая иконка меньше ряда',
   },
   {
     type: 'named-exception',
@@ -143,7 +133,7 @@ export const EXEMPTION_REGISTRY = [
   {
     type: 'named-exception',
     selector: '.cal-cell',
-    reason: 'date-remainders: ячейка мини-календаря — сетка дней, не кнопка 44×44',
+    reason: 'date-remainders: сетка gap 4px — 44 pt без перекрытия соседа недостижимо (::after или min-height)',
   },
   {
     type: 'named-exception',
@@ -152,18 +142,8 @@ export const EXEMPTION_REGISTRY = [
   },
   {
     type: 'named-exception',
-    match: (sel) => /\.widgets-settings-fab\b/.test(sel),
-    reason: 'home-widgets: FAB 40px видимый, тач 44 через .widgets-settings-fab__host::after — гейт меряет button',
-  },
-  {
-    type: 'named-exception',
-    match: (sel) => /\.widgets-quick-(?:minus|chip|pencil)\b/.test(sel),
-    reason: 'home-widgets quick-sheet: видимый контрол <44px, тач через __host::after на дочернем span',
-  },
-  {
-    type: 'named-exception',
-    match: (sel) => /\.widgets-catalog__(?:category|item)\b/.test(sel),
-    reason: 'home-widgets каталог: чип категории / строка списка — не отдельная кнопка 44×44',
+    match: (sel) => /\.widgets-catalog__category\b/.test(sel),
+    reason: 'home-widgets каталог: чип категории — не отдельная кнопка 44×44',
   },
   {
     type: 'named-exception',
@@ -182,18 +162,13 @@ export const EXEMPTION_REGISTRY = [
   },
   {
     type: 'named-exception',
-    match: (sel) => /\.widget__(?:delete|settings|resize)-btn\b/.test(sel),
-    reason: 'home-widgets: edit-mode chrome скрыт display:none до .widget--editing — гейт меряет покой',
+    match: (sel) => /\.widget__resize-btn\b/.test(sel),
+    reason: 'home-widgets: resize chrome скрыт display:none до .widget--editing — гейт меряет покой',
   },
   {
     type: 'named-exception',
     selector: '.widgets-settings__field input[type="checkbox"]',
     reason: 'home-widgets: гейт меряет input с классом поля; видимый чекбокс 44px в правиле input[type=checkbox]',
-  },
-  {
-    type: 'named-exception',
-    selector: '.photo-processed-checkbox',
-    reason: 'чекбокс обработки фото — индикатор, не полноразмерная кнопка',
   },
   {
     type: 'dev-only',
@@ -218,10 +193,9 @@ export const EXEMPTION_REGISTRY = [
   {
     type: 'named-exception',
     match: (sel) =>
-      /\.hdr-settings-sheet__(?:row|fab-chip|diag-toggle|diag-btn)\b/.test(sel)
+      /\.hdr-settings-sheet__(?:row|fab-chip|soft-card|diag-toggle|diag-btn)\b/.test(sel)
       || /\.notify-detail__row\b/.test(sel)
-      || /\.reading-continue\b/.test(sel)
-      || /\.hdr-settings-sheet__soft-card\b/.test(sel),
+      || /\.reading-continue\b/.test(sel),
     reason:
       'settings/reading: видимый min-height ≥44 без ::after (контракт «Прочитать все»)',
   },
@@ -625,6 +599,12 @@ function selectorParts(selector) {
  * @param {string} [hostBlock]
  */
 export function findPseudoExpander(cssText, selector, hostBlock) {
+  const cls = primaryClassFromSelector(selector);
+  if (cls && !cls.endsWith('__host') && !/\b__host\b/.test(selector)) {
+    const inner = findPseudoExpander(cssText, `.${cls}__host`, null);
+    if (inner) return inner;
+  }
+
   const parts = selectorParts(selector);
   const host =
     hostBlock
