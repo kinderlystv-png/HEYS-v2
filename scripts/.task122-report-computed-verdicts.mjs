@@ -1,6 +1,10 @@
 #!/usr/bin/env node
-/** Task 122 part 1 — report screen computed verdict facts (sand+blue). */
+/** Task 122 — apply computed sand+blue facts to verdict rows.
+ *  Capture: `node scripts/ui-v4-measure-zone.mjs --zone=… --verdict== --json-out=…`
+ *  Format:  `scripts/ui-v4-format-computed-fact.mjs`
+ *  Apply:   edit ROWS below, then run this script for the zone. */
 import { readZone, writeZone } from './lib/ui-v4-verdicts.mjs';
+import { formatComputedColorFact } from './ui-v4-format-computed-fact.mjs';
 import { snapshotForeignRowStrings, assertForeignRowsUnchanged } from './lib/handoff-batch-apply.mjs';
 
 const ZONE = 'strength-builder';
