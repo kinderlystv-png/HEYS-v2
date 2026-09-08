@@ -644,7 +644,7 @@
     },
     "вид · строка подхода": {
       "v": "=",
-      "f": "Кадры A1б/Е1: .sb-ap-num 26×26 r9, .sb-ap-field/.sb-ap-check 44×44 r999 — 750-strength-builder.css:3745; prose :2349 (r12) устарела, продукт = кадру. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "f": "Кадры A1б/Е1: .sb-ap-num 26×26 r9, .sb-ap-field/.sb-ap-check 44×44 r999 — 750-strength-builder.css:3819; prose :2349 (r12) устарела, продукт = кадру. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
       "h": "8adee798fb2c"
     },
     "вид · разминка и дроп-сет": {
@@ -2071,7 +2071,7 @@
     },
     "Своё упражнение · 09": {
       "v": "=",
-      "f": ".sb-ex-cd-row padding 9px 0 border-bottom 0 — 750-strength-builder.css:1259–1262; computed sand/blue paddingTop/Bottom 9px.",
+      "f": ".sb-ex-cd-row padding 9px 0 border-bottom 0 — 750-strength-builder.css:1319–1262; computed sand/blue paddingTop/Bottom 9px.",
       "h": "931b461e2c48"
     },
     "Своё упражнение · 10": {
@@ -4513,7 +4513,7 @@
     },
     "Связка · создание · 29": {
       "v": "=",
-      "f": "Плитка «подходов»: .sb-tile { flex-direction:column; align-items:center; gap:4px; padding:9px 4px; border-radius:12px; background:var(--sb-bg) } — apps/web/styles/modules/750-strength-builder.css:3487-3496.",
+      "f": "Плитка «подходов»: .sb-tile { flex-direction:column; align-items:center; gap:4px; padding:9px 4px; border-radius:12px; background:var(--sb-bg) } — apps/web/styles/modules/750-strength-builder.css:4236-3496.",
       "h": "df492a01c1fb"
     },
     "Связка · создание · 30": {
@@ -4689,7 +4689,7 @@
     "Куратор и зал · 02": {
       "h": "07ffbada0ee7",
       "v": "=",
-      "f": "Заголовок колонкой: .sb-head-title { display:flex; flex-direction:column; gap:3px } — 750-strength-builder.css:3093."
+      "f": "Заголовок колонкой: .sb-head-title { display:flex; flex-direction:column; gap:3px } — 750-strength-builder.css:3161."
     },
     "Куратор и зал · 03": {
       "h": "fde93b8307ff",
@@ -5277,7 +5277,7 @@
     },
     "Спорное · тап по закрытому во время отдыха · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · тап по закрытому во время отдыха · 03": {
@@ -5369,7 +5369,7 @@
     },
     "Спорное · подход добавлен к закрытому · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · подход добавлен к закрытому · 03": {
@@ -5466,7 +5466,7 @@
     },
     "Спорное · рабочий стал разминкой · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · рабочий стал разминкой · 03": {
@@ -5533,7 +5533,7 @@
     },
     "Спорное · вес правят после галочки · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · вес правят после галочки · 03": {
@@ -5620,7 +5620,7 @@
     },
     "Спорное · дроп или разминка в связке · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · дроп или разминка в связке · 03": {
@@ -5687,7 +5687,7 @@
     },
     "Спорное · галочка при пустых полях · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · галочка при пустых полях · 03": {
@@ -5744,7 +5744,7 @@
     },
     "Спорное · запись куратора поверх вашей · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · запись куратора поверх вашей · 03": {
@@ -5836,7 +5836,7 @@
     },
     "Спорное · в связке разное число подходов · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · в связке разное число подходов · 03": {
@@ -5903,7 +5903,7 @@
     },
     "Спорное · тяжесть не отмечена · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · тяжесть не отмечена · 03": {
@@ -5995,7 +5995,7 @@
     },
     "Спорное · старая связка неравная · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · старая связка неравная · 03": {
@@ -6062,7 +6062,7 @@
     },
     "Спорное · участник добавлен по ходу · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · участник добавлен по ходу · 03": {
@@ -6149,7 +6149,7 @@
     },
     "Спорное · свой вес без коэффициента · 02": {
       "v": "=",
-      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3093.",
+      "f": ".sb-head-title — column gap 3px; 750-strength-builder.css:3161.",
       "h": "07ffbada0ee7"
     },
     "Спорное · свой вес без коэффициента · 03": {
@@ -7646,7 +7646,7 @@
     },
     "Упражнение · группы мышц · 08": {
       "v": "=",
-      "f": ".sb-ex-muscle-screen .sb-chip.is-on — flex none, padding 0 14px, min-height 44px, bg var(--acs), color var(--on-acs); 750-strength-builder.css:5780-5796.",
+      "f": ".sb-ex-muscle-screen .sb-chip.is-on — flex none, padding 0 14px, min-height 44px, bg var(--acs), color var(--on-acs); 750-strength-builder.css:6299-5796.",
       "h": "3df0d87d1802"
     },
     "Упражнение · группы мышц · 09": {
@@ -8076,12 +8076,12 @@
     },
     "Сессия · вернулись через час · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2627) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:3150) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Сессия · вернулись через час · 03": {
       "v": "=",
-      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2638).",
+      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:3161).",
       "h": "07ffbada0ee7"
     },
     "Сессия · вернулись через час · 04": {
@@ -8106,7 +8106,7 @@
     },
     "Сессия · вернулись через час · 08": {
       "v": "=",
-      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
+      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:3192).",
       "h": "f06d6e12de2e"
     },
     "Сессия · вернулись через час · 09": {
@@ -9145,7 +9145,7 @@
     },
     "Конструктор · тренировка идёт · спокойнее · 24": {
       "v": "=",
-      "f": ".sb-ex-toggle color var(--v4-ink-2) (750-strength-builder.css:3640-3649); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
+      "f": ".sb-ex-toggle color var(--v4-ink-2) (750-strength-builder.css:3714-3649); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
       "h": "b805c2ad0650",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
@@ -9546,7 +9546,7 @@
     },
     "Конструктор · пусто · плана нет · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, по центру, тон rgba(--ink,.45) — .sb-head.is-empty .sb-icon-btn--close (750-strength-builder.css:2627). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, по центру, тон rgba(--ink,.45) — .sb-head.is-empty .sb-icon-btn--close (750-strength-builder.css:2918). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Конструктор · пусто · плана нет · 03": {
@@ -9571,7 +9571,7 @@
     },
     "Конструктор · пусто · плана нет · 07": {
       "v": "=",
-      "f": "Карточка .grp — .sb-empty-card: отступ сверху 12px, поля 16, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
+      "f": "Карточка .grp — .sb-empty-card: отступ сверху 12px, поля 16, радиус 20, фон --v4-c1 (750-strength-builder.css:2956).",
       "h": "81d6d8e40a85"
     },
     "Конструктор · пусто · плана нет · 08": {
@@ -9591,7 +9591,7 @@
     },
     "Конструктор · пусто · плана нет · 11": {
       "v": "=",
-      "f": "Список .cd — .sb-empty-options: отступ сверху 10, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
+      "f": "Список .cd — .sb-empty-options: отступ сверху 10, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:3077).",
       "h": "d641122bb122"
     },
     "Конструктор · пусто · плана нет · 12": {
@@ -9606,7 +9606,7 @@
     },
     "Конструктор · пусто · плана нет · 14": {
       "v": "=",
-      "f": "«7 упр.» — b строки: 700 11.5px/1 тоном --v4-act-text, то есть --ac кадра (750-strength-builder.css:2665).",
+      "f": "«7 упр.» — b строки: 700 11.5px/1 тоном --v4-act-text, то есть --ac кадра (750-strength-builder.css:2730).",
       "h": "57090ba62a2d"
     },
     "Конструктор · пусто · плана нет · 15": {
@@ -9621,7 +9621,7 @@
     },
     "Конструктор · пусто · план назначен · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, по центру, тон rgba(--ink,.45) — .sb-head.is-empty .sb-icon-btn--close (750-strength-builder.css:2627). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, по центру, тон rgba(--ink,.45) — .sb-head.is-empty .sb-icon-btn--close (750-strength-builder.css:2918). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Конструктор · пусто · план назначен · 03": {
@@ -9646,7 +9646,7 @@
     },
     "Конструктор · пусто · план назначен · 07": {
       "v": "=",
-      "f": "Карточка .grp — .sb-empty-card: отступ сверху 12px, поля 16, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
+      "f": "Карточка .grp — .sb-empty-card: отступ сверху 12px, поля 16, радиус 20, фон --v4-c1 (750-strength-builder.css:2956).",
       "h": "81d6d8e40a85"
     },
     "Конструктор · пусто · план назначен · 08": {
@@ -9711,12 +9711,12 @@
     },
     "Сессия · вернулись через час · без таймера · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2627) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:3150) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Сессия · вернулись через час · без таймера · 03": {
       "v": "=",
-      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2638).",
+      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:3161).",
       "h": "07ffbada0ee7"
     },
     "Сессия · вернулись через час · без таймера · 04": {
@@ -9741,7 +9741,7 @@
     },
     "Сессия · вернулись через час · без таймера · 08": {
       "v": "=",
-      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
+      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:3192).",
       "h": "f06d6e12de2e"
     },
     "Сессия · вернулись через час · без таймера · 09": {
@@ -9791,12 +9791,12 @@
     },
     "Сессия · вернулись через час · таймер идёт · 02": {
       "v": "=",
-      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:2627) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "Выход 44×44 с отступами -10px 2px -10px -10px, флекс none, содержимое по центру, тон rgba(--ink,.45) — .sb-interrupted-head .sb-icon-btn--close (750-strength-builder.css:3150) теми же числами; центрирование наследуется от .sb-icon-btn (:113-117). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
       "h": "ff3ae05e555d"
     },
     "Сессия · вернулись через час · таймер идёт · 03": {
       "v": "=",
-      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:2638).",
+      "f": "Колонка заголовка — .sb-interrupted-head .sb-head-title: направление column, зазор 3px (750-strength-builder.css:3161).",
       "h": "07ffbada0ee7"
     },
     "Сессия · вернулись через час · таймер идёт · 04": {
@@ -9821,7 +9821,7 @@
     },
     "Сессия · вернулись через час · таймер идёт · 08": {
       "v": "=",
-      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:2632).",
+      "f": "Список .cd — .sb-interrupted-meta: отступ сверху 12px, поля 2px 16px, радиус 20, фон --v4-c1 (750-strength-builder.css:3192).",
       "h": "f06d6e12de2e"
     },
     "Сессия · вернулись через час · таймер идёт · 09": {
@@ -9956,7 +9956,7 @@
     },
     "Конструктор · пусто · план назначен · 22": {
       "v": "=",
-      "f": "«7 упр.»: .sb-empty-option b — font 700 11.5px/1, color var(--v4-act-text) — 750-strength-builder.css:2665; last.exercises.length — JS:937.",
+      "f": "«7 упр.»: .sb-empty-option b — font 700 11.5px/1, color var(--v4-act-text) — 750-strength-builder.css:3077; last.exercises.length — JS:937.",
       "h": "57090ba62a2d"
     },
     "Конструктор · пусто · план назначен · 23": {

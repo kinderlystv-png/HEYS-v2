@@ -11,13 +11,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const INNER = path.join(HERE, 'ui-v4-check-verdict-addresses.mjs');
 
-// 08.09: shared-measurement facts добавили css:line в curator-cabinet/product-card; hard 0, moved 51.
+// 08.09 push-blockers: 51 moved re-resolved after parallel CSS line shifts; hard 0, moved 0.
 const BASELINE = Object.freeze({
   truncated: 0,
   missing: 0,
   beyond: 0,
   absent: 0,
-  moved: 51,
+  moved: 0,
 });
 
 function countScope() {

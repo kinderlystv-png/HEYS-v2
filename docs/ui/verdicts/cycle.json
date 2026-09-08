@@ -280,7 +280,7 @@
     },
     "контраст ленты": {
       "v": "=",
-      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8500",
+      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8565",
       "h": "7c8802aa93e9"
     },
     "прогноз следующего периода": {

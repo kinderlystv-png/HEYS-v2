@@ -250,17 +250,17 @@
     },
     "Подписка · строка в настройках · 01": {
       "v": "=",
-      "f": "000-base-and-gamification.css:11013: .hdr-settings-sheet__row без position — static по умолчанию",
+      "f": "000-base-and-gamification.css:11101: .hdr-settings-sheet__row без position — static по умолчанию",
       "h": "be26b94c0688"
     },
     "Подписка · строка в настройках · 02": {
       "v": "=",
-      "f": "000-base-and-gamification.css:10948: hdr-settings-sheet__tier margin 14px 2px 8px",
+      "f": "000-base-and-gamification.css:11036: hdr-settings-sheet__tier margin 14px 2px 8px",
       "h": "7d89140238fd"
     },
     "Подписка · строка в настройках · 03": {
       "v": "=",
-      "f": "000-base-and-gamification.css:10956: hdr-settings-sheet__group radius 18px",
+      "f": "000-base-and-gamification.css:11044: hdr-settings-sheet__group radius 18px",
       "h": "90c3eca5a44a"
     },
     "Подписка · строка в настройках · 04": {
@@ -272,7 +272,7 @@
     },
     "Подписка · строка в настройках · 05": {
       "v": "=",
-      "f": "000-base-and-gamification.css:10948: hdr-settings-sheet__tier margin 14px 2px 8px",
+      "f": "000-base-and-gamification.css:11036: hdr-settings-sheet__tier margin 14px 2px 8px",
       "h": "c5cfa42e86b2"
     },
     "Подписка · строка в настройках · 06": {
