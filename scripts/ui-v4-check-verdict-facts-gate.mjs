@@ -13,11 +13,11 @@ const BASELINE = Object.freeze({
   staleDigest: 'ac637bc4ee760ac5',
 });
 
-// 08.09 polosa 5: классификатор остатка + curator-edits file:line (−124 unparsed).
+// 08.09 polosa 5: curator-edits −124; settings-system −118 (−114 c, −7 b net).
 const CLASSIFIER_BASELINE = Object.freeze({
-  unparsedRows: 8917,
-  buckets: Object.freeze({ a: 1492, b: 3270, c: 2471, g: 1674 }),
-  digest: '4bffcb7858991716',
+  unparsedRows: 8804,
+  buckets: Object.freeze({ a: 1492, b: 3263, c: 2364, g: 1675 }),
+  digest: '82105ca959b63a0c',
 });
 
 function runCli() {
