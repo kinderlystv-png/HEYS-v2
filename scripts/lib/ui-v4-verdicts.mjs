@@ -196,11 +196,11 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // они называют числа превью 2×2 и карточки «До цели» и сведены с кодом.
     // 05.09: 17 legacy «≠» типизированы reasonCode — долг 71 → 54.
     // 06.09, полоса 2/4: 20 legacy «≠» сведены в «=» по факту кода — 54 → 34.
-    // 06.09, package 43 agent-9 (5-zone): 7 legacy «≠» — 5 «=», 1 «?» (Вода ·28),
-    // 1 typed logic-invariant (Вес ·24); mismatch 7 → 0, typedMismatch 37 → 38.
+    // 08.09: все 1481 «—» получили naKind (scripts/.hw-neq-nakind-finalize.mjs):
+    // handoff 758, demo-only 590, foreign-zone 133; notApplicable 1356 → 0.
     mismatch: [0, 'e3b0c44298fc1c14'],
     typedMismatch: [38, '5b531b3a82026aaa'],
-    notApplicable: [1356, 'b439428088a4c3d6'],
+    notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   login: Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию

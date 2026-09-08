@@ -56,12 +56,6 @@ const CLUSTER_BASELINE = Object.freeze([
     rowCount: 4,
   },
   {
-    zoneId: 'home-widgets',
-    decisionRef:
-      'docs/ui/UI_V4_FINDINGS_HISTORY.md#home-widgets-background-redraw-x17-2026-09-05',
-    rowCount: 4,
-  },
-  {
     zoneId: 'strength-builder',
     decisionRef:
       'docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-abandoned-session-x22-2026-09-05',
