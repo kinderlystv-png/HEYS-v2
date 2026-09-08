@@ -3627,12 +3627,10 @@ html[data-theme-id="blue-dark"] .water-fab-wrap {
 
 [data-theme$='dark'] .advice-v4-disclaimer-card,
 [data-theme$='dark'] .advice-v4-settings,
-[data-theme$='dark'] .advice-v4-science,
-[data-theme$='dark'] .advice-v4-toast-card {
+[data-theme$='dark'] .advice-v4-science {
   background: var(--v4-bg, #141210);
 }
 
-[data-theme$='dark'] .advice-v4-disclaimer-card__title,
 [data-theme$='dark'] .advice-v4-disclaimer-card__lead,
 [data-theme$='dark'] .advice-v4-settings__title,
 [data-theme$='dark'] .advice-v4-settings__row-title,
