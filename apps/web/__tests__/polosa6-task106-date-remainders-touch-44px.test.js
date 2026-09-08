@@ -15,6 +15,8 @@ import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { sliceDatePickerProbeCss } from './helpers/date-picker-probe-css.mjs';
+
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = path.resolve(WEB_DIR, '..', '..');
 const CANVAS = path.join(
@@ -23,6 +25,7 @@ const CANVAS = path.join(
 );
 const BASE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
 const PALETTE_CSS = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/002-ui-v4-palette-roles.css'), 'utf8');
+const DATE_PICKER_PROBE_CSS = sliceDatePickerProbeCss(BASE_CSS);
 
 /** Строки контракта, закрытые правками 5 и 6 сентября (пакеты 38 и 42). */
 export const TOUCH_CONTRACT_LINES = Object.freeze([
@@ -96,7 +99,8 @@ function probe(elClass, wrapClass, metric) {
 
 describe('polosa6 task106 · date-remainders touch 44px visible', () => {
   let roots = [];
-  let styles = [];
+  /** Стили для computed-пробы: один раз на файл, не перепарсиваем 000-base на каждый it. */
+  let probeCssStyle = null;
 
   beforeAll(() => {
     globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -105,6 +109,14 @@ describe('polosa6 task106 · date-remainders touch 44px visible', () => {
     window.HEYS = window.HEYS || {};
     loadScript('heys_day_utils.js');
     loadScript('heys_day_pickers.js');
+    probeCssStyle = injectCss(`${PALETTE_CSS}\n${DATE_PICKER_PROBE_CSS}`);
+    // happy-dom: без reflow getComputedStyle иногда читает каскад до применения <style>.
+    document.body.offsetHeight;
+  });
+
+  afterAll(() => {
+    probeCssStyle?.remove();
+    probeCssStyle = null;
   });
 
   afterEach(() => {
@@ -113,8 +125,6 @@ describe('polosa6 task106 · date-remainders touch 44px visible', () => {
       host.remove();
     }
     roots = [];
-    styles.forEach((s) => s.remove());
-    styles = [];
     document.body.innerHTML = '';
     document.documentElement.removeAttribute('data-theme-id');
     document.documentElement.removeAttribute('data-theme');
@@ -181,10 +191,10 @@ describe('polosa6 task106 · date-remainders touch 44px visible', () => {
   });
 
   it('computed sand + blue · стрелки 44 px видимым габаритом', () => {
-    styles.push(injectCss(`${PALETTE_CSS}\n${BASE_CSS}`));
     const table = { sand: {}, blue: {} };
     for (const id of ['sand', 'blue']) {
       mountPalette(id);
+      document.body.offsetHeight;
       table[id].navHeight = probeNav('height');
       table[id].navWidth = probeNav('width');
       table[id].nightMinHeight = probe(

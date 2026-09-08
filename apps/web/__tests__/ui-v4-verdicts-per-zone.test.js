@@ -74,7 +74,7 @@ describe('Путь к вердиктам знает один модуль', () =
     // запись падала на починке, когда запись вынесли в общий эталон.
     expect(setter).toContain('setVerdictKey(');
     const lib = fs.readFileSync(path.join(ROOT, 'scripts/lib/ui-v4-verdicts.mjs'), 'utf8');
-    expect(lib).toContain('writeZone(zoneId, zone)');
+    expect(lib).toMatch(/export function writeZone\(zoneId,\s*zone/);
     expect(setter).not.toContain('ui-v4-contract-verdicts.json');
   });
 
