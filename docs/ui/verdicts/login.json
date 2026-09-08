@@ -194,7 +194,7 @@
     },
     "свёрнутое": {
       "v": "=",
-      "f": "Замер вычисленных значений на стенде, песочный и синий: 733-ui-v4-login-theme.css:1140 .heys-login-theme__dots — min-height 44 и измеренная высота 44, background transparent, border 0, padding 0, то есть цель совпадает с самим рядом и расширителя нет; три точки .heys-login-theme__dot :1159 — 8×8 радиусом 999, третья .is-ring :1166 прозрачная с обводкой inset 1,5px, порядок act / ok / ring задаётся списком ['act','ok','ring'] в heys_login_theme_picker_v1.js:152 (DOM-ветка) и :452 (React-ветка); подпись .heys-login-theme__caption :1171 несёт COPY.title = «Оформление» (:8). Док стоит вне карточки: :1110 .heys-login-theme:not(.is-expanded) — position absolute, bottom 14.",
+      "f": "; три точки .heys-login-theme__dot :1159 — 8×8 радиусом 999, третья .is-ring :1166 прозрачная с обводкой inset 1,5px, порядок act / ok / ring задаётся списком ['act','ok','ring'] в heys_login_theme_picker_v1.js:152 (DOM-ветка) и :452 (React-ветка); подпись .heys-login-theme__caption :1171 несёт COPY.title = «Оформление» (:8). Док стоит вне карточки: :1110 .heys-login-theme:not(.is-expanded) — position absolute, bottom 14. Точка act Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); подпись Замер chromium 375 px: песочный rgba(0,0,0/0.56), тёмный rgba(242,237,230/0.63).",
       "h": "b87ccf9ad1a8"
     },
     "вид выбора оформления": {
@@ -554,7 +554,7 @@
     },
     "Вход · выбор свёрнут · 15": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — width 100%, margin-top 14, radius 16, 11.5px/600 var(--v4-warn-text); background transparent, кадр ·15 рисует заливку #f3e0d2 на stop t1 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "f": "733-ui-v4-login-theme.css:518-533 .heys-auth-error — width 100%, margin-top 14, radius 16, 11.5px/600 var(--v4-warn-text); background transparent, кадр ·15 рисует заливку #f3e0d2 на stop t1 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта. Ошибка Замер chromium 375 px: песочный rgb(161,71,28), тёмный rgb(208,125,78).",
       "h": "8d741fa3c065",
       "reasonCode": "owner-decision",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
@@ -568,7 +568,7 @@
     },
     "Вход · выбор свёрнут · 17": {
       "v": "≠",
-      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key — height 46, border-radius 16, background var(--v4-surface); кадр ·17 просит radius 14 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "f": "733-ui-v4-login-theme.css:613-622 .heys-auth-key — height 46, border-radius 16, background var(--v4-surface); кадр ·17 просит radius 14 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта. Ошибка Замер chromium 375 px: песочный rgb(161,71,28), тёмный rgb(208,125,78).",
       "h": "379a34d0fa64",
       "reasonCode": "owner-decision",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"

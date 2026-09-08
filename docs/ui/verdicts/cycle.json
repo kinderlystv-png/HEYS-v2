@@ -280,7 +280,7 @@
     },
     "контраст ленты": {
       "v": "=",
-      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8565",
+      "f": "cycle-ribbon--period::before background var(--v4-act) palette-aware 000-base-and-gamification.css:8565 Лента Замер chromium 375 px: песочный rgba(0, 0, 0, 0), тёмный rgba(0, 0, 0, 0).",
       "h": "7c8802aa93e9"
     },
     "прогноз следующего периода": {
@@ -817,7 +817,7 @@
     },
     "Цикл · инсайт баланса · 01": {
       "v": "≠",
-      "f": "500-pwa:2226-2230 .cycle-card-v4__insight — radius 18 и padding 15/16 совпали; background var(--v4-ok-bg) вместо --gr-bg кадра Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "f": "500-pwa:2226-2230 .cycle-card-v4__insight — radius 18 и padding 15/16 совпали; background var(--v4-ok-bg) вместо --gr-bg кадра Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта. Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(35,32,27).",
       "h": "e4e1b7e1cb46",
       "reasonCode": "owner-decision",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"

@@ -61,6 +61,8 @@ export const FIXTURES = [
 <p class="yv-pack-note">note</p>
 <div class="yv-pack-row"><button class="yv-pack-secondary">sec</button><button class="yv-pack-secondary yv-pack-secondary--feelings">feel</button></div>
 <div class="yv-food-card"><div class="yv-food-row">Еда</div><div class="yv-food-value">+500</div></div>
+<div class="yv-v4-slider-fill yv-v4-slider-fill--norm" style="width:50%"></div>
+<div class="mc-estimated-badge">расчётный</div>
 <button class="yv-text-later">Позже</button>`,
     probes: [
       { id: 'yv-hero-title', sel: '.yv-hero-title', prop: 'color' },
@@ -75,6 +77,9 @@ export const FIXTURES = [
       { id: 'yv-food-card-bg', sel: '.yv-food-card', prop: 'backgroundColor' },
       { id: 'yv-food-row', sel: '.yv-food-row', prop: 'color' },
       { id: 'yv-food-value', sel: '.yv-food-value', prop: 'color' },
+      { id: 'yv-slider-fill-bg', sel: '.yv-v4-slider-fill--norm', prop: 'backgroundImage' },
+      { id: 'yv-estimated-badge-bg', sel: '.mc-estimated-badge', prop: 'backgroundColor' },
+      { id: 'yv-estimated-badge-color', sel: '.mc-estimated-badge', prop: 'color' },
       { id: 'yv-text-later', sel: '.yv-text-later', prop: 'color' },
     ],
   },
@@ -140,12 +145,214 @@ export const FIXTURES = [
     html: `<div class="date-picker--v4 date-picker--past"><button class="date-picker-day-nav"></button>
 <div class="date-picker-trigger-lbl"><div class="date-picker-lbl-inner"><span class="date-picker-main date-picker-main--past">Вчера</span></div></div></div>
 <div class="date-picker--v4"><span class="date-picker-inline-today">Сегодня</span></div>
-<button class="date-picker-btn today-btn">Вернуться</button>`,
+<button class="date-picker-btn today-btn">Вернуться</button>
+<div class="date-picker-sheet"><button class="date-picker-day cycle-ribbon--period"></button></div>`,
     probes: [
       { id: 'date-past-nav-bg', sel: '.date-picker--past .date-picker-day-nav', prop: 'backgroundColor' },
       { id: 'date-past-main', sel: '.date-picker-main--past', prop: 'color' },
       { id: 'date-inline-today', sel: '.date-picker-inline-today', prop: 'color' },
       { id: 'date-today-btn-bg', sel: '.date-picker-btn.today-btn', prop: 'backgroundColor' },
+      { id: 'date-today-btn-color', sel: '.date-picker-btn.today-btn', prop: 'color' },
+      { id: 'cycle-ribbon-period-bg', sel: '.cycle-ribbon--period', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'pwa-mc',
+    css: [...BASE, '500-pwa-and-offline.css'],
+    html: `<button class="mc-pill--choice is-on">Да</button>
+<span class="mc-rest-chevron">›</span>
+<span class="mc-rest-supp-add-icon"></span>
+<span class="mc-wheel-value--current">12</span>
+<div class="mc-rest-row mc-rest-row--overdue"></div>
+<button class="mc-rest-type is-on">Тип</button>
+<div class="mc-rest-measure-side-pill is-on">32</div>
+<div class="cycle-card-v4 cycle-card-v4--filled"><div class="cycle-card-v4__insight">i</div></div>
+<span class="mc-recorded-check">✓</span>
+<div class="mc-backdrop"></div>`,
+    probes: [
+      { id: 'mc-pill-on-bg', sel: '.mc-pill--choice.is-on', prop: 'backgroundColor' },
+      { id: 'mc-pill-on-color', sel: '.mc-pill--choice.is-on', prop: 'color' },
+      { id: 'mc-rest-chevron-color', sel: '.mc-rest-chevron', prop: 'color' },
+      { id: 'mc-rest-supp-add-icon-bg', sel: '.mc-rest-supp-add-icon', prop: 'backgroundColor' },
+      { id: 'mc-wheel-current-color', sel: '.mc-wheel-value--current', prop: 'color' },
+      { id: 'mc-rest-row-overdue-bg', sel: '.mc-rest-row--overdue', prop: 'backgroundColor' },
+      { id: 'mc-rest-type-on-bg', sel: '.mc-rest-type.is-on', prop: 'backgroundColor' },
+      { id: 'mc-rest-measure-pill-on-bg', sel: '.mc-rest-measure-side-pill.is-on', prop: 'backgroundColor' },
+      { id: 'cycle-card-bg', sel: '.cycle-card-v4--filled', prop: 'backgroundColor' },
+      { id: 'cycle-card-insight-color', sel: '.cycle-card-v4__insight', prop: 'color' },
+      { id: 'mc-recorded-check-color', sel: '.mc-recorded-check', prop: 'color' },
+      { id: 'mc-backdrop-bg', sel: '.mc-backdrop', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'gamification',
+    css: [...BASE, '000-base-and-gamification.css'],
+    html: `<div class="game-v4-sheet__bar game-v4-sheet__bar--thin"><div class="game-v4-sheet__bar-fill" style="width:60%"></div></div>
+<div class="game-v4-sheet__bar"><div class="game-v4-sheet__bar-fill is-complete" style="width:100%"></div></div>
+<div class="game-v4-sheet__hero game-v4-sheet__hero--cream">hero</div>`,
+    probes: [
+      { id: 'game-bar-fill-bg', sel: '.game-v4-sheet__bar-fill:not(.is-complete)', prop: 'backgroundColor' },
+      { id: 'game-bar-fill-complete-bg', sel: '.game-v4-sheet__bar-fill.is-complete', prop: 'backgroundColor' },
+      { id: 'game-hero-cream-bg', sel: '.game-v4-sheet__hero--cream', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'subscription-ro',
+    css: [...BASE, '735-ui-v4-subscription.css'],
+    html: `<div class="readonly-banner readonly-banner--sticky"><div class="readonly-banner-content"><div class="readonly-banner-title">T</div><div class="readonly-banner-text">x</div></div><button class="readonly-banner-pill">Подписка</button></div>
+<div class="readonly-toast"><span class="readonly-toast-label">L</span><span class="readonly-toast-action">Подписка</span></div>
+<div class="sub-screen__status-card">card</div>
+<div class="sub-screen__footnote">note</div>
+<div class="sub-screen__support-link">help</div>
+<div class="paywall-overlay"></div>
+<div class="paywall-trial paywall-trial--offer"><div class="paywall-trial-title">T</div><span class="paywall-trial-dot paywall-trial-dot--ok"></span></div>
+<button class="paywall-btnq">q</button>
+<div class="paywall-divider"><span class="paywall-divider-line"></span></div>`,
+    probes: [
+      { id: 'readonly-banner-sticky-bg', sel: '.readonly-banner--sticky', prop: 'backgroundColor' },
+      { id: 'readonly-banner-pill-bg', sel: '.readonly-banner-pill', prop: 'backgroundColor' },
+      { id: 'readonly-banner-pill-color', sel: '.readonly-banner-pill', prop: 'color' },
+      { id: 'readonly-toast-bg', sel: '.readonly-toast', prop: 'backgroundColor' },
+      { id: 'readonly-toast-action-color', sel: '.readonly-toast-action', prop: 'color' },
+      { id: 'sub-screen-status-card-bg', sel: '.sub-screen__status-card', prop: 'backgroundColor' },
+      { id: 'sub-screen-footnote-bg', sel: '.sub-screen__footnote', prop: 'backgroundColor' },
+      { id: 'sub-screen-support-link-color', sel: '.sub-screen__support-link', prop: 'color' },
+      { id: 'paywall-overlay-bg', sel: '.paywall-overlay', prop: 'backgroundColor' },
+      { id: 'paywall-trial-bg', sel: '.paywall-trial', prop: 'backgroundColor' },
+      { id: 'paywall-trial-dot-bg', sel: '.paywall-trial-dot--ok', prop: 'backgroundColor' },
+      { id: 'paywall-btnq-bg', sel: '.paywall-btnq', prop: 'backgroundColor' },
+      { id: 'paywall-divider-line-bg', sel: '.paywall-divider-line', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'strength',
+    css: [...BASE, '750-strength-builder.css', '731-ui-v4-activity.css'],
+    html: `<button class="sb-chip is-on">chip</button>
+<button class="sb-star is-on">★</button>
+<div class="sb-plan-vs-summary">sum</div>
+<div class="sb-plan-vs-cell is-done">done</div>
+<span class="sb-plan-vs-cell-val is-positive">+1</span>
+<div class="sb-finish-hero">hero</div>
+<div class="sb-ss-member-card">m</div>`,
+    probes: [
+      { id: 'sb-chip-on-bg', sel: '.sb-chip.is-on', prop: 'backgroundColor' },
+      { id: 'sb-chip-on-color', sel: '.sb-chip.is-on', prop: 'color' },
+      { id: 'sb-star-on-color', sel: '.sb-star.is-on', prop: 'color' },
+      { id: 'sb-plan-vs-summary-bg', sel: '.sb-plan-vs-summary', prop: 'backgroundColor' },
+      { id: 'sb-plan-vs-cell-done-bg', sel: '.sb-plan-vs-cell.is-done', prop: 'backgroundColor' },
+      { id: 'sb-plan-vs-cell-val-color', sel: '.sb-plan-vs-cell-val.is-positive', prop: 'color' },
+      { id: 'sb-finish-hero-bg', sel: '.sb-finish-hero', prop: 'backgroundColor' },
+      { id: 'sb-ss-member-card-bg', sel: '.sb-ss-member-card', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'food-meal',
+    css: [...BASE, '610-aps-meal-flow.css'],
+    html: `<div class="meal-time-wave">w</div>
+<button class="meal-time-cta">cta</button>
+<button class="aps-v4-grams-chip">g</button>
+<button class="aps-v4-grams-chip is-active">g</button>
+<button class="aps-v4-grams-unit is-active">Граммы</button>
+<button class="meal-transfer-v4__gram-step">−</button>
+<button class="mpr-preview-item-toggle">+</button>`,
+    probes: [
+      { id: 'meal-time-wave-bg', sel: '.meal-time-wave', prop: 'backgroundColor' },
+      { id: 'meal-time-cta-bg', sel: '.meal-time-cta', prop: 'backgroundColor' },
+      { id: 'meal-time-cta-color', sel: '.meal-time-cta', prop: 'color' },
+      { id: 'aps-grams-chip-bg', sel: '.aps-v4-grams-chip:not(.is-active)', prop: 'backgroundColor' },
+      { id: 'aps-grams-chip-active-bg', sel: '.aps-v4-grams-chip.is-active', prop: 'backgroundColor' },
+      { id: 'aps-grams-chip-active-color', sel: '.aps-v4-grams-chip.is-active', prop: 'color' },
+      { id: 'aps-grams-unit-active-color', sel: '.aps-v4-grams-unit.is-active', prop: 'color' },
+      { id: 'meal-transfer-gram-step-bg', sel: '.meal-transfer-v4__gram-step', prop: 'backgroundColor' },
+      { id: 'mpr-preview-toggle-bg', sel: '.mpr-preview-item-toggle', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'login',
+    css: [...BASE, '733-ui-v4-login-theme.css'],
+    html: `<div class="heys-login-theme__dots"><span class="heys-login-theme__dot is-act"></span><span class="heys-login-theme__dot is-ok"></span><span class="heys-login-theme__dot is-ring"></span></div>
+<span class="heys-login-theme__caption">Оформление</span>
+<div class="heys-auth-error">err</div>`,
+    probes: [
+      { id: 'login-theme-dot-act-bg', sel: '.heys-login-theme__dot.is-act', prop: 'backgroundColor' },
+      { id: 'login-theme-caption-color', sel: '.heys-login-theme__caption', prop: 'color' },
+      { id: 'login-auth-error-color', sel: '.heys-auth-error', prop: 'color' },
+    ],
+  },
+  {
+    id: 'curator',
+    css: [...BASE, '734-ui-v4-curator-panel.css'],
+    html: `<div class="cur-cab__title">Кабинет</div>
+<div class="cur-sheet-scrim"></div>
+<button class="cur-sheet__cta">Открыть</button>`,
+    probes: [
+      { id: 'cur-cab-title-color', sel: '.cur-cab__title', prop: 'color' },
+      { id: 'cur-sheet-scrim-bg', sel: '.cur-sheet-scrim', prop: 'backgroundColor' },
+      { id: 'cur-sheet-cta-bg', sel: '.cur-sheet__cta', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'product-card',
+    css: [...BASE, '611-aps-product-card.css'],
+    html: `<div class="aps-v4-harm-compare"><div class="aps-v4-harm-compare__card is-active"><span class="aps-v4-harm-compare__value">3</span></div></div>
+<div class="aps-barcode-state">scan</div>`,
+    probes: [
+      { id: 'harm-compare-active-border', sel: '.aps-v4-harm-compare__card.is-active', prop: 'borderColor' },
+      { id: 'harm-compare-active-value', sel: '.aps-v4-harm-compare__card.is-active .aps-v4-harm-compare__value', prop: 'color' },
+      { id: 'barcode-state-color', sel: '.aps-barcode-state', prop: 'color' },
+    ],
+  },
+  {
+    id: 'messenger',
+    css: [...BASE, '1000-messenger.css'],
+    html: `<div class="msg-row msg-row-mine"><div class="msg-bubble msg-bubble-mine"><div class="msg-body">hi</div></div></div>
+<div class="msg-menu-item">more</div>`,
+    probes: [
+      { id: 'msg-bubble-mine-bg', sel: '.msg-bubble-mine', prop: 'backgroundColor' },
+      { id: 'msg-menu-item-color', sel: '.msg-menu-item', prop: 'color' },
+    ],
+  },
+  {
+    id: 'tab-activity',
+    css: [...BASE, '731-ui-v4-activity.css', '300-modals-and-day.css'],
+    html: `<div class="ma-habit-cal--activity-v4"><button class="ma-habit-cal-cell is-done"></button>
+<button class="ma-habit-cal-mode-btn is-active">M</button></div>`,
+    probes: [
+      { id: 'habit-cal-cell-done-bg', sel: '.ma-habit-cal-cell.is-done', prop: 'backgroundColor' },
+      { id: 'habit-cal-mode-active-bg', sel: '.ma-habit-cal-mode-btn.is-active', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'nutrition-zones',
+    css: [...BASE, '732-ui-v4-nutrition.css'],
+    html: `<div class="nutrition-v4-zones"><span class="nutrition-v4-zones__bar-fill" style="width:40%"></span></div>`,
+    probes: [
+      { id: 'nutrition-zones-bar-fill-bg', sel: '.nutrition-v4-zones__bar-fill', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'tips',
+    css: [...BASE, '400-water-and-hydration.css'],
+    html: `<div class="advice-v4-disclaimer-overlay"></div>
+<div class="advice-v4-disclaimer-card__handle"></div>
+<div class="advice-v4-popup">popup</div>`,
+    probes: [
+      { id: 'advice-disclaimer-overlay-bg', sel: '.advice-v4-disclaimer-overlay', prop: 'backgroundColor' },
+      { id: 'advice-disclaimer-handle-bg', sel: '.advice-v4-disclaimer-card__handle', prop: 'backgroundColor' },
+      { id: 'advice-popup-bg', sel: '.advice-v4-popup', prop: 'backgroundColor' },
+    ],
+  },
+  {
+    id: 'pwa',
+    css: [...BASE, '../heys-components.css'],
+    html: `<div class="heys-update-modal__backdrop"></div>
+<div class="heys-update-prompt__backdrop"></div>
+<div class="heys-update-modal__card">card</div>`,
+    probes: [
+      { id: 'pwa-modal-backdrop-bg', sel: '.heys-update-modal__backdrop', prop: 'backgroundColor' },
+      { id: 'pwa-prompt-backdrop-bg', sel: '.heys-update-prompt__backdrop', prop: 'backgroundColor' },
+      { id: 'pwa-card-bg', sel: '.heys-update-modal__card', prop: 'backgroundColor' },
+      { id: 'pwa-card-ink', sel: '.heys-update-modal__card', prop: 'color' },
     ],
   },
 ];
@@ -171,6 +378,46 @@ body{margin:0;padding:16px;background:var(--v4-bg,#fffaf1);font-family:Figtree,s
 .yv-food-row{color:rgba(0,0,0,.55)}
 .yv-text-later{min-height:44px;border:0;background:transparent;font:700 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45)}
 .yv-pack-secondary{min-height:48px;border:0;border-radius:999px;background:var(--v4-c1);color:var(--v4-ink-2)}
+.mc-pill--choice{min-height:44px;border:0;border-radius:999px;padding:0 16px}
+.mc-rest-supp-add-icon{display:inline-block;width:26px;height:26px;border-radius:999px}
+.mc-rest-row--overdue{min-height:44px;border-radius:16px}
+.mc-rest-type,.mc-rest-measure-side-pill{border:0;border-radius:999px;padding:0 12px;min-height:32px}
+.mc-wheel-value--current{display:inline-block}
+.readonly-banner{display:flex;align-items:center}
+.readonly-toast{position:relative}
+.sub-screen__status-card,.sub-screen__footnote{border-radius:16px;padding:12px}
+.sb-chip,.sb-star{border:0;background:transparent}
+.sb-plan-vs-summary,.sb-plan-vs-cell,.sb-finish-hero,.sb-ss-member-card{border-radius:12px;padding:8px}
+.meal-time-wave,.meal-time-cta,.aps-v4-grams-chip,.meal-transfer-v4__gram-step,.mpr-preview-item-toggle{min-height:44px;border:0;border-radius:999px}
+.heys-login-theme__dot{display:inline-block;width:8px;height:8px;border-radius:999px;margin:0 3px}
+.heys-login-theme__dot.is-act{background:var(--v4-act)}
+.cur-sheet-scrim{position:fixed;inset:0}
+.cur-sheet__cta{min-height:48px;border:0;border-radius:999px;padding:0 16px}
+.advice-v4-disclaimer-overlay{position:fixed;inset:0}
+.game-v4-sheet__bar{height:8px;background:var(--v4-track);border-radius:999px;overflow:hidden}
+.game-v4-sheet__hero--cream{padding:16px;border-radius:20px}
+.mc-estimated-badge{margin-top:12px;padding:5px 12px;border-radius:999px;background:var(--v4-hero,#efe3cf);font:700 10.5px/1 Figtree,sans-serif;color:var(--v4-act-text,#8a4a20)}
+.yv-v4-slider-fill--norm{position:relative;width:50%;height:26px;border-radius:999px}
+.cycle-card-v4{border-radius:16px;padding:12px}
+.cycle-card-v4__insight{font-size:12px}
+.mc-recorded-check{display:inline-block}
+.mc-backdrop{position:fixed;inset:0}
+.paywall-overlay{position:fixed;inset:0}
+.paywall-trial,.paywall-btnq{border-radius:16px;padding:12px;border:0}
+.paywall-divider-line{display:block;height:1px}
+.aps-v4-harm-compare__card{border-radius:20px;padding:12px;border:2px solid transparent}
+.aps-barcode-state{display:block}
+.msg-bubble{border-radius:16px;padding:10px}
+.msg-menu-item{display:block;padding:8px}
+.ma-habit-cal-cell{width:24px;height:24px;border:0;border-radius:999px}
+.ma-habit-cal-mode-btn{min-height:32px;border:0;border-radius:999px;padding:0 12px}
+.nutrition-v4-zones{height:8px;border-radius:999px;overflow:hidden;background:var(--v4-track)}
+.nutrition-v4-zones__bar-fill{display:block;height:100%}
+.advice-v4-disclaimer-card__handle{width:40px;height:4px;border-radius:999px}
+.date-picker-sheet .date-picker-day{min-width:44px;min-height:44px;border:0;border-radius:999px}
+.heys-update-modal__backdrop,.heys-update-prompt__backdrop{position:fixed;inset:0}
+.heys-update-modal__card{padding:20px;border-radius:24px}
+.heys-auth-error{padding:8px;border-radius:16px}
 </style></head><body>${fixture.html}</body></html>`,
   );
 

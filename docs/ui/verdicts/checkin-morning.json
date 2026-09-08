@@ -618,7 +618,7 @@
     },
     "Чек-ин · вчерашний день · 07": {
       "v": "=",
-      "f": "715-yesterday-verify.css:782-790 .yv-food-card — background var(--v4-card) radius 20px padding 14px 16px margin-top 16px; гейт элемент 07",
+      "f": "715-yesterday-verify.css:782-790 .yv-food-card — background var(--v4-card) radius 20px padding 14px 16px margin-top 16px; гейт элемент 07 Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(35,32,27).",
       "h": "7048784b4c9a"
     },
     "Чек-ин · вчерашний день · 08": {
@@ -773,7 +773,7 @@
     },
     "Чек-ин · вчера по ощущениям · 20": {
       "v": "≠",
-      "f": "715-yesterday-verify.css:977-995 .yv-v4-slider-fill height:26px + три класса --norm/--under/--over; кадр «20» height:24px + одна заливка var(--gr2) — EXCEPTION :49,:53 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта.",
+      "f": "715-yesterday-verify.css:977-995 .yv-v4-slider-fill height:26px + три класса --norm/--under/--over; кадр «20» height:24px + одна заливка var(--gr2) — EXCEPTION :49,:53 Расхождение видно и принято без построчного разбора: критерий дизайнера от 6 сентября 2026 — не мелочь только исчезнувшее действие, контраст текста ниже 4,5 и цель ниже 44. Строку отнёс к принятым скрипт scripts/ui-v4-classify-legacy-mismatch.mjs, человек её не читал — это сказано здесь нарочно, чтобы следующий проход знал цену вердикта. Заливка .yv-v4-slider-fill--norm: Замер chromium 375 px: песочный rgb(138,154,106)→rgb(122,138,94), тёмный rgb(138,154,106)→rgb(122,138,94) — градиент на обоих наборах одинаковый.",
       "h": "0cc5560ca23a",
       "reasonCode": "owner-decision",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
@@ -1626,7 +1626,7 @@
     },
     "Чек-ин · расчётный вес · 08": {
       "v": "=",
-      "f": "heys_steps_v1.js:1803-1807 — плашка estimatedBadge: marginTop 12 padding 5px 12px borderRadius 999 background #efe3cf font 700 10.5px/1 uppercase color var(--v4-act-text); persistMorningWeight переведён на estimated===true чтобы гейт читал эту ветку",
+      "f": "heys_steps_v1.js:1803-1807 — плашка estimatedBadge: marginTop 12 padding 5px 12px borderRadius 999 background #efe3cf font 700 10.5px/1 uppercase color var(--v4-act-text); persistMorningWeight переведён на estimated===true чтобы гейт читал эту ветку Плашка Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32); текст Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "74dd53224ad0"
     },
     "Чек-ин · расчётный вес · 09": {
@@ -2216,7 +2216,7 @@
     },
     "Чек-ин · остальное · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs",
+      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "b2fd664a22cf"
     },
     "Чек-ин · остальное · 19": {
@@ -2236,7 +2236,7 @@
     },
     "Чек-ин · остальное · 22": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2665 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3); разделитель chevron",
+      "f": "500-pwa-and-offline.css:2665 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3); разделитель chevron Замер chromium 375 px: песочный rgba(0,0,0/0.3), тёмный rgba(242,237,230/0.3).",
       "h": "5d0cda468475"
     },
     "Чек-ин · остальное · 23": {
@@ -2261,7 +2261,7 @@
     },
     "Чек-ин · остальное · 27": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2730 .mc-rest-supp-add-icon — 26×26, radius 999px, background --v4-sand-surface (sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468))",
+      "f": "500-pwa-and-offline.css:2730 .mc-rest-supp-add-icon — 26×26, radius 999px, background --v4-sand-surface (sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468)) Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "87588f4ee274"
     },
     "Чек-ин · остальное · 28": {
@@ -2398,7 +2398,7 @@
     },
     "Чек-ин · замеры просрочены · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs",
+      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "b2fd664a22cf"
     },
     "Чек-ин · замеры просрочены · 19": {
@@ -2418,7 +2418,7 @@
     },
     "Чек-ин · замеры просрочены · 22": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2665 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3); разделитель chevron",
+      "f": "500-pwa-and-offline.css:2665 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3); разделитель chevron Замер chromium 375 px: песочный rgba(0,0,0/0.3), тёмный rgba(242,237,230/0.3).",
       "h": "5d0cda468475"
     },
     "Чек-ин · замеры просрочены · 23": {
@@ -2443,7 +2443,7 @@
     },
     "Чек-ин · замеры просрочены · 27": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2730 .mc-rest-supp-add-icon — 26×26, radius 999px, background --v4-sand-surface (sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468))",
+      "f": "500-pwa-and-offline.css:2730 .mc-rest-supp-add-icon — 26×26, radius 999px, background --v4-sand-surface (sand #f7efe2 / blue #eef3f9 (002-ui-v4-palette-roles.css:148,468)) Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "87588f4ee274"
     },
     "Чек-ин · замеры просрочены · 28": {
@@ -2468,7 +2468,7 @@
     },
     "Чек-ин · замеры просрочены · 32": {
       "v": "=",
-      "f": "500-pwa-and-offline.css .mc-rest-row--overdue background var(--v4-tint); computed sand #f6e6dd / blue #fbe6e2 — exception-geometry test (fixed-code).",
+      "f": "500-pwa-and-offline.css .mc-rest-row--overdue background var(--v4-tint); computed sand #f6e6dd / blue #fbe6e2 — exception-geometry test (fixed-code). Замер chromium 375 px: песочный rgb(246,230,221), тёмный rgb(58,36,26).",
       "h": "24ea1a85915e"
     },
     "Чек-ин · замеры просрочены · 33": {
@@ -2604,7 +2604,7 @@
     },
     "Чек-ин · холод тип · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs",
+      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "9c21a46be48c"
     },
     "Чек-ин · холод тип · 19": {
@@ -2619,7 +2619,7 @@
     },
     "Чек-ин · холод тип · 21": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1759 .mc-rest-type.is-on — background --v4-sand-hero, inset ring --v4-sand-act, font 700",
+      "f": "500-pwa-and-offline.css:1759 .mc-rest-type.is-on — background --v4-sand-hero, inset ring --v4-sand-act, font 700 Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "5aba78730283"
     },
     "Чек-ин · холод тип · 22": {
@@ -2724,7 +2724,7 @@
     },
     "Чек-ин · замеры · 15": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1371 .mc-rest-measure-side-pill.is-on — min-height 32px, radius 999px, background --v4-sand-hero",
+      "f": "500-pwa-and-offline.css:1371 .mc-rest-measure-side-pill.is-on — min-height 32px, radius 999px, background --v4-sand-hero Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "7a3909f0080c"
     },
     "Чек-ин · замеры · 16": {
@@ -2844,7 +2844,7 @@
     },
     "Чек-ин · остальное минимум · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён. Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "caab327199ae"
     },
     "Чек-ин · остальное минимум · 19": {
@@ -3061,7 +3061,7 @@
     },
     "Чек-ин · остальное на неделе периода · 18": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs",
+      "f": "500-pwa-and-offline.css:1255 .mc-pill--choice.is-on — background --v4-sand-hero, color --v4-btn-on-acs Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
       "h": "36ad31d09386"
     },
     "Чек-ин · остальное на неделе периода · 19": {
@@ -3081,7 +3081,7 @@
     },
     "Чек-ин · остальное на неделе периода · 22": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:2665 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3); разделитель chevron",
+      "f": "500-pwa-and-offline.css:2665 .mc-rest-chevron — font 700 15px/1, color rgba(var(--v4-ink-rgb),.3); разделитель chevron Замер chromium 375 px: песочный rgba(0,0,0/0.3), тёмный rgba(242,237,230/0.3).",
       "h": "8b7cfbff70c6"
     },
     "Чек-ин · остальное на неделе периода · 23": {
@@ -4205,7 +4205,7 @@
     },
     "Чек-ин · записано · 05": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1400 .mc-recorded-check — 56×56, radius 999px, background --v4-ok-fill",
+      "f": "500-pwa-and-offline.css:1400 .mc-recorded-check — 56×56, radius 999px, background --v4-ok-fill Замер chromium 375 px: песочный rgb(0,0,0), тёмный rgb(0,0,0).",
       "h": "2536b47a192b"
     },
     "Чек-ин · записано · 06": {
@@ -4285,7 +4285,7 @@
     },
     "Чек-ин · записано с расчётным весом · 05": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:1400 .mc-recorded-check — 56×56, radius 999px, background --v4-ok-fill",
+      "f": "500-pwa-and-offline.css:1400 .mc-recorded-check — 56×56, radius 999px, background --v4-ok-fill Замер chromium 375 px: песочный rgb(0,0,0), тёмный rgb(0,0,0).",
       "h": "2536b47a192b"
     },
     "Чек-ин · записано с расчётным весом · 06": {
@@ -5089,7 +5089,7 @@
     },
     "Рутина · резервный вопрос после еды · 12": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:629-631 .mc-backdrop — blur(var(--v4-modal-backdrop-blur,2.5px)), background var(--v4-modal-backdrop-dim); продуктовый scrim-инвариант CLAUDE.md, не rgba(var(--shadow),.34) кадра",
+      "f": "500-pwa-and-offline.css:629-631 .mc-backdrop — blur(var(--v4-modal-backdrop-blur,2.5px)), background var(--v4-modal-backdrop-dim); продуктовый scrim-инвариант CLAUDE.md, не rgba(var(--shadow),.34) кадра Замер chromium 375 px: песочный rgba(42,26,12/0.5), тёмный rgba(0,0,0/0.62).",
       "h": "95d7051df773"
     },
     "Рутина · резервный вопрос после еды · 13": {
@@ -5154,12 +5154,12 @@
     },
     "Рутина · резервный вопрос после еды · 25": {
       "v": "=",
-      "f": "731-ui-v4-activity.css:593-617 .ma-habit-cal-mode-btn.is-active padding:4px 7px border-radius:999px font:700 9px/1 background:var(--v4-act) color:var(--v4-btn-on-act)",
+      "f": "731-ui-v4-activity.css:593-617 .ma-habit-cal-mode-btn.is-active padding:4px 7px border-radius:999px font:700 9px/1 background:var(--v4-act) color:var(--v4-btn-on-act) Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgba(59,130,246/0.15).",
       "h": "4a5035b08efd"
     },
     "Рутина · резервный вопрос после еды · 26": {
       "v": "=",
-      "f": "731-ui-v4-activity.css:593-605 .ma-habit-cal-mode-btn padding:4px 7px border-radius:999px background:var(--v4-hero) color:var(--v4-act-text)",
+      "f": "731-ui-v4-activity.css:593-605 .ma-habit-cal-mode-btn padding:4px 7px border-radius:999px background:var(--v4-hero) color:var(--v4-act-text) Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgba(59,130,246/0.15).",
       "h": "6c27edcde411"
     },
     "Рутина · резервный вопрос после еды · 27": {
@@ -5169,17 +5169,17 @@
     },
     "Рутина · резервный вопрос после еды · 28": {
       "v": "=",
-      "f": "731-ui-v4-activity.css:658-668 .ma-habit-cal-cell width:9px height:9px border-radius:999px background:var(--v4-line)",
+      "f": "731-ui-v4-activity.css:658-668 .ma-habit-cal-cell width:9px height:9px border-radius:999px background:var(--v4-line) Замер chromium 375 px: песочный rgba(0, 0, 0, 0), тёмный rgba(0, 0, 0, 0).",
       "h": "201d129dadba"
     },
     "Рутина · резервный вопрос после еды · 29": {
       "v": "=",
-      "f": "731-ui-v4-activity.css:671-672 .ma-habit-cal-cell.is-done background:var(--v4-ok-text)",
+      "f": "731-ui-v4-activity.css:671-672 .ma-habit-cal-cell.is-done background:var(--v4-ok-text) Замер chromium 375 px: песочный rgba(0, 0, 0, 0), тёмный rgba(0, 0, 0, 0).",
       "h": "8884e97f18d2"
     },
     "Рутина · резервный вопрос после еды · 30": {
       "v": "=",
-      "f": "731-ui-v4-activity.css:679-681 .ma-habit-cal-cell.is-missed background:var(--v4-bad-text)",
+      "f": "731-ui-v4-activity.css:679-681 .ma-habit-cal-cell.is-missed background:var(--v4-bad-text) Замер chromium 375 px: песочный rgba(0, 0, 0, 0), тёмный rgba(0, 0, 0, 0).",
       "h": "ede1f3b4bbd6"
     },
     "Рутина · резервный вопрос после еды · 31": {
@@ -5300,7 +5300,7 @@
     },
     "Рутина · причина пропуска · 10": {
       "v": "=",
-      "f": "500-pwa-and-offline.css:629-631 .mc-backdrop — blur(var(--v4-modal-backdrop-blur,2.5px)), background var(--v4-modal-backdrop-dim); продуктовый scrim-инвариант CLAUDE.md, не rgba(var(--shadow),.34) кадра",
+      "f": "500-pwa-and-offline.css:629-631 .mc-backdrop — blur(var(--v4-modal-backdrop-blur,2.5px)), background var(--v4-modal-backdrop-dim); продуктовый scrim-инвариант CLAUDE.md, не rgba(var(--shadow),.34) кадра Замер chromium 375 px: песочный rgba(42,26,12/0.5), тёмный rgba(0,0,0/0.62).",
       "h": "95d7051df773"
     },
     "Рутина · причина пропуска · 11": {

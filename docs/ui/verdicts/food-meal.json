@@ -585,7 +585,7 @@
     },
     "Добавление · время и тип · 19": {
       "v": "=",
-      "f": ".meal-time-wave — margin-top 10px, background var(--v4-hero) (--c2), padding 16; apps/web/styles/modules/610-aps-meal-flow.css:295",
+      "f": ".meal-time-wave — margin-top 10px, background var(--v4-hero) (--c2), padding 16; apps/web/styles/modules/610-aps-meal-flow.css:295 Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "b6d38ea7adf8"
     },
     "Добавление · время и тип · 20": {
@@ -1195,12 +1195,12 @@
     },
     "Добавление · порция · 12": {
       "v": "=",
-      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px, min-height 44; 610-aps-meal-flow.css:3729",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px, min-height 44; 610-aps-meal-flow.css:3729 Замер chromium 375 px: песочный rgb(255,250,241), тёмный rgb(20,18,16).",
       "h": "090500da6d68"
     },
     "Добавление · порция · 13": {
       "v": "=",
-      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act) (--on-acs), padding 0 10px; 610-aps-meal-flow.css:3585",
+      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act) (--on-acs), padding 0 10px; 610-aps-meal-flow.css:3585 Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); Замер chromium 375 px: песочный rgb(43,22,8), тёмный rgb(26,15,4).",
       "h": "e4bd08d98edf"
     },
     "Добавление · порция · 14": {
@@ -1339,7 +1339,7 @@
     },
     "Порция · ввод в калориях · 12": {
       "v": "=",
-      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729 Замер chromium 375 px: песочный rgb(255,250,241), тёмный rgb(20,18,16).",
       "h": "090500da6d68"
     },
     "Порция · ввод в калориях · 13": {
@@ -1359,7 +1359,7 @@
     },
     "Порция · ввод в калориях · 16": {
       "v": "=",
-      "f": "«Граммы» активная — .aps-v4-grams-unit.is-active min-height 44 bg --v4-bg color --v4-sand-act-deep; неактивная «Ккал» соседом color var(--v4-ink-2) (610-aps-meal-flow.css:3601-3619).",
+      "f": "«Граммы» активная — .aps-v4-grams-unit.is-active min-height 44 bg --v4-bg color --v4-sand-act-deep; неактивная «Ккал» соседом color var(--v4-ink-2) (610-aps-meal-flow.css:3601-3619). Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "0ee58904d2c9"
     },
     "Порция · ввод в калориях · 17": {
@@ -1483,12 +1483,12 @@
     },
     "Порция · продукт уже в приёме · 12": {
       "v": "=",
-      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729 Замер chromium 375 px: песочный rgb(255,250,241), тёмный rgb(20,18,16).",
       "h": "090500da6d68"
     },
     "Порция · продукт уже в приёме · 13": {
       "v": "=",
-      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act); 610-aps-meal-flow.css:3585",
+      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act); 610-aps-meal-flow.css:3585 Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); Замер chromium 375 px: песочный rgb(43,22,8), тёмный rgb(26,15,4).",
       "h": "e4bd08d98edf"
     },
     "Порция · продукт уже в приёме · 14": {
@@ -1637,12 +1637,12 @@
     },
     "Порция · перебор нормы · 12": {
       "v": "=",
-      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729",
+      "f": ".aps-v4-grams-chip — background var(--v4-bg) (--bg), padding 0 10px; 610-aps-meal-flow.css:3729 Замер chromium 375 px: песочный rgb(255,250,241), тёмный rgb(20,18,16).",
       "h": "090500da6d68"
     },
     "Порция · перебор нормы · 13": {
       "v": "=",
-      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act); 610-aps-meal-flow.css:3585",
+      "f": ".aps-v4-grams-chip.is-active — background var(--v4-sand-act) (--acs), color var(--v4-btn-on-act); 610-aps-meal-flow.css:3585 Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); Замер chromium 375 px: песочный rgb(43,22,8), тёмный rgb(26,15,4).",
       "h": "e4bd08d98edf"
     },
     "Порция · перебор нормы · 14": {
@@ -2266,7 +2266,7 @@
     },
     "Действие · копировать · 14": {
       "v": "=",
-      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4581, heys_day_copy_meal_modal_v1.js:409",
+      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4581, heys_day_copy_meal_modal_v1.js:409 Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "6dd9a6fd1579"
     },
     "Действие · копировать · 15": {
@@ -2406,7 +2406,7 @@
     },
     "Действие · копировать без целей · 14": {
       "v": "=",
-      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4744",
+      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4744 Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "6dd9a6fd1579"
     },
     "Действие · копировать без целей · 15": {
@@ -2721,7 +2721,7 @@
     },
     "Добавление · правка набора · 14": {
       "v": "=",
-      "f": ".mpr-preview-item-toggle — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:2007, heys_add_product_step_v1.js:3088",
+      "f": ".mpr-preview-item-toggle — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:2007, heys_add_product_step_v1.js:3088 Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "270c11bea85e"
     },
     "Добавление · правка набора · 15": {
@@ -5237,7 +5237,7 @@
     },
     "Действие · копировать · чего не знаем · 14": {
       "v": "=",
-      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4744",
+      "f": ".meal-transfer-v4__gram-step — 44×44, border-radius 999, background var(--v4-hero) (--c2); 610-aps-meal-flow.css:4744 Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
       "h": "6dd9a6fd1579"
     },
     "Действие · копировать · чего не знаем · 15": {
@@ -5377,7 +5377,7 @@
     },
     "главная кнопка шага приёма · заливка во всех наборах": {
       "v": "=",
-      "f": ".meal-time-cta — background var(--v4-act) color var(--v4-btn-on-act) 610:308-323; blue-override [data-palette=blue] .mc-modal--meal-create .meal-time-cta снят из 600; --v4-act #c67139 песок / #1d5e96 синий / #3f8fd0 сине-тёмный 002:461,598; --v4-btn-on-act #2b1608 песок / #ffffff синие 002:281,570,719; meal-time-v4-structure.test.js:131-139.",
+      "f": ".meal-time-cta — background var(--v4-act) color var(--v4-btn-on-act) 610:308-323; blue-override [data-palette=blue] .mc-modal--meal-create .meal-time-cta снят из 600; --v4-act #c67139 песок / #1d5e96 синий / #3f8fd0 сине-тёмный 002:461,598; --v4-btn-on-act #2b1608 песок / #ffffff синие 002:281,570,719; meal-time-v4-structure.test.js:131-139. Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); Замер chromium 375 px: песочный rgb(43,22,8), тёмный rgb(26,15,4).",
       "h": "c8398fb90b6e"
     },
     "вид · крестик закрытия листа": {

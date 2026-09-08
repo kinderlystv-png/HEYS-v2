@@ -1108,7 +1108,7 @@
     },
     "Регистрация · рост и вес · 12": {
       "v": "=",
-      "f": "рост · предыдущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
+      "f": "рост · предыдущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347 Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "93898ff3168e"
     },
     "Регистрация · рост и вес · 13": {
@@ -1118,7 +1118,7 @@
     },
     "Регистрация · рост и вес · 14": {
       "v": "=",
-      "f": "рост · следующее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
+      "f": "рост · следующее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347 Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "01a0f33ff9f8"
     },
     "Регистрация · рост и вес · 15": {
@@ -1886,7 +1886,7 @@
     },
     "Регистрация · ниже нормы имт · 11": {
       "v": "=",
-      "f": "рост · предыдущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
+      "f": "рост · предыдущее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347 Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "93898ff3168e"
     },
     "Регистрация · ниже нормы имт · 12": {
@@ -1896,7 +1896,7 @@
     },
     "Регистрация · ниже нормы имт · 13": {
       "v": "=",
-      "f": "рост · следующее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347",
+      "f": "рост · следующее: .mc-wheel-value--current 700 22px/1.35 var(--v4-act-text); .mc-wheel-value--prev/next 600 13px/1.75 color-mix ink 22%; .mc-wheel-values::before капсула --v4-hero 32px — 500-pwa-and-offline.css:5275-5347 Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
       "h": "01a0f33ff9f8"
     },
     "Регистрация · ниже нормы имт · 14": {

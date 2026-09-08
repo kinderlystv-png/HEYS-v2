@@ -1097,7 +1097,7 @@
     },
     "Оговорка · 05": {
       "v": "=",
-      "f": "Подложка — .advice-v4-disclaimer-overlay (400-water-and-hydration.css:2971). Замер chromium 375 px: rgba(32,30,29,.4) на песочном и тёмном — тон не зависит от набора.",
+      "f": "Подложка — .advice-v4-disclaimer-overlay (400-water-and-hydration.css:2971). Замер chromium 375 px: песочный rgba(32,30,29/0.4), тёмный rgba(32,30,29/0.4).",
       "h": "4c5169473f36"
     },
     "Оговорка · 06": {
@@ -1107,7 +1107,7 @@
     },
     "Оговорка · 07": {
       "v": "≠",
-      "f": "400-water-and-hydration.css:3001 .advice-v4-disclaimer-card__handle — background var(--v4-track); 002-ui-v4-palette-roles.css:192 --v4-track rgba(0,0,0,.12); кадр «Оговорка · 07» data-v rgba(0,0,0,.14); замер chromium 375 px sand+blue: rgba(0, 0, 0, 0.12)",
+      "f": "400-water-and-hydration.css:3001 .advice-v4-disclaimer-card__handle — background var(--v4-track); 002-ui-v4-palette-roles.css:192 --v4-track rgba(0,0,0,.12); кадр «Оговорка · 07» data-v rgba(0,0,0,.14); замер chromium 375 px sand+blue: rgba(0, 0, 0, 0.12) Замер chromium 375 px: песочный rgba(0,0,0/0.12), тёмный rgba(242,237,230/0.12).",
       "h": "7655b277846a",
       "reasonCode": "canvas-conflict",
       "decisionRef": "apps/web/styles/modules/002-ui-v4-palette-roles.css:192"

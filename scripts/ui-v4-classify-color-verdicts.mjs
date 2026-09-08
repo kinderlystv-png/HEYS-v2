@@ -271,10 +271,18 @@ function runCli() {
   const asJson = argv.includes('--json');
   const eyeCheck = argv.includes('--eye-check');
   const weakSandOnly = argv.includes('--weak-sand');
+  const highRiskOnly = argv.includes('--high-risk');
   const exclude = parseExclude(argv);
 
   const data = readAllZones();
   const report = classifyColorVerdicts(data, { excludeZones: exclude });
+
+  if (highRiskOnly) {
+    const rows = report.openA.filter((r) => r.risk === 1);
+    const payload = { highRiskOpen: rows.length, rows };
+    process.stdout.write(`${JSON.stringify(asJson ? payload : { highRiskOpen: rows.length, rows: rows.length }, null, 2)}\n`);
+    return;
+  }
 
   if (weakSandOnly) {
     const c = report.weakSand.filter((r) => r.bucket === 'c').length;
