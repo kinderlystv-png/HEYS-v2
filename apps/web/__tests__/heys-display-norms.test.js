@@ -226,6 +226,78 @@ describe('HEYS.dayCalculations.computeDisplayNorms (heys/798770 PR C)', () => {
     expect(normAbs.prot).toBe(120);
   });
 
+  it('profile.proteinCoeffGPerKg задан — берётся он, а не дефолт режима', () => {
+    const { normAbs, proteinMeta } = global.HEYS.dayCalculations.computeDisplayNorms({
+      displayOptimum: 1900,
+      normPerc,
+      profile: { weight: 91, weightGoal: 80, gender: 'Мужской', proteinCoeffGPerKg: 1.3 },
+      day: { weightMorning: 91 },
+      tdeeResult: { trainingsKcal: 0 },
+    });
+    // Режим остаётся дефицитом, но 1.8 г/кг больше не навязывается: 1.3 × 91 = 118.
+    expect(proteinMeta.mode).toBe('deficit');
+    expect(proteinMeta.coeffGPerKg).toBe(1.3);
+    expect(proteinMeta.coeffSource).toBe('profile');
+    expect(normAbs.prot).toBe(118);
+  });
+
+  it('коэффициент из норм клиента (кабинет куратора) перекрывает профиль', () => {
+    const { normAbs, proteinMeta } = global.HEYS.dayCalculations.computeDisplayNorms({
+      displayOptimum: 1900,
+      normPerc: { ...normPerc, proteinCoeffGPerKg: 1.3 },
+      profile: { weight: 91, weightGoal: 80, gender: 'Мужской', proteinCoeffGPerKg: 2.0 },
+      day: { weightMorning: 91 },
+      tdeeResult: { trainingsKcal: 0 },
+    });
+    expect(proteinMeta.coeffGPerKg).toBe(1.3);
+    expect(proteinMeta.coeffSource).toBe('profile');
+    expect(normAbs.prot).toBe(118);
+  });
+
+  it('profile.proteinCoeffGPerKg не задан — дефолт режима и coeffSource default', () => {
+    const { normAbs, proteinMeta } = global.HEYS.dayCalculations.computeDisplayNorms({
+      displayOptimum: 1900,
+      normPerc,
+      profile: { weight: 91, weightGoal: 80, gender: 'Мужской' },
+      day: { weightMorning: 91 },
+      tdeeResult: { trainingsKcal: 0 },
+    });
+    expect(proteinMeta.coeffGPerKg).toBe(1.8);
+    expect(proteinMeta.coeffSource).toBe('default');
+    expect(normAbs.prot).toBe(164);
+  });
+
+  it('заданный коэффициент зажимается полом 1.2 и потолком 2.4', () => {
+    const low = global.HEYS.dayCalculations.computeDisplayNorms({
+      displayOptimum: 1900,
+      normPerc,
+      profile: { weight: 91, weightGoal: 80, gender: 'Мужской', proteinCoeffGPerKg: 0.5 },
+      day: { weightMorning: 91 },
+      tdeeResult: { trainingsKcal: 0 },
+    });
+    const high = global.HEYS.dayCalculations.computeDisplayNorms({
+      displayOptimum: 3600,
+      normPerc,
+      profile: { weight: 91, weightGoal: 80, gender: 'Мужской', proteinCoeffGPerKg: 5 },
+      day: { weightMorning: 91 },
+      tdeeResult: { trainingsKcal: 0 },
+    });
+    expect(low.proteinMeta.coeffGPerKg).toBe(1.2);
+    expect(high.proteinMeta.coeffGPerKg).toBe(2.4);
+  });
+
+  it('мусор в proteinCoeffGPerKg не ломает норму — падаем на дефолт', () => {
+    const { proteinMeta } = global.HEYS.dayCalculations.computeDisplayNorms({
+      displayOptimum: 1900,
+      normPerc,
+      profile: { weight: 91, weightGoal: 80, gender: 'Мужской', proteinCoeffGPerKg: 'полтора' },
+      day: { weightMorning: 91 },
+      tdeeResult: { trainingsKcal: 0 },
+    });
+    expect(proteinMeta.coeffGPerKg).toBe(1.8);
+    expect(proteinMeta.coeffSource).toBe('default');
+  });
+
   it('пустой heys_norms — дефолтные доли У/Ж, не весь остаток в жир', () => {
     const { normAbs } = global.HEYS.dayCalculations.computeDisplayNorms({
       displayOptimum: 1800,
