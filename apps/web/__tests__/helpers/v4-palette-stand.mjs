@@ -396,4 +396,105 @@ export function formatFindingsTable(report) {
   return report.rows.filter((r) => r.status === 'failed' || r.status === 'error');
 }
 
+/**
+ * Порядок наборов, объявленный полосам как контракт стенда.
+ *
+ * Значимая пара для цвета — светлый против ТЁМНОГО, а не песочный против
+ * синего: у ролей чернил светлые наборы совпадают по построению, и сравнение
+ * двух светлых не различает ничего.
+ */
+export const SETS = Object.freeze(V4_PALETTE_SETS.map((set) => set.id));
+
+const SET_BY_ID = new Map(V4_PALETTE_SETS.map((set) => [set.id, set]));
+
+/** Свойства, по которым анализатор судит о читаемости, залипании и контуре. */
+const WATCH_PROPS = Object.freeze(['fontSize', 'fontWeight', 'boxShadow', 'borderColor']);
+
+const BORDER_SIDES = Object.freeze([
+  'border-left-color', 'border-bottom-color', 'border-top-color', 'border-right-color',
+]);
+
+/**
+ * Цвет контура, когда рамка задана одной стороной.
+ *
+ * jsdom отдаёт шорткат `borderColor` пустым, если в правиле стоит только
+ * `border-left`, — а именно так нарисована цитата в мессенджере
+ * (`border-left: 2px solid var(--v4-act)`). Пустая строка здесь читалась бы
+ * как «контура нет», то есть проверка молчала бы на живом контуре.
+ */
+function borderColorOf(doc, el, shorthand) {
+  if (shorthand && String(shorthand).trim()) return shorthand;
+  const cs = doc.defaultView.getComputedStyle(el);
+  for (const side of BORDER_SIDES) {
+    const value = cs.getPropertyValue(side).trim();
+    if (value) return value;
+  }
+  return shorthand ?? '';
+}
+
+/**
+ * Сырой замер зоны на всех четырёх наборах — слой, на котором написаны
+ * фикстуры `stands/<зона>.stand.mjs` и анализатор `-analyze.mjs`.
+ *
+ * Отделён от auditScreenOnSet намеренно: тот и меряет, и судит, а здесь суд
+ * вынесен наружу, чтобы шесть полос не изобрели шесть разных критериев
+ * читаемости. Общий движок один и тот же — mountPaletteSet, injectCss,
+ * effectiveBackground/effectiveColor.
+ *
+ * Селектор, которого нет в разметке, попадает в notFound, а не отдаёт пустой
+ * замер: молчание на ненайденном узле читается как «сошлось», хотя означает
+ * только, что смотреть было не на что.
+ *
+ * @param {{ zone: string, cssFiles: string[], html: string, watch: Record<string,string>, bodyStyle?: string }} stand
+ * @param {{ doc?: Document, width?: number }} [options]
+ */
+export function measureZone(stand, { doc = globalThis.document, width = 375 } = {}) {
+  if (!doc) throw new Error('measureZone: нет document — стенд запускается в jsdom-среде');
+
+  const css = [readModuleCss(...BASE_CSS_FILES), ...stand.cssFiles.map((file) => readWebCss(file))];
+  const keys = Object.entries(stand.watch || {});
+  /** @type {Set<string>} */
+  const notFound = new Set();
+  /** @type {Record<string, Record<string, object>>} */
+  const sets = {};
+  let rendered = false;
+
+  for (const setId of SETS) {
+    const styles = [];
+    try {
+      mountPaletteSet(doc, SET_BY_ID.get(setId));
+      for (const chunk of css) styles.push(injectCss(doc, chunk));
+      doc.body.setAttribute('style', stand.bodyStyle || `margin:0;width:${width}px;background:var(--v4-hero,#efe3cf)`);
+      doc.body.innerHTML = stand.html;
+      rendered = true;
+
+      const measured = {};
+      for (const [name, selector] of keys) {
+        const el = doc.querySelector(selector);
+        if (!el) {
+          notFound.add(name);
+          continue;
+        }
+        const probe = probeComputed(doc, selector, WATCH_PROPS);
+        measured[name] = {
+          ...probe,
+          // Собственный фон узла часто прозрачен, и «мой цвет применился» ещё
+          // не значит, что человек увидит именно его: считается то, что реально
+          // лежит под текстом.
+          color: effectiveColor(doc, el),
+          background: effectiveBackground(doc, el),
+          borderColor: borderColorOf(doc, el, probe.borderColor),
+        };
+      }
+      sets[setId] = measured;
+    } finally {
+      for (const style of styles) style.remove();
+      doc.body.innerHTML = '';
+      unmountPaletteSet(doc);
+    }
+  }
+
+  return { rendered, notFound: [...notFound], sets };
+}
+
 export { BASE_CSS_FILES, WEB_DIR, MODULES_DIR };
