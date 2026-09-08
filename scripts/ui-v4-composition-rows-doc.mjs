@@ -4,7 +4,6 @@
  * дизайнером (пакет 48). Источник ключей и класса — UI_V4_DIVERGENCE_ROWS.json
  * (срез классификатора ui-v4-group-deviations-for-designer.mjs).
  */
-import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,18 +17,11 @@ const JSON_PATH = path.join(ROOT, 'docs/ui/UI_V4_DIVERGENCE_ROWS.json');
 const TARGET_CLASSES = new Set(['composition-ux', 'functional-flow']);
 
 function loadDivergenceRows() {
-  // Рабочая копия могла устареть (параллельные полосы); для списка берём HEAD.
-  try {
-    const raw = execSync('git show HEAD:docs/ui/UI_V4_DIVERGENCE_ROWS.json', {
-      cwd: ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return { rows: JSON.parse(raw), source: 'git HEAD:docs/ui/UI_V4_DIVERGENCE_ROWS.json' };
-  } catch {
-    const rows = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
-    return { rows, source: 'рабочая копия docs/ui/UI_V4_DIVERGENCE_ROWS.json' };
-  }
+  const rows = JSON.parse(fs.readFileSync(JSON_PATH, 'utf8'));
+  return {
+    rows,
+    source: 'docs/ui/UI_V4_DIVERGENCE_ROWS.json (срез после ui-v4-designer-divergence-list.mjs --write)',
+  };
 }
 
 function factByKey(data) {
@@ -351,18 +343,25 @@ function main() {
   });
 
   const countA = {
-    label: 'Фильтр JSON по classId (HEAD)',
+    label: 'Фильтр JSON по classId (свежий срез)',
     composition: enriched.filter((r) => r.classId === 'composition-ux').length,
     flow: enriched.filter((r) => r.classId === 'functional-flow').length,
     sum: enriched.length,
   };
 
-  const countNote =
+  const countNote = [
     countA.sum === 146
       ? 'Сходится с ожиданием **146**.'
-      : countA.sum === 144
-        ? 'В HEAD снимке **144** (composition-ux 122, не 124 из письма 5 сентября — минус 2). Рабочая копия JSON сейчас короче; для списка взят **HEAD**.'
-        : `В снимке **${countA.sum}**, не 146 — сначала сверить с дизайнером, откуда две пропавшие строки.`;
+      : `В свежем срезе **${countA.sum}** (composition-ux ${countA.composition}, functional-flow ${countA.flow}), не 146.`,
+    'Две строки из письма 5 сентября (`food-meal · Наборы · вкладка поиска · 12/13`) сейчас в вердиктах `=` (touch 44px) — в списке «≠» их нет.',
+    countA.sum > 146
+      ? `Плюс ${countA.sum - 146} к 146: после типизации legacy-mismatch часть «≠» с reasonCode owner-decision снова попадает в composition/flow, если факт матчит критерий пакета 48 (приоритет классификатора выше owner-decision).`
+      : countA.sum < 146
+        ? `Минус ${146 - countA.sum} к 146: закрытые «=» и сужение общего хвоста «≠» (901 → ${allRows.length} в divergence JSON).`
+        : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   const mdDraft = renderMarkdown(enriched, {
     jsonSource,
