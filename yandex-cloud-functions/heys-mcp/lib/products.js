@@ -820,6 +820,15 @@ function computeRecipeNutrients(recipe, findProduct) {
   let novaWeighted = 0;
   let novaMass = 0;
   let itemGrams = 0;
+  // Жир и углеводы ингредиентов, у которых заполнено только общее поле.
+  // Разбивка (badFat/goodFat/trans, simple/complex) обязательна при заведении
+  // карточки, но у восстановленных и старых строк её нет: normalizeRow умеет
+  // собрать fat100 из разбивки и не умеет обратно. Без этого такой ингредиент
+  // входил в блюдо с нулевым жиром, и калорийность падала вдвое — «Пицца ПП на
+  // творожном корже» давала 61,8 ккал/100 при 122,8 по сумме вкладов
+  // (heys/e04c0d, найдено 04.09, разобрано 08.09).
+  let fatFallbackMass = 0;
+  let carbsFallbackMass = 0;
 
   for (let index = 0; index < rawItems.length; index += 1) {
     const spec = rawItems[index] || {};
@@ -848,6 +857,12 @@ function computeRecipeNutrients(recipe, findProduct) {
       const value = Number(product[field]);
       if (Number.isFinite(value)) totals[field] += value * factor;
     }
+    const detailedFat = (Number(product.badFat100) || 0)
+      + (Number(product.goodFat100) || 0)
+      + (Number(product.trans100) || 0);
+    if (!detailedFat) fatFallbackMass += (Number(product.fat100) || 0) * factor;
+    const detailedCarbs = (Number(product.simple100) || 0) + (Number(product.complex100) || 0);
+    if (!detailedCarbs) carbsFallbackMass += (Number(product.carbs100) || 0) * factor;
     giMass += (Number(product.gi) || 0) * grams;
     harmMass += (Number(product.harm) || 0) * grams;
     if (Number.isFinite(Number(product.nova_group))) {
@@ -867,8 +882,12 @@ function computeRecipeNutrients(recipe, findProduct) {
   nutrients.harm = itemGrams > 0 ? round1(harmMass / itemGrams) : 0;
   if (novaMass > 0) nutrients.nova_group = Math.round(novaWeighted / novaMass);
 
-  const carbs = (Number(nutrients.simple100) || 0) + (Number(nutrients.complex100) || 0);
-  const fat = (Number(nutrients.badFat100) || 0) + (Number(nutrients.goodFat100) || 0) + (Number(nutrients.trans100) || 0);
+  // К разбивке добавляется то, что пришло общим полем: иначе ингредиент без
+  // разбивки входит в блюдо нулём, а не своим жиром и углеводами.
+  const carbs = (Number(nutrients.simple100) || 0) + (Number(nutrients.complex100) || 0)
+    + round1(carbsFallbackMass * scale);
+  const fat = (Number(nutrients.badFat100) || 0) + (Number(nutrients.goodFat100) || 0)
+    + (Number(nutrients.trans100) || 0) + round1(fatFallbackMass * scale);
   nutrients.carbs100 = round1(carbs);
   nutrients.fat100 = round1(fat);
   nutrients.kcal100 = round1(3 * (Number(nutrients.protein100) || 0) + 4 * carbs + 9 * fat);

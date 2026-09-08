@@ -569,3 +569,34 @@ test('sameAggregateComposition: допуск 0.05 на агрегаты', () => 
   assert.equal(products.sameAggregateComposition(a, b), true);
   assert.equal(products.sameAggregateComposition(a, { ...b, fat100: 18 }), false);
 });
+
+// heys/e04c0d: «Пицца ПП на творожном корже» считалась 61,8 ккал/100 при 122,8
+// по сумме вкладов ингредиентов — ровно вдвое ниже. Причина не в сохранённых
+// значениях: блюдо складывало только разбивку жиров и углеводов, а у части
+// карточек заполнено лишь общее поле, и такой ингредиент входил в блюдо нулём.
+test('ингредиент с одним общим fat100 приносит в блюдо свой жир, а не ноль', () => {
+  const find = () => ({
+    id: 'x', name: 'Творог 5%', protein100: 16, carbs100: 3, fat100: 5,
+  });
+  const { nutrients } = products.computeRecipeNutrients(
+    { yield_grams: 100, items: [{ product_id: 'x', grams: 100 }] },
+    find,
+  );
+  assert.equal(nutrients.fat100, 5, 'жир не потерян');
+  assert.equal(nutrients.carbs100, 3, 'углеводы не потеряны');
+  assert.equal(nutrients.kcal100, 3 * 16 + 4 * 3 + 9 * 5);
+});
+
+test('разбивка жиров и углеводов по-прежнему в приоритете и не удваивается', () => {
+  const find = () => ({
+    id: 'y', name: 'Молоко', protein100: 3,
+    simple100: 4.7, complex100: 0, carbs100: 4.7,
+    badFat100: 2.2, goodFat100: 1.3, trans100: 0, fat100: 3.5,
+  });
+  const { nutrients } = products.computeRecipeNutrients(
+    { yield_grams: 100, items: [{ product_id: 'y', grams: 100 }] },
+    find,
+  );
+  assert.equal(nutrients.fat100, 3.5, 'жир взят из разбивки один раз');
+  assert.equal(nutrients.carbs100, 4.7, 'углеводы взяты из разбивки один раз');
+});
