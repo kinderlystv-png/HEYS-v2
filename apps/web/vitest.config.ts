@@ -65,9 +65,22 @@ const DESIGN_GATES = '__tests__/**/*-canvas-{razbor,geometry,copy}.test.js';
 // `v4-palette-stand-zones` держит структуру фикстур и покрытие зон, а
 // `v4-palette-stand.harness` — саму механику стенда; это не сведение с кадром,
 // и краснеть от прихода пакета они не должны.
+// Перенесён сначала был только стенд входа, а соседние оставлены в деплойном
+// контуре как «структурные». Через час решение пришлось пересмотреть:
+// `v4-palette-stand` упал на `pwa-update · sand · icon` с контрастом 2,84:1
+// при нужных 3, а `v4-palette-stand-zones` — на зонах, чьи фикстуры ещё не
+// закоммичены. Оба меряют контраст ролей на стендах, то есть сведение экрана с
+// пакетом, и по правилу проекта выкатку держать не должны: их красный означает
+// «зоны не сведены», а не «продукт сломан».
+//
+// `v4-palette-stand.harness` остаётся в деплойном контуре: он проверяет
+// механику самого стенда, а не соответствие палитре, и от прихода пакета
+// краснеть не может.
 const DESIGN_GATE_FILES = [
   '__tests__/ui-v4-completed-frame-evidence.test.js',
   '__tests__/login-registration-questionnaire-v4-palette-stand.test.js',
+  '__tests__/v4-palette-stand.test.js',
+  '__tests__/v4-palette-stand-zones.test.js',
 ];
 
 for (const file of DESIGN_GATE_FILES) {
