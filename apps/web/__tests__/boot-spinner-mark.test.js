@@ -343,16 +343,22 @@ describe('cold-start spinner mark', () => {
   // кадров, а выражение требовало обратный порядок, так что не находило даже
   // то, что якобы запрещало. Ниже — проверка, которая читает сам блок
   // @media и падает, если дыхание убрать или подменить.
-  it('breathes the arc instead of spinning under reduced motion', () => {
+  it('breathes the wait arc and freezes the loader disc under reduced motion', () => {
+    // 9 сентября дизайнер развёл два знака (app-splash, «уменьшенное
+    // движение»): дышит только знак ожидания, диск загрузчика замирает
+    // целиком. Прежде оба сидели в одном правиле.
     const reduced = readReducedMotionBlock(css);
-    const rule = readRule(reduced, '.heys-boot-mark__spin');
+    const rule = readRule(reduced, '.heys-wait-mark__spin');
 
-    expect(rule.selector).toContain('.heys-boot-mark .heys-boot-mark__spin.animate-always');
     expect(rule.selector).toContain('.heys-wait-mark .heys-wait-mark__spin.animate-always');
     expect(rule.body).toMatch(
       /animation:\s*heys-boot-breathe\s+1\.6s\s+ease-in-out\s+infinite\s*!important/,
     );
     expect(rule.body).not.toContain('heys-boot-spin');
+
+    const loader = readRule(reduced, '.heys-boot-mark__spin');
+    expect(loader.selector).toContain('.heys-boot-mark .heys-boot-mark__spin.animate-always');
+    expect(loader.body).toMatch(/animation:\s*none\s*!important/);
 
     // Кадры дыхания живые, а не мёртвый код: гоняют только прозрачность.
     const breathe = readKeyframes(css, 'heys-boot-breathe');

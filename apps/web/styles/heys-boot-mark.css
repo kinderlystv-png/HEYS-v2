@@ -508,11 +508,18 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
     background-color: var(--v4-bg, #fffaf1);
 }
 @media (prefers-reduced-motion: reduce) {
-    /* Контракт spinners, строка «без анимации»: вращение выключается, дуга
-       дышит прозрачностью 1,6 с — «замерший круг читается как сломанный
-       элемент». Гасить дугу насовсем нельзя, поэтому здесь замена движения,
-       а не его снятие.
-       Каскад. Этот файл стоит в шапке документа, а глобальное гашение
+    /* Два знака расходятся здесь, и это решение дизайнера от 9 сентября
+       (app-splash, строка «уменьшенное движение»). Прежде оба дышали по
+       контракту spinners; теперь дышит только знак ожидания.
+       Почему так. Spinners описывает ЗНАК ОЖИДАНИЯ — поверхность, которая
+       появляется после порога и означает «идёт работа»: там замерший круг
+       читается как сломанный элемент, поэтому вращение заменяется дыханием,
+       а не снимается. Загрузчик — не знак ожидания: человек ещё не совершал
+       действия, ждать ему нечего, и пульсирующая дуга не сообщает ничего.
+       Reduce-motion — это не «поменьше движения», а «движение только там,
+       где оно несёт смысл», поэтому в загрузчике гаснут ОБЕ анимации.
+       Каскад (относится к знаку ожидания). Этот файл стоит в шапке
+       документа, а глобальное гашение
        (*:not(.animate-always):not(.animate-always *) в heys-components.css и
        в modules/300-modals-and-day.css) приезжает позже с основным стилем и
        весит (0,2,0) при !important. Дыхание переживает его приход двумя
@@ -523,10 +530,16 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
        каскаде. Флаг тут работает дважды, поэтому он и остаётся на знаке.
        На успехе и на отказе дуга уходит целиком: display: none в правилах
        ниже, конкурирующего display здесь нет. */
-    .heys-boot-mark .heys-boot-mark__spin.animate-always,
     .heys-wait-mark .heys-wait-mark__spin.animate-always {
         animation: heys-boot-breathe 1.6s ease-in-out infinite !important;
         will-change: opacity;
+    }
+    /* Загрузчик: диск статичен до перехода в знак ожидания. `animation: none`
+       нужен явно и с !important — флаг animate-always выводит дугу из-под
+       глобального гашения, поэтому без этой строки здесь осталось бы
+       вращение heys-boot-spin, объявленное выше по файлу. */
+    .heys-boot-mark .heys-boot-mark__spin.animate-always {
+        animation: none !important;
     }
     .heys-boot-mark__sign,
     .heys-wait-mark__sign { animation: none; opacity: 1; }

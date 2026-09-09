@@ -34,9 +34,9 @@
       "h": "2fba78ec60d3"
     },
     "уменьшенное движение": {
-      "v": "≠",
-      "f": "дуга вращается с первого кадра; при prefers-reduced-motion — дыхание 1,6 с по контракту spinners «без анимации» (heys-boot-mark.css:482), а не статичный диск до 300 мс как в app-splash",
-      "h": "41ece7827ed5",
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: дуга вращается с первого кадра; при prefers-reduced-motion — дыхание 1,6 с по контракту spinners «без анимации» (heys-boot-mark.css:482), а не статичный диск до 300 мс как в app-splash",
+      "h": "2c482067525c",
       "reasonCode": "owner-decision",
       "decisionRef": "docs/ui/verdicts/spinners.json:76"
     },

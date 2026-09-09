@@ -48,13 +48,14 @@ describe('contract spinners → «без анимации»', () => {
     const duration = `${seconds[1]}.${seconds[2]}s`;
 
     const reduced = readReducedMotionBlock(css);
-    const rule = readRule(reduced, '.heys-boot-mark__spin');
+    const rule = readRule(reduced, '.heys-wait-mark__spin');
 
     // «вращение выключается»
     expect(rule.body).not.toContain('heys-boot-spin');
-    // «дуга дышит прозрачностью 1,6 с» — и знак ожидания, и диск загрузчика
-    expect(rule.selector).toContain('.heys-boot-mark__spin');
+    // «дуга дышит прозрачностью 1,6 с» — это про ЗНАК ОЖИДАНИЯ. Диск
+    // загрузчика с 9 сентября сюда не входит, см. набор ниже.
     expect(rule.selector).toContain('.heys-wait-mark__spin');
+    expect(rule.selector).not.toContain('.heys-boot-mark__spin');
     expect(rule.body).toContain('heys-boot-breathe');
     expect(rule.body).toContain(duration);
 
@@ -65,7 +66,7 @@ describe('contract spinners → «без анимации»', () => {
 
   it('keeps the arc moving rather than frozen — «замерший круг читается как сломанный элемент»', () => {
     const reduced = readReducedMotionBlock(css);
-    const rule = readRule(reduced, '.heys-boot-mark__spin');
+    const rule = readRule(reduced, '.heys-wait-mark__spin');
     expect(rule.body).toContain('infinite');
     expect(rule.body).not.toMatch(/animation:\s*none/);
 
@@ -73,6 +74,51 @@ describe('contract spinners → «без анимации»', () => {
     // *:not(.animate-always):not(.animate-always *) весом (0,2,0) с !important,
     // которое грузится позже этого файла. Отсюда флаг в селекторе (вес 0,3,0
     // и вывод дуги из-под глобального правила) и !important на самой анимации.
+    expect(rule.selector).toContain('.animate-always');
+    expect(rule.body).toContain('!important');
+  });
+});
+
+/**
+ * Загрузчик ≠ знак ожидания.
+ *
+ * До 9 сентября обе дуги дышали по одной строке spinners, и это выглядело
+ * согласованным. Дизайнер развёл их: spinners описывает знак ожидания —
+ * поверхность, которая появляется после порога и означает «идёт работа»;
+ * загрузчик показывают до всякого действия человека, и пульсирующая дуга там
+ * не сообщает ничего. Строка app-splash названа главнее, конфликта нет.
+ *
+ * Проверка читает саму строку канваса: перепишет её дизайнер — тест упадёт
+ * здесь, а не оставит код под отменённым решением.
+ */
+describe('contract app-splash → «уменьшенное движение»', () => {
+  const splashCanvas = fs.readFileSync(
+    path.join(
+      repoRoot,
+      'docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/app-splash.v4.dc.html',
+    ),
+    'utf8',
+  );
+  const row = contractRow(splashCanvas, 'уменьшенное движение');
+
+  it('reads the row and sees both animations named', () => {
+    expect(row).toContain('диск статичен');
+    expect(row).toContain('heys-boot-spin');
+    expect(row).toContain('heys-boot-breathe');
+  });
+
+  it('freezes the loader disc entirely — not rotation, not breathing', () => {
+    const reduced = readReducedMotionBlock(css);
+    const rule = readRule(reduced, '.heys-boot-mark__spin');
+
+    expect(rule.selector).toContain('.heys-boot-mark__spin');
+    expect(rule.selector).not.toContain('.heys-wait-mark__spin');
+    expect(rule.body).toMatch(/animation:\s*none/);
+    expect(rule.body).not.toContain('heys-boot-breathe');
+
+    // !important обязателен: флаг animate-always выводит дугу из-под
+    // глобального гашения, и без него здесь осталось бы вращение,
+    // объявленное выше по файлу.
     expect(rule.selector).toContain('.animate-always');
     expect(rule.body).toContain('!important');
   });
