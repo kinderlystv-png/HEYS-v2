@@ -91,11 +91,11 @@
   .mb span{font:500 11.5px/1.5 Figtree,sans-serif;color:var(--dim);text-wrap:pretty}
   .mb .plus,.mb .plusO{text-wrap:nowrap}
   .mb span.plus{color:var(--on-acs)}
-  .mb span.plusO{color:var(--acs)}
+  .mb span.plusO{color:var(--ac)}
   .mchev{width:15px;height:15px;flex:none;margin-bottom:1px}
   .mempty span{color:var(--dim);font-style:italic}
   .plus{min-height:44px;padding:0 12px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
-  .plusO{min-height:44px;padding:0 12px;border-radius:999px;background:transparent;color:var(--acs);box-shadow:inset 0 0 0 2px var(--acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
+  .plusO{min-height:44px;padding:0 12px;border-radius:999px;background:transparent;color:var(--ac);box-shadow:inset 0 0 0 2px var(--acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
   .dryE{padding:18px 16px;font:500 12px/1.45 Figtree,sans-serif;color:var(--dim)}
   .cta{margin-top:16px;min-height:52px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:700 13px/1 Figtree,sans-serif}
 
@@ -163,8 +163,8 @@
   .lrow span{font:500 11px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
 
   .suP{min-height:44px;padding:0 11px;border-radius:999px;border:1.5px solid rgba(var(--ink),.16);color:var(--tx);font:700 10.5px/1 Figtree,sans-serif;display:inline-flex;align-items:center;gap:5px;flex:none;white-space:nowrap}
-  .suP.on{background:var(--acs);border-color:var(--acs);color:var(--on-acs)}
-  .suP.act{border-color:var(--acs);color:var(--ac)}
+  .suP.on{background:var(--acs);border-color:var(--on-acs);color:var(--on-acs)}
+  .suP.act{border-color:var(--on-acs);color:var(--ac)}
   .blkA{display:flex;align-items:center;gap:9px}
   .suG{display:flex;gap:9px;align-items:flex-start;padding:3px 0}
   .suL{width:126px;flex:none;min-height:44px;padding:0 10px;border-radius:999px;box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.18);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
@@ -190,7 +190,7 @@
 
   .nav{margin-top:auto;padding:11px 18px calc(14px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;background:var(--bg);border-top:1px solid rgba(var(--ink),.07)}
   .navI{display:flex;flex-direction:column;align-items:center;gap:4px;font:600 9px/1 Figtree,sans-serif;color:var(--dim);position:relative}
-  .navI.on{color:var(--acs)}
+  .navI.on{color:var(--ac)}
   .fab{position:absolute;right:14px;bottom:78px;display:flex;flex-direction:column;gap:9px;align-items:center;z-index:3}
   .fabS{width:44px;height:44px;border-radius:999px;background:var(--bg);box-shadow:0 2px 8px rgba(var(--shadow),.14);display:flex;align-items:center;justify-content:center}
   .fabB{width:52px;height:52px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(var(--shadow),.18)}
@@ -205,7 +205,7 @@
   .shA{margin:0 18px;padding:12px 0;display:flex;align-items:center;gap:11px;min-height:44px;border-top:1px solid var(--trk)}
   .shA:first-of-type{border-top:none}
   .shA b{flex:1;font:600 12px/1.3 Figtree,sans-serif;color:var(--tx)}
-  .shA .ico{flex:none;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--acs)}
+  .shA .ico{flex:none;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--ac)}
   .shDel{margin:14px 18px 0;padding-top:12px;border-top:1px solid var(--trk);min-height:44px;display:flex;align-items:center;justify-content:center;gap:7px;font:600 12px/1 Figtree,sans-serif;color:var(--red)}
 
   .cur{margin:12px 18px 0;min-height:44px;padding:11px 13px;border-radius:16px;background:var(--tint);display:flex;align-items:center;gap:10px}
@@ -558,7 +558,7 @@
     <div class="spec"><b>заметность чипа</b><span data-v="чип обязан отличаться от подложки не меньше чем на 3:1 — сам чип, а не текст в нём: включённый заливкой акцента, выключенный обводкой 2 px тем же акцентом"></span><i>обводка — единственная граница выключенного чипа, и она несёт состояние «блок выключен»; на 1,5 px в альфе .16 она давала 1,45:1, и состояние пропадало. Правило и число те же, что у минус-чипа воды</i></div>
     <div class="spec"><b>синие наборы</b><span data-v="покрыты полностью, включая капсулу даты и плашку куратора"></span><i>капсула оставалась песочной в синей палитре, плашка куратора не имела правил для сине-тёмной</i></div>
   <div class="spec" style="border-bottom:none"><b>ожидание данных</b><span data-v="скелетонов нет: до прихода данных блоки показывают прочерки, а не нули"></span><i>нули читаются как факт «ничего не съел»</i></div>
-                                                                                                        <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                                                                            <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Питание · блок · Шапка · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Питание · блок · Шапка · 02</b><span data-v="«Питание» — имя экрана"></span></div>
@@ -712,7 +712,7 @@
     <div class="spec"><b>Питание · советы приёма · 06</b><span data-v="отступы 0 18px 8px, фон var(--c1), радиус 16px, поля 13px 15px"></span></div>
     <div class="spec"><b>Питание · советы приёма · 07</b><span data-v="«Добавь овощей — не хватает клетчатки» — шрифт 600 12px/1.4 Figtree, цвет var(--tx)"></span></div>
     <div class="spec"><b>Питание · советы приёма · 08</b><span data-v="«в приёме 2 г из ~9 нужных к этому времени» — шрифт 500 10.5px/1.45 Figtree, цвет var(--dim), отступ сверху 3px"></span></div>
-    <div class="spec"><b>Питание · советы приёма · 09</b><span data-v="выравнивание center, распределение space-between, отступ сверху 10px, разделитель сверху 1px solid rgba(0,0,0,.07), шрифт 600 11.5px/1 Figtree, цвет var(--acs)"></span></div>
+    <div class="spec"><b>Питание · советы приёма · 09</b><span data-v="выравнивание center, распределение space-between, отступ сверху 10px, разделитель сверху 1px solid rgba(0,0,0,.07), шрифт 600 11.5px/1 Figtree, цвет var(--ac)"></span></div>
     <div class="spec"><b>Питание · советы приёма · 10</b><span data-v="высота 16px"></span></div>
     <div class="spec"><b>Питание · копирование частью · 01</b><span data-v="высота 640px"></span></div>
     <div class="spec"><b>Питание · копирование частью · 02</b><span data-v="шапка"></span></div>
@@ -796,7 +796,7 @@
     <div class="spec"><b>Питание · куда переместить · 04</b><span data-v="прозрачность .5"></span></div>
     <div class="spec"><b>Питание · куда переместить · 05</b><span data-v="ширина 67%"></span></div>
     <div class="spec"><b>Питание · куда переместить · 06</b><span data-v="отступы 0 18px 8px 36px"></span></div>
-    <div class="spec"><b>Питание · куда переместить · 07</b><span data-v="«В новый приём» — цвет var(--acs)"></span></div>
+    <div class="spec"><b>Питание · куда переместить · 07</b><span data-v="«В новый приём» — цвет var(--ac)"></span></div>
     <div class="spec"><b>Питание · куда переместить · 08</b><span data-v="высота 16px"></span></div>
     <div class="spec"><b>Питание · вода без кнопки · 01</b><span data-v="высота 700px"></span></div>
     <div class="spec"><b>Питание · вода без кнопки · 02</b><span data-v="шапка"></span></div>
@@ -982,8 +982,8 @@
     <div class="spec"><b>Питание · копирование продукта · рисунок 05</b><span data-v="поле рисунка 14×14 (viewBox 0 0 24 24)"></span></div>
     <div class="spec"><b>Питание · копирование продукта · рисунок 06</b><span data-v="кривая, точки M6 9l6 6 6-6"></span></div>
     <div class="spec"><b>Питание · отмена удаления · рисунок 01</b><span data-v="поле рисунка 30×30 (viewBox 0 0 30 30)"></span></div>
-    <div class="spec"><b>Питание · отмена удаления · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs), прозрачность .22"></span></div>
-    <div class="spec"><b>Питание · отмена удаления · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs)"></span></div>
+    <div class="spec"><b>Питание · отмена удаления · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--ac), прозрачность .22"></span></div>
+    <div class="spec"><b>Питание · отмена удаления · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--ac)"></span></div>
     <div class="spec"><b>Питание · куда переместить · рисунок 01</b><span data-v="поле рисунка 15×15 (viewBox 0 0 24 24)"></span></div>
     <div class="spec"><b>Питание · куда переместить · рисунок 02</b><span data-v="кривая, точки M6 9l6 6 6-6"></span></div>
     <div class="spec"><b>Питание · куда переместить · рисунок 03</b><span data-v="кривая, точки M12 5v14M5 12h14"></span></div>
@@ -1763,7 +1763,7 @@
             <div style="margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;">
               <b style="display:block;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Сироп даёт треть сахара дня</b>
               <span style="display:block;font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:3px;">20 г сиропа — 14 г простых углеводов</span>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.07);font:600 11.5px/1 Figtree,sans-serif;color:var(--acs);"><span>Заменить → корица, ~2 ккал</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.07);font:600 11.5px/1 Figtree,sans-serif;color:var(--ac);"><span>Заменить → корица, ~2 ккал</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
             </div>
             <div style="margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;">
               <b style="display:block;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Белка достаточно — фиксируй порцию</b>
@@ -1807,7 +1807,7 @@
         </div>
         <div style="position:absolute;left:12px;right:12px;bottom:12px;background:var(--c1);border-radius:22px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22);">
           <span style="flex:none;position:relative;width:30px;height:30px;">
-            <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="49 78.5" transform="rotate(-90 15 15)"/></svg>
+            <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="49 78.5" transform="rotate(-90 15 15)"/></svg>
             <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">3</span></span>
           <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Перекус удалён</span>
           <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Отменить</span>
@@ -1829,7 +1829,7 @@
             <div class="shR"><b>Сегодня, 20 августа</b><span>3 приёма</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M6 9l6 6 6-6"/></svg></div>
             <div class="shR" style="margin:0 18px 8px 36px;"><b>Завтрак · 8:40</b><span>412 ккал</span></div>
             <div class="shR" style="margin:0 18px 8px 36px;"><b>Перекус · 16:40</b><span>309 ккал</span></div>
-            <div class="shR" style="margin:0 18px 8px 36px;"><b style="color:var(--acs)">В новый приём</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" style="color:var(--acs)"><path d="M12 5v14M5 12h14"/></svg></div>
+            <div class="shR" style="margin:0 18px 8px 36px;"><b style="color:var(--ac)">В новый приём</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" style="color:var(--ac)"><path d="M12 5v14M5 12h14"/></svg></div>
             <div class="shR"><b>Вчера, 19 августа</b><span>4 приёма</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
             <div class="shR"><b>Завтра, 21 августа</b><span>пусто · в новый приём</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
             <div style="height:16px"></div>

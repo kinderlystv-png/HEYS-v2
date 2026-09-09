@@ -17,7 +17,7 @@
   body{margin:0;background:var(--page);font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
   a{color:var(--ac);text-decoration:none}
-  a:hover{color:var(--acs)}
+  a:hover{color:var(--ac)}
   .ph{width:375px;height:auto;min-height:0;display:block;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
   .sc{flex:none;min-height:0;overflow:visible;padding:6px 18px 18px}
   .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--ink-2)}
@@ -932,7 +932,7 @@
           <div style="display:flex;flex-direction:column;align-items:center;margin-top:16px;">
             <div style="font:700 10px/1.3 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ac);text-align:center;">Отдых · связка A · тяжесть 8 → 2:00</div>
             <div style="position:relative;width:168px;height:168px;margin-top:12px;">
-              <svg viewBox="0 0 168 168" width="168" height="168" style="display:block;"><circle cx="84" cy="84" r="76" fill="none" stroke="var(--v4-track)" stroke-width="9"></circle><circle cx="84" cy="84" r="76" fill="none" stroke="var(--acs)" stroke-width="9" stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="104" transform="rotate(-90 84 84)"></circle></svg>
+              <svg viewBox="0 0 168 168" width="168" height="168" style="display:block;"><circle cx="84" cy="84" r="76" fill="none" stroke="var(--v4-track)" stroke-width="9"></circle><circle cx="84" cy="84" r="76" fill="none" stroke="var(--ac)" stroke-width="9" stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="104" transform="rotate(-90 84 84)"></circle></svg>
               <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
                 <span class="n" style="font:800 38px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.03em;">1:34</span>
                 <span style="font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);">осталось</span>
@@ -2477,7 +2477,7 @@
     
     <div class="spec" style="border-bottom:none"><b>чего нет в этом заходе</b><span data-v="ЗАКРЫТО 5 сентября: секции НАЙДЕНЫ и разбор сверён. Лежат они в source/curator.dc.html — 16c «Обзор · что не так сейчас и что вместо» (строки 115–148) и 16d «Второй слой · путь, а не таблица статусов» (строки 149–190); прежде я искал их по именам секций в другом файле и потому не нашёл. Разбор 16c: виджет обзора был календарём, а не действием — три названные проблемы (сегодня по нему делать нечего; занимает место карточки каждый день, а меняется раз в неделю; исчезает, когда всё выполнено, то есть пропадает в лучший момент программы), и вместо него в день без тренировки СТРОКА «Следующая тренировка — в четверг · Программа ›», а в день тренировки строки нет вовсе — говорит карточка плана. Из виджета забирается только МЕСТО В НЕДЕЛЕ («первая из трёх на неделе»), а не дата следующей. Разбор 16d: второй слой — ПУТЬ, а не таблица статусов; слово «статус» и колонка дат убраны, вместо них «Сделано 5 из 12 · впереди 6», сетка недель клетками с легендой сделано / пропущено / впереди и карточка ближайшей. Кадр «Программа · цикл» этому не противоречит: дат в нём нет, слова «статус» нет, путь дан парой «Выполнено 4 / 12» и фазами недель, ближайшая названа днём «Пт · День C · сегодня» вместо отдельной карточки «Ближайшая» — это решение дневной ленты, а не расхождение с разбором"></span><i>кадр был построен без этого разбора и оказался ему верен — но проверить это стало возможно только когда секции нашлись. Строка держалась в разделе именно затем, чтобы не выдать непроверенное за проверенное</i></div>
     
-                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Конструктор · тренировка идёт · снято · 01</b><span data-v="шапка: выравнивание flex-start"></span></div>
     <div class="spec"><b>Конструктор · тренировка идёт · снято · 02</b><span data-v="«✕» — выравнивание center, распределение center, флекс none, ширина 36px, высота 36px, радиус 999px, фон var(--c1), шрифт 600 14px/1 Figtree, цвет var(--ink-2)"></span></div>
@@ -4068,7 +4068,7 @@
     <div class="spec"><b>Программа · цикл · рисунок 02</b><span data-v="кривая, точки M9 6l6 6-6 6"></span></div>
     <div class="spec"><b>Отдых · кольцо · рисунок 01</b><span data-v="поле рисунка 168×168 (viewBox 0 0 168 168)"></span></div>
     <div class="spec"><b>Отдых · кольцо · рисунок 02</b><span data-v="точка r 76 в (84,84), заливка none, обводка var(--v4-track)"></span></div>
-    <div class="spec"><b>Отдых · кольцо · рисунок 03</b><span data-v="точка r 76 в (84,84), заливка none, обводка var(--acs)"></span></div>
+    <div class="spec"><b>Отдых · кольцо · рисунок 03</b><span data-v="точка r 76 в (84,84), заливка none, обводка var(--ac)"></span></div>
     <div class="spec"><b>Правка · клиент уже начал · рисунок 01</b><span data-v="поле рисунка 11×11 (viewBox 0 0 24 24)"></span></div>
     <div class="spec"><b>Правка · клиент уже начал · рисунок 02</b><span data-v="прямоугольник 16×10, радиус 2.5"></span></div>
     <div class="spec"><b>Правка · клиент уже начал · рисунок 03</b><span data-v="кривая, точки M8 11V7a4 4 0 0 1 8 0v4"></span></div>

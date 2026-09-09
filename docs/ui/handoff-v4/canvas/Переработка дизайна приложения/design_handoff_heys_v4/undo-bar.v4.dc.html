@@ -122,7 +122,7 @@
     <div class="spec"><b>тоста подтверждения нет</b><span data-v="всплывающего уведомления об успехе или ошибке действия не рисуем: успех подтверждается самим содержимым, ошибка — на месте действия. Снимается роль подтверждения у heys_toast_v1 (зелёное «Действие отменено» с кнопкой), а не компонент целиком"></span><i>решение 21 августа: одно всплывающее место про возврат — этот бар. Роль подтверждения дублировала его кнопку «Отменить», поэтому уходит она</i></div>
     <div class="spec" style="border-bottom:none"><b>всплывающий совет — не мой</b><span data-v="второй потребитель heys_toast_v1 — всплывающий совет и плашка «Всё отлично! Советов нет». Он остаётся и описан в tips.v4.dc.html (кадр «Всплывающий совет»); этот контракт его не снимает и вида ему не задаёт"></span><i>один файл кода в двух ролях: без этой строки «прежний компонент снимается» читается как «удалить heys_toast_v1», а на нём висят советы</i></div>
 
-                                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 01</b><span data-v="высота 300px, фон var(--bg), распределение flex-start"></span></div>
     <div class="spec"><b>Отмена · одно удаление · 02</b><span data-v="«Питание» — поля 16px 18px 0, шрифт 700 13px/1 Figtree, цвет var(--tx)"></span></div>
@@ -163,14 +163,14 @@
     <div class="ctrH">Разбор графики · SVG в кадрах</div>
     <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
     <div class="spec"><b>Отмена · одно удаление · рисунок 01</b><span data-v="поле рисунка 30×30 (viewBox 0 0 30 30)"></span></div>
-    <div class="spec"><b>Отмена · одно удаление · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs), прозрачность .22"></span></div>
-    <div class="spec"><b>Отмена · одно удаление · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs)"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--ac), прозрачность .22"></span></div>
+    <div class="spec"><b>Отмена · одно удаление · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--ac)"></span></div>
     <div class="spec"><b>Отмена · пачка · рисунок 01</b><span data-v="поле рисунка 30×30 (viewBox 0 0 30 30)"></span></div>
-    <div class="spec"><b>Отмена · пачка · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs), прозрачность .22"></span></div>
-    <div class="spec"><b>Отмена · пачка · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs)"></span></div>
+    <div class="spec"><b>Отмена · пачка · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--ac), прозрачность .22"></span></div>
+    <div class="spec"><b>Отмена · пачка · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--ac)"></span></div>
     <div class="spec"><b>Отмена · продукт · рисунок 01</b><span data-v="поле рисунка 30×30 (viewBox 0 0 30 30)"></span></div>
-    <div class="spec"><b>Отмена · продукт · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs), прозрачность .22"></span></div>
-    <div class="spec"><b>Отмена · продукт · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--acs)"></span></div>
+    <div class="spec"><b>Отмена · продукт · рисунок 02</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--ac), прозрачность .22"></span></div>
+    <div class="spec"><b>Отмена · продукт · рисунок 03</b><span data-v="точка r 12.5 в (15,15), заливка none, обводка var(--ac)"></span></div>
     <div class="ctrH">Текст кадров дословно</div>
     <div class="spec"><b>как читать текст</b><span data-v="вся копия каждого кадра в порядке сверху вниз, строки разделены знаком ›. Ровно эти слова, числа, единицы и знаки должны стоять на экране. Расходится копия в коде — верна строка; расходится строка с кадром — верен кадр, и строка перегенерируется"></span></div>
     <div class="spec"><b>Отмена · одно удаление · текст</b><span data-v="Питание › Перекус удалён › Вернуть › Главная › Питание › Актив › Отчёты › Инсайты"></span></div>
@@ -188,7 +188,7 @@
         <div style="margin:8px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
         <div style="position:absolute;left:12px;right:12px;bottom:76px;background:var(--c1);border-radius:22px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22);">
           <span style="flex:none;position:relative;width:30px;height:30px;">
-          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="78.5 78.5" transform="rotate(-90 15 15)"/></svg>
+          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="78.5 78.5" transform="rotate(-90 15 15)"/></svg>
           <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">5</span></span>
           <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Перекус удалён</span>
           <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Вернуть</span>
@@ -204,7 +204,7 @@
         <div style="margin:8px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
         <div style="position:absolute;left:12px;right:12px;bottom:76px;background:var(--c1);border-radius:22px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22);">
           <span style="flex:none;position:relative;width:30px;height:30px;">
-          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8 78.5" transform="rotate(-90 15 15)"/></svg>
+          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="62.8 78.5" transform="rotate(-90 15 15)"/></svg>
           <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">4</span></span>
           <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Удалено 3 продукта</span>
           <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Вернуть</span>
@@ -220,7 +220,7 @@
         <div style="margin:8px 18px 0;height:44px;border-radius:16px;background:var(--c1);"></div>
         <div style="position:absolute;left:12px;right:12px;bottom:76px;background:var(--c1);border-radius:22px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22);">
           <span style="flex:none;position:relative;width:30px;height:30px;">
-          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--acs)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="31.4 78.5" transform="rotate(-90 15 15)"/></svg>
+          <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="31.4 78.5" transform="rotate(-90 15 15)"/></svg>
           <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">2</span></span>
           <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Рис бурый удалён</span>
           <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Вернуть</span>

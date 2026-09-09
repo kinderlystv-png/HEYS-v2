@@ -119,7 +119,7 @@
     <div class="spec"><b>пояснение под заголовком шага</b><span data-v="есть у всех четырёх шагов, одна строка 12 px/500 тоном var(--ink-2) через 9 px под заголовком. Дословно: шаг 1 — «Имя увидит только ваш куратор» · шаг 2 — «Вес будете уточнять каждое утро, здесь только точка отсчёта» · шаг 3 — «Цель можно поменять в любой момент» · шаг 4 — «По этим двум числам считается окно приёмов». Больше пояснений на шаге нет: подписи полей объясняют себя сами"></span><i>текст назван дословно 25 августа — раньше строка требовала пояснение у каждого шага, а копия была только у второго, и дописать её за дизайнера кодер не имеет права. Каждая фраза отвечает на «зачем вы это спрашиваете», а не пересказывает заголовок</i></div>
     <div class="spec"><b>особый период в профиле</b><span data-v="тумблер «Особый период» — пятая строка группы «Нормы», между «Сном» и «Инсулиновой волной»; дорожка 40×24, ползунок 18, включённый — заливка --acs. Строка видна только при поле «Женский»; включение без подтверждения, выключение спрашивает и удаляет отметки"></span><i>он меняет нормы дня, поэтому живёт рядом с ними, а не в «Медицинском»: отдельного согласия у функции больше нет. Вид карточки периода, ряда дней и множителей — cycle.v4.dc.html</i></div>
     <div class="spec" style="border-bottom:none"><b>профиль в настройках</b><span data-v="экран профиля — три группы: «Обо мне» (имя, пол, дата рождения, рост, базовый вес, текущий вес) · «Нормы и цели» со вторым уровнем заголовков (цель, нормы, пульсовые зоны) · «Медицинское» (ограничения, добавки, документы, отзыв согласия). Экран прокручивается: содержимое выше высоты экрана, поэтому на канвасе оно нарисовано двумя кадрами одной прокрутки — «Профиль · верх» и «Профиль · низ»; шапка и полка с «Сохранить» закреплены и стоят в обоих. Раскладку регистрации экран повторяет значением в значение только внутри «Обо мне». Главный для состава групп и адресов вынесенного — settings-system.v4.dc.html, строки «профиль — три группы вместо восьми» и «адреса вынесенного из профиля»; своих чисел для них этот файл не заводит"></span><i>решение владельца 25 августа, вариант А: три группы с названным адресом для каждого вынесенного блока. Прежняя редакция несла вариант Б («остальные аккордеоны остаются как есть») и спорила с решением, а до неё требовала три плоские группы из двенадцати строк, не говоря, куда девать пульсовые зоны, нормы БЖУ и безопасность. Кадров два, потому что 814 px содержимого в экран 706 не укладываются ни при какой обрезке отступов — обрезалась ровно группа «Медицинское», ради которой перерисовка и делалась</i></div>
-                                                                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Регистрация · согласия · 01</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Регистрация · согласия · 02</b><span data-v="«Согласия и условия» — шрифт 700 20px/1.3 Figtree, цвет var(--tx), отступ сверху 6px"></span></div>
@@ -897,7 +897,7 @@
     <div><div class="lab"><b>Итог · ждём куратора</b><span>доступ ещё не открыт</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Регистрация · ожидание куратора">
       <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
-        <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Профиль сохранён</div>
         <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-align:center;text-wrap:pretty;">Куратор назначит дату начала недели и откроет дневник.</div>
         <div style="width:100%;background:var(--c1);border-radius:20px;padding:16px 18px;margin-top:20px;">
@@ -912,7 +912,7 @@
     <div><div class="lab"><b>Итог · неделя с даты</b><span>доступ выдан, но начнётся позже</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Регистрация · неделя начнётся позже">
       <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
-        <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span>
+        <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span>
         <div style="font:700 20px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Неделя начнётся 21 августа</div>
         <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-align:center;text-wrap:pretty;">Профиль готов. До этого дня дневник закрыт — считать нечего.</div>
         <div style="width:100%;background:var(--c1);border-radius:20px;padding:16px 18px;margin-top:20px;">
@@ -1066,7 +1066,7 @@
     <div><div class="lab"><b>Сохранение</b><span>после «Готово» на шаге 4</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Регистрация · сохранение">
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
-        <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+        <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
         <div style="font:700 15px/1.35 Figtree,sans-serif;color:var(--tx);margin-top:18px;">Сохраняем профиль</div>
         <div style="font:500 12px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:7px;">Пара секунд.</div>
       </div>
@@ -1080,7 +1080,7 @@
         <div style="font:700 18px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Профиль не сохранился</div>
         <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-align:center;text-wrap:pretty;">Ответы на месте, они на устройстве. Повторяем автоматически, пока облако не подтвердит запись.</div>
         <div style="width:100%;background:var(--c1);border-radius:20px;padding:14px 16px;margin-top:20px;display:flex;align-items:center;gap:11px;">
-          <span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
+          <span style="width:26px;height:26px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;flex:none;"><svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="3" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
           <span style="font:600 11.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">Попытка 3 · следующая через 8 секунд</span>
         </div>
       </div>
@@ -1090,7 +1090,7 @@
     <div><div class="lab"><b>Возврат</b><span>ушёл на шаге 2, вернулся через неделю</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Регистрация · возврат к незавершённой">
       <div class="sc" style="padding-top:36px;display:flex;flex-direction:column;align-items:center;">
-        <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--acs)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
+        <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
         <div style="font:700 19px/1.3 Figtree,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Продолжим, Александра</div>
         <div style="font:500 12.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:9px;text-align:center;text-wrap:pretty;">Профиль заполнен наполовину. Заполнено 8 августа — вес спросим заново, за неделю он мог измениться.</div>
         <div style="width:100%;background:var(--c1);border-radius:20px;padding:16px 18px;margin-top:20px;">
