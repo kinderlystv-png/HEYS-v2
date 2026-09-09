@@ -182,7 +182,8 @@ describe('meal time step v4 structure', () => {
     expect(cssSource).toContain('.meal-night-hint');
     expect(cssSource).toContain('border-radius: 20px');
     expect(cssSource).toContain('.meal-night-icon');
-    expect(cssSource).toMatch(/\.meal-night-hint \{[\s\S]*?var\(--v4-sand-accent-bg/);
+    // Роль набора, а не песочное семейство — см. 84823ebc4.
+    expect(cssSource).toMatch(/\.meal-night-hint \{[\s\S]*?var\(--v4-accent-bg/);
     expect(cssSource).toMatch(/\.meal-time-step--v4 \.meal-night-hint[\s\S]*?margin-top: 16px/);
   });
 });

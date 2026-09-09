@@ -51,6 +51,11 @@ export const ALLOWED_NA_KINDS = Object.freeze([
 // вместе со знанием. Не «у ≠ появился reasonCode», а «самого ≠ больше нет».
 // Настоящий долг при этом вырос: 3279 строк без вердикта в двадцати зонах.
 // Затянуть заморозку всё равно обязаны — храповик считает текущее состояние.
+// 9 сентября то же самое повторилось с пакетом 50: app-splash 3→2,
+// curator-edits 1→0, service-curator 2→1, login 46→42 и 300→287. Читать как
+// прогресс нельзя ровно по той же причине — дизайнер переписал строки, вердикт
+// снялся в «?», и типизированного долга стало меньше только потому, что самих
+// «≠» больше нет. Строки при этом никто не пересматривал: они ждут сведения.
 export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'app-splash': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -63,7 +68,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, package 43 agent-9: «Стык · загрузчик · рисунок 02» ink-30 tail → «=»;
     // mismatch 2 → 1.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [3, '2bec6f84d66fc9a3'],
+    typedMismatch: [2, 'eb7f2ce63e9f672c'],
     notApplicable: [42, 'bd8795aa1e28be3e'],
   }),
   // 3 сентября (вечер): числа те же, отпечаток другой. Пакет перевёл четыре
@@ -96,7 +101,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   }),
   'curator-edits': Object.freeze({
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [1, 'b677dfbd0d3317c7'],
+    typedMismatch: [0, 'e3b0c44298fc1c14'],
     notApplicable: [29, 'f7ac9fda9e37b790'],
   }),
   cycle: Object.freeze({
@@ -213,8 +218,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, package 44: «Оформление внутри приложения · 74» touch → «=» (1 → 0);
     // typedMismatch 52 → 46 после rehash пакета 44 и закрытия canvas-conflict строк.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [46, '2c4feeca8ab81a9d'],
-    notApplicable: [300, '09e96c95595984f5'],
+    typedMismatch: [42, '0075a8d2924013f5'],
+    notApplicable: [287, 'b023677e77426548'],
   }),
   // Зона заведена 05.09 вместе с первым разбором messenger.v4.dc.html: 4 typed «≠»
   // — это canvas-conflict по строкам, где продукт ещё не сведён с кадром.
@@ -341,7 +346,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, task 152: одна legacy «≠» сведена в «=» (2 → 1); одна типизирована
     // reasonCode — typedMismatch 0 → 1.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [2, 'b360becf15443345'],
+    typedMismatch: [1, '9ec248fc79a278d5'],
     notApplicable: [10, '1a79551c98be8a55'],
   }),
   'settings-system': Object.freeze({

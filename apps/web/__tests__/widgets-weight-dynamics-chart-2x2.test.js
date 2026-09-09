@@ -115,12 +115,24 @@ function ruleOf(selector) {
 
 describe('«Динамика веса» · вид «График» 2×2', () => {
   beforeEach(() => {
+    // Часы стоят на дне последнего взвешивания фабрики.
+    //
+    // Фабрика прибита к календарю (dayKey считает от 2026-09-02), а продукт
+    // читает дневник от СЕГОДНЯ назад. Пока даты близко, окна совпадают; с
+    // каждыми сутками пересечение тает на день, и тест падает сам по себе,
+    // ничего не сломав в коде. 9 сентября так и вышло: точек стало 29 из 30,
+    // прогон покраснел на правке соседней зоны, и час ушёл на поиск виновника.
+    // Проверка обязана сторожить правило «окно 30 дней → 30 точек в поле
+    // 2…119», а не сегодняшнее число в календаре.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-02T09:00:00Z'));
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     delete window.HEYS;
     globalThis.React = originalReact;

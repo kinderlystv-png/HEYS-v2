@@ -108,9 +108,18 @@ describe('polosa4 task41 · legacy surfaces → v4 roles', () => {
     document.documentElement.removeAttribute('data-palette');
   });
 
-  it('gamification · hero--cream на песочном и синем (sand-lock через --v4-hero)', () => {
+  it('gamification · hero--cream следует палитре на песочном и синем', () => {
+    // Прежде проверка ждала песочный на ОБОИХ наборах и называла это
+    // «sand-lock через --v4-hero». Допущение было ошибочным, и файл спорит сам
+    // с собой: ниже он требует, чтобы этот же селектор стоял на var(--v4-hero)
+    // (проверка «CSS source»), а роль --v4-hero обязана РАЗЛИЧАТЬСЯ по наборам
+    // — этого требует соседняя проверка meal-row num. Пока роль не различала
+    // наборы, оба ожидания были зелёными одновременно; как только палитра
+    // заработала, ложное упало. Sand-lock задаётся семейством --v4-sand-*
+    // (см. ach-list), а не ролью набора.
     styles.push(injectCss(`${PALETTE_CSS}\n${BASE_CSS}`));
 
+    const seen = {};
     for (const id of ['sand', 'blue']) {
       mountPalette(id);
       const sheet = document.createElement('div');
@@ -119,9 +128,11 @@ describe('polosa4 task41 · legacy surfaces → v4 roles', () => {
       hero.className = 'game-v4-sheet__hero game-v4-sheet__hero--cream';
       sheet.appendChild(hero);
       document.body.appendChild(sheet);
-      expect(normColor(getComputedStyle(hero).backgroundColor), id).toBe(EXPECT.sand.hero);
+      seen[id] = normColor(getComputedStyle(hero).backgroundColor);
+      expect(seen[id], id).toBe(EXPECT[id].hero);
       sheet.remove();
     }
+    expect(seen.sand).not.toBe(seen.blue);
   });
 
   it('nutrition-tab · meal-row num следует палитре на sand и blue', () => {

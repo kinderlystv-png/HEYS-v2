@@ -136,9 +136,7 @@
     "переход по строке": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: heys_curator_actions_banner_v1.js:2236-2237 — тап строки подтверждает запись на сервере при нуле видимых действий (:1902-1915); контракт data-v: «не подтверждает». Смоук curator-actions-banner.test.js",
-      "h": "ef889b3ea68b",
-      "reasonCode": "logic-invariant",
-      "decisionRef": "apps/web/heys_curator_actions_banner_v1.js:2237"
+      "h": "ef889b3ea68b"
     },
     "подтверждение": {
       "v": "=",

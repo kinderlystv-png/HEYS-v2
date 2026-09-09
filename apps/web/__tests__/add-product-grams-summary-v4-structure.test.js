@@ -87,7 +87,9 @@ describe('meal summary v4 canvas structure', () => {
     expect(cssSource).toContain('.aps-v4-meal-summary__done');
     // Вторичная кнопка зоны — заливка второй поверхностью: на песочном полотне
     // плашка цвета полотна кнопкой не читается.
-    expect(cssSource).toMatch(/\.aps-v4-meal-summary__done \{[^}]*--v4-sand-surface/);
+    // Роль набора, а не песочное семейство: 84823ebc4 перевёл поверхности
+    // зоны на палитровые роли, и проверка имени отстала от кода.
+    expect(cssSource).toMatch(/\.aps-v4-meal-summary__done \{[^}]*--v4-c1/);
   });
 });
 

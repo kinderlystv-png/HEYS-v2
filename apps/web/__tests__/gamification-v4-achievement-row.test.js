@@ -57,10 +57,19 @@ const INK2 = { sand: '#000000', 'sand-dark': '#f2ede6', blue: '#000000', 'blue-d
 // непрозрачный --v4-ink (#201e1d песочный, #101826 синий). Контракт ink-2 —
 // правило .game-v4-sheet__ach-name + ink-ladder; живой chromium — acceptance.
 const INK2_JSDOM_LIGHT = { sand: '#201e1d', blue: '#101826' };
-const SAND_TX = { sand: '#201e1d', 'sand-dark': '#f2ede6', blue: '#201e1d', 'blue-dark': '#f2ede6' };
-const SAND_AC = { sand: '#8a4a20', 'sand-dark': '#e2a468', blue: '#8a4a20', 'blue-dark': '#e2a468' };
-const SAND_C1 = { sand: '#f7efe2', 'sand-dark': '#23201b', blue: '#f7efe2', 'blue-dark': '#23201b' };
-const SAND_C2 = { sand: '#efe3cf', 'sand-dark': '#2f2820', blue: '#efe3cf', 'blue-dark': '#2f2820' };
+// Значения СВОЕГО набора, а не песочные во всех четырёх.
+//
+// Прежде эти четыре таблицы повторяли песочный хекс в колонке blue: считалось,
+// что строка достижения сидит на семействе --v4-sand-*, которое светлеет и
+// темнеет целиком, но за набором не идёт. Контракт зоны говорит иначе — он
+// называет палитровые роли: награда «+N XP» тоном --ac, «Достижения · 05» фон
+// var(--c2), имя достижения полными чернилами --tx. Пока роли не различали
+// наборы, ложное ожидание было зелёным; как только палитра заработала, тест
+// упал на ПОЧИНКЕ. Имена оставлены прежними, чтобы не трогать места вызова.
+const SAND_TX = { sand: '#201e1d', 'sand-dark': '#f2ede6', blue: '#101826', 'blue-dark': '#eef3f8' };
+const SAND_AC = { sand: '#8a4a20', 'sand-dark': '#e2a468', blue: '#1d5e96', 'blue-dark': '#7fbceb' };
+const SAND_C1 = { sand: '#f7efe2', 'sand-dark': '#23201b', blue: '#eef3f9', 'blue-dark': '#182a3a' };
+const SAND_C2 = { sand: '#efe3cf', 'sand-dark': '#2f2820', blue: '#e2ecf6', 'blue-dark': '#1e3448' };
 const GR_BG = { sand: '#eaefe0', 'sand-dark': '#242c20', blue: '#e4efe7', 'blue-dark': '#17302a' };
 const GR = { sand: '#5c6a45', 'sand-dark': '#9fb981', blue: '#1f6e4d', 'blue-dark': '#7fd1a0' };
 
