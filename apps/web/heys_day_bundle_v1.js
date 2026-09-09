@@ -642,7 +642,8 @@
             onClick: (e) => e.stopPropagation(),
         },
             React.createElement('div', { className: 'advice-v4-disclaimer-card' },
-                // Кадр «Оговорка», элемент 22: лист поднимается снизу и несёт
+                // Кадр «Оговорка», элемент 07 (был 22 до пакета 6 сентября):
+                // лист поднимается снизу и несёт
                 // ручку, как остальные листы советов. Без неё карточка стояла
                 // по центру экрана и читалась как окно, а не как лист.
                 React.createElement('div', { className: 'advice-v4-disclaimer-card__handle' }),
@@ -650,7 +651,7 @@
                 React.createElement('p', { className: 'advice-v4-disclaimer-card__lead' },
                     'Дальше приложение будет замечать закономерности в ваших данных'
                 ),
-                // Элемент 25: оговорка врача живёт в своей карточке на первой
+                // Элемент 10 (был 25): оговорка врача живёт в своей карточке на первой
                 // поверхности — она отдельное предупреждение, а не продолжение
                 // фразы над ней.
                 React.createElement('div', { className: 'advice-v4-disclaimer-card__note' },
@@ -2360,14 +2361,6 @@
                     }, renderAdviceV4Icon(React, 'close'))
                 ),
                 React.createElement('div', { className: 'advice-v4-toast-card__actions' },
-                    React.createElement('button', {
-                        type: 'button',
-                        className: 'advice-v4-toast-card__secondary',
-                        onClick: (e) => {
-                            e.stopPropagation();
-                            dismissToast && dismissToast();
-                        },
-                    }, 'Позже'),
                     React.createElement('button', {
                         type: 'button',
                         className: 'advice-v4-toast-card__primary',
@@ -6161,9 +6154,11 @@
       }
     };
 
-    // `aps-v4-flow` держит полотно потока: песочный фон модалки, радиус 28,
-    // тёплая тень и поля шапки/содержимого живут на `.mc-modal:has(.aps-v4-flow)`.
-    // Без него итог приёма падал на базовый `.mc-modal` — бело-голубой градиент
+    // `aps-v4-flow` держит полотно потока: радиус 28, поля шапки и содержимого
+    // 6/18/18 живут на `.mc-modal:has(.aps-v4-flow)`, и итог приёма — последний
+    // экран потока — был единственным без этого класса. Общий фон листа со 2
+    // сентября держит сама `.mc-modal` (e94c3b549 перевёл оболочку шаговых
+    // модалок на песочный); до него отсюда тянулся ещё и бело-голубой градиент
     // прежней системы под песочными карточками.
     return React.createElement('div', { className: 'aps-v4-flow aps-v4-meal-summary' },
       typeof onPhoto === 'function' && React.createElement('input', {
@@ -7318,6 +7313,53 @@
     const HEYS = global.HEYS = global.HEYS || {};
     const React = global.React;
 
+    // Значок совета · строка контракта nutrition-tab «советы приёма»: иконка
+    // 15×15 обводкой 2,75 по семейству правила, тоном --ac; у предупреждения
+    // --ac2. Эмодзи правила (rule.icon) в интерфейс не выводится — в наборе
+    // эмодзи не используются. Помощник повторяет идиому зоны
+    // (heys_day_nutrition_v1.js:630): 2,75 — единицы viewBox 24, не пиксели.
+    function adviceIcon(props, parts) {
+        const list = Array.isArray(parts) ? parts : [parts];
+        return React.createElement('svg', Object.assign({
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            strokeWidth: 2.75,
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+            'aria-hidden': 'true'
+        }, props), list.map((d, i) => React.createElement('path', { key: i, d })));
+    }
+
+    // Три семейства движка — SYNERGY_RULES / BALANCE_RULES / TIMING_RULES
+    // (heys_meal_optimizer_v1.js). Предупреждение — не семейство, а признак
+    // правила, поэтому оно перебивает семейство и красится --ac2.
+    const ADVICE_FAMILY_GLYPH = {
+        // Синергия — звено цепи: два вещества, работающие в паре.
+        synergy: [
+            'M10 14a4 4 0 0 1 0-5.66l1.5-1.5a4 4 0 0 1 5.66 5.66l-.8.8',
+            'M14 10a4 4 0 0 1 0 5.66l-1.5 1.5a4 4 0 0 1-5.66-5.66l.8-.8'
+        ],
+        // Баланс — коромысло весов на стойке. Коромысло прямое: наклонное
+        // (`M5 9l7-3 7 3`) на 15 px читалось стрелкой вверх, а не весами.
+        balance: ['M12 5v14', 'M7 19h10', 'M5 9h14'],
+        // Время — циферблат со стрелками.
+        timing: ['M12 4a8 8 0 1 0 0 16 8 8 0 1 0 0-16', 'M12 8v4l3 2']
+    };
+    // Предупреждение — треугольник с восклицанием.
+    const ADVICE_WARNING_GLYPH = ['M12 4.5 2.5 19.5h19z', 'M12 10v4', 'M12 17.2v.01'];
+
+    function renderAdviceIcon(rec, className) {
+        const isWarning = !!rec?.isWarning;
+        const glyph = isWarning
+            ? ADVICE_WARNING_GLYPH
+            : (ADVICE_FAMILY_GLYPH[rec?.family] || ADVICE_FAMILY_GLYPH.balance);
+        return React.createElement('span', {
+            className: className + (isWarning ? ' is-warning' : ''),
+            'aria-hidden': 'true'
+        }, adviceIcon({ width: 15, height: 15 }, glyph));
+    }
+
     const MealOptimizerSection = React.memo(function MealOptimizerSection(props) {
         const { meal, totals, dayData, profile, products, pIndex, mealIndex, addProductToMeal } = props || {};
         const MO = HEYS.MealOptimizer;
@@ -7392,7 +7434,29 @@
             });
         }, []);
 
-        if (visibleRecs.length === 0) return null;
+        function renderProductButton(rec, prod, pIdx) {
+        const isSwap = rec.productCta === 'swap';
+        const portionLabel = prod.smartPortion?.label;
+        return React.createElement('button', {
+            key: prod.id || pIdx,
+            className: 'meal-optimizer__product' + (isSwap ? ' meal-optimizer__product--swap' : ''),
+            onClick: (e) => { e.stopPropagation(); handleAddProduct(prod, rec.id); },
+            title: isSwap ? `Заменить на ${prod.name}` : `Добавить ${prod.name}`
+        },
+            isSwap
+                ? React.createElement('span', { className: 'meal-optimizer__product-name' },
+                    'Заменить → ',
+                    prod.name,
+                    portionLabel ? `, ${portionLabel}` : '')
+                : [
+                    React.createElement('span', { key: 'name', className: 'meal-optimizer__product-name' }, prod.name),
+                    portionLabel && React.createElement('span', { key: 'portion', className: 'meal-optimizer__product-portion' }, portionLabel),
+                    React.createElement('span', { key: 'add', className: 'meal-optimizer__product-add' }, '+')
+                ]
+        );
+    }
+
+    if (visibleRecs.length === 0) return null;
 
         const bestRec = visibleRecs[0];
         const restRecs = visibleRecs.slice(1);
@@ -7404,7 +7468,7 @@
                 className: 'meal-optimizer__header',
                 onClick: () => restRecs.length > 0 && setOptExpanded(!optExpanded)
             },
-                React.createElement('span', { className: 'meal-optimizer__header-icon' }, bestRec.icon),
+                renderAdviceIcon(bestRec, 'meal-optimizer__header-icon'),
                 React.createElement('div', { className: 'meal-optimizer__header-text' },
                     React.createElement('div', { className: 'meal-optimizer__header-title' }, bestRec.title),
                     React.createElement('div', { className: 'meal-optimizer__header-reason' }, bestRec.reason)
@@ -7425,18 +7489,7 @@
             ),
 
             bestRec.products && bestRec.products.length > 0 && React.createElement('div', { className: 'meal-optimizer__products' },
-                bestRec.products.map((prod, pIdx) =>
-                    React.createElement('button', {
-                        key: prod.id || pIdx,
-                        className: 'meal-optimizer__product',
-                        onClick: (e) => { e.stopPropagation(); handleAddProduct(prod, bestRec.id); },
-                        title: `Добавить ${prod.name}`
-                    },
-                        React.createElement('span', { className: 'meal-optimizer__product-name' }, prod.name),
-                        prod.smartPortion && React.createElement('span', { className: 'meal-optimizer__product-portion' }, prod.smartPortion.label),
-                        React.createElement('span', { className: 'meal-optimizer__product-add' }, '+')
-                    )
-                )
+                bestRec.products.map((prod, pIdx) => renderProductButton(bestRec, prod, pIdx))
             ),
 
             optExpanded && restRecs.length > 0 && React.createElement('div', { className: 'meal-optimizer__content' },
@@ -7448,7 +7501,7 @@
                             + (rec.isInfo ? ' meal-optimizer__item--info' : '')
                     },
                         React.createElement('div', { className: 'meal-optimizer__item-header' },
-                            React.createElement('span', { className: 'meal-optimizer__item-icon' }, rec.icon),
+                            renderAdviceIcon(rec, 'meal-optimizer__item-icon'),
                             React.createElement('div', { className: 'meal-optimizer__item-content' },
                                 React.createElement('div', { className: 'meal-optimizer__item-title' }, rec.title),
                                 React.createElement('div', { className: 'meal-optimizer__item-reason' }, rec.reason),
@@ -7462,18 +7515,7 @@
                         ),
 
                         rec.products && rec.products.length > 0 && React.createElement('div', { className: 'meal-optimizer__products' },
-                            rec.products.map((prod, pIdx) =>
-                                React.createElement('button', {
-                                    key: prod.id || pIdx,
-                                    className: 'meal-optimizer__product',
-                                    onClick: (e) => { e.stopPropagation(); handleAddProduct(prod, rec.id); },
-                                    title: `Добавить ${prod.name}`
-                                },
-                                    React.createElement('span', { className: 'meal-optimizer__product-name' }, prod.name),
-                                    prod.smartPortion && React.createElement('span', { className: 'meal-optimizer__product-portion' }, prod.smartPortion.label),
-                                    React.createElement('span', { className: 'meal-optimizer__product-add' }, '+')
-                                )
-                            )
+                            rec.products.map((prod, pIdx) => renderProductButton(rec, prod, pIdx))
                         )
                     )
                 )
@@ -7495,7 +7537,7 @@
 //                 docs/reference/systems/MEAL_PLANNER.md
 //
 //   ~3    IIFE entry — scoped dayv2 key, daytrace helpers
-//  ~44    Meal date guard — formatMealDateLabel, MealDateWarning
+//  ~44    Meal date guard — formatMealDateLabel, equal-choice sheet, undo trace
 // ~128    Meal flow events — dispatchMealFlowFinished
 // ~139    MEAL PLATE GUIDE — variants, preload, showMealPlateGuide
 // ~510    resolveMealIndex helper
@@ -7519,6 +7561,15 @@
             HEYS.analytics.trackError(err, context);
         }
     };
+
+    // v4 roles — янтарная лестница по смыслу (UI_V4_BARE_LITERALS_DECISION.md, ведро 2)
+    const WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+    const WARN_1 = 'var(--v4-warn-1, #d99a63)';
+    const WARN_TEXT = 'var(--v4-warn-text, #a1471c)';
+    const ACT = 'var(--v4-act, #c67139)';
+    const ACT_TEXT = 'var(--v4-act-text, #8a4a20)';
+    const ACCENT_BG = 'var(--v4-accent-bg, #f0dcc6)';
+    const mixRole = (role, pct) => `color-mix(in srgb, ${role} ${pct}%, transparent)`;
 
     // v69 FIX: Resolve scoped dayv2 key to prevent cross-client contamination
     function _scopedDayKey(dateStr) {
@@ -7564,73 +7615,179 @@
         return label.charAt(0).toUpperCase() + label.slice(1);
     }
 
-    function MealDateWarning({ dateKey }) {
-        const targetLabel = formatMealDateLabel(dateKey);
-
-        return React.createElement('div', {
-            className: 'meal-date-warning',
-            role: 'alert',
-            'aria-live': 'assertive',
-        },
-            React.createElement('div', { className: 'meal-date-warning__badge' }, 'Внимание'),
-            React.createElement('div', { className: 'meal-date-warning__question' },
-                `Приём запишется на ${targetLabel}, а не на сегодня`
-            ),
-            React.createElement('p', { className: 'meal-date-warning__copy' },
-                'В календаре выбран другой день. Еда уйдёт туда и в сегодняшнюю норму не попадёт.'
-            )
-        );
+    function formatTodayMealRowLabel(todayKey) {
+        return `Сегодня, ${formatMealDateLabel(todayKey)}`;
     }
 
-    async function confirmMealCreationDate(dateKey, { onReturnToday } = {}) {
+    function formatOpenDayContextLabel(dateKey) {
+        const label = formatMealDateLabel(dateKey, true);
+        return `вы смотрите ${label.charAt(0).toLowerCase()}${label.slice(1)}`;
+    }
+
+    function countMealsWithProducts(dayData) {
+        return (dayData?.meals || []).filter((meal) => (meal?.items || []).length > 0).length;
+    }
+
+    function mealCountSubtitle(count) {
+        const n = Number(count) || 0;
+        if (n % 10 === 1 && n % 100 !== 11) return `${n} приём`;
+        if (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) return `${n} приёма`;
+        return `${n} приёмов`;
+    }
+
+    function notifyRecordedInForeignDay(dateKey, onUndo) {
         const todayKey = _getTodayISO();
-        if (!dateKey || dateKey === todayKey) return true;
-        if (!HEYS.ConfirmModal?.show) {
-            HEYS.Toast?.error?.('Не удалось подтвердить дату — приём не создан');
-            return false;
-        }
-
-        const targetShortLabel = formatMealDateLabel(dateKey);
-        const result = await HEYS.ConfirmModal.show({
-            icon: '',
-            title: '',
-            text: React.createElement(MealDateWarning, { dateKey }),
-            actions: [
-                {
-                    key: 'return-today',
-                    label: 'Перейти на сегодня',
-                    value: 'today',
-                    style: 'primary',
-                    variant: 'fill',
-                    row: 0,
-                    isDefault: true,
-                    isCancel: true,
-                    className: 'meal-date-warning__today-action',
-                },
-                {
-                    key: 'confirm-other-date',
-                    label: `Всё-таки записать на ${targetShortLabel}`,
-                    value: 'confirm',
-                    style: 'neutral',
-                    variant: 'text',
-                    row: 1,
-                    className: 'meal-date-warning__confirm-action',
-                },
-            ],
-            defaultActionValue: 'today',
-            cancelActionValue: 'today',
+        if (!dateKey || dateKey === todayKey || typeof onUndo !== 'function') return;
+        if (!HEYS.Undo?.push) return;
+        HEYS.Undo.push({
+            label: `Записано в ${formatMealDateLabel(dateKey)}`,
+            duration: 6000,
+            onUndo,
         });
+    }
 
-        if (result === 'today') {
-            onReturnToday?.(todayKey);
-            return false;
+    // «Рендерер есть» проверяется по точке входа, а не по истинности объекта:
+    // непустой, но безрендерный ReactDOM проходил `!ReactDOM` и падал уже
+    // внутри mount — приём при этом не создавался (fail-closed держался), но
+    // человек не видел ни листа, ни причины, а промис addMeal отклонялся.
+    function canMountMealDateTargetSheet() {
+        if (!React || !ReactDOM) return false;
+        return typeof ReactDOM.createRoot === 'function' || typeof ReactDOM.render === 'function';
+    }
+
+    function mountMealDateTargetSheet(props) {
+        const host = document.createElement('div');
+        host.id = 'heys-meal-date-target-root';
+        document.body.appendChild(host);
+        const root = typeof ReactDOM.createRoot === 'function'
+            ? ReactDOM.createRoot(host)
+            : null;
+
+        const cleanup = () => {
+            if (root) {
+                root.unmount();
+            } else if (ReactDOM.unmountComponentAtNode) {
+                ReactDOM.unmountComponentAtNode(host);
+            }
+            host.remove();
+        };
+
+        function MealDateTargetSheet() {
+            const [selected, setSelected] = React.useState('open');
+
+            React.useEffect(() => {
+                const onKeyDown = (event) => {
+                    if (event.key === 'Escape') props.onCancel();
+                };
+                document.addEventListener('keydown', onKeyDown);
+                return () => document.removeEventListener('keydown', onKeyDown);
+            }, []);
+
+            const targetKey = selected === 'today' ? props.todayKey : props.openDayKey;
+            const ctaLabel = `Записать на ${formatMealDateLabel(targetKey)}`;
+
+            return React.createElement('div', {
+                className: 'nutrition-v4-sheet-backdrop',
+                role: 'presentation',
+                onClick: (event) => {
+                    if (event.target === event.currentTarget) props.onCancel();
+                },
+            },
+                React.createElement('div', {
+                    className: 'nutrition-v4-sheet nutrition-v4-date-target-sheet',
+                    role: 'dialog',
+                    'aria-modal': 'true',
+                    'aria-label': 'На какой день записать?',
+                },
+                    React.createElement('div', { className: 'nutrition-v4-sheet__head' },
+                        React.createElement('b', null, 'На какой день записать?'),
+                        React.createElement('span', null, formatOpenDayContextLabel(props.openDayKey))
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'nutrition-v4-sheet__row' + (selected === 'open' ? ' is-selected' : ''),
+                        onClick: () => setSelected('open'),
+                    },
+                        React.createElement('b', null, formatMealDateLabel(props.openDayKey)),
+                        React.createElement('span', null, 'открытый день')
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'nutrition-v4-sheet__row' + (selected === 'today' ? ' is-selected' : ''),
+                        onClick: () => setSelected('today'),
+                    },
+                        React.createElement('b', null, formatTodayMealRowLabel(props.todayKey)),
+                        React.createElement('span', null, mealCountSubtitle(props.todayMealCount))
+                    ),
+                    React.createElement('button', {
+                        type: 'button',
+                        className: 'nutrition-v4-cta nutrition-v4-sheet__cta',
+                        onClick: () => props.onConfirm(targetKey),
+                    }, ctaLabel)
+                )
+            );
         }
-        return result === 'confirm';
+
+        try {
+            if (root) {
+                root.render(React.createElement(MealDateTargetSheet));
+            } else {
+                ReactDOM.render(React.createElement(MealDateTargetSheet), host);
+            }
+        } catch (err) {
+            // Иначе пустой хост останется в body и перехватит клики по экрану.
+            host.remove();
+            throw err;
+        }
+
+        return cleanup;
+    }
+
+    async function confirmMealCreationDate(dateKey, { onReturnToday, getTodayDay, getOpenDay } = {}) {
+        const todayKey = _getTodayISO();
+        if (!dateKey || dateKey === todayKey) return dateKey;
+        if (!canMountMealDateTargetSheet()) {
+            HEYS.Toast?.error?.('Не удалось подтвердить дату — приём не создан');
+            return null;
+        }
+
+        const todayDay = typeof getTodayDay === 'function' ? getTodayDay() : null;
+        const openDay = typeof getOpenDay === 'function' ? getOpenDay() : null;
+
+        return new Promise((resolve) => {
+            let cleanup = null;
+            const finish = (targetDate) => {
+                cleanup?.();
+                resolve(targetDate);
+            };
+
+            try {
+                cleanup = mountMealDateTargetSheet({
+                    openDayKey: dateKey,
+                    todayKey,
+                    todayMealCount: countMealsWithProducts(todayDay),
+                    openMealCount: countMealsWithProducts(openDay),
+                    onCancel: () => finish(null),
+                    onConfirm: (targetDate) => {
+                        if (targetDate === todayKey) onReturnToday?.(todayKey);
+                        finish(targetDate);
+                    },
+                });
+            } catch (err) {
+                // Лист не поднялся — дату подтвердить нечем. Fail closed:
+                // null вместо даты, приём не создаётся, причина названа вслух.
+                trackError(err, 'confirmMealCreationDate');
+                HEYS.Toast?.error?.('Не удалось подтвердить дату — приём не создан');
+                resolve(null);
+            }
+        });
     }
 
     HEYS.mealDateGuard = {
         confirm: confirmMealCreationDate,
         formatDateLabel: formatMealDateLabel,
+        notifyRecordedInForeignDay,
+        countMealsWithProducts,
     };
 
     // ── Защита от задвоенного приёма ──────────────────────────────────────
@@ -8218,7 +8375,7 @@
             case 'post':
                 return { background: '#3b82f633', color: '#2563eb', border: '#3b82f655' };
             case 'pre':
-                return { background: '#eab30833', color: '#ca8a04', border: '#eab30855' };
+                return { background: mixRole(WARN_SOFT, 20), color: WARN_TEXT, border: mixRole(WARN_SOFT, 33) };
             case 'steps':
                 return { background: '#10b9812b', color: '#047857', border: '#10b9814d' };
             case 'household':
@@ -8786,14 +8943,14 @@
                             background: mealQuality.mealRoleStatus.tone === 'green'
                                 ? '#dcfce7'
                                 : mealQuality.mealRoleStatus.tone === 'amber'
-                                    ? '#fef3c7'
+                                    ? ACCENT_BG
                                     : mealQuality.mealRoleStatus.tone === 'slate'
                                         ? '#e2e8f0'
                                         : '#dbeafe',
                             color: mealQuality.mealRoleStatus.tone === 'green'
                                 ? '#15803d'
                                 : mealQuality.mealRoleStatus.tone === 'amber'
-                                    ? '#b45309'
+                                    ? WARN_TEXT
                                     : mealQuality.mealRoleStatus.tone === 'slate'
                                         ? '#475569'
                                         : '#1d4ed8',
@@ -10060,10 +10217,10 @@
                             style: {
                                 margin: '8px 12px 10px 12px',
                                 padding: '8px 10px',
-                                background: inRiskWindow ? 'rgba(249,115,22,0.12)' : 'rgba(234,179,8,0.1)',
+                                background: inRiskWindow ? mixRole(WARN_1, 12) : mixRole(WARN_SOFT, 10),
                                 borderRadius: '8px',
                                 fontSize: '12px',
-                                color: inRiskWindow ? '#ea580c' : '#ca8a04',
+                                color: inRiskWindow ? WARN_TEXT : WARN_SOFT,
                             },
                         },
                             React.createElement('div', { style: { fontWeight: '600', marginBottom: '2px' } },
@@ -10081,7 +10238,19 @@
                 ),
 
                 React.createElement('div', {
-                    className: 'meal-meta-row',
+                    className: 'meal-meta-row' + (mealQuality ? ' meal-meta-row--quality-tap' : ''),
+                    onClick: mealQuality ? (e) => {
+                        if (e.target.closest('.mobile-mood-btn, .meal-meta-field, .compact-input')) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setMealQualityPopup({
+                            meal,
+                            quality: mealQuality,
+                            mealTypeInfo,
+                            x: rect.left + rect.width / 2,
+                            y: rect.bottom + 8,
+                        });
+                    } : undefined,
+                    title: mealQuality ? 'Качество приёма — нажми для деталей' : undefined,
                     style: {
                         display: 'flex',
                         flexWrap: 'wrap',
@@ -10090,31 +10259,17 @@
                         padding: '8px 0',
                     },
                 },
-                    mealQuality && React.createElement('button', {
+                    mealQuality && React.createElement('span', {
                         className: 'meal-quality-badge',
-                        onClick: (e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setMealQualityPopup({
-                                meal,
-                                quality: mealQuality,
-                                mealTypeInfo,
-                                x: rect.left + rect.width / 2,
-                                y: rect.bottom + 8,
-                            });
-                        },
-                        title: 'Качество приёма — нажми для деталей',
                         style: {
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             padding: '2px 6px',
                             borderRadius: '8px',
-                            border: 'none',
                             background: mealQuality.color + '20',
                             color: mealQuality.color,
-                            cursor: 'pointer',
                             marginRight: '4px',
-                            transition: 'transform 0.15s, box-shadow 0.15s',
                             flexShrink: 0,
                             minWidth: '28px',
                         },
@@ -10127,7 +10282,10 @@
                     isMobile
                         ? React.createElement('div', {
                             className: 'mobile-mood-btn',
-                            onClick: () => openMoodEditor(mealIndex),
+                            onClick: (e) => {
+                                e.stopPropagation();
+                                openMoodEditor(mealIndex);
+                            },
                             title: 'Изменить оценки',
                             style: {
                                 display: 'flex',
@@ -10143,12 +10301,12 @@
                                         alignItems: 'center',
                                         padding: '2px 6px',
                                         borderRadius: '8px',
-                                        background: '#fef3c7',
+                                        background: mixRole(WARN_SOFT, 12),
                                         minWidth: '28px',
                                     },
                                 },
                                     React.createElement('span', { style: { fontSize: '12px' } }, moodEmoji),
-                                    React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: '#b45309' } }, moodVal),
+                                    React.createElement('span', { style: { fontSize: '11px', fontWeight: 600, color: WARN_TEXT } }, moodVal),
                                 ),
                                 wellbeingEmoji && React.createElement('div', {
                                     style: {
@@ -10231,8 +10389,8 @@
                             padding: '4px 8px',
                             borderRadius: '12px',
                             border: 'none',
-                            background: '#fef3c7',
-                            color: '#b45309',
+                            background: ACCENT_BG,
+                            color: WARN_TEXT,
                             fontSize: '12px',
                             fontWeight: 600,
                             cursor: 'pointer',
@@ -10244,7 +10402,7 @@
                         'Советы',
                         React.createElement('span', {
                             style: {
-                                background: '#f59e0b',
+                                background: ACT,
                                 color: '#fff',
                                 borderRadius: '8px',
                                 padding: '0 5px',
@@ -10291,8 +10449,8 @@
                             padding: '4px 8px',
                             borderRadius: '12px',
                             border: 'none',
-                            background: '#fef3c7',
-                            color: '#b45309',
+                            background: ACCENT_BG,
+                            color: WARN_TEXT,
                             fontSize: '12px',
                             fontWeight: 600,
                             cursor: (meal.items || []).length ? 'pointer' : 'not-allowed',
@@ -10408,9 +10566,9 @@
                     style: {
                         marginTop: '12px',
                         padding: '12px',
-                        background: 'linear-gradient(135deg, rgba(245, 158, 0, 0.08) 0%, rgba(251, 191, 36, 0.05) 100%)',
+                        background: `linear-gradient(135deg, ${mixRole(WARN_1, 8)} 0%, ${mixRole(WARN_SOFT, 5)} 100%)`,
                         borderRadius: '12px',
-                        border: '1px solid rgba(245, 158, 0, 0.2)',
+                        border: `1px solid ${mixRole(WARN_1, 20)}`,
                         animation: 'slideDown 0.2s ease-out',
                     },
                 }, React.createElement(MealOptimizerSection, {
@@ -11369,8 +11527,8 @@
         const gi = Number(wave?.gi);
         if (Number.isFinite(gi)) {
             if (gi <= 35) return '#22c55e';
-            if (gi <= 55) return '#eab308';
-            if (gi <= 70) return '#f97316';
+            if (gi <= 55) return WARN_SOFT;
+            if (gi <= 70) return WARN_1;
             return '#ef4444';
         }
         return '#3b82f6';
@@ -11707,8 +11865,8 @@
                             fontSize: '11px',
                             padding: '2px 6px',
                             borderRadius: '10px',
-                            background: mealsChartData.avgQualityScore >= 80 ? '#dcfce7' : mealsChartData.avgQualityScore >= 50 ? '#fef3c7' : '#fee2e2',
-                            color: mealsChartData.avgQualityScore >= 80 ? '#166534' : mealsChartData.avgQualityScore >= 50 ? '#92400e' : '#991b1b',
+                            background: mealsChartData.avgQualityScore >= 80 ? '#dcfce7' : mealsChartData.avgQualityScore >= 50 ? ACCENT_BG : '#fee2e2',
+                            color: mealsChartData.avgQualityScore >= 80 ? '#166534' : mealsChartData.avgQualityScore >= 50 ? WARN_TEXT : '#991b1b',
                             fontWeight: '600',
                         },
                     }, 'средняя оценка ' + mealsChartData.avgQualityScore),
@@ -11815,8 +11973,8 @@
                                 React.createElement('stop', { offset: '100%', stopColor: '#22c55e', stopOpacity: '0.02' }),
                             ),
                             React.createElement('linearGradient', { id: 'snackZoneGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
-                                React.createElement('stop', { offset: '0%', stopColor: '#eab308', stopOpacity: '0.08' }),
-                                React.createElement('stop', { offset: '100%', stopColor: '#eab308', stopOpacity: '0.01' }),
+                                React.createElement('stop', { offset: '0%', stopColor: WARN_SOFT, stopOpacity: '0.08' }),
+                                React.createElement('stop', { offset: '100%', stopColor: WARN_SOFT, stopOpacity: '0.01' }),
                             ),
                             React.createElement('linearGradient', { id: 'badZoneGrad', x1: '0', y1: '0', x2: '0', y2: '1' },
                                 React.createElement('stop', { offset: '0%', stopColor: '#ef4444', stopOpacity: '0.12' }),
@@ -11979,7 +12137,7 @@
                     const isBest = mealsChartData.bestMealIndex === originalIndex && quality && quality.score >= 70;
                     const barFill = quality
                         ? `linear-gradient(90deg, ${quality.color} 0%, ${quality.color}cc 100%)`
-                        : (isOverTarget ? 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(90deg, #34d399 0%, #10b981 100%)');
+                        : (isOverTarget ? `linear-gradient(90deg, ${WARN_SOFT} 0%, ${ACT} 100%)` : 'linear-gradient(90deg, #34d399 0%, #10b981 100%)');
                     const problemBadges = quality?.badges?.filter((b) => !b.ok).slice(0, 3) || [];
                     const openQualityModal = (e) => {
                         if (!quality) return;
@@ -12029,7 +12187,7 @@
                         quality.score >= 80
                             ? { background: 'rgba(34, 197, 94, 0.14)', color: '#16a34a', borderColor: 'rgba(34, 197, 94, 0.28)' }
                             : quality.score >= 50
-                                ? { background: 'rgba(245, 158, 11, 0.14)', color: '#b45309', borderColor: 'rgba(245, 158, 11, 0.28)' }
+                                ? { background: mixRole(WARN_1, 14), color: WARN_TEXT, borderColor: mixRole(WARN_1, 28) }
                                 : { background: 'rgba(239, 68, 68, 0.14)', color: '#dc2626', borderColor: 'rgba(239, 68, 68, 0.28)' }
                     ) : null;
                     return React.createElement('div', {
@@ -12105,7 +12263,7 @@
                                 overflow: 'visible',
                                 position: 'relative',
                                 cursor: quality ? 'pointer' : 'default',
-                                boxShadow: isBest ? '0 0 0 2px #fbbf24, 0 2px 8px rgba(251,191,36,0.3)' : undefined,
+                                boxShadow: isBest ? `0 0 0 2px ${WARN_SOFT}, 0 2px 8px ${mixRole(WARN_SOFT, 30)}` : undefined,
                             },
                         },
                             React.createElement('div', {
@@ -12192,7 +12350,7 @@
                 }),
                 mealsChartData.qualityStreak >= 3 && React.createElement('div', { className: 'meal-quality-streak-banner' },
                     React.createElement('span', { className: 'streak-fire' }, '🔥'),
-                    React.createElement('span', { style: { fontWeight: '600', color: '#92400e' } }, mealsChartData.qualityStreak + ' отличных приёмов подряд!'),
+                    React.createElement('span', { style: { fontWeight: '600', color: ACT_TEXT } }, mealsChartData.qualityStreak + ' отличных приёмов подряд!'),
                     React.createElement('span', { style: { fontSize: '16px' } }, '🏆'),
                 ),
                 showFirstPerfectAchievement && React.createElement('div', { className: 'first-perfect-meal-badge', style: { marginTop: '8px' } },
@@ -12857,10 +13015,11 @@
         }, []);
 
         const runAddMealFlow = React.useCallback(async (transitionOptions = {}) => {
+            const flowDate = transitionOptions.date || date;
             if (isMobile && HEYS.MealStep) {
                 HEYS.MealStep.showAddMeal({
                     initialSlideInDirection: transitionOptions.initialSlideInDirection || null,
-                    dateKey: date,
+                    dateKey: flowDate,
                     meals: day.meals,
                     pIndex,
                     getProductFromItem,
@@ -12879,7 +13038,7 @@
                         // PWA reload must not let an older cloud snapshot erase this meal.
                         HEYS.Day?.setLastLoadedUpdatedAt?.(newUpdatedAt);
                         HEYS.Day?.setBlockCloudUpdates?.(newUpdatedAt + 15000);
-                        HEYS.Day?.markPendingMutation?.(date);
+                        HEYS.Day?.markPendingMutation?.(flowDate);
 
                         const baseDay = protectCheckinFields(dayRef.current || {});
                         const newMeals = sortMealsByTime([...(baseDay.meals || []), newMeal]);
@@ -12895,18 +13054,30 @@
                             if (window.HEYS && window.HEYS.analytics) {
                                 window.HEYS.analytics.trackDataOperation('meal-created');
                             }
+                            notifyRecordedInForeignDay(flowDate, () => {
+                                const snapshot = dayRef.current || newDayData;
+                                const meals = (snapshot.meals || []).filter((meal) => meal.id !== newMealId);
+                                const restored = protectCheckinFields({
+                                    ...snapshot,
+                                    meals,
+                                    updatedAt: Date.now(),
+                                });
+                                dayRef.current = restored;
+                                persistDayData(restored, 'undo_recorded_in_foreign_day');
+                                setDay(() => restored);
+                            });
                             // Fork-модалка с названием приёма — достаточное подтверждение, toast не нужен.
                         } else {
                             HEYS.Toast?.error('Не удалось сохранить приём. Попробуйте ещё раз.');
                         }
-                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
+                        window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: flowDate } }));
 
                         // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                         try {
                             window.HEYS?.eventLog?.write(
                                 'meal-add',
-                                `meal=${newMeal.name || 'unnamed'} для ${date}`,
-                                { dateKey: date, mealName: newMeal.name || '', count: 1 },
+                                `meal=${newMeal.name || 'unnamed'} для ${flowDate}`,
+                                { dateKey: flowDate, mealName: newMeal.name || '', count: 1 },
                                 'addMeal_mobile_flow'
                             );
                         } catch (_) { /* noop */ }
@@ -13414,7 +13585,7 @@
                 const newMeals = [...baseMeals, newMeal];
                 newMealIndex = newMeals.length - 1;
                 const newDayData = protectCheckinFields({ ...baseDay, meals: newMeals, updatedAt: newUpdatedAt });
-                const key = _scopedDayKey(date);
+                const key = _scopedDayKey(flowDate);
                 try {
                     lsSet(key, newDayData);
                 } catch (e) {
@@ -13425,14 +13596,30 @@
                 if (window.HEYS && window.HEYS.analytics) {
                     window.HEYS.analytics.trackDataOperation('meal-created');
                 }
-                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date } }));
+                notifyRecordedInForeignDay(flowDate, () => {
+                    const snapshot = dayRef.current || newDayData;
+                    const meals = (snapshot.meals || []).filter((meal) => meal.id !== newMealId);
+                    const restored = protectCheckinFields({
+                        ...snapshot,
+                        meals,
+                        updatedAt: Date.now(),
+                    });
+                    dayRef.current = restored;
+                    try {
+                        lsSet(key, restored);
+                    } catch (e) {
+                        trackError(e, { source: 'day/_meals.js', action: 'undo_recorded_in_foreign_day' });
+                    }
+                    setDay(() => restored);
+                });
+                window.dispatchEvent(new CustomEvent('heysMealAdded', { detail: { meal: newMeal, date: flowDate } }));
 
                 // 📝 Event log (Ticket N): meal-add — UI emit for activity reports
                 try {
                     window.HEYS?.eventLog?.write(
                         'meal-add',
-                        `meal=${newMeal.name || 'unnamed'} для ${date}`,
-                        { dateKey: date, mealName: newMeal.name || '', count: 1 },
+                        `meal=${newMeal.name || 'unnamed'} для ${flowDate}`,
+                        { dateKey: flowDate, mealName: newMeal.name || '', count: 1 },
                         'addMeal_desktop'
                     );
                 } catch (_) { /* noop */ }
@@ -13449,23 +13636,35 @@
 
             if (mealDateGuardPendingRef.current) return false;
             mealDateGuardPendingRef.current = true;
-            let dateConfirmed = false;
+            let targetDate = null;
             try {
-                dateConfirmed = await confirmMealCreationDate(date, {
+                targetDate = await confirmMealCreationDate(date, {
                     onReturnToday: (todayKey) => {
                         const setSelectedDate = global.__heysSetSelectedDate || HEYS.ui?.setSelectedDate;
                         setSelectedDate?.(todayKey);
                     },
+                    getTodayDay: () => {
+                        const todayKey = _getTodayISO();
+                        try {
+                            if (HEYS.utils && typeof HEYS.utils.lsGet === 'function') {
+                                return HEYS.utils.lsGet(_scopedDayKey(todayKey), { meals: [] }) || { meals: [] };
+                            }
+                            return lsGet(_scopedDayKey(todayKey), { meals: [] }) || { meals: [] };
+                        } catch (_) {
+                            return { meals: [] };
+                        }
+                    },
+                    getOpenDay: () => dayRef.current || day || { meals: [] },
                 });
             } finally {
                 mealDateGuardPendingRef.current = false;
             }
-            if (!dateConfirmed) return false;
+            if (!targetDate) return false;
 
             // Решение владельца 2026-08-13: гайд с тарелкой убран — показывался
             // при каждом создании приёма без флага «не показывать снова» и
             // раздражал больше, чем помогал.
-            return runAddMealFlow();
+            return runAddMealFlow({ date: targetDate });
         }, [date, runAddMealFlow]);
 
         const replanEmitTimersRef = React.useRef({});
@@ -15207,6 +15406,8 @@
     let _DiaryPanelGate = null;
 
     const HEALTH_TREND_PERIOD_STORAGE_KEY = 'heys_diary_health_trend_period_v1';
+    const V4_WARN_SOFT = 'var(--v4-warn-soft, #c9922e)';
+    const V4_WARN_2 = 'var(--v4-warn-2, #c67139)';
     const FIBER_PANEL_PROFILE_FIELD = 'showDiaryFiberPanel';
     const SCORE_RISK_TREND_PANEL_PROFILE_FIELD = 'showDiaryScoreRiskTrendPanel';
     const PLANNER_PANEL_PROFILE_FIELD = 'showDiaryPlannerPanel';
@@ -15479,8 +15680,8 @@
         const numericScore = Number(score) || 0;
         if (numericScore >= 85) return { id: 'excellent', color: '#10b981' };
         if (numericScore >= 70) return { id: 'good', color: '#22c55e' };
-        if (numericScore >= 50) return { id: 'attention', color: '#eab308' };
-        if (numericScore >= 30) return { id: 'warning', color: '#f97316' };
+        if (numericScore >= 50) return { id: 'attention', color: V4_WARN_SOFT };
+        if (numericScore >= 30) return { id: 'warning', color: V4_WARN_2 };
         return { id: 'critical', color: '#ef4444' };
     }
 

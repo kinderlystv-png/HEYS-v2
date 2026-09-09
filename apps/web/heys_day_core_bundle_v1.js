@@ -3285,6 +3285,32 @@
         return table[mode] || table.maintenance;
     }
 
+    /**
+     * Целевой коэффициент белка: заданный куратором в профиле, иначе дефолт режима.
+     *
+     * Решение 18.08 (heys/798770): коэффициент настраивает куратор, дефолты по
+     * режиму остаются подсказкой. До этого коэффициент был захардкожен, а поле
+     * профиля proteinPct правило только legacy-ветку — куратор видел настройку,
+     * которая ни на что не влияла.
+     *
+     * Заданное значение зажимается тем же полом и потолком, что и расчётное:
+     * ниже 1,2 г/кг не режем (порог сохранения тощей массы), выше 2,4 не поднимаем.
+     */
+    function resolveProteinCoeffGPerKg(normPerc, profile, mode, female) {
+        const fallback = defaultProteinCoeffGPerKg(mode, female);
+        // Порядок тот же, что у resolveNormField: сначала нормы клиента
+        // (их правит куратор в кабинете, ключ heys_norms), затем профиль.
+        const fromNorms = normPerc ? normPerc.proteinCoeffGPerKg : undefined;
+        const raw = (fromNorms === undefined || fromNorms === null || fromNorms === '')
+            ? (profile ? profile.proteinCoeffGPerKg : undefined)
+            : fromNorms;
+        if (raw === undefined || raw === null || raw === '') return { coeff: fallback, source: 'default' };
+        const num = Number(raw);
+        if (!Number.isFinite(num) || num <= 0) return { coeff: fallback, source: 'default' };
+        const clamped = Math.min(PROTEIN_CAP_G_PER_KG, Math.max(PROTEIN_ABSOLUTE_FLOOR_G_PER_KG, num));
+        return { coeff: clamped, source: 'profile', requested: num };
+    }
+
     function computeDailyNormsLegacy(optimum, normPerc = {}) {
         const K = +optimum || 0;
         const carbPct = +normPerc.carbsPct || 0;
@@ -3362,7 +3388,10 @@
         const weight = +day.weightMorning || +profile.weight || +profile.baseWeight || 70;
         const female = isFemaleProfile(profile);
         const mode = resolveProteinMode(weight, profile.weightGoal);
-        const coeff = defaultProteinCoeffGPerKg(mode, female);
+        // rawNormPerc, а не normPerc: resolveNormPerc возвращает только известные
+        // ему процентные ключи и коэффициент бы отбросил.
+        const coeffResolved = resolveProteinCoeffGPerKg(rawNormPerc, profile, mode, female);
+        const coeff = coeffResolved.coeff;
         const trainingBonus = (+tdeeResult.trainingsKcal || 0) >= TRAINING_KCAL_THRESHOLD
             ? TRAINING_BONUS_G_PER_KG : 0;
         const protTargetG = Math.min(PROTEIN_CAP_G_PER_KG * weight, (coeff + trainingBonus) * weight);
@@ -3413,6 +3442,7 @@
         const proteinMeta = {
             mode,
             coeffGPerKg: coeff,
+            coeffSource: coeffResolved.source,
             trainingBonusGPerKg: trainingBonus,
             weightKg: weight,
             targetGPerKg: coeff + trainingBonus,
@@ -6087,7 +6117,7 @@
 
             // 🎊 Confetti on goal hit — DOM-based (no React state)
             if (hitGoal) {
-                const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#3b82f6'];
+                const colors = ['#10b981', '#3b82f6', 'var(--v4-warn-1, #d99a63)', '#ec4899', '#3b82f6'];
                 const confettiEl = document.createElement('div');
                 confettiEl.className = 'confetti-container mood-confetti';
                 confettiEl.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
