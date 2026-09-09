@@ -52,6 +52,27 @@
     return trialIntakeLogin ? TRIAL_INTAKE_LOGIN_COPY : CLIENT_LOGIN_COPY;
   }
 
+  // Строка контракта «блокировка» (решение 09.09): короткая ступень подаётся
+  // строкой ошибки, длинные — карточкой. Ступени заморозки заданы сервером:
+  // 15 минут, час, сутки (database/2026-08-11_pin_lockout_by_phone.sql:85),
+  // поэтому порог отделяет первую ступень ровно, без запаса «на всякий».
+  const SHORT_LOCK_MINUTES = 15;
+
+  /**
+   * Время открытия входа как «14:47».
+   *
+   * Контракт требует точку на часах, а не относительный срок: «через 15 минут»
+   * человеку надо держать в голове от момента, которого он не заметил, а время
+   * он сверит с часами.
+   */
+  function formatLockUntil(untilMs) {
+    try {
+      return new Date(untilMs).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+      return '';
+    }
+  }
+
   const LOGIN_MAINTENANCE_COPY = Object.freeze({
     title: 'Вход временно закрыт',
     body: 'Идут технические работы. Данные на месте, ничего делать не нужно.',
@@ -242,6 +263,9 @@
 	    // секунду; в блокировке он не может ничего, и единственный выход к живому
 	    // куратору нельзя набрать тем же кеглем, что «код не подошёл».
 	    const [rateBlocked, setRateBlocked] = useState(false);
+	    // Короткая ступень заморозки: строка в общем слоте ошибки, но своим
+	    // кеглем (кадр «Вход · блокировка · 15 минут», строка 14).
+	    const [shortLock, setShortLock] = useState(false);
 	    const curatorAutoLoginTriedRef = useRef(false);
     const pinErrorTimers = useRef({ reset: null, clear: null });
 
@@ -463,6 +487,7 @@
       }
       setErr('');
       setRateBlocked(false);
+      setShortLock(false);
       setPinErrorVisible(false);
       setPinErrorActive(false);
       setBusy(true);
@@ -492,8 +517,22 @@
             // Локальный ограничитель знает, сколько ждать, и выход из него —
             // подождать: это строка ошибки. Серверная блокировка отсчёта не даёт,
             // выход из неё один — куратор, и она разворачивается карточкой.
+            // Строка контракта «блокировка», решение 09.09: заморозка подаётся
+            // по-разному на короткой и длинной ступени, потому что это разные
+            // состояния для человека. Первая ступень — строка ошибки с точным
+            // временем открытия, карточки и куратора здесь нет, экран остаётся
+            // живым: можно сменить телефон или уйти в «Не помните код?». Час и
+            // сутки — карточка, там ждать до утра без объяснения читается как
+            // отказ сервиса, и гашение клавиатуры включается вместе с ней.
+            const lock = res.lock || null;
+            const lockMin = lock ? Math.ceil(lock.leftMs / 60000) : 0;
+            const lockAt = lock ? formatLockUntil(lock.untilMs) : '';
             if (sec > 0) {
               setErr(`Слишком много попыток. Подождите ${sec}с и попробуйте снова.`);
+            } else if (lockMin > 0 && lockMin <= SHORT_LOCK_MINUTES && lockAt) {
+              setErr(`Слишком много попыток. Вход откроется в ${lockAt}.`);
+              setRateBlocked(false);
+              setShortLock(true);
             } else {
               setRateBlocked(true);
               setErr('');
@@ -1212,7 +1251,9 @@
           React.createElement(
             'div',
             {
-              className: 'heys-auth-error heys-auth-error-slot' + (pinErrorVisible ? ' is-pin-error' : ''),
+              className: 'heys-auth-error heys-auth-error-slot'
+                + (pinErrorVisible ? ' is-pin-error' : '')
+                + (shortLock ? ' is-lock' : ''),
               role: 'alert',
               'aria-live': 'polite',
             },

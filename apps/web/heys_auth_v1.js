@@ -268,6 +268,24 @@
     invalid_device_id: { kind: 'explained' },
   };
 
+  /**
+   * Срок заморозки из ответа сервера → { untilMs, leftMs }, либо null.
+   *
+   * Заморозка ступенчатая: пять промахов дают 15 минут, десять — час,
+   * пятнадцать — сутки (database/2026-08-11_pin_lockout_by_phone.sql:85).
+   * Экрану нужны обе величины: по остатку он выбирает подачу (строка контракта
+   * «блокировка», решение 09.09 — короткая ступень строкой, длинные карточкой),
+   * а показывает точное время открытия, а не относительный срок.
+   */
+  function parseLockUntil(raw) {
+    if (!raw) return null;
+    const untilMs = Date.parse(raw);
+    if (!Number.isFinite(untilMs)) return null;
+    const leftMs = untilMs - Date.now();
+    if (leftMs <= 0) return null;
+    return { untilMs, leftMs };
+  }
+
   // Приводит серверный отказ к коду для экрана. Незнакомый код НЕ схлопывается
   // в invalid_credentials, а уезжает наверх как есть вместе с серверным
   // текстом: экран покажет настоящую причину, а не «PIN не подошёл».
@@ -435,6 +453,9 @@
           serverError: rejected.serverError,
           serverMessage: rejected.serverMessage,
           isWrongPin: rejected.isWrongPin,
+          // Срок заморозки идёт наверх отдельным полем: экран показывает время
+          // открытия, а по остатку выбирает подачу (строка контракта «блокировка»).
+          lock: parseLockUntil(row?.locked_until),
           _debug: { stage: 'login_client_v1', rpc: 'login_client_v1', serverError: row?.error },
         },
       };
@@ -462,6 +483,7 @@
           serverError: rejected.serverError,
           serverMessage: rejected.serverMessage,
           isWrongPin: rejected.isWrongPin,
+          lock: parseLockUntil(row?.locked_until),
           _debug: { stage: 'verify_client_onetime_pin', rpc: 'verify_client_onetime_pin', serverError: row?.error },
         },
       };
