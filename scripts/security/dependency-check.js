@@ -37,10 +37,35 @@ const DEPENDENCY_CONFIG = {
     info: { weight: 0, color: '\x1b[37m', threshold: 20 }, // Белый
   },
 
-  // Исключения - пакеты которые можно игнорировать
-  ignoredVulnerabilities: [
-    // extract-zip: dev-only (puppeteer/lighthouse/storybook), upstream patch TBD (GHSA-jmr9-qjv8-65gv)
-    1139346,
+  // Принятые уязвимости: те, что нельзя починить сейчас, и мы это решили вслух.
+  //
+  // Прежний список был массивом голых номеров и вычищал только ПОДРОБНОСТИ:
+  // счётчики и код выхода берутся из metadata.vulnerabilities, поэтому запись
+  // сюда гейт не гасила и создавала видимость решения. Теперь принятая запись
+  // действительно вычитается из счёта — и за это платит тремя вещами.
+  //
+  // 1. Причина обязательна. «Игнорируем» — не причина; нужно, почему риск
+  //    приемлем именно здесь (только сборка, не в проде, нет вектора).
+  // 2. `reviewBy` обязателен. Когда дата прошла, гейт падает НА САМОМ
+  //    исключении: непочинимое сегодня почти всегда чинится через месяц, а
+  //    вечное исключение неотличимо от забытого.
+  // 3. Исключение, которому больше нечего гасить, тоже роняет гейт — иначе
+  //    список копит записи про уязвимости, которых давно нет, и читать его
+  //    перестают.
+  //
+  // Принятое печатается в отчёте отдельным блоком, а не исчезает: молчащая
+  // проверка хуже отсутствующей.
+  acceptedVulnerabilities: [
+    {
+      package: 'extract-zip',
+      severity: 'high',
+      reason:
+        'Транзитивный внутри Playwright, только разработка: в прод не попадает, ' +
+        'распаковку архивов делает CI над своим же скачанным браузером. Починки ' +
+        'НЕ СУЩЕСТВУЕТ — в обеих записях patched_versions равен <0.0.0, то есть ' +
+        'исправленной версии нет вовсе, и поднять нечего.',
+      reviewBy: '2026-10-09',
+    },
   ],
 
   // CI security gate проверяет именно vulnerabilities. `pnpm outdated` может
@@ -104,6 +129,11 @@ class DependencySecurityChecker {
 
       // Выполняем аудит зависимостей
       await this.runDependencyAudit();
+
+      // Вычитание принятого — строго после аудита: он может разобрать
+      // отчёт не один раз, и вычитание внутри него затиралось следующим
+      // пересчётом счётчиков.
+      this.applyAcceptedVulnerabilities();
 
       // Проверяем критические пакеты
       await this.checkCriticalPackages();
@@ -208,12 +238,101 @@ class DependencySecurityChecker {
   }
 
   /**
-   * Добавить запись об уязвимости (с учётом allowlist игнора).
+   * Добавить запись об уязвимости.
+   *
+   * Раньше здесь молча выбрасывались записи из allowlist — и в отчёт они не
+   * попадали вовсе, при том что счётчики их всё равно считали. Теперь сюда
+   * попадает ВСЁ, а принятое помечается ниже: вычесть из счёта и спрятать из
+   * отчёта — разные вещи, и вторая нам не нужна.
    */
   pushVuln(v) {
-    if (!v || DEPENDENCY_CONFIG.ignoredVulnerabilities.includes(v.id)) return;
+    if (!v) return;
     v.timestamp = new Date().toISOString();
     this.results.vulnerabilities.push(v);
+  }
+
+  /**
+   * Вычесть принятые уязвимости из счёта — и проверить сами исключения.
+   *
+   * Счётчики приходят из metadata.vulnerabilities, а сопоставляем мы по
+   * подробностям. Если подробностей нет, а счёт не нулевой, вычитать нельзя:
+   * мы не знаем, что именно там, и молчаливое вычитание превратило бы гейт в
+   * зелёный на неизвестном. В таком случае оставляем счёт как есть.
+   */
+  applyAcceptedVulnerabilities() {
+    // Через this.config, а не через модульную константу: иначе метод
+    // непроверяем — подставить другой список в тесте невозможно, и
+    // единственным способом проверить гейт остаётся правка исходника.
+    const accepted = this.config.acceptedVulnerabilities || [];
+    this.results.accepted = [];
+    this.results.exceptionProblems = [];
+    if (!accepted.length) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const details = this.results.vulnerabilities;
+
+    for (const rule of accepted) {
+      if (!rule.reason || !rule.reviewBy) {
+        this.results.exceptionProblems.push(
+          `исключение для ${rule.package || rule.id}: нужны и reason, и reviewBy`,
+        );
+        continue;
+      }
+      const hits = details.filter(
+        (v) =>
+          !v.accepted &&
+          (rule.id ? v.id === rule.id : true) &&
+          (rule.package ? v.package === rule.package : true) &&
+          (rule.match ? String(v.title || '').includes(rule.match) : true),
+      );
+      if (!hits.length) {
+        this.results.exceptionProblems.push(
+          `исключение для ${rule.package || rule.id} больше нечего гасить — уязвимости нет, уберите запись`,
+        );
+        continue;
+      }
+      if (rule.reviewBy < today) {
+        this.results.exceptionProblems.push(
+          `исключение для ${rule.package || rule.id} просрочено (${rule.reviewBy}) — пересмотрите или продлите с новой причиной`,
+        );
+      }
+      for (const hit of hits) {
+        hit.accepted = rule;
+        this.results.accepted.push(hit);
+      }
+    }
+  }
+
+  /**
+   * Счёт за вычетом принятого.
+   *
+   * Вычитаем ПРИ ЧТЕНИИ, а не мутацией общего счётчика: аудит пересобирает
+   * summary не в одном месте, и вычитание, сделанное раньше пересборки, тихо
+   * терялось — счёт показывал прежние числа, а блок принятого при этом
+   * печатался. Ровно тот случай, когда отчёт спорит сам с собой.
+   */
+  effectiveSummary() {
+    const details = this.results.vulnerabilities || [];
+    // Без подробностей вычитать не из чего: metadata остаётся как есть, и гейт
+    // судит по ней. Это фейл-клоузд — лучше лишний красный, чем зелёный на
+    // неизвестном.
+    if (!details.length) return { ...this.results.summary };
+
+    // Считаем по УНИКАЛЬНЫМ записям, а не по metadata.
+    //
+    // metadata.vulnerabilities считает ПУТИ зависимостей: одна и та же
+    // уязвимость, пришедшая двумя путями, даёт там двойку. extract-zip именно
+    // такой — в metadata его четыре при двух записях. Вычитание принятого по
+    // записям из счёта по путям недосчитывает ровно на это удвоение, и гейт
+    // оставался красным на уже принятом.
+    const out = { critical: 0, high: 0, moderate: 0, low: 0, info: 0, total: 0, score: this.results.summary.score };
+    for (const v of details) {
+      if (v.accepted) continue;
+      if (out[v.severity] === undefined) continue;
+      out[v.severity] += 1;
+      out.total += 1;
+    }
+    return out;
   }
 
   /**
@@ -301,8 +420,12 @@ class DependencySecurityChecker {
         }
       }
 
-      // 3) Счётчики: из metadata, но после allowlist — пересчёт по учтённым находкам.
-      if (!haveMeta || DEPENDENCY_CONFIG.ignoredVulnerabilities.length > 0) {
+      // 3) Счётчики: из metadata, а без неё — пересчёт по подробностям.
+      // Вычитание принятого делает applyAcceptedVulnerabilities уже после
+      // разбора: раньше оно пряталось здесь, и принятое исчезало не только из
+      // счёта, но и из отчёта — прочитать, что именно мы согласились терпеть,
+      // было негде.
+      if (!haveMeta) {
         for (const sev of SEVS) this.results.summary[sev] = 0;
         this.results.summary.total = 0;
         for (const v of this.results.vulnerabilities) {
@@ -646,9 +769,10 @@ class DependencySecurityChecker {
     console.log('=====================================');
     console.log(`📋 Project: ${this.results.projectInfo.name}`);
     console.log(`📊 Total packages: ${this.results.packages.total}`);
-    console.log(`🔍 Vulnerabilities found: ${this.results.summary.total}`);
+    const effective = this.effectiveSummary();
+    console.log(`🔍 Vulnerabilities found: ${effective.total}`);
 
-    Object.entries(this.results.summary).forEach(([severity, count]) => {
+    Object.entries(effective).forEach(([severity, count]) => {
       if (severity !== 'total' && severity !== 'score' && count > 0) {
         const config = colors[severity];
         if (config) {
@@ -659,11 +783,30 @@ class DependencySecurityChecker {
       }
     });
 
-    if (this.results.summary.total === 0) {
+    // Принятое печатается всегда: вычесть из счёта — не то же самое, что
+    // спрятать. Читающий отчёт обязан видеть, что именно мы согласились терпеть.
+    const accepted = this.results.accepted || [];
+    if (accepted.length) {
+      console.log(`\n🟡 Принято осознанно (вне счёта): ${accepted.length}`);
+      for (const v of accepted) {
+        console.log(`   - ${v.package}: ${v.title} (${v.severity})`);
+        console.log(`     причина: ${v.accepted.reason}`);
+        console.log(`     пересмотреть до: ${v.accepted.reviewBy}`);
+      }
+    }
+    for (const problem of this.results.exceptionProblems || []) {
+      console.log(`\n❌ ${problem}`);
+    }
+
+    if (effective.total === 0) {
       console.log('\n🎉 No vulnerabilities found in dependencies!');
+    } else if (effective.critical + effective.high > 0) {
+      console.log(
+        `\n⚠️ Action required for ${effective.critical + effective.high} high-priority vulnerabilities`,
+      );
     } else {
       console.log(
-        `\n⚠️ Action required for ${this.results.summary.critical + this.results.summary.high} high-priority vulnerabilities`,
+        `\n✅ Критических и высоких нет; ниже порога осталось записей: ${effective.total}`,
       );
     }
   }
@@ -672,11 +815,15 @@ class DependencySecurityChecker {
    * Определение кода выхода
    */
   getExitCode() {
-    const { critical, high } = this.results.summary;
+    const { critical, high } = this.effectiveSummary();
 
     // Сломанный/недоступный аудит — НЕ «зелёный». Иначе вернётся старый баг
     // ложного прохода гейта.
     if (this.results.auditStatus === 'unknown') return 1;
+    // Просроченное или опустевшее исключение роняет гейт так же, как сама
+    // уязвимость: список принятого, который никто не пересматривает, через
+    // месяц гасит уже не то, что решали гасить.
+    if ((this.results.exceptionProblems || []).length) return 1;
     if (critical > 0) return 2; // Критические уязвимости
     if (high > 0) return 1; // Высокие уязвимости
     return 0; // Нет критических/высоких уязвимостей
