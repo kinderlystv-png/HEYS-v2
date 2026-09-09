@@ -364,7 +364,11 @@
           }),
           h('circle', {
             cx: 84, cy: 84, r: r, fill: 'none',
-            stroke: 'var(--acs, var(--sb-acc))', strokeWidth: 9, strokeLinecap: 'round',
+            // Пакет 51: обводка кольца — акцент-текст (--ac), не заливка.
+            // Здесь же стояло имя роли КАНВАСА (--acs), которой в продукте
+            // нет вовсе: цвет всё это время приходил из запасного --sb-acc,
+            // и за набором не следовал.
+            stroke: 'var(--v4-act-text, var(--sb-acc))', strokeWidth: 9, strokeLinecap: 'round',
             strokeDasharray: c, strokeDashoffset: c * (1 - ratio)
           })
         ),

@@ -430,17 +430,19 @@ button.messenger-day-checklist__chip:active {
      фон не должен спорить с фотографиями еды. */
   background: var(--v4-hero, #efe3cf);
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.22) transparent;
+  /* Пакет 51, строка «вид · полоса прокрутки ленты»: роль --v4-track, а не
+     своя. Серый литерал запрещён — на тёмных наборах он не виден вовсе. */
+  scrollbar-color: var(--v4-track, rgba(0, 0, 0, 0.12)) transparent;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
 
 .messenger-thread::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 .messenger-thread::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.22);
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   border-radius: 999px;
 }
 
@@ -812,9 +814,12 @@ button.messenger-day-checklist__chip:active {
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  /* Строка «вид · голосовое в своём пузыре»: вставка идёт на --bg — светлее
+     пузыря, а не полупрозрачнее его. Прозрачность даёт разный результат на
+     четырёх наборах, а роль одна везде; по той же причине снята и белая
+     полупрозрачная обводка. В чужом пузыре вставка та же --bg. */
+  background: var(--v4-bg, #fffaf1);
 }
 
 .msg-audio-block {
@@ -824,8 +829,7 @@ button.messenger-day-checklist__chip:active {
 
 .msg-bubble-theirs .msg-audio,
 .messenger-audio-draft .msg-audio {
-  background: rgba(15, 23, 42, 0.04);
-  border-color: rgba(148, 163, 184, 0.18);
+  background: var(--v4-bg, #fffaf1);
 }
 
 .msg-audio-compact {
@@ -833,16 +837,30 @@ button.messenger-day-checklist__chip:active {
 }
 
 .msg-audio-play {
-  width: 44px;
-  height: 44px;
+  /* Строка «вид · голосовое в своём пузыре»: круг 28 px. Видимый размер —
+     как в кадре, а нажимается 44 через прозрачный ::after: рисунок меньше
+     44 pt, а цель попадания нет. */
+  position: relative;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
-  color: var(--v4-bg, #fffaf1);
+  /* Заливка --acs с парной ролью текста --on-acs, а не графика акцентом на
+     светлом: строка контракта называет это прямо. */
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+/* Цель попадания 44 при рисунке 28: расширитель прозрачный и не меняет вид. */
+.msg-audio-play::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
 }
 
 .msg-bubble-theirs .msg-audio-play,
@@ -993,7 +1011,9 @@ button.messenger-day-checklist__chip:active {
 .msg-attachment-item {
   position: relative;
   cursor: pointer;
-  background: var(--v4-accent-bg, #f0dcc6);
+  /* Строка «вид · заглушка вложения»: нейтральная чернильная плашка той же
+     роли, что полоса прокрутки. */
+  background: var(--v4-track, rgba(0, 0, 0, 0.12));
   aspect-ratio: 1;
   min-width: 44px;
   min-height: 44px;
@@ -1068,8 +1088,11 @@ button.messenger-day-checklist__chip:active {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
-  color: var(--v4-bg, #fffaf1);
+  /* Строка «вид · подложка загрузки вложения»: та же роль, что под модалкой.
+     Затемнение в продукте одно; чёрный литерал снят — на тёмных наборах он
+     сливался с фото и с пузырём. */
+  background: var(--scrim, rgba(0, 0, 0, 0.5));
+  color: var(--v4-btn-on-act, #2b1608);
   font-size: 20px;
   z-index: 2;
 }

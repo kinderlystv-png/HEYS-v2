@@ -12167,7 +12167,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 
 .widget-v4-spark--act .widget-v4-spark__line,
 .widget-v4-spark--act polyline {
-  stroke: var(--v4-act, #c67139);
+  stroke: var(--v4-act-text, #8a4a20);
 }
 
 .widget-v4-spark--act .widget-v4-spark__dot,

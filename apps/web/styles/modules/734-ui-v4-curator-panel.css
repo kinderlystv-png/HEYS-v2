@@ -590,12 +590,12 @@
 /* Нижний пунктир — цель, и он тоном цели: два одинаковых пунктира читались бы
    как разметка, а не как «отсюда и досюда». */
 .cur-sheet__hist-dash.is-target {
-  stroke: var(--v4-act, #c67139);
+  stroke: var(--v4-act-text, #8a4a20);
   opacity: 0.45;
 }
 
 .cur-sheet__hist-line {
-  stroke: var(--v4-act, #c67139);
+  stroke: var(--v4-act-text, #8a4a20);
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;

@@ -488,7 +488,10 @@
   function renderStageIcon(stage) {
     const s = UPDATE_STAGES[stage] || UPDATE_STAGES.downloading;
     // Дуга 26 обводкой 2,75: полный круг r 9.4 тоном --v4-ink-30, поверх —
-    // дуга тоном --acs через currentColor (pwa-update «… · рисунок 02/03»).
+    // дуга акцентом-текстом через currentColor (pwa-update «… · рисунок 02/03»).
+    // Пакет 51: --acs это заливка, графика берёт --ac. Цвет приходит от
+    // .heys-update-modal__icon, поэтому здесь менять нечего — но подпись роли
+    // держим верной, иначе следующий читатель сверит код с отменённым правилом.
     const ring = s.spinner
       ? `<svg class="heys-update-modal__spinner" width="${UPDATE_ARC_PX}" height="${UPDATE_ARC_PX}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${UPDATE_ARC_STROKE}" stroke-linecap="round" aria-hidden="true">`
       + '<circle cx="12" cy="12" r="9.4" stroke="var(--v4-ink-30, rgba(0,0,0,0.3))" fill="none"/>'

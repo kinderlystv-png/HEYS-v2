@@ -1968,9 +1968,9 @@
       "h": "5f548a675c56"
     },
     "Совет · отмена с таймером · рисунок 03": {
-      "v": "=",
-      "f": "Заполненная дуга кольца: тот же circle r 15 в (18,18), обводка --acs толщиной 3 со скруглённым концом и dasharray по остатку — apps/web/day/_advice.js:370-377 плюс .advice-v4-hide-ring__progress в apps/web/styles/modules/400-water-and-hydration.css:2174-2180 (var(--v4-sand-act) — тот же #c67139, что --acs кадра).",
-      "h": "ccf4d217aebd"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Заполненная дуга кольца: тот же circle r 15 в (18,18), обводка --acs толщиной 3 со скруглённым концом и dasharray по остатку — apps/web/day/_advice.js:370-377 плюс .advice-v4-hide-ring__progress в apps/web/styles/modules/400-water-and-hydration.css:2174-2180 (var(--v4-sand-act) — тот же #c67139, что --acs кадра).",
+      "h": "62eab33c46c1"
     },
     "Совет · отмена с таймером · рисунок 04": {
       "v": "—",
