@@ -193,16 +193,25 @@ describe('cold-start spinner mark', () => {
     expect(loading).not.toContain("retry: 'Повторить ещё раз'");
   });
 
-  it('keeps the sign palettes on the canvas --c2 / --acs values', () => {
+  it('keeps the sign palettes on the canvas --c2 / --ac values', () => {
     // Синие наборы расходились с v4-canvas.css: #e2edf7 против --c2 #e2ecf6,
-    // #2e7cc0 против --acs #1d5e96, #13222f против --c2 #1e3448.
+    // #2e7cc0 против #1d5e96, #13222f против --c2 #1e3448.
     // 4 сентября литералы перевели на роли (--v4-hero / --v4-act); запасное
     // значение сохраняет контрактные #e2ecf6, #1d5e96 и #1e3448.
+    //
+    // Пакет 51 сменил роль дуги: строка spinners «форма» говорит «дуга
+    // акцентом-текстом (--ac, не --acs — см. строку „палитры“)». Повод —
+    // находка стенда: дуга --acs на круге --c2 давала 2,85:1 при пороге 3 для
+    // значка. Дизайнер ответил правилом, а не точечной правкой: --acs это роль
+    // ЗАЛИВКИ, графика и текст акцентом берут --ac; переведено 90 мест в
+    // 19 зонах. Поэтому здесь теперь --v4-act-text, и запасное значение синего
+    // набора совпадает у обеих ролей (#1d5e96) — проверка держится на имени
+    // роли, а не на совпадении хекса.
     expect(css).toMatch(
       /html\[data-theme-id="blue"\][\s\S]*?--boot-disc:\s*var\(--v4-hero,\s*#e2ecf6\)/,
     );
     expect(css).toMatch(
-      /html\[data-theme-id="blue"\][\s\S]*?--boot-stroke:\s*var\(--v4-act,\s*#1d5e96\)/,
+      /html\[data-theme-id="blue"\][\s\S]*?--boot-stroke:\s*var\(--v4-act-text,\s*#1d5e96\)/,
     );
     expect(css).toMatch(
       /html\[data-theme-id="blue-dark"\][\s\S]*?--boot-disc:\s*var\(--v4-hero,\s*#1e3448\)/,
