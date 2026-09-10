@@ -580,6 +580,62 @@ describe('поправка на факт · кадры недельной све
     expect(c.copy.evidenceNote).toBeNull();
   });
 
+  it('ветка «только талия» показывает числа замера, а не отговорку', () => {
+    // Решение владельца 10 сентября: веток стабильности ТРИ. Средняя заведена
+    // навсегда — человек вправе мерить одну талию, и ему нужно объяснение по
+    // ЕГО замеру. Прежний текст «стабильность обхватов не подтверждена» звучал
+    // отказом при том, что замер есть и учтён.
+    const c = NC.buildWeeklySyncCard({
+      result: down(),
+      tariff: 'pro',
+      appliedDecision: Object.assign(appliedDownDecision('waist_only'), {
+        evidence: { kind: 'waist_only', waistPoints: 4, spanDays: 21, waistFrom: 76.5, waistTo: 76 }
+      })
+    });
+    expect(c.frame).toBe('lowered');
+    // Проза называет талию поимённо и объясняет, почему одного обхвата хватает.
+    expect(c.copy.body).toBe(
+      'Три недели вес и талия держатся на месте. Талия — самый показательный '
+      + 'обхват: когда состав тела меняется, она отвечает первой. Значит, наш '
+      + 'расчёт расхода для вас завышен — мы поправили его, а не вас.'
+    );
+    // Снятая формулировка не должна вернуться молча.
+    expect(c.copy.body).not.toContain('стабильность обхватов не подтверждена');
+    // Строка списка показывает ЧИСЛА, а не слово: это единственное
+    // доказательство ветки. Тихого тона у неё нет — есть что показать.
+    expect(c.facts[0]).toEqual({
+      label: 'Талия за три недели',
+      value: '76,5 см → 76,0 см'
+    });
+    expect(c.facts.map((f) => f.label)).toEqual([
+      'Талия за три недели', 'Дефицит остался тем же', 'Дальше шагов'
+    ]);
+    // Ноль после запятой не срезается: «76,0» и «76» в одном ряду читались бы
+    // как разная точность замера.
+    expect(c.facts[0].value).toContain('76,0');
+  });
+
+  it('три ветки дают три разных текста и не путаются между собой', () => {
+    const body = (kind, evidence) => NC.buildWeeklySyncCard({
+      result: down(),
+      tariff: 'pro',
+      appliedDecision: Object.assign(appliedDownDecision(kind), evidence ? { evidence } : {}),
+      recomposition: kind === 'missing' ? { noWaistEvidence: true } : undefined
+    }).copy.body;
+
+    const none = body('missing');
+    const waist = body('waist_only', { kind: 'waist_only', waistFrom: 80, waistTo: 79.6 });
+    const girths = body('stable_girths');
+
+    expect(new Set([none, waist, girths]).size).toBe(3);
+    expect(none).toContain('Замеров обхватов не было');
+    expect(waist).toContain('вес и талия держатся');
+    expect(girths).toContain('вес и обхваты держатся');
+    // Ветка 3 сейчас недостижима — сервер второй обхват не отдаёт, — но кадр
+    // остаётся: снимать его нельзя, вердикт по нему «?», а не «≠».
+    expect(girths).not.toContain('талия');
+  });
+
   it('ветка с обхватами лишней строки факта не заводит', () => {
     const c = NC.buildWeeklySyncCard({
       result: down(),
