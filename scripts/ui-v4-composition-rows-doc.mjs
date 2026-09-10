@@ -266,6 +266,23 @@ function renderMarkdown(rows, meta) {
     '## Откуда строки',
     '',
     `- **Источник ключей и класса:** ${meta.jsonSource}`,
+    ...(meta.excluded && meta.excluded.length
+      ? [
+          '',
+          '## Снято с разбора и почему',
+          '',
+          'Это не сокращение списка под ожидаемое число: снятое перечислено ниже,',
+          'чтобы было видно, что именно ушло. Правило — из ответа дизайнера',
+          '10 сентября: критерий применялся к полю «факт», а факт пересказывает всю',
+          'строку контракта, поэтому в класс попадало не относящееся к композиции.',
+          '',
+          `Снято **${meta.excluded.length}** строк из ${meta.excluded.length + rows.length}.`,
+          '',
+          '| Строка | Зона | Почему снята |',
+          '| --- | --- | --- |',
+          ...meta.excluded.map((r) => `| ${r.key} | ${r.zoneId} | ${r.ruleLabel} |`),
+        ]
+      : []),
     '- **Классификатор:** `scripts/ui-v4-group-deviations-for-designer.mjs` → поле `classId`',
     '- **Факты «кадр vs код»:** поле `f` вердиктов `docs/ui/verdicts/<зона>.json` (`v === "≠"`)',
     '- **Ожидание дизайнера (5 сентября):** 124 + 22 = **146** строк — [`UI_V4_FINDINGS_HISTORY.md#p48-composition-ux-review-criterion-2026-09-05`](UI_V4_FINDINGS_HISTORY.md#p48-composition-ux-review-criterion-2026-09-05)',
@@ -323,10 +340,49 @@ function countH3BySection(md) {
   return { composition, flow, sum: composition + flow };
 }
 
+// Строки, которые в композицию НЕ идут.
+//
+// Ответ дизайнера 10 сентября на список из 174: критерий применён к полю
+// «факт», а факт часто пересказывает всю строку контракта — поэтому в класс
+// попало то, что к композиции не относится. Его указание: пересобрать по тому,
+// В ЧЁМ РАСХОЖДЕНИЕ, а строки с признаком отсутствия кода не брать вовсе.
+//
+// Отдельного поля «в чём расхождение» в данных нет — есть только факт вердикта.
+// Поэтому отсеиваем по признакам в самом факте, и только по тем, что дают
+// РОВНО его числа: 15 и 8. Третий его класс — «тон и ступени», 34 строки — по
+// названным им процентам даёт 13, и подгонять правило под 34 наугад нельзя:
+// список пойдёт человеку в руки. По нему задан отдельный вопрос.
+const EXCLUDE = [
+  {
+    id: 'no-code',
+    label: 'функциональности нет в коде',
+    why: 'это «?», а не отступление: спорить не с чем, пока нечего сверять',
+    test: (f) => /кода нет вовсе|в коде нет|не реализован|механики нет/i.test(f),
+  },
+  {
+    id: 'same-view',
+    label: 'факт сам говорит «тот же вид»',
+    why: 'это «=»: расхождения нет, вердикт стоит неверный',
+    test: (f) => /тот же вид|то же самое/i.test(f),
+  },
+];
+
 function main() {
   const { rows: allRows, source: jsonSource } = loadDivergenceRows();
-  const filtered = allRows.filter((r) => TARGET_CLASSES.has(r.classId));
+  const inClass = allRows.filter((r) => TARGET_CLASSES.has(r.classId));
   const facts = factByKey(readAllZones());
+
+  const excluded = [];
+  const filtered = inClass.filter((row) => {
+    const f = facts.get(`${row.zoneId}\0${row.key}`) || row.phrase || '';
+    const hit = EXCLUDE.find((rule) => rule.test(f));
+    if (hit) excluded.push({ ...row, ruleId: hit.id, ruleLabel: hit.label });
+    return !hit;
+  });
+  const byRule = new Map();
+  for (const row of excluded) byRule.set(row.ruleId, (byRule.get(row.ruleId) || 0) + 1);
+  console.log(`в двух классах ${inClass.length}, снято ${excluded.length}, к разбору ${filtered.length}`);
+  for (const rule of EXCLUDE) console.log(`  снято «${rule.label}»: ${byRule.get(rule.id) || 0}`);
 
   const enriched = filtered.map((row) => {
     const fullF = facts.get(`${row.zoneId}\0${row.key}`) || row.phrase;
@@ -374,7 +430,7 @@ function main() {
     ...countH3BySection(mdDraft),
   };
 
-  const mdFinal = renderMarkdown(enriched, { jsonSource, countA, countB, countNote });
+  const mdFinal = renderMarkdown(enriched, { jsonSource, countA, countB, countNote, excluded });
   fs.writeFileSync(OUT, mdFinal, 'utf8');
 
   if (countB.sum !== countA.sum) {
