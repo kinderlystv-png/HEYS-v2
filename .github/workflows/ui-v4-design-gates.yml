@@ -20,12 +20,22 @@ on:
     paths:
       - "apps/web/**"
       - "docs/ui/**"
+      # Гейты, которые этот контур запускает, лежат в scripts/ корнем, а не в
+      # scripts/lib/. Пока фильтр знал только lib, правка самого гейта проходила
+      # мимо контура: 10 сентября так уехал непроверенным список заморозки чужих
+      # запасных значений, и подтвердить починку было нечем до следующей правки
+      # CSS. Контур обязан видеть свой собственный инструмент.
+      - "scripts/ui-v4-*.mjs"
+      - "scripts/ui-check-undeclared-vars.mjs"
       - "scripts/lib/ui-v4-*.mjs"
       - ".github/workflows/ui-v4-design-gates.yml"
   pull_request:
     paths:
       - "apps/web/**"
       - "docs/ui/**"
+      - "scripts/ui-v4-*.mjs"
+      - "scripts/ui-check-undeclared-vars.mjs"
+      - "scripts/lib/ui-v4-*.mjs"
   workflow_dispatch:
 
 concurrency:
