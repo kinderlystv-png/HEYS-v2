@@ -51,6 +51,10 @@ export const ALLOWED_NA_KINDS = Object.freeze([
 // вместе со знанием. Не «у ≠ появился reasonCode», а «самого ≠ больше нет».
 // Настоящий долг при этом вырос: 3279 строк без вердикта в двадцати зонах.
 // Затянуть заморозку всё равно обязаны — храповик считает текущее состояние.
+// 10 сентября — пакет 51: nutrition-tab 211→209, reports-insights 124→122,
+// spinners 33→32. Причина та же и читать прогрессом так же нельзя: дизайнер
+// перевёл графику и текст с --acs на --ac, строки переписались, вердикты
+// снялись в «?». Строки ждут сведения, а не сведены.
 // 9 сентября то же самое повторилось с пакетом 50: app-splash 3→2,
 // curator-edits 1→0, service-curator 2→1, login 46→42 и 300→287. Читать как
 // прогресс нельзя ровно по той же причине — дизайнер переписал строки, вердикт
@@ -249,7 +253,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // на undo-bar:83; остальное в строке (текст «Записано в …», 6 с, оба пути
     // записи, капсула на открытом дне) сошлось.
     typedMismatch: [1, '69e78db8bfe74645'],
-    notApplicable: [211, 'c56b7bc960bb40c0'],
+    notApplicable: [209, '0b289056f87f3458'],
   }),
   'product-card': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -336,7 +340,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 08.09: 131 legacy «—» получили naKind (scripts/.reports-insights-nakind-apply.mjs)
     // — notApplicable 131 → 0.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [124, 'fdf7c32f70fe25c0'],
+    typedMismatch: [122, 'e806b03ef387d138'],
     notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   'service-curator': Object.freeze({
@@ -379,7 +383,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // на :127 — спор внутри канваса, а не необоснованный вердикт.
     // 06.09, пакет 44: «вторая неудача · 07» canvas-conflict; typedMismatch 26 → 28.
     typedMismatch: [28, '3ce2b620f6ce2101'],
-    notApplicable: [33, '2f00fa5302804302'],
+    notApplicable: [32, '0bbc1dfb7772d4f8'],
   }),
   'strength-builder': Object.freeze({
     // 3 сентября: notApplicable 98 -> 97. Строка «отношение к канону называет

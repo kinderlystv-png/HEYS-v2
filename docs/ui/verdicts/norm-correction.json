@@ -847,11 +847,7 @@
     "Сверка · норма снизилась · 07": {
       "v": "?",
       "f": "Canvas требует stable_girths (≥2 обхвата за 14 дней), но owner-flow до расширения server RPC недостижим; ждём решения в docs/ui/UI_V4_FINDINGS.md#norm-correction-nc5-stable-girths",
-      "h": "755acd2651a3",
-      "evidence": [
-        "unsupported: get_curator_clients_window returns waist but not biceps/thigh",
-        "semantic-test: apps/web/__tests__/norm-correction-owner-flow.test.js"
-      ]
+      "h": "755acd2651a3"
     },
     "Сверка · норма снизилась · 08": {
       "v": "=",
