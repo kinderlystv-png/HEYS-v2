@@ -298,7 +298,9 @@
   margin-top: 10px;
   padding: 16px;
   border-radius: 20px;
-  background: var(--v4-sand-surface, #f7efe2);
+  /* Кадры «Цикл · график веса · 01» и «график калорий · 01» просят --c1;
+     --v4-sand-surface расходится с ней на синих наборах. */
+  background: var(--v4-c1, #f7efe2);
 }
 
 /* Кадр «Отчёты · нет веса», элемент 11: шапка карточки графика — зазор 10. */
