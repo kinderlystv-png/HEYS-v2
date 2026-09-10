@@ -116,7 +116,7 @@ const STAND_COVERAGE_GAPS = Object.freeze({
   messenger: 'empty + bubbles + card + composer/recording/offline/action-sheet; нет inbox/search',
   'undo-bar': 'visible + leaving + tabs-контекст; нет runtime-смещения bottom под tabs',
   'water-add': 'плитка + FAB + ring + custom-sheet; нет анимаций fill/drop',
-  'product-card': 'create + pe-field + barcode + harm-compare; не все 27 reviewed data rows',
+  'product-card': 'search + row + grams + исходы, чипы порции, вкладки, разбор вреда, создание; не все 27 reviewed data rows',
   'home-widgets': 'плитки + streak + sheet + режим расстановки; нет всех 12 виджетов',
   'checkin-morning': 'greeting + вес + просрочка + footer + шаг «Шаги» и загрузочный день; нет остальных шагов и evening pack',
   'nutrition-tab': 'hero + meal-row + sheet + оценки, качество, добавки, строки листа; нет refeed/overlap/readonly/offline',
