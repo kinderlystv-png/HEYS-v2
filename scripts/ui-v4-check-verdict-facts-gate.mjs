@@ -8,16 +8,22 @@ import { classifyVerdictFacts } from './ui-v4-classify-verdict-facts.mjs';
 import { inspectVerdictFacts } from './ui-v4-check-verdict-facts.mjs';
 
 // 05.09 recount: полоса 5 + short CSS module refs (NNN:line).
+// 10.09: протухших якорей стало 3 из 4 — одна ссылка закрылась вместе со
+// строкой, которую переписал пакет 52.
 const BASELINE = Object.freeze({
-  staleCount: 4,
-  staleDigest: 'ac637bc4ee760ac5',
+  staleCount: 3,
+  staleDigest: 'b1deb49343486225',
 });
 
 // 08.09 settings-system tail: −17 unparsed (gate-ref + svg + alias + soleNavKey + touch).
+// 10.09 пакеты 51 и 52: 8787 → 8728, все четыре корзины ужались. Прогрессом это
+// не является — строки не разобрали, их переписал дизайнер, вердикты снялись в
+// «?», и вместе с «=» из счёта ушли их факты. Порог затянут, потому что храповик
+// считает текущее состояние, а не наши заслуги.
 const CLASSIFIER_BASELINE = Object.freeze({
-  unparsedRows: 8787,
-  buckets: Object.freeze({ a: 1488, b: 3263, c: 2352, g: 1674 }),
-  digest: '1d4f3aa65f77370d',
+  unparsedRows: 8728,
+  buckets: Object.freeze({ a: 1482, b: 3241, c: 2338, g: 1658 }),
+  digest: 'ebafe4fd1f4cf57e',
 });
 
 function runCli() {
