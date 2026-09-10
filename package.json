@@ -142,6 +142,7 @@
     "ui:v4:check:screens": "node scripts/ui-v4-check-code-screen-coverage-gate.mjs",
     "ui:v4:check:semantics": "node scripts/ui-v4-check-verdict-semantics-gate.mjs",
     "ui:v4:check:touch-target": "node scripts/ui-v4-check-touch-target-visible.mjs --check",
+    "ui:v4:dead-rules": "node scripts/ui-v4-check-dead-class-rules.mjs",
     "ui:v4:visual:capture": "node apps/web/scripts/ui-v4-visual-capture.mjs",
     "ui:v4:visual:check": "node apps/web/scripts/ui-v4-visual-capture.mjs --check",
     "ui:v4:visual:verify": "node apps/web/scripts/ui-v4-visual-capture.mjs --verify",
