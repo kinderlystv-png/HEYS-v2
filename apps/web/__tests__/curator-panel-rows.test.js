@@ -292,10 +292,16 @@ describe('панель куратора · сборка строк', () => {
       windowRows: days21((i) => ({ waist: [0, 7, 14].includes(i) ? 80 : null })),
       contextRows: [contextRow()]
     })[0];
+    // Числа замера — часть доказательства, а не служебное поле: строка
+    // контракта «вид · карточка «только талия»» требует показать «Талия за три
+    // недели → 76,5 → 76,0 см», и без waistFrom/waistTo карточке нечего
+    // выводить. Здесь все три дня стоят на 80, поэтому от и до совпадают.
     expect(waistOnly.evidence).toEqual({
       kind: 'waist_only',
       waistPoints: 3,
-      spanDays: 14
+      spanDays: 14,
+      waistFrom: 80,
+      waistTo: 80
     });
     expect(waistOnly.evidence.kind).not.toBe('stable_girths');
   });

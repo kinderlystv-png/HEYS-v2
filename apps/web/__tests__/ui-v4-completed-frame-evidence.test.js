@@ -25,8 +25,12 @@ describe('восемь завершённых кадров: построчное
     // 299 с пакета 47 (33435e3bf): дизайнер убрал две строки из канваса
     // strength-builder — «спокойнее · 48» (сноска «Сделанное») и
     // «итоги · 59» (отступ кнопки «Готово»); не переименование.
-    expect(materialized).toHaveLength(299);
-    expect(new Set(materialized.map((row) => row.rowIdentity)).size).toBe(299);
+    // 319 с пакета 52: третья ветка сверки «только талия» — двадцать строк
+    // кадра по решению владельца 10 сентября. Рост числа здесь законен ровно
+    // тогда, когда у новых строк есть построчное доказательство: это проверяет
+    // утверждение ниже, и оно же не даст поднять счётчик под зелёный цвет.
+    expect(materialized).toHaveLength(319);
+    expect(new Set(materialized.map((row) => row.rowIdentity)).size).toBe(319);
     expect(materialized.every((row) => row.evidence.length > 0)).toBe(true);
   });
 
