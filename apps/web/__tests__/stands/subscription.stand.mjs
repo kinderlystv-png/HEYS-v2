@@ -35,8 +35,33 @@ export default {
         <a class="sub-screen__support-link" href="#">Поддержка</a>
       </div>
     </div>
-  `,
+  
+    <!-- Очередь на пробу: предложение, «идёт» и «готово». -->
+    <div class="paywall-trial paywall-trial--offer">
+      <span class="paywall-trial-dot--ok"></span>
+      <span class="paywall-trial-status--ok">Место есть</span>
+    </div>
+    <div class="paywall-trial">
+      <span class="paywall-trial-dot--busy"></span>
+      <span class="paywall-trial-status--busy">Очередь занята</span>
+    </div>
+
+    <!-- Согласие: отмеченный бокс. -->
+    <span class="paywall-consent-box is-checked"></span>
+
+    <!-- Экран: опасная подпись и карточка статуса только для чтения. -->
+    <div class="sub-screen__kick--danger">Доступ закрыт</div>
+    <div class="sub-screen__status-card sub-screen__status-card--readonly">Читать можно, менять нельзя</div>
+`,
   watch: {
+    'Очередь · предложение': '.paywall-trial--offer',
+    'Точка · место есть': '.paywall-trial-dot--ok',
+    'Статус · место есть': '.paywall-trial-status--ok',
+    'Точка · занято': '.paywall-trial-dot--busy',
+    'Статус · занято': '.paywall-trial-status--busy',
+    'Согласие отмечено': '.paywall-consent-box.is-checked',
+    'Опасная подпись': '.sub-screen__kick--danger',
+    'Статус только чтение': '.sub-screen__status-card--readonly',
     'хост экрана': '#ui-v4-subscription-screen-host',
     'подложка пейволла': '.paywall-overlay',
     'экран подписки': '.sub-screen',
