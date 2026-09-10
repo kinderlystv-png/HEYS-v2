@@ -41,6 +41,7 @@ export default {
     </div>
   `,
   watch: {
+    'модалка обновления': '.heys-update-modal',
     'Подложка обновления': '.heys-update-modal__backdrop',
     'Карточка обновления': '.heys-update-modal__card',
     'Заголовок': '.heys-update-modal__title',

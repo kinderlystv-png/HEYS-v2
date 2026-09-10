@@ -72,6 +72,7 @@ export default {
     </div>
   `,
   watch: {
+    'обёртка темы': '.heys-login-theme--login-only',
     'оболочка входа': '#heys-login-gate.heys-auth-shell',
     'карточка входа': '.heys-auth-card',
     'заголовок': '.heys-auth-title',

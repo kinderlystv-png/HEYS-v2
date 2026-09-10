@@ -29,6 +29,7 @@ export default {
     </div>
   `,
   watch: {
+    'корень питания': '.nutrition-v4',
     'Герой': '.nutrition-v4-hero',
     'Подпись героя': '.nutrition-v4-hero__label',
     'Число героя': '.nutrition-v4-hero__value',

@@ -33,6 +33,10 @@ export default {
     </div>
   `,
   watch: {
+    'шаг создания': '.aps-create-step',
+    'поле в строку': '.pe-field--inline',
+    'ручной ввод штрихкода': '.aps-barcode-manual',
+    'сравнение вреда': '.aps-v4-harm-compare',
     'Счётчик шага': '.aps-v4-header-count',
     'Формат порции': '.aps-create-format',
     'Примечание штрихкода': '.aps-create-barcode-note',

@@ -25,6 +25,7 @@ export default {
     </div>
   `,
   watch: {
+    'выбор даты': '.date-picker--v4',
     'Триггер даты': '.date-picker-trigger-lbl',
     'Навигация дня': '.date-picker-day-nav',
     'Оверлей шторки': '.date-picker-sheet-overlay',

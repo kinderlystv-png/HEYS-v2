@@ -27,6 +27,8 @@ export default {
     </div>
   `,
   watch: {
+    'лист приёма': '.nutrition-v4-sheet',
+    'действие листа': '.nutrition-v4-sheet__action',
     'Пустая строка приёма': '.nutrition-v4-meal-row--empty',
     'Номер приёма': '.nutrition-v4-meal-row__num',
     'Кнопка «Добавить»': '.nutrition-v4-meal-row__add',

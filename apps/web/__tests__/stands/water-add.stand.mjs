@@ -34,6 +34,7 @@ export default {
     </div>
   `,
   watch: {
+    'кнопка минус': '.water-fab-vol--minus',
     'Плитка воды': '.widget-water--v4',
     'Норма сверху': '.widget-water__norm',
     'Подпись «Вода»': '.widget-water__label',

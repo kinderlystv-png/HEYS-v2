@@ -32,6 +32,10 @@ export default {
     </div>
   `,
   watch: {
+    'вкладка виджетов': '.widgets-tab',
+    'контейнер сетки': '.widgets-grid-container',
+    'сетка виджетов': '.widgets-grid',
+    'виджет серии': '.widget-streak',
     'Плитка калорий': '.widget-calories',
     'Кикер плитки': '.widget-v4-kicker',
     'Число героя': '.widget-calories__hero-bar-num--ink',

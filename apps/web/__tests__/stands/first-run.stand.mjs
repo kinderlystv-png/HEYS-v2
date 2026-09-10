@@ -27,6 +27,7 @@ export default {
     </div>
   `,
   watch: {
+    'подложка тура': '.tour-overlay',
     'Подсказка тура': '.tour-tooltip',
     'Заголовок тура': '.tour-title',
     'Текст тура': '.tour-text',

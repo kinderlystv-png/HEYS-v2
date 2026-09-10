@@ -29,6 +29,8 @@ export default {
     </div>
   `,
   watch: {
+    'лист настроек': '.tab-settings-menu--v4-sheet',
+    'группа листа': '.hdr-settings-sheet__group',
     'Шапка шторки': '.hdr-settings-sheet__head',
     'Заголовок': '.hdr-settings-sheet__title',
     'Крестик': '.hdr-settings-sheet__close',

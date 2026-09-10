@@ -31,6 +31,8 @@ export default {
     <span class="cascade-dot cascade-dot--household"></span>
   `,
   watch: {
+    'инсайт питания': '.insights-v4-nutrition',
+    'точка каскада · быт': '.cascade-dot--household',
     'Карточка БЖУ': '.insights-v4-nutrition__card',
     'Заголовок БЖУ': '.insights-v4-nutrition__head',
     'Название макро': '.insights-v4-nutrition__bzhu-name',

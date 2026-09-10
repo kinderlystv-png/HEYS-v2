@@ -40,6 +40,7 @@ export default {
     </div>
   `,
   watch: {
+    'подложка листа': '.mc-backdrop',
     'модалка регистрации': '.mc-modal[data-heys-step-id="profile-personal"]',
     'поле имени': '.profile-personal-name input[type="text"]',
     'текущее значение колеса': '.mc-wheel-value--current',

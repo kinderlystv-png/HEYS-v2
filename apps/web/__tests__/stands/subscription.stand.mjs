@@ -37,6 +37,9 @@ export default {
     </div>
   `,
   watch: {
+    'хост экрана': '#ui-v4-subscription-screen-host',
+    'подложка пейволла': '.paywall-overlay',
+    'экран подписки': '.sub-screen',
     'Баннер «только чтение»': '.readonly-banner',
     'Пилюля «Подписка»': '.readonly-banner-pill',
     'Модалка тарифов': '.paywall-modal',

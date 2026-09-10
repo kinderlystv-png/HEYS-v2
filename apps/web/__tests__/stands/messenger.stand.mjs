@@ -56,6 +56,7 @@ export default {
     </div>
   `,
   watch: {
+    'подложка листа действий': '.messenger-action-sheet-backdrop',
     'Пустой тред': '.messenger-empty',
     'Бейдж пустого треда': '.messenger-empty__badge',
     'Текст пустого треда': '.messenger-empty__text',
