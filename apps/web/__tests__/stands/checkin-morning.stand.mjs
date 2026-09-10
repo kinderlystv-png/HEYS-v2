@@ -37,8 +37,44 @@ export default {
       </div>
       <button type="button" class="mc-btn mc-daily-footer-primary mc-btn--primary">Дальше</button>
     </div>
-  `,
+  
+    <!-- Шаг «Шаги»: обычный герой и герой при своей цели. -->
+    <div class="mc-steps-step">
+      <div class="mc-step-kicker">Шаги</div>
+      <div class="mc-steps-hero">
+        <span class="mc-steps-hero-value">8 400</span>
+        <span class="mc-steps-unit">шагов</span>
+      </div>
+      <div class="mc-recorded-sub">Записано вчера</div>
+      <div class="mc-steps-slider-container">
+        <span class="mc-steps-advice-mark"></span>
+      </div>
+    </div>
+    <div class="mc-steps-hero mc-steps-hero--custom">
+      <span class="mc-steps-hero-value">12 000</span>
+    </div>
+
+    <!-- Загрузочный день: своя строка на шаге. -->
+    <div class="mc-steps-refeed-row">
+      <div>
+        <div class="mc-steps-refeed-title">Загрузочный день</div>
+        <div class="mc-steps-refeed-hint">Норма выше обычной</div>
+      </div>
+    </div>
+`,
   watch: {
+    'Шаг «Шаги»': '.mc-steps-step',
+    'Надзаголовок шага': '.mc-step-kicker',
+    'Герой шагов': '.mc-steps-hero:not(.mc-steps-hero--custom)',
+    'Герой · своя цель': '.mc-steps-hero--custom',
+    'Число героя шагов': '.mc-steps-hero-value',
+    'Единица': '.mc-steps-unit',
+    'Подпись «записано»': '.mc-recorded-sub',
+    'Дорожка ползунка': '.mc-steps-slider-container',
+    'Метка совета': '.mc-steps-advice-mark',
+    'Строка загрузки': '.mc-steps-refeed-row',
+    'Заголовок загрузки': '.mc-steps-refeed-title',
+    'Подсказка загрузки': '.mc-steps-refeed-hint',
     'Модалка daily': '.mc-modal--daily',
     'Приветствие': '.mc-daily-greeting-title',
     'Дата': '.mc-daily-greeting-date',
