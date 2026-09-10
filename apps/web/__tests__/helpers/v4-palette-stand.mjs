@@ -459,15 +459,26 @@ export function measureZone(stand, { doc = globalThis.document, width = 375 } = 
   const sets = {};
   let rendered = false;
 
-  for (const setId of SETS) {
-    const styles = [];
-    try {
-      mountPaletteSet(doc, SET_BY_ID.get(setId));
-      for (const chunk of css) styles.push(injectCss(doc, chunk));
-      doc.body.setAttribute('style', stand.bodyStyle || `margin:0;width:${width}px;background:var(--v4-hero,#efe3cf)`);
-      doc.body.innerHTML = stand.html;
-      rendered = true;
+  // CSS вкладывается ОДИН раз на зону, а не по разу на набор.
+  //
+  // Наборы переключаются атрибутами на корне документа, и один и тот же
+  // вложенный CSS обслуживает все четыре — правила для тёмного и синего лежат
+  // в тех же файлах. Прежняя версия вкладывала и удаляла стили внутри цикла по
+  // наборам, и jsdom разбирал их заново каждый раз: 28 зон × 4 набора = 112
+  // разборов, среди которых 000-base-and-gamification.css на 19 тысяч строк.
+  // Инвентарь покрытия из-за этого шёл сорок минут и ронял соседние проверки
+  // по таймауту — не потому, что что-то сломано, а потому, что до них не
+  // доходила очередь. Медленный гейт не читают, а его красноту списывают на
+  // «опять таймаут», и однажды под этим спишут настоящую поломку.
+  const styles = [];
+  try {
+    for (const chunk of css) styles.push(injectCss(doc, chunk));
+    doc.body.setAttribute('style', stand.bodyStyle || `margin:0;width:${width}px;background:var(--v4-hero,#efe3cf)`);
+    doc.body.innerHTML = stand.html;
+    rendered = true;
 
+    for (const setId of SETS) {
+      mountPaletteSet(doc, SET_BY_ID.get(setId));
       const measured = {};
       for (const [name, selector] of keys) {
         const el = doc.querySelector(selector);
@@ -487,11 +498,11 @@ export function measureZone(stand, { doc = globalThis.document, width = 375 } = 
         };
       }
       sets[setId] = measured;
-    } finally {
-      for (const style of styles) style.remove();
-      doc.body.innerHTML = '';
-      unmountPaletteSet(doc);
     }
+  } finally {
+    for (const style of styles) style.remove();
+    doc.body.innerHTML = '';
+    unmountPaletteSet(doc);
   }
 
   return { rendered, notFound: [...notFound], sets };
