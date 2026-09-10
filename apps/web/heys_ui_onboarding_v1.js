@@ -877,7 +877,17 @@
         document.body.classList.remove('tour-active');
         document.body.style.overflow = '';
       }
-      await this.start({ force: true, skipWelcome: true });
+      // `start()` сюда не годится по двум причинам: тур выключен флагом до
+      // пострелизной доводки, и по пути он переключает вкладку, глушит утренний
+      // чек-ин и будит виджеты — на стенде это подвешивало страницу. Кадрам
+      // нужен только слой с подсветкой над готовыми целями, поэтому состояние
+      // поднимается ровно до него.
+      state.isActive = true;
+      state.userName = state.userName || '';
+      state.stepStartTime = Date.now();
+      document.body.classList.add('tour-active');
+      createOverlay();
+
       const safeIndex = Math.min(Math.max(0, stepIndex), TOUR_STEPS.length - 1);
       state.currentStepIndex = safeIndex;
       this.renderStep();
