@@ -39,8 +39,17 @@ export default {
         <span class="offline-banner-duration">Офлайн 42 сек</span>
       </div>
     </div>
-  `,
+  
+    <!-- Баннер восстановленной сети: живёт 2 секунды, но цвет у него свой. -->
+    <div class="online-banner">
+      <span class="online-banner-icon">✓</span>
+      <span class="online-banner-text">Сеть восстановлена</span>
+    </div>
+`,
   watch: {
+    'Баннер сети': '.online-banner',
+    'Значок баннера': '.online-banner-icon',
+    'Текст баннера': '.online-banner-text',
     'модалка обновления': '.heys-update-modal',
     'Подложка обновления': '.heys-update-modal__backdrop',
     'Карточка обновления': '.heys-update-modal__card',

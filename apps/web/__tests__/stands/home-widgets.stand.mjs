@@ -30,8 +30,24 @@ export default {
       <span class="widget-cascade__dot widget-cascade__dot--neutral"></span>
       <span class="pct-badge pct-badge--yellow">42%</span>
     </div>
-  `,
+  
+    <!-- Режим расстановки: шапка с двумя кнопками и счётчик бюджета. -->
+    <div class="hdr-tab-title-row">
+      <button type="button" class="hdr-widgets-edit-btn hdr-widgets-edit-btn--cancel">Отмена</button>
+      <span class="hdr-widgets-edit-title">Расстановка</span>
+      <button type="button" class="hdr-widgets-edit-btn hdr-widgets-edit-btn--done">Готово</button>
+    </div>
+    <div class="hdr-widgets-edit-budget n"><span class="hdr-widgets-edit-budget__num">3</span></div>
+    <div class="widgets-edit-fab active"></div>
+`,
   watch: {
+    'Шапка расстановки': '.hdr-tab-title-row',
+    'Кнопка «Отмена»': '.hdr-widgets-edit-btn--cancel',
+    'Заголовок расстановки': '.hdr-widgets-edit-title',
+    'Кнопка «Готово»': '.hdr-widgets-edit-btn--done',
+    'Счётчик бюджета': '.hdr-widgets-edit-budget',
+    'Число бюджета': '.hdr-widgets-edit-budget__num',
+    'Кнопка расстановки': '.widgets-edit-fab.active',
     'вкладка виджетов': '.widgets-tab',
     'контейнер сетки': '.widgets-grid-container',
     'сетка виджетов': '.widgets-grid',
