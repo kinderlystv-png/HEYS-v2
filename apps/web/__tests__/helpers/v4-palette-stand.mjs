@@ -3,6 +3,7 @@
  * Pattern: curator-sheet-palette, messenger-bubble-v4-palette, registration-wheel-v4-palette.
  */
 import fs from 'node:fs';
+import postcss from 'postcss';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,6 +50,73 @@ export function unmountPaletteSet(doc) {
 }
 
 /** @param {Document} doc */
+/**
+ * Выбросить из CSS правила, которые не могут совпасть ни с одним узлом стенда.
+ *
+ * Стенд одной зоны берёт до мегабайта CSS, а дорог здесь не разбор (2 мс) и не
+ * разметка (12 мс), а первый getComputedStyle на узел: happy-dom примеряет к
+ * нему КАЖДОЕ правило, и это 0,8 с на элемент. Отсюда сорок минут на инвентарь.
+ *
+ * Решает не число вставок, а объём примеряемого. Правило, у которого самый
+ * правый компаунд требует класса, идентификатора или тега, которых в дереве
+ * стенда нет, не может повлиять ни на один замер — его выбрасываем. Набор
+ * палитры переключается атрибутами на КОРНЕ, состав узлов при этом не меняется,
+ * поэтому один и тот же отбор верен для всех четырёх наборов.
+ *
+ * Отбор намеренно трусливый: всё, чего не разобрали уверенно — `:is()`, `*`,
+ * `:root`, экранированные имена, любая неожиданная форма — остаётся. Замер на
+ * входе: 959 → 244 КБ, 53,3 → 6,9 с, все 52 значения совпали до цифры.
+ */
+export function filterCssForDom(cssText, doc) {
+  const inv = domInventory(doc);
+  const root = postcss.parse(cssText);
+  root.walkRules((rule) => {
+    const parent = rule.parent;
+    if (parent && parent.type === 'atrule' && /keyframes$/i.test(parent.name)) return;
+    const kept = rule.selectors.filter((selector) => selectorCanMatch(selector, inv));
+    if (!kept.length) rule.remove();
+    else if (kept.length !== rule.selectors.length) rule.selectors = kept;
+  });
+  root.walkAtRules((at) => {
+    if (at.nodes && !at.nodes.length) at.remove();
+  });
+  return root.toString();
+}
+
+function domInventory(doc) {
+  const classes = new Set();
+  const ids = new Set();
+  const tags = new Set(['html', 'head', 'body']);
+  for (const el of doc.querySelectorAll('*')) {
+    tags.add(el.tagName.toLowerCase());
+    if (el.id) ids.add(el.id);
+    for (const name of el.classList) classes.add(name);
+  }
+  return { classes, ids, tags };
+}
+
+const PSEUDO_RE = /::?[a-zA-Z-]+(\([^()]*\))?/g;
+const BRACKET_RE = /\[[^\]]*\]/g;
+
+function selectorCanMatch(selector, inv) {
+  // Скобки атрибутов гасим до разбиения: в них бывают пробелы и комбинаторы.
+  const flat = selector.replace(BRACKET_RE, '\u0000');
+  const parts = flat.split(/[\s>+~]+/).filter(Boolean);
+  const last = parts[parts.length - 1];
+  if (!last) return true;
+  const bare = last.replace(PSEUDO_RE, '');
+  // Осталась скобка или экранирование — разобрать не берёмся, правило оставляем.
+  if (/[()\\]/.test(bare)) return true;
+  for (const m of bare.matchAll(/\.(-?[_a-zA-Z][\w-]*)/g)) {
+    if (!inv.classes.has(m[1])) return false;
+  }
+  const id = bare.match(/#(-?[_a-zA-Z][\w-]*)/);
+  if (id && !inv.ids.has(id[1])) return false;
+  const tag = bare.match(/^([a-zA-Z][\w-]*)/);
+  if (tag && !inv.tags.has(tag[1].toLowerCase())) return false;
+  return true;
+}
+
 export function injectCss(doc, cssText) {
   const style = doc.createElement('style');
   style.textContent = cssText;
@@ -448,37 +516,48 @@ function borderColorOf(doc, el, shorthand) {
  * @param {{ zone: string, cssFiles: string[], html: string, watch: Record<string,string>, bodyStyle?: string }} stand
  * @param {{ doc?: Document, width?: number }} [options]
  */
-export function measureZone(stand, { doc = globalThis.document, width = 375 } = {}) {
+export function measureZone(stand, { doc = globalThis.document, width = 375, noFilter = false } = {}) {
   if (!doc) throw new Error('measureZone: нет document — стенд запускается в jsdom-среде');
 
-  const css = [readModuleCss(...BASE_CSS_FILES), ...stand.cssFiles.map((file) => readWebCss(file))];
+  const rawCss = [readModuleCss(...BASE_CSS_FILES), ...stand.cssFiles.map((file) => readWebCss(file))];
   const keys = Object.entries(stand.watch || {});
+
+  // Отбор правил делается один раз на зону: он зависит только от состава узлов,
+  // а тот у всех четырёх наборов один. Разметку для отбора ставим и убираем
+  // здесь же, чтобы цикл ниже начинал с чистого тела.
+  doc.body.innerHTML = stand.html;
+  const css = noFilter ? rawCss : rawCss.map((chunk) => filterCssForDom(chunk, doc));
+  doc.body.innerHTML = '';
+
   /** @type {Set<string>} */
   const notFound = new Set();
   /** @type {Record<string, Record<string, object>>} */
   const sets = {};
   let rendered = false;
 
-  // CSS вкладывается ОДИН раз на зону, а не по разу на набор.
+  // CSS вкладывается и разметка пересоздаётся ВНУТРИ цикла по наборам, и это не
+  // расточительность, а условие правильного замера. 10 сентября вынос вставки за
+  // цикл дал 644 → 197 с и неверные числа: happy-dom держит вычисленный стиль
+  // элемента в кеше, который сбрасывают только мутации дерева, а смена
+  // data-theme на <html> его не трогает. Наборы 2–4 возвращали числа первого —
+  // кнопка входа на синем отдавала песочные чернила #2b1608 на синей заливке и
+  // рождала ложную находку «контраст 2,53». Отцеп и прицеп <body> кеш корня
+  // обновляет, но не кеш самих узлов, поэтому не годится тоже; проверено
+  // замером на четырёх способах сброса.
   //
-  // Наборы переключаются атрибутами на корне документа, и один и тот же
-  // вложенный CSS обслуживает все четыре — правила для тёмного и синего лежат
-  // в тех же файлах. Прежняя версия вкладывала и удаляла стили внутри цикла по
-  // наборам, и jsdom разбирал их заново каждый раз: 28 зон × 4 набора = 112
-  // разборов, среди которых 000-base-and-gamification.css на 19 тысяч строк.
-  // Инвентарь покрытия из-за этого шёл сорок минут и ронял соседние проверки
-  // по таймауту — не потому, что что-то сломано, а потому, что до них не
-  // доходила очередь. Медленный гейт не читают, а его красноту списывают на
-  // «опять таймаут», и однажды под этим спишут настоящую поломку.
-  const styles = [];
-  try {
-    for (const chunk of css) styles.push(injectCss(doc, chunk));
-    doc.body.setAttribute('style', stand.bodyStyle || `margin:0;width:${width}px;background:var(--v4-hero,#efe3cf)`);
-    doc.body.innerHTML = stand.html;
-    rendered = true;
-
-    for (const setId of SETS) {
+  // Дорога здесь не вставка CSS (2 мс) и не разбор разметки (12 мс), а первый
+  // getComputedStyle на узел против ~1 МБ CSS — 0,8 с на элемент. Ускорять надо
+  // объём CSS, который берёт стенд, а не число вставок; и любое такое ускорение
+  // обязано доказать, что числа не изменились.
+  for (const setId of SETS) {
+    const styles = [];
+    try {
       mountPaletteSet(doc, SET_BY_ID.get(setId));
+      for (const chunk of css) styles.push(injectCss(doc, chunk));
+      doc.body.setAttribute('style', stand.bodyStyle || `margin:0;width:${width}px;background:var(--v4-hero,#efe3cf)`);
+      doc.body.innerHTML = stand.html;
+      rendered = true;
+
       const measured = {};
       for (const [name, selector] of keys) {
         const el = doc.querySelector(selector);
@@ -498,11 +577,11 @@ export function measureZone(stand, { doc = globalThis.document, width = 375 } = 
         };
       }
       sets[setId] = measured;
+    } finally {
+      for (const style of styles) style.remove();
+      doc.body.innerHTML = '';
+      unmountPaletteSet(doc);
     }
-  } finally {
-    for (const style of styles) style.remove();
-    doc.body.innerHTML = '';
-    unmountPaletteSet(doc);
   }
 
   return { rendered, notFound: [...notFound], sets };
