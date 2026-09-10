@@ -279,8 +279,13 @@ describe('слой обновления PWA взял общий знак ожи�
     const html = fs.readFileSync(path.join(WEB_DIR, 'index.html'), 'utf8');
 
     expect(components).toMatch(/\.heys-update-modal__icon \{[\s\S]*?width: 56px;/);
+    // Пакет 51 сменил роль знака: строка «вид иконки стадии» говорит теперь
+    // «дуга 26 px обводкой 2,75 тоном --ac». Повод — находка стенда палитры:
+    // дуга --acs на круге --c2 давала 2,85:1 при пороге 3 для значка. Дизайнер
+    // ответил правилом, а не точечной правкой: --acs это роль ЗАЛИВКИ, графика
+    // и текст акцентом берут --ac.
     expect(components).toMatch(
-      /\.heys-update-modal__icon \{[^}]*background: var\(--v4-hero, #efe3cf\);[^}]*color: var\(--v4-act, #c67139\);/,
+      /\.heys-update-modal__icon \{[^}]*background: var\(--v4-hero, #efe3cf\);[^}]*color: var\(--v4-act-text, #8a4a20\);/,
     );
     expect(components).not.toContain('background: rgba(217, 138, 79, 0.14);');
     expect(components).toContain('animation: heys-update-spin 1.1s linear infinite;');
@@ -323,8 +328,12 @@ describe('слой обновления PWA взял общий знак ожи�
     style.textContent = `${paletteCss}\n${iconRule}`;
     document.head.appendChild(style);
 
+    // act здесь — значение --v4-act-text (роль --ac контракта), а не --v4-act:
+    // пакет 51 перевёл графику акцентом на --ac. В СИНЕМ наборе обе роли дают
+    // один и тот же #1d5e96, поэтому сверка только по синему прошла бы и на
+    // неверной роли — песочный набор здесь и есть настоящая проверка.
     const cases = [
-      { theme: 'sand', disc: '#efe3cf', act: '#c67139' },
+      { theme: 'sand', disc: '#efe3cf', act: '#8a4a20' },
       { theme: 'blue', disc: '#e2ecf6', act: '#1d5e96' },
     ];
 
