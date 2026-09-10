@@ -123,7 +123,7 @@ const STAND_COVERAGE_GAPS = Object.freeze({
   'food-meal': 'grams-hero + empty row + sheet actions; нет time-step и всех кадров приёма',
   gamification: 'hero + ach unlocked/locked; нет progress/mission/ladder экранов',
   'reports-insights': 'insights card + reports tier + cascade dots; не все кадры PI dashboard',
-  'curator-cabinet': 'cur-row + cur-sheet; нет полного листа поправки и всех состояний строки',
+  'curator-cabinet': 'cur-row + cur-sheet + здоровье, чек-ин, чипы, точки состояний, факты листа; нет полного листа поправки',
   'curator-edits': 'ca-modal meal-card + ack/later; нет разворота продуктов и multi-day',
   tips: 'list + rate-panel + sync panel + settings toggles + skip; нет detail',
   'norm-correction': 'curator_kept hero + facts; нет client/proposal/reject flows',
