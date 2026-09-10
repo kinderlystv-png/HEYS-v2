@@ -125,12 +125,12 @@ const STAND_COVERAGE_GAPS = Object.freeze({
   'reports-insights': 'insights card + reports tier + cascade dots; не все кадры PI dashboard',
   'curator-cabinet': 'cur-row + cur-sheet; нет полного листа поправки и всех состояний строки',
   'curator-edits': 'ca-modal meal-card + ack/later; нет разворота продуктов и multi-day',
-  tips: 'list + rate-panel + sync panel; нет detail/skip/settings toggle',
+  tips: 'list + rate-panel + sync panel + settings toggles + skip; нет detail',
   'norm-correction': 'curator_kept hero + facts; нет client/proposal/reject flows',
   'strength-builder': 'sb-empty card + actions; нет workout/log/superset/menu sheets',
-  'date-remainders': 'sheet + day cells + nav; нет trigger-only и legend states',
+  'date-remainders': 'sheet + day cells + nav + trigger tones + legend swatches',
   'tab-activity': 'steps zero + today row + plan card; нет calendar grid и missed states',
-  cycle: 'filled card + insight + norm pill; нет marking panel и empty states',
+  cycle: 'filled card + insight + norm pill + marking panel + empty card + ended row',
 });
 
 /** Разбирает «нет …» / «не все …» из STAND_COVERAGE_GAPS в список непокрытых состояний. */

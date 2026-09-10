@@ -33,8 +33,58 @@ export default {
         </div>
       </div>
     </div>
-  `,
+  
+    <!-- Экран настроек советов: тумблеры включённый и выключенный. -->
+    <div class="advice-v4-settings-overlay">
+      <div class="advice-v4-settings">
+        <div class="advice-v4-settings__header">
+          <button type="button" class="advice-v4-settings__back" aria-label="Назад"></button>
+          <span class="advice-v4-settings__title">Советы</span>
+        </div>
+        <div class="advice-v4-settings__body">
+          <div class="advice-v4-settings__intro">Советы приходят, когда есть что сказать по вашим записям</div>
+          <div class="advice-v4-settings__section-label">Как приходят</div>
+          <div class="advice-v4-settings__group">
+            <div class="advice-v4-settings__row">
+              <div class="advice-v4-settings__row-copy">
+                <div class="advice-v4-settings__row-title">Всплывающие</div>
+                <div class="advice-v4-settings__row-hint">Показывать поверх экрана</div>
+              </div>
+              <button type="button" class="advice-v4-settings__toggle is-on" aria-pressed="true">
+                <span class="advice-v4-settings__toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="advice-v4-settings__row">
+              <div class="advice-v4-settings__row-copy">
+                <div class="advice-v4-settings__row-title">Звук</div>
+                <div class="advice-v4-settings__row-hint">Короткий сигнал</div>
+              </div>
+              <button type="button" class="advice-v4-settings__toggle" aria-pressed="false">
+                <span class="advice-v4-settings__toggle-thumb"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- «Пропустить» в панели совета. -->
+    <button type="button" class="advice-v4-panel__skip">Пропустить</button>
+`,
   watch: {
+    'Оверлей настроек': '.advice-v4-settings-overlay',
+    'Экран настроек': '.advice-v4-settings',
+    'Шапка настроек': '.advice-v4-settings__header',
+    'Заголовок настроек': '.advice-v4-settings__title',
+    'Вступление': '.advice-v4-settings__intro',
+    'Метка раздела': '.advice-v4-settings__section-label',
+    'Группа настроек': '.advice-v4-settings__group',
+    'Заголовок строки': '.advice-v4-settings__row-title',
+    'Подсказка строки': '.advice-v4-settings__row-hint',
+    'Тумблер включён': '.advice-v4-settings__toggle.is-on',
+    'Тумблер выключен': '.advice-v4-settings__toggle:not(.is-on)',
+    'Бегунок тумблера': '.advice-v4-settings__toggle.is-on .advice-v4-settings__toggle-thumb',
+    'Кнопка «Пропустить»': '.advice-v4-panel__skip',
     'Оверлей': '.advice-list-overlay',
     'Лист v4': '.advice-list-container--v4',
     'Ручка листа': '.advice-list-handle',
