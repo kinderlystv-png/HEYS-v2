@@ -3142,11 +3142,6 @@
   border-radius: 8px;
 }
 
-.caloric-balance-rec-icon {
-  font-size: 14px;
-  flex-shrink: 0;
-}
-
 .caloric-balance-rec-text {
   font-size: 13px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -6438,13 +6433,6 @@
   margin-left: 2px;
 }
 
-.weight-card-bottom-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-}
-
 .weight-card-trend {
   display: flex;
   align-items: center;
@@ -8093,41 +8081,6 @@
 }
 
 .dev-clear-weight-btn:active {
-  opacity: 0.7;
-  transition: opacity 120ms ease;
-}
-
-/* Weight card bottom row: trend + mini clear button */
-.weight-card-bottom-row {
-  justify-content: center;
-}
-
-/* DEV: Mini clear weight button */
-.dev-clear-weight-btn-mini {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  font-size: 12px;
-  line-height: 14px;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
-  background: transparent;
-  border: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
-  border-radius: 50%;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-  opacity: 0.6;
-}
-
-@media (hover: hover) {
-  .dev-clear-weight-btn-mini:hover {
-  color: var(--v4-wgt-danger-text, #a1471c);
-  border-color: var(--v4-wgt-danger-text, #a1471c);
-  background: rgba(239, 68, 68, 0.1);
-  opacity: 1;
-}
-}
-
-.dev-clear-weight-btn-mini:active {
   opacity: 0.7;
   transition: opacity 120ms ease;
 }

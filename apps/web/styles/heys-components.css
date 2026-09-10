@@ -5460,30 +5460,6 @@ body.tour-active .ios-pwa-banner {
   white-space: nowrap;
 }
 
-.mc-header-right-btn {
-  min-height: 44px;
-  min-width: 44px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  background: var(--v4-bg, #fffaf1);
-  color: var(--v4-ink, #201e1d);
-  border-radius: 8px;
-  padding: 4px 6px;
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.mc-header-right-btn:active {
-  opacity: 0.7;
-  transition: opacity 120ms ease;
-}
-
-[data-theme$="dark"] .mc-header-right-btn {
-  background: var(--v4-bg, #fffaf1);
-  color: #e5e7eb;
-  border-color: var(--v4-sand-ink-slate, #1f2937);
-}
-
 [data-theme$="dark"] .aps-portions-suggest {
   background: var(--v4-bg, #fffaf1);
   border-color: var(--v4-sand-ink-slate, #1f2937);

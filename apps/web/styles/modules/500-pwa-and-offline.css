@@ -2652,7 +2652,6 @@
   color: rgba(0, 0, 0, 0.4);
 }
 
-.mc-rest-cold-clear-hint,
 .mc-rest-clear-mark-hint {
   margin-top: 4px;
   font: 500 11px/1.5 Figtree, system-ui, sans-serif;
@@ -2667,7 +2666,6 @@
   margin-top: 10px;
 }
 
-.mc-rest-step--layer .mc-rest-cold-clear-hint,
 .mc-rest-step--layer .mc-rest-clear-mark-hint {
   margin-bottom: 8px;
 }

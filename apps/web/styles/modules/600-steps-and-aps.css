@@ -2662,8 +2662,7 @@ body:has(.mc-backdrop .aps-search-step) #heys-toast-container {
 }
 
 .aps-v4-flow .aps-new-product-btn,
-.aps-v4-flow .aps-portions-next-btn,
-.aps-v4-flow .aps-create-submit-btn {
+.aps-v4-flow .aps-portions-next-btn {
   background: var(--v4-sand-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
   border-color: transparent;
