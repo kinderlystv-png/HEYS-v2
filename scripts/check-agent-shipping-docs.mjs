@@ -407,10 +407,17 @@ function validateVisiblePolicyContracts(state, failures) {
   const commitOnlyRow = runbook
     .split('\n')
     .find((line) => /^\|\s*Commit-only, one intended staged group\s*\|/.test(line));
+  // `--no-push` требуется у КАЖДОЙ команды в строке, а не где-нибудь в строке.
+  // 5 сентября в ту же ячейку добавили второй пример с изолированным индексом,
+  // и проверка «в строке есть --no-push» стала проходить, даже если первая
+  // команда его потеряет: сторож замолчал ровно там, где его ответ нужен.
+  const shipCommands = commitOnlyRow
+    ? [...commitOnlyRow.matchAll(/`([^`]*pnpm ship[^`]*)`/g)].map((m) => m[1])
+    : [];
   if (
     !commitOnlyRow ||
-    !commitOnlyRow.includes('pnpm ship') ||
-    !commitOnlyRow.includes('--no-push') ||
+    shipCommands.length === 0 ||
+    !shipCommands.every((command) => command.includes('--no-push')) ||
     !/\|\s*No\s*\|$/.test(commitOnlyRow)
   ) {
     addFailure(failures, {

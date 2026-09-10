@@ -239,6 +239,8 @@ tsup.config.bundled_*.mjs
 .worktrees/
 .claude/worktrees/
 .claude/scheduled_tasks.lock
+# Временные индексы изолированных коммитов: рабочий мусор, не исходник.
+.claude/isolated-index/
 
 # Cloud Functions local bundle (shared/ MUST be tracked — required for deploy!)
 # yandex-cloud-functions/heys-api-rpc/shared/  # ← НЕ игнорировать! Нужен для деплоя
