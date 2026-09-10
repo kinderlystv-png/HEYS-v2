@@ -1718,7 +1718,9 @@ body.tour-active .ios-pwa-banner {
   border-radius: 999px;
   border: none;
   background: var(--v4-hero, #efe3cf);
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.58));
+  /* Запасное было 58 % при роли 56 % — на стенде подхватывалось именно оно
+     и расходилось с кадром. */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -1769,7 +1771,9 @@ body.tour-active .ios-pwa-banner {
   background: transparent;
   font-weight: 500;
   line-height: 1.55;
-  color: rgba(0, 0, 0, 0.6);
+  /* Кадр «Сверка · норма снизилась» даёт тексту вторичные чернила 56 %.
+     Стояли голые 60 % — ступени с таким значением в лестнице чернил нет. */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
@@ -1829,7 +1833,9 @@ body.tour-active .ios-pwa-banner {
 }
 
 .weekly-wrap-correction--lowered .weekly-wrap-correction__btn:not(.weekly-wrap-correction__btn--primary) {
-  color: rgba(0, 0, 0, 0.58);
+  /* Кадр даёт второй кнопке вторичные чернила 56 %. Голые 58 % — не ступень
+     лестницы чернил, и они перебивали роль, стоящую этажом выше. */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .weekly-wrap-correction--lowered .weekly-wrap-correction__footnote {
