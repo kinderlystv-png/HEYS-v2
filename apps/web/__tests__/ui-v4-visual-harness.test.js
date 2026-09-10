@@ -145,7 +145,9 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
     expect(captureSource).toContain('!visualChecks.waterZero');
     expect(captureSource).toContain("near(visualChecks.header?.y, 16)");
     expect(captureSource).toContain("near(visualChecks.date?.y, 46)");
-    expect(captureSource).toContain("near(visualChecks.grid?.y, 82)");
+    // Строка контракта «тач-цели», решение 5 сентября: пилюля капсулы даты
+    // выросла с 36 до 44, и сетка съехала ровно на эти 8 пикселей.
+    expect(captureSource).toContain("near(visualChecks.grid?.y, 90)");
     expect(captureSource).toContain('viewportHeight - navHeight - 14 - 52');
     expect(captureSource).toContain("near(visualChecks.navRow?.x, 10)");
     expect(captureSource).toContain('visualChecks.cloudTarget?.width < 44');

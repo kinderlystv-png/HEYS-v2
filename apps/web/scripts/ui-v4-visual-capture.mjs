@@ -1662,7 +1662,16 @@ async function openCase(browser, item, snapshot, options = {}) {
         .locator('.widgets-grid .widget')
         .first()
         .waitFor({ state: 'visible', timeout: 45_000 });
-      await page.getByRole('button', { name: 'Настройки', exact: true }).click();
+      // Лист открывается тем же обработчиком, что и кнопка в шапке. Через клик
+      // не выходит: шапка геймификации анимируется бесконечно, и Playwright
+      // ждёт «элемент замер» до самого таймаута, а форсированный клик приходит
+      // в неё раньше, чем она подхватит обработчик.
+      await page.waitForFunction(
+        () => typeof window.__heysToggleTabSettingsHandler === 'function',
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate(() => window.__heysToggleTabSettingsHandler());
     }
     if (item.kind === 'demo-v4-visual-frame' || item.kind === 'demo-subscription') {
       const prepared = await prepareUiV4VisualCase(page, item);
@@ -2122,8 +2131,11 @@ async function openCase(browser, item, snapshot, options = {}) {
         || !near(visualChecks.date?.x, 18)
         || !near(visualChecks.date?.y, 46)
         || !near(visualChecks.date?.width, viewportWidth - 36)
-        || !near(visualChecks.date?.height, 36)
-        || !near(visualChecks.grid?.y, 82)
+        // Строка контракта «тач-цели», решение 5 сентября: пилюля капсулы даты
+        // выросла с 36 до 44 видимым размером — самый частый жест на Главной.
+        // Сетка съехала ровно на эти 8 пикселей.
+        || !near(visualChecks.date?.height, 44)
+        || !near(visualChecks.grid?.y, 90)
         || !near(visualChecks.settingsFab?.x, 14)
         || !near(visualChecks.settingsFab?.y, viewportHeight - navHeight - 18 - 40)
         || !near(visualChecks.quickFab?.x, viewportWidth - 14 - 52)
@@ -2382,7 +2394,9 @@ async function openCase(browser, item, snapshot, options = {}) {
         || visualChecks.card?.borderRadius !== '20px'
         || visualChecks.title?.font !== '700 16px / 21.12px Figtree, sans-serif'
         || visualChecks.body?.font !== '500 12px / 18.6px Figtree, sans-serif'
-        || visualChecks.body?.color !== 'rgba(0, 0, 0, 0.6)'
+        // Кадр даёт вторичные чернила 56 %; литерал 60 % здесь сторожил
+        // прежний цвет и падал ровно на его починке.
+        || visualChecks.body?.color !== 'rgba(0, 0, 0, 0.56)'
         || visualChecks.body?.marginTop !== '8px'
         || visualChecks.hero?.display !== 'flex'
         || visualChecks.hero?.alignItems !== 'baseline'

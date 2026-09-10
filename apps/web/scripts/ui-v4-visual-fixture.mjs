@@ -7,6 +7,9 @@ import { readCanvasPackage } from '../../../scripts/lib/ui-v4-canvas-index.mjs';
 const FIXTURE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const VISUAL_FIXTURE_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_ui_v4_visual_fixture_v1.js');
 export const SUBSCRIPTION_PRODUCT_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_subscriptions_v1.js');
+// Бар отмены живёт в ленивом бандле и к моменту монтирования фикстуры ещё не
+// загружен: два кадра, которые его показывают, падали на «HEYS.Undo unavailable».
+const UNDO_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_undo_v1.js');
 
 const FIXED_NOW = '2026-08-28T09:30:00+03:00';
 const FIXED_DAY = '2026-08-28';
@@ -1000,6 +1003,22 @@ function isSubscriptionVisualCase(item) {
     || (item.kind === 'demo-v4-visual-frame' && item.frameLabel?.startsWith('Подписка ·'));
 }
 
+/** Подгружает бар отмены, если ленивый бандл ещё не донёс его на страницу. */
+async function ensureUndoModule(page) {
+  const hasUndo = await page.evaluate(() => typeof window.HEYS?.Undo?.push === 'function');
+  if (hasUndo) return;
+
+  if (!fs.existsSync(UNDO_SCRIPT)) {
+    throw new Error(`Undo script missing: ${UNDO_SCRIPT}`);
+  }
+  await page.addScriptTag({ path: UNDO_SCRIPT });
+  await page.waitForFunction(
+    () => typeof window.HEYS?.Undo?.push === 'function',
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
 async function ensureSubscriptionProductModules(page) {
   await page.waitForFunction(
     () =>
@@ -1050,6 +1069,8 @@ export async function prepareUiV4VisualCase(page, item) {
   if (isSubscriptionVisualCase(item)) {
     await ensureSubscriptionProductModules(page);
   }
+
+  await ensureUndoModule(page);
 
   await page.addScriptTag({ path: VISUAL_FIXTURE_SCRIPT });
 
