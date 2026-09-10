@@ -189,9 +189,9 @@
       "h": "0e9c15994934"
     },
     "вид карточки итогов": {
-      "v": "=",
-      "f": "cardShell background var(--v4-hero, #efe3cf) heys_profile_step_v1.js:1804-1813; computed sand rgb(239,227,207) blue rgb(226,236,246) @375 registration-q7-colors.test.js cardShell Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
-      "h": "156f1666d3e5"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: cardShell background var(--v4-hero, #efe3cf) heys_profile_step_v1.js:1804-1813; computed sand rgb(239,227,207) blue rgb(226,236,246) @375 registration-q7-colors.test.js cardShell Замер chromium 375 px: песочный rgb(239,227,207), тёмный rgb(47,40,32).",
+      "h": "4f1fcc4949c9"
     },
     "ожидание": {
       "v": "=",

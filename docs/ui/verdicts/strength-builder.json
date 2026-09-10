@@ -698,11 +698,9 @@
       "h": "29e0a6cbbf96"
     },
     "вид · след переноса": {
-      "v": "≠",
-      "f": "movedFrom/movedTo + MoveSheet есть (superset_ui:2398–2621), но кадр Г3 — композит day shell + PlanCard; 13 строк ≠ по .sb-transfer-follow-verdict-handoff.json (copy/геометрия PlanCard vs канвас). · пакет 47: проза контракта уточнена, код сверен в приёмке.",
-      "h": "2d0e6b2281c9",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#otvet22-g3-plan-card-reresolve-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: movedFrom/movedTo + MoveSheet есть (superset_ui:2398–2621), но кадр Г3 — композит day shell + PlanCard; 13 строк ≠ по .sb-transfer-follow-verdict-handoff.json (copy/геометрия PlanCard vs канвас). · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "29e8d23cc71a"
     },
     "вид · метка авторства": {
       "v": "=",
@@ -2507,10 +2505,9 @@
       "naKind": "foreign-zone"
     },
     "Перенос · след в обе стороны · 03": {
-      "v": "—",
-      "f": "«План на сегодня» — ttl страницы дня в кадре Г3:636; в продукте нет этой строки в PlanCard (заголовок карточки «Сегодня по программе» — superset_ui:2615). Имя экрана — tab-activity/day shell.",
-      "h": "c0ff47802d37",
-      "naKind": "foreign-zone"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: «План на сегодня» — ttl страницы дня в кадре Г3:636; в продукте нет этой строки в PlanCard (заголовок карточки «Сегодня по программе» — superset_ui:2615). Имя экрана — tab-activity/day shell.",
+      "h": "3ce550c7d95e"
     },
     "Перенос · след в обе стороны · 04": {
       "v": "—",
@@ -2537,101 +2534,79 @@
       "decisionRef": "apps/web/__tests__/activity-plan-card-frame.test.js:70"
     },
     "Перенос · след в обе стороны · 08": {
-      "v": "≠",
-      "f": "Контракт: «7 упражнений · назначил Артём» 500 11.5px/1.4 rgba(ink,.56) margin-top 4px. Runtime: planProse «{dayLabel} · {n} упр. · … В расход не идёт…» — superset_ui:2609-2619; .sb-plan-meta 500 12px/1.55 margin 8px 0 0 — 731:954-957. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "518427e96059",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: «7 упражнений · назначил Артём» 500 11.5px/1.4 rgba(ink,.56) margin-top 4px. Runtime: planProse «{dayLabel} · {n} упр. · … В расход не идёт…» — superset_ui:2609-2619; .sb-plan-meta 500 12px/1.55 margin 8px 0 0 — 731:954-957. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "f41c6d0e10e6"
     },
     "Перенос · след в обе стороны · 09": {
-      "v": "≠",
-      "f": "Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:33.",
-      "h": "6911b98d3ef4",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: «Начать тренировку» margin-top 12px. Runtime: кнопка «Начать» — superset_ui:2622-2625; margin-top 14px — 731:960-961; тест activity-plan-card-frame.test.js:33.",
+      "h": "9a309a6088d5"
     },
     "Перенос · след в обе стороны · 10": {
-      "v": "≠",
-      "f": "Контракт: одна вторичная «Не смогу сегодня» margin-top 9px. Runtime: ряд .sb-plan-actions «Перенести»+«Пропустить» margin-top 9px — superset_ui:2626-2634, 731:970-973; осознанный разнос перенос/пропуск — activity-plan-card-frame.test.js:3-7, 225-291.",
-      "h": "d690b0422265",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: одна вторичная «Не смогу сегодня» margin-top 9px. Runtime: ряд .sb-plan-actions «Перенести»+«Пропустить» margin-top 9px — superset_ui:2626-2634, 731:970-973; осознанный разнос перенос/пропуск — activity-plan-card-frame.test.js:3-7, 225-291.",
+      "h": "f4a366db553a"
     },
     "Перенос · след в обе стороны · 11": {
-      "v": "=",
-      "f": "Ярус «Куда перенести · выбор дня»: h('b','Куда перенести · выбор дня') в MoveSheet — superset_ui:2300; открывается по «Перенести» — activity-plan-card-frame.test.js:33.",
-      "h": "fdd60f9a8e98"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Ярус «Куда перенести · выбор дня»: h('b','Куда перенести · выбор дня') в MoveSheet — superset_ui:2300; открывается по «Перенести» — activity-plan-card-frame.test.js:33.",
+      "h": "fbde47a0abfd"
     },
     "Перенос · след в обе стороны · 12": {
-      "v": "≠",
-      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
-      "h": "d9a337aab838",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "h": "fdd60f9a8e98"
     },
     "Перенос · след в обе стороны · 13": {
-      "v": "≠",
-      "f": "Контракт: строка .cd .row. Runtime: button.sb-move-day flex row — superset_ui:2305-2316; геометрия 731:1225-1240 (min-height 52px, padding 10px 12px) — не класс .row кадра.",
-      "h": "af81bb6e54c6",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: строка .cd .row. Runtime: button.sb-move-day flex row — superset_ui:2305-2316; геометрия 731:1225-1240 (min-height 52px, padding 10px 12px) — не класс .row кадра.",
+      "h": "d9a337aab838"
     },
     "Перенос · след в обе стороны · 14": {
-      "v": "≠",
-      "f": "Контракт: дата свободного дня color var(--tx). CSS задаёт только font на .sb-move-day-copy b (600 12.5px) без color — 731:1255-1258; внутри <button> текст наследует buttontext, не --tx/--v4-ink.",
-      "h": "78fa7e55efd8",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: дата свободного дня color var(--tx). CSS задаёт только font на .sb-move-day-copy b (600 12.5px) без color — 731:1255-1258; внутри <button> текст наследует buttontext, не --tx/--v4-ink.",
+      "h": "af81bb6e54c6"
     },
     "Перенос · след в обе стороны · 15": {
-      "v": "≠",
-      "f": "Контракт: «Свободно» 500 11px/1.3 rgba(ink,.56). CSS: font 500 11px/1.3 на span без color — 731:1260-1262; подпись «Свободно» в MoveSheet — superset_ui:2313. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "785ff4718b9c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: «Свободно» 500 11px/1.3 rgba(ink,.56). CSS: font 500 11px/1.3 на span без color — 731:1260-1262; подпись «Свободно» в MoveSheet — superset_ui:2313. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "78fa7e55efd8"
     },
     "Перенос · след в обе стороны · 16": {
-      "v": "=",
-      "f": "«перенести»: font 700 11.5px/1 color var(--v4-act-text) — 731:1264-1267; песок #8a4a20, синий #1d5e96 из 002-ui-v4-palette-roles.css:147,470; DOM i «перенести» — superset_ui:2315.",
-      "h": "42c85486d059"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: «перенести»: font 700 11.5px/1 color var(--v4-act-text) — 731:1264-1267; песок #8a4a20, синий #1d5e96 из 002-ui-v4-palette-roles.css:147,470; DOM i «перенести» — superset_ui:2315.",
+      "h": "785ff4718b9c"
     },
     "Перенос · след в обе стороны · 17": {
-      "v": "≠",
-      "f": "Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопределено в 731 без dim текста. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "5f667de3c140",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопределено в 731 без dim текста. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "42c85486d059"
     },
     "Перенос · след в обе стороны · 18": {
-      "v": "≠",
-      "f": "Контракт: пилюля «занят» color rgba(ink,.4). Runtime: .sb-move-day.is-busy > i с color var(--v4-ink-3)=rgba(0,0,0,.45) + фон --v4-hero — 731:1269-1274; контракт .4 vs .45 и лишняя заливка. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "2c5a97305112",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: пилюля «занят» color rgba(ink,.4). Runtime: .sb-move-day.is-busy > i с color var(--v4-ink-3)=rgba(0,0,0,.45) + фон --v4-hero — 731:1269-1274; контракт .4 vs .45 и лишняя заливка. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "5f667de3c140"
     },
     "Перенос · след в обе стороны · 19": {
-      "v": "=",
-      "f": "Последняя строка без разделителя: .sb-move-day:last-child { border-bottom:none } — 731:1242-1244; кадр row style border-bottom:none — heys_strength_superset_ui_v1.js:2657.",
-      "h": "6b286135ed76"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Последняя строка без разделителя: .sb-move-day:last-child { border-bottom:none } — 731:1242-1244; кадр row style border-bottom:none — heys_strength_superset_ui_v1.js:2657.",
+      "h": "2c5a97305112"
     },
     "Перенос · след в обе стороны · 20": {
-      "v": "≠",
-      "f": "Контракт: «выбрано» 500 11px/1.3 color var(--ac). Runtime: span «выбрано» при pick — superset_ui:2313; CSS span без accent-color на .is-on — 731:1260-1262, 1276-1279.",
-      "h": "fd2c51fe496c",
-      "reasonCode": "canvas-conflict",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-plan-card-geometry-2026-09-07"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: «выбрано» 500 11px/1.3 color var(--ac). Runtime: span «выбрано» при pick — superset_ui:2313; CSS span без accent-color на .is-on — 731:1260-1262, 1276-1279.",
+      "h": "6b286135ed76"
     },
     "Перенос · след в обе стороны · 21": {
-      "v": "=",
-      "f": "Пилюля «план»: .sb-plan-badge 9px ui-monospace, фон --v4-hero, color --v4-act-text — 731:941-951; на будущем дне h('span','план') — superset_ui:2530; moved-target в кадре — badge «план» :663.",
-      "h": "410f53ff185c"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Пилюля «план»: .sb-plan-badge 9px ui-monospace, фон --v4-hero, color --v4-act-text — 731:941-951; на будущем дне h('span','план') — superset_ui:2530; moved-target в кадре — badge «план» :663.",
+      "h": "fd2c51fe496c"
     },
     "Перенос · след в обе стороны · 22": {
-      "v": "≠",
-      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
-      "h": "32f6f04d630b",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "h": "410f53ff185c"
     },
     "Правка веса в сессии · 01": {
       "v": "=",
@@ -7257,9 +7232,9 @@
       "h": "07ffbada0ee7"
     },
     "Принятие · ветка карточки · 03": {
-      "v": "=",
-      "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c0ff47802d37"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
+      "h": "3ce550c7d95e"
     },
     "Принятие · ветка карточки · 04": {
       "v": "=",
@@ -8378,11 +8353,9 @@
       "h": "eed1dfabc6e1"
     },
     "Перенос · след в обе стороны · текст": {
-      "v": "≠",
-      "f": "Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
-      "h": "8c2896c058d1",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#legacy-mismatch-owner-decision-2026-09-06"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Расхождение видно, принято без разбора. Решение дизайнера 6 сентября 2026.",
+      "h": "1e3d872500e5"
     },
     "Правка веса в сессии · текст": {
       "v": "=",
@@ -8601,9 +8574,9 @@
       "naKind": "foreign-zone"
     },
     "Принятие · ветка карточки · текст": {
-      "v": "=",
-      "f": "Поведение accept/decline на дне = (:4321–4356). 23 frame-строки «Принятие · ветка карточки · NN» — геометрия ProposalCard (proposal_ui + 750); runtime wiring day_trainings, визуал — владелец proposal_ui/750.",
-      "h": "f343aafd3a91"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Поведение accept/decline на дне = (:4321–4356). 23 frame-строки «Принятие · ветка карточки · NN» — геометрия ProposalCard (proposal_ui + 750); runtime wiring day_trainings, визуал — владелец proposal_ui/750.",
+      "h": "811a53c7dae2"
     },
     "Правка · сторона куратора · текст": {
       "v": "=",
@@ -9695,9 +9668,9 @@
       "h": "244ad2b1ed36"
     },
     "Конструктор · пусто · план назначен · 17": {
-      "v": "=",
-      "f": "Подпись «N упражнений · назначил …»: .sb-empty-plan-meta — margin-top 6px, text-align center, font 500 11px/1.4, var(--v4-ink-data) — 750-strength-builder.css:3056; JS:896-898. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "fb794ba8e15e"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Подпись «N упражнений · назначил …»: .sb-empty-plan-meta — margin-top 6px, text-align center, font 500 11px/1.4, var(--v4-ink-data) — 750-strength-builder.css:3056; JS:896-898. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
+      "h": "1f742ce10e6e"
     },
     "Сессия · вернулись через час · 16": {
       "v": "=",
@@ -9920,9 +9893,9 @@
       "h": "3d2b61206f79"
     },
     "Конструктор · пусто · план назначен · текст": {
-      "v": "=",
-      "f": "Сборка с планом: ключ «план на день · 0 подходов», «План на сегодня готов», ol.sb-empty-plan-preview, «Начать по плану · …», meta, «Собрать свою» вторичная, сноска — heys_strength_builder_ui_v1.js:1771.",
-      "h": "43a03ffae6cc"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Сборка с планом: ключ «план на день · 0 подходов», «План на сегодня готов», ol.sb-empty-plan-preview, «Начать по плану · …», meta, «Собрать свою» вторичная, сноска — heys_strength_builder_ui_v1.js:1771.",
+      "h": "a644385dd7a9"
     },
     "Сессия · вернулись через час · без таймера · текст": {
       "v": "=",
@@ -9965,10 +9938,9 @@
       "h": "9b6597f4be95"
     },
     "карточка плана Г3 — кадр устарел": {
-      "v": "—",
-      "f": "Метка устаревшего кадра Г3 — scope пакета 36, не продуктовый дефект; PlanCard в activity.",
-      "h": "562b2ab5dab6",
-      "naKind": "handoff"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Метка устаревшего кадра Г3 — scope пакета 36, не продуктовый дефект; PlanCard в activity.",
+      "h": "5bd54c63f51e"
     },
     "источник для открытого весового упражнения": {
       "v": "=",
@@ -10010,6 +9982,11 @@
       "v": "=",
       "f": "Короткие роли канваса объявлены на КОРНЕ зоны — 750-strength-builder.css:12-32 (.sb-root: --c1/--c2/--tint/--tx/--ink/--ac/--ac2/--acs/--on-acs/--gr/--gr-bg/--val-bad на v4-роли); дубли из .sb-finish-screen (:2064) и .sb-exercise-card-screen (:5345) сняты, чтобы объявление осталось одно. Замер chromium 375 px на четырёх наборах: .sb-root --c1 #f7efe2/#eef3f9/#23201b/#182a3a, --gr #5c6a45/#1f6e4d/#9fb981/#7fd1a0, --ink 0,0,0 / 16,24,38 / 242,237,230 / 232,238,246. На .sb-root.program-cycle кнопка шапки до правки давала фон rgba(0,0,0,0) и полные чернила rgb(32,30,29), после — #f7efe2/#eef3f9 и чернила 56 %; на .sb-period-report значения исходов, подробность, заголовок и фон карточки долга следуют набору (is-ok #5c6a45/#1f6e4d, --tint #f6e6dd/#fbe6e2). Гейт strength-proposal-v4-canvas-contract.test.js этого класса по построению не видит — jsdom не раскрывает вложенный var() внутри rgba(); доставка проверена замером в chromium.",
       "h": "248a9b410f31"
+    },
+    "Перенос · след в обе стороны · 23": {
+      "v": "?",
+      "f": "Строка добавлена дизайнером, вердикта нет",
+      "h": "32f6f04d630b"
     }
   },
   "frames": {

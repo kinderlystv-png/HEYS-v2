@@ -51,6 +51,10 @@ export const ALLOWED_NA_KINDS = Object.freeze([
 // вместе со знанием. Не «у ≠ появился reasonCode», а «самого ≠ больше нет».
 // Настоящий долг при этом вырос: 3279 строк без вердикта в двадцати зонах.
 // Затянуть заморозку всё равно обязаны — храповик считает текущее состояние.
+// 10 сентября, пакет 52: curator-cabinet 33→31, reports-insights 122→121,
+// strength-builder 79→66. Та же причина в третий раз: дизайнер переписал
+// строки под решения владельца, вердикты снялись в «?». Тринадцать строк
+// strength-builder — переснятый кадр Г3 под два исхода.
 // 10 сентября — пакет 51: nutrition-tab 211→209, reports-insights 124→122,
 // spinners 33→32. Причина та же и читать прогрессом так же нельзя: дизайнер
 // перевёл графику и текст с --acs на --ac, строки переписались, вердикты
@@ -100,7 +104,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, package 43 agent-9: 5 legacy «≠» закрыты — 1 «=», 4 typed
     // logic-invariant; mismatch 5 → 0, typedMismatch 29 → 33.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [33, '94297aa1faae21b0'],
+    typedMismatch: [31, 'e23183b4d37f00ae'],
     notApplicable: [14, 'd5c0e5d25ec8306b'],
   }),
   'curator-edits': Object.freeze({
@@ -340,7 +344,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 08.09: 131 legacy «—» получили naKind (scripts/.reports-insights-nakind-apply.mjs)
     // — notApplicable 131 → 0.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [122, 'e806b03ef387d138'],
+    typedMismatch: [121, '696a07d44347a875'],
     notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   'service-curator': Object.freeze({
@@ -418,7 +422,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // панель, итоги ·58 «Готово»); один новый «≠» итоги ·57 «В шаблоны» нет в коде.
     // typedMismatch 80 → 79. Три designer-removed ключа сняты rehash — notApplicable
     // 105 → 103.
-    typedMismatch: [79, 'd4db647909a38ba2'],
+    typedMismatch: [66, 'bc30eaf7866c4fad'],
     notApplicable: [103, 'fcfec8ca6a782006'],
   }),
   // Зона заведена 05.09 вместе с первым разбором: прежде записи не было, и
