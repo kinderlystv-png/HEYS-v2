@@ -615,6 +615,46 @@ describe('поправка на факт · кадры недельной све
     expect(c.facts[0].value).toContain('76,0');
   });
 
+  it('порог «держится» — 0,5 см, и он от точности ленты, а не от вето', () => {
+    // Уточнение дизайнера 10 сентября. Порог, взятый «с запасом от вето 1,5»,
+    // сломался бы при смене вето. Порог, взятый от точности бытового замера
+    // лентой (±0,5 см), — нет: ниже половины сантиметра замер не отличает
+    // изменение от собственной погрешности.
+    const rows = (from, to) => ([
+      { day_date: '2026-08-20', waist: from },
+      { day_date: '2026-09-10', waist: to }
+    ]);
+    const kindOf = (from, to) => NC.decisionEvidenceFromWindowRows(rows(from, to)).kind;
+
+    expect(kindOf(76.5, 76.0)).toBe('waist_only');   // ровно 0,5 — ещё «держится»
+    expect(kindOf(76.5, 76.5)).toBe('waist_only');   // не менялась вовсе
+    expect(kindOf(76.5, 77.0)).toBe('waist_only');   // 0,5 в другую сторону
+    expect(kindOf(76.5, 75.9)).toBe('waist_moved');  // 0,6 — уже сдвинулась
+    expect(kindOf(76.5, 75.1)).toBe('waist_moved');  // 1,4 — ещё не вето
+  });
+
+  it('средняя полоса не утверждает про талию ничего', () => {
+    // Больше 0,5 и меньше 1,5: изменение есть, но на прямой довод не тянет.
+    // Ни «держится», ни «замеров не было» — оба были бы неправдой. Свой кадр
+    // этому состоянию рисует дизайнер; до него — фраза про один вес.
+    const c = NC.buildWeeklySyncCard({
+      result: down(),
+      tariff: 'pro',
+      appliedDecision: Object.assign(appliedDownDecision('waist_moved'), {
+        evidence: { kind: 'waist_moved', waistPoints: 4, spanDays: 21, waistDrift: 0.9, waistFrom: 76.5, waistTo: 75.6 }
+      })
+    });
+    expect(c.copy.body).toBe(
+      'Три недели вес держится на месте. Значит, наш расчёт расхода для вас '
+      + 'завышен — мы поправили его, а не вас.'
+    );
+    expect(c.copy.body).not.toContain('талия');
+    expect(c.copy.body).not.toContain('Замеров обхватов не было');
+    // Строки с числами талии здесь нет: показывать «76,5 → 75,6» рядом с
+    // молчанием про талию значило бы сказать то же самое цифрами.
+    expect(c.facts.map((f) => f.label)).not.toContain('Талия за три недели');
+  });
+
   it('три ветки дают три разных текста и не путаются между собой', () => {
     const body = (kind, evidence) => NC.buildWeeklySyncCard({
       result: down(),

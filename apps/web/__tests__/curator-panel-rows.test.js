@@ -300,6 +300,7 @@ describe('панель куратора · сборка строк', () => {
       kind: 'waist_only',
       waistPoints: 3,
       spanDays: 14,
+      waistDrift: 0,
       waistFrom: 80,
       waistTo: 80
     });
