@@ -579,12 +579,25 @@ body:has(.activity-v4) .hdr::after {
    шторка резервного вопроса, и строка «календарь в резервном вопросе» прямо
    запрещает ей свой вариант; ждать вид от чужого предка она не может.
    Требование самого класса раскладки осталось — он и есть адрес блока. */
-.activity-v4 .ma-habit-cal-shell.ma-habit-cal--activity-v4 {
+/* Предка `.activity-v4` здесь больше нет: блок вставляет и шторка резервного
+   вопроса, а без этого правила на ней оставались рамка и белый фон прежней
+   оболочки календаря. */
+.ma-habit-cal-shell.ma-habit-cal--activity-v4 {
   padding: 0;
   border: none;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+/* У шторки резервного вопроса календарь стоит своим блоком: строка «вид ·
+   резервный вопрос после еды» даёт ему --c1 радиусом 20 и поля 14. Правило
+   выше обнуляет оболочку ради «Актива», где блока нет вовсе, поэтому здесь
+   нужен третий класс — иначе обнуление выигрывает порядком. */
+.ma-habit-cal-shell.ma-habit-cal--activity-v4.ma-habit-cal--sheet {
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--v4-c1) /* v4-intentional */;
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-footer {
@@ -603,6 +616,16 @@ body:has(.activity-v4) .hdr::after {
   text-transform: none;
 }
 
+/* Шапка календаря в шторке — своя: строка «календарь в резервном вопросе»
+   даёт «Календарь привычки» 13 px/700 чернилами. У «Актива» на этом месте
+   стоит счёт «Зарядка · N из M» своим кеглем, и его правило выше. */
+.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-heading {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--v4-ink) /* v4-intentional */;
+}
+
 /* Чипы режима — .badge кадра: 9 px моноширинной, поля 4/7, радиус 999;
    выбранный на акценте, второй на второй поверхности тоном акцента
    (контракт «вид · календарь зарядки», строка 30). Прежняя редакция рисовала
@@ -613,6 +636,10 @@ body:has(.activity-v4) .hdr::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  /* Прежняя оболочка держит на этой кнопке min-height 44, и с полями 4/7 и
+     радиусом 999 пилюля превращалась в круг. Кадр даёт плоскую капсулу,
+     высота у неё — от полей. */
+  min-height: 0;
   padding: 4px 7px;
   border: none;
   border-radius: 999px;

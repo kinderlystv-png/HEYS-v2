@@ -207,4 +207,35 @@ describe('причина пропуска', () => {
     expect(todayRule).not.toContain('--v4-ink-30');
   });
 
+  it('календарь в шторке — свой блок и своя шапка', () => {
+    // Строка «вид · резервный вопрос после еды»: блок --c1 радиусом 20 полями
+    // 14. Строка «календарь в резервном вопросе»: шапка «Календарь привычки»
+    // 13 px/700 чернилами. Общее правило вида обнуляет оболочку ради «Актива»,
+    // поэтому у шторки свои правила третьим классом — иначе выигрывает оно.
+    const activityCss = fs.readFileSync(
+      path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'),
+      'utf8',
+    );
+    const card = activityCss.indexOf('.ma-habit-cal-shell.ma-habit-cal--activity-v4.ma-habit-cal--sheet');
+    expect(card, 'правило блока найдено').toBeGreaterThan(-1);
+    const cardRule = activityCss.slice(card, activityCss.indexOf('}', card));
+    expect(cardRule).toContain('padding: 14px');
+    expect(cardRule).toContain('border-radius: 20px');
+    expect(cardRule).toContain('var(--v4-c1)');
+
+    const head = activityCss.indexOf('.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-heading');
+    expect(head, 'правило шапки найдено').toBeGreaterThan(-1);
+    const headRule = activityCss.slice(head, activityCss.indexOf('}', head));
+    expect(headRule).toContain('font-size: 13px');
+    expect(headRule).toContain('font-weight: 700');
+
+    // Прежняя оболочка держит на чипе режима min-height 44: с полями 4/7 и
+    // радиусом 999 пилюля превращалась в круг.
+    const pill = activityCss.indexOf('.ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn {');
+    const pillRule = activityCss.slice(pill, activityCss.indexOf('}', pill));
+    expect(pillRule).toContain('min-height: 0');
+    // Снятие рамки прежней оболочки не должно снова требовать предка вкладки.
+    expect(activityCss).not.toContain('.activity-v4 .ma-habit-cal-shell.ma-habit-cal--activity-v4');
+  });
+
 });
