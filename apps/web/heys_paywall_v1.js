@@ -395,7 +395,7 @@
           timeRemaining && React.createElement('div', {
             className: 'n',
             style: {
-              font: '800 26px/1 Figtree, system-ui, sans-serif',
+              font: '800 26px/1 Manrope, system-ui, sans-serif',
               color: 'var(--v4-ink, #201e1d)',
               marginTop: '8px',
               fontVariantNumeric: 'tabular-nums',
@@ -403,7 +403,7 @@
           }, timeRemaining),
           React.createElement('div', {
             style: {
-              font: '500 11px/1.4 Figtree, system-ui, sans-serif',
+              font: '500 11px/1.4 Manrope, system-ui, sans-serif',
               color: 'var(--v4-ink-2, rgba(32, 30, 29, 0.56))',
               marginTop: '4px',
             },
@@ -442,7 +442,7 @@
         ),
         React.createElement('div', {
           style: {
-            font: '500 11px/1.4 Figtree, system-ui, sans-serif',
+            font: '500 11px/1.4 Manrope, system-ui, sans-serif',
             color: 'var(--v4-ink-2, rgba(32, 30, 29, 0.56))',
             marginTop: '4px',
           },

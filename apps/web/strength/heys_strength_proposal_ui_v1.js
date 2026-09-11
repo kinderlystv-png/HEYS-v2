@@ -419,17 +419,17 @@
 
   const CURATOR_EDIT_STYLE = {
     colMain: { display: 'flex', flexDirection: 'column', gap: '3px' },
-    meta11: { font: '500 11px/1.3 Figtree, sans-serif', color: 'var(--ink56)' },
-    meta11Warn: { font: '500 11px/1.3 Figtree, sans-serif', color: 'var(--ac2)' },
-    meta11Policy: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--ink56)' },
-    markOk: { font: '700 12px/1 Figtree, sans-serif', color: 'var(--gr)' },
-    markWarn: { font: '700 12px/1 Figtree, sans-serif', color: 'var(--ac2)' },
+    meta11: { font: '500 11px/1.3 Manrope, sans-serif', color: 'var(--ink56)' },
+    meta11Warn: { font: '500 11px/1.3 Manrope, sans-serif', color: 'var(--ac2)' },
+    meta11Policy: { font: '600 11px/1 Manrope, sans-serif', color: 'var(--ink56)' },
+    markOk: { font: '700 12px/1 Manrope, sans-serif', color: 'var(--gr)' },
+    markWarn: { font: '700 12px/1 Manrope, sans-serif', color: 'var(--ac2)' },
     badgeYes: {
       padding: '4px 8px',
       borderRadius: '999px',
       background: 'var(--gr-bg)',
       color: 'var(--gr)',
-      font: '700 11px/1 Figtree, sans-serif',
+      font: '700 11px/1 Manrope, sans-serif',
     },
     card: {
       background: 'var(--c1)',
@@ -443,11 +443,11 @@
       gap: '12px',
       padding: '13px 0',
       borderBottom: '1px solid rgba(var(--ink), .07)',
-      font: '600 12.5px/1 Figtree, sans-serif',
+      font: '600 12.5px/1 Manrope, sans-serif',
     },
     footnote: {
       marginTop: '12px',
-      font: '500 11px/1.55 Figtree, sans-serif',
+      font: '500 11px/1.55 Manrope, sans-serif',
       color: 'var(--ink56)',
     },
   };
@@ -638,8 +638,8 @@
 
   const MISSED_TODAY_STYLE = {
     headCol: { display: 'flex', flexDirection: 'column', gap: '3px' },
-    title: { font: '700 15px/1 Figtree, sans-serif', color: 'var(--tx)' },
-    key: { font: '600 10.5px/1 Figtree, sans-serif', color: 'var(--ink56)' },
+    title: { font: '700 15px/1 Manrope, sans-serif', color: 'var(--tx)' },
+    key: { font: '600 10.5px/1 Manrope, sans-serif', color: 'var(--ink56)' },
     badge: {
       display: 'inline-flex',
       alignItems: 'center',
@@ -647,7 +647,7 @@
       padding: '4px 10px',
       borderRadius: '999px',
       background: 'var(--c2)',
-      font: '600 11px/1 Figtree, sans-serif',
+      font: '600 11px/1 Manrope, sans-serif',
       color: 'var(--tx)',
     },
     noteCard: {
@@ -656,9 +656,9 @@
       padding: '11px 12px',
       marginTop: '10px',
     },
-    noteText: { font: '500 12px/1.5 Figtree, sans-serif', color: 'var(--tx)' },
+    noteText: { font: '500 12px/1.5 Manrope, sans-serif', color: 'var(--tx)' },
     noteMeta: {
-      font: '500 10.5px/1 Figtree, sans-serif',
+      font: '500 10.5px/1 Manrope, sans-serif',
       color: 'rgba(var(--ink), .56)',
       marginTop: '7px',
     },
@@ -670,11 +670,11 @@
       gap: '12px',
       padding: '11px 0',
       borderBottom: '1px solid rgba(var(--ink), .07)',
-      font: '600 12.5px/1 Figtree, sans-serif',
+      font: '600 12.5px/1 Manrope, sans-serif',
     },
     rowName: { color: 'var(--tx)' },
-    labelKept: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--gr)' },
-    labelRemoved: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--ac2)' },
+    labelKept: { font: '600 11px/1 Manrope, sans-serif', color: 'var(--gr)' },
+    labelRemoved: { font: '600 11px/1 Manrope, sans-serif', color: 'var(--ac2)' },
     actions: { display: 'flex', gap: '7px', marginTop: '12px' },
     btn: {
       flex: 1,
@@ -686,7 +686,7 @@
       border: 'none',
       background: 'var(--c2)',
       color: 'var(--tx)',
-      font: '600 13px/1 Figtree, sans-serif',
+      font: '600 13px/1 Manrope, sans-serif',
       cursor: 'pointer',
     },
     btnAccent: {
@@ -695,7 +695,7 @@
     },
     footnote: {
       marginTop: '12px',
-      font: '500 11px/1.55 Figtree, sans-serif',
+      font: '500 11px/1.55 Manrope, sans-serif',
       color: 'var(--ink56)',
     },
   };
@@ -895,8 +895,8 @@
 
   const MISSED_EARLIER_STYLE = {
     headCol: { display: 'flex', flexDirection: 'column', gap: '3px' },
-    title: { font: '700 15px/1 Figtree, sans-serif', color: 'var(--tx)' },
-    key: { font: '600 10.5px/1 Figtree, sans-serif', color: 'var(--ink56)' },
+    title: { font: '700 15px/1 Manrope, sans-serif', color: 'var(--tx)' },
+    key: { font: '600 10.5px/1 Manrope, sans-serif', color: 'var(--ink56)' },
     card: {
       marginTop: '12px',
       background: 'var(--c1)',
@@ -905,12 +905,12 @@
     },
     timeline: { display: 'flex', alignItems: 'center', gap: '9px' },
     skippedBadge: {
-      font: '600 11px/1 Figtree, sans-serif',
+      font: '600 11px/1 Manrope, sans-serif',
     },
-    replacementLine: { font: '700 12.5px/1 Figtree, sans-serif', color: 'var(--tx)' },
+    replacementLine: { font: '700 12.5px/1 Manrope, sans-serif', color: 'var(--tx)' },
     prose: {
       marginTop: '10px',
-      font: '500 12px/1.5 Figtree, sans-serif',
+      font: '500 12px/1.5 Manrope, sans-serif',
       color: 'var(--tx)',
     },
     reviewBtn: {
@@ -924,12 +924,12 @@
       border: 'none',
       background: 'var(--c2)',
       color: 'var(--tx)',
-      font: '600 13px/1 Figtree, sans-serif',
+      font: '600 13px/1 Manrope, sans-serif',
       cursor: 'pointer',
     },
     tier: {
       marginTop: '14px',
-      font: '700 11px/1 Figtree, sans-serif',
+      font: '700 11px/1 Manrope, sans-serif',
       letterSpacing: '0.04em',
       textTransform: 'uppercase',
       color: 'rgba(var(--ink), .45)',
@@ -947,17 +947,17 @@
       gap: '12px',
       padding: '13px 0',
       borderBottom: '1px solid rgba(var(--ink), .07)',
-      font: '600 12.5px/1 Figtree, sans-serif',
+      font: '600 12.5px/1 Manrope, sans-serif',
     },
     ruleMain: { color: 'var(--tx)' },
-    ruleAccent: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--ac2)' },
-    ruleMuted: { font: '600 11px/1 Figtree, sans-serif', color: 'var(--ink56)' },
+    ruleAccent: { font: '600 11px/1 Manrope, sans-serif', color: 'var(--ac2)' },
+    ruleMuted: { font: '600 11px/1 Manrope, sans-serif', color: 'var(--ink56)' },
     ruleCol: { display: 'flex', flexDirection: 'column', gap: '3px' },
-    ruleSub: { font: '500 11px/1.3 Figtree, sans-serif', color: 'var(--ink56)' },
-    ruleWarn: { font: '700 11.5px/1 Figtree, sans-serif', color: 'var(--ac2)' },
+    ruleSub: { font: '500 11px/1.3 Manrope, sans-serif', color: 'var(--ink56)' },
+    ruleWarn: { font: '700 11.5px/1 Manrope, sans-serif', color: 'var(--ac2)' },
     footnote: {
       marginTop: '12px',
-      font: '500 11px/1.55 Figtree, sans-serif',
+      font: '500 11px/1.55 Manrope, sans-serif',
       color: 'var(--ink56)',
     },
   };

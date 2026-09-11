@@ -1612,7 +1612,7 @@
               style: {
                 marginTop: 8,
                 textAlign: 'center',
-                font: '500 11.5px/1.45 Figtree, system-ui, sans-serif',
+                font: '500 11.5px/1.45 Manrope, system-ui, sans-serif',
                 color: 'var(--v4-bad-text, #a1471c)',
               },
             }, dailyRetryCountdown > 0
@@ -1642,7 +1642,7 @@
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   minHeight: 44, padding: '14px 16px', borderRadius: 20,
                   background: '#f7efe2', color: INK_DATA,
-                  font: '600 11.5px/1.4 Figtree, system-ui, sans-serif', textAlign: 'center',
+                  font: '600 11.5px/1.4 Manrope, system-ui, sans-serif', textAlign: 'center',
                 },
               }, profileRetryCountdown > 0
                 ? `Попытка ${profileRetryAttempt} · следующая через ${profileRetryCountdown} ${pluralSeconds(profileRetryCountdown)}`

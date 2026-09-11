@@ -199,7 +199,7 @@
     borderRadius: 999,
     background: 'var(--v4-chip, #efe3cf)',
     cursor: 'pointer',
-    font: '700 11px/1 Figtree, system-ui, sans-serif',
+    font: '700 11px/1 Manrope, system-ui, sans-serif',
     color: 'var(--v4-act-text, #8a4a20)'
   };
 

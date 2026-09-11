@@ -3321,7 +3321,7 @@
     'color:rgba(var(--ink), .62);',
     '}',
     '.sb-custom-exercise-screen .sb-custom-ex-hint {',
-    'font:600 12.5px/1.4 Figtree,sans-serif;',
+    'font:600 12.5px/1.4 Manrope,sans-serif;',
     'color:rgba(var(--ink), 0.56);',
     '}'
   ].join('');
@@ -3381,7 +3381,7 @@
 
     const tierStyle = {
       margin: '14px 0 8px',
-      font: '700 10px/1 Figtree, sans-serif',
+      font: '700 10px/1 Manrope, sans-serif',
       color: 'var(--sb-acc)'
     };
     const cdRowStyle = {
@@ -3483,13 +3483,13 @@
           primary && h('div', { style: cdRowStyle },
             h('span', { style: { color: 'var(--sb-tx)' } }, 'Основная'),
             h('span', {
-              style: { font: '700 11.5px/1 Figtree, sans-serif', color: 'var(--sb-acc)' }
+              style: { font: '700 11.5px/1 Manrope, sans-serif', color: 'var(--sb-acc)' }
             }, api.groupLabel(primary).toLowerCase())
           ),
           secondary.length > 0 && h('div', { style: cdRowStyle },
             h('span', { style: { color: 'var(--sb-tx)' } }, 'Помогают'),
             h('span', {
-              style: { font: '600 11.5px/1 Figtree, sans-serif', color: 'var(--sb-mut)' }
+              style: { font: '600 11.5px/1 Manrope, sans-serif', color: 'var(--sb-mut)' }
             }, secondaryLabel)
           )
         ),

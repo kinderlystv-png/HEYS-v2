@@ -10,7 +10,7 @@
   const { useState, useEffect, useCallback, useRef, useMemo } = React || {};
   const INK_DATA = 'var(--v4-ink-2, rgba(0,0,0,.56))';
   const INK_2 = 'var(--v4-ink-2, rgba(0,0,0,.55))';
-  const LEGAL_DISCLOSURE_FONT = '500 12.5px/1.55 Figtree, system-ui, sans-serif';
+  const LEGAL_DISCLOSURE_FONT = '500 12.5px/1.55 Manrope, system-ui, sans-serif';
   const LEGAL_DISCLOSURE_TYPES = new Set(['personal_data']);
 
   // v4 roles для registration (смысл, не оттенок — UI_V4_BARE_LITERALS_DECISION.md).
@@ -1412,13 +1412,13 @@
             React.createElement('div', { className: 'heys-consent-sign-sheet__kicker' }, 'Подписание'),
             React.createElement('div', {
               className: 'heys-consent-sign-sheet__title',
-              style: { font: '700 15px/1.35 Figtree, system-ui, sans-serif', textAlign: 'center' },
+              style: { font: '700 15px/1.35 Manrope, system-ui, sans-serif', textAlign: 'center' },
             }, signSheetTitle),
             React.createElement('p', {
               style: {
                 margin: '7px 0 0',
                 color: INK_DATA,
-                font: '500 12.5px/1.45 Figtree, system-ui, sans-serif',
+                font: '500 12.5px/1.45 Manrope, system-ui, sans-serif',
                 textAlign: 'center',
                 textWrap: 'pretty',
               },
@@ -1562,7 +1562,7 @@
         style: { paddingTop: 20 }
       },
         React.createElement('h1', {
-          style: { font: '700 20px/1.3 Figtree, system-ui, sans-serif', color: '#201e1d' }
+          style: { font: '700 20px/1.3 Manrope, system-ui, sans-serif', color: '#201e1d' }
         }, step === 'verify_code' ? 'Подтверждение' : 'Подпишите документы'),
         React.createElement('p', {
           style: {
@@ -1591,7 +1591,7 @@
           !allRequiredAccepted && React.createElement(React.Fragment, null,
             React.createElement('div', {
               style: {
-                font: '700 20px/1.3 Figtree, system-ui, sans-serif',
+                font: '700 20px/1.3 Manrope, system-ui, sans-serif',
                 color: '#201e1d',
                 marginTop: 6,
                 textWrap: 'pretty',
@@ -1616,7 +1616,7 @@
               }
             },
               React.createElement('div', {
-                style: { font: '700 12px/1.4 Figtree, system-ui, sans-serif', color: 'var(--v4-warn-text, #a1471c)' }
+                style: { font: '700 12px/1.4 Manrope, system-ui, sans-serif', color: 'var(--v4-warn-text, #a1471c)' }
               }, 'Важно'),
               React.createElement('div', {
                 style: {
@@ -1634,7 +1634,7 @@
           },
             allRequiredAccepted && React.createElement('div', {
               style: {
-                font: '600 10px/1 Figtree, system-ui, sans-serif',
+                font: '600 10px/1 Manrope, system-ui, sans-serif',
                 letterSpacing: '0.16em',
                 textTransform: 'uppercase',
                 color: 'var(--v4-act-text, #8a4a20)',
@@ -1668,7 +1668,7 @@
             allRequiredAccepted && React.createElement(React.Fragment, null,
               React.createElement('div', {
                 style: {
-                  font: '600 10px/1 Figtree, system-ui, sans-serif',
+                  font: '600 10px/1 Manrope, system-ui, sans-serif',
                   letterSpacing: '0.16em',
                   textTransform: 'uppercase',
                   color: 'var(--v4-act-text, #8a4a20)',
@@ -1891,7 +1891,7 @@
             requiredConsentReason && React.createElement('div', {
               style: {
                 textAlign: 'center',
-                font: '600 11.5px/1.45 Figtree, system-ui, sans-serif',
+                font: '600 11.5px/1.45 Manrope, system-ui, sans-serif',
                 color: INK_2,
               }
             }, requiredConsentReason),
@@ -1905,7 +1905,7 @@
                 minHeight: 48,
                 borderRadius: 999,
                 border: 'none',
-                font: '700 13px/1 Figtree, system-ui, sans-serif',
+                font: '700 13px/1 Manrope, system-ui, sans-serif',
                 // Строка «неактивная кнопка»: кнопка гаснет до 45 % и не
                 // нажимается — своей заливки у выключенного состояния нет. Кадр
                 // вместо гашения перекрашивал её в песочную с текстом 30 %,
@@ -1934,7 +1934,7 @@
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                font: '700 12px/1 Figtree, system-ui, sans-serif',
+                font: '700 12px/1 Manrope, system-ui, sans-serif',
                 color: INK_2,
                 cursor: loading ? 'not-allowed' : 'pointer',
               }
@@ -2088,7 +2088,7 @@
           style: {
             display: 'inline',
             font: canvasCard
-              ? (compact ? '600 12px/1.35 Figtree, system-ui, sans-serif' : '600 12.5px/1.55 Figtree, system-ui, sans-serif')
+              ? (compact ? '600 12px/1.35 Manrope, system-ui, sans-serif' : '600 12.5px/1.55 Manrope, system-ui, sans-serif')
               : undefined,
             color: checked && canvasCard ? 'var(--v4-ink, #201e1d)' : (canvasCard ? INK_2 : '#3f3f46'),
           },
@@ -2115,12 +2115,12 @@
           }
         },
           React.createElement('div', {
-            style: { font: '700 10.5px/1.3 Figtree, system-ui, sans-serif', color: '#5c6a45' }
+            style: { font: '700 10.5px/1.3 Manrope, system-ui, sans-serif', color: '#5c6a45' }
           }, 'Коротко и честно'),
           React.createElement('div', {
             style: {
               marginTop: 4,
-              font: LEGAL_DISCLOSURE_TYPES.has(type) ? LEGAL_DISCLOSURE_FONT : '500 11px/1.5 Figtree, system-ui, sans-serif',
+              font: LEGAL_DISCLOSURE_TYPES.has(type) ? LEGAL_DISCLOSURE_FONT : '500 11px/1.5 Manrope, system-ui, sans-serif',
               color: LEGAL_DISCLOSURE_TYPES.has(type) ? INK_2 : INK_DATA,
               textWrap: 'pretty',
             }
@@ -2131,7 +2131,7 @@
           style: {
             display: 'block',
             marginTop: 3,
-            font: type === 'marketing' ? LEGAL_DISCLOSURE_FONT : '500 10.5px/1.4 Figtree, system-ui, sans-serif',
+            font: type === 'marketing' ? LEGAL_DISCLOSURE_FONT : '500 10.5px/1.4 Manrope, system-ui, sans-serif',
             color: type === 'marketing' ? INK_2 : INK_DATA,
           }
         }, optionalHint),
@@ -2153,7 +2153,7 @@
               padding: 0,
               border: 'none',
               background: 'transparent',
-              font: '700 11.5px/1 Figtree, system-ui, sans-serif',
+              font: '700 11.5px/1 Manrope, system-ui, sans-serif',
               color: 'var(--v4-act-text, #8a4a20)',
               cursor: 'pointer',
             }
@@ -3597,11 +3597,11 @@
         style: {
           background: '#fff', borderRadius: '18px 18px 0 0', padding: '20px 18px 24px',
           width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto',
-          font: '400 14px/1.5 Figtree, system-ui, sans-serif', color: '#1f2937',
+          font: '400 14px/1.5 Manrope, system-ui, sans-serif', color: '#1f2937',
         },
       },
         React.createElement('div', {
-          style: { font: '600 17px/1.3 Figtree, system-ui, sans-serif', marginBottom: 6 },
+          style: { font: '600 17px/1.3 Manrope, system-ui, sans-serif', marginBottom: 6 },
         }, 'Документы обновлены'),
 
         React.createElement('div', {
@@ -3672,7 +3672,7 @@
             border: 'none', cursor: (!allRead || busy) ? 'default' : 'pointer',
             background: (!allRead || busy) ? '#e5e7eb' : V4_ACCENT_FILL,
             color: (!allRead || busy) ? 'rgba(0,0,0,.4)' : '#fff',
-            font: '600 15px/1 Figtree, system-ui, sans-serif',
+            font: '600 15px/1 Manrope, system-ui, sans-serif',
           },
         }, busy ? 'Подписываем…' : (allRead ? 'Подписать' : 'Сначала прочитайте документы')),
 

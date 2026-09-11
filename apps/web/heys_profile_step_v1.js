@@ -587,7 +587,7 @@
             border: 'none',
             padding: '12px 15px',
             background: '#f7efe2',
-            font: '600 13px/1.5 Figtree, system-ui, sans-serif',
+            font: '600 13px/1.5 Manrope, system-ui, sans-serif',
             color: '#201e1d',
             ...(nameError && firstName
               ? { boxShadow: 'inset 0 0 0 2px #a1471c' }
@@ -631,7 +631,7 @@
             border: 'none',
             padding: '12px 15px',
             background: '#f7efe2',
-            font: '600 13px/1.5 Figtree, system-ui, sans-serif',
+            font: '600 13px/1.5 Manrope, system-ui, sans-serif',
             color: '#201e1d',
           }
         })
@@ -654,7 +654,7 @@
                 alignItems: 'center',
                 borderRadius: 999,
                 border: 'none',
-                font: '600 12px/1 Figtree, system-ui, sans-serif',
+                font: '600 12px/1 Manrope, system-ui, sans-serif',
                 background: gender === g ? '#c67139' : '#f7efe2',
                 color: gender === g ? '#2b1608' : 'rgba(0,0,0,.55)',
                 cursor: 'pointer',
@@ -731,7 +731,7 @@
             border: 'none',
             padding: '12px 15px',
             background: '#f7efe2',
-            font: '600 13px/1.5 Figtree, system-ui, sans-serif',
+            font: '600 13px/1.5 Manrope, system-ui, sans-serif',
             color: '#201e1d',
           }
         }),
@@ -739,7 +739,7 @@
           className: 'profile-personal-age',
           style: {
             textAlign: 'center',
-            font: '700 24px/1 Figtree, system-ui, sans-serif',
+            font: '700 24px/1 Manrope, system-ui, sans-serif',
             color: under18 ? '#a1471c' : '#8a4a20',
             marginTop: 14,
           },

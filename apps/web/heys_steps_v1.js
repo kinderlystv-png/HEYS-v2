@@ -1812,7 +1812,8 @@
         ),
         React.createElement('div', {
           style: {
-            marginTop: 12, padding: '5px 12px', borderRadius: 999, background: 'var(--v4-hero, #efe3cf)',
+            // Строки «Чек-ин · расчётный вес · 08» (пакет 53): фон --c1, а не --c2.
+            marginTop: 12, padding: '5px 12px', borderRadius: 999, background: 'var(--v4-c1, #f7efe2)',
             fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--v4-act-text, #8a4a20)'
           }
         }, estimatedBadge),
@@ -2686,7 +2687,7 @@
         React.createElement('div', { className: 'mc-scale-head' },
           React.createElement('span', null, 'Насколько выспались'),
           React.createElement('span', { className: 'mc-scale-value' },
-            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Figtree, system-ui, sans-serif', color: V4_ACCENT_TEXT } }, String(sleepQuality)),
+            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Manrope, system-ui, sans-serif', color: V4_ACCENT_TEXT } }, String(sleepQuality)),
             ` · ${String(qualityWord).toLowerCase()}`
           )
         ),
@@ -5083,7 +5084,7 @@
         React.createElement('div', { className: 'mc-scale-head' },
           React.createElement('span', null, row.title),
           React.createElement('span', { className: 'mc-scale-value' },
-            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Figtree, system-ui, sans-serif', color: V4_ACCENT_TEXT } }, String(row.value)),
+            React.createElement('b', { className: 'n', style: { font: '700 13px/1 Manrope, system-ui, sans-serif', color: V4_ACCENT_TEXT } }, String(row.value)),
             ` · ${scaleWord(row.value, row.kind)}`
           )
         ),
