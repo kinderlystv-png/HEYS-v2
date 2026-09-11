@@ -342,10 +342,13 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
     expect(cases).toHaveLength(15);
     expect(cases.every((entry) => entry.status === 'automated' && entry.rootSelector)).toBe(true);
     expect(cases.filter((entry) => entry.kind === 'demo-subscription')).toHaveLength(14);
+    // Корень — там, куда экран подписки монтирует продукт: секция профиля,
+    // открытая строкой «Подписка» листа настроек. Прежний '#ui-v4-subscription-
+    // screen-host' был рамкой стенда, а не местом продукта.
     expect(cases.find((entry) => entry.id === 'subscription-trial-screen')).toMatchObject({
       kind: 'demo-subscription',
-      rootSelector: '#ui-v4-subscription-screen-host',
-      bootstrap: { subscriptionStatus: 'trial', trial_ends_at: '2026-09-10' },
+      rootSelector: '#profile-section-subscription .sub-screen',
+      bootstrap: { entry: 'settings-row', subscriptionStatus: 'trial', trial_ends_at: '2026-09-10' },
     });
     expect(UI_V4_VISUAL_CASES.some((entry) => entry.zone === 'subscription' && entry.status === 'scenario-pending'))
       .toBe(false);

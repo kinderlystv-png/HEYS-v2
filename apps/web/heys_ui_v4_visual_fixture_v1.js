@@ -16,20 +16,24 @@
     'Первый вход · обзор пройден': '.heys-undo-bar',
     'Первый вход · с компьютера': '.desktop-gate',
     'Подписка · строка в настройках': '.tab-settings-menu--v4-sheet .hdr-settings-sheet__row[data-settings-key="subscription"]',
-    'Подписка · экран · пробный период': '#ui-v4-subscription-screen-host',
-    'Подписка · приветствие': '#ui-v4-subscription-screen-host',
-    'Подписка · баннер сверху': '#ui-v4-subscription-screen-host .readonly-banner',
-    'Подписка · тост на действии': '.heys-undo-bar',
-    'Подписка · контакт поддержки': '#ui-v4-subscription-screen-host',
-    'Подписка · тарифы · места есть': '#ui-v4-subscription-screen-host .paywall-modal',
-    'Подписка · тарифы · мест нет': '#ui-v4-subscription-screen-host .paywall-modal',
-    'Подписка · тарифы · Pro Спорт': '#ui-v4-subscription-screen-host .paywall-modal',
-    'Подписка · проверьте заказ': '#ui-v4-subscription-screen-host',
-    'Подписка · оплата прошла': '#ui-v4-subscription-screen-host',
-    'Подписка · экран · активна': '#ui-v4-subscription-screen-host',
-    'Подписка · экран · только чтение': '#ui-v4-subscription-screen-host',
-    'Подписка · очередь · заявка подана': '#ui-v4-subscription-screen-host .paywall-modal',
-    'Подписка · очередь · место освободилось': '#ui-v4-subscription-screen-host .paywall-modal',
+    // Корни подписки — там, где их монтирует сам продукт: экран подписки —
+    // секция профиля, модалки — свои контейнеры на body. Две модалки без
+    // входа в продукте (приветствие зовёт монтаж первого входа, «оплата
+    // прошла» — возврат из ЮKassa) монтируются в прозрачную рамку стенда.
+    'Подписка · экран · пробный период': '#profile-section-subscription .sub-screen',
+    'Подписка · приветствие': '#ui-v4-visual-fixture-host .paywall-modal',
+    'Подписка · баннер сверху': '.readonly-banner--sticky',
+    'Подписка · тост на действии': '.readonly-toast',
+    'Подписка · контакт поддержки': '#heys-contact-support-host .paywall-modal',
+    'Подписка · тарифы · места есть': '#heys-paywall-container .paywall-modal',
+    'Подписка · тарифы · мест нет': '#heys-paywall-container .paywall-modal',
+    'Подписка · тарифы · Pro Спорт': '#heys-paywall-container .paywall-modal',
+    'Подписка · проверьте заказ': '#heys-paywall-container .paywall-order-card',
+    'Подписка · оплата прошла': '#ui-v4-visual-fixture-host .paywall-modal',
+    'Подписка · экран · активна': '#profile-section-subscription .sub-screen',
+    'Подписка · экран · только чтение': '#profile-section-subscription .sub-screen',
+    'Подписка · очередь · заявка подана': '#heys-paywall-container .paywall-modal',
+    'Подписка · очередь · место освободилось': '#heys-paywall-container .paywall-modal',
     // Кадр мессенджера — целый экран; слои (лист, меню, диалоги) живут внутри
     // .messenger-modal, поэтому корень у всех десяти один.
     'Мессенджер · пустой тред': '.messenger-modal',
@@ -81,106 +85,123 @@
     HEYS.Undo.push(payload);
   }
 
-  function subscriptionScreenHost(children) {
-    return h('div', {
-      id: 'ui-v4-subscription-screen-host',
-      className: 'ui-v4-subscription-screen-host',
-      style: { padding: '16px', maxWidth: '375px', margin: '0 auto' },
-    }, children);
+  // ── Подписка ───────────────────────────────────────────────────────────
+  // Стенд доводит приложение до состояния кадра настоящими входами продукта:
+  // строка «Подписка» в листе настроек, пилюля липкого баннера, тап по
+  // «Добавить приём пищи» в «только чтении», кнопка тарифа, галочка оферты.
+  // Подменяется только то, чего на стенде нет: ответы сервера (статус
+  // подписки, ёмкость очереди, прогноз срока заказа) и флаг фазы.
+  // Прежний стенд рисовал компоненты в пустой рамке, а заглушку статуса
+  // снимал синхронно, раньше чем экран её спросит: экран подписки получал
+  // «нет подписки» и во всех трёх состояниях рисовал «Pro · активна» без
+  // даты. Заглушка очереди ставилась эффектом родителя — уже после того, как
+  // блок очереди сходил к настоящему серверу, — и четыре кадра очереди
+  // показывали одно «Мест нет · в очереди 0».
+
+  const SUBSCRIPTION_STATUS_BY_FRAME = Object.freeze({
+    'Подписка · экран · пробный период': { status: 'trial', trial_ends_at: '2026-09-10', plan: null },
+    'Подписка · экран · активна': { status: 'active', plan: 'pro', subscription_ends_at: '2026-10-03' },
+    'Подписка · экран · только чтение': { status: 'read_only', plan: 'pro' },
+  });
+
+  function installSubscriptionServer(status) {
+    const api = HEYS.YandexAPI;
+    if (!api?.rpc) throw new Error('HEYS.YandexAPI.rpc unavailable');
+    if (!api.__uiV4OriginalRpc) api.__uiV4OriginalRpc = api.rpc;
+    const original = api.__uiV4OriginalRpc;
+    api.rpc = function uiV4SubscriptionRpc(name, params) {
+      if (name === 'get_subscription_status_by_session') {
+        return Promise.resolve({ data: { can_edit: status.status !== 'read_only', ...status } });
+      }
+      return original.call(this, name, params);
+    };
   }
 
-  function withSubscriptionStatus(status, renderChild) {
-    const subs = HEYS.Subscriptions;
-    if (!subs?.getStatus) throw new Error('HEYS.Subscriptions.getStatus unavailable');
-    const previous = subs.getStatus;
-    subs.getStatus = async () => ({
-      can_edit: status?.status !== 'read_only',
-      ...status,
-    });
-    renderChild();
-    subs.getStatus = previous;
+  // «Только чтение» по всему приложению: кэш статуса, из которого читают
+  // вкладка «Питание» (баннер) и гейт записи (тост), плюс событие смены
+  // статуса — им приложение перерисовывается без перезагрузки.
+  async function enterReadOnly() {
+    const sub = HEYS.Subscription;
+    if (!sub?.getCachedStatus) throw new Error('HEYS.Subscription.getCachedStatus unavailable');
+    sub.getCachedStatus = () => 'read_only';
+    sub.getCachedDetails = () => ({ status: 'read_only' });
+    global.dispatchEvent(new CustomEvent('heys:subscription-changed', { detail: { status: 'read_only' } }));
+    await waitFor(() => document.querySelector('.readonly-banner--sticky'), 'липкий баннер «только чтение»');
+  }
+
+  async function tapReadOnlyBannerPill() {
+    const pill = await waitFor(
+      () => document.querySelector('.readonly-banner--sticky .readonly-banner-pill'),
+      'пилюля «Подписка» в баннере',
+    );
+    pill.click();
   }
 
   function installTrialQueueStub(variant) {
+    // Числа — из кадров: «в очереди 4», «вы 3-й в очереди», таймер 1:47:12
+    // (часы стенда стоят, поэтому таймер не уходит).
     const presets = {
       open: {
-        capacity: { is_accepting: true, available_slots: 3, total_slots: 12, queue_length: 4 },
+        capacity: { is_accepting: true, available_slots: 3, total_slots: 12, queue_length: 0 },
         queue: { status: 'not_in_queue' },
       },
       full: {
-        capacity: { is_accepting: true, available_slots: 0, total_slots: 12, queue_length: 18 },
+        capacity: { is_accepting: true, available_slots: 0, total_slots: 12, queue_length: 4 },
         queue: { status: 'not_in_queue' },
       },
       queued: {
-        capacity: { is_accepting: true, available_slots: 0, total_slots: 12, queue_length: 18 },
-        queue: { status: 'queued', position: 12 },
+        capacity: { is_accepting: true, available_slots: 0, total_slots: 12, queue_length: 4 },
+        queue: { status: 'queued', position: 3 },
       },
       offer: {
         capacity: { is_accepting: true, available_slots: 1, total_slots: 12, queue_length: 3 },
         queue: {
           status: 'offer',
-          offer_expires_at: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+          offer_expires_at: new Date(Date.now() + ((1 * 60 + 47) * 60 + 12) * 1000).toISOString(),
         },
       },
     };
     const preset = presets[variant];
     if (!preset) throw new Error(`Unknown trial queue variant: ${variant}`);
-    const base = HEYS.TrialQueue || {};
+    const base = HEYS.TrialQueue;
+    if (!base?.formatTimeRemaining || !base?.isOfferExpired) {
+      throw new Error('HEYS.TrialQueue unavailable');
+    }
     HEYS.TrialQueue = {
       ...base,
       getCapacity: async () => preset.capacity,
       getQueueStatus: async () => preset.queue,
-      formatTimeRemaining: base.formatTimeRemaining || (() => '00:42:18'),
-      isOfferExpired: base.isOfferExpired || (() => false),
-      getQueueStatusMeta: base.getQueueStatusMeta || ((status, position) => ({
-        emoji: status === 'offer' ? '🎉' : '⏳',
-        label: status === 'offer' ? 'Место освободилось' : `В очереди · #${position || '?'}`,
-        actionLabel: status === 'offer' ? 'Забрать место' : 'В очереди',
-      })),
-      getCapacityMeta: base.getCapacityMeta || ((capacity) => {
-        if (capacity.available_slots > 0) {
-          return {
-            status: 'available',
-            color: '#22c55e',
-            emoji: '🟢',
-            label: `Свободно ${capacity.available_slots} из ${capacity.total_slots}`,
-            sublabel: 'Место доступно прямо сейчас!',
-            actionLabel: 'Начать триал',
-            showQueue: false,
-          };
-        }
-        return {
-          status: 'queue',
-          color: '#f59e0b',
-          emoji: '🟡',
-          label: 'Мест нет — можно встать в очередь',
-          sublabel: `В очереди ${capacity.queue_length || 0} человек`,
-          actionLabel: 'Встать в очередь',
-          showQueue: true,
-        };
-      }),
       requestTrial: async () => ({ success: true }),
       cancelQueue: async () => ({ success: true }),
       claimOffer: async () => ({ success: true }),
     };
   }
 
-  function PaywallPlansFixture({ variant, selectPlan }) {
-    const PaywallModal = HEYS.Paywall?.PaywallModal;
-    const [, force] = React.useState(0);
-    React.useEffect(() => {
-      installTrialQueueStub(variant);
-      if (!selectPlan) return;
-      const timer = setTimeout(() => {
-        const plans = document.querySelectorAll('#ui-v4-subscription-screen-host .paywall-plan');
-        const target = [...plans].find((node) => node.textContent?.includes(selectPlan));
-        target?.click();
-        force((value) => value + 1);
-      }, 0);
-      return () => clearTimeout(timer);
-    }, [variant, selectPlan]);
-    if (!PaywallModal) throw new Error('HEYS.Paywall.PaywallModal unavailable');
-    return h(PaywallModal, { onClose: () => {} });
+  function installOrderServer() {
+    const api = HEYS.YandexAPI;
+    if (!api) throw new Error('HEYS.YandexAPI unavailable');
+    // «до 5 октября» — дата, которую возвращает сервер (строка «вид ·
+    // проверьте заказ»: клиент её не вычисляет).
+    api.getOrderPreview = async () => ({
+      data: { projected_period_end: '2026-10-05', period_kind: 'estimate' },
+      error: null,
+    });
+    // Наличие createPayment — условие, при котором тарифы ведут на «проверьте
+    // заказ». До оплаты стенд не доходит: платёж не создаётся.
+    api.createPayment = async () => ({ data: null, error: { message: 'stand' } });
+  }
+
+  function findButtonByText(root, text) {
+    return [...root.querySelectorAll('button, [role="button"]')]
+      .find((node) => node.textContent?.replace(/\s+/g, ' ').trim().includes(text)) || null;
+  }
+
+  function renderOverTheApp(element) {
+    // Модалка без входа в продукте встаёт поверх живого приложения: рамка
+    // стенда прозрачна, под затемнением виден экран, как на кадре.
+    const host = renderToHost(element);
+    host.style.background = 'transparent';
+    return host;
   }
 
   async function mountFirstRun(frameLabel) {
@@ -208,97 +229,135 @@
     await tour.openVisualFixtureStep(stepIndex);
   }
 
-  function mountSubscription(frameLabel) {
+  const TRIAL_QUEUE_VARIANT_BY_FRAME = Object.freeze({
+    'Подписка · тарифы · места есть': 'open',
+    'Подписка · тарифы · мест нет': 'full',
+    'Подписка · очередь · заявка подана': 'queued',
+    'Подписка · очередь · место освободилось': 'offer',
+  });
+
+  async function mountSubscription(frameLabel) {
     clearHost();
     const Subs = HEYS.Subscriptions;
     const Paywall = HEYS.Paywall;
     if (!Subs) throw new Error('HEYS.Subscriptions unavailable');
-    const clientId = HEYS.currentClientId || 'demo-client-female';
+    if (!Paywall?.show) throw new Error('HEYS.Paywall.show unavailable');
+    HEYS.config = HEYS.config || {};
 
-    switch (frameLabel) {
-      case 'Подписка · строка в настройках':
-        throw new Error('settings-row frame uses demo-settings flow');
-      case 'Подписка · экран · пробный период':
-        withSubscriptionStatus({
-          status: 'trial',
-          trial_ends_at: '2026-09-10',
-          plan: null,
-        }, () => renderToHost(subscriptionScreenHost(h(Subs.SubscriptionSection, { clientId }))));
-        return;
-      case 'Подписка · приветствие':
-        renderToHost(subscriptionScreenHost(h(Subs.WelcomeFirstLogin, {
-          clientName: 'Анна',
-          trialEndsAt: '2026-09-12',
-          onClose: () => {},
-        })));
-        return;
-      case 'Подписка · баннер сверху':
-        if (!Paywall?.ReadOnlyBanner) throw new Error('HEYS.Paywall.ReadOnlyBanner unavailable');
-        renderToHost(subscriptionScreenHost(h(Paywall.ReadOnlyBanner, { onClick: () => {} })));
-        return;
-      case 'Подписка · тост на действии':
-        pushUndoToast({
-          label: 'Запись недоступна — только чтение',
-          actionLabel: 'Подписка',
-          duration: 4000,
-          onAction: () => {},
-          onUndo: () => {},
-        });
-        return;
-      case 'Подписка · контакт поддержки':
-        renderToHost(subscriptionScreenHost(h(Subs.ContactCuratorScreen, {
-          isReadOnly: true,
-          onClose: () => {},
-        })));
-        return;
-      case 'Подписка · тарифы · места есть':
-        renderToHost(subscriptionScreenHost(h(PaywallPlansFixture, { variant: 'open' })));
-        return;
-      case 'Подписка · тарифы · мест нет':
-        renderToHost(subscriptionScreenHost(h(PaywallPlansFixture, { variant: 'full' })));
-        return;
-      case 'Подписка · тарифы · Pro Спорт':
-        renderToHost(subscriptionScreenHost(h(PaywallPlansFixture, {
-          variant: 'open',
-          selectPlan: 'Pro Спорт',
-        })));
-        return;
-      case 'Подписка · проверьте заказ':
-        renderToHost(subscriptionScreenHost(h(Subs.PaymentScreen, {
-          clientId,
-          onSuccess: () => {},
-          onCancel: () => {},
-        })));
-        return;
-      case 'Подписка · оплата прошла':
-        renderToHost(subscriptionScreenHost(h(Subs.PaymentSuccessScreen, {
-          plan: 'pro',
-          expiresAt: '2026-10-03',
-          onContinue: () => {},
-        })));
-        return;
-      case 'Подписка · экран · активна':
-        withSubscriptionStatus({
-          status: 'active',
-          plan: 'pro',
-          subscription_ends_at: '2026-10-03',
-        }, () => renderToHost(subscriptionScreenHost(h(Subs.SubscriptionSection, { clientId }))));
-        return;
-      case 'Подписка · экран · только чтение':
-        withSubscriptionStatus({
-          status: 'read_only',
-          plan: 'pro',
-        }, () => renderToHost(subscriptionScreenHost(h(Subs.SubscriptionSection, { clientId }))));
-        return;
-      case 'Подписка · очередь · заявка подана':
-        renderToHost(subscriptionScreenHost(h(PaywallPlansFixture, { variant: 'queued' })));
-        return;
-      case 'Подписка · очередь · место освободилось':
-        renderToHost(subscriptionScreenHost(h(PaywallPlansFixture, { variant: 'offer' })));
-        return;
-      default:
-        throw new Error(`Unknown subscription frame: ${frameLabel}`);
+    if (frameLabel === 'Подписка · строка в настройках') {
+      throw new Error('settings-row frame uses demo-settings flow');
     }
+
+    // Экран подписки: строка «Подписка» в листе настроек → секция профиля.
+    const screenStatus = SUBSCRIPTION_STATUS_BY_FRAME[frameLabel];
+    if (screenStatus) {
+      installSubscriptionServer(screenStatus);
+      await waitFor(
+        () => typeof global.__heysToggleTabSettingsHandler === 'function',
+        'обработчик листа настроек',
+        30000,
+      );
+      global.__heysToggleTabSettingsHandler();
+      const row = await waitFor(
+        () => document.querySelector('.hdr-settings-sheet__row[data-settings-key="subscription"]'),
+        'строка «Подписка» в листе настроек',
+      );
+      row.click();
+      await waitFor(
+        () => document.querySelector('#profile-section-subscription .sub-screen__status-card'),
+        'экран подписки',
+      );
+      await sleep(600); // плавная прокрутка к секции
+      return;
+    }
+
+    // Фаза 1 · «только чтение»: пилюля баннера на «Питании» → контакт поддержки.
+    if (frameLabel === 'Подписка · контакт поддержки') {
+      HEYS.config.paymentsEnabled = false;
+      await enterReadOnly();
+      await tapReadOnlyBannerPill();
+      await waitFor(() => document.querySelector('#heys-contact-support-host .sub-contact'), 'контакт поддержки');
+      return;
+    }
+
+    if (frameLabel === 'Подписка · баннер сверху') {
+      await enterReadOnly();
+      return;
+    }
+
+    // Тап по «Добавить приём пищи» в «только чтении» — вход кадра («тап по
+    // «Добавить» в «только чтении»»). Текст тоста даёт вызывающий код.
+    if (frameLabel === 'Подписка · тост на действии') {
+      await enterReadOnly();
+      const add = await waitFor(() => findButtonByText(document, 'Добавить приём пищи'), 'кнопка «Добавить приём пищи»');
+      add.click();
+      await waitFor(() => document.querySelector('.readonly-toast'), 'тост «только чтение»');
+      return;
+    }
+
+    // Фаза 2 · тарифы и очередь: «только чтение», пилюля баннера → тарифы.
+    const queueVariant = TRIAL_QUEUE_VARIANT_BY_FRAME[frameLabel];
+    if (queueVariant) {
+      HEYS.config.paymentsEnabled = true;
+      installTrialQueueStub(queueVariant);
+      await enterReadOnly();
+      await tapReadOnlyBannerPill();
+      await waitFor(
+        () => {
+          const title = document.querySelector('#heys-paywall-container .paywall-trial-title');
+          // «Проверяем места…» — состояние загрузки блока, а не кадр.
+          return title && !document.querySelector('#heys-paywall-container .paywall-trial-status--busy')?.textContent?.includes('Проверяем');
+        },
+        'блок пробного периода',
+      );
+      await sleep(200);
+      return;
+    }
+
+    // Фаза 2 · доступ ещё есть: вход с экрана подписки → тарифы.
+    if (frameLabel === 'Подписка · тарифы · Pro Спорт' || frameLabel === 'Подписка · проверьте заказ') {
+      HEYS.config.paymentsEnabled = true;
+      installTrialQueueStub('open');
+      installOrderServer();
+      if (!HEYS.currentClientId) throw new Error('HEYS.currentClientId пуст: «проверьте заказ» требует клиента');
+      Paywall.show('subscription_screen');
+      const modal = await waitFor(() => document.querySelector('#heys-paywall-container .paywall-modal'), 'модалка тарифов');
+      if (frameLabel === 'Подписка · тарифы · Pro Спорт') {
+        const plan = [...modal.querySelectorAll('.paywall-plan')].find((node) => node.textContent.includes('Pro Спорт'));
+        if (!plan) throw new Error('карточка «Pro Спорт» не найдена');
+        plan.click();
+        await waitFor(() => document.querySelector('#heys-paywall-container .paywall-footnote'), 'подпись Pro Спорт');
+        return;
+      }
+      const cta = await waitFor(() => document.querySelector('#heys-paywall-container .paywall-cta'), 'кнопка «Оформить Pro»');
+      cta.click();
+      const consent = await waitFor(() => document.querySelector('#heys-paywall-container .paywall-consent'), 'согласие с офертой');
+      consent.click();
+      await waitFor(() => document.querySelector('#heys-paywall-container .paywall-consent-box.is-checked'), 'галочка оферты');
+      await waitFor(() => document.querySelector('#heys-paywall-container .paywall-order-period'), 'дата окончания заказа');
+      return;
+    }
+
+    if (frameLabel === 'Подписка · приветствие') {
+      renderOverTheApp(h(Subs.WelcomeFirstLogin, {
+        clientName: 'Анна',
+        trialEndsAt: '2026-09-12',
+        onClose: () => {},
+      }));
+      return;
+    }
+
+    if (frameLabel === 'Подписка · оплата прошла') {
+      // Срок — «До 5 октября»: дата, которую сервер вернул после оплаты.
+      renderOverTheApp(h(Subs.PaymentSuccessScreen, {
+        plan: 'pro',
+        expiresAt: '2026-10-05',
+        onContinue: () => {},
+      }));
+      return;
+    }
+
+    throw new Error(`Unknown subscription frame: ${frameLabel}`);
   }
 
   // ── Мессенджер ───────────────────────────────────────────────────────
@@ -322,7 +381,7 @@
       const value = check();
       if (value) return value;
       if (performance.now() - started > timeoutMs) {
-        throw new Error(`Мессенджер: не дождались «${label}»`);
+        throw new Error(`Стенд: не дождались «${label}»`);
       }
       await sleep(50);
     }
@@ -832,7 +891,7 @@
       return ROOT_BY_FRAME[frameLabel];
     }
     if (frameLabel.startsWith('Подписка ·')) {
-      mountSubscription(frameLabel);
+      await mountSubscription(frameLabel);
       return ROOT_BY_FRAME[frameLabel];
     }
     if (frameLabel.startsWith('Мессенджер ·')) {
