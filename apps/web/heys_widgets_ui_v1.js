@@ -3327,8 +3327,13 @@
         className: 'widget-v4-stack widget-trend-compact'
           + (sheetCompact ? ' widget-trend-compact--sheet' : '')
       },
+        // Строка «состав дефолта»: на Главной плитка называет себя целиком —
+        // «Тренд здоровья · 14 дней». Короткий ключ «Тренд · 14 дней» — только
+        // в превью шторки, где имя виджета уже стоит заголовком листа.
         React.createElement('div', { className: 'widget-trend-compact__head' },
-          v4Kicker(`Тренд · ${formatRuUnit(periodDays, 'дней')}`)
+          v4Kicker(sheetCompact
+            ? `Тренд · ${formatRuUnit(periodDays, 'дней')}`
+            : `Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`)
         ),
         React.createElement('div', { className: 'widget-trend-compact__row' },
           React.createElement('span', {
@@ -7396,9 +7401,12 @@
         playEntrance
       })
       : null;
+    // Кадр «Динамика · G сброшено и кривая» и Главная: число слева, кривая
+    // справа — как у тренда здоровья рядом. Спарклайн слева от числа только у
+    // плитки «Вес» (строка «состав дефолта», п. 10), здесь его не было.
     return React.createElement('div', { className: 'widget-wd__curve-row' },
-      spark,
-      deltaLine
+      deltaLine,
+      spark
     );
   }
 

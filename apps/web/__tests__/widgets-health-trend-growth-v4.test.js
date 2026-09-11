@@ -76,7 +76,11 @@ describe('Тренд здоровья · рост — сведённый кус�
     expect(compact).toContain('HEALTH_SPARK_BOX_COMPACT');
     expect(compact).toContain('v4HealthTrendState');
     expect(compact).toContain('v4HealthTrendSparkClass');
-    expect(compact).not.toContain("`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`");
+    // Контракт старше кадра: строка «состав дефолта» даёт плитке Главной полное
+    // имя «Тренд здоровья · 14 дней», короткий ключ кадров состояний остаётся
+    // превью шторки. Отступление от кадра — в UI_V4_FINDINGS.
+    expect(compact).toContain("`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`");
+    expect(compact).toMatch(/sheetCompact\s*\?\s*`Тренд · \$\{formatRuUnit\(periodDays, 'дней'\)\}`/);
     expect(empty).toContain("`Тренд здоровья · ${formatRuUnit(periodDays, 'дней')}`");
     expect(uiSrc).toContain('const HEALTH_SPARK_BOX_COMPACT = { left: 2, right: 56, top: 4, bottom: 18, dotR: 3.5 }');
     expect(uiSrc).toContain('const V4_HEALTH_TREND_DEAD_ZONE = 2');

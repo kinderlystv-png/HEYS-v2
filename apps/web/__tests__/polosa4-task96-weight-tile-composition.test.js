@@ -155,7 +155,9 @@ describe('polosa4 task96 · динамика веса curve · один путь
     expect(a).toEqual(b);
   });
 
-  it('computed: лист открыт (sheetPreview) и Главная закрыта (full) — space-between, спарклайн слева', () => {
+  // Кадр «Динамика · G сброшено и кривая» (11 сентября): число слева, кривая
+  // справа. Прежнее «спарклайн слева» не опиралось ни на один кадр.
+  it('computed: лист открыт (sheetPreview) и Главная закрыта (full) — space-between, число слева', () => {
     const { renderComposition } = loadComposition();
     const sheetHost = document.createElement('div');
     sheetHost.className = 'widget-wd widget-wd--preview widget widget--2x1 widget--crashRisk';
@@ -181,8 +183,8 @@ describe('polosa4 task96 · динамика веса curve · один путь
 
     expect(sheetSnap.hasSpark).toBe(true);
     expect(homeSnap.hasSpark).toBe(true);
-    expect(sheetSnap.sparkBeforeDelta).toBe(true);
-    expect(homeSnap.sparkBeforeDelta).toBe(true);
+    expect(sheetSnap.sparkBeforeDelta).toBe(false);
+    expect(homeSnap.sparkBeforeDelta).toBe(false);
     expect(sheetSnap.justifyContent).toBe('space-between');
     expect(homeSnap.justifyContent).toBe('space-between');
     expect(sheetSnap.flexDirection).toBe('row');
@@ -216,7 +218,7 @@ describe('polosa4 task96 · динамика веса curve · один путь
       );
       const snap = layoutSnapshot(container, rules);
       expect(snap.hasSpark).toBe(true);
-      expect(snap.sparkBeforeDelta).toBe(true);
+      expect(snap.sparkBeforeDelta).toBe(false);
       expect(snap.justifyContent).toBe('space-between');
       host.remove();
     });
