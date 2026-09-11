@@ -2645,6 +2645,20 @@ async function openCase(browser, item, snapshot, options = {}) {
       };
     }
 
+    // Стенд открывает слои программно, без касания, и браузер рисует рамку
+    // фокуса вокруг кнопки, на которую слой сам ставит фокус (так требует
+    // доступность). Человек, открывший слой пальцем, этой рамки не видит, а в
+    // кадрах её нет — снимаем фокус перед снимком, как это делает касание.
+    await page.evaluate(() => {
+      const active = document.activeElement;
+      if (active && active !== document.body && active.matches(':focus-visible')) active.blur();
+    });
+    // Текст экрана рядом со снимком: по нему к стенду подбирается кадр того же
+    // состояния (у кадров текст записан строкой «<кадр> · текст»).
+    await page
+      .evaluate((selector) => (document.querySelector(selector) || document.body).innerText, item.captureSelector || item.rootSelector || 'body')
+      .then((text) => fs.writeFileSync(path.join(OUT_DIR, `${item.id}.txt`), text || ''))
+      .catch(() => {});
     const file = path.join(OUT_DIR, `${item.id}${item.canvasFrame ? '.runtime' : ''}.png`);
     if (item.captureSelector) {
       const captureRoot = page.locator(item.captureSelector);
