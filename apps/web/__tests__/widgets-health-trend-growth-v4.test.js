@@ -31,6 +31,13 @@ describe('Тренд здоровья · рост — сведённый кус�
   const palette = fs.readFileSync(PALETTE, 'utf8');
   const uiSrc = fs.readFileSync(UI, 'utf8');
   const variantsSrc = fs.readFileSync(VARIANTS, 'utf8');
+  const registrySrc = fs.readFileSync(path.resolve(__dirname, '../heys_widgets_registry_v1.js'), 'utf8');
+
+  it('новая плитка считает тренд за 14 дней, как «+8 за 14 дней» строки контракта', () => {
+    const trendAt = registrySrc.indexOf("component: 'WidgetHealthTrend'");
+    const block = registrySrc.slice(trendAt, registrySrc.indexOf('dayScore: {', trendAt));
+    expect(block).toMatch(/periodDays:\s*\{[^}]*default:\s*14/);
+  });
   const rules = readRules(css);
 
   const bodyAt = uiSrc.indexOf('function HealthTrendVariantBody');
