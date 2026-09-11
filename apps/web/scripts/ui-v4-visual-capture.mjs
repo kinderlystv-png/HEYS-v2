@@ -291,6 +291,13 @@ async function openCase(browser, item, snapshot, options = {}) {
     serviceWorkers: 'block',
   });
   await installDeterminism(context, item, snapshot);
+  // Данные стенда, которые приложение читает из хранилища сессии (правки
+  // куратора): записываются до загрузки страницы, как если бы они уже пришли.
+  if (item.sessionSeed) {
+    await context.addInitScript((seed) => {
+      for (const [key, value] of Object.entries(seed)) sessionStorage.setItem(key, JSON.stringify(value));
+    }, item.sessionSeed);
+  }
   const page = await context.newPage();
   const consoleErrors = [];
   page.on('console', (message) => {
@@ -1653,9 +1660,12 @@ async function openCase(browser, item, snapshot, options = {}) {
         undefined,
         { timeout: 45_000 },
       );
-      await page.evaluate(async () => {
+      await page.evaluate(async (curatorName) => {
+        // Имя куратора в заголовке листа: у демо-клиента его нет ни в профиле,
+        // ни в настройках, а кадр называет куратора по имени.
+        if (curatorName) window.HEYS.curatorDisplayName = curatorName;
         await window.HEYS.debug.replayCuratorReview({ allowSample: true });
-      });
+      }, item.curatorName || null);
     }
     if (item.kind === 'demo-settings') {
       await page

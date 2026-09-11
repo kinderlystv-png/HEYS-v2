@@ -14,6 +14,35 @@ const UNDO_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_undo_v1.js');
 const FIXED_NOW = '2026-08-28T09:30:00+03:00';
 const FIXED_DAY = '2026-08-28';
 
+/** Правки куратора в форме снимков «прочитано по датам» — кадр «Куратор · две даты». */
+function curatorTwoDatesSeed() {
+  const today = FIXED_DAY;
+  const d = new Date(`${FIXED_DAY}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  const yesterday = d.toISOString().slice(0, 10);
+  const items = [
+    ['Люля куриные на гриле', 70], ['Бризоль куриная', 70], ['Рис с овощами', 288],
+    ['Капуста квашеная', 100], ['Кофе американо', 150], ['Молоко 3.2', 200], ['Кетчуп томатный', 15],
+  ].map(([name, grams], i) => ({ item_id: `seed-dinner-${i}`, name, grams }));
+  const entry = (id, date, time, actions, before, after) => ({
+    id,
+    created_at: `${date}T${time}:00.000Z`,
+    keys: [`heys_dayv2_${date}`],
+    actions: { actions, day_kcal_before: before, day_kcal_after: after },
+  });
+  return {
+    [today]: { entries: [entry('seed-curator-today', today, '17:05', [
+      { type: 'meal_added', date: today, meal_id: 'seed-dinner', meal_label: 'Ужин', time: '16:46', kcal: 697, items },
+      { type: 'water_set', date: today, to: 1800 },
+    ], 1240, 1937)] },
+    [yesterday]: { entries: [entry('seed-curator-yesterday', yesterday, '19:20', [
+      { type: 'meal_item_changed', date: yesterday, meal_id: 'seed-lunch', meal_name: 'Обед', name: 'Рис', from_grams: 200, to_grams: 288, kcal_delta: 118 },
+      { type: 'meal_item_removed', date: yesterday, meal_id: 'seed-breakfast', meal_name: 'Завтрак', count: 2, kcal_delta: -298 },
+      { type: 'steps_set', date: yesterday, to: 8432 },
+    ], 2010, 1866)] },
+  };
+}
+
 export const UI_V4_VISUAL_CLOCK = Object.freeze({
   iso: FIXED_NOW,
   day: FIXED_DAY,
@@ -535,6 +564,11 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     kind: 'demo-curator-edits',
     tab: 'widgets',
     rootSelector: '.ca-modal-backdrop--visible .ca-modal',
+    // Состояние кадра «Куратор · две даты»: за сегодня добавлен ужин и
+    // проставлена вода, за вчера — три правки по еде и шагам. Прежде стенд
+    // показывал встроенный образец приложения, и сверять было не с чем.
+    curatorName: 'Антон',
+    sessionSeed: { heys_curator_reviewed_by_date_v1: curatorTwoDatesSeed() },
   },
   ...['sand', 'sand-dark', 'blue', 'blue-dark'].map((themeId) => ({
     id: `food-copy-empty-target-${themeId}`,
