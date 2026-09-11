@@ -162,7 +162,9 @@ describe('registration · разбор кадра «персональные д�
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card::before[\s\S]*height: 14px/s);
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card::after[\s\S]*height: 14px/s);
     expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--prev[\s\S]*font: 600 12\.5px\/2\.1/s);
-    expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--current[\s\S]*font: 700 15\.5px\/2/s);
+    // Решение владельца 11 сентября: выбранная дата по кадру — 26 px/700
+    // акцентом, без капсулы (было 15,5 px чернилами по строке контракта).
+    expect(pwaCss).toMatch(/\.profile-personal-wheel-card \.mc-wheel-value--current[\s\S]*font: 700 26px\/1\.4/s);
   });
 
   it('элемент 04/24 — прокрутка и подвал общие для daily-оболочки', () => {

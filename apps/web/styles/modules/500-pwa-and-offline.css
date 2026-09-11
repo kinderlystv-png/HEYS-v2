@@ -5564,11 +5564,20 @@
   opacity: 1;
 }
 
+/* Решение владельца 11 сентября: дата рождения — как в кадре «Регистрация ·
+   персональные данные», в одном стиле с колёсами роста и веса: выбранное 26
+   px/700 акцентом, без капсулы под ним. Строка «вид колеса значений» просила
+   15,5 px чернилами на капсуле и спорила с кадром с первой поставки; её правка
+   — ход дизайнера (UI_V4_FINDINGS, registration-birthdate-wheel-frame-vs-row). */
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--current {
   height: auto;
   min-height: 0;
-  font: 700 15.5px/2 Manrope, system-ui, sans-serif;
-  color: var(--v4-ink, #201e1d);
+  font: 700 26px/1.4 Manrope, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-values::before {
+  display: none;
 }
 
 .mc-modal[data-heys-step-id="profile-body"] .mc-wheel-values {
