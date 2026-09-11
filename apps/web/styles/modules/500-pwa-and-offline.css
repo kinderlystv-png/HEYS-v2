@@ -7212,7 +7212,10 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.6);
 }
 
-.mc-modal--daily .mc-weight-step:has(.mc-daily-greeting) .mc-weight-hero {
+/* 34 над «Вес на утро» — только когда над ним плашка серии (кадр «Чек-ин ·
+   вес»); без плашки кадр «Чек-ин · первый вес» ставит 30. Прежде правило
+   держало 34 всегда и по весу селектора перебивало 30: весь шаг ниже на 4 px. */
+.mc-modal--daily .mc-weight-step:has(.mc-daily-streak-banner) .mc-weight-hero {
   margin-top: 34px;
 }
 

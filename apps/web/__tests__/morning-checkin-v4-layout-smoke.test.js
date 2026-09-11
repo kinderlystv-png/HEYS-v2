@@ -35,6 +35,12 @@ describe('morning check-in v4 layout vs canvas', () => {
     // Пустое место под «Назад» — в кадре span шириной 44 без высоты: строка
     // шапки высотой с точки. Спейсер 44 × 44 опускал весь шаг на 38 px.
     expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-header-spacer \{[^}]*height: 0;/);
+    // Над «Вес на утро»: 34 только при плашке серии, без неё 30 (кадры «Чек-ин ·
+    // вес» и «Чек-ин · первый вес»). Правило «34 при любом приветствии»
+    // перебивало 30 весом селектора.
+    expect(DAILY_CSS).not.toContain('.mc-weight-step:has(.mc-daily-greeting) .mc-weight-hero');
+    expect(DAILY_CSS).toMatch(/\.mc-weight-step:has\(\.mc-daily-streak-banner\) \.mc-weight-hero \{\s*margin-top: 34px;/);
+    expect(DAILY_CSS).toMatch(/\.mc-daily-greeting:not\(:has\(\.mc-daily-streak-banner\)\) \+ \.mc-weight-hero \{\s*margin-top: 30px;/);
     // Регистрация держит свою цель 44 с выносом −8 — её кадр другой.
     expect(DAILY_CSS).toMatch(/\[data-heys-step-id="profile-personal"\] \.mc-header-spacer \{[^}]*height: 44px;[^}]*margin: -8px 0;/);
     expect(DAILY_CSS).toContain('.mc-backdrop:has(.mc-modal--daily)');
