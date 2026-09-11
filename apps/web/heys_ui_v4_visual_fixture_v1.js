@@ -30,16 +30,18 @@
     'Подписка · экран · только чтение': '#ui-v4-subscription-screen-host',
     'Подписка · очередь · заявка подана': '#ui-v4-subscription-screen-host .paywall-modal',
     'Подписка · очередь · место освободилось': '#ui-v4-subscription-screen-host .paywall-modal',
+    // Кадр мессенджера — целый экран; слои (лист, меню, диалоги) живут внутри
+    // .messenger-modal, поэтому корень у всех десяти один.
     'Мессенджер · пустой тред': '.messenger-modal',
-    'Мессенджер · тред с карточкой дня': '.messenger-modal .msg-applied-card',
-    'Мессенджер · Ждём и подсказка': '.messenger-modal .messenger-day-checklist',
-    'Мессенджер · запись голосового': '.messenger-modal .messenger-composer--recording',
-    'Мессенджер · лист действий': '.messenger-action-sheet',
-    'Мессенджер · меню Ещё': '.messenger-header-menu',
-    'Мессенджер · поиск': '.messenger-search-panel',
-    'Мессенджер · без сети': '.messenger-modal .messenger-offline-bar',
-    'Мессенджер · согласие на расшифровку': '.messenger-confirm-dialog',
-    'Мессенджер · удаление сообщения': '.messenger-confirm-dialog',
+    'Мессенджер · тред с карточкой дня': '.messenger-modal',
+    'Мессенджер · Ждём и подсказка': '.messenger-modal',
+    'Мессенджер · запись голосового': '.messenger-modal',
+    'Мессенджер · лист действий': '.messenger-modal',
+    'Мессенджер · меню Ещё': '.messenger-modal',
+    'Мессенджер · поиск': '.messenger-modal',
+    'Мессенджер · без сети': '.messenger-modal',
+    'Мессенджер · согласие на расшифровку': '.messenger-modal',
+    'Мессенджер · удаление сообщения': '.messenger-modal',
   });
 
   function ensureHost() {
@@ -299,111 +301,529 @@
     }
   }
 
-  function ensureMessengerSearchStub() {
-    HEYS.MessengerAPI = HEYS.MessengerAPI || {};
-    HEYS.MessengerAPI.searchMessages = async () => ({
-      success: true,
-      messages: [{
-        id: 'visual-search-1',
-        body: 'Курица 180 г',
-        created_at: '2026-08-28T10:15:00+03:00',
-      }],
-    });
+  // ── Мессенджер ───────────────────────────────────────────────────────
+  // Стенд открывает настоящий экран переписки (HEYS.Messenger.openModal) и
+  // доводит его до состояния кадра теми же действиями, что и человек: тап по
+  // «Ещё», долгое нажатие на сообщении, ввод текста, запись голосового. Прежний
+  // стенд собирал похожий DOM из голых div с классами продукта, и пара «кадр —
+  // приложение» сравнивала кадр с имитацией. Подменяется только то, чего на
+  // стенде нет физически: ответы сервера (HEYS.MessengerAPI), загрузка файлов,
+  // микрофон и признак сети. Данные повторяют форму ответов сервера, а не
+  // текст кадра там, где сервер так ответить не может (например, чек-лист дня
+  // знает один пункт «Приём пищи», а не «Ужин» и «Обед»).
+
+  const MESSENGER_CURATOR_NAME = 'Ольга';
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  async function waitFor(check, label, timeoutMs = 8000) {
+    // performance.now идёт по-настоящему: Date на стенде заморожен.
+    const started = performance.now();
+    for (;;) {
+      const value = check();
+      if (value) return value;
+      if (performance.now() - started > timeoutMs) {
+        throw new Error(`Мессенджер: не дождались «${label}»`);
+      }
+      await sleep(50);
+    }
   }
 
-  function mountMessenger(frameLabel) {
-    clearHost();
-    const test = HEYS.Messenger?._test;
-    if (!test) throw new Error('HEYS.Messenger._test unavailable');
+  /** Момент по часам стенда: сдвиг в днях от «сегодня» и время «ЧЧ:ММ[:СС]». */
+  function at(dayOffset, time) {
+    const now = new Date();
+    const [hh, mm, ss = 0] = time.split(':').map(Number);
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, hh, mm, ss).toISOString();
+  }
 
-    const shell = (body) => h('div', { className: 'messenger-modal', style: { minHeight: '100%' } }, body);
+  function msg(id, role, dayOffset, time, body, extra = {}) {
+    return {
+      id: `visual-${id}`,
+      sender_role: role,
+      body,
+      attachments: [],
+      created_at: at(dayOffset, time),
+      ...extra,
+    };
+  }
 
-    switch (frameLabel) {
-      case 'Мессенджер · пустой тред':
-        renderToHost(shell([
-          h(test.MessengerHeader, { subtitle: 'отвечает обычно за час', onClose: () => {} }),
-          h('div', { className: 'messenger-thread' }, h(test.EmptyThread, { onPickPrompt: () => {} })),
-        ]));
-        return;
-      case 'Мессенджер · тред с карточкой дня':
-        renderToHost(shell([
-          h(test.MessengerHeader, { subtitle: 'прочитала · 9:15', onClose: () => {} }),
-          h('div', { className: 'messenger-thread' }, h(test.AppliedDayCard, {
-            summary: {
+  function photoCanvas() {
+    // Снимок еды нарисовать нечем — ставим спокойную «фотографию» тарелки,
+    // чтобы в паре было видно место и размер снимка, как у заглушки кадра.
+    const canvas = document.createElement('canvas');
+    canvas.width = 680;
+    canvas.height = 472;
+    const ctx = canvas.getContext('2d');
+    const bg = ctx.createLinearGradient(0, 0, 680, 472);
+    bg.addColorStop(0, '#b9a58a');
+    bg.addColorStop(1, '#8c7a63');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, 680, 472);
+    ctx.fillStyle = '#efe9df';
+    ctx.beginPath();
+    ctx.ellipse(340, 236, 210, 170, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#9a6b3f';
+    ctx.beginPath();
+    ctx.ellipse(290, 230, 95, 70, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#e8c9a1';
+    ctx.beginPath();
+    ctx.ellipse(410, 250, 80, 55, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    return canvas;
+  }
+
+  let photoUrlCache = null;
+  function photoUrl() {
+    photoUrlCache = photoUrlCache || photoCanvas().toDataURL('image/jpeg', 0.85);
+    return photoUrlCache;
+  }
+
+  /** Тихая WAV-запись нужной длины: у голосового куратора длительность берётся из файла. */
+  function silentWavUrl(seconds) {
+    const rate = 8000;
+    const samples = rate * seconds;
+    const buffer = new ArrayBuffer(44 + samples);
+    const view = new DataView(buffer);
+    const text = (offset, value) => {
+      for (let i = 0; i < value.length; i += 1) view.setUint8(offset + i, value.charCodeAt(i));
+    };
+    text(0, 'RIFF');
+    view.setUint32(4, 36 + samples, true);
+    text(8, 'WAVE');
+    text(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, 1, true);
+    view.setUint32(24, rate, true);
+    view.setUint32(28, rate, true);
+    view.setUint16(32, 1, true);
+    view.setUint16(34, 8, true);
+    text(36, 'data');
+    view.setUint32(40, samples, true);
+    new Uint8Array(buffer, 44).fill(128);
+    return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+  }
+
+  function searchableText(message) {
+    return message.body || (message.attachments || []).map((att) => att.transcript_text).find(Boolean) || '';
+  }
+
+  function installMessengerApi(state) {
+    const base = HEYS.MessengerAPI || {};
+    const audioUrls = new Map();
+    HEYS.MessengerAPI = {
+      ...base,
+      // Сервер отдаёт страницу от новых к старым.
+      getThread: async (opts = {}) => {
+        let list = state.thread.slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+        if (opts.before_ts) list = list.filter((m) => m.created_at < opts.before_ts);
+        return { success: true, messages: list.slice(0, opts.limit || 50) };
+      },
+      getDayChecklist: async () => ({ success: true, items: state.checklist || [] }),
+      getTranscriptionConsent: async () => ({ success: true, ...state.consent }),
+      setTranscriptionConsent: async (granted) => {
+        state.consent = {
+          granted: !!granted,
+          decided: true,
+          created_at: new Date().toISOString(),
+          revoked_at: null,
+          version: '1.1',
+        };
+        return { success: true, ...state.consent };
+      },
+      // Сервер ищет подстрокой (ILIKE по тексту и расшифровке), без словоформ.
+      searchMessages: async ({ q, type } = {}) => {
+        const needle = String(q || '').toLowerCase();
+        const hits = (state.search || []).filter((m) => {
+          if (!searchableText(m).toLowerCase().includes(needle)) return false;
+          if (type === 'image') return m.attachments.some((att) => att.type === 'image');
+          if (type === 'audio') return m.attachments.some((att) => att.type === 'audio');
+          if (type === 'applied') return !!m.applied_at;
+          return true;
+        });
+        return { success: true, messages: hits };
+      },
+      send: async (payload) => {
+        if (state.networkDown) return { success: false, error: 'network_error' };
+        const created_at = new Date().toISOString();
+        const id = `visual-sent-${state.thread.length + 1}`;
+        state.thread.push({
+          id,
+          sender_role: 'client',
+          body: payload.body,
+          attachments: payload.attachments || [],
+          created_at,
+        });
+        return { success: true, message_id: id, created_at };
+      },
+      markRead: async () => ({ success: true }),
+      setAcked: async (id, value) => ({ success: true, acked_at: value ? new Date().toISOString() : null }),
+      setDone: async (id, value) => ({ success: true, done_at: value ? new Date().toISOString() : null }),
+      deleteMessage: async () => ({ success: true }),
+      editMessage: async () => ({ success: true, edited_at: new Date().toISOString() }),
+      getInbox: async () => ({ success: true, inbox: [] }),
+      refreshInbox: () => {},
+      refreshFabUnread: () => {},
+      fetchPhotoBlob: async () => ({ success: true, objectUrl: photoUrl() }),
+      fetchAudioBlob: async (path) => {
+        const att = state.thread.flatMap((m) => m.attachments).find((a) => a.path === path);
+        const seconds = Math.max(1, Math.round((att?.duration_ms || 1000) / 1000));
+        if (!audioUrls.has(path)) audioUrls.set(path, silentWavUrl(seconds));
+        return { success: true, objectUrl: audioUrls.get(path) };
+      },
+    };
+  }
+
+  function installMediaStubs() {
+    HEYS.StoragePhotos = HEYS.StoragePhotos || {};
+    HEYS.StoragePhotos.uploadPhoto = async (dataUrl, clientId, day, mealId) => ({
+      url: `https://visual.invalid/${mealId}.jpg`,
+      path: `visual/${mealId}.jpg`,
+    });
+    HEYS.StorageMedia = HEYS.StorageMedia || {};
+    HEYS.StorageMedia.uploadAudio = async (dataUrl, clientId, day, mealId, meta = {}) => ({
+      url: '',
+      path: `visual/${mealId}.wav`,
+      mime: meta.blob?.type || 'audio/wav',
+      size_bytes: meta.blob?.size || 0,
+    });
+    // Микрофона у стенда нет: отдаём настоящий поток из генератора звука,
+    // и MediaRecorder продукта пишет его как обычную запись.
+    const devices = navigator.mediaDevices || {};
+    devices.getUserMedia = async () => {
+      const Ctx = global.AudioContext || global.webkitAudioContext;
+      const ctx = new Ctx();
+      try { await ctx.resume(); } catch (_) { /* без жеста может остаться suspended */ }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.05;
+      const dest = ctx.createMediaStreamDestination();
+      osc.connect(gain).connect(dest);
+      osc.start();
+      return dest.stream;
+    };
+    if (!navigator.mediaDevices) {
+      Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: devices });
+    }
+  }
+
+  /** Часы стенда заморожены; «прошло N секунд» — это новые замороженные часы позже. */
+  function advanceClock(ms) {
+    const Base = global.Date;
+    const later = Base.now() + ms;
+    class Later extends Base {
+      constructor(...values) {
+        super(...(values.length ? values : [later]));
+      }
+      static now() {
+        return later;
+      }
+    }
+    global.Date = Later;
+  }
+
+  function goOffline() {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+    global.dispatchEvent(new Event('offline'));
+  }
+
+  function modalNode(selector) {
+    return document.querySelector(`.messenger-modal ${selector}`);
+  }
+
+  function typeInto(element, text) {
+    const proto = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(element, text);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  async function tapSend() {
+    const button = await waitFor(() => {
+      const node = modalNode('.messenger-send');
+      return node && !node.disabled ? node : null;
+    }, 'кнопка отправки активна');
+    button.click();
+  }
+
+  /** Долгое нажатие: касание без отпускания дольше порога долгого нажатия. */
+  async function longPress(element) {
+    let event;
+    try {
+      event = new TouchEvent('touchstart', { bubbles: true, cancelable: true });
+    } catch (_) {
+      event = new Event('touchstart', { bubbles: true, cancelable: true });
+    }
+    element.dispatchEvent(event);
+    await sleep((HEYS.longPress?.MS ?? 350) + 150);
+  }
+
+  async function pickPhoto(name) {
+    const input = modalNode('input[type="file"]');
+    const blob = await new Promise((resolve) => photoCanvas().toBlob(resolve, 'image/jpeg', 0.85));
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([blob], name, { type: 'image/jpeg' }));
+    input.files = transfer.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  async function openMoreMenu() {
+    modalNode('.messenger-header-button[aria-label="Ещё"]').click();
+    return waitFor(() => modalNode('.messenger-header-menu'), 'меню «Ещё»');
+  }
+
+  function lastOwnRow() {
+    const rows = document.querySelectorAll('.messenger-modal .msg-row-mine[data-message-id]');
+    return rows[rows.length - 1] || null;
+  }
+
+  // Переписка трёх кадров над одним тредом: лист действий, меню «Ещё» и
+  // удаление рисуют одно и то же «Обед … · Приняла, соберу день.».
+  const lunchThread = () => [
+    msg('lunch', 'client', 0, '13:07', 'Обед в 13:05, гречка 180 г, грудка 120 г', {
+      seen_at: at(0, '13:12'),
+      done_at: at(0, '13:31'),
+    }),
+    msg('lunch-reply', 'curator', 0, '13:31', 'Приняла, соберу день.'),
+  ];
+  const consentGranted = () => ({
+    granted: true,
+    decided: true,
+    created_at: at(-3, '10:00'),
+    revoked_at: null,
+    version: '1.1',
+  });
+  const consentUndecided = () => ({ granted: false, decided: false, created_at: null, revoked_at: null });
+
+  // Поиск: всё, что сервер вернул бы на «гречка» подстрокой, от новых к старым.
+  const buckwheatSearch = () => [
+    msg('s1', 'client', 0, '13:07', 'Обед в 13:05, гречка 180 г, грудка 120 г'),
+    msg('s2', 'client', -1, '19:44', 'Ужин: гречка 150 г и салат с маслом 12 г'),
+    msg('s3', 'client', -2, '13:20', 'Обед в 13:10, гречка 160 г и котлета 110 г'),
+    msg('s4', 'client', -3, '19:02', null, {
+      attachments: [{
+        type: 'audio',
+        path: 'visual/search-voice.ogg',
+        mime: 'audio/ogg',
+        duration_ms: 21000,
+        transcript_status: 'ready',
+        transcript_text: 'На ужин гречка с грибами, граммов двести, и чай без сахара',
+      }],
+    }),
+    msg('s5', 'curator', -4, '13:20', 'Гречка варёная — около 110 ккал на сто грамм, сухая втрое больше'),
+    msg('s6', 'client', -8, '12:10', 'Гречка каждый день — это нормально?'),
+    msg('s7', 'client', -9, '13:00', 'Обед: гречка 150 г, индейка 100 г'),
+    msg('s8', 'client', -10, '19:30', 'Ужин в 19:20: гречка 120 г, огурцы'),
+    msg('s9', 'client', -11, '08:40', 'Завтрак: гречка с молоком, 200 г'),
+    msg('s10', 'client', -12, '13:15', 'Гречка 170 г и тушёные овощи'),
+    msg('s11', 'client', -13, '19:05', 'Ужин: гречка 140 г, творог 100 г'),
+    msg('s12', 'client', -14, '13:40', 'Обед в 13:30, гречка 180 г, курица 120 г'),
+    msg('s13', 'curator', -15, '10:00', 'Если гречка на ужин — порцию лучше уменьшить до 120 г'),
+    msg('s14', 'client', -16, '13:05', 'Обед: гречка 160 г, рыба 130 г'),
+    msg('s15', 'client', -17, '19:10', 'Ужин: гречка 130 г и салат'),
+    msg('s16', 'client', -18, '08:30', 'Завтрак: гречка 150 г и яйцо'),
+    msg('s17', 'client', -19, '13:20', 'Обед: гречка 170 г, говядина 100 г'),
+    msg('s18', 'client', -20, '19:40', 'Ужин: гречка 120 г и кефир'),
+  ];
+
+  const MESSENGER_SCENES = {
+    'Мессенджер · пустой тред': {
+      state: () => ({ thread: [], checklist: [], consent: consentUndecided() }),
+    },
+    'Мессенджер · тред с карточкой дня': {
+      state: () => ({
+        // Четырнадцать сообщений старше порога истории прячутся за «Показать ранее».
+        thread: [
+          ...Array.from({ length: 14 }, (_, i) => msg(
+            `old-${i}`,
+            i % 2 ? 'curator' : 'client',
+            -45 - i,
+            '12:00',
+            i % 2 ? 'Приняла.' : 'Обед в 12:00, суп 250 г',
+          )),
+          msg('lunch-photo', 'client', 0, '13:07:00', null, {
+            seen_at: at(0, '13:12'),
+            done_at: at(0, '13:31'),
+            attachments: [{
+              type: 'image',
+              path: 'visual/lunch.jpg',
+              url: '',
+              width: 1200,
+              height: 832,
+              mime: 'image/jpeg',
+            }],
+          }),
+          msg('lunch-text', 'client', 0, '13:07:20', 'Обед в 13:05 — гречка 180 г, куриная грудка 120 г', {
+            seen_at: at(0, '13:12'),
+            done_at: at(0, '13:31'),
+            applied_at: at(0, '13:41'),
+            applied_summary: {
               meal_label: 'Обед',
               meal_time: '13:05',
+              items: [
+                { name: 'Гречка варёная', grams: 180, kcal: 210 },
+                { name: 'Куриная грудка', grams: 120, kcal: 198 },
+                { name: 'Масло оливковое', grams: 14, kcal: 132 },
+              ],
               total: { kcal: 540 },
-              items: [{ name: 'Курица', grams: 180, kcal: 210 }],
             },
-            onOpenDay: () => {},
-          })),
-        ]));
-        return;
-      case 'Мессенджер · Ждём и подсказка':
-        renderToHost(shell([
-          h(test.MessengerHeader, { subtitle: 'отвечает обычно за час', onClose: () => {} }),
-          h(test.DayChecklistRow, {
-            items: [{ key: 'meal', label: 'Приём пищи', status: 'missing' }],
-            onPick: () => {},
           }),
-          h(test.FoodHintCard, { onInsertTime: () => {}, onInsertGrams: () => {}, onHide: () => {} }),
-        ]));
-        return;
-      case 'Мессенджер · запись голосового':
-        renderToHost(shell([
-          h(test.MessengerHeader, { subtitle: 'отвечает обычно за час', onClose: () => {} }),
-          h('div', { className: 'messenger-composer messenger-composer--recording' },
-            h('div', { className: 'messenger-recording-bar' }, '0:14'),
-          ),
-        ]));
-        return;
-      case 'Мессенджер · лист действий':
-        renderToHost(h('div', { className: 'messenger-action-sheet' },
-          h('div', { className: 'messenger-action-sheet__quote' }, 'Курица 180 г'),
-          h('button', { type: 'button', className: 'messenger-action-sheet__item' }, 'Ответить'),
-          h('button', {
-            type: 'button',
-            className: 'messenger-action-sheet__item messenger-action-sheet__item--danger',
-          }, 'Удалить'),
-        ));
-        return;
-      case 'Мессенджер · меню Ещё':
-        renderToHost(h('div', { className: 'messenger-header-menu' },
-          h('button', { type: 'button', className: 'messenger-header-menu__item' }, 'Поиск'),
-          h('button', { type: 'button', className: 'messenger-header-menu__item' }, 'Расшифровка голосовых'),
-        ));
-        return;
-      case 'Мессенджер · поиск':
-        ensureMessengerSearchStub();
-        renderToHost(h('div', { className: 'messenger-search-panel' },
-          h(test.SearchPanel, {
-            isCurator: false,
-            onClose: () => {},
-            onJump: () => {},
+          msg('lunch-reply', 'curator', 0, '13:31', 'Приняла. Гречку записала как варёную, грудку без кожи — соберу день.'),
+        ],
+        checklist: [],
+        consent: consentGranted(),
+      }),
+    },
+    'Мессенджер · Ждём и подсказка': {
+      state: () => ({
+        thread: [
+          msg('weight', 'client', 0, '08:12', 'Вес утром: 71,4 кг', { seen_at: at(0, '08:30'), done_at: at(0, '08:40') }),
+          msg('weight-reply', 'curator', 0, '08:40', 'Хорошо. За неделю минус 400 г — идём по плану.'),
+          msg('lunch', 'client', 0, '13:07', 'Обед в 13:05, гречка 180 г, грудка 120 г', { seen_at: at(0, '13:12') }),
+        ],
+        // Форма ответа /messages/day-checklist в 13:15: приём и вес внесены,
+        // вода отстаёт, активность ещё не наступила.
+        checklist: [
+          { key: 'meal', label: 'Приём пищи', status: 'done', due_from: '12:00', done_at_local: '13:05' },
+          { key: 'weight', label: 'Вес утром', status: 'done', due_from: '09:00' },
+          { key: 'water', label: 'Вода', status: 'missing', deficit_ml: 600 },
+          { key: 'activity', label: 'Активность', status: 'skipped', due_from: '19:00' },
+        ],
+        consent: consentGranted(),
+      }),
+      drive: async () => {
+        await waitFor(() => modalNode('.messenger-day-checklist'), 'строка «Ждём»');
+        await waitFor(() => modalNode('.messenger-food-hint'), 'подсказка «время и граммы»');
+        typeInto(modalNode('.messenger-input'), 'Ужин в 19:20, ');
+      },
+    },
+    'Мессенджер · запись голосового': {
+      state: () => ({
+        thread: [
+          msg('weight-intent', 'client', -1, '08:12', null, {
+            intent_type: 'weight',
+            intent_payload: { weight_kg: 71.4 },
+            seen_at: at(-1, '08:30'),
+            done_at: at(-1, '09:02'),
           }),
-        ));
-        return;
-      case 'Мессенджер · без сети':
-        renderToHost(shell([
-          h(test.MessengerHeader, { subtitle: 'нет сети — синхронизируем позже', offline: true, onClose: () => {} }),
-          h(test.OfflineQueueBar, { count: 2, hasDraft: false, sending: false, onRetry: () => {} }),
-        ]));
-        return;
-      case 'Мессенджер · согласие на расшифровку':
-        renderToHost(h('div', { className: 'messenger-confirm-dialog' },
-          h('h3', null, 'Расшифровывать голосовые?'),
-          h('p', null, 'Передадим выбранное аудио в Yandex SpeechKit'),
-        ));
-        return;
-      case 'Мессенджер · удаление сообщения':
-        renderToHost(h('div', { className: 'messenger-confirm-dialog' },
-          h('h3', null, 'Удалить сообщение?'),
-          h('p', null, 'У куратора оно тоже исчезнет.'),
-        ));
-        return;
-      default:
-        throw new Error(`Unknown messenger frame: ${frameLabel}`);
-    }
+          msg('voice-reply', 'curator', -1, '09:02', null, {
+            attachments: [{
+              type: 'audio',
+              path: 'visual/voice-0902.ogg',
+              mime: 'audio/ogg',
+              duration_ms: 32000,
+              transcript_status: 'ready',
+              transcript_text: 'Хорошо идёте. На ужин добавьте белок — грудку или творог, граммов сто пятьдесят.',
+            }],
+          }),
+        ],
+        checklist: [],
+        consent: consentGranted(),
+      }),
+      drive: async () => {
+        modalNode('.messenger-voice').click();
+        await waitFor(() => modalNode('.messenger-recording-live'), 'запись идёт');
+        advanceClock(14000);
+        await waitFor(() => modalNode('.messenger-recording-time')?.textContent === '0:14', 'таймер 0:14');
+      },
+    },
+    'Мессенджер · лист действий': {
+      state: () => ({ thread: lunchThread(), checklist: [], consent: consentGranted() }),
+      drive: async () => {
+        await longPress(await waitFor(lastOwnRow, 'своё сообщение'));
+        await waitFor(() => modalNode('.messenger-action-sheet'), 'лист действий');
+      },
+    },
+    'Мессенджер · меню Ещё': {
+      state: () => ({
+        thread: lunchThread(),
+        checklist: [],
+        consent: { ...consentGranted(), created_at: '2026-09-02T10:00:00+03:00' },
+      }),
+      drive: openMoreMenu,
+    },
+    'Мессенджер · поиск': {
+      state: () => ({ thread: lunchThread(), checklist: [], consent: consentGranted(), search: buckwheatSearch() }),
+      drive: async () => {
+        await openMoreMenu();
+        const item = [...document.querySelectorAll('.messenger-modal .messenger-header-menu__item')]
+          .find((node) => node.textContent.includes('Поиск'));
+        item.click();
+        const input = await waitFor(() => modalNode('.messenger-search__input'), 'поле поиска');
+        typeInto(input, 'гречка');
+        await waitFor(() => modalNode('.messenger-search__item'), 'результаты поиска');
+      },
+    },
+    'Мессенджер · без сети': {
+      state: () => ({
+        thread: [msg('ask-dinner', 'curator', 0, '18:30', 'Пришлите ужин, когда поедите.')],
+        checklist: [],
+        consent: consentGranted(),
+      }),
+      // Два неотправленных сообщения, как в кадре: связь пропала на отправке
+      // (запрос не дошёл), затем сеть пропала совсем, и человек начал черновик.
+      drive: async (state) => {
+        state.networkDown = true;
+        typeInto(modalNode('.messenger-input'), 'Ужин в 19:20, творог 200 г');
+        await tapSend();
+        await waitFor(() => document.querySelectorAll('.messenger-modal .msg-bubble-queued').length === 1, 'первое в очереди');
+        await pickPhoto('dinner.jpg');
+        await waitFor(() => modalNode('.messenger-pending-photo.status-done'), 'фото загружено');
+        await tapSend();
+        await waitFor(() => document.querySelectorAll('.messenger-modal .msg-bubble-queued').length === 2, 'второе в очереди');
+        goOffline();
+        typeInto(modalNode('.messenger-input'), 'Спрошу завтра про пере');
+        await waitFor(() => modalNode('.messenger-offline-bar'), 'полоса без сети');
+      },
+    },
+    'Мессенджер · согласие на расшифровку': {
+      state: () => ({
+        thread: [msg('ask-day', 'curator', 0, '18:30', 'Пришлите, как прошёл день.')],
+        checklist: [],
+        consent: consentUndecided(),
+      }),
+      // Согласие спрашивается один раз, после отправки первого голосового:
+      // записываем, останавливаем, отправляем — и ждём диалог.
+      drive: async () => {
+        modalNode('.messenger-voice').click();
+        await waitFor(() => modalNode('.messenger-recording-live'), 'запись идёт');
+        advanceClock(6000);
+        await sleep(1500);
+        modalNode('.messenger-voice').click();
+        await waitFor(() => modalNode('.messenger-audio-draft.status-done'), 'голосовое загружено', 15000);
+        await tapSend();
+        await waitFor(() => modalNode('.messenger-consent-dialog'), 'диалог согласия');
+      },
+    },
+    'Мессенджер · удаление сообщения': {
+      state: () => ({ thread: lunchThread(), checklist: [], consent: consentGranted() }),
+      drive: async () => {
+        await longPress(await waitFor(lastOwnRow, 'своё сообщение'));
+        const remove = await waitFor(() => modalNode('.messenger-action-sheet__item--danger'), 'пункт «Удалить»');
+        remove.click();
+        await waitFor(() => modalNode('.messenger-confirm-dialog'), 'диалог удаления');
+      },
+    },
+  };
+
+  async function mountMessenger(frameLabel) {
+    clearHost();
+    const scene = MESSENGER_SCENES[frameLabel];
+    if (!scene) throw new Error(`Unknown messenger frame: ${frameLabel}`);
+    await waitFor(() => typeof HEYS.Messenger?.openModal === 'function', 'HEYS.Messenger', 30000);
+    // Имя куратора у демо-клиента нигде не записано, а кадр называет его.
+    HEYS.curatorDisplayName = MESSENGER_CURATOR_NAME;
+    const state = scene.state();
+    installMessengerApi(state);
+    installMediaStubs();
+    HEYS.Messenger.closeModal?.();
+    HEYS.Messenger.openModal();
+    await waitFor(
+      () => modalNode('.messenger-thread .msg-row') || modalNode('.messenger-thread .messenger-empty'),
+      'тред загружен',
+    );
+    if (scene.drive) await scene.drive(state);
+    await sleep(200);
   }
 
   async function mount(frameLabel) {
@@ -416,7 +836,7 @@
       return ROOT_BY_FRAME[frameLabel];
     }
     if (frameLabel.startsWith('Мессенджер ·')) {
-      mountMessenger(frameLabel);
+      await mountMessenger(frameLabel);
       return ROOT_BY_FRAME[frameLabel];
     }
     throw new Error(`Unknown visual frame zone for «${frameLabel}»`);
