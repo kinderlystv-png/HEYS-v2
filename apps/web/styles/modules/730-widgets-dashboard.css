@@ -12007,7 +12007,9 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
    записью (строка «пустой день · чего не подставляем»). */
 .widget-calories--empty .widget-calories__value--lg,
 .widget-calories--empty .widget-calories__hero-bar-num--ink {
-  color: var(--v4-ink-3) /* v4-intentional */);
+  /* Лишняя «)» после комментария делала объявление недействительным, и
+     прочерк пустого дня брал акцентный тон героя вместо чернил 42 %. */
+  color: var(--v4-ink-3); /* v4-intentional */
 }
 
 .widget-calories__empty-row {
@@ -12021,25 +12023,25 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   font-size: 21px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-3) /* v4-intentional */);
+  color: var(--v4-ink-3); /* v4-intentional */
 }
 
 .widget-calories__empty-target {
   font-size: 9px;
   font-weight: 600;
   line-height: 1;
-  color: var(--v4-ink-2) /* v4-intentional */);
+  color: var(--v4-ink-2); /* v4-intentional */
   font-variant-numeric: tabular-nums;
 }
 
 .widget-v4-macro__fact--empty .widget-v4-macro__fact-val {
-  color: var(--v4-ink-3) /* v4-intentional */);
+  color: var(--v4-ink-3); /* v4-intentional */
 }
 
 .widget-v4-macro__fact--empty .widget-v4-macro__fact-sep,
 .widget-v4-macro__fact--empty .widget-v4-macro__fact-tgt {
   font-weight: 700;
-  color: var(--v4-ink-2) /* v4-intentional */);
+  color: var(--v4-ink-2); /* v4-intentional */
 }
 
 .widget-v4-macro__empty {
@@ -12194,13 +12196,13 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-spark--flat .widget-v4-spark__line,
 .widget-v4-spark--flat polyline,
 .widget-trend-compact__spark.widget-v4-spark--flat polyline {
-  stroke: var(--v4-ink-30) /* v4-intentional */);
+  stroke: var(--v4-ink-30); /* v4-intentional */
 }
 
 .widget-v4-spark--flat .widget-v4-spark__dot,
 .widget-v4-spark--flat circle,
 .widget-trend-compact__spark.widget-v4-spark--flat circle {
-  fill: var(--v4-ink-30) /* v4-intentional */);
+  fill: var(--v4-ink-30); /* v4-intentional */
 }
 
 /* Кадр «Тренд здоровья · рост»: ломаная 2×1 несёт --gr2 через

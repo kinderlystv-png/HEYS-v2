@@ -1845,9 +1845,11 @@ async function openCase(browser, item, snapshot, options = {}) {
             protein: 0,
             fat: 0,
             carbs: 0,
-            proteinTarget: 160,
-            fatTarget: 64,
-            carbsTarget: 210,
+            // Кадр «Кольца БЖУ · пустой день»: нормы те же, что в заполненных
+            // кадрах канваса, — 150 / 62 / 180, второго набора норм нет.
+            proteinTarget: 150,
+            fatTarget: 62,
+            carbsTarget: 180,
           },
           protein: { hasData: false, protein: null, target: 160 },
           fiber: { hasData: false, fiber: null, norm: 30 },
