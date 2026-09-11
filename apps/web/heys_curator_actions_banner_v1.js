@@ -763,6 +763,68 @@
     19: 'Девятнадцать', 20: 'Двадцать',
   };
 
+  // Числа в листе — словами до тридцати, как в кадрах canvas curator-edits:
+  // «Шесть изменений за вчера», «Двадцать одно изменение», «и ещё девять правок»;
+  // больше — цифрами: «Ещё 43 изменения за пять дней». Граница 30 выбрана между
+  // 21 и 43 из кадров — записана вопросом дизайнеру в UI_V4_FINDINGS.md.
+  const COUNT_WORDS_LIMIT = 30;
+  const UNIT_WORDS_RU = ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять',
+    'десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать', 'шестнадцать',
+    'семнадцать', 'восемнадцать', 'девятнадцать'];
+
+  function countWordRu(n, gender) {
+    const count = Number(n);
+    if (!Number.isInteger(count) || count < 1 || count > COUNT_WORDS_LIMIT) return null;
+    const tens = count >= 20 ? (count >= 30 ? 'тридцать' : 'двадцать') : '';
+    const unit = count >= 20 ? count % 10 : count;
+    let word = UNIT_WORDS_RU[unit];
+    if (unit === 1 && gender === 'f') word = 'одна';
+    if (unit === 1 && gender === 'n') word = 'одно';
+    if (unit === 2 && gender === 'f') word = 'две';
+    return [tens, word].filter(Boolean).join(' ');
+  }
+
+  // «шесть изменений», «две правки», «43 изменения» — число с существительным.
+  function countPhraseRu(n, gender, one, few, many) {
+    const count = Math.max(0, Number(n) || 0);
+    return `${countWordRu(count, gender) || count} ${pluralRu(count, one, few, many)}`;
+  }
+
+  function changesWords(n) {
+    return countPhraseRu(n, 'n', 'изменение', 'изменения', 'изменений');
+  }
+
+  function daysWords(n) {
+    return countPhraseRu(n, 'm', 'день', 'дня', 'дней');
+  }
+
+  // Название приёма в предложном («в обеде») и родительном («из завтрака»)
+  // падеже, как в кадрах. Своё название клиента не склоняем — берём в кавычки.
+  const MEAL_LABEL_CASES_RU = {
+    'завтрак': ['завтраке', 'завтрака'],
+    'второй завтрак': ['втором завтраке', 'второго завтрака'],
+    'обед': ['обеде', 'обеда'],
+    'полдник': ['полднике', 'полдника'],
+    'ужин': ['ужине', 'ужина'],
+    'перекус': ['перекусе', 'перекуса'],
+    'кофе-брейк': ['кофе-брейке', 'кофе-брейка'],
+  };
+
+  function mealInRu(label) {
+    const forms = MEAL_LABEL_CASES_RU[String(label || '').trim().toLowerCase()];
+    return forms ? `в ${forms[0]}` : `в «${label || 'приём'}»`;
+  }
+
+  function mealFromRu(label) {
+    const forms = MEAL_LABEL_CASES_RU[String(label || '').trim().toLowerCase()];
+    return forms ? `Из ${forms[1]}` : `Из «${label || 'приём'}»`;
+  }
+
+  function lowerFirst(value) {
+    const t = String(value || '');
+    return t ? t.charAt(0).toLowerCase() + t.slice(1) : t;
+  }
+
   const MEAL_REPEAT_LABEL_FORMS = {
     'Кофе-брейк': ['кофе-брейк', 'кофе-брейка', 'кофе-брейков'],
     'Перекус': ['перекус', 'перекуса', 'перекусов'],
@@ -990,10 +1052,6 @@
   function changesLabel(n) {
     const count = Math.max(0, Number(n) || 0);
     return `${count} ${pluralRu(count, 'изменение', 'изменения', 'изменений')}`;
-  }
-
-  function daysWord(n) {
-    return pluralRu(n, 'день', 'дня', 'дней');
   }
 
   function todayYmd() {
@@ -1288,7 +1346,7 @@
   // Закрывающая строка раскрытой группы: «и ещё 9 правок приёмов».
   function dayTypeMoreLabel(rest, more) {
     const tail = more ? ` ${more}` : '';
-    return `и ещё ${rest} ${pluralRu(rest, 'правка', 'правки', 'правок')}${tail}`;
+    return `и ещё ${countPhraseRu(rest, 'f', 'правка', 'правки', 'правок')}${tail}`;
   }
 
   // Число в подписи — ровно столько строк, сколько раскроет тап: одинаковые
@@ -1321,9 +1379,9 @@
     const mealTouched = (groups || []).some((g) => (g.pairs || []).some((p) => isMealAction(p.action)));
     const supplementsTouched = (groups || []).some((g) => (g.pairs || []).some((p) => isSupplementAction(p.action)));
     if (dates.length > 1) {
-      if (dates.length >= 6) return `Пока вас не было — правки за ${dates.length} ${daysWord(dates.length)}`;
+      if (dates.length >= 6) return `Пока вас не было — правки за ${daysWords(dates.length)}`;
       if (dates.length === 2) return 'Изменения за два дня';
-      return `Изменения за ${dates.length} ${daysWord(dates.length)}`;
+      return `Изменения за ${daysWords(dates.length)}`;
     }
     if (!mealTouched && supplementsTouched) return 'Еду не трогали — изменились добавки';
     if (!mealTouched) return 'Еду не трогали — правки по весу и активности';
@@ -1331,7 +1389,7 @@
       const date = dates[0];
       const today = todayYmd();
       const rel = date === today ? 'сегодня' : date === shiftYmd(today, -1) ? 'вчера' : ymdLabel(date);
-      return `${capitalizeFirst(changesLabel(actionCount))} за ${rel}`;
+      return `${capitalizeFirst(changesWords(actionCount))} за ${rel}`;
     }
     return 'Проверьте, что изменилось по вашим данным';
   }
@@ -1340,9 +1398,9 @@
     const n = dayActionCount(group);
     const meal = (group.pairs || []).some((p) => isMealAction(p.action));
     const steps = (group.pairs || []).some((p) => p.action && p.action.type === 'steps_set');
-    if (meal && steps) return `${capitalizeFirst(changesLabel(n))} по еде и шагам`;
-    if (meal) return `${capitalizeFirst(changesLabel(n))} по еде`;
-    return capitalizeFirst(changesLabel(n));
+    if (meal && steps) return `${capitalizeFirst(changesWords(n))} по еде и шагам`;
+    if (meal) return `${capitalizeFirst(changesWords(n))} по еде`;
+    return capitalizeFirst(changesWords(n));
   }
 
   function planDateLayout(groups) {
@@ -1424,19 +1482,22 @@
         const grams = (a.from_grams != null && a.to_grams != null)
           ? `: ${trimNum(a.from_grams)} → ${trimNum(a.to_grams)} г`
           : '';
-        return { title: `${itemName} в ${mealName}${grams}`, subtitle: formatSignedKcal(a.kcal_delta) || '' };
+        // Кадр «много правок за день»: «Рис в обеде: 200 → 288 г».
+        return { title: `${itemName} ${mealInRu(mealName)}${grams}`, subtitle: formatSignedKcal(a.kcal_delta) || '' };
       }
       case 'meal_item_removed': {
         const count = a.count || 1;
         const meal = a.meal_name || a.meal_label || 'приём';
         return {
-          title: count === 1 ? `Из «${meal}» убран продукт` : `Из «${meal}» убраны ${count} ${pluralRu(count, 'продукт', 'продукта', 'продуктов')}`,
+          // Кадр «много правок за день»: «Из завтрака убраны два продукта».
+          title: count === 1 ? `${mealFromRu(meal)} убран продукт` : `${mealFromRu(meal)} убраны ${countPhraseRu(count, 'm', 'продукт', 'продукта', 'продуктов')}`,
           subtitle: formatSignedKcal(a.kcal_delta) || '',
         };
       }
       case 'training_added':
         return {
-          title: `Тренировка: ${a.kind || ''}${a.duration_min ? `, ${a.duration_min} минут` : ''}`,
+          // Вид тренировки со строчной, как в кадрах: «Тренировка: силовая, 45 минут».
+          title: `Тренировка: ${lowerFirst(a.kind)}${a.duration_min ? `, ${a.duration_min} минут` : ''}`,
           subtitle: a.time ? `${a.time} · вкладка «Актив»` : 'вкладка «Актив»',
         };
       case 'training_removed':
@@ -2079,7 +2140,7 @@
             <div class="ca-modal__date"><span class="ca-modal__date-label">${escapeHtml(dateRangeLabel(tailDates))}</span></div>
             <button class="ca-modal__item" type="button" data-ca-expand-tail="1">
               ${renderRowCopyHtml({
-                title: `Ещё ${changesLabel(tailCount)} за ${tailDates.length} ${daysWord(tailDates.length)}`,
+                title: `Ещё ${changesWords(tailCount)} за ${daysWords(tailDates.length)}`,
                 subtitle: 'Развернуть по дням',
               })}
               ${chevronSvg(true)}

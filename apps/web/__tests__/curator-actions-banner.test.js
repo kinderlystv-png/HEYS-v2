@@ -192,7 +192,7 @@ describe('CuratorActionsBanner review modal', () => {
 
     expect(document.querySelector('.ca-modal-backdrop')).toBeTruthy();
     expect(document.querySelector('.ca-modal__header-subtitle')?.textContent).toBe('Еду не трогали — правки по весу и активности');
-    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Тренировка: Кардио, 60 минут');
+    expect(document.querySelector('.ca-modal__content')?.textContent).toContain('Тренировка: кардио, 60 минут');
   });
 
   it('renders the same training only once when it appears in multiple changelog entries', async () => {
@@ -206,7 +206,7 @@ describe('CuratorActionsBanner review modal', () => {
 
     expect(document.querySelector('.ca-modal__header-subtitle')?.textContent).toBe('Еду не трогали — правки по весу и активности');
     const trainingCards = Array.from(document.querySelectorAll('.ca-modal__item-title'))
-      .filter((node) => node.textContent?.includes('Тренировка: Кардио, 60 минут'));
+      .filter((node) => node.textContent?.includes('Тренировка: кардио, 60 минут'));
     expect(trainingCards).toHaveLength(1);
   });
 

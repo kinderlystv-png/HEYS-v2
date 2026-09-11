@@ -196,7 +196,7 @@ describe('Canvas frames: curator review sheet', () => {
     await banner.checkAndShow();
 
     // Продукт: цифра («6…»), не слова из canvas — решение владельца.
-    expect(subtitle()).toBe('6 изменений за вчера');
+    expect(subtitle()).toBe('Шесть изменений за вчера');
     expect(document.querySelector('.ca-modal__date-kcal')?.textContent).toMatch(/1\s240 → 1\s757 ккал/);
     expect(document.querySelector('.ca-modal__meal-card')).toBeFalsy();
     expect(itemTitles().length).toBeGreaterThanOrEqual(6);
@@ -267,10 +267,10 @@ describe('Canvas frames: curator review sheet', () => {
 
     // Раскрылось внутри того же листа: одна модалка, счётчик в шапке тот же.
     expect(document.querySelectorAll('.ca-modal-backdrop')).toHaveLength(1);
-    expect(subtitle()).toBe('17 изменений за сегодня');
+    expect(subtitle()).toBe('Семнадцать изменений за сегодня');
     // Первые три правки и закрывающая строка «и ещё N правок…».
     expect(document.querySelectorAll('.ca-modal__type-members > li:not(.ca-modal__type-more)')).toHaveLength(3);
-    expect(document.querySelector('.ca-modal__type-more')?.textContent).toContain('и ещё 9 правок приёмов');
+    expect(document.querySelector('.ca-modal__type-more')?.textContent).toContain('и ещё девять правок приёмов');
     expect(bodyText()).toContain('Продукт 1');
     expect(bodyText()).not.toContain('Продукт 12');
     // Другой тип остался свёрнутым.
@@ -350,8 +350,8 @@ describe('Canvas frames: curator review sheet', () => {
     ]);
     // «…и ещё N изменений» — обрезка сервера, а не тип правки: остаётся строкой.
     expect(plan.loose.map((p) => p.action.type)).toEqual(['sleep_set', 'norms_changed', 'truncated']);
-    expect(banner._test.dayTypeMoreLabel(9, 'приёмов')).toBe('и ещё 9 правок приёмов');
-    expect(banner._test.dayTypeMoreLabel(2, 'по активности')).toBe('и ещё 2 правки по активности');
+    expect(banner._test.dayTypeMoreLabel(9, 'приёмов')).toBe('и ещё девять правок приёмов');
+    expect(banner._test.dayTypeMoreLabel(2, 'по активности')).toBe('и ещё две правки по активности');
   });
 
   it('Куратор · две даты — свежий день раскрыт, прошлый свёрнут', async () => {
@@ -385,7 +385,7 @@ describe('Canvas frames: curator review sheet', () => {
     expect(dateLabels()[0]).toBe('5 июля');
     expect(bodyText()).toMatch(/Ужин в 16:46/);
     expect(bodyText()).toMatch(/Вода: 1\s?800 мл/);
-    expect(bodyText()).toMatch(/3 изменения по еде и шагам/);
+    expect(bodyText()).toMatch(/Три изменения по еде и шагам/);
     expect(bodyText()).toMatch(/Развернуть/);
     expect(document.querySelector('[data-ca-expand-date]')).toBeTruthy();
   });
@@ -448,10 +448,10 @@ describe('Canvas frames: curator review sheet', () => {
     await banner.checkAndShow();
 
     // Продукт: цифра («6 дней»), не «шесть» из canvas.
-    expect(subtitle()).toBe('Пока вас не было — правки за 6 дней');
+    expect(subtitle()).toBe('Пока вас не было — правки за шесть дней');
     expect(document.querySelector('[data-ca-expand-tail]')).toBeTruthy();
     expect(bodyText()).toMatch(/Развернуть по дням/);
-    expect(bodyText()).toMatch(/Ещё .+ за 3 дня/);
+    expect(bodyText()).toMatch(/Ещё .+ за три дня/);
   });
 
   it('Куратор · повторяющиеся правки — группа ×5, компактный перекус, карточка ужина', async () => {
@@ -515,7 +515,7 @@ describe('Canvas frames: curator review sheet', () => {
 
     await banner.checkAndShow();
 
-    expect(subtitle()).toBe('8 изменений за вчера');
+    expect(subtitle()).toBe('Восемь изменений за вчера');
     expect(document.querySelector('.ca-modal__date-kcal')?.textContent).toMatch(/888 → 1\s958 ккал/);
     expect(document.querySelectorAll('.ca-modal__meal-card')).toHaveLength(1);
     expect(document.querySelector('.ca-modal__repeat-badge')?.textContent).toBe('×5');
@@ -553,7 +553,7 @@ describe('Canvas frames: curator review sheet', () => {
 
     await banner.checkAndShow();
 
-    expect(subtitle()).toBe('7 изменений за вчера');
+    expect(subtitle()).toBe('Семь изменений за вчера');
     expect(document.querySelectorAll('.ca-modal__repeat-badge')).toHaveLength(1);
     expect(document.querySelector('.ca-modal__repeat-badge')?.textContent).toBe('×5');
     expect(bodyText()).toMatch(/Из «Кофе с молоком» убран продукт/);
