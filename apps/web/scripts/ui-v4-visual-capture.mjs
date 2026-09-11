@@ -2812,7 +2812,13 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
     const byOid = page.locator(oidSelector);
     const oidMatches = await byOid.count();
     const usedOid = oidMatches === 1;
-    const candidates = usedOid ? byOid : page.locator(labelSelector);
+    // Кадры, нарисованные плиткой, а не экраном («Калории · пустой день ·
+    // 2×2»), живут не в .ph. Для них — та же метка на любом узле, и та же
+    // строгость: ровно один. Экранные кадры по-прежнему ищутся в .ph первыми.
+    let candidates = usedOid ? byOid : page.locator(labelSelector);
+    if (!usedOid && (await candidates.count()) === 0) {
+      candidates = page.locator(`[data-screen-label="${item.canvasFrame.label}"]`);
+    }
     const matches = usedOid ? oidMatches : await candidates.count();
     if (matches !== 1) {
       throw new Error(

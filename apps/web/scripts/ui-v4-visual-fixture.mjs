@@ -380,6 +380,49 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     rootSelector: '.widgets-grid .widget',
     viewport: { width: 320, height: 700 },
   },
+  // Кадры пустого дня нарисованы плитками, а не экраном: пара «вся Главная —
+  // две плитки» сравнивала несравнимое. Каждая плитка снимается отдельно и
+  // встаёт против своего кадра; данные пустого дня те же — по префиксу id.
+  // У кадров нет data-oid, поэтому oid служит только именем пары, а кадр
+  // находится по подписи.
+  {
+    id: 'home-widgets-empty-day-calories',
+    zone: 'home-widgets',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-tab',
+    tab: 'widgets',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    rootSelector: '.widgets-grid .widget',
+    viewport: { width: 375, height: 812 },
+    captureSelector: '.widgets-grid [data-widget-type="calories"]',
+    canvasFrame: {
+      file: 'home-widgets.v4.dc.html',
+      label: 'Калории · пустой день · 2×2',
+      oid: 'HW-EMPTY-KCAL',
+      palette: 'sand',
+    },
+  },
+  {
+    id: 'home-widgets-empty-day-macros',
+    zone: 'home-widgets',
+    status: 'automated',
+    gate: 'diagnostic',
+    kind: 'demo-tab',
+    tab: 'widgets',
+    themeId: 'sand',
+    stubGamificationMerge: true,
+    rootSelector: '.widgets-grid .widget',
+    viewport: { width: 375, height: 812 },
+    captureSelector: '.widgets-grid [data-widget-type="macros"]',
+    canvasFrame: {
+      file: 'home-widgets.v4.dc.html',
+      label: 'Кольца БЖУ · пустой день',
+      oid: 'HW-EMPTY-BJU',
+      palette: 'sand',
+    },
+  },
   // Вкладка «Актив» — основная, а стенда у зоны не было вовсе: сравнить экран
   // с кадром было нечем. Пара с кадром пока не заводится: состояние фикстуры
   // (день без тренировок) не совпадает ни с одним кадром зоны дословно, а
