@@ -45,6 +45,10 @@ describe('регистрация · колесо даты рождения по 
     expect(rule('.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-step label'))
       .toContain('font: 600 12.5px/1.4 Manrope');
     expect(CSS).toMatch(/\.profile-personal-name > input,\n[^{]*\.profile-personal-family > input \{\s*margin-top: 8px;/);
+    // Tailwind «gap-2» и общий margin-bottom 4 у label складывались с отступами
+    // кадра: внутри групп промежутка нет, у подписи нижнего поля нет.
+    expect(rule('.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-step label')).toContain('margin-bottom: 0');
+    expect(CSS).toMatch(/\.profile-personal-name,\n[^{]*\.profile-personal-family,\n[^{]*\.profile-personal-gender \{\s*gap: 0;/);
     const PROFILE = fs.readFileSync(path.join(ROOT, 'apps/web/heys_profile_step_v1.js'), 'utf8');
     expect(PROFILE).not.toContain("style: { color: 'rgba(0,0,0,.7)' }");
   });

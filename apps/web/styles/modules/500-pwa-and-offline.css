@@ -5476,7 +5476,18 @@
    поле под ней через 8 (.fld margin-top 8). Классов text-sm/font-medium в
    наших стилях нет — подпись брала шрифт по умолчанию. */
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-step label {
+  margin-bottom: 0;
   font: 600 12.5px/1.4 Manrope, system-ui, sans-serif;
+}
+
+/* Внутри групп отступы задают сами элементы кадра: поле через 8, чипы через
+   10, подсказка через 6, причина ошибки через 6. Промежуток Tailwind «gap-2»
+   (8) и общий margin-bottom 4 у label складывались с ними — подпись отъезжала
+   от своего поля на 20, и шаг не помещался в экран. */
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-name,
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-family,
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-gender {
+  gap: 0;
 }
 
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-name > input,
