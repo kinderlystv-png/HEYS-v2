@@ -10,7 +10,7 @@
 <helmet>
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
 <script src="./contract-audit.js"></script>
 <style>
@@ -18,28 +18,28 @@
   .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
   .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
   .spec>span[data-v]::before{content:attr(data-v)}
-  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
+  .spec>i{grid-column:2;font:500 11px/1.5 Manrope,sans-serif;color:rgba(0,0,0,.56);font-style:normal;text-wrap:pretty}
   .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
   .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
-  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
+  .ctrH{font:700 10px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:16px 0 2px}
 </style>
 </helmet>
 
-<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Figtree,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#e9dfcd"/><rect x="30" y="30" width="40" height="40" rx="10" fill="#c67139"/><text x="50" y="57" text-anchor="middle" font-family="Manrope,sans-serif" font-size="16" font-weight="700" fill="#2b1608">v4</text></svg></template>
 
 <div style="background:#e9dfcd;padding:0 46px 70px;width:max-content;">
 
   <div style="display:flex;align-items:baseline;gap:11px;margin:0 0 10px;">
     <span style="font:700 10px/1 ui-monospace,Menlo,monospace;padding:5px 9px;background:#c67139;color:#2b1608;border-radius:999px;">ПРАВКИ КУРАТОРА</span>
-    <span style="font:700 14px/1.2 Figtree,sans-serif;color:#201e1d;">Лист изменений и оболочка вокруг него: вкладка, дата, настройки</span>
+    <span style="font:700 14px/1.2 Manrope,sans-serif;color:#201e1d;">Лист изменений и оболочка вокруг него: вкладка, дата, настройки</span>
   </div>
-  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, шторка настроек. Строка даты и её поведение при прокрутке живут в «Дата и остатки v4» — здесь их больше нет, чтобы одно поведение не описывалось в двух канвасах.</p>
+  <p style="margin:0 0 30px;max-width:960px;font:500 12.5px/1.65 Manrope,sans-serif;color:var(--ink-2);text-wrap:pretty;">Лист показывает итог дня, а не список нажатий, и никуда не уводит после подтверждения. Рядом — оболочка, через которую до правок вообще добираются: дата во вкладке, шторка настроек. Строка даты и её поведение при прокрутке живут в «Дата и остатки v4» — здесь их больше нет, чтобы одно поведение не описывалось в двух канвасах.</p>
   <p style="margin:-18px 0 30px;font:600 11px/1.5 ui-monospace,Menlo,monospace;color:var(--ink-2);">В пакете: curator-edits.v4.dc.html · протокол docs/implementation/CURATOR_CHANGELOG_SHEET_V4_PROTOCOL.md · экраны искать по data-screen-label</p>
   <div class="ctr" data-contract="curator-edits">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <span class="ctrTag">КОНТРАКТ</span>
-      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-      <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
+      <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Manrope,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+      <span style="font:500 9.5px/1.4 Manrope,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
     </div>
 
     <div class="ctrH">Что это и чьё</div>
@@ -109,7 +109,7 @@
                                               <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Куратор · один приём · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · один приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · один приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · один приём · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · один приём · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · один приём · 05</b><span data-v="флекс 1"></span></div>
@@ -119,7 +119,7 @@
     <div class="spec"><b>Куратор · один приём · 09</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · один приём · 10</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · много правок за день · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · много правок за день · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 05</b><span data-v="флекс 1"></span></div>
@@ -128,19 +128,19 @@
     <div class="spec"><b>Куратор · много правок за день · 08</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 09</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · свёрнуто по типам · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · свёрнуто по типам · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 05</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 06</b><span data-v="«1 240 → 2 148 ккал» — моноцифры"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 07</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 08</b><span data-v="«Приёмы» — перенос nowrap"></span></div>
-    <div class="spec"><b>Куратор · свёрнуто по типам · 09</b><span data-v="«· 12» — шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Куратор · свёрнуто по типам · 09</b><span data-v="«· 12» — шрифт 700 11px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 10</b><span data-v="«и ещё девять правок приёмов» — цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 11</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 12</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · две даты · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · две даты · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · две даты · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · две даты · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · две даты · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · две даты · 05</b><span data-v="флекс 1"></span></div>
@@ -149,7 +149,7 @@
     <div class="spec"><b>Куратор · две даты · 08</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · две даты · 09</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · длинный приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · длинный приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 04</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 05</b><span data-v="«1 240 → 1 937 ккал» — моноцифры"></span></div>
@@ -158,7 +158,7 @@
     <div class="spec"><b>Куратор · длинный приём · 08</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 09</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · сухие строки · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · сухие строки · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 05</b><span data-v="флекс 1"></span></div>
@@ -166,7 +166,7 @@
     <div class="spec"><b>Куратор · сухие строки · 07</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 08</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · много дней · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · много дней · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · много дней · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · много дней · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · много дней · 04</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Куратор · много дней · 05</b><span data-v="«1 240 → 1 937 ккал» — моноцифры"></span></div>
@@ -174,7 +174,7 @@
     <div class="spec"><b>Куратор · много дней · 07</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · много дней · 08</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · повторяющиеся правки · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · повторяющиеся правки · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 04</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 05</b><span data-v="«888 → 1 958 ккал» — моноцифры"></span></div>
@@ -182,8 +182,8 @@
     <div class="spec"><b>Куратор · повторяющиеся правки · 07</b><span data-v="«и ещё 3 продукта» — отступ сверху 8px"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 08</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 09</b><span data-v="строка списка: выравнивание flex-start, поля 11px 13px 12px"></span></div>
-    <div class="spec"><b>Куратор · повторяющиеся правки · 10</b><span data-v="«×5» — флекс none, ширина от 30px, высота 30px, радиус 10px, фон var(--c2), выравнивание center, распределение center, шрифт 700 11.5px/1 Figtree, цвет var(--ac), трекинг -.02em, отступ сверху 1px"></span></div>
-    <div class="spec"><b>Куратор · повторяющиеся правки · 11</b><span data-v="«+ 290 ккал за все пять» — моноцифры: отступ сверху 6px, шрифт 700 11px/1.3 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Куратор · повторяющиеся правки · 10</b><span data-v="«×5» — флекс none, ширина от 30px, высота 30px, радиус 10px, фон var(--c2), выравнивание center, распределение center, шрифт 700 11.5px/1 Manrope, цвет var(--ac), трекинг -.02em, отступ сверху 1px"></span></div>
+    <div class="spec"><b>Куратор · повторяющиеся правки · 11</b><span data-v="«+ 290 ккал за все пять» — моноцифры: отступ сверху 6px, шрифт 700 11px/1.3 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 12</b><span data-v="отступ сверху 4px"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 13</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 14</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
@@ -288,7 +288,7 @@
 
     <div><div class="lab"><b>Один приём</b><span>частый случай — куратор внёс ужин</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Куратор · один приём">
-      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
           <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
@@ -312,7 +312,7 @@
 
     <div><div class="lab"><b>День целиком</b><span>шесть правок разного рода</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Куратор · много правок за день">
-      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
           <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
@@ -334,7 +334,7 @@
 
     <div><div class="lab"><b>Свёрнуто по типам</b><span>перенос дня целиком: строки собраны в группы, «Приёмы» раскрыты</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Куратор · свёрнуто по типам">
-      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
           <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
@@ -343,20 +343,20 @@
         </div>
         <div class="mdb">
           <div class="gh"><span class="ghd">15 августа</span><span class="ghv n">1 240 → 2 148 ккал</span></div>
-          <div class="row"><div class="rowt"><b style="font-weight:700;white-space:nowrap;">Приёмы<i style="font:700 11px/1 Figtree,sans-serif;font-style:normal;color:var(--ac);margin-left:7px;">· 12</i></b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b style="font-weight:700;white-space:nowrap;">Приёмы<i style="font:700 11px/1 Manrope,sans-serif;font-style:normal;color:var(--ac);margin-left:7px;">· 12</i></b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
           <div class="row" style="padding-left:26px;"><div class="rowt"><b>Ужин в 16:46 · 697 ккал</b><span>Приём добавлен · 7 продуктов</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
           <div class="row" style="padding-left:26px;"><div class="rowt"><b>Рис в обеде: 200 → 288 г</b><span>+ 118 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
           <div class="row" style="padding-left:26px;"><div class="rowt"><b>Из завтрака убраны два продукта</b><span>− 298 ккал</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
           <div class="row" style="padding-left:26px;"><div class="rowt"><b style="color:var(--ink-2);">и ещё девять правок приёмов</b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
-          <div class="row"><div class="rowt"><b style="font-weight:700;white-space:nowrap;">Вода<i style="font:700 11px/1 Figtree,sans-serif;font-style:normal;color:var(--ac);margin-left:7px;">· 3</i></b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
-          <div class="row"><div class="rowt"><b style="font-weight:700;white-space:nowrap;">Замеры<i style="font:700 11px/1 Figtree,sans-serif;font-style:normal;color:var(--ac);margin-left:7px;">· 1</i></b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b style="font-weight:700;white-space:nowrap;">Вода<i style="font:700 11px/1 Manrope,sans-serif;font-style:normal;color:var(--ac);margin-left:7px;">· 3</i></b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
+          <div class="row"><div class="rowt"><b style="font-weight:700;white-space:nowrap;">Замеры<i style="font:700 11px/1 Manrope,sans-serif;font-style:normal;color:var(--ac);margin-left:7px;">· 1</i></b></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div>
         </div>
         <div class="mdf"><div class="btn2">Позже</div><div class="btn" style="flex:1;">Понятно</div></div>
       </div></div>
     </div></div>
     <div><div class="lab"><b>Две даты</b><span>прошлые дни свёрнуты</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Куратор · две даты">
-      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
           <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
@@ -376,7 +376,7 @@
 
     <div><div class="lab"><b>Длинный приём</b><span>развёрнутый список продуктов</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Куратор · длинный приём">
-      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
           <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
@@ -404,7 +404,7 @@
 
     <div><div class="lab"><b>Без еды</b><span>вес, тренировка, нормы</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Куратор · сухие строки">
-      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
           <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
@@ -424,7 +424,7 @@
 
     <div><div class="lab"><b>Долгое отсутствие</b><span>больше сотни записей</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Куратор · много дней">
-      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
           <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
@@ -445,7 +445,7 @@
 
     <div><div class="lab"><b>Повторы за день</b><span>четырнадцать правок, пять одинаковых</span></div>
     <div class="ph" data-demo="stop" data-screen-label="Куратор · повторяющиеся правки">
-      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Figtree,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
+      <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
           <span class="mdi"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/></svg></span>
@@ -464,9 +464,9 @@
           </div>
           <div class="row"><div class="rowt"><b>Перекус в 18:40 · 498 ккал</b><span>Приём добавлен · удон с курицей, 280 г</span></div><span class="cv"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span></div>
           <div class="row" style="align-items:flex-start;padding:11px 13px 12px;">
-            <span style="flex:none;min-width:30px;height:30px;border-radius:10px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Figtree,sans-serif;color:var(--ac);letter-spacing:-.02em;margin-top:1px;">×5</span>
+            <span style="flex:none;min-width:30px;height:30px;border-radius:10px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 11.5px/1 Manrope,sans-serif;color:var(--ac);letter-spacing:-.02em;margin-top:1px;">×5</span>
             <div class="rowt"><b>Пять кофе-брейков, 08:30 — 12:30</b><span>В каждом кофе растворимый с молоком 2,5 · 200 г</span>
-              <span class="n" style="margin-top:6px;display:block;font:700 11px/1.3 Figtree,sans-serif;color:var(--ac);">+ 290 ккал за все пять</span>
+              <span class="n" style="margin-top:6px;display:block;font:700 11px/1.3 Manrope,sans-serif;color:var(--ac);">+ 290 ккал за все пять</span>
             </div>
             <span class="cv" style="margin-top:4px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span>
           </div>

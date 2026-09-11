@@ -10,59 +10,59 @@
 <helmet>
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="./v4-canvas.css" rel="stylesheet">
 <script src="./contract-audit.js"></script>
 <style>
-  body{margin:0;background:var(--page);font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  body{margin:0;background:var(--page);font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   *{box-sizing:border-box}
   a{color:var(--ac);text-decoration:none}
   a:hover{color:var(--ac)}
   .ph{width:375px;height:auto;min-height:0;display:block;flex:none;position:relative;overflow:hidden;background:var(--bg);border-radius:28px;box-shadow:0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)}
   .sc{flex:none;min-height:0;overflow:visible;padding:6px 18px 18px}
-  .k{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--ink-2)}
+  .k{font:600 10.5px/1 Manrope,sans-serif;letter-spacing:.04em;color:var(--ink-2)}
   .n{font-variant-numeric:tabular-nums}
-  .tier{font:700 10px/1 Figtree,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:20px 0 10px}
+  .tier{font:700 10px/1 Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:20px 0 10px}
   .grp{background:var(--c1);border-radius:20px;padding:16px}
   .cd{background:var(--c1);border-radius:20px;padding:2px 16px}
-  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Figtree,sans-serif;background:none;border-radius:0;min-height:0}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(var(--ink),.07);font:600 12.5px/1 Manrope,sans-serif;background:none;border-radius:0;min-height:0}
   .row > :last-child{flex:none}
-  .btn2c{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 13px/1 Figtree,sans-serif;color:var(--ink-2)}
+  .btn2c{display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:999px;background:var(--c2);font:700 13px/1 Manrope,sans-serif;color:var(--ink-2)}
   .badge{font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;padding:4px 7px;border-radius:999px;background:var(--c2);color:var(--ac)}
-  .p{font:500 12px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty}
-  .sm{font:500 11px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:12px;text-wrap:pretty}
-  .h1{font:700 16px/1.32 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
-  .big{font:800 30px/1 Figtree,sans-serif;color:var(--tx);letter-spacing:-.02em}
-  .pl{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:26px 0 10px}
+  .p{font:500 12px/1.55 Manrope,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty}
+  .sm{font:500 11px/1.55 Manrope,sans-serif;color:var(--ink-2);margin-top:12px;text-wrap:pretty}
+  .h1{font:700 16px/1.32 Manrope,sans-serif;color:var(--tx);text-wrap:pretty}
+  .big{font:800 30px/1 Manrope,sans-serif;color:var(--tx);letter-spacing:-.02em}
+  .pl{font:700 10px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(0,0,0,.56);margin:26px 0 10px}
   .an{width:302px;flex:none}
-  .anh{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin:0 0 12px}
+  .anh{font:700 10px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ac);margin:0 0 12px}
   .ab{border-left:2px solid rgba(var(--ink),.14);padding:0 0 0 12px;margin:0 0 15px}
-  .ab b{display:block;font:700 12px/1.35 Figtree,sans-serif;color:var(--tx)}
-  .ab span{display:block;font:500 11.5px/1.55 Figtree,sans-serif;color:var(--ink-2);margin-top:3px;text-wrap:pretty}
-  .ab i{display:block;font:600 10.5px/1.5 Figtree,sans-serif;color:var(--ac);font-style:normal;margin-top:5px;text-wrap:pretty}
+  .ab b{display:block;font:700 12px/1.35 Manrope,sans-serif;color:var(--tx)}
+  .ab span{display:block;font:500 11.5px/1.55 Manrope,sans-serif;color:var(--ink-2);margin-top:3px;text-wrap:pretty}
+  .ab i{display:block;font:600 10.5px/1.5 Manrope,sans-serif;color:var(--ac);font-style:normal;margin-top:5px;text-wrap:pretty}
   .sect{display:flex;align-items:baseline;gap:10px;margin:44px 0 14px}
   .sect .lt{flex:none;font:700 10px/1 ui-monospace,Menlo,monospace;padding:6px 9px;background:var(--c2);color:var(--ac);border-radius:999px}
-  .sect .tt{font:700 15px/1.2 Figtree,sans-serif;color:var(--tx);letter-spacing:-.01em}
-  .sect .st{font:500 11.5px/1.3 Figtree,sans-serif;color:var(--ink-2)}
+  .sect .tt{font:700 15px/1.2 Manrope,sans-serif;color:var(--tx);letter-spacing:-.01em}
+  .sect .st{font:500 11.5px/1.3 Manrope,sans-serif;color:var(--ink-2)}
   .spec{display:grid;grid-template-columns:210px 1fr;gap:6px 18px;padding:9px 0;border-bottom:1px solid rgba(var(--ink),.07);align-items:baseline}
-  .spec>b{font:700 11.5px/1.4 Figtree,sans-serif;color:var(--tx)}
-  .spec>span[data-v]{font:500 11.5px/1.55 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty}
+  .spec>b{font:700 11.5px/1.4 Manrope,sans-serif;color:var(--tx)}
+  .spec>span[data-v]{font:500 11.5px/1.55 Manrope,sans-serif;color:var(--ink-2);text-wrap:pretty}
   .spec>span[data-v]::after{content:attr(data-v)}
-  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
-  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:18px 0 2px}
+  .spec>i{grid-column:2;font:500 11px/1.5 Manrope,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
+  .ctrH{font:700 10px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:18px 0 2px}
 </style>
 </helmet>
 <div style="background:var(--page);padding:44px 46px 70px;width:max-content;min-width:100%;">
   <div style="max-width:1080px;">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <h1 style="font:800 22px/1.2 Figtree,sans-serif;color:#201e1d;letter-spacing:-.01em;margin:0;">Поправка на факт</h1>
+      <h1 style="font:800 22px/1.2 Manrope,sans-serif;color:#201e1d;letter-spacing:-.01em;margin:0;">Поправка на факт</h1>
       <span style="font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;padding:7px 11px;border-radius:999px;background:#b4442a;color:#fff;">В ПРОД — ОБА ТАРИФА: PRO РЕШАЕТ КУРАТОР, SELF — КЛИЕНТ</span>
-      <div data-protbar style="font:700 11px/1.4 Figtree,sans-serif;color:var(--ink-2);"></div>
+      <div data-protbar style="font:700 11px/1.4 Manrope,sans-serif;color:var(--ink-2);"></div>
     </div>
-    <p style="font:500 13px/1.65 Figtree,sans-serif;color:var(--ink-2);margin:14px 0 0;text-wrap:pretty;">Норма перестаёт быть числом из формулы и становится обещанием, которое система еженедельно сверяет с фактом — а когда вес молчит, спрашивает у тела через замер. Нарисовано по брифу в форме «решение принимает человек»: число считает система, а кто нажимает кнопку — зависит от тарифа. На Pro это куратор, на Self сам клиент. Порядок кадров — приоритет реализации: кураторская карточка, недельная сверка клиента с четырьмя исходами, момент неопределённости, строка в попапе цели, разведение Self и Pro. Все девятнадцать кадров в релизе — метка «релиз» стоит на каждом.</p>
+    <p style="font:500 13px/1.65 Manrope,sans-serif;color:var(--ink-2);margin:14px 0 0;text-wrap:pretty;">Норма перестаёт быть числом из формулы и становится обещанием, которое система еженедельно сверяет с фактом — а когда вес молчит, спрашивает у тела через замер. Нарисовано по брифу в форме «решение принимает человек»: число считает система, а кто нажимает кнопку — зависит от тарифа. На Pro это куратор, на Self сам клиент. Порядок кадров — приоритет реализации: кураторская карточка, недельная сверка клиента с четырьмя исходами, момент неопределённости, строка в попапе цели, разведение Self и Pro. Все девятнадцать кадров в релизе — метка «релиз» стоит на каждом.</p>
     <p style="font:500 11px/1.6 ui-monospace,Menlo,monospace;color:var(--ink-2);margin:10px 0 0;">поправка-на-факт · протокол: journal/2026-08.md · экраны искать по data-screen-label · соседи: reports-insights.v4.dc.html (недельные итоги), checkin-morning.v4.dc.html (вес и замеры), «Адаптивная норма и честный лог — концепт» (сравнение путей)</p>
     <div style="margin-top:18px;padding:18px 20px;background:#fffaf1;border-radius:20px;">
-      <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);">Сквозной пример — один клиент на весь канвас</div>
+      <div style="font:700 10px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);">Сквозной пример — один клиент на весь канвас</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
         <span class="badge" style="background:#f0e2cb;color:#6a4a2f;">формула 2 400</span>
         <span class="badge" style="background:#f0e2cb;color:#6a4a2f;">факт 2 210</span>
@@ -73,37 +73,37 @@
         <span class="badge" style="background:#f0e2cb;color:#6a4a2f;">норма дня 2 112 → 2 049</span>
       </div>
       <div style="font:500 12px/1.6 ui-monospace,Menlo,monospace;color:var(--ink-2);margin-top:12px;text-wrap:pretty;">1 520 базовый + 610 активность + 270 тренировки = 2 400 расход · ×0,97 = 2 328 · −12 % = 2 049 норма дня · +120 возврат долга = 2 169 итог на сегодня</div>
-      <div style="font:500 11.5px/1.6 Figtree,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Числа проведены через все кадры без пересчёта на месте: кураторская карточка → недельная сверка → попап цели. Четыре исхода недельной сверки — не четыре клиента, а четыре недели одного: норма конца недели становится нормой начала следующей, и все они выводятся из той же базы 2 400. «Сошлось» — вес −0,3 (k 1,01), «выросла» — вес −0,4 (k 1,12, шаг +3 % даёт 2 175), «снизилась» — главная неделя примера (2 112 → 2 049). Расходятся кадры — виноват кадр, а не пример.</div>
+      <div style="font:500 11.5px/1.6 Manrope,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Числа проведены через все кадры без пересчёта на месте: кураторская карточка → недельная сверка → попап цели. Четыре исхода недельной сверки — не четыре клиента, а четыре недели одного: норма конца недели становится нормой начала следующей, и все они выводятся из той же базы 2 400. «Сошлось» — вес −0,3 (k 1,01), «выросла» — вес −0,4 (k 1,12, шаг +3 % даёт 2 175), «снизилась» — главная неделя примера (2 112 → 2 049). Расходятся кадры — виноват кадр, а не пример.</div>
     </div>
     <div style="margin-top:14px;padding:18px 20px;background:#fffaf1;border-radius:20px;">
-      <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);">Пороги и окна — в контракт целиком</div>
+      <div style="font:700 10px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);">Пороги и окна — в контракт целиком</div>
       <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 34px;margin-top:10px;">
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Окно расчёта</span><span style="color:var(--ink-2);text-align:right;">минимум 14 дней, рабочее 21</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Пересчёт</span><span style="color:var(--ink-2);text-align:right;">раз в неделю, по понедельникам</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Диапазон поправки</span><span style="color:var(--ink-2);text-align:right;">0,90 … 1,15</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Шаг за обновление</span><span style="color:var(--ink-2);text-align:right;">не больше 3 %</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Гейт данных</span><span style="color:var(--ink-2);text-align:right;">≥10 ведённых дней и ≥6 реальных взвешиваний</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Расчётные веса</span><span style="color:var(--ink-2);text-align:right;">в зачёт не идут</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Вето по замеру</span><span style="color:var(--ink-2);text-align:right;">талия от 1,5 см за 3–4 недели</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Холодный старт</span><span style="color:var(--ink-2);text-align:right;">2–4 недели при ×1,00</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Предел заморозки</span><span style="color:var(--ink-2);text-align:right;">2 недели от первой просьбы о замере</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Абсолютный пол</span><span style="color:var(--ink-2);text-align:right;">не ниже базового обмена</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Холодный старт не сокращается</span><span style="color:var(--ink-2);text-align:right;">даже когда данных «уже хватает»</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Окно исключает дни</span><span style="color:var(--ink-2);text-align:right;">помеченные неполными — как в долге калорий</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Тренд веса исключает</span><span style="color:var(--ink-2);text-align:right;">дни цикла и рефида — там вода, а не еда</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Тренд веса — один</span><span style="color:var(--ink-2);text-align:right;">MA7 из виджета динамики, не шесть разных</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Предложение не хранится</span><span style="color:var(--ink-2);text-align:right;">пересчитывается каждый понедельник заново</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Числа куратора и клиента</span><span style="color:var(--ink-2);text-align:right;">совпадают: одно окно, одно округление</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Применение</span><span style="color:var(--ink-2);text-align:right;">со следующего дня, не задним числом</span></div>
-        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;font:600 12px/1.35 Figtree,sans-serif;color:#201e1d;"><span>Что поправка не трогает</span><span style="color:var(--ink-2);text-align:right;">дефицит по договорённости</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Окно расчёта</span><span style="color:var(--ink-2);text-align:right;">минимум 14 дней, рабочее 21</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Пересчёт</span><span style="color:var(--ink-2);text-align:right;">раз в неделю, по понедельникам</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Диапазон поправки</span><span style="color:var(--ink-2);text-align:right;">0,90 … 1,15</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Шаг за обновление</span><span style="color:var(--ink-2);text-align:right;">не больше 3 %</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Гейт данных</span><span style="color:var(--ink-2);text-align:right;">≥10 ведённых дней и ≥6 реальных взвешиваний</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Расчётные веса</span><span style="color:var(--ink-2);text-align:right;">в зачёт не идут</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Вето по замеру</span><span style="color:var(--ink-2);text-align:right;">талия от 1,5 см за 3–4 недели</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Холодный старт</span><span style="color:var(--ink-2);text-align:right;">2–4 недели при ×1,00</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Предел заморозки</span><span style="color:var(--ink-2);text-align:right;">2 недели от первой просьбы о замере</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Абсолютный пол</span><span style="color:var(--ink-2);text-align:right;">не ниже базового обмена</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Холодный старт не сокращается</span><span style="color:var(--ink-2);text-align:right;">даже когда данных «уже хватает»</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Окно исключает дни</span><span style="color:var(--ink-2);text-align:right;">помеченные неполными — как в долге калорий</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Тренд веса исключает</span><span style="color:var(--ink-2);text-align:right;">дни цикла и рефида — там вода, а не еда</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Тренд веса — один</span><span style="color:var(--ink-2);text-align:right;">MA7 из виджета динамики, не шесть разных</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Предложение не хранится</span><span style="color:var(--ink-2);text-align:right;">пересчитывается каждый понедельник заново</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(0,0,0,.07);font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Числа куратора и клиента</span><span style="color:var(--ink-2);text-align:right;">совпадают: одно окно, одно округление</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Применение</span><span style="color:var(--ink-2);text-align:right;">со следующего дня, не задним числом</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;font:600 12px/1.35 Manrope,sans-serif;color:#201e1d;"><span>Что поправка не трогает</span><span style="color:var(--ink-2);text-align:right;">дефицит по договорённости</span></div>
       </div>
     </div>
   </div>
 
   <div style="max-width:1080px;margin-top:14px;padding:18px 20px;background:#f6ece1;border-radius:20px;">
-    <div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8c3a24;">Решение владельца · уточнено</div>
-    <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);margin-top:10px;text-wrap:pretty;">Поправка идёт <b>в оба тарифа</b>. На <b>Pro</b> решает куратор, клиент видит ту же карточку в режиме чтения. На <b>Self</b> человек сам себе куратор: применяет сам, предохранители поднимаются в первый слой. Прежнее решение «только Pro» снято — оно опиралось на то, что «сверка фактом без кнопки» нерабочая, а вывод из этого другой: не отнять поправку у Self, а дать ему кнопку.</div>
-    <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;"><b>Применение и уведомление — разные вещи.</b> Рост нормы применяется сам и сообщается в тот же день с кнопкой отмены; снижение требует явного согласия. Молча не двигаем никогда, даже вверх. Кадр «Self · третий отказ подряд» из факультативного становится обязательным: без куратора отказ иначе уходит в тишину, и норма стоит месяцами, пока расчёт расходится с фактом.</div>
+    <div style="font:700 10px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8c3a24;">Решение владельца · уточнено</div>
+    <div style="font:500 12.5px/1.65 Manrope,sans-serif;color:var(--ink-2);margin-top:10px;text-wrap:pretty;">Поправка идёт <b>в оба тарифа</b>. На <b>Pro</b> решает куратор, клиент видит ту же карточку в режиме чтения. На <b>Self</b> человек сам себе куратор: применяет сам, предохранители поднимаются в первый слой. Прежнее решение «только Pro» снято — оно опиралось на то, что «сверка фактом без кнопки» нерабочая, а вывод из этого другой: не отнять поправку у Self, а дать ему кнопку.</div>
+    <div style="font:500 12.5px/1.65 Manrope,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;"><b>Применение и уведомление — разные вещи.</b> Рост нормы применяется сам и сообщается в тот же день с кнопкой отмены; снижение требует явного согласия. Молча не двигаем никогда, даже вверх. Кадр «Self · третий отказ подряд» из факультативного становится обязательным: без куратора отказ иначе уходит в тишину, и норма стоит месяцами, пока расчёт расходится с фактом.</div>
   </div>
 
   <div class="sect"><span class="lt">А</span><span class="tt">Куратор — поправка предложена</span><span class="st">главный экран релиза · ни одна норма не двигается без человека</span></div>
@@ -115,31 +115,31 @@
         <div class="sc">
           <div class="tier">Норма против факта</div>
           <div class="cd">
-            <div class="row"><span><span style="display:block;color:var(--tx);">Формула говорит</span><span class="k" style="display:block;margin-top:4px;">BMR + шаги + тренировки</span></span><span class="n" style="font:700 14px/1 Figtree,sans-serif;color:var(--tx);">2 400</span></div>
-            <div class="row" style="border-bottom:none;"><span><span style="display:block;color:var(--tx);">Факт говорит</span><span class="k" style="display:block;margin-top:4px;">съедено минус движение веса</span></span><span class="n" style="font:700 14px/1 Figtree,sans-serif;color:var(--ac);">2 210</span></div>
+            <div class="row"><span><span style="display:block;color:var(--tx);">Формула говорит</span><span class="k" style="display:block;margin-top:4px;">BMR + шаги + тренировки</span></span><span class="n" style="font:700 14px/1 Manrope,sans-serif;color:var(--tx);">2 400</span></div>
+            <div class="row" style="border-bottom:none;"><span><span style="display:block;color:var(--tx);">Факт говорит</span><span class="k" style="display:block;margin-top:4px;">съедено минус движение веса</span></span><span class="n" style="font:700 14px/1 Manrope,sans-serif;color:var(--ac);">2 210</span></div>
           </div>
           <div class="grp" style="margin-top:12px;background:var(--c2);">
-            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;"><span class="k">Расхождение</span><span class="n" style="font:800 20px/1 Figtree,sans-serif;color:var(--tx);">8 %</span></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;"><span class="k">Расхождение</span><span class="n" style="font:800 20px/1 Manrope,sans-serif;color:var(--tx);">8 %</span></div>
             <div class="sm" style="margin-top:8px;">Внутри рабочего диапазона 0,90–1,15: формула ошибается на человеке примерно на столько же. За его пределами поправка не идёт — там вероятнее ошибка данных, чем экзотический обмен.</div>
           </div>
           <div class="grp" style="margin-top:10px;">
-            <div style="font:700 12.5px/1.3 Figtree,sans-serif;color:var(--tx);">Где может сидеть расхождение</div>
+            <div style="font:700 12.5px/1.3 Manrope,sans-serif;color:var(--tx);">Где может сидеть расхождение</div>
             <div class="p">В расходе — формула завышает. Или в точности записей — часть съеденного не попала в дневник. Поправка выравнивает результат в обоих случаях, но лечится это по-разному: первое нормой, второе разбором дневника.</div>
             <div class="sm">Клиенту эта строка не показывается: она про выбор лечения, а не про клиента.</div>
           </div>
           <div class="tier">Качество данных</div>
           <div class="cd">
-            <div class="row"><span style="color:var(--tx);">Дней ведено</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">18 из 21</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--gr);">хватает</span></span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Взвешиваний реальных</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">9</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--gr);">хватает</span></span></div>
+            <div class="row"><span style="color:var(--tx);">Дней ведено</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">18 из 21</span><span style="font:700 11px/1 Manrope,sans-serif;color:var(--gr);">хватает</span></span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Взвешиваний реальных</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">9</span><span style="font:700 11px/1 Manrope,sans-serif;color:var(--gr);">хватает</span></span></div>
           </div>
           <div class="tier">Рекомендация</div>
           <div class="grp">
-            <div style="display:flex;align-items:baseline;gap:10px;"><span class="n big">2 049</span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--val-bad);">−63 ккал в день</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;"><span class="n big">2 049</span><span style="font:600 12px/1 Manrope,sans-serif;color:var(--val-bad);">−63 ккал в день</span></div>
             <div class="k" style="margin-top:8px;">норма дня · сейчас 2 112</div>
             <div style="height:1px;background:rgba(var(--ink),.09);margin:13px 0;"></div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;"><span class="k">Поправка этой недели</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">×0,97</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:9px;"><span class="k">Расход после поправки</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 328</span></div>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:9px;"><span class="k">Цель поправки</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--ac);">×0,92</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;"><span class="k">Поправка этой недели</span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--tx);">×0,97</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:9px;"><span class="k">Расход после поправки</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 328</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:9px;"><span class="k">Цель поправки</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--ac);">×0,92</span></div>
             <div class="p">Шаг ограничен тремя процентами: до цели дойдём примерно за три недели. Замеров у клиента нет — вето рекомпозиции проверить нечем, предложено включить их вместе с поправкой.</div>
           </div>
           <div class="btn" style="margin-top:14px;">Применить со следующего дня</div>
@@ -162,9 +162,9 @@
           </div>
           <div class="tier">Чего не хватает</div>
           <div class="cd">
-            <div class="row"><span style="color:var(--tx);">Взвешиваний реальных</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">4 из 6</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--val-bad);">мало</span></span></div>
-            <div class="row"><span style="color:var(--tx);">Дней ведено</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">9 из 10</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--val-bad);">мало</span></span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Расчётные веса</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">в зачёт не идут</span></div>
+            <div class="row"><span style="color:var(--tx);">Взвешиваний реальных</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">4 из 6</span><span style="font:700 11px/1 Manrope,sans-serif;color:var(--val-bad);">мало</span></span></div>
+            <div class="row"><span style="color:var(--tx);">Дней ведено</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">9 из 10</span><span style="font:700 11px/1 Manrope,sans-serif;color:var(--val-bad);">мало</span></span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Расчётные веса</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">в зачёт не идут</span></div>
           </div>
           <div class="btn2c" style="margin-top:14px;">Написать клиенту про взвешивания</div>
           <div class="sm">Норма остаётся прежней. Карточка вернётся, когда окно наберёт данные.</div>
@@ -189,11 +189,11 @@
           <div class="grp" style="margin-top:12px;">
             <div class="h1">Расчёт сходится с фактом</div>
             <div class="p">Четвёртая неделя подряд без правок: расхождение внутри 2 %, поэтому норму не двигаем.</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 112</span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ink-3);">без изменений</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 112</span><span style="font:600 12px/1 Manrope,sans-serif;color:var(--ink-3);">без изменений</span></div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Вес за неделю</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--gr);">−0,3 кг</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Ели в среднем</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 095 ккал</span></div>
+            <div class="row"><span style="color:var(--tx);">Вес за неделю</span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--gr);">−0,3 кг</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Ели в среднем</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 095 ккал</span></div>
           </div>
           <div class="btn" style="margin-top:14px;">Хорошо</div>
         </div>
@@ -207,11 +207,11 @@
           <div class="grp" style="margin-top:12px;background:var(--gr-bg);">
             <div class="h1">Можно есть больше</div>
             <div class="p">Вы ели больше плана, а вес всё равно шёл вниз. Значит, тратите вы больше, чем мы считали, — норму подняли под ваш результат.</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 175</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--gr);">+63 ккал</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 175</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--gr);">+63 ккал</span></div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Ели в среднем</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 240 ккал</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Вес за неделю</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--gr);">−0,4 кг</span></div>
+            <div class="row"><span style="color:var(--tx);">Ели в среднем</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 240 ккал</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Вес за неделю</span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--gr);">−0,4 кг</span></div>
           </div>
           <div class="sm">Такое бывает, когда дневник ведут честно: чем точнее записи, тем точнее норма.</div>
           <div class="btn2c" style="margin-top:14px;">Вернуть прежнюю норму</div>
@@ -233,11 +233,11 @@
           <div class="grp" style="margin-top:12px;">
             <div class="h1">Норму подстроили под факт</div>
             <div class="p">Три недели вес и обхваты держатся на месте. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 049</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--val-bad);">−63 ккал</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 049</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--val-bad);">−63 ккал</span></div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Дефицит остался тем же</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">как договаривались</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Дальше шагов</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">не больше 3 % в неделю</span></div>
+            <div class="row"><span style="color:var(--tx);">Дефицит остался тем же</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">как договаривались</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Дальше шагов</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">не больше 3 % в неделю</span></div>
           </div>
           <div class="btn" style="margin-top:14px;">Понятно</div>
           <div class="btn2c" style="margin-top:9px;">Написать куратору</div>
@@ -254,12 +254,12 @@
           <div class="grp" style="margin-top:12px;">
             <div class="h1">Норму подстроили под факт</div>
             <div class="p">Три недели вес держится на месте. Замеров обхватов не было — проверить перестройку по ним нельзя. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 049</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--val-bad);">−63 ккал</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 049</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--val-bad);">−63 ккал</span></div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Замер талии</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">не было</span></div>
-          <div class="row"><span style="color:var(--tx);">Дефицит остался тем же</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">как договаривались</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Дальше шагов</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">не больше 3 % в неделю</span></div>
+            <div class="row"><span style="color:var(--tx);">Замер талии</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">не было</span></div>
+          <div class="row"><span style="color:var(--tx);">Дефицит остался тем же</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">как договаривались</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Дальше шагов</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">не больше 3 % в неделю</span></div>
           </div>
           <div class="btn" style="margin-top:14px;">Понятно</div>
           <div class="btn2c" style="margin-top:9px;">Написать куратору</div>
@@ -273,12 +273,12 @@
           <div class="grp" style="margin-top:12px;">
             <div class="h1">Норму подстроили под факт</div>
             <div class="p">Три недели вес и талия держатся на месте. Талия — самый показательный обхват: когда состав тела меняется, она отвечает первой. Значит, наш расчёт расхода для вас завышен — мы поправили его, а не вас.</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 049</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--val-bad);">−63 ккал</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 049</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--val-bad);">−63 ккал</span></div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Талия за три недели</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">76,5 → 76,0 см</span></div>
-            <div class="row"><span style="color:var(--tx);">Дефицит остался тем же</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">как договаривались</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Дальше шагов</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">не больше 3 % в неделю</span></div>
+            <div class="row"><span style="color:var(--tx);">Талия за три недели</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">76,5 → 76,0 см</span></div>
+            <div class="row"><span style="color:var(--tx);">Дефицит остался тем же</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">как договаривались</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Дальше шагов</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">не больше 3 % в неделю</span></div>
           </div>
           <div class="btn" style="margin-top:14px;">Понятно</div>
           <div class="btn2c" style="margin-top:9px;">Написать куратору</div>
@@ -304,8 +304,8 @@
               <circle cx="258" cy="68" r="4" fill="var(--acs)"/>
             </svg>
             <div style="display:flex;gap:14px;margin-top:10px;">
-              <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Figtree,sans-serif;color:var(--ink-2);"><span style="width:10px;height:3px;border-radius:2px;background:rgba(var(--ink),.32);"></span>вес</span>
-              <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Figtree,sans-serif;color:var(--ac);"><span style="width:10px;height:3px;border-radius:2px;background:var(--acs);"></span>талия</span>
+              <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Manrope,sans-serif;color:var(--ink-2);"><span style="width:10px;height:3px;border-radius:2px;background:rgba(var(--ink),.32);"></span>вес</span>
+              <span style="display:flex;align-items:center;gap:6px;font:600 10.5px/1 Manrope,sans-serif;color:var(--ac);"><span style="width:10px;height:3px;border-radius:2px;background:var(--acs);"></span>талия</span>
             </div>
           </div>
           <div class="btn" style="margin-top:14px;">Хорошо</div>
@@ -334,8 +334,8 @@
             <div class="btn2c" style="margin-top:9px;">Не сейчас</div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Норма пока</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">заморожена</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Ждём замер</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">ещё 6 дней</span></div>
+            <div class="row"><span style="color:var(--tx);">Норма пока</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">заморожена</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Ждём замер</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">ещё 6 дней</span></div>
           </div>
           <div class="sm">Через две недели без замера поправка применится по весу: заморозка не может длиться вечно.</div>
         </div>
@@ -352,9 +352,9 @@
           </div>
           <div class="tier">Что это даёт</div>
           <div class="cd">
-            <div class="row"><span style="color:var(--tx);">Отличить перестройку от застоя</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--gr);">да</span></div>
-            <div class="row"><span style="color:var(--tx);">Защита от лишнего снижения нормы</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--gr);">да</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Хранятся</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">пока функция включена</span></div>
+            <div class="row"><span style="color:var(--tx);">Отличить перестройку от застоя</span><span style="font:700 11px/1 Manrope,sans-serif;color:var(--gr);">да</span></div>
+            <div class="row"><span style="color:var(--tx);">Защита от лишнего снижения нормы</span><span style="font:700 11px/1 Manrope,sans-serif;color:var(--gr);">да</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Хранятся</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">пока функция включена</span></div>
           </div>
           <div class="sm">Выключите — данные замеров удалятся. Без них сверка работает, только без ветки перестройки.</div>
           <div class="btn" style="margin-top:14px;">Включить и дать согласие</div>
@@ -373,8 +373,8 @@
             <div style="display:flex;align-items:center;gap:8px;margin-top:12px;"><span class="badge" style="color:var(--ink-2);">по росту рабочих весов за 4 недели</span></div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Довод</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">косвенный</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Заморозка</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">один цикл</span></div>
+            <div class="row"><span style="color:var(--tx);">Довод</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">косвенный</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Заморозка</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">один цикл</span></div>
           </div>
           <div class="sm">Точнее скажет замер талии — он отличит перестройку от застоя прямо, а не по догадке.</div>
           <div class="btn" style="margin-top:14px;">Включить замеры</div>
@@ -390,17 +390,17 @@
           <div class="grp" style="margin-top:12px;">
             <div class="h1">Отличить перестройку было нечем</div>
             <div class="p">Замера не было, силовых в эти недели тоже. Две недели ожидания истекли — поправку можно применить по весу.</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 049</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--val-bad);">−63 ккал</span></div>
-            <div style="font:600 11px/1.4 Figtree,sans-serif;color:var(--ink-2);margin-top:6px;">предложение — пока не применено</div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:14px;"><span class="n big">2 049</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--val-bad);">−63 ккал</span></div>
+            <div style="font:600 11px/1.4 Manrope,sans-serif;color:var(--ink-2);margin-top:6px;">предложение — пока не применено</div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Замер талии</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">не было</span></div>
-            <div class="row"><span style="color:var(--tx);">Рабочие веса</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">данных нет</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Заморозка</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">две недели истекли</span></div>
+            <div class="row"><span style="color:var(--tx);">Замер талии</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">не было</span></div>
+            <div class="row"><span style="color:var(--tx);">Рабочие веса</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">данных нет</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Заморозка</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">две недели истекли</span></div>
           </div>
           <div class="btn" style="margin-top:14px;">Применить с завтра</div>
           <div class="btn2c" style="margin-top:9px;">Оставить прежнюю</div>
-          <div style="min-height:44px;display:flex;align-items:center;justify-content:center;margin-top:2px;font:600 12px/1 Figtree,sans-serif;color:var(--ink-2);">Написать куратору</div>
+          <div style="min-height:44px;display:flex;align-items:center;justify-content:center;margin-top:2px;font:600 12px/1 Manrope,sans-serif;color:var(--ink-2);">Написать куратору</div>
           <div class="sm">Поправка — про расчёт, а не про старание. Замер в любой момент вернёт ветку перестройки.</div>
         </div>
       </div>
@@ -422,19 +422,19 @@
         <div class="sc">
           <div class="tier">Из чего сложилась</div>
           <div class="cd">
-            <div class="row"><span style="color:var(--tx);">Базовый обмен</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">1 520</span></div>
-            <div class="row"><span style="color:var(--tx);">Шаги и активность</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">+610</span></div>
-            <div class="row"><span style="color:var(--tx);">Тренировки</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">+270</span></div>
-            <div class="row"><span style="display:flex;align-items:center;gap:8px;color:var(--tx);">Поправка на факт<span class="badge">с 26 авг</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">×0,97</span></div>
-            <div class="row"><span style="color:var(--tx);">Расход после поправки</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 328</span></div>
-            <div class="row"><span style="color:var(--tx);">Дефицит по договорённости</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">−12 %</span></div>
-            <div class="row"><span style="color:var(--tx);">Норма дня</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 049</span></div>
-            <div class="row"><span style="display:flex;align-items:center;gap:8px;color:var(--tx);">Возврат долга<span class="badge" style="color:var(--ink-2);">за три дня</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--gr);">+120</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Итог на сегодня</span><span class="n" style="font:800 13px/1 Figtree,sans-serif;color:var(--tx);">2 169</span></div>
+            <div class="row"><span style="color:var(--tx);">Базовый обмен</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">1 520</span></div>
+            <div class="row"><span style="color:var(--tx);">Шаги и активность</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">+610</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">+270</span></div>
+            <div class="row"><span style="display:flex;align-items:center;gap:8px;color:var(--tx);">Поправка на факт<span class="badge">с 26 авг</span></span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--ac);">×0,97</span></div>
+            <div class="row"><span style="color:var(--tx);">Расход после поправки</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 328</span></div>
+            <div class="row"><span style="color:var(--tx);">Дефицит по договорённости</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">−12 %</span></div>
+            <div class="row"><span style="color:var(--tx);">Норма дня</span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 049</span></div>
+            <div class="row"><span style="display:flex;align-items:center;gap:8px;color:var(--tx);">Возврат долга<span class="badge" style="color:var(--ink-2);">за три дня</span></span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--gr);">+120</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Итог на сегодня</span><span class="n" style="font:800 13px/1 Manrope,sans-serif;color:var(--tx);">2 169</span></div>
           </div>
           <div class="sm" style="margin-top:10px;">Порядок слоёв не произволен: поправка правит расход раз в неделю, дефицит остаётся договорённостью, долг правит итог дня. Норма без долга — 2 049.</div>
           <div class="grp" style="margin-top:12px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:700 12.5px/1.3 Figtree,sans-serif;color:var(--tx);">Что такое поправка на факт</span><span style="font:700 13px/1 Figtree,sans-serif;color:var(--ac);">развернуть</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:700 12.5px/1.3 Manrope,sans-serif;color:var(--tx);">Что такое поправка на факт</span><span style="font:700 13px/1 Manrope,sans-serif;color:var(--ac);">развернуть</span></div>
             <div class="p">Раз в неделю мы сверяем расчёт с тем, что показали ваши записи и весы, и подстраиваем расход под ваш результат. Дефицит при этом не меняется — он остаётся тем, о чём договорились.</div>
           </div>
           <div class="sm">Ниже базового обмена норма не опускается ни при какой поправке.</div>
@@ -447,15 +447,15 @@
         <div class="top"><span class="ttl">Норма дня</span><span class="k n">2 112 ккал</span></div>
         <div class="sc">
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Базовый обмен</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">1 520</span></div>
-            <div class="row"><span style="color:var(--tx);">Шаги и активность</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">+610</span></div>
-            <div class="row"><span style="color:var(--tx);">Тренировки</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">+270</span></div>
-            <div class="row"><span style="display:flex;align-items:center;gap:8px;color:var(--tx);">Поправка на факт<span class="badge" style="color:var(--ink-2);">копим данные</span></span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">пока нет</span></div>
-            <div class="row"><span style="color:var(--tx);">Дефицит по договорённости</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">−12 %</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Долга нет</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">итог равен норме</span></div>
+            <div class="row"><span style="color:var(--tx);">Базовый обмен</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">1 520</span></div>
+            <div class="row"><span style="color:var(--tx);">Шаги и активность</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">+610</span></div>
+            <div class="row"><span style="color:var(--tx);">Тренировки</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">+270</span></div>
+            <div class="row"><span style="display:flex;align-items:center;gap:8px;color:var(--tx);">Поправка на факт<span class="badge" style="color:var(--ink-2);">копим данные</span></span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">пока нет</span></div>
+            <div class="row"><span style="color:var(--tx);">Дефицит по договорённости</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">−12 %</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Долга нет</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">итог равен норме</span></div>
           </div>
           <div class="grp" style="margin-top:12px;">
-            <div style="display:flex;align-items:center;gap:10px;"><span style="flex:1;height:6px;border-radius:999px;background:rgba(var(--ink),.09);"><span style="display:block;width:57%;height:6px;border-radius:999px;background:var(--acs);"></span></span><span class="n" style="font:700 11px/1 Figtree,sans-serif;color:var(--ac);">8 дней из 14</span></div>
+            <div style="display:flex;align-items:center;gap:10px;"><span style="flex:1;height:6px;border-radius:999px;background:rgba(var(--ink),.09);"><span style="display:block;width:57%;height:6px;border-radius:999px;background:var(--acs);"></span></span><span class="n" style="font:700 11px/1 Manrope,sans-serif;color:var(--ac);">8 дней из 14</span></div>
             <div class="p">Пока считаем по формуле. Через неделю проверим расчёт на вашем результате и, если он разойдётся с фактом, подстроим.</div>
           </div>
         </div>
@@ -473,14 +473,14 @@
               <polyline points="4,16 88,16 172,16 258,27" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
               <circle cx="258" cy="27" r="4" fill="var(--acs)"/>
             </svg>
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font:500 10px/1 Figtree,sans-serif;color:var(--ink-2);margin-top:8px;"><span>пунктир сверху — 1,00</span><span style="color:var(--ac);">пунктир снизу — цель 0,92</span></div>
-            <div style="display:flex;justify-content:space-between;font:600 10px/1 Figtree,sans-serif;color:var(--ink-2);margin-top:6px;"><span>5 авг</span><span>12 авг</span><span>19 авг</span><span>26 авг</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;font:500 10px/1 Manrope,sans-serif;color:var(--ink-2);margin-top:8px;"><span>пунктир сверху — 1,00</span><span style="color:var(--ac);">пунктир снизу — цель 0,92</span></div>
+            <div style="display:flex;justify-content:space-between;font:600 10px/1 Manrope,sans-serif;color:var(--ink-2);margin-top:6px;"><span>5 авг</span><span>12 авг</span><span>19 авг</span><span>26 авг</span></div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">26 авг</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">×0,97</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">куратор применил</span></span></div>
-            <div class="row"><span style="color:var(--tx);">19 авг</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">×1,00</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">клиент отказался</span></span></div>
-            <div class="row"><span style="color:var(--tx);">12 авг</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">×1,00</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">отложено</span></span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">5 авг</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">×1,00</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">холодный старт</span></span></div>
+            <div class="row"><span style="color:var(--tx);">26 авг</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">×0,97</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">куратор применил</span></span></div>
+            <div class="row"><span style="color:var(--tx);">19 авг</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">×1,00</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">клиент отказался</span></span></div>
+            <div class="row"><span style="color:var(--tx);">12 авг</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">×1,00</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">отложено</span></span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">5 авг</span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">×1,00</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">холодный старт</span></span></div>
           </div>
           <div class="sm">Видно и то, что система предложила, и то, что человек с этим сделал.</div>
         </div>
@@ -506,15 +506,15 @@
             <div class="p">По вашим записям и весам расход выходит ниже, чем считает формула. Снижение нормы — только с вашего согласия.</div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Формула говорит</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:var(--ink-2);">расход по формуле</span></span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 400</span></div>
-            <div class="row"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Факт говорит</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:var(--ink-2);">расход по весу и записям</span></span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">2 210</span></div>
-            <div class="row" style="border-bottom:none;"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Норма дня станет</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:var(--ink-2);">с дефицитом −12 %</span></span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 049</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--val-bad);">−63</span></span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Формула говорит</span><span style="font:500 10px/1.3 Manrope,sans-serif;color:var(--ink-2);">расход по формуле</span></span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 400</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Факт говорит</span><span style="font:500 10px/1.3 Manrope,sans-serif;color:var(--ink-2);">расход по весу и записям</span></span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--ac);">2 210</span></div>
+            <div class="row" style="border-bottom:none;"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Норма дня станет</span><span style="font:500 10px/1.3 Manrope,sans-serif;color:var(--ink-2);">с дефицитом −12 %</span></span><span style="display:flex;align-items:center;gap:8px;"><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 049</span><span style="font:700 11px/1 Manrope,sans-serif;color:var(--val-bad);">−63</span></span></div>
           </div>
           <div class="tier">Предохранители</div>
           <div class="cd">
-            <div class="row"><span style="color:var(--tx);">Шаг за неделю</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">не больше 3 %</span></div>
-            <div class="row"><span style="color:var(--tx);">Ниже базового обмена</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">не опускаем</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Отменить</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">в любой момент</span></div>
+            <div class="row"><span style="color:var(--tx);">Шаг за неделю</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">не больше 3 %</span></div>
+            <div class="row"><span style="color:var(--tx);">Ниже базового обмена</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">не опускаем</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Отменить</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">в любой момент</span></div>
           </div>
           <div class="btn" style="margin-top:14px;">Применить с завтра</div>
           <div style="display:flex;gap:8px;margin-top:9px;">
@@ -532,15 +532,15 @@
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
             <div class="k">Ваша норма сегодня</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px;"><span class="n big">2 112</span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ink-3);">без изменений</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px;"><span class="n big">2 112</span><span style="font:600 12px/1 Manrope,sans-serif;color:var(--ink-3);">без изменений</span></div>
             <div class="p">Ешьте на это число. Поправку смотрит куратор — до его решения норма не меняется.</div>
           </div>
           <div class="tier">Что он смотрит</div>
           <div class="cd">
-            <div class="row"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Формула говорит</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:var(--ink-2);">расход по формуле</span></span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--ink-2);">2 400</span></div>
-            <div class="row"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Факт говорит</span><span style="font:500 10px/1.3 Figtree,sans-serif;color:var(--ink-2);">расход по весу и записям</span></span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--ink-2);">2 210</span></div>
-            <div class="row"><span style="color:var(--tx);">Предложение</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--ink-2);">2 049 · пока не применено</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Предохранители</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);">развернуть</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Формула говорит</span><span style="font:500 10px/1.3 Manrope,sans-serif;color:var(--ink-2);">расход по формуле</span></span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--ink-2);">2 400</span></div>
+            <div class="row"><span style="display:flex;flex-direction:column;gap:2px;"><span style="color:var(--tx);">Факт говорит</span><span style="font:500 10px/1.3 Manrope,sans-serif;color:var(--ink-2);">расход по весу и записям</span></span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--ink-2);">2 210</span></div>
+            <div class="row"><span style="color:var(--tx);">Предложение</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--ink-2);">2 049 · пока не применено</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Предохранители</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--ac);">развернуть</span></div>
           </div>
           <div class="btn2c" style="margin-top:14px;">Спросить куратора</div>
           <div class="sm">Что решит куратор — придёт в недельной сверке: там будет причина и возможность спросить, если она непонятна.</div>
@@ -557,9 +557,9 @@
             <div class="p">Оставили 2 112 — так и будет. Поправка не исчезла: вернётся в понедельник с обновлёнными данными, и расхождение к тому времени может стать другим.</div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Норма дня</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 112</span></div>
-            <div class="row"><span style="color:var(--tx);">Поправка вернётся</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">в понедельник</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Отказ учли</span><span style="font:700 11px/1 Figtree,sans-serif;color:var(--gr);">да</span></div>
+            <div class="row"><span style="color:var(--tx);">Норма дня</span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 112</span></div>
+            <div class="row"><span style="color:var(--tx);">Поправка вернётся</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">в понедельник</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Отказ учли</span><span style="font:700 11px/1 Manrope,sans-serif;color:var(--gr);">да</span></div>
           </div>
           <div class="sm">Отказ — сигнал, а не ошибка. На Pro его видит куратор и спросит, что мешает; на Self после третьего раза мы покажем, сколько недель норма не менялась.</div>
         </div>
@@ -572,13 +572,13 @@
         <div class="sc">
           <div class="grp" style="margin-top:12px;background:var(--gr-bg);">
             <div class="k">Ваша норма сегодня</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px;"><span class="n big">2 175</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--gr);">+63 ккал</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px;"><span class="n big">2 175</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--gr);">+63 ккал</span></div>
             <div class="p">Вы ели больше плана, а вес шёл вниз — значит, тратите больше, чем считала формула. Норму подняли и говорим об этом.</div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Было</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 112</span></div>
-            <div class="row"><span style="color:var(--tx);">Поправка</span><span class="n" style="font:700 12.5px/1 Figtree,sans-serif;color:var(--ac);">×1,03</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Спрашивать согласие</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">на рост не спрашиваем</span></div>
+            <div class="row"><span style="color:var(--tx);">Было</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 112</span></div>
+            <div class="row"><span style="color:var(--tx);">Поправка</span><span class="n" style="font:700 12.5px/1 Manrope,sans-serif;color:var(--ac);">×1,03</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Спрашивать согласие</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">на рост не спрашиваем</span></div>
           </div>
           <div class="btn2c" style="margin-top:14px;">Вернуть прежнюю норму</div>
           <div class="sm">Молча норма не двигается никогда — даже вверх: любое решение расчёта вы видите в тот же день.</div>
@@ -595,15 +595,15 @@
             <div class="p">Вы трижды оставили прежнее число — это ваше право, и я его сохраняю. Но расчёт всё это время расходится с фактом, и вес стоит.</div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Норма</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">2 112 · шесть недель</span></div>
-            <div class="row"><span style="color:var(--tx);">Расхождение</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">8 % и держится</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Замер талии</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">не было</span></div>
+            <div class="row"><span style="color:var(--tx);">Норма</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">2 112 · шесть недель</span></div>
+            <div class="row"><span style="color:var(--tx);">Расхождение</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">8 % и держится</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Замер талии</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">не было</span></div>
           </div>
           <div class="tier">Что можно сделать</div>
           <div class="cd">
-            <div class="row"><span style="color:var(--tx);">Применить поправку</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);">2 049</span></div>
-            <div class="row"><span style="color:var(--tx);">Замерить талию</span><span style="font:700 12px/1 Figtree,sans-serif;color:var(--ac);">проверить перестройку</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Оставить как есть</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">и не спрашивать месяц</span></div>
+            <div class="row"><span style="color:var(--tx);">Применить поправку</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--ac);">2 049</span></div>
+            <div class="row"><span style="color:var(--tx);">Замерить талию</span><span style="font:700 12px/1 Manrope,sans-serif;color:var(--ac);">проверить перестройку</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Оставить как есть</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">и не спрашивать месяц</span></div>
           </div>
           <div class="sm">Ни одна из кнопок не обязательна. Плохо не то, что вы отказываетесь, — плохо, если вы не знаете, что расчёт разошёлся.</div>
         </div>
@@ -616,13 +616,13 @@
         <div class="sc">
           <div class="grp" style="margin-top:12px;">
             <div class="k">Ваша норма сегодня</div>
-            <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px;"><span class="n big">2 112</span><span style="font:600 12px/1 Figtree,sans-serif;color:var(--ink-3);">без изменений</span></div>
+            <div style="display:flex;align-items:baseline;gap:10px;margin-top:10px;"><span class="n big">2 112</span><span style="font:600 12px/1 Manrope,sans-serif;color:var(--ink-3);">без изменений</span></div>
             <div class="p">Куратор посмотрел поправку и решил норму не двигать: неделя была нетипичной, и он хочет увидеть ещё одну.</div>
           </div>
           <div class="cd" style="margin-top:12px;">
-            <div class="row"><span style="color:var(--tx);">Предложение было</span><span class="n" style="font:600 12.5px/1 Figtree,sans-serif;color:var(--ink-2);">2 049</span></div>
-            <div class="row"><span style="color:var(--tx);">Решение</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">оставить 2 112</span></div>
-            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Вернёмся к вопросу</span><span style="font:600 11px/1 Figtree,sans-serif;color:var(--ink-2);">в следующий понедельник</span></div>
+            <div class="row"><span style="color:var(--tx);">Предложение было</span><span class="n" style="font:600 12.5px/1 Manrope,sans-serif;color:var(--ink-2);">2 049</span></div>
+            <div class="row"><span style="color:var(--tx);">Решение</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">оставить 2 112</span></div>
+            <div class="row" style="border-bottom:none;"><span style="color:var(--tx);">Вернёмся к вопросу</span><span style="font:600 11px/1 Manrope,sans-serif;color:var(--ink-2);">в следующий понедельник</span></div>
           </div>
           <div class="btn2c" style="margin-top:14px;">Спросить куратора</div>
           <div class="sm">Предложение не исчезает молча: чем кончилось — всегда видно, иначе «увидел заранее» превращается в «увидел и не понял».</div>
@@ -639,7 +639,7 @@
     </div>
   </div>
 
-  <div data-ctrbar style="max-width:1080px;margin-top:46px;font:700 11px/1.4 Figtree,sans-serif;color:var(--ink-2);"></div>
+  <div data-ctrbar style="max-width:1080px;margin-top:46px;font:700 11px/1.4 Manrope,sans-serif;color:var(--ink-2);"></div>
   <div class="ctr" data-contract style="background:var(--c2);border-radius:26px;padding:22px 24px;margin-top:12px;max-width:1080px;">
     <div class="ctrH">Что это и чьё</div>
     <div class="spec"><b>фича</b><span data-v="поправка на факт: норма пересчитывается от результата, а не только от формулы. В релизе оба тарифа: карточка поправки в кабинете куратора, недельная сверка клиента, запрос замера, строка в разборе нормы, и кадры Self, где человек применяет поправку сам. Все 19 кадров помечены «релиз»"></span></div>
@@ -758,31 +758,31 @@
     <div class="spec"><b>Куратор · поправка предложена · 07</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 08</b><span data-v="«Формула говорит» — цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 09</b><span data-v="«BMR + шаги + тренировки» — ключ: отступ сверху 4px"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 10</b><span data-v="«2 400» — моноцифры: шрифт 700 14px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 10</b><span data-v="«2 400» — моноцифры: шрифт 700 14px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 11</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 12</b><span data-v="«2 210» — моноцифры: шрифт 700 14px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 12</b><span data-v="«2 210» — моноцифры: шрифт 700 14px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 13</b><span data-v="карточка .grp: отступ сверху 12px, фон var(--c2)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 14</b><span data-v="выравнивание baseline, распределение space-between, зазор 12px"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 15</b><span data-v="«Расхождение» — ключ"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 16</b><span data-v="«8 %» — моноцифры: шрифт 800 20px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 16</b><span data-v="«8 %» — моноцифры: шрифт 800 20px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 17</b><span data-v="«Внутри рабочего диапазона 0,90–1,15: формула ошиба» — сноска: отступ сверху 8px"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 18</b><span data-v="карточка .grp: отступ сверху 10px"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 19</b><span data-v="«Где может сидеть расхождение» — шрифт 700 12.5px/1.3 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 19</b><span data-v="«Где может сидеть расхождение» — шрифт 700 12.5px/1.3 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 20</b><span data-v="«В расходе — формула завышает. Или в точности запис» — проза"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 21</b><span data-v="«Клиенту эта строка не показывается: она про выбор» — сноска"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 22</b><span data-v="выравнивание center, зазор 8px"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 23</b><span data-v="«18 из 21» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 24</b><span data-v="«хватает» — шрифт 700 11px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 23</b><span data-v="«18 из 21» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 24</b><span data-v="«хватает» — шрифт 700 11px/1 Manrope, цвет var(--gr)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 25</b><span data-v="карточка .grp"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 26</b><span data-v="выравнивание baseline, зазор 10px"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 27</b><span data-v="«2 049» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 28</b><span data-v="«−63 ккал в день» — шрифт 600 12px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 28</b><span data-v="«−63 ккал в день» — шрифт 600 12px/1 Manrope, цвет var(--val-bad)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 29</b><span data-v="«норма дня · сейчас 2 112» — ключ: отступ сверху 8px"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 30</b><span data-v="высота 1px, фон rgba(var(--ink),.09), отступы 13px 0"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 31</b><span data-v="распределение space-between, выравнивание baseline, зазор 12px"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 32</b><span data-v="«×0,97» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 32</b><span data-v="«×0,97» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 33</b><span data-v="распределение space-between, выравнивание baseline, зазор 12px, отступ сверху 9px"></span></div>
-    <div class="spec"><b>Куратор · поправка предложена · 34</b><span data-v="«×0,92» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Куратор · поправка предложена · 34</b><span data-v="«×0,92» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 35</b><span data-v="«Применить со следующего дня» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 36</b><span data-v="зазор 8px, отступ сверху 9px"></span></div>
     <div class="spec"><b>Куратор · поправка предложена · 37</b><span data-v="«Отложить» — вторичная кнопка: флекс 1"></span></div>
@@ -798,10 +798,10 @@
     <div class="spec"><b>Куратор · данных не хватает · 10</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Куратор · данных не хватает · 11</b><span data-v="«Взвешиваний реальных» — цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · данных не хватает · 12</b><span data-v="выравнивание center, зазор 8px"></span></div>
-    <div class="spec"><b>Куратор · данных не хватает · 13</b><span data-v="«4 из 6» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Куратор · данных не хватает · 14</b><span data-v="«мало» — шрифт 700 11px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Куратор · данных не хватает · 13</b><span data-v="«4 из 6» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · данных не хватает · 14</b><span data-v="«мало» — шрифт 700 11px/1 Manrope, цвет var(--val-bad)"></span></div>
     <div class="spec"><b>Куратор · данных не хватает · 15</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Куратор · данных не хватает · 16</b><span data-v="«в зачёт не идут» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Куратор · данных не хватает · 16</b><span data-v="«в зачёт не идут» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Куратор · данных не хватает · 17</b><span data-v="«Написать клиенту про взвешивания» — вторичная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · данных не хватает · 18</b><span data-v="«Норма остаётся прежней. Карточка вернётся, когда о» — сноска"></span></div>
     <div class="spec"><b>Сверка · сошлось · 01</b><span data-v="шапка"></span></div>
@@ -813,13 +813,13 @@
     <div class="spec"><b>Сверка · сошлось · 07</b><span data-v="«Четвёртая неделя подряд без правок: расхождение вн» — проза"></span></div>
     <div class="spec"><b>Сверка · сошлось · 08</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · сошлось · 09</b><span data-v="«2 112» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Сверка · сошлось · 10</b><span data-v="«без изменений» — шрифт 600 12px/1 Figtree, цвет var(--ink-3)"></span></div>
+    <div class="spec"><b>Сверка · сошлось · 10</b><span data-v="«без изменений» — шрифт 600 12px/1 Manrope, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Сверка · сошлось · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Сверка · сошлось · 12</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Сверка · сошлось · 13</b><span data-v="«Вес за неделю» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сверка · сошлось · 14</b><span data-v="«−0,3 кг» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Сверка · сошлось · 14</b><span data-v="«−0,3 кг» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--gr)"></span></div>
     <div class="spec"><b>Сверка · сошлось · 15</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Сверка · сошлось · 16</b><span data-v="«2 095 ккал» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сверка · сошлось · 16</b><span data-v="«2 095 ккал» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Сверка · сошлось · 17</b><span data-v="«Хорошо» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 02</b><span data-v="«Неделя закрыта» — имя экрана"></span></div>
@@ -830,13 +830,13 @@
     <div class="spec"><b>Сверка · норма выросла · 07</b><span data-v="«Вы ели больше плана, а вес всё равно шёл вниз. Зна» — проза"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 08</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 09</b><span data-v="«2 175» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Сверка · норма выросла · 10</b><span data-v="«+63 ккал» — шрифт 700 12px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Сверка · норма выросла · 10</b><span data-v="«+63 ккал» — шрифт 700 12px/1 Manrope, цвет var(--gr)"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 12</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 13</b><span data-v="«Ели в среднем» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сверка · норма выросла · 14</b><span data-v="«2 240 ккал» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сверка · норма выросла · 14</b><span data-v="«2 240 ккал» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 15</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Сверка · норма выросла · 16</b><span data-v="«−0,4 кг» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Сверка · норма выросла · 16</b><span data-v="«−0,4 кг» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--gr)"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 17</b><span data-v="«Такое бывает, когда дневник ведут честно: чем точн» — сноска"></span></div>
     <div class="spec"><b>Сверка · норма выросла · 18</b><span data-v="«Вернуть прежнюю норму» — вторичная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 01</b><span data-v="шапка"></span></div>
@@ -848,13 +848,13 @@
     <div class="spec"><b>Сверка · норма снизилась · 07</b><span data-v="«Три недели вес и обхваты держатся на месте. Значит» — проза"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 08</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 09</b><span data-v="«2 049» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · 10</b><span data-v="«−63 ккал» — шрифт 700 12px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · 10</b><span data-v="«−63 ккал» — шрифт 700 12px/1 Manrope, цвет var(--val-bad)"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 12</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 13</b><span data-v="«Дефицит остался тем же» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · 14</b><span data-v="«как договаривались» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · 14</b><span data-v="«как договаривались» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 15</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · 16</b><span data-v="«не больше 3 % в неделю» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · 16</b><span data-v="«не больше 3 % в неделю» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 17</b><span data-v="«Понятно» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 18</b><span data-v="«Написать куратору» — вторичная кнопка: отступ сверху 9px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · 19</b><span data-v="«Решение куратора остаётся в силе — отменить его зд» — сноска"></span></div>
@@ -867,13 +867,13 @@
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 07</b><span data-v="«Три недели вес держится на месте. Замеров обхватов» — проза"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 08</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 09</b><span data-v="«2 049» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · без обхватов · 10</b><span data-v="«−63 ккал» — шрифт 700 12px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · без обхватов · 10</b><span data-v="«−63 ккал» — шрифт 700 12px/1 Manrope, цвет var(--val-bad)"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 12</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 13</b><span data-v="«Замер талии» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · без обхватов · 14</b><span data-v="«не было» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · без обхватов · 14</b><span data-v="«не было» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 15</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · без обхватов · 16</b><span data-v="«не больше 3 % в неделю» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · без обхватов · 16</b><span data-v="«не больше 3 % в неделю» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 17</b><span data-v="«Понятно» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 18</b><span data-v="«Написать куратору» — вторичная кнопка: отступ сверху 9px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · без обхватов · 19</b><span data-v="«Решение куратора остаётся в силе — отменить его зд» — сноска"></span></div>
@@ -886,12 +886,12 @@
     <div class="spec"><b>Сверка · норма снизилась · только талия · 07</b><span data-v="«Три недели вес и талия держатся на месте. Талия —» — проза"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · только талия · 08</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · только талия · 09</b><span data-v="«2 049» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · только талия · 10</b><span data-v="«−63 ккал» — шрифт 700 12px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · только талия · 10</b><span data-v="«−63 ккал» — шрифт 700 12px/1 Manrope, цвет var(--val-bad)"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · только талия · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · только талия · 12</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · только талия · 13</b><span data-v="«Талия за три недели» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · только талия · 14</b><span data-v="«76,5 → 76,0 см» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сверка · норма снизилась · только талия · 15</b><span data-v="«как договаривались» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · только талия · 14</b><span data-v="«76,5 → 76,0 см» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сверка · норма снизилась · только талия · 15</b><span data-v="«как договаривались» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · только талия · 16</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · только талия · 17</b><span data-v="«Понятно» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · норма снизилась · только талия · 18</b><span data-v="«Написать куратору» — вторичная кнопка: отступ сверху 9px"></span></div>
@@ -907,9 +907,9 @@
     <div class="spec"><b>Сверка · рекомпозиция · 09</b><span data-v="«по замеру от 12 августа» — пилюля: фон var(--bg), цвет var(--ac)"></span></div>
     <div class="spec"><b>Сверка · рекомпозиция · 10</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
     <div class="spec"><b>Сверка · рекомпозиция · 11</b><span data-v="зазор 14px, отступ сверху 10px"></span></div>
-    <div class="spec"><b>Сверка · рекомпозиция · 12</b><span data-v="выравнивание center, зазор 6px, шрифт 600 10.5px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Сверка · рекомпозиция · 12</b><span data-v="выравнивание center, зазор 6px, шрифт 600 10.5px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Сверка · рекомпозиция · 13</b><span data-v="ширина 10px, высота 3px, радиус 2px, фон rgba(var(--ink),.32)"></span></div>
-    <div class="spec"><b>Сверка · рекомпозиция · 14</b><span data-v="выравнивание center, зазор 6px, шрифт 600 10.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Сверка · рекомпозиция · 14</b><span data-v="выравнивание center, зазор 6px, шрифт 600 10.5px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Сверка · рекомпозиция · 15</b><span data-v="ширина 10px, высота 3px, радиус 2px, фон var(--acs)"></span></div>
     <div class="spec"><b>Сверка · рекомпозиция · 16</b><span data-v="«Хорошо» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · рекомпозиция · 17</b><span data-v="«Следующий замер — через неделю: подтвердим, что на» — сноска"></span></div>
@@ -925,9 +925,9 @@
     <div class="spec"><b>Замер · запрос в момент неопределённости · 10</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Замер · запрос в момент неопределённости · 11</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Замер · запрос в момент неопределённости · 12</b><span data-v="«Норма пока» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Замер · запрос в момент неопределённости · 13</b><span data-v="«заморожена» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Замер · запрос в момент неопределённости · 13</b><span data-v="«заморожена» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Замер · запрос в момент неопределённости · 14</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Замер · запрос в момент неопределённости · 15</b><span data-v="«ещё 6 дней» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Замер · запрос в момент неопределённости · 15</b><span data-v="«ещё 6 дней» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Замер · запрос в момент неопределённости · 16</b><span data-v="«Через две недели без замера поправка применится по» — сноска"></span></div>
     <div class="spec"><b>Замер · включение с согласием · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Замер · включение с согласием · 02</b><span data-v="«Замеры тела» — имя экрана"></span></div>
@@ -940,9 +940,9 @@
     <div class="spec"><b>Замер · включение с согласием · 09</b><span data-v="список .cd"></span></div>
     <div class="spec"><b>Замер · включение с согласием · 10</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Замер · включение с согласием · 11</b><span data-v="«Отличить перестройку от застоя» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Замер · включение с согласием · 12</b><span data-v="«да» — шрифт 700 11px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Замер · включение с согласием · 12</b><span data-v="«да» — шрифт 700 11px/1 Manrope, цвет var(--gr)"></span></div>
     <div class="spec"><b>Замер · включение с согласием · 13</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Замер · включение с согласием · 14</b><span data-v="«пока функция включена» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Замер · включение с согласием · 14</b><span data-v="«пока функция включена» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Замер · включение с согласием · 15</b><span data-v="«Выключите — данные замеров удалятся. Без них сверк» — сноска"></span></div>
     <div class="spec"><b>Замер · включение с согласием · 16</b><span data-v="«Включить и дать согласие» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Замер · включение с согласием · 17</b><span data-v="«Обойтись без замеров» — вторичная кнопка: отступ сверху 9px"></span></div>
@@ -958,9 +958,9 @@
     <div class="spec"><b>Перестройка · по косвенным · 10</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Перестройка · по косвенным · 11</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Перестройка · по косвенным · 12</b><span data-v="«Довод» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Перестройка · по косвенным · 13</b><span data-v="«косвенный» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Перестройка · по косвенным · 13</b><span data-v="«косвенный» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Перестройка · по косвенным · 14</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Перестройка · по косвенным · 15</b><span data-v="«один цикл» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Перестройка · по косвенным · 15</b><span data-v="«один цикл» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Перестройка · по косвенным · 16</b><span data-v="«Точнее скажет замер талии — он отличит перестройку» — сноска"></span></div>
     <div class="spec"><b>Перестройка · по косвенным · 17</b><span data-v="«Включить замеры» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Перестройка · по косвенным · 18</b><span data-v="«Не сейчас» — вторичная кнопка: отступ сверху 9px"></span></div>
@@ -973,17 +973,17 @@
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 07</b><span data-v="«Замера не было, силовых в эти недели тоже. Две нед» — проза"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 08</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 09</b><span data-v="«2 049» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Сверка · перестройку проверить не удалось · 10</b><span data-v="«−63 ккал» — шрифт 700 12px/1 Figtree, цвет var(--val-bad)"></span></div>
-    <div class="spec"><b>Сверка · перестройку проверить не удалось · 11</b><span data-v="«предложение — пока не применено» — шрифт 600 11px/1.4 Figtree, цвет var(--ink-2), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Сверка · перестройку проверить не удалось · 10</b><span data-v="«−63 ккал» — шрифт 700 12px/1 Manrope, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Сверка · перестройку проверить не удалось · 11</b><span data-v="«предложение — пока не применено» — шрифт 600 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 6px"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 12</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 13</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 14</b><span data-v="«Замер талии» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Сверка · перестройку проверить не удалось · 15</b><span data-v="«не было» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Сверка · перестройку проверить не удалось · 15</b><span data-v="«не было» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 16</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Сверка · перестройку проверить не удалось · 17</b><span data-v="«две недели истекли» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Сверка · перестройку проверить не удалось · 17</b><span data-v="«две недели истекли» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 18</b><span data-v="«Применить с завтра» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 19</b><span data-v="«Оставить прежнюю» — вторичная кнопка: отступ сверху 9px"></span></div>
-    <div class="spec"><b>Сверка · перестройку проверить не удалось · 20</b><span data-v="«Написать куратору» — высота от 44px, выравнивание center, распределение center, отступ сверху 2px, шрифт 600 12px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Сверка · перестройку проверить не удалось · 20</b><span data-v="«Написать куратору» — высота от 44px, выравнивание center, распределение center, отступ сверху 2px, шрифт 600 12px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Сверка · перестройку проверить не удалось · 21</b><span data-v="«Поправка — про расчёт, а не про старание. Замер в» — сноска"></span></div>
     <div class="spec"><b>Цель · строка поправки · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Цель · строка поправки · 02</b><span data-v="«Итог на сегодня» — имя экрана"></span></div>
@@ -993,20 +993,20 @@
     <div class="spec"><b>Цель · строка поправки · 06</b><span data-v="список .cd"></span></div>
     <div class="spec"><b>Цель · строка поправки · 07</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Цель · строка поправки · 08</b><span data-v="«Базовый обмен» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Цель · строка поправки · 09</b><span data-v="«1 520» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цель · строка поправки · 09</b><span data-v="«1 520» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Цель · строка поправки · 10</b><span data-v="«Поправка на факт» — выравнивание center, зазор 8px, цвет var(--tx)"></span></div>
     <div class="spec"><b>Цель · строка поправки · 11</b><span data-v="«с 26 авг» — пилюля"></span></div>
-    <div class="spec"><b>Цель · строка поправки · 12</b><span data-v="«×0,97» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Цель · строка поправки · 13</b><span data-v="«2 049» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цель · строка поправки · 12</b><span data-v="«×0,97» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Цель · строка поправки · 13</b><span data-v="«2 049» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Цель · строка поправки · 14</b><span data-v="«за три дня» — пилюля: цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Цель · строка поправки · 15</b><span data-v="«+120» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Цель · строка поправки · 15</b><span data-v="«+120» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--gr)"></span></div>
     <div class="spec"><b>Цель · строка поправки · 16</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Цель · строка поправки · 17</b><span data-v="«2 169» — моноцифры: шрифт 800 13px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цель · строка поправки · 17</b><span data-v="«2 169» — моноцифры: шрифт 800 13px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Цель · строка поправки · 18</b><span data-v="«Порядок слоёв не произволен: поправка правит расхо» — сноска: отступ сверху 10px"></span></div>
     <div class="spec"><b>Цель · строка поправки · 19</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
     <div class="spec"><b>Цель · строка поправки · 20</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
-    <div class="spec"><b>Цель · строка поправки · 21</b><span data-v="«Что такое поправка на факт» — шрифт 700 12.5px/1.3 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Цель · строка поправки · 22</b><span data-v="«развернуть» — шрифт 700 13px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Цель · строка поправки · 21</b><span data-v="«Что такое поправка на факт» — шрифт 700 12.5px/1.3 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цель · строка поправки · 22</b><span data-v="«развернуть» — шрифт 700 13px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Цель · строка поправки · 23</b><span data-v="«Раз в неделю мы сверяем расчёт с тем, что показали» — проза"></span></div>
     <div class="spec"><b>Цель · строка поправки · 24</b><span data-v="«Ниже базового обмена норма не опускается ни при ка» — сноска"></span></div>
     <div class="spec"><b>Цель · холодный старт · 01</b><span data-v="шапка"></span></div>
@@ -1016,31 +1016,31 @@
     <div class="spec"><b>Цель · холодный старт · 05</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Цель · холодный старт · 06</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Цель · холодный старт · 07</b><span data-v="«Базовый обмен» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Цель · холодный старт · 08</b><span data-v="«1 520» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Цель · холодный старт · 08</b><span data-v="«1 520» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Цель · холодный старт · 09</b><span data-v="«Поправка на факт» — выравнивание center, зазор 8px, цвет var(--tx)"></span></div>
     <div class="spec"><b>Цель · холодный старт · 10</b><span data-v="«копим данные» — пилюля: цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Цель · холодный старт · 11</b><span data-v="«пока нет» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Цель · холодный старт · 11</b><span data-v="«пока нет» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Цель · холодный старт · 12</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Цель · холодный старт · 13</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
     <div class="spec"><b>Цель · холодный старт · 14</b><span data-v="выравнивание center, зазор 10px"></span></div>
     <div class="spec"><b>Цель · холодный старт · 15</b><span data-v="флекс 1, высота 6px, радиус 999px, фон rgba(var(--ink),.09)"></span></div>
     <div class="spec"><b>Цель · холодный старт · 16</b><span data-v="ширина 57%, высота 6px, радиус 999px, фон var(--acs)"></span></div>
-    <div class="spec"><b>Цель · холодный старт · 17</b><span data-v="«8 дней из 14» — моноцифры: шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Цель · холодный старт · 17</b><span data-v="«8 дней из 14» — моноцифры: шрифт 700 11px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Цель · холодный старт · 18</b><span data-v="«Пока считаем по формуле. Через неделю проверим рас» — проза"></span></div>
     <div class="spec"><b>Куратор · история поправки · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Куратор · история поправки · 02</b><span data-v="«История поправки» — имя экрана"></span></div>
     <div class="spec"><b>Куратор · история поправки · 03</b><span data-v="«Марина К.» — ключ + моноцифры"></span></div>
     <div class="spec"><b>Куратор · история поправки · 04</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Куратор · история поправки · 05</b><span data-v="карточка .grp: отступ сверху 12px"></span></div>
-    <div class="spec"><b>Куратор · история поправки · 06</b><span data-v="распределение space-between, выравнивание baseline, зазор 10px, шрифт 500 10px/1 Figtree, цвет var(--ink-2), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Куратор · история поправки · 06</b><span data-v="распределение space-between, выравнивание baseline, зазор 10px, шрифт 500 10px/1 Manrope, цвет var(--ink-2), отступ сверху 8px"></span></div>
     <div class="spec"><b>Куратор · история поправки · 07</b><span data-v="«пунктир снизу — цель 0,92» — цвет var(--ac)"></span></div>
-    <div class="spec"><b>Куратор · история поправки · 08</b><span data-v="распределение space-between, шрифт 600 10px/1 Figtree, цвет var(--ink-2), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Куратор · история поправки · 08</b><span data-v="распределение space-between, шрифт 600 10px/1 Manrope, цвет var(--ink-2), отступ сверху 6px"></span></div>
     <div class="spec"><b>Куратор · история поправки · 09</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Куратор · история поправки · 10</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Куратор · история поправки · 11</b><span data-v="«26 авг» — цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · история поправки · 12</b><span data-v="выравнивание center, зазор 8px"></span></div>
-    <div class="spec"><b>Куратор · история поправки · 13</b><span data-v="«×0,97» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Куратор · история поправки · 14</b><span data-v="«куратор применил» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Куратор · история поправки · 13</b><span data-v="«×0,97» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · история поправки · 14</b><span data-v="«куратор применил» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Куратор · история поправки · 15</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Куратор · история поправки · 16</b><span data-v="«Видно и то, что система предложила, и то, что чело» — сноска"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 01</b><span data-v="шапка"></span></div>
@@ -1054,16 +1054,16 @@
     <div class="spec"><b>Self · снижение ждёт согласия · 09</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 10</b><span data-v="направление column, зазор 2px"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 11</b><span data-v="«Формула говорит» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Self · снижение ждёт согласия · 12</b><span data-v="«расход по формуле» — шрифт 500 10px/1.3 Figtree, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Self · снижение ждёт согласия · 13</b><span data-v="«2 400» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Self · снижение ждёт согласия · 14</b><span data-v="«2 210» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Self · снижение ждёт согласия · 12</b><span data-v="«расход по формуле» — шрифт 500 10px/1.3 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Self · снижение ждёт согласия · 13</b><span data-v="«2 400» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Self · снижение ждёт согласия · 14</b><span data-v="«2 210» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 15</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 16</b><span data-v="выравнивание center, зазор 8px"></span></div>
-    <div class="spec"><b>Self · снижение ждёт согласия · 17</b><span data-v="«2 049» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Self · снижение ждёт согласия · 18</b><span data-v="«−63» — шрифт 700 11px/1 Figtree, цвет var(--val-bad)"></span></div>
+    <div class="spec"><b>Self · снижение ждёт согласия · 17</b><span data-v="«2 049» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Self · снижение ждёт согласия · 18</b><span data-v="«−63» — шрифт 700 11px/1 Manrope, цвет var(--val-bad)"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 19</b><span data-v="«Предохранители» — ярус"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 20</b><span data-v="список .cd"></span></div>
-    <div class="spec"><b>Self · снижение ждёт согласия · 21</b><span data-v="«не опускаем» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Self · снижение ждёт согласия · 21</b><span data-v="«не опускаем» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 22</b><span data-v="«Применить с завтра» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 23</b><span data-v="зазор 8px, отступ сверху 9px"></span></div>
     <div class="spec"><b>Self · снижение ждёт согласия · 24</b><span data-v="«Оставить прежнюю» — вторичная кнопка: флекс 1"></span></div>
@@ -1076,17 +1076,17 @@
     <div class="spec"><b>Pro · на согласовании · 06</b><span data-v="«Ваша норма сегодня» — ключ"></span></div>
     <div class="spec"><b>Pro · на согласовании · 07</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 10px"></span></div>
     <div class="spec"><b>Pro · на согласовании · 08</b><span data-v="«2 112» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Pro · на согласовании · 09</b><span data-v="«без изменений» — шрифт 600 12px/1 Figtree, цвет var(--ink-3)"></span></div>
+    <div class="spec"><b>Pro · на согласовании · 09</b><span data-v="«без изменений» — шрифт 600 12px/1 Manrope, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Pro · на согласовании · 10</b><span data-v="«Ешьте на это число. Поправку смотрит куратор — до» — проза"></span></div>
     <div class="spec"><b>Pro · на согласовании · 11</b><span data-v="«Что он смотрит» — ярус"></span></div>
     <div class="spec"><b>Pro · на согласовании · 12</b><span data-v="список .cd"></span></div>
     <div class="spec"><b>Pro · на согласовании · 13</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Pro · на согласовании · 14</b><span data-v="направление column, зазор 2px"></span></div>
     <div class="spec"><b>Pro · на согласовании · 15</b><span data-v="«Формула говорит» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Pro · на согласовании · 16</b><span data-v="«расход по формуле» — шрифт 500 10px/1.3 Figtree, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Pro · на согласовании · 17</b><span data-v="«2 400» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Pro · на согласовании · 16</b><span data-v="«расход по формуле» — шрифт 500 10px/1.3 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Pro · на согласовании · 17</b><span data-v="«2 400» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Pro · на согласовании · 18</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Pro · на согласовании · 19</b><span data-v="«развернуть» — шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Pro · на согласовании · 19</b><span data-v="«развернуть» — шрифт 700 12px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Pro · на согласовании · 20</b><span data-v="«Спросить куратора» — вторичная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Pro · на согласовании · 21</b><span data-v="«Что решит куратор — придёт в недельной сверке: там» — сноска"></span></div>
     <div class="spec"><b>Self · отказ принят · 01</b><span data-v="шапка"></span></div>
@@ -1099,10 +1099,10 @@
     <div class="spec"><b>Self · отказ принят · 08</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Self · отказ принят · 09</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Self · отказ принят · 10</b><span data-v="«Норма дня» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Self · отказ принят · 11</b><span data-v="«2 112» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Self · отказ принят · 12</b><span data-v="«в понедельник» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Self · отказ принят · 11</b><span data-v="«2 112» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Self · отказ принят · 12</b><span data-v="«в понедельник» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Self · отказ принят · 13</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Self · отказ принят · 14</b><span data-v="«да» — шрифт 700 11px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Self · отказ принят · 14</b><span data-v="«да» — шрифт 700 11px/1 Manrope, цвет var(--gr)"></span></div>
     <div class="spec"><b>Self · отказ принят · 15</b><span data-v="«Отказ — сигнал, а не ошибка. На Pro его видит кура» — сноска"></span></div>
     <div class="spec"><b>Self · рост применён · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Self · рост применён · 02</b><span data-v="«Норма выросла» — имя экрана"></span></div>
@@ -1112,15 +1112,15 @@
     <div class="spec"><b>Self · рост применён · 06</b><span data-v="«Ваша норма сегодня» — ключ"></span></div>
     <div class="spec"><b>Self · рост применён · 07</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 10px"></span></div>
     <div class="spec"><b>Self · рост применён · 08</b><span data-v="«2 175» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Self · рост применён · 09</b><span data-v="«+63 ккал» — шрифт 700 12px/1 Figtree, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Self · рост применён · 09</b><span data-v="«+63 ккал» — шрифт 700 12px/1 Manrope, цвет var(--gr)"></span></div>
     <div class="spec"><b>Self · рост применён · 10</b><span data-v="«Вы ели больше плана, а вес шёл вниз — значит, трат» — проза"></span></div>
     <div class="spec"><b>Self · рост применён · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Self · рост применён · 12</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Self · рост применён · 13</b><span data-v="«Было» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Self · рост применён · 14</b><span data-v="«2 112» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Self · рост применён · 15</b><span data-v="«×1,03» — моноцифры: шрифт 700 12.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Self · рост применён · 14</b><span data-v="«2 112» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Self · рост применён · 15</b><span data-v="«×1,03» — моноцифры: шрифт 700 12.5px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Self · рост применён · 16</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Self · рост применён · 17</b><span data-v="«на рост не спрашиваем» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Self · рост применён · 17</b><span data-v="«на рост не спрашиваем» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Self · рост применён · 18</b><span data-v="«Вернуть прежнюю норму» — вторичная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Self · рост применён · 19</b><span data-v="«Молча норма не двигается никогда — даже вверх: люб» — сноска"></span></div>
     <div class="spec"><b>Self · третий отказ подряд · 01</b><span data-v="шапка"></span></div>
@@ -1133,12 +1133,12 @@
     <div class="spec"><b>Self · третий отказ подряд · 08</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Self · третий отказ подряд · 09</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Self · третий отказ подряд · 10</b><span data-v="«Норма» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Self · третий отказ подряд · 11</b><span data-v="«2 112 · шесть недель» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Self · третий отказ подряд · 11</b><span data-v="«2 112 · шесть недель» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Self · третий отказ подряд · 12</b><span data-v="строка списка: разделитель none"></span></div>
-    <div class="spec"><b>Self · третий отказ подряд · 13</b><span data-v="«не было» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Self · третий отказ подряд · 13</b><span data-v="«не было» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Self · третий отказ подряд · 14</b><span data-v="«Что можно сделать» — ярус"></span></div>
     <div class="spec"><b>Self · третий отказ подряд · 15</b><span data-v="список .cd"></span></div>
-    <div class="spec"><b>Self · третий отказ подряд · 16</b><span data-v="«2 049» — шрифт 700 12px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Self · третий отказ подряд · 16</b><span data-v="«2 049» — шрифт 700 12px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Self · третий отказ подряд · 17</b><span data-v="«Ни одна из кнопок не обязательна. Плохо не то, что» — сноска"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 01</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 02</b><span data-v="«Норма на неделю» — имя экрана"></span></div>
@@ -1148,13 +1148,13 @@
     <div class="spec"><b>Pro · куратор решил не менять · 06</b><span data-v="«Ваша норма сегодня» — ключ"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 07</b><span data-v="выравнивание baseline, зазор 10px, отступ сверху 10px"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 08</b><span data-v="«2 112» — моноцифры + главное число"></span></div>
-    <div class="spec"><b>Pro · куратор решил не менять · 09</b><span data-v="«без изменений» — шрифт 600 12px/1 Figtree, цвет var(--ink-3)"></span></div>
+    <div class="spec"><b>Pro · куратор решил не менять · 09</b><span data-v="«без изменений» — шрифт 600 12px/1 Manrope, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 10</b><span data-v="«Куратор посмотрел поправку и решил норму не двигат» — проза"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 11</b><span data-v="список .cd: отступ сверху 12px"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 12</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 13</b><span data-v="«Предложение было» — цвет var(--tx)"></span></div>
-    <div class="spec"><b>Pro · куратор решил не менять · 14</b><span data-v="«2 049» — моноцифры: шрифт 600 12.5px/1 Figtree, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Pro · куратор решил не менять · 15</b><span data-v="«оставить 2 112» — шрифт 600 11px/1 Figtree, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Pro · куратор решил не менять · 14</b><span data-v="«2 049» — моноцифры: шрифт 600 12.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Pro · куратор решил не менять · 15</b><span data-v="«оставить 2 112» — шрифт 600 11px/1 Manrope, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 16</b><span data-v="строка списка: разделитель none"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 17</b><span data-v="«Спросить куратора» — вторичная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Pro · куратор решил не менять · 18</b><span data-v="«Предложение не исчезает молча: чем кончилось — все» — сноска"></span></div>
@@ -1197,8 +1197,8 @@
 </div>
 
   <div style="max-width:1080px;margin-top:52px;padding:20px 22px;background:#fffaf1;border-radius:20px;">
-    <div style="font:700 12px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);">Открыто до передачи</div>
-    <div style="font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);margin-top:10px;text-wrap:pretty;">Открытых вопросов у канваса два, и оба названы строками контракта: формулировка Self в каноне оффера (моё предложение там же) и кто правит текст согласия на замеры. Поправка идёт в оба тарифа: на Pro решает куратор, на Self — сам человек. Снижение клиент видит только после применения куратором. Предел заморозки — две недели, отсчёт от первой просьбы о замере. Обещание из справки про рекомпозицию чинится кодом. Правило вилок планера — три формы вместо процентов, живёт в контракте зоны Отчётов и Инсайтов. Дальше по канвасу: контракт строками <span style="font-family:ui-monospace,Menlo,monospace;">data-v</span> на все пороги, включая оба исключения — неполные дни со стороны съеденного и дни цикла с рефидом со стороны веса; потом кадры релизной половины идут в пакет.</div>
+    <div style="font:700 12px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);">Открыто до передачи</div>
+    <div style="font:500 12.5px/1.65 Manrope,sans-serif;color:var(--ink-2);margin-top:10px;text-wrap:pretty;">Открытых вопросов у канваса два, и оба названы строками контракта: формулировка Self в каноне оффера (моё предложение там же) и кто правит текст согласия на замеры. Поправка идёт в оба тарифа: на Pro решает куратор, на Self — сам человек. Снижение клиент видит только после применения куратором. Предел заморозки — две недели, отсчёт от первой просьбы о замере. Обещание из справки про рекомпозицию чинится кодом. Правило вилок планера — три формы вместо процентов, живёт в контракте зоны Отчётов и Инсайтов. Дальше по канвасу: контракт строками <span style="font-family:ui-monospace,Menlo,monospace;">data-v</span> на все пороги, включая оба исключения — неполные дни со стороны съеденного и дни цикла с рефидом со стороны веса; потом кадры релизной половины идут в пакет.</div>
   </div>
 </div>
 

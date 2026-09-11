@@ -10,7 +10,7 @@
 <helmet>
 <meta name="design_doc_mode" content="canvas">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&amp;family=Caprasimo&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;family=Caprasimo&amp;display=swap" rel="stylesheet">
 <link href="v4-canvas.css" rel="stylesheet">
 <script src="./contract-audit.js"></script>
 <style>
@@ -27,57 +27,57 @@
   .spec>b{font:600 11px/1.45 ui-monospace,Menlo,monospace;color:#8a4a20}
   .spec>span[data-v]{font:600 11.5px/1.5 ui-monospace,Menlo,monospace;color:#201e1d;text-wrap:pretty}
   .spec>span[data-v]::before{content:attr(data-v)}
-  .spec>i{grid-column:2;font:500 11px/1.5 Figtree,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
+  .spec>i{grid-column:2;font:500 11px/1.5 Manrope,sans-serif;color:#6b5f4f;font-style:normal;text-wrap:pretty}
   .ctr{background:#efe3cf;border-radius:24px;padding:20px;max-width:1080px;margin:0 0 30px}
   .ctrTag{display:inline-block;font:700 9px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;padding:5px 8px;border-radius:999px;background:#c67139;color:#2b1608}
-  .ctrH{font:700 10px/1 Figtree,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6b5f4f;margin:16px 0 2px}
+  .ctrH{font:700 10px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#6b5f4f;margin:16px 0 2px}
   .banner{display:flex;align-items:flex-start;gap:11px;background:#efe3cf;border-radius:16px;padding:13px 16px;margin:0 0 20px;max-width:980px}
   .banner span:first-child{font:700 9.5px/1 ui-monospace,Menlo,monospace;padding:5px 8px;background:#c67139;color:#2b1608;border-radius:999px;flex:none}
-  .banner span:last-child{font:500 11.5px/1.55 Figtree,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty}
+  .banner span:last-child{font:500 11.5px/1.55 Manrope,sans-serif;color:rgba(0,0,0,.62);text-wrap:pretty}
   .row4{display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap}
   .strip{display:grid;grid-template-columns:320px 375px;gap:0 32px;align-items:start}
   .stripWrap{display:flex;gap:52px;align-items:flex-start;width:max-content}
   .varCol{width:375px}
-  .varH{font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d;padding:2px 0 0}
-  .varH span{display:block;font:500 11px/1.45 Figtree,sans-serif;color:#6b5f4f;margin-top:3px;text-wrap:pretty}
+  .varH{font:700 12.5px/1.35 Manrope,sans-serif;color:#201e1d;padding:2px 0 0}
+  .varH span{display:block;font:500 11px/1.45 Manrope,sans-serif;color:#6b5f4f;margin-top:3px;text-wrap:pretty}
   .sLab.vLab{text-align:left;padding:20px 0 7px}
   .sLab{padding:10px 0 0;text-align:right}
-  .sLab b{display:block;font:700 12.5px/1.35 Figtree,sans-serif;color:#201e1d}
-  .sLab span{display:block;font:500 11px/1.45 Figtree,sans-serif;color:#6b5f4f;margin-top:3px;text-wrap:pretty}
+  .sLab b{display:block;font:700 12.5px/1.35 Manrope,sans-serif;color:#201e1d}
+  .sLab span{display:block;font:500 11px/1.45 Manrope,sans-serif;color:#6b5f4f;margin-top:3px;text-wrap:pretty}
   .sPh{width:375px;background:var(--bg);position:relative}
   .sPh.sTop{border-radius:28px 28px 0 0;box-shadow:0 -1px 2px rgba(var(--shadow),.06)}
   .sPh.sBot{border-radius:0 0 28px 28px;padding-bottom:0;box-shadow:0 14px 40px rgba(var(--shadow),.12)}
   .sPh .sec{margin:0 18px}
 
   .cap{padding:0 18px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-  .capL{font:700 15px/1 Figtree,sans-serif;color:var(--tx)}
-  .capM{font:500 11px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap}
+  .capL{font:700 15px/1 Manrope,sans-serif;color:var(--tx)}
+  .capM{font:500 11px/1 Manrope,sans-serif;color:var(--dim);white-space:nowrap}
   .dcap{margin:11px 18px 0;display:flex;align-items:center;gap:8px}
   .darr{width:34px;height:44px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;color:var(--dim)}
-  .dpil{flex:1;min-height:44px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;gap:6px;font:700 12.5px/1 Figtree,sans-serif;color:var(--tx)}
+  .dpil{flex:1;min-height:44px;border-radius:16px;background:var(--c1);display:flex;align-items:center;justify-content:center;gap:6px;font:700 12.5px/1 Manrope,sans-serif;color:var(--tx)}
   .dpil.past{background:#f6e6dd}
   .pal.dk .dpil.past{background:#2f2820}
   .pal.bl .dpil.past{background:#e4e0f2}
   .pal.bldk .dpil.past{background:#2b2a44}
-  .tod{min-height:26px;padding:0 10px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 10px/1 Figtree,sans-serif;display:inline-flex;align-items:center}
+  .tod{min-height:26px;padding:0 10px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 10px/1 Manrope,sans-serif;display:inline-flex;align-items:center}
 
   .hero{margin:14px 18px 0;background:var(--c2);border-radius:26px;padding:22px 20px 20px}
-  .hk{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
+  .hk{font:600 10.5px/1 Manrope,sans-serif;letter-spacing:.04em;color:var(--dim)}
   .hn{display:flex;align-items:baseline;gap:9px;margin-top:13px}
-  .hn b{font:600 54px/.9 Figtree,sans-serif;letter-spacing:-.045em;color:var(--ac);font-variant-numeric:tabular-nums}
-  .hn i{font:600 12px/1 Figtree,sans-serif;font-style:normal;color:var(--dim)}
+  .hn b{font:600 54px/.9 Manrope,sans-serif;letter-spacing:-.045em;color:var(--ac);font-variant-numeric:tabular-nums}
+  .hn i{font:600 12px/1 Manrope,sans-serif;font-style:normal;color:var(--dim)}
   .hn.over b{color:var(--red)}
   .hn.warn b{color:var(--ac2)}
   .htr i.wrn{background:var(--ac2)}
   .htr{height:6px;border-radius:999px;background:rgba(var(--ink),.1);margin-top:19px;overflow:hidden;display:flex}
   .htr i{display:block;height:6px;border-radius:999px;background:var(--acs)}
   .htr i.ov{background:var(--red)}
-  .hb{display:flex;justify-content:space-between;margin-top:12px;font:600 11px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .hb{display:flex;justify-content:space-between;margin-top:12px;font:600 11px/1 Manrope,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
 
   .sec{margin:0 18px}
   .win{margin-top:8px;background:var(--c1);border-radius:20px;padding:14px 16px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-  .win span:first-child{font:600 12.5px/1.2 Figtree,sans-serif;color:var(--dim)}
-  .win span:last-child{font:600 12.5px/1.2 Figtree,sans-serif;color:var(--dim);text-align:right}
+  .win span:first-child{font:600 12.5px/1.2 Manrope,sans-serif;color:var(--dim)}
+  .win span:last-child{font:600 12.5px/1.2 Manrope,sans-serif;color:var(--dim);text-align:right}
   .win.open span:last-child{color:var(--gr)}
   .win.warn span:last-child{color:var(--red)}
 
@@ -85,27 +85,27 @@
   .meal{padding:14px 16px;border-bottom:1px solid rgba(var(--ink),.07);min-height:44px}
   .meal:last-child{border-bottom:none}
   .mt{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
-  .mt b{font:700 13px/1 Figtree,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
-  .mt s{text-decoration:none;font:700 13px/1 Figtree,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
+  .mt b{font:700 13px/1 Manrope,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
+  .mt s{text-decoration:none;font:700 13px/1 Manrope,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
   .mb{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:5px}
-  .mb span{font:500 11.5px/1.5 Figtree,sans-serif;color:var(--dim);text-wrap:pretty}
+  .mb span{font:500 11.5px/1.5 Manrope,sans-serif;color:var(--dim);text-wrap:pretty}
   .mb .plus,.mb .plusO{text-wrap:nowrap}
   .mb span.plus{color:var(--on-acs)}
   .mb span.plusO{color:var(--ac)}
   .mchev{width:15px;height:15px;flex:none;margin-bottom:1px}
   .mempty span{color:var(--dim);font-style:italic}
-  .plus{min-height:44px;padding:0 12px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
-  .plusO{min-height:44px;padding:0 12px;border-radius:999px;background:transparent;color:var(--ac);box-shadow:inset 0 0 0 2px var(--acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
-  .dryE{padding:18px 16px;font:500 12px/1.45 Figtree,sans-serif;color:var(--dim)}
-  .cta{margin-top:16px;min-height:52px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:700 13px/1 Figtree,sans-serif}
+  .plus{min-height:44px;padding:0 12px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11px/1 Manrope,sans-serif;display:inline-flex;align-items:center;flex:none}
+  .plusO{min-height:44px;padding:0 12px;border-radius:999px;background:transparent;color:var(--ac);box-shadow:inset 0 0 0 2px var(--acs);font:700 11px/1 Manrope,sans-serif;display:inline-flex;align-items:center;flex:none}
+  .dryE{padding:18px 16px;font:500 12px/1.45 Manrope,sans-serif;color:var(--dim)}
+  .cta{margin-top:16px;min-height:52px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:space-between;padding:0 22px;font:700 13px/1 Manrope,sans-serif}
 
   .tot{margin-top:8px;background:var(--c1);border-radius:20px;padding:16px}
-  .totH{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim);margin-bottom:13px}
+  .totH{font:600 10.5px/1 Manrope,sans-serif;letter-spacing:.04em;color:var(--dim);margin-bottom:13px}
   .tr{margin-bottom:13px}
   .tr:last-child{margin-bottom:0}
   .trh{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-  .trh b{font:700 11.5px/1 Figtree,sans-serif;color:var(--tx)}
-  .trh span{font:600 11.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .trh b{font:700 11.5px/1 Manrope,sans-serif;color:var(--tx)}
+  .trh span{font:600 11.5px/1 Manrope,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
   .trh span em{font-style:normal;color:var(--tx);font-weight:700}
   .trh span.bad em{color:var(--red)}
   .trk{height:5px;border-radius:999px;background:rgba(var(--ink),.1);margin-top:7px;display:flex;gap:2px;overflow:hidden;position:relative}
@@ -114,44 +114,44 @@
   .trk i.zOk{background:var(--gr2)}
   .trk i.zUnder,.trk i.zOver{background:var(--warn)}
   .trk i.zLow,.trk i.zHigh{background:var(--red)}
-  .zleg{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap}
+  .zleg{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:600 10.5px/1 Manrope,sans-serif;color:var(--dim);white-space:nowrap}
   .zleg em{font-style:normal;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
 
   .qual{margin-top:10px;display:flex;gap:10px}
   .qc{flex:1;background:var(--c2);border-radius:20px;padding:15px 16px}
   .qc.ok{background:var(--gr-bg)}
-  .qk{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
+  .qk{font:600 10.5px/1 Manrope,sans-serif;letter-spacing:.04em;color:var(--dim)}
   .qv{display:flex;align-items:baseline;gap:4px;margin-top:9px}
-  .qv b{font:600 22px/1 Figtree,sans-serif;color:var(--ac);font-variant-numeric:tabular-nums}
+  .qv b{font:600 22px/1 Manrope,sans-serif;color:var(--ac);font-variant-numeric:tabular-nums}
   .qc.ok .qv b{color:var(--gr)}
-  .qv i{font:500 11px/1 Figtree,sans-serif;font-style:normal;color:var(--dim)}
-  .qh{font:500 10px/1.35 Figtree,sans-serif;color:var(--dim);margin-top:7px}
+  .qv i{font:500 11px/1 Manrope,sans-serif;font-style:normal;color:var(--dim)}
+  .qh{font:500 10px/1.35 Manrope,sans-serif;color:var(--dim);margin-top:7px}
 
   .blk{margin-top:10px;background:var(--c1);border-radius:20px;padding:16px}
   .blkH{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:12px}
-  .blkH b{font:600 10.5px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
-  .blkH span{font:700 10.5px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap}
+  .blkH b{font:600 10.5px/1 Manrope,sans-serif;letter-spacing:.04em;color:var(--dim)}
+  .blkH span{font:700 10.5px/1 Manrope,sans-serif;color:var(--dim);white-space:nowrap}
   .blkH span.open{color:var(--gr)}
   .blkH span.warn{color:var(--red)}
   .wv{width:100%;height:96px;display:block}
   .wvl{display:flex;flex-direction:column;gap:4px;margin-top:10px}
-  .wvl span{font:500 10.5px/1.35 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .wvl span{font:500 10.5px/1.35 Manrope,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
 
   .sp{display:flex;flex-direction:column;gap:10px}
   .spr{display:flex;align-items:center;gap:10px}
-  .spr b{flex:none;width:52px;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .spr b{flex:none;width:52px;font:600 10.5px/1 Manrope,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
   .spb{flex:1;height:8px;border-radius:999px;overflow:hidden;display:flex;background:rgba(var(--ink),.08)}
   .spb i{height:8px}
-  .spr s{text-decoration:none;flex:none;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .spr s{text-decoration:none;flex:none;font:600 10.5px/1 Manrope,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
   .spleg{display:flex;gap:12px;margin-top:12px}
-  .spleg span{display:flex;align-items:center;gap:5px;font:500 10px/1 Figtree,sans-serif;color:var(--dim)}
+  .spleg span{display:flex;align-items:center;gap:5px;font:500 10px/1 Manrope,sans-serif;color:var(--dim)}
   .spleg i{width:8px;height:8px;border-radius:3px;display:block}
 
   .hg{display:flex;gap:10px}
   .hgc{flex:1;background:var(--c2);border-radius:16px;padding:12px 14px}
-  .hgc b{display:block;font:600 10px/1 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim)}
-  .hgc s{text-decoration:none;display:flex;align-items:baseline;gap:3px;margin-top:8px;font:600 20px/1 Figtree,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
-  .hgc s i{font:500 10px/1 Figtree,sans-serif;font-style:normal;color:var(--dim)}
+  .hgc b{display:block;font:600 10px/1 Manrope,sans-serif;letter-spacing:.04em;color:var(--dim)}
+  .hgc s{text-decoration:none;display:flex;align-items:baseline;gap:3px;margin-top:8px;font:600 20px/1 Manrope,sans-serif;color:var(--tx);font-variant-numeric:tabular-nums}
+  .hgc s i{font:500 10px/1 Manrope,sans-serif;font-style:normal;color:var(--dim)}
   .hgs{display:flex;gap:2px;margin-top:9px}
   .hgs i{flex:1;height:4px;border-radius:999px;background:rgba(var(--ink),.12)}
   .hgs i.on{background:var(--acs)}
@@ -159,113 +159,113 @@
 
   .lst{display:flex;flex-direction:column;gap:9px}
   .lrow{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-  .lrow b{font:600 12px/1.35 Figtree,sans-serif;color:var(--tx)}
-  .lrow span{font:500 11px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .lrow b{font:600 12px/1.35 Manrope,sans-serif;color:var(--tx)}
+  .lrow span{font:500 11px/1 Manrope,sans-serif;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
 
-  .suP{min-height:44px;padding:0 11px;border-radius:999px;border:1.5px solid rgba(var(--ink),.16);color:var(--tx);font:700 10.5px/1 Figtree,sans-serif;display:inline-flex;align-items:center;gap:5px;flex:none;white-space:nowrap}
+  .suP{min-height:44px;padding:0 11px;border-radius:999px;border:1.5px solid rgba(var(--ink),.16);color:var(--tx);font:700 10.5px/1 Manrope,sans-serif;display:inline-flex;align-items:center;gap:5px;flex:none;white-space:nowrap}
   .suP.on{background:var(--acs);border-color:var(--on-acs);color:var(--on-acs)}
   .suP.act{border-color:var(--on-acs);color:var(--ac)}
   .blkA{display:flex;align-items:center;gap:9px}
   .suG{display:flex;gap:9px;align-items:flex-start;padding:3px 0}
   .suL{width:126px;flex:none;min-height:44px;padding:0 10px;border-radius:999px;box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.18);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
   .suL:has(i.done){box-shadow:inset 0 0 0 1.5px var(--gr2)}
-  .suL b{display:inline;font:700 9.5px/1.35 Figtree,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
-  .suL i{display:inline;margin-left:5px;font:600 9.5px/1.35 Figtree,sans-serif;font-style:normal;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .suL b{display:inline;font:700 9.5px/1.35 Manrope,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+  .suL i{display:inline;margin-left:5px;font:600 9.5px/1.35 Manrope,sans-serif;font-style:normal;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
   .suL i.done{color:var(--gr)}
   .blkH span em,.suL i em{font-style:normal;font-weight:700;color:var(--tx)}
   .suC{flex:1;display:flex;flex-wrap:wrap;gap:5px}
-  .suCh{flex:0 0 auto;min-height:44px;padding:6px 11px;border-radius:999px;background:var(--c2);color:var(--tx);font:600 11px/1.25 Figtree,sans-serif;display:inline-flex;align-items:center;gap:5px;max-width:100%;overflow-wrap:anywhere}
+  .suCh{flex:0 0 auto;min-height:44px;padding:6px 11px;border-radius:999px;background:var(--c2);color:var(--tx);font:600 11px/1.25 Manrope,sans-serif;display:inline-flex;align-items:center;gap:5px;max-width:100%;overflow-wrap:anywhere}
   .suCh.mo{background:none;box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.18);color:var(--dim);font-weight:700}
   .suCh.gh{background:var(--gr-bg);color:var(--gr);box-shadow:inset 0 0 0 1.5px var(--gr2)}
   .suCh.on{background:var(--gr2);color:var(--on-gr)}
-  .suInv{font:500 11.5px/1.55 Figtree,sans-serif;color:var(--dim);text-wrap:pretty;margin-bottom:13px}
+  .suInv{font:500 11.5px/1.55 Manrope,sans-serif;color:var(--dim);text-wrap:pretty;margin-bottom:13px}
 
 
   .cfg{margin:22px 18px 0;padding-top:18px;border-top:1px solid rgba(var(--ink),.09)}
-  .cfgH{font:600 10.5px/1.45 Figtree,sans-serif;letter-spacing:.04em;color:var(--dim);text-wrap:pretty}
+  .cfgH{font:600 10.5px/1.45 Manrope,sans-serif;letter-spacing:.04em;color:var(--dim);text-wrap:pretty}
   .cfgR{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
-  .cfgC{min-height:44px;padding:0 13px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11px/1 Figtree,sans-serif;display:inline-flex;align-items:center;gap:6px}
+  .cfgC{min-height:44px;padding:0 13px;border-radius:999px;background:var(--acs);color:var(--on-acs);font:700 11px/1 Manrope,sans-serif;display:inline-flex;align-items:center;gap:6px}
   .cfgC.off{background:transparent;color:var(--tx);box-shadow:inset 0 0 0 2px var(--acs)}
   .cfgC svg{flex:none}
 
   .nav{margin-top:auto;padding:11px 18px calc(14px + env(safe-area-inset-bottom));display:flex;justify-content:space-between;background:var(--bg);border-top:1px solid rgba(var(--ink),.07)}
-  .navI{display:flex;flex-direction:column;align-items:center;gap:4px;font:600 9px/1 Figtree,sans-serif;color:var(--dim);position:relative}
+  .navI{display:flex;flex-direction:column;align-items:center;gap:4px;font:600 9px/1 Manrope,sans-serif;color:var(--dim);position:relative}
   .navI.on{color:var(--ac)}
   .fab{position:absolute;right:14px;bottom:78px;display:flex;flex-direction:column;gap:9px;align-items:center;z-index:3}
   .fabS{width:44px;height:44px;border-radius:999px;background:var(--bg);box-shadow:0 2px 8px rgba(var(--shadow),.14);display:flex;align-items:center;justify-content:center}
   .fabB{width:52px;height:52px;border-radius:999px;background:var(--acs);color:var(--on-acs);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(var(--shadow),.18)}
 
   .shH{padding:16px 18px 12px}
-  .shH b{display:block;font:700 15.5px/1.3 Figtree,sans-serif;color:var(--tx)}
-  .shH span{display:block;font:500 11.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:4px}
+  .shH b{display:block;font:700 15.5px/1.3 Manrope,sans-serif;color:var(--tx)}
+  .shH span{display:block;font:500 11.5px/1.45 Manrope,sans-serif;color:var(--dim);margin-top:4px}
   .shR{margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px}
-  .shR b{flex:1;font:600 12.5px/1.3 Figtree,sans-serif;color:var(--tx)}
-  .shR span{font:600 12.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
-  .shCap{margin:18px 18px 2px;font:700 9.5px/1 Figtree,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+  .shR b{flex:1;font:600 12.5px/1.3 Manrope,sans-serif;color:var(--tx)}
+  .shR span{font:600 12.5px/1 Manrope,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .shCap{margin:18px 18px 2px;font:700 9.5px/1 Manrope,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
   .shA{margin:0 18px;padding:12px 0;display:flex;align-items:center;gap:11px;min-height:44px;border-top:1px solid var(--trk)}
   .shA:first-of-type{border-top:none}
-  .shA b{flex:1;font:600 12px/1.3 Figtree,sans-serif;color:var(--tx)}
+  .shA b{flex:1;font:600 12px/1.3 Manrope,sans-serif;color:var(--tx)}
   .shA .ico{flex:none;width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--ac)}
-  .shDel{margin:14px 18px 0;padding-top:12px;border-top:1px solid var(--trk);min-height:44px;display:flex;align-items:center;justify-content:center;gap:7px;font:600 12px/1 Figtree,sans-serif;color:var(--red)}
+  .shDel{margin:14px 18px 0;padding-top:12px;border-top:1px solid var(--trk);min-height:44px;display:flex;align-items:center;justify-content:center;gap:7px;font:600 12px/1 Manrope,sans-serif;color:var(--red)}
 
   .cur{margin:12px 18px 0;min-height:44px;padding:11px 13px;border-radius:16px;background:var(--tint);display:flex;align-items:center;gap:10px}
-  .cur b{flex:1;font:600 12.5px/1.35 Figtree,sans-serif;color:var(--tx)}
-  .cur b span{display:block;font:500 11px/1.4 Figtree,sans-serif;color:var(--dim);margin-top:3px}
-  .roB{margin:12px 18px 0;padding:12px 14px;border-radius:16px;background:var(--c2);font:600 12px/1.45 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
-  .roB span{display:block;font:500 11px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:4px}
+  .cur b{flex:1;font:600 12.5px/1.35 Manrope,sans-serif;color:var(--tx)}
+  .cur b span{display:block;font:500 11px/1.4 Manrope,sans-serif;color:var(--dim);margin-top:3px}
+  .roB{margin:12px 18px 0;padding:12px 14px;border-radius:16px;background:var(--c2);font:600 12px/1.45 Manrope,sans-serif;color:var(--tx);text-wrap:pretty}
+  .roB span{display:block;font:500 11px/1.45 Manrope,sans-serif;color:var(--dim);margin-top:4px}
   .offc{margin:auto 18px;padding:20px 18px;border-radius:22px;background:var(--c1);text-align:center}
-  .offc b{display:block;font:700 13.5px/1.35 Figtree,sans-serif;color:var(--tx)}
-  .offc span{display:block;font:500 11.5px/1.5 Figtree,sans-serif;color:var(--dim);margin-top:6px;text-wrap:pretty}
+  .offc b{display:block;font:700 13.5px/1.35 Manrope,sans-serif;color:var(--tx)}
+  .offc span{display:block;font:500 11.5px/1.5 Manrope,sans-serif;color:var(--dim);margin-top:6px;text-wrap:pretty}
   /* --- карточка воды: дубль из water-add.v4.dc.html, править там --- */
   .wCardB{--cardBg:#f7efe2;--w:#7d98a6;--wDeep:#4e6d7a;--wTxt:#fffaf1;--inkTxt:#201e1d;--dimTxt:#6b5f4f;--trk:rgba(0,0,0,.1);--sparkOff:#5e808f;--wLow:var(--red);position:relative;background:var(--cardBg);border-radius:18px;padding:12px 14px 13px}
   .pal.dk .wCardB{--cardBg:#23201b;--w:#8fb3c2;--wDeep:#3f6c7e;--wTxt:#f2ede6;--inkTxt:#f2ede6;--dimTxt:rgba(242,237,230,.62);--trk:rgba(242,237,230,.14);--sparkOff:#7ba3b4;--wLow:var(--red)}
   .pal.bl .wCardB{--cardBg:#eef3f9;--w:#3d7f9e;--wDeep:#2c5f76;--wTxt:#ffffff;--inkTxt:#101826;--dimTxt:#5a6474;--trk:rgba(16,24,38,.1);--sparkOff:#4a86a4;--wLow:var(--red)}
   .pal.bldk .wCardB{--cardBg:#182a3a;--w:#7fb6d0;--wDeep:#35657d;--wTxt:#eef3f9;--inkTxt:#eef3f9;--dimTxt:rgba(238,243,248,.62);--trk:rgba(238,243,248,.14);--sparkOff:#6ba3bf;--wLow:var(--red)}
-  .wCardB .k{font:600 9.5px/1 Figtree,sans-serif;letter-spacing:.03em;color:var(--dimTxt)}
+  .wCardB .k{font:600 9.5px/1 Manrope,sans-serif;letter-spacing:.03em;color:var(--dimTxt)}
   .bTop{display:flex;align-items:center;justify-content:space-between}
-  .bSub{height:26px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font:700 10.5px/1 Figtree,sans-serif;color:var(--inkTxt);box-shadow:inset 0 0 0 2px var(--wDeep)}
+  .bSub{height:26px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font:700 10.5px/1 Manrope,sans-serif;color:var(--inkTxt);box-shadow:inset 0 0 0 2px var(--wDeep)}
   .bRing{display:flex;align-items:center;gap:13px;margin-top:8px}
   .bRingTxt{display:flex;flex-direction:column;gap:3px}
-  .bRingTxt b{font:600 22px/1 Figtree,sans-serif;letter-spacing:-.03em;color:var(--inkTxt)}
-  .bRingTxt span{font:600 9.5px/1.4 Figtree,sans-serif;color:var(--dimTxt)}
+  .bRingTxt b{font:600 22px/1 Manrope,sans-serif;letter-spacing:-.03em;color:var(--inkTxt)}
+  .bRingTxt span{font:600 9.5px/1.4 Manrope,sans-serif;color:var(--dimTxt)}
   .bChips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
-  .bChip{height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--wTxt);background:var(--wDeep)}
+  .bChip{height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font:700 11px/1 Manrope,sans-serif;color:var(--wTxt);background:var(--wDeep)}
   .bMini{display:flex;align-items:center;gap:12px;margin-top:11px}
   .bRingTxt .wNorm{display:inline}
   .bCurve{margin-top:13px;color:var(--wDeep)}
   .bCurve svg{width:100%;height:56px;display:block}
-  .bDays{display:flex;justify-content:space-between;padding:0 3px;margin-top:1px;font:600 8px/1 Figtree,sans-serif;color:var(--dimTxt)}
+  .bDays{display:flex;justify-content:space-between;padding:0 3px;margin-top:1px;font:600 8px/1 Manrope,sans-serif;color:var(--dimTxt)}
   .bDays{align-items:center}
   .bDone{width:12px;height:12px;border-radius:999px;background:var(--gr2);color:#fff;display:inline-flex;align-items:center;justify-content:center}
   .wNorm{color:var(--inkTxt);border-bottom:1px dashed var(--dimTxt);padding-bottom:1px}
   .bDays span:last-child:not(.bDone){color:var(--inkTxt)}
-  .bHint{margin-top:10px;padding:10px 11px;border-radius:12px;background:rgba(var(--ink),.05);font:500 10.5px/1.5 Figtree,sans-serif;color:var(--inkTxt);text-wrap:pretty}
+  .bHint{margin-top:10px;padding:10px 11px;border-radius:12px;background:rgba(var(--ink),.05);font:500 10.5px/1.5 Manrope,sans-serif;color:var(--inkTxt);text-wrap:pretty}
 
   .tmr{background:var(--gr-bg);border-radius:20px;padding:18px 16px;text-align:center}
-  .tmrN{font:600 34px/1 Figtree,sans-serif;letter-spacing:-.03em;color:var(--gr);font-variant-numeric:tabular-nums}
-  .tmrS{font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:9px;text-wrap:pretty}
+  .tmrN{font:600 34px/1 Manrope,sans-serif;letter-spacing:-.03em;color:var(--gr);font-variant-numeric:tabular-nums}
+  .tmrS{font:500 10.5px/1.45 Manrope,sans-serif;color:var(--dim);margin-top:9px;text-wrap:pretty}
   .trc{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid rgba(var(--ink),.07)}
   .trc:last-child{border-bottom:none}
-  .trc b{font:600 11.5px/1.35 Figtree,sans-serif;color:var(--tx)}
-  .trc span{font:600 11.5px/1 Figtree,sans-serif;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
-  .unc{margin-top:11px;font:500 11px/1.5 Figtree,sans-serif;color:var(--dim);text-wrap:pretty}
-  .more{margin-top:12px;min-height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:6px;font:600 11.5px/1 Figtree,sans-serif;color:var(--ac);box-shadow:inset 0 0 0 1.5px var(--acs)}
-  .prop{font:700 14px/1.35 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .trc b{font:600 11.5px/1.35 Manrope,sans-serif;color:var(--tx)}
+  .trc span{font:600 11.5px/1 Manrope,sans-serif;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .unc{margin-top:11px;font:500 11px/1.5 Manrope,sans-serif;color:var(--dim);text-wrap:pretty}
+  .more{margin-top:12px;min-height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:6px;font:600 11.5px/1 Manrope,sans-serif;color:var(--ac);box-shadow:inset 0 0 0 1.5px var(--acs)}
+  .prop{font:700 14px/1.35 Manrope,sans-serif;color:var(--tx);text-wrap:pretty}
   .propC{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
-  .pchipS{min-height:28px;padding:0 11px;border-radius:999px;background:var(--c2);color:var(--tx);font:700 10.5px/1 Figtree,sans-serif;display:inline-flex;align-items:center}
-  .why{margin-top:11px;font:500 11px/1.5 Figtree,sans-serif;color:var(--dim);text-wrap:pretty}
-  .grade{min-height:26px;padding:0 10px;border-radius:999px;background:var(--gr-bg);color:var(--gr);font:700 10.5px/1 Figtree,sans-serif;display:inline-flex;align-items:center;flex:none}
-  .repl{margin-top:9px;padding:11px 12px;border-radius:14px;background:var(--c2);font:500 11px/1.5 Figtree,sans-serif;color:var(--tx);text-wrap:pretty}
+  .pchipS{min-height:28px;padding:0 11px;border-radius:999px;background:var(--c2);color:var(--tx);font:700 10.5px/1 Manrope,sans-serif;display:inline-flex;align-items:center}
+  .why{margin-top:11px;font:500 11px/1.5 Manrope,sans-serif;color:var(--dim);text-wrap:pretty}
+  .grade{min-height:26px;padding:0 10px;border-radius:999px;background:var(--gr-bg);color:var(--gr);font:700 10.5px/1 Manrope,sans-serif;display:inline-flex;align-items:center;flex:none}
+  .repl{margin-top:9px;padding:11px 12px;border-radius:14px;background:var(--c2);font:500 11px/1.5 Manrope,sans-serif;color:var(--tx);text-wrap:pretty}
   .repl b{font-weight:700}
   .tl{display:flex;flex-direction:column;gap:7px}
   .tlr{display:flex;align-items:center;gap:9px}
-  .tlr b{flex:none;width:36px;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .tlr b{flex:none;width:36px;font:600 10.5px/1 Manrope,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
   .tlb{flex:1;height:8px;border-radius:999px;background:rgba(var(--ink),.08);position:relative;overflow:hidden}
   .tlb i{position:absolute;top:0;height:8px;border-radius:999px;background:var(--acs);display:block}
   .tlb i.ovl{background:var(--red)}
-  .tlr s{text-decoration:none;flex:none;width:36px;text-align:right;font:600 10.5px/1 Figtree,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
-  .mnum{width:26px;height:26px;flex:none;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--dim)}
-  .streak{margin-top:8px;padding:12px 14px;border-radius:16px;background:var(--gr-bg);font:600 11.5px/1.4 Figtree,sans-serif;color:var(--gr)}
+  .tlr s{text-decoration:none;flex:none;width:36px;text-align:right;font:600 10.5px/1 Manrope,sans-serif;color:var(--dim);font-variant-numeric:tabular-nums}
+  .mnum{width:26px;height:26px;flex:none;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;font:700 11px/1 Manrope,sans-serif;color:var(--dim)}
+  .streak{margin-top:8px;padding:12px 14px;border-radius:16px;background:var(--gr-bg);font:600 11.5px/1.4 Manrope,sans-serif;color:var(--gr)}
 </style>
 </helmet>
 
@@ -279,8 +279,8 @@
 <div class="ctr" data-contract="nutrition-tab">
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
     <span class="ctrTag">КОНТРАКТ</span>
-    <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Figtree,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
-    <span style="font:500 9.5px/1.4 Figtree,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
+    <button type="button" onClick="{{ copySpec }}" style="font:600 10px/1 Manrope,sans-serif;padding:6px 11px;border:none;border-radius:999px;background:rgba(0,0,0,.08);color:#201e1d;cursor:pointer;" style-hover="background:rgba(0,0,0,.14)">скопировать контракт</button>
+    <span style="font:500 9.5px/1.4 Manrope,sans-serif;color:var(--ink-2);">ключ и значение через таб — вставляется в тикет или тест</span>
   </div>
 
   <div class="spec"><b>тач-цели</b><span data-v="ПРИВЕДЕНО 5 сентября, видимым размером: чипы позиций (30 → 44 — строка «состав чипа»), стрелки перелистывания дня .darr (34 → 44), пилюли режима курса .suP (28 → 44), ряд «Весь расчёт» .more (40 → 44), малый ФАБ .fabS (40 → 44), чипы карточки воды .bChip (30 → 44, дубль из water-add). Не цели и намеренно ниже 44: ярлык «Сегодня» 26 внутри ряда даты 44 (нажимается ряд, не ярлык), подпись подписки .bSub 26, галочка дня .bDone 12, ярлыки нутриентов .pchipS 28, оценка приёма .grade 26, номер приёма .mnum 26, полосы .htr 6 / .trk 5 / .spb 8 / .tlb 8"></span><i>норма 44 pt держится видимым размером: невидимый расширитель проходит замер и проваливается в руке — палец не видит ::after</i></div>
@@ -627,9 +627,9 @@
     <div class="spec"><b>Питание · лист правки приёма · 05</b><span data-v="ширина 67%"></span></div>
     <div class="spec"><b>Питание · лист правки приёма · 06</b><span data-v="позиция relative, отступы 0 18px 8px, радиус 16px, обрез hidden"></span></div>
     <div class="spec"><b>Питание · лист правки приёма · 07</b><span data-v="позиция absolute, вписан 0, распределение flex-end"></span></div>
-    <div class="spec"><b>Питание · лист правки приёма · 08</b><span data-v="«Копировать» — выравнивание center, поля 0 12px, фон var(--sage), шрифт 600 10.5px/1 Figtree, цвет var(--sageTx)"></span></div>
-    <div class="spec"><b>Питание · лист правки приёма · 09</b><span data-v="«Переместить» — выравнивание center, поля 0 12px, фон var(--tint), шрифт 600 10.5px/1 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Питание · лист правки приёма · 10</b><span data-v="«Удалить» — выравнивание center, поля 0 12px, фон var(--red), шрифт 600 10.5px/1 Figtree, цвет #fffaf1"></span></div>
+    <div class="spec"><b>Питание · лист правки приёма · 08</b><span data-v="«Копировать» — выравнивание center, поля 0 12px, фон var(--sage), шрифт 600 10.5px/1 Manrope, цвет var(--sageTx)"></span></div>
+    <div class="spec"><b>Питание · лист правки приёма · 09</b><span data-v="«Переместить» — выравнивание center, поля 0 12px, фон var(--tint), шрифт 600 10.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · лист правки приёма · 10</b><span data-v="«Удалить» — выравнивание center, поля 0 12px, фон var(--red), шрифт 600 10.5px/1 Manrope, цвет #fffaf1"></span></div>
     <div class="spec"><b>Питание · лист правки приёма · 11</b><span data-v="отступы 0, сдвиг translateX(-246px), позиция relative"></span></div>
     <div class="spec"><b>Питание · лист правки приёма · 12</b><span data-v="отступы 8px 18px 0"></span></div>
     <div class="spec"><b>Питание · лист правки приёма · 13</b><span data-v="высота 16px"></span></div>
@@ -674,8 +674,8 @@
     <div class="spec"><b>Питание · блок · Волна сейчас · 03</b><span data-v="«Питание» — имя экрана"></span></div>
     <div class="spec"><b>Питание · блок · Волна сейчас · 04</b><span data-v="отступ сверху 14px"></span></div>
     <div class="spec"><b>Питание · блок · Волна сейчас · 05</b><span data-v="выравнивание baseline, зазор 6px"></span></div>
-    <div class="spec"><b>Питание · блок · Волна сейчас · 06</b><span data-v="«1:35» — шрифт 600 24px/1 Figtree, трекинг -.02em, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Питание · блок · Волна сейчас · 07</b><span data-v="«до спада · закончится ≈18:10» — шрифт 500 11.5px/1 Figtree, цвет var(--dim)"></span></div>
+    <div class="spec"><b>Питание · блок · Волна сейчас · 06</b><span data-v="«1:35» — шрифт 600 24px/1 Manrope, трекинг -.02em, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · блок · Волна сейчас · 07</b><span data-v="«до спада · закончится ≈18:10» — шрифт 500 11.5px/1 Manrope, цвет var(--dim)"></span></div>
     <div class="spec"><b>Питание · блок · Волна сейчас · 08</b><span data-v="ширина 62%"></span></div>
     <div class="spec"><b>Питание · блок · Волна сейчас · 09</b><span data-v="ширина 10%"></span></div>
     <div class="spec"><b>Питание · блок · Волна сейчас · 10</b><span data-v="ширина 30%"></span></div>
@@ -684,8 +684,8 @@
     <div class="spec"><b>Питание · блок · Оценка и риск · 03</b><span data-v="«Питание» — имя экрана"></span></div>
     <div class="spec"><b>Питание · блок · Оценка и риск · 04</b><span data-v="отступ сверху 14px"></span></div>
     <div class="spec"><b>Питание · блок · Оценка и риск · 05</b><span data-v="выравнивание baseline, зазор 8px"></span></div>
-    <div class="spec"><b>Питание · блок · Оценка и риск · 06</b><span data-v="«день собран» — шрифт 600 20px/1 Figtree, цвет var(--gr)"></span></div>
-    <div class="spec"><b>Питание · блок · Оценка и риск · 07</b><span data-v="«риск низкий» — шрифт 500 11.5px/1 Figtree, цвет var(--dim)"></span></div>
+    <div class="spec"><b>Питание · блок · Оценка и риск · 06</b><span data-v="«день собран» — шрифт 600 20px/1 Manrope, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Питание · блок · Оценка и риск · 07</b><span data-v="«риск низкий» — шрифт 500 11.5px/1 Manrope, цвет var(--dim)"></span></div>
     <div class="spec"><b>Питание · блок · Оценка и риск · 08</b><span data-v="зазор 4px, отступ сверху 13px"></span></div>
     <div class="spec"><b>Питание · блок · Оценка и риск · 09</b><span data-v="флекс 1, высота 6px, радиус 999px, фон var(--gr)"></span></div>
     <div class="spec"><b>Питание · блок · Оценка и риск · 10</b><span data-v="флекс 1, высота 6px, радиус 999px, фон rgba(var(--ink),.1)"></span></div>
@@ -710,9 +710,9 @@
     <div class="spec"><b>Питание · советы приёма · 04</b><span data-v="прозрачность .5"></span></div>
     <div class="spec"><b>Питание · советы приёма · 05</b><span data-v="ширина 67%"></span></div>
     <div class="spec"><b>Питание · советы приёма · 06</b><span data-v="отступы 0 18px 8px, фон var(--c1), радиус 16px, поля 13px 15px"></span></div>
-    <div class="spec"><b>Питание · советы приёма · 07</b><span data-v="«Добавь овощей — не хватает клетчатки» — шрифт 600 12px/1.4 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Питание · советы приёма · 08</b><span data-v="«в приёме 2 г из ~9 нужных к этому времени» — шрифт 500 10.5px/1.45 Figtree, цвет var(--dim), отступ сверху 3px"></span></div>
-    <div class="spec"><b>Питание · советы приёма · 09</b><span data-v="выравнивание center, распределение space-between, отступ сверху 10px, разделитель сверху 1px solid rgba(0,0,0,.07), шрифт 600 11.5px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Питание · советы приёма · 07</b><span data-v="«Добавь овощей — не хватает клетчатки» — шрифт 600 12px/1.4 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · советы приёма · 08</b><span data-v="«в приёме 2 г из ~9 нужных к этому времени» — шрифт 500 10.5px/1.45 Manrope, цвет var(--dim), отступ сверху 3px"></span></div>
+    <div class="spec"><b>Питание · советы приёма · 09</b><span data-v="выравнивание center, распределение space-between, отступ сверху 10px, разделитель сверху 1px solid rgba(0,0,0,.07), шрифт 600 11.5px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Питание · советы приёма · 10</b><span data-v="высота 16px"></span></div>
     <div class="spec"><b>Питание · копирование частью · 01</b><span data-v="высота 640px"></span></div>
     <div class="spec"><b>Питание · копирование частью · 02</b><span data-v="шапка"></span></div>
@@ -732,25 +732,25 @@
     <div class="spec"><b>Питание · перенос приёма · 07</b><span data-v="позиция absolute, отступы 0 12px 12px, фон var(--md), радиус 26px, поля 12px 16px 16px"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 08</b><span data-v="ширина 36px, высота 4px, радиус 999px, фон rgba(var(--ink),.14), отступы 0 auto 12px"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 09</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 10</b><span data-v="«Перенести приём» — шрифт 700 16px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 10</b><span data-v="«Перенести приём» — шрифт 700 16px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 11</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -10px -10px -10px 0, выравнивание center, распределение center, цвет var(--ink-3)"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 12</b><span data-v="«Переносим: Обед (14:30), 3 продукта» — шрифт 500 11.5px/1.4 Figtree, цвет var(--ink-2), отступ сверху 4px"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 13</b><span data-v="«Куда перенести» — шрифт 700 10px/1 Figtree, трекинг .11em, регистр uppercase, цвет var(--ink-2), отступы 14px 0 8px"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 12</b><span data-v="«Переносим: Обед (14:30), 3 продукта» — шрифт 500 11.5px/1.4 Manrope, цвет var(--ink-2), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 13</b><span data-v="«Куда перенести» — шрифт 700 10px/1 Manrope, трекинг .11em, регистр uppercase, цвет var(--ink-2), отступы 14px 0 8px"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 14</b><span data-v="выравнивание center, зазор 9px, высота от 48px, поля 0 13px, радиус 16px, фон var(--c1)"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 15</b><span data-v="флекс none, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 16</b><span data-v="«Чт, 21 авг» — флекс 1, шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 16</b><span data-v="«Чт, 21 авг» — флекс 1, шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 17</b><span data-v="флекс none, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 18</b><span data-v="выравнивание center, зазор 11px, высота от 48px, поля 0 13px, радиус 16px, фон var(--c1), отступ снизу 7px"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 19</b><span data-v="флекс none, ширина 20px, высота 20px, радиус 999px, рамка inset 0 0 0 1.75px rgba(var(--ink),.2)"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 20</b><span data-v="флекс 1, ширина от 0"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 21</b><span data-v="«Завтрак · 08:15» — шрифт 600 12.5px/1.25 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 21</b><span data-v="«Завтрак · 08:15» — шрифт 600 12.5px/1.25 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 22</b><span data-v="выравнивание center, зазор 11px, высота от 48px, поля 0 13px, радиус 16px, фон var(--c2), отступ снизу 7px"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 23</b><span data-v="флекс none, ширина 20px, высота 20px, радиус 999px, фон var(--acs), рамка inset 0 0 0 5px var(--bg),inset 0 0 0 6.5px var(--acs)"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 24</b><span data-v="«Обед · 13:40» — шрифт 700 12.5px/1.25 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 25</b><span data-v="«Приём уйдёт из сегодняшнего дня целиком — итоги об» — шрифт 500 11px/1.5 Figtree, цвет var(--ink-2), отступ сверху 11px"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 24</b><span data-v="«Обед · 13:40» — шрифт 700 12.5px/1.25 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 25</b><span data-v="«Приём уйдёт из сегодняшнего дня целиком — итоги об» — шрифт 500 11px/1.5 Manrope, цвет var(--ink-2), отступ сверху 11px"></span></div>
     <div class="spec"><b>Питание · перенос приёма · 26</b><span data-v="зазор 8px, отступ сверху 16px"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 27</b><span data-v="«Отмена» — флекс 1, высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), шрифт 700 12.5px/1 Figtree, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Питание · перенос приёма · 28</b><span data-v="«Перенести» — флекс 1, высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), шрифт 700 12.5px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 27</b><span data-v="«Отмена» — флекс 1, высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), шрифт 700 12.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Питание · перенос приёма · 28</b><span data-v="«Перенести» — флекс 1, высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), шрифт 700 12.5px/1 Manrope, цвет var(--on-acs)"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 01</b><span data-v="высота 520px, позиция relative"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 02</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 03</b><span data-v="«Питание» — имя экрана"></span></div>
@@ -760,26 +760,26 @@
     <div class="spec"><b>Питание · копирование продукта · 07</b><span data-v="позиция absolute, отступы 0 12px 12px, фон var(--md), радиус 26px, поля 12px 16px 16px"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 08</b><span data-v="ширина 36px, высота 4px, радиус 999px, фон rgba(var(--ink),.14), отступы 0 auto 12px"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 09</b><span data-v="выравнивание center, распределение space-between, зазор 10px"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 10</b><span data-v="«Скопировать продукт» — шрифт 700 16px/1.2 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 10</b><span data-v="«Скопировать продукт» — шрифт 700 16px/1.2 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 11</b><span data-v="флекс none, ширина 44px, высота 44px, отступы -10px -10px -10px 0, выравнивание center, распределение center, цвет var(--ink-3)"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 12</b><span data-v="«Копируем: Рис бурый, 120 г» — шрифт 500 11.5px/1.4 Figtree, цвет var(--ink-2), отступ сверху 4px"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 13</b><span data-v="«Куда скопировать» — шрифт 700 10px/1 Figtree, трекинг .11em, регистр uppercase, цвет var(--ink-2), отступы 14px 0 8px"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 12</b><span data-v="«Копируем: Рис бурый, 120 г» — шрифт 500 11.5px/1.4 Manrope, цвет var(--ink-2), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 13</b><span data-v="«Куда скопировать» — шрифт 700 10px/1 Manrope, трекинг .11em, регистр uppercase, цвет var(--ink-2), отступы 14px 0 8px"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 14</b><span data-v="выравнивание center, зазор 9px, высота от 48px, поля 0 13px, радиус 16px, фон var(--c1)"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 15</b><span data-v="флекс none, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 16</b><span data-v="«Чт, 21 авг» — флекс 1, шрифт 600 12.5px/1 Figtree, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 16</b><span data-v="«Чт, 21 авг» — флекс 1, шрифт 600 12.5px/1 Manrope, цвет var(--tx)"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 17</b><span data-v="флекс none, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 18</b><span data-v="выравнивание center, зазор 11px, высота от 48px, поля 0 13px, радиус 16px, фон var(--c1), отступ снизу 7px"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 19</b><span data-v="флекс none, ширина 20px, высота 20px, радиус 999px, рамка inset 0 0 0 1.75px rgba(var(--ink),.2)"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 20</b><span data-v="флекс 1, ширина от 0"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 21</b><span data-v="«Завтрак · 08:15» — шрифт 600 12.5px/1.25 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 22</b><span data-v="«2 продукта · ~412 ккал» — моноцифры: шрифт 500 10.5px/1 Figtree, цвет var(--ink-2), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 21</b><span data-v="«Завтрак · 08:15» — шрифт 600 12.5px/1.25 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 22</b><span data-v="«2 продукта · ~412 ккал» — моноцифры: шрифт 500 10.5px/1 Manrope, цвет var(--ink-2), отступ сверху 4px"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 23</b><span data-v="выравнивание center, зазор 11px, высота от 48px, поля 0 13px, радиус 16px, фон var(--c2), отступ снизу 7px"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 24</b><span data-v="флекс none, ширина 20px, высота 20px, радиус 999px, фон var(--acs), рамка inset 0 0 0 5px var(--bg),inset 0 0 0 6.5px var(--acs)"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 25</b><span data-v="«Обед · 13:40» — шрифт 700 12.5px/1.25 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 26</b><span data-v="«Строка появится копией — в исходном приёме она ост» — шрифт 500 11px/1.5 Figtree, цвет var(--ink-2), отступ сверху 11px"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 25</b><span data-v="«Обед · 13:40» — шрифт 700 12.5px/1.25 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 26</b><span data-v="«Строка появится копией — в исходном приёме она ост» — шрифт 500 11px/1.5 Manrope, цвет var(--ink-2), отступ сверху 11px"></span></div>
     <div class="spec"><b>Питание · копирование продукта · 27</b><span data-v="зазор 8px, отступ сверху 16px"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 28</b><span data-v="«Отмена» — флекс 1, высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), шрифт 700 12.5px/1 Figtree, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Питание · копирование продукта · 29</b><span data-v="«Скопировать» — флекс 1, высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), шрифт 700 12.5px/1 Figtree, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 28</b><span data-v="«Отмена» — флекс 1, высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--bg), рамка inset 0 0 0 1.5px rgba(var(--ink),.16), шрифт 700 12.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Питание · копирование продукта · 29</b><span data-v="«Скопировать» — флекс 1, высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), шрифт 700 12.5px/1 Manrope, цвет var(--on-acs)"></span></div>
     <div class="spec"><b>Питание · отмена удаления · 01</b><span data-v="высота 420px, позиция relative"></span></div>
     <div class="spec"><b>Питание · отмена удаления · 02</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Питание · отмена удаления · 03</b><span data-v="«Питание» — имя экрана"></span></div>
@@ -787,9 +787,9 @@
     <div class="spec"><b>Питание · отмена удаления · 05</b><span data-v="отступы 0 0 8px"></span></div>
     <div class="spec"><b>Питание · отмена удаления · 06</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 11px 13px, выравнивание center, зазор 11px, рамка inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22)"></span></div>
     <div class="spec"><b>Питание · отмена удаления · 07</b><span data-v="флекс none, позиция relative, ширина 30px, высота 30px"></span></div>
-    <div class="spec"><b>Питание · отмена удаления · 08</b><span data-v="«3» — моноцифры: позиция absolute, вписан 0, выравнивание center, распределение center, шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Питание · отмена удаления · 09</b><span data-v="«Перекус удалён» — флекс 1, шрифт 600 12px/1.35 Figtree, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Питание · отмена удаления · 10</b><span data-v="«Отменить» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Figtree, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Питание · отмена удаления · 08</b><span data-v="«3» — моноцифры: позиция absolute, вписан 0, выравнивание center, распределение center, шрифт 700 11px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Питание · отмена удаления · 09</b><span data-v="«Перекус удалён» — флекс 1, шрифт 600 12px/1.35 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Питание · отмена удаления · 10</b><span data-v="«Отменить» — флекс none, высота от 34px, выравнивание center, поля 0 13px, радиус 999px, фон rgba(var(--ink),.07), шрифт 700 11px/1 Manrope, цвет var(--ac)"></span></div>
     <div class="spec"><b>Питание · куда переместить · 01</b><span data-v="высота 640px"></span></div>
     <div class="spec"><b>Питание · куда переместить · 02</b><span data-v="шапка"></span></div>
     <div class="spec"><b>Питание · куда переместить · 03</b><span data-v="«Питание» — имя экрана"></span></div>
@@ -1067,7 +1067,7 @@
 </div>
 
 <div class="h">Вкладка целиком · день с приёмами</div>
-<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Экран собран одной непрерывной полосой — это одна прокрутка, а не набор состояний; каждый блок адресуется своей меткой. Порядок здесь каноничный: он же перечислен строкой контракта «порядок блоков». Четыре чип-зависимых блока (клетчатка, рефид, оценка и риск, волна сейчас) в полосу не нарисованы — их вид в отдельных кадрах ниже; отсутствие блока здесь не значит, что он выключен. Числа во всех блоках одного дня: бюджет 1 931, съедено 1 289, осталось 642 — те же, что на плитке «Калории» Главной. В полосе каждый блок нарисован ровно одним видом; другие состояния итогов дня и добавок стоят колонкой справа и в порядок вкладки не входят.</p>
+<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Manrope,sans-serif;color:var(--ink-2);text-wrap:pretty;">Экран собран одной непрерывной полосой — это одна прокрутка, а не набор состояний; каждый блок адресуется своей меткой. Порядок здесь каноничный: он же перечислен строкой контракта «порядок блоков». Четыре чип-зависимых блока (клетчатка, рефид, оценка и риск, волна сейчас) в полосу не нарисованы — их вид в отдельных кадрах ниже; отсутствие блока здесь не значит, что он выключен. Числа во всех блоках одного дня: бюджет 1 931, съедено 1 289, осталось 642 — те же, что на плитке «Калории» Главной. В полосе каждый блок нарисован ровно одним видом; другие состояния итогов дня и добавок стоят колонкой справа и в порядок вкладки не входят.</p>
 
 <div class="pal" data-mir="m1">
   <div class="stripWrap">
@@ -1519,7 +1519,7 @@
             <div class="shR"><b>Время</b><span>13:05</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
             <div class="shR"><b>Курица, грудка</b><span>180 г</span></div>
             <div style="position:relative;margin:0 18px 8px;border-radius:16px;overflow:hidden;">
-              <div style="position:absolute;inset:0;display:flex;justify-content:flex-end;"><span style="display:flex;align-items:center;padding:0 12px;background:var(--sage);font:600 10.5px/1 Figtree,sans-serif;color:var(--sageTx)">Копировать</span><span style="display:flex;align-items:center;padding:0 12px;background:var(--tint);font:600 10.5px/1 Figtree,sans-serif;color:var(--tx)">Переместить</span><span style="display:flex;align-items:center;padding:0 12px;background:var(--red);font:600 10.5px/1 Figtree,sans-serif;color:#fffaf1">Удалить</span></div>
+              <div style="position:absolute;inset:0;display:flex;justify-content:flex-end;"><span style="display:flex;align-items:center;padding:0 12px;background:var(--sage);font:600 10.5px/1 Manrope,sans-serif;color:var(--sageTx)">Копировать</span><span style="display:flex;align-items:center;padding:0 12px;background:var(--tint);font:600 10.5px/1 Manrope,sans-serif;color:var(--tx)">Переместить</span><span style="display:flex;align-items:center;padding:0 12px;background:var(--red);font:600 10.5px/1 Manrope,sans-serif;color:#fffaf1">Удалить</span></div>
               <div class="shR" style="margin:0;transform:translateX(-246px);position:relative;"><b>Рис бурый</b><span>120 г</span></div>
             </div>
             <div class="shR"><b>Салат овощной</b><span>150 г</span></div>
@@ -1669,8 +1669,8 @@
         <div class="sec" style="margin-top:14px;"><div class="blk">
           <div class="blkH"><b>Волна сейчас</b><span class="warn">нахлёст 1:20</span></div>
           <div style="display:flex;align-items:baseline;gap:6px;">
-            <b style="font:600 24px/1 Figtree,sans-serif;letter-spacing:-.02em;color:var(--tx);">1:35</b>
-            <span style="font:500 11.5px/1 Figtree,sans-serif;color:var(--dim);">до спада · закончится ≈18:10</span>
+            <b style="font:600 24px/1 Manrope,sans-serif;letter-spacing:-.02em;color:var(--tx);">1:35</b>
+            <span style="font:500 11.5px/1 Manrope,sans-serif;color:var(--dim);">до спада · закончится ≈18:10</span>
           </div>
           <div class="tl" style="margin-top:14px;">
             <div class="tlr"><b>13:05</b><span class="tlb"><i style="left:0;width:62%"></i><i class="ovl" style="left:52%;width:10%"></i></span><s>18:10</s></div>
@@ -1688,8 +1688,8 @@
         <div class="sec" style="margin-top:14px;"><div class="blk">
           <div class="blkH"><b>Оценка и риск</b><span>сегодня</span></div>
           <div style="display:flex;align-items:baseline;gap:8px;">
-            <b style="font:600 20px/1 Figtree,sans-serif;color:var(--gr);">день собран</b>
-            <span style="font:500 11.5px/1 Figtree,sans-serif;color:var(--dim);">риск низкий</span>
+            <b style="font:600 20px/1 Manrope,sans-serif;color:var(--gr);">день собран</b>
+            <span style="font:500 11.5px/1 Manrope,sans-serif;color:var(--dim);">риск низкий</span>
           </div>
           <div style="display:flex;gap:4px;margin-top:13px;">
             <span style="flex:1;height:6px;border-radius:999px;background:var(--gr);"></span>
@@ -1757,17 +1757,17 @@
             <div class="shH"><b>Обед · 13:05</b><span>562 ккал · Б 42 · Ж 18 · У 54</span></div>
             <div class="shR"><b>Советы · 3</b><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M18 15l-6-6-6 6"/></svg></div>
             <div style="margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;">
-              <b style="display:block;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Добавь овощей — не хватает клетчатки</b>
-              <span style="display:block;font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:3px;">в приёме 2 г из ~9 нужных к этому времени</span>
+              <b style="display:block;font:600 12px/1.4 Manrope,sans-serif;color:var(--tx);">Добавь овощей — не хватает клетчатки</b>
+              <span style="display:block;font:500 10.5px/1.45 Manrope,sans-serif;color:var(--dim);margin-top:3px;">в приёме 2 г из ~9 нужных к этому времени</span>
             </div>
             <div style="margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;">
-              <b style="display:block;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Сироп даёт треть сахара дня</b>
-              <span style="display:block;font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:3px;">20 г сиропа — 14 г простых углеводов</span>
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.07);font:600 11.5px/1 Figtree,sans-serif;color:var(--ac);"><span>Заменить → корица, ~2 ккал</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
+              <b style="display:block;font:600 12px/1.4 Manrope,sans-serif;color:var(--tx);">Сироп даёт треть сахара дня</b>
+              <span style="display:block;font:500 10.5px/1.45 Manrope,sans-serif;color:var(--dim);margin-top:3px;">20 г сиропа — 14 г простых углеводов</span>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid rgba(0,0,0,.07);font:600 11.5px/1 Manrope,sans-serif;color:var(--ac);"><span>Заменить → корица, ~2 ккал</span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round" style="color:var(--dimIco)"><path d="M9 6l6 6-6 6"/></svg></div>
             </div>
             <div style="margin:0 18px 8px;background:var(--c1);border-radius:16px;padding:13px 15px;">
-              <b style="display:block;font:600 12px/1.4 Figtree,sans-serif;color:var(--tx);">Белка достаточно — фиксируй порцию</b>
-              <span style="display:block;font:500 10.5px/1.45 Figtree,sans-serif;color:var(--dim);margin-top:3px;">42 г — это норма приёма, добавка не нужна</span>
+              <b style="display:block;font:600 12px/1.4 Manrope,sans-serif;color:var(--tx);">Белка достаточно — фиксируй порцию</b>
+              <span style="display:block;font:500 10.5px/1.45 Manrope,sans-serif;color:var(--dim);margin-top:3px;">42 г — это норма приёма, добавка не нужна</span>
             </div>
             <div style="height:16px"></div>
           </div>
@@ -1798,7 +1798,7 @@
       </div>
     </div>
 
-     <div class="lab"><b>Перенос и копирование — отдельным листом</b><span>перенос приёма код уже собрал листом v4; копирование продукта на старом каркасе — сводится к этому же виду</span></div><div style="display:flex;gap:30px;align-items:flex-start;"><div><div class="lab"><b>Перенос приёма</b><span>приём уходит целиком</span></div><div class="ph" style="height:520px;position:relative;" data-demo="stop" data-screen-label="Питание · перенос приёма" data-vid="вид · лист переноса приёма"><div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 2 приёма</span></div><div class="sec" style="margin-top:14px;"><div class="shR" style="margin:0 0 8px;"><b>Завтрак · 08:30</b><span>412 ккал</span></div><div class="shR" style="margin:0 0 8px;"><b>Обед · 14:30</b><span>562 ккал</span></div></div><span style="position:absolute;inset:0;background:rgba(var(--shadow),.34);"></span><div style="position:absolute;left:0;right:0;bottom:0;margin:0 12px 12px;background:var(--md);border-radius:26px;padding:12px 16px 16px;"><span style="display:block;width:36px;height:4px;border-radius:999px;background:rgba(var(--ink),.14);margin:0 auto 12px;"></span><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:700 16px/1.2 Figtree,sans-serif;color:var(--tx);">Перенести приём</span><span style="flex:none;width:44px;height:44px;margin:-10px -10px -10px 0;display:flex;align-items:center;justify-content:center;color:var(--ink-3);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div><div style="font:500 11.5px/1.4 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">Переносим: Обед (14:30), 3 продукта</div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 8px;">Куда перенести</div><div style="display:flex;align-items:center;gap:9px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);"><span style="flex:none;color:var(--ac);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span><span style="flex:1;font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Чт, 21 авг</span><span style="flex:none;color:var(--ink-3);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 8px;">В какой приём</div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 1.75px rgba(var(--ink),.2);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 12.5px/1.25 Figtree,sans-serif;color:var(--tx);">Завтрак · 08:15</span></span></div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c2);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;background:var(--acs);box-shadow:inset 0 0 0 5px var(--bg),inset 0 0 0 6.5px var(--acs);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:700 12.5px/1.25 Figtree,sans-serif;color:var(--tx);">Обед · 13:40</span></span></div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 1.75px rgba(var(--ink),.2);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 12.5px/1.25 Figtree,sans-serif;color:var(--tx);">+ Создать новый приём</span></span></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:11px;text-wrap:pretty;">Приём уйдёт из сегодняшнего дня целиком — итоги обоих дней пересчитаются.</div><div style="display:flex;gap:8px;margin-top:16px;"><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);font:700 12.5px/1 Figtree,sans-serif;color:var(--ink-2);">Отмена</span><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Перенести</span></div></div></div></div><div><div class="lab"><b>Копирование продукта</b><span>строка уходит копией, источник остаётся</span></div><div class="ph" style="height:520px;position:relative;" data-demo="stop" data-screen-label="Питание · копирование продукта" data-vid="вид · лист переноса приёма"><div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 2 приёма</span></div><div class="sec" style="margin-top:14px;"><div class="shR" style="margin:0 0 8px;"><b>Завтрак · 08:30</b><span>412 ккал</span></div><div class="shR" style="margin:0 0 8px;"><b>Обед · 14:30</b><span>562 ккал</span></div></div><span style="position:absolute;inset:0;background:rgba(var(--shadow),.34);"></span><div style="position:absolute;left:0;right:0;bottom:0;margin:0 12px 12px;background:var(--md);border-radius:26px;padding:12px 16px 16px;"><span style="display:block;width:36px;height:4px;border-radius:999px;background:rgba(var(--ink),.14);margin:0 auto 12px;"></span><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:700 16px/1.2 Figtree,sans-serif;color:var(--tx);">Скопировать продукт</span><span style="flex:none;width:44px;height:44px;margin:-10px -10px -10px 0;display:flex;align-items:center;justify-content:center;color:var(--ink-3);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div><div style="font:500 11.5px/1.4 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">Копируем: Рис бурый, 120 г</div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 8px;">Куда скопировать</div><div style="display:flex;align-items:center;gap:9px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);"><span style="flex:none;color:var(--ac);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span><span style="flex:1;font:600 12.5px/1 Figtree,sans-serif;color:var(--tx);">Чт, 21 авг</span><span style="flex:none;color:var(--ink-3);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div style="font:700 10px/1 Figtree,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 8px;">В какой приём</div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 1.75px rgba(var(--ink),.2);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 12.5px/1.25 Figtree,sans-serif;color:var(--tx);">Завтрак · 08:15</span><span class="n" style="display:block;font:500 10.5px/1 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;">2 продукта · ~412 ккал</span></span></div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c2);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;background:var(--acs);box-shadow:inset 0 0 0 5px var(--bg),inset 0 0 0 6.5px var(--acs);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:700 12.5px/1.25 Figtree,sans-serif;color:var(--tx);">Обед · 13:40</span><span class="n" style="display:block;font:500 10.5px/1 Figtree,sans-serif;color:var(--ink-2);margin-top:4px;">3 продукта · ~562 ккал</span></span></div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 1.75px rgba(var(--ink),.2);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 12.5px/1.25 Figtree,sans-serif;color:var(--tx);">+ Создать новый приём</span></span></div><div style="font:500 11px/1.5 Figtree,sans-serif;color:var(--ink-2);margin-top:11px;text-wrap:pretty;">Строка появится копией — в исходном приёме она остаётся.</div><div style="display:flex;gap:8px;margin-top:16px;"><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);font:700 12.5px/1 Figtree,sans-serif;color:var(--ink-2);">Отмена</span><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--acs);font:700 12.5px/1 Figtree,sans-serif;color:var(--on-acs);">Скопировать</span></div></div></div></div></div><div class="lab"><b>Отмена удаления</b><span>вид бара — undo-bar.v4.dc.html: кольцо-таймер 5 с, единственное действие «Отменить». Здесь показано только его место на вкладке</span></div>
+     <div class="lab"><b>Перенос и копирование — отдельным листом</b><span>перенос приёма код уже собрал листом v4; копирование продукта на старом каркасе — сводится к этому же виду</span></div><div style="display:flex;gap:30px;align-items:flex-start;"><div><div class="lab"><b>Перенос приёма</b><span>приём уходит целиком</span></div><div class="ph" style="height:520px;position:relative;" data-demo="stop" data-screen-label="Питание · перенос приёма" data-vid="вид · лист переноса приёма"><div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 2 приёма</span></div><div class="sec" style="margin-top:14px;"><div class="shR" style="margin:0 0 8px;"><b>Завтрак · 08:30</b><span>412 ккал</span></div><div class="shR" style="margin:0 0 8px;"><b>Обед · 14:30</b><span>562 ккал</span></div></div><span style="position:absolute;inset:0;background:rgba(var(--shadow),.34);"></span><div style="position:absolute;left:0;right:0;bottom:0;margin:0 12px 12px;background:var(--md);border-radius:26px;padding:12px 16px 16px;"><span style="display:block;width:36px;height:4px;border-radius:999px;background:rgba(var(--ink),.14);margin:0 auto 12px;"></span><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:700 16px/1.2 Manrope,sans-serif;color:var(--tx);">Перенести приём</span><span style="flex:none;width:44px;height:44px;margin:-10px -10px -10px 0;display:flex;align-items:center;justify-content:center;color:var(--ink-3);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div><div style="font:500 11.5px/1.4 Manrope,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">Переносим: Обед (14:30), 3 продукта</div><div style="font:700 10px/1 Manrope,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 8px;">Куда перенести</div><div style="display:flex;align-items:center;gap:9px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);"><span style="flex:none;color:var(--ac);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span><span style="flex:1;font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">Чт, 21 авг</span><span style="flex:none;color:var(--ink-3);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div style="font:700 10px/1 Manrope,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 8px;">В какой приём</div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 1.75px rgba(var(--ink),.2);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 12.5px/1.25 Manrope,sans-serif;color:var(--tx);">Завтрак · 08:15</span></span></div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c2);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;background:var(--acs);box-shadow:inset 0 0 0 5px var(--bg),inset 0 0 0 6.5px var(--acs);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:700 12.5px/1.25 Manrope,sans-serif;color:var(--tx);">Обед · 13:40</span></span></div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 1.75px rgba(var(--ink),.2);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 12.5px/1.25 Manrope,sans-serif;color:var(--tx);">+ Создать новый приём</span></span></div><div style="font:500 11px/1.5 Manrope,sans-serif;color:var(--ink-2);margin-top:11px;text-wrap:pretty;">Приём уйдёт из сегодняшнего дня целиком — итоги обоих дней пересчитаются.</div><div style="display:flex;gap:8px;margin-top:16px;"><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);font:700 12.5px/1 Manrope,sans-serif;color:var(--ink-2);">Отмена</span><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--acs);font:700 12.5px/1 Manrope,sans-serif;color:var(--on-acs);">Перенести</span></div></div></div></div><div><div class="lab"><b>Копирование продукта</b><span>строка уходит копией, источник остаётся</span></div><div class="ph" style="height:520px;position:relative;" data-demo="stop" data-screen-label="Питание · копирование продукта" data-vid="вид · лист переноса приёма"><div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 2 приёма</span></div><div class="sec" style="margin-top:14px;"><div class="shR" style="margin:0 0 8px;"><b>Завтрак · 08:30</b><span>412 ккал</span></div><div class="shR" style="margin:0 0 8px;"><b>Обед · 14:30</b><span>562 ккал</span></div></div><span style="position:absolute;inset:0;background:rgba(var(--shadow),.34);"></span><div style="position:absolute;left:0;right:0;bottom:0;margin:0 12px 12px;background:var(--md);border-radius:26px;padding:12px 16px 16px;"><span style="display:block;width:36px;height:4px;border-radius:999px;background:rgba(var(--ink),.14);margin:0 auto 12px;"></span><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;"><span style="font:700 16px/1.2 Manrope,sans-serif;color:var(--tx);">Скопировать продукт</span><span style="flex:none;width:44px;height:44px;margin:-10px -10px -10px 0;display:flex;align-items:center;justify-content:center;color:var(--ink-3);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div><div style="font:500 11.5px/1.4 Manrope,sans-serif;color:var(--ink-2);margin-top:4px;text-wrap:pretty;">Копируем: Рис бурый, 120 г</div><div style="font:700 10px/1 Manrope,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 8px;">Куда скопировать</div><div style="display:flex;align-items:center;gap:9px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);"><span style="flex:none;color:var(--ac);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span><span style="flex:1;font:600 12.5px/1 Manrope,sans-serif;color:var(--tx);">Чт, 21 авг</span><span style="flex:none;color:var(--ink-3);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div><div style="font:700 10px/1 Manrope,sans-serif;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-2);margin:14px 0 8px;">В какой приём</div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 1.75px rgba(var(--ink),.2);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 12.5px/1.25 Manrope,sans-serif;color:var(--tx);">Завтрак · 08:15</span><span class="n" style="display:block;font:500 10.5px/1 Manrope,sans-serif;color:var(--ink-2);margin-top:4px;">2 продукта · ~412 ккал</span></span></div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c2);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;background:var(--acs);box-shadow:inset 0 0 0 5px var(--bg),inset 0 0 0 6.5px var(--acs);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:700 12.5px/1.25 Manrope,sans-serif;color:var(--tx);">Обед · 13:40</span><span class="n" style="display:block;font:500 10.5px/1 Manrope,sans-serif;color:var(--ink-2);margin-top:4px;">3 продукта · ~562 ккал</span></span></div><div style="display:flex;align-items:center;gap:11px;min-height:48px;padding:0 13px;border-radius:16px;background:var(--c1);margin-bottom:7px;"><span style="flex:none;width:20px;height:20px;border-radius:999px;box-shadow:inset 0 0 0 1.75px rgba(var(--ink),.2);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 12.5px/1.25 Manrope,sans-serif;color:var(--tx);">+ Создать новый приём</span></span></div><div style="font:500 11px/1.5 Manrope,sans-serif;color:var(--ink-2);margin-top:11px;text-wrap:pretty;">Строка появится копией — в исходном приёме она остаётся.</div><div style="display:flex;gap:8px;margin-top:16px;"><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--bg);box-shadow:inset 0 0 0 1.5px rgba(var(--ink),.16);font:700 12.5px/1 Manrope,sans-serif;color:var(--ink-2);">Отмена</span><span style="flex:1;min-height:48px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:var(--acs);font:700 12.5px/1 Manrope,sans-serif;color:var(--on-acs);">Скопировать</span></div></div></div></div></div><div class="lab"><b>Отмена удаления</b><span>вид бара — undo-bar.v4.dc.html: кольцо-таймер 5 с, единственное действие «Отменить». Здесь показано только его место на вкладке</span></div>
       <div class="ph" style="height:420px;position:relative;" data-demo="stop" data-screen-label="Питание · отмена удаления">
         <div class="top"><span class="ttl">Питание</span><span class="capM">ср, 20 авг · 2 приёма</span></div>
         <div class="sec" style="margin-top:14px;">
@@ -1808,9 +1808,9 @@
         <div style="position:absolute;left:12px;right:12px;bottom:12px;background:var(--c1);border-radius:22px;padding:11px 13px;display:flex;align-items:center;gap:11px;box-shadow:inset 0 0 0 1px rgba(var(--ink),.12),0 10px 28px rgba(var(--shadow),.22);">
           <span style="flex:none;position:relative;width:30px;height:30px;">
             <svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-opacity=".22" stroke-width="2.5"/><circle cx="15" cy="15" r="12.5" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="49 78.5" transform="rotate(-90 15 15)"/></svg>
-            <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Figtree,sans-serif;color:var(--ac);">3</span></span>
-          <span style="flex:1;font:600 12px/1.35 Figtree,sans-serif;color:var(--tx);">Перекус удалён</span>
-          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Figtree,sans-serif;color:var(--ac);">Отменить</span>
+            <span class="n" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 11px/1 Manrope,sans-serif;color:var(--ac);">3</span></span>
+          <span style="flex:1;font:600 12px/1.35 Manrope,sans-serif;color:var(--tx);">Перекус удалён</span>
+          <span style="flex:none;min-height:34px;display:flex;align-items:center;padding:0 13px;border-radius:999px;background:rgba(var(--ink),.07);font:700 11px/1 Manrope,sans-serif;color:var(--ac);">Отменить</span>
         </div>
       </div>
     
@@ -1890,7 +1890,7 @@
 <div data-mirdst="m1"></div>
 
 <div class="h">Из каноничной версии · то же, но премиальнее</div>
-<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Figtree,sans-serif;color:var(--ink-2);text-wrap:pretty;">Десять идей старой вкладки, которые работали, перерисованы под язык v4. Правка везде одна: блок говорит одну вещь и заканчивается действием, а подробности живут за касанием. Старые кадры остались в скриншотах — сравнивать с ними, а не с прозой.</p>
+<p style="margin:0 0 16px;max-width:960px;font:500 12.5px/1.65 Manrope,sans-serif;color:var(--ink-2);text-wrap:pretty;">Десять идей старой вкладки, которые работали, перерисованы под язык v4. Правка везде одна: блок говорит одну вещь и заканчивается действием, а подробности живут за касанием. Старые кадры остались в скриншотах — сравнивать с ними, а не с прозой.</p>
 
 <div class="pal" data-mir="m2">
   <div class="row4">
@@ -1977,7 +1977,7 @@
     </div>
 
     <div>
-      <div class="lab"><b>7 · Приёмы за день полосами</b><span style="display:block;font:500 10px/1.4 Figtree,sans-serif;color:#6b5f4f;margin-top:2px;">пункт 6 (вода) не пропал — переехал в полосу, блок «Вода»</span><span>видно длительность и нахлёст, кривые в протоколе</span></div>
+      <div class="lab"><b>7 · Приёмы за день полосами</b><span style="display:block;font:500 10px/1.4 Manrope,sans-serif;color:#6b5f4f;margin-top:2px;">пункт 6 (вода) не пропал — переехал в полосу, блок «Вода»</span><span>видно длительность и нахлёст, кривые в протоколе</span></div>
       <div class="ph" style="height:600px;" data-demo="stop" data-screen-label="Питание · приёмы полосами" data-vid="вид · блок «Приёмы за день»">
         <div class="sec" style="margin-top:18px;">
           <div class="blk">
