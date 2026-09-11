@@ -932,7 +932,11 @@
 
     function onPointerMove(e) {
       if (!dragRef.current.active) return;
-      setInsertBefore(insertBeforeFromPointer(e.clientY));
+      const before = insertBeforeFromPointer(e.clientY);
+      // Место вставки живёт и в ref: отпускание читает его оттуда, а не из
+      // состояния, — иначе перенос мышью заканчивался там же, где начался.
+      dragRef.current.before = before;
+      setInsertBefore(before);
     }
 
     function onPointerUp() {
@@ -942,6 +946,10 @@
 
     function startDrag(blockIdx, e) {
       if (e.button !== 0) return;
+      // Контракт «перестановка — стрелками и за ручку»: пальцем тащить строку
+      // внутри скролла нельзя — список едет вместе с ней. Касание оставляем
+      // прокрутке, для пальца есть стрелки; ручка — только мышь и перо.
+      if (e.pointerType === 'touch') return;
       e.preventDefault();
       dragRef.current = { from: blockIdx, before: blockIdx, active: true };
       setDragFrom(blockIdx);
@@ -984,7 +992,7 @@
             className: 'sb-ex-num'
               + (isDropTarget ? ' is-accent' : '')
               + (meta.isGroup && !isDropTarget ? ' is-group-num' : '')
-          }, String(bi + 1)),
+          }, String(options.number || (bi + 1))),
           h('div', { className: 'sb-cat-title' },
             h('b', null, meta.title),
             subtitle && h('span', { className: isDropTarget ? 'is-accent' : '' }, subtitle)
@@ -1007,18 +1015,29 @@
       );
     }
 
-    const rows = [];
+    // Пока строку несут, номера идут по будущему порядку: переносимая
+    // карточка стоит на месте вставки (и в конце списка тоже — кадр Ж1
+    // рисует её с подписью «переносится сюда», а не голую полосу).
+    const display = [];
     blocks.forEach(function (block, bi) {
       if (dragFrom !== null && insertBefore === bi) {
-        rows.push(h('div', { key: 'ins-' + bi, className: 'sb-order-insert', 'aria-hidden': true }));
-        rows.push(renderRow(blocks[dragFrom], bi, { isPreview: true, key: 'preview-' + bi }));
+        display.push({ block: blocks[dragFrom], bi: bi, isPreview: true, key: 'preview-' + bi });
       }
       if (dragFrom === bi) return;
-      rows.push(renderRow(block, bi));
+      display.push({ block: block, bi: bi, isPreview: false });
     });
     if (dragFrom !== null && insertBefore === blocks.length) {
-      rows.push(h('div', { key: 'ins-end', className: 'sb-order-insert', 'aria-hidden': true }));
+      display.push({ block: blocks[dragFrom], bi: blocks.length - 1, isPreview: true, key: 'preview-end' });
     }
+    const rows = [];
+    display.forEach(function (entry, di) {
+      if (entry.isPreview) {
+        rows.push(h('div', { key: 'ins-' + entry.key, className: 'sb-order-insert', 'aria-hidden': true }));
+        rows.push(renderRow(entry.block, entry.bi, { isPreview: true, key: entry.key, number: di + 1 }));
+        return;
+      }
+      rows.push(renderRow(entry.block, entry.bi, { number: di + 1 }));
+    });
 
     return h('div', { className: 'sb-root sb-screen sb-order-screen' },
       h('div', { className: 'sb-head' },
