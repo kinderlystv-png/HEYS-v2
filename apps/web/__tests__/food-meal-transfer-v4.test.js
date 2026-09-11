@@ -523,7 +523,10 @@ describe('food-meal · копирование и перенос v4', () => {
   });
 
   it('фиксирует точную геометрию общего листа из food-meal canvas', () => {
-    expect(CSS).toMatch(/\.meal-transfer-v4__sheet\s*{[^}]*width:\s*min\(100%, 375px\)[^}]*height:\s*min\(706px/s);
+    // Ширина кадра 375; высота по содержимому с потолком 706 — решение
+    // дизайнера 3 сентября «лист обнимает содержимое» для всего общего листа.
+    expect(CSS).toMatch(/\.meal-transfer-v4__sheet\s*{[^}]*width:\s*min\(100%, 375px\)[^}]*height:\s*auto[^}]*max-height:\s*min\(706px, 100%\)/s);
+    expect(CSS).not.toMatch(/\.meal-transfer-v4__sheet--move\s*{/);
     expect(CSS).toMatch(/\.meal-transfer-v4__sheet\s*{[^}]*font-family:\s*Manrope, sans-serif[^}]*-webkit-font-smoothing:\s*antialiased/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__tier-row\s*{[^}]*align-items:\s*baseline[^}]*gap:\s*10px[^}]*min-height:\s*11px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__product-main\s*{[^}]*gap:\s*10px/s);
