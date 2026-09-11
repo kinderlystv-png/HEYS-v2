@@ -1906,10 +1906,13 @@
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
+/* Зазоры между блоками задают их собственные отступы сверху — 12, 10, 12 и 11,
+   как в кадре. Общий gap колонки складывался с ними, и каждый зазор выходил
+   вдвое больше: лист рос на 30 px против кадра. */
 .ma-followup-step {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
 }
 
 .ma-followup-note {

@@ -54,6 +54,18 @@ describe('резервный вопрос после еды', () => {
     expect(rule('.ma-followup-note-text')).toContain('font-size: 11.5px');
   });
 
+  it('зазоры между блоками — отступы блоков из кадра, без общего gap колонки', () => {
+    // Кадр: заметка сверху 12, календарь 10, ответы 12, подпись 11. Общий gap
+    // колонки складывался с ними, и лист выходил на 30 px выше кадра.
+    expect(FRAME).toContain('padding:12px 13px;margin-top:12px;');
+    expect(FRAME).toContain('padding:14px;margin-top:10px;');
+    expect(rule('.ma-followup-step')).toContain('gap: 0');
+    expect(rule('.ma-followup-note')).toContain('margin-top: 12px');
+    expect(rule('.ma-followup-answers')).toContain('margin-top: 12px');
+    expect(rule('.ma-followup-footnote')).toContain('margin-top: 11px');
+    expect(rule('.ma-habit-cal-shell')).toContain('margin-top: 10px');
+  });
+
   it('три ответа стоят в ряд пилюлями 44, а не стопкой на всю ширину', () => {
     // Кадр: три пилюли flex:1, min-height 44, радиус 999, зазор 6.
     expect(FRAME).toContain('display:flex;gap:6px;margin-top:12px;');
