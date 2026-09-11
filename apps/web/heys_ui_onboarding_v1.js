@@ -39,102 +39,68 @@
     }
   };
 
-  // Шаги тура с персонализацией
+  // Четыре шага обзора — first-run.v4, строка «четыре шага и их порядок»:
+  // от того, что человек видит, к тому, за чем вернётся. Цель шага ищется по
+  // живому экрану; если её нет (виджет убран с Главной) — шаг выпадает, и
+  // счёт в кикере пересчитывается (строка «цель не найдена»). Демо-чисел нет:
+  // обзор идёт по настоящему экрану (строка «своих чисел, а не демонстрационных»).
   const TOUR_STEPS = [
     {
-      id: 'step_hero',
-      targetId: 'tour-hero-stats',
-      title: 'Главные цифры',
-      // text генерируется динамически с именем пользователя
-      getText: (name) => name
-        ? `${name}, здесь ваш статус на сегодня. "Съедено" и "Осталось" помогут держать баланс.`
-        : 'Здесь ваш статус на сегодня. "Съедено" и "Осталось" помогут держать баланс.',
-      position: 'bottom',
-      arrow: 'top',
-      demoData: { eaten: 1450, goal: 2000, remaining: 550, ratio: 0.72 }
+      id: 'step_numbers',
+      title: 'Ваши цифры на сегодня',
+      text: 'Съедено и осталось — два числа, по которым видно, как идёт день. Пока пусто: заполнится с первой записью.',
+      // Верхний ряд виджетов Главной: плитки с той же вершиной, что у первой.
+      getTarget: () => {
+        const grid = document.querySelector('.widgets-grid');
+        if (!grid) return document.getElementById('tour-hero-stats');
+        const tiles = Array.from(grid.querySelectorAll('[data-widget-id]'));
+        if (!tiles.length) return null;
+        const top = tiles[0].getBoundingClientRect().top;
+        return tiles.filter((tile) => Math.abs(tile.getBoundingClientRect().top - top) < 2);
+      },
     },
     {
-      id: 'step_sparkline',
-      targetId: 'tour-calorie-graph',
-      title: 'Динамика и Дефицит',
-      getText: () => 'График показывает ваш прогресс за неделю. Следите за средним дефицитом!',
-      position: 'bottom',
-      arrow: 'top'
+      id: 'step_add',
+      title: 'Записать еду и воду',
+      text: 'Одна кнопка на все записи дня. Долгий тап по ней — сразу вода, без выбора.',
+      getTarget: () => document.querySelector('.widgets-quick-fab-wrap') || document.getElementById('tour-fab-buttons'),
     },
     {
-      id: 'step_insulin',
-      targetId: 'tour-insulin-wave',
-      title: 'Инсулиновая волна',
-      getText: () => 'Уникальная фишка HEYS. Показывает, когда жиросжигание активно (🔥).',
-      position: 'bottom',
-      arrow: 'top',
-      forceExpand: true // Раскрыть виджет если свернут
+      id: 'step_nav',
+      title: 'Где что лежит',
+      text: 'Питание — приёмы и продукты, Актив — шаги и тренировки, Отчёты — что вышло за неделю.',
+      getTarget: () => document.querySelector('.tab-primary-nav-row') || document.querySelector('.tabs--v4-primary'),
     },
     {
-      id: 'step_fab',
-      targetId: 'tour-fab-buttons',
-      title: 'Быстрое добавление',
-      getText: () => 'Главная кнопка 🍽️ для еды и 🥛 для воды. Всегда под рукой.',
-      position: 'top',
-      arrow: 'bottom'
+      id: 'step_reports',
+      title: 'Куда смотреть через неделю',
+      text: 'В «Отчётах» неделя собирается сама: средние, динамика веса и что стоит поправить.',
+      getTarget: () => document.getElementById('tour-stats-tab'),
     },
-    // === ВКЛАДКИ (по порядку) ===
-    {
-      id: 'step_widgets',
-      targetId: 'tour-widgets-tab',
-      title: '🎛️ Виджеты',
-      getText: () => 'Ваша панель управления. Настройте виджеты под себя — добавляйте, удаляйте, меняйте размер.',
-      position: 'top',
-      arrow: 'bottom',
-      highlightTab: true
-    },
-    {
-      id: 'step_stats',
-      targetId: 'tour-stats-tab',
-      title: '📊 Итоги дня',
-      getText: () => 'Здесь вся статистика: макросы, сон, шаги, недельный отчёт и умные советы.',
-      position: 'top',
-      arrow: 'bottom',
-      highlightTab: true
-    },
-    {
-      id: 'step_diary',
-      targetId: 'tour-diary-tab',
-      title: '🍴 Дневник еды',
-      getText: () => 'Все приёмы пищи за день. Добавляйте еду, редактируйте, смотрите детали.',
-      position: 'top',
-      arrow: 'bottom',
-      highlightTab: true
-    },
-    {
-      id: 'step_insights',
-      targetId: 'tour-insights-tab',
-      title: '🔮 Умные Инсайты',
-      getText: () => 'Загляните сюда! Анализ метаболизма, прогнозы веса и персональные советы.',
-      position: 'top',
-      arrow: 'bottom',
-      highlightTab: true
-    }
   ];
 
-  // Demo данные для визуализации (если у пользователя пусто)
-  const TOUR_DEMO_DATA = {
-    hero: {
-      tdee: 2150,
-      optimum: 2000,
-      eaten: 1450,
-      remaining: 550,
-      ratio: 0.72
-    },
-    sparkline: [
-      { date: 'Пн', kcal: 1800, target: 2000 },
-      { date: 'Вт', kcal: 1950, target: 2000 },
-      { date: 'Ср', kcal: 1700, target: 2000 },
-      { date: 'Чт', kcal: 2100, target: 2000 }, // перебор
-      { date: 'Пт', kcal: 1850, target: 2000 },
-      { date: 'Сб', kcal: 1750, target: 2000 },
-      { date: 'Вс', kcal: 0, target: 2000 }
-    ]
+  // Прямоугольник цели: объединение видимых элементов шага.
+  function stepTargetRect(step) {
+    let target = null;
+    try { target = step.getTarget(); } catch (e) { trackTourError(e, { scope: 'onboarding_step_target', step: step.id }); }
+    if (!target) return null;
+    const rects = (Array.isArray(target) ? target : [target])
+      .map((el) => el.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.height > 0);
+    if (!rects.length) return null;
+    const left = Math.min(...rects.map((r) => r.left));
+    const top = Math.min(...rects.map((r) => r.top));
+    const right = Math.max(...rects.map((r) => r.right));
+    const bottom = Math.max(...rects.map((r) => r.bottom));
+    return { left, top, right, bottom, width: right - left, height: bottom - top };
+  }
+
+  function availableSteps() {
+    return TOUR_STEPS.filter((step) => !!stepTargetRect(step));
+  }
+
+  const reducedMotion = () => {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; }
   };
 
   // === MODULE STATE ===
@@ -142,6 +108,8 @@
   let state = {
     isActive: false,
     currentStepIndex: 0,
+    steps: [], // доступные шаги этого прохода (строка «цель не найдена»)
+    fromSettings: false, // из настроек плашка «обзор пройден» не показывается
     stepStartTime: null, // Время начала шага для analytics
     overlayEl: null,
     tooltipEl: null,
@@ -197,7 +165,7 @@
       const saved = localStorage.getItem(INTERRUPTED_STEP_KEY);
       if (saved !== null) {
         const stepIndex = parseInt(saved, 10);
-        if (!isNaN(stepIndex) && stepIndex >= 0 && stepIndex < TOUR_STEPS.length) {
+        if (!isNaN(stepIndex) && stepIndex >= 0) {
           return stepIndex;
         }
       }
@@ -219,61 +187,6 @@
   }
 
   // === WELCOME MODAL ===
-
-  function showWelcomeModal(options = {}) {
-    return new Promise((resolve) => {
-      const el = document.createElement('div');
-      el.className = 'tour-welcome-modal';
-
-      // Получаем имя пользователя
-      const userName = getUserName();
-      const greeting = userName ? `Привет, ${userName}!` : 'Добро пожаловать в HEYS!';
-
-      el.innerHTML = `
-        <div class="tour-welcome-backdrop"></div>
-        <div class="tour-welcome-content">
-          <div class="tour-welcome-icon">👋</div>
-          <h2 class="tour-welcome-title">${greeting}</h2>
-          <p class="tour-welcome-text">
-            Хотите быстро познакомиться с приложением?<br>
-            Покажем главные функции за 30 секунд.
-          </p>
-          <div class="tour-welcome-buttons">
-            <button class="tour-btn tour-btn-later">Позже</button>
-            <button class="tour-btn tour-btn-start">Да, показать! 🚀</button>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(el);
-      state.welcomeModalEl = el;
-
-      // Анимация появления
-      requestAnimationFrame(() => {
-        el.classList.add('tour-welcome-enter');
-      });
-
-      // Обработчики
-      const startBtn = el.querySelector('.tour-btn-start');
-      const laterBtn = el.querySelector('.tour-btn-later');
-      const backdrop = el.querySelector('.tour-welcome-backdrop');
-
-      const close = (result) => {
-        el.classList.remove('tour-welcome-enter');
-        el.classList.add('tour-welcome-exit');
-        triggerHaptic();
-        setTimeout(() => {
-          el.remove();
-          state.welcomeModalEl = null;
-          resolve(result);
-        }, 300);
-      };
-
-      startBtn.onclick = () => close('start');
-      laterBtn.onclick = () => close('later');
-      backdrop.onclick = () => close('later');
-    });
-  }
 
   function getUserName() {
     // Пытаемся получить имя из разных источников
@@ -380,165 +293,94 @@
     if (!el) {
       el = document.createElement('div');
       el.className = 'tour-highlight';
-      el.style.position = 'fixed';
-      el.style.zIndex = '9001';
-      // v1.7: Базовая тень + анимация пульсации добавляется через CSS класс
-      el.style.boxShadow = '0 0 0 9999px rgba(0, 0, 0, 0.75)';
-      el.style.borderRadius = '12px';
-      el.style.pointerEvents = 'none'; // Пропускать клики если нужно (но обычно мы не даем жать)
-      el.style.transition = 'top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease';
-      // v1.7: Пульсация привлекает внимание к подсвеченному элементу
-      el.style.animation = 'tourPulse 2s ease-in-out infinite';
+      el.setAttribute('aria-hidden', 'true');
       document.body.appendChild(el);
       state.highlightEl = el;
     }
-
-    // Обновляем позицию
-    // Добавляем padding
+    // Поля окна — границы цели плюс 4 px, чтобы обводка не наезжала на содержимое.
     const padding = 4;
     el.style.top = (rect.top - padding) + 'px';
     el.style.left = (rect.left - padding) + 'px';
     el.style.width = (rect.width + padding * 2) + 'px';
     el.style.height = (rect.height + padding * 2) + 'px';
-
     return el;
   }
 
   function createTooltip(step, rect) {
     let el = state.tooltipEl;
     const isNewStep = state._lastAnimatedStep !== state.currentStepIndex;
-
     if (!el) {
       el = document.createElement('div');
-      el.className = 'tour-tooltip';
-      el.style.position = 'fixed';
-      el.style.zIndex = '9002';
+      el.className = 'tour-card';
+      el.setAttribute('role', 'dialog');
+      el.setAttribute('aria-modal', 'true');
+      el.setAttribute('aria-labelledby', 'tour-card-title');
+      el.setAttribute('aria-describedby', 'tour-card-text');
       document.body.appendChild(el);
       state.tooltipEl = el;
     }
-
-    // Контент (обновляем только при смене шага, иначе только позиционируем)
     if (!isNewStep && el.innerHTML) {
-      // Только обновление позиции, контент уже есть
       updateTooltipPosition(el, step, rect);
       return;
     }
-
-    // Контент
-    const isFirst = state.currentStepIndex === 0;
-    const isLast = state.currentStepIndex === TOUR_STEPS.length - 1;
-
-    const nextLabel = isLast ? 'Готово! 🎉' : 'Далее →';
-
+    const total = state.steps.length;
+    const index = state.currentStepIndex;
+    const isLast = index === total - 1;
+    const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
     el.innerHTML = `
-      <div class="tour-tooltip-content">
-        <h3 class="tour-title">${step.title}</h3>
-        <p class="tour-text">${step.text}</p>
-        <div class="tour-footer">
-          <div class="tour-indicators">
-            ${TOUR_STEPS.map((_, i) =>
-      `<span class="tour-dot ${i === state.currentStepIndex ? 'active' : ''}"></span>`
-    ).join('')}
-          </div>
-          <div class="tour-buttons">
-            ${!isLast ? `<button class="tour-btn tour-btn-skip">Пропустить</button>` : ''}
-            <button class="tour-btn tour-btn-next ${isLast ? 'tour-btn-finish' : ''}">${nextLabel}</button>
-          </div>
-        </div>
-        <div class="tour-arrow tour-arrow-${step.arrow}"></div>
+      <span class="tour-card__nose" aria-hidden="true"></span>
+      <div class="tour-card__live" aria-live="polite" aria-atomic="true">
+        <div class="tour-card__kicker">Шаг ${index + 1} из ${total}</div>
+        <h3 class="tour-card__title" id="tour-card-title">${esc(step.title)}</h3>
+        <p class="tour-card__text" id="tour-card-text">${esc(step.text)}</p>
+      </div>
+      <div class="tour-card__actions">
+        ${isLast ? '' : '<button type="button" class="tour-card__skip">Пропустить</button>'}
+        <button type="button" class="tour-card__next">${isLast ? 'Всё понятно' : 'Далее'}</button>
       </div>
     `;
-
-    // Обработчики
-    const nextBtn = el.querySelector('.tour-btn-next');
-    const skipBtn = el.querySelector('.tour-btn-skip');
-
+    const nextBtn = el.querySelector('.tour-card__next');
+    const skipBtn = el.querySelector('.tour-card__skip');
     if (nextBtn) nextBtn.onclick = () => OnboardingTour.next();
     if (skipBtn) skipBtn.onclick = () => OnboardingTour.skip();
-
-    // Позиционирование
-    // Базовая логика position: bottom/top
-    const tooltipRect = el.getBoundingClientRect(); // Нужно для центрирования, но пока контент новый
-    // Сброс стилей перед измерением
-    el.style.top = '';
-    el.style.bottom = '';
-    el.style.left = '';
-    el.style.right = '';
-
-    // Позиционирование и анимация
     updateTooltipPosition(el, step, rect, true);
-
-    // Отмечаем шаг как анимированный
     state._lastAnimatedStep = state.currentStepIndex;
+    // Строка «доступность»: фокус на «Далее».
+    try { nextBtn?.focus({ preventScroll: true }); } catch (_) { /* ignore */ }
   }
 
-  /**
-   * Обновить позицию тултипа (без перерисовки контента)
-   * @param {HTMLElement} el - элемент тултипа
-   * @param {Object} step - текущий шаг
-   * @param {DOMRect} rect - rect целевого элемента
-   * @param {boolean} animate - запускать ли анимацию появления
-   */
+  // Карточка ниже окна, если окно в верхней половине экрана, и выше — если в
+  // нижней; носик всегда указывает на окно (строка «карточка шага»).
   function updateTooltipPosition(el, step, rect, animate = false) {
-    // Ждем рендера чтобы получить размеры
-    requestAnimationFrame(() => {
-      const ttW = el.offsetWidth;
-      const ttH = el.offsetHeight;
-      const gap = 12;
-
-      let top, left;
-
-      if (step.position === 'bottom') {
-        top = rect.bottom + gap;
-        left = rect.left + (rect.width / 2) - (ttW / 2);
-      } else if (step.position === 'top') {
-        top = rect.top - ttH - gap;
-        left = rect.left + (rect.width / 2) - (ttW / 2);
-      }
-
-      // 🔧 v1.17 FIX: Проверка границ экрана — горизонтальные И вертикальные
-      const margin = 16;
-
-      // Горизонтальные границы
-      if (left < margin) left = margin;
-      if (left + ttW > window.innerWidth - margin) {
-        left = window.innerWidth - ttW - margin;
-        // 🔧 v1.20 FIX: Если всё равно не влезает (на узких экранах), принудительно ограничиваем ширину
-        if (left < margin) {
-          left = margin;
-          // Тут можно было бы менять ширину элемента, но он фиксированный в CSS.
-          // Поэтому просто центрируем, пусть лучше влезает контент
-        }
-      }
-
-      // 🔧 v1.17 FIX: Вертикальные границы (не давать тултипу уезжать за экран)
-      // Добавлена логика для FAB кнопок (они внизу, тултип должен быть НАД ними)
-      if (step.position === 'top' && top + ttH > rect.top) { // Если тултип перекрывает элемент (на узких экранах)
-        top = rect.top - ttH - gap;
-      }
-
-      if (top < margin) {
-        // Если уехал вверх — сдвигаем вниз от элемента
-        top = rect.bottom + gap;
-      }
-      // Если уехал вниз за экран ИЛИ перекрыл нижний край (для safety)
-      if (top + ttH > window.innerHeight - margin) {
-        // Если уехал вниз — сдвигаем вверх от элемента
-        top = rect.top - ttH - gap;
-        // Если всё равно не влезает — прижимаем к верху (грубый фоллбек)
-        if (top < margin) top = margin;
-      }
-
-      el.style.top = top + 'px';
-      el.style.left = left + 'px';
-
-      // 🔧 v1.21 FIX: Анимация появления только при смене шага (не при updatePosition)
-      if (animate) {
-        el.classList.remove('tour-tooltip-enter');
-        void el.offsetWidth; // reflow
-        el.classList.add('tour-tooltip-enter');
-      }
-    });
+    const padding = 4;
+    const nose = 14;
+    const gap = 12;
+    const windowTop = rect.top - padding;
+    const windowBottom = rect.bottom + padding;
+    const centerY = (windowTop + windowBottom) / 2;
+    const below = centerY < window.innerHeight / 2;
+    el.classList.toggle('tour-card--below', below);
+    el.classList.toggle('tour-card--above', !below);
+    if (below) {
+      el.style.top = Math.round(windowBottom + nose / 2 + gap) + 'px';
+      el.style.bottom = '';
+    } else {
+      el.style.top = '';
+      el.style.bottom = Math.round(window.innerHeight - windowTop + nose / 2 + gap) + 'px';
+    }
+    const noseEl = el.querySelector('.tour-card__nose');
+    if (noseEl) {
+      const cardLeft = 14;
+      const cardWidth = window.innerWidth - cardLeft * 2;
+      const centerX = (rect.left + rect.right) / 2 - cardLeft;
+      const x = Math.max(22, Math.min(cardWidth - 22 - nose, centerX - nose / 2));
+      noseEl.style.left = Math.round(x) + 'px';
+    }
+    if (animate && !reducedMotion()) {
+      el.classList.remove('tour-card--enter');
+      void el.offsetWidth;
+      el.classList.add('tour-card--enter');
+    }
   }
 
   // === PUBLIC API ===
@@ -565,28 +407,13 @@
       // Получаем имя пользователя для персонализации
       state.userName = getUserName();
 
-      // Показать welcome modal если не пропущен
-      if (!options.skipWelcome && !options.force) {
-        const result = await showWelcomeModal();
-        if (result === 'later') {
-          trackTourEvent('onboarding_tour_deferred', { reason: 'user_later' });
-          if (HEYS.analytics) {
-            HEYS.analytics.trackEvent('tour_deferred');
-          }
-          return;
-        }
-      }
-
       trackTourEvent('onboarding_tour_starting', { hasUserName: !!state.userName });
 
       // FORCE SWITCH TO MAIN TAB before starting
       // This ensures elements like hero-stats are in the DOM
-      if (HEYS.ui && HEYS.ui.switchTab) {
-        // Check if we need to switch
-        // We assume 'stats' is the tab where first steps are loccated.
-        // Ideally we should check if the target element of the current step is visible.
-        HEYS.ui.switchTab('stats');
-      }
+      // Обзор идёт поверх настоящей Главной (строка «своих чисел»).
+      if (HEYS.ui && HEYS.ui.switchTab) HEYS.ui.switchTab('widgets');
+      state.fromSettings = !!options.fromSettings;
 
       // Temporarily suppress Morning Check-in using a global flag
       if (HEYS.ui) {
@@ -594,47 +421,32 @@
         trackTourEvent('onboarding_checkin_suppressed', {});
       }
 
-      // Wait for the target element of the first (or current) step to appear
-      const initialStepIndex = getInterruptedStep() === null ? 0 : getInterruptedStep();
-      const targetId = TOUR_STEPS[initialStepIndex]?.targetId;
-
-      if (targetId) {
-        trackTourEvent('onboarding_wait_for_element', { targetId });
-        const waitForElement = (id, timeout = 2500) => {
-          return new Promise(resolve => {
-            const startTime = Date.now();
-            const check = () => {
-              const el = document.getElementById(id);
-              if (el && el.offsetParent !== null) { // exists and visible (not display:none)
-                trackTourEvent('onboarding_element_found', { targetId: id, ms: Date.now() - startTime });
-                resolve(el);
-              } else if (Date.now() - startTime > timeout) {
-                trackTourEvent('onboarding_element_timeout', { targetId: id, ms: Date.now() - startTime });
-                resolve(null);
-              } else {
-                requestAnimationFrame(check);
-              }
-            };
-            check();
-          });
+      // Ждём, пока на Главной появится хоть одна цель обзора; из нуля
+      // доступных шагов обзор не запускается вовсе (строка «цель не найдена»).
+      const waitForSteps = (timeout = 2500) => new Promise((resolve) => {
+        const startTime = Date.now();
+        const check = () => {
+          const steps = availableSteps();
+          if (steps.length || Date.now() - startTime > timeout) resolve(steps);
+          else requestAnimationFrame(check);
         };
-        await waitForElement(targetId);
-        trackTourEvent('onboarding_wait_for_element_done', { targetId });
-      } else {
-        // Fallback just in case
-        await new Promise(r => setTimeout(r, 500));
+        check();
+      });
+      state.steps = await waitForSteps();
+      trackTourEvent('onboarding_steps_available', { count: state.steps.length });
+      if (!state.steps.length) {
+        trackTourEvent('onboarding_tour_skipped', { reason: 'no_targets' });
+        if (HEYS.ui) HEYS.ui.suppressMorningCheckin = false;
+        return;
       }
 
       state.isActive = true;
       state.onComplete = options.onComplete;
       state.stepStartTime = Date.now(); // Для time_on_step
 
-      // 🆕 Уведомляем виджеты о переходе в демо-режим (чтобы показать демо-данные)
-      HEYS.Widgets?.emit?.('data:updated', {});
-
       // Восстановление прерванного шага если есть
       const interruptedStep = getInterruptedStep();
-      if (interruptedStep !== null && !options.force) {
+      if (interruptedStep !== null && !options.force && interruptedStep < state.steps.length) {
         state.currentStepIndex = interruptedStep;
         trackTourEvent('onboarding_resume_interrupted_step', { step: interruptedStep });
       } else {
@@ -664,39 +476,31 @@
      */
     renderStep() {
       if (!state.isActive) return;
-
-      const step = TOUR_STEPS[state.currentStepIndex];
-      const targetEl = document.getElementById(step.targetId);
-
-      trackTourEvent('onboarding_render_step', { targetId: step.targetId, found: !!targetEl });
-
-      if (!targetEl) {
-        trackTourEvent('onboarding_target_missing', { targetId: step.targetId });
-        this.next();
+      const step = state.steps[state.currentStepIndex];
+      if (!step) { this.finish(); return; }
+      const rect = stepTargetRect(step);
+      trackTourEvent('onboarding_render_step', { step: step.id, found: !!rect });
+      if (!rect) {
+        // Цель исчезла по ходу — шаг выпадает, счёт пересчитывается.
+        trackTourEvent('onboarding_target_missing', { step: step.id });
+        state.steps = state.steps.filter((item) => item !== step);
+        if (!state.steps.length) { this.finish(); return; }
+        if (state.currentStepIndex >= state.steps.length) state.currentStepIndex = state.steps.length - 1;
+        state._lastAnimatedStep = null;
+        this.renderStep();
         return;
       }
-
-      // Функция отрисовки highlight и тултипа
       const updatePosition = () => {
         if (!state.isActive) return;
-        const rect = targetEl.getBoundingClientRect();
-        trackTourEvent('onboarding_update_position', { targetId: step.targetId });
-        createHighlight(rect);
-        // Передаём персонализированный текст
-        const stepWithText = {
-          ...step,
-          text: step.getText ? step.getText(state.userName) : step.text
-        };
-        createTooltip(stepWithText, rect);
+        const current = stepTargetRect(step) || rect;
+        createHighlight(current);
+        createTooltip(step, current);
       };
-
-      // Мгновенный скролл к элементу (без анимации — чтобы highlight сразу был в нужном месте)
-      targetEl.scrollIntoView({ behavior: 'instant', block: 'center' });
-
-      // Рисуем после того как браузер применил скролл (1 frame)
+      const target = step.getTarget();
+      const first = Array.isArray(target) ? target[0] : target;
+      if (first?.scrollIntoView) first.scrollIntoView({ behavior: 'instant', block: 'center' });
       requestAnimationFrame(() => {
         updatePosition();
-        // Повторно обновляем через 100ms на случай lazy-рендера
         setTimeout(updatePosition, 100);
       });
     },
@@ -710,19 +514,19 @@
       if (HEYS.analytics) {
         HEYS.analytics.trackEvent('tour_step', {
           step_index: state.currentStepIndex,
-          step_id: TOUR_STEPS[state.currentStepIndex]?.targetId,
+          step_id: state.steps[state.currentStepIndex]?.id,
           time_on_step_ms: timeOnStep
         });
       }
 
       triggerHaptic();
 
-      if (state.currentStepIndex < TOUR_STEPS.length - 1) {
+      if (state.currentStepIndex < state.steps.length - 1) {
         state.currentStepIndex++;
         state.stepStartTime = Date.now(); // Сброс таймера для нового шага
         this.renderStep();
       } else {
-        this.finish();
+        this.finish({ completed: true });
       }
     },
 
@@ -738,8 +542,14 @@
       this.finish();
     },
 
-    finish() {
+    finish(result = {}) {
       if (!state.isActive) return;
+      // Строка «обзор пройден»: после последнего шага — плашка по правилам
+      // undo-bar без кольца и действия, 4 с. Из настроек и по «Пропустить»
+      // плашки нет (строки «возврат к обзору», «пропуск без переспроса»).
+      if (result.completed && !state.fromSettings) {
+        HEYS.Undo?.push?.({ label: 'Обзор пройден. Вернуться к нему — в настройках', duration: 4000, notice: true });
+      }
 
       trackTourEvent('onboarding_tour_finished', {});
 
@@ -786,7 +596,7 @@
       // Analytics
       if (HEYS.analytics) {
         HEYS.analytics.trackEvent('tour_completed', {
-          total_steps: TOUR_STEPS.length
+          total_steps: state.steps.length
         });
       }
 
@@ -820,9 +630,10 @@
      * @param {string} componentId - 'hero' | 'sparkline'
      * @returns {Object|null}
      */
-    getDemoData(componentId) {
-      if (!state.isActive) return null;
-      return TOUR_DEMO_DATA[componentId] || null;
+    getDemoData() {
+      // Строка «своих чисел, а не демонстрационных»: обзор идёт по настоящему
+      // экрану, демо-числа в разметку не подставляются.
+      return null;
     },
 
     /**
@@ -837,34 +648,7 @@
       trackTourEvent('onboarding_tour_reset', {});
     },
 
-    ensureVisualFixtureTargets() {
-      const boxes = [
-        { id: 'tour-hero-stats', top: 96, left: 16, width: 168, height: 72 },
-        { id: 'tour-calorie-graph', top: 176, left: 16, width: 168, height: 56 },
-        { id: 'tour-insulin-wave', top: 240, left: 16, width: 168, height: 56 },
-        { id: 'tour-fab-buttons', top: 620, left: 150, width: 72, height: 72 },
-        { id: 'tour-widgets-tab', top: 748, left: 24, width: 72, height: 48 },
-        { id: 'tour-stats-tab', top: 748, left: 270, width: 72, height: 48 },
-      ];
-      for (const box of boxes) {
-        if (document.getElementById(box.id)) continue;
-        const el = document.createElement('div');
-        el.id = box.id;
-        Object.assign(el.style, {
-          position: 'fixed',
-          top: `${box.top}px`,
-          left: `${box.left}px`,
-          width: `${box.width}px`,
-          height: `${box.height}px`,
-          pointerEvents: 'none',
-          zIndex: '1',
-        });
-        document.body.appendChild(el);
-      }
-    },
-
     async openVisualFixtureStep(stepIndex) {
-      this.ensureVisualFixtureTargets();
       if (state.isActive) {
         document.removeEventListener('visibilitychange', handleVisibilityChange);
         if (state.overlayEl) state.overlayEl.remove();
@@ -888,8 +672,11 @@
       document.body.classList.add('tour-active');
       createOverlay();
 
-      const safeIndex = Math.min(Math.max(0, stepIndex), TOUR_STEPS.length - 1);
-      state.currentStepIndex = safeIndex;
+      state.steps = availableSteps();
+      if (!state.steps.length) throw new Error('OnboardingTour: на экране нет ни одной цели обзора');
+      state.fromSettings = false;
+      state.currentStepIndex = Math.min(Math.max(0, stepIndex), state.steps.length - 1);
+      state._lastAnimatedStep = null;
       this.renderStep();
     },
   };

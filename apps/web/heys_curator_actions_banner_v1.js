@@ -2392,7 +2392,6 @@
       const selectors = [
         '.whats-new-modal',
         '.whats-new-backdrop',
-        '.tour-welcome-modal',
         '.aps-barcode-modal',
         '.barcode-modal',
         '.photo-confirm-modal',

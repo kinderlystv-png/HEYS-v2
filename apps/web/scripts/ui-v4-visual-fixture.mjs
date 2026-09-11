@@ -314,6 +314,8 @@ function buildTask72VisualCases() {
       frameLabel,
       themeId: 'sand',
       rootSelector: TASK72_VISUAL_FRAME_ROOTS[frameLabel],
+      // Обзор идёт поверх настоящей Главной — стенд открывает её перед монтажом.
+      ...(zone === 'first-run' && frameLabel !== 'Первый вход · с компьютера' ? { tab: 'widgets' } : {}),
       // Вход с компьютера показывается только на широком окне: снимаем его в
       // размере кадра без нарисованной полосы браузера (900 × 720 − 38).
       viewport: frameLabel === 'Первый вход · с компьютера' ? { width: 900, height: 682 } : { width: 375, height: 812 },

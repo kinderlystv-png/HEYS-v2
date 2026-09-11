@@ -56,7 +56,9 @@ describe('UI v4 code→canvas screen coverage', () => {
     const registry = readScreenCoverageRegistry();
     const report = buildCodeScreenCoverageReport(roots, readCanvasPackage(), registry);
 
-    expect(roots).toHaveLength(149);
+    // −1 root 11 сентября (149→148, gaps 83→82): приветственная модалка обзора
+    // снята по строке «одно приветствие, а не два» (first-run.v4).
+    expect(roots).toHaveLength(148);
     // +9 roots зарегистрированы 5 сентября: reports-v4-periods-sheet и 8 sb-* экранов
     // (135→143, covered 36→45). reports-fullscreen-modal заменён на reports-v4-periods-sheet.
     // +6 roots 6 сентября (143→149, gaps 77→83): экраны, построенные по ответам
@@ -66,10 +68,10 @@ describe('UI v4 code→canvas screen coverage', () => {
     // кадрам, и отчёт её проверяет; привязку никто не сверял. Заявить покрытие
     // без сверки — завести зелёный, подтверждающий только собственную слепоту.
     expect(report.totals).toMatchObject({
-      codeRoots: 149,
+      codeRoots: 148,
       covered: 45,
       excluded: 21,
-      gaps: 83,
+      gaps: 82,
       pending: 0,
       missing: 0,
       stale: 0,

@@ -331,14 +331,16 @@
      * }} opts
      */
     push(opts) {
-      if (!opts || typeof opts.onUndo !== 'function') {
+      // notice: плашка без кольца и без действия — «обзор пройден» (first-run.v4,
+      // строка «вид · плашка «обзор пройден»»: вид тот же, действия нет).
+      if (!opts || (typeof opts.onUndo !== 'function' && !opts.notice)) {
         console.warn('[HEYS.Undo] push() requires onUndo callback');
         return;
       }
 
       const entry = {
         label: opts.label || 'Действие выполнено',
-        onUndo: opts.onUndo,
+        onUndo: typeof opts.onUndo === 'function' ? opts.onUndo : () => {},
         onExpire: opts.onExpire || null,
         context: opts.context,
       };
@@ -374,6 +376,7 @@
         endsAt: 0,
       };
       showState(state);
+      barEl?.classList.toggle('heys-undo-bar--notice', !!opts.notice);
       return state;
     },
 

@@ -3592,7 +3592,6 @@
         '.ca-modal-backdrop--visible',
         '.whats-new-modal',
         '.whats-new-backdrop',
-        '.tour-welcome-modal',
         '.heys-consent-sign-backdrop',
         '.consent-fulltext-backdrop',
         '#heys-morning-activation-modal-root',
