@@ -4514,6 +4514,10 @@
   width: 44px;
   height: 44px;
   padding: 0;
+  /* Кадры «Действие · копировать» и «перенести»: цель 44 с выносом
+     −14/−8/−14/0 — шапка высотой в заголовок, а не в цель. Без выноса шапка
+     росла до 44, и всё содержимое листа съезжало вниз на 29 px. */
+  margin: -14px -8px -14px 0;
   color: rgba(var(--v4-ink-rgb), 0.35); /* v4-intentional */
   background: transparent;
   border: 0;
@@ -4546,8 +4550,12 @@
   text-transform: uppercase;
 }
 
+/* Кадр рисует «Снять всё» строкой текста в ряд 11 px. Цель 44 остаётся, но
+   выносится за ряд −16/−8/−17/0: без выноса ряд рос до 44, и список со всем
+   ниже съезжал на 17 px против кадра. */
 .meal-transfer-v4__select-all {
   min-height: 44px;
+  margin: -16px -8px -17px 0;
   padding: 0 8px;
   color: var(--v4-act-text); /* v4-intentional */
   font-size: 11px;
@@ -4561,12 +4569,14 @@
   cursor: pointer;
 }
 
+/* Кадры «Действие · копировать»: список идёт во всю высоту листа, три и
+   четыре карточки видны целиком. Потолок 262 резал третью карточку при
+   свободном месте внизу; прокрутка остаётся, когда не хватает самого листа. */
 .meal-transfer-v4__product-list {
   display: flex;
-  flex: 0 1 262px;
+  flex: 0 1 auto;
   flex-direction: column;
   gap: 8px;
-  max-height: 262px;
   min-height: 120px;
   margin-top: 8px;
   overflow-y: auto;
@@ -4704,6 +4714,7 @@
 /* Строка полноты под списком: появляется только при непосчитанном. */
 .meal-transfer-v4__completeness {
   margin-top: 5px;
+  padding: 0 18px;
   text-align: center;
   font-size: 10.5px;
   font-weight: 500;

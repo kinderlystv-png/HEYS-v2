@@ -69,7 +69,10 @@ describe('food-meal · копирование без целей', () => {
     expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*font-size:\s*11px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__empty\s*{[^}]*line-height:\s*1\.5/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__items\s*{[^}]*flex:\s*0 1 auto[^}]*padding:\s*6px 18px 0/s);
-    expect(CSS).toMatch(/\.meal-transfer-v4__product-list\s*{[^}]*flex:\s*0 1 262px[^}]*max-height:\s*262px[^}]*min-height:\s*120px/s);
+    // Кадры «копировать» показывают все карточки целиком: потолка 262 нет,
+    // список сжимается и прокручивается, только когда не хватает листа.
+    expect(CSS).toMatch(/\.meal-transfer-v4__product-list\s*{[^}]*flex:\s*0 1 auto[^}]*min-height:\s*120px/s);
+    expect(CSS).not.toMatch(/\.meal-transfer-v4__product-list\s*{[^}]*max-height/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__product-list\s*{[^}]*margin-top:\s*8px/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__range\s*{[^}]*height:\s*14px\s*!important[^}]*min-height:\s*0\s*!important[^}]*padding:\s*0\s*!important[^}]*border:\s*0/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__footer\s*{[^}]*margin-top:\s*0/s);

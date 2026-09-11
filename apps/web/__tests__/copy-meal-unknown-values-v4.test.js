@@ -84,9 +84,16 @@ describe('лист копирования · чего не знаем', () => {
     expect(completeness).toContain('font-size: 10.5px');
     expect(completeness).toContain('font-weight: 500');
     expect(completeness).toContain('var(--v4-ink-3)');
-    // Элемент 31 кадра: по центру и через 5 от последней карточки.
+    // Кадр и строка контракта: «под итогом», по центру, через 5 от итога.
     expect(completeness).toContain('text-align: center');
     expect(completeness).toContain('margin-top: 5px');
+    expect(completeness).toContain('padding: 0 18px');
+    const summaryAt = SRC.indexOf("className: 'meal-transfer-v4__summary'");
+    const completenessAt = SRC.indexOf("className: 'meal-transfer-v4__completeness'");
+    const actionsAt = SRC.indexOf("className: 'meal-transfer-v4__actions'");
+    expect(summaryAt).toBeGreaterThan(-1);
+    expect(completenessAt).toBeGreaterThan(summaryAt);
+    expect(actionsAt).toBeGreaterThan(completenessAt);
   });
 
   it('кнопка не блокируется, а дефект уводит в карточку продукта', () => {

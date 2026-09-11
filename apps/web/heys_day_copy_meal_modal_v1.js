@@ -421,13 +421,6 @@
                     );
                 }),
             ),
-            // Строка «сумма не имеет права занижать»: число под списком всегда
-            // посчитано целиком, потому что непосчитанное отметить нельзя. Строка
-            // полноты появляется только когда что-то осталось за бортом — при
-            // полном списке её нет.
-            uncountable > 0 && React.createElement('div', {
-                className: 'meal-transfer-v4__completeness',
-            }, `${uncountable} ${pluralProducts(uncountable)} из ${allItems.length} не копируются — сумма считает только отмеченные`),
         );
 
         // === Targets section ===
@@ -502,6 +495,12 @@
             // без разделителя, и четырёхзначные числа читались сплошняком.
             }, `${kbjuPreview.dstName}: ${fmtKcal(kbjuPreview.dstKcal)} → `
               + `${fmtKcal(kbjuPreview.totalKcal)} ккал (+${fmtKcal(kbjuPreview.addedKcal)})`),
+            // Строка «сумма не имеет права занижать»: под итогом — строка
+            // полноты, только когда что-то осталось за бортом. Число итога
+            // всегда посчитано целиком, потому что непосчитанное отметить нельзя.
+            uncountable > 0 && React.createElement('div', {
+                className: 'meal-transfer-v4__completeness',
+            }, `${uncountable} ${pluralProducts(uncountable)} из ${allItems.length} не копируются — сумма считает только отмеченные`),
             React.createElement('div', { className: 'meal-transfer-v4__actions' },
                 React.createElement('button', {
                     type: 'button',

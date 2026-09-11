@@ -47,6 +47,7 @@
   const TOUR_STEPS = [
     {
       id: 'step_numbers',
+      radius: 20,
       title: 'Ваши цифры на сегодня',
       text: 'Съедено и осталось — два числа, по которым видно, как идёт день. Пока пусто: заполнится с первой записью.',
       // Верхний ряд виджетов Главной: плитки с той же вершиной, что у первой.
@@ -61,18 +62,23 @@
     },
     {
       id: 'step_add',
+      // Окно вокруг круглой кнопки — круг (кадр «Первый вход · шаг 2»: 999).
+      radius: 999,
       title: 'Записать еду и воду',
       text: 'Одна кнопка на все записи дня. Долгий тап по ней — сразу вода, без выбора.',
       getTarget: () => document.querySelector('.widgets-quick-fab-wrap') || document.getElementById('tour-fab-buttons'),
     },
     {
       id: 'step_nav',
+      radius: 20,
       title: 'Где что лежит',
       text: 'Питание — приёмы и продукты, Актив — шаги и тренировки, Отчёты — что вышло за неделю.',
       getTarget: () => document.querySelector('.tab-primary-nav-row') || document.querySelector('.tabs--v4-primary'),
     },
     {
       id: 'step_reports',
+      // Вкладка навигации — радиус 18 (кадр «Первый вход · шаг 4»).
+      radius: 18,
       title: 'Куда смотреть через неделю',
       text: 'В «Отчётах» неделя собирается сама: средние, динамика веса и что стоит поправить.',
       getTarget: () => document.getElementById('tour-stats-tab'),
@@ -288,7 +294,7 @@
     return el;
   }
 
-  function createHighlight(rect) {
+  function createHighlight(rect, radius = 20) {
     let el = state.highlightEl;
     if (!el) {
       el = document.createElement('div');
@@ -303,6 +309,9 @@
     el.style.left = (rect.left - padding) + 'px';
     el.style.width = (rect.width + padding * 2) + 'px';
     el.style.height = (rect.height + padding * 2) + 'px';
+    // Радиус окна свой у каждого шага — как в кадрах: у ряда плиток и навигации 20,
+    // у круглой кнопки круг, у вкладки «Отчёты» 18.
+    el.style.borderRadius = radius + 'px';
     return el;
   }
 
@@ -493,7 +502,7 @@
       const updatePosition = () => {
         if (!state.isActive) return;
         const current = stepTargetRect(step) || rect;
-        createHighlight(current);
+        createHighlight(current, step.radius);
         createTooltip(step, current);
       };
       const target = step.getTarget();

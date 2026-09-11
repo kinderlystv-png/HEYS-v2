@@ -73,6 +73,12 @@ describe('обзор первого входа против кадров first-r
     expect(rule).toContain('0 0 0 9999px var(--scrim');
     expect(rule).not.toContain('animation');
     expect(CSS).not.toContain('@keyframes tour-pulse');
+    // Радиус окна по кадру каждого шага: 2 — круг вокруг кнопки, 4 — 18.
+    expect(CANVAS).toMatch(/data-screen-label="Первый вход · шаг 2"[\s\S]*?<span class="spot"[^>]*border-radius:999px/);
+    expect(CANVAS).toMatch(/data-screen-label="Первый вход · шаг 4"[\s\S]*?<span class="spot"[^>]*border-radius:18px/);
+    expect(TOUR).toMatch(/id: 'step_add',[\s\S]*?radius: 999,/);
+    expect(TOUR).toMatch(/id: 'step_reports',[\s\S]*?radius: 18,/);
+    expect(TOUR).toContain("el.style.borderRadius = radius + 'px';");
     // Поля окна — цель плюс 4 со всех сторон.
     expect(TOUR).toMatch(/function createHighlight[\s\S]*?const padding = 4;/);
   });

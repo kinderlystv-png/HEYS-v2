@@ -1494,7 +1494,9 @@ async function openCase(browser, item, snapshot, options = {}) {
         const sourceItems = [
           { id: 'visual-soba', name: 'Лапша соба варёная', grams: 137, kcal100: 114.6 },
           { id: 'visual-coffee-zero', name: 'Домашний кофе без сахара', grams: 300, kcal100: 0 },
-          { id: 'visual-syrniki', name: 'Сырники творожные', grams: null },
+          // Калорийность у сырников известна, неизвестны только граммы — иначе
+          // лист честно показывает «дефект», а кадр рисует «пустое».
+          { id: 'visual-syrniki', name: 'Сырники творожные', grams: null, kcal100: 220 },
           { id: 'visual-sauce-defect', name: "Соус Хеллманн'с Бургер Гриль", grams: 30 },
         ];
         window.HEYS.CopyMealModal.show({
@@ -1506,7 +1508,12 @@ async function openCase(browser, item, snapshot, options = {}) {
           sourceMealIndex: 0,
           sourceDate: '2026-08-28',
           targetDate: '2026-08-28',
+          // Копируемый приём первым, как в стенде «копировать»: лист убирает из
+          // целей приём с тем же номером, что у копируемого, если день тот же, —
+          // без него «Перекус» стоял под номером копируемого и выпадал, и лист
+          // открывался «без целей» вместо кадра «чего не знаем».
           targetMeals: [
+            { id: 'visual-source', name: 'Перекус', time: '08:10', items: sourceItems },
             {
               id: 'visual-snack',
               name: 'Перекус',
