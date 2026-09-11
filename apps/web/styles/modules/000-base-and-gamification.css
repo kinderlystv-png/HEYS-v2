@@ -7242,6 +7242,19 @@ color: var(--v4-sand-ink, #201e1d);
   min-width: 0;
 }
 
+/* Кадр «Питание · пустой день» (.top): «Питание» слева, дата «чт, 21 авг»
+   прижата вправо. Заголовок и мета лежат в общей обёртке, и без своего
+   правила она сжималась по содержимому — дата прилипала к заголовку, хотя
+   ряд раздвигает края. */
+.hdr-tab-title-group {
+  display: flex;
+  flex: 1;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
 .hdr-tab-title-row--widgets .hdr-widgets-edit-btn {
   align-self: center;
 }

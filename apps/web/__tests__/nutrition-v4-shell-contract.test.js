@@ -26,6 +26,10 @@ describe('nutrition v4 · isolated Canvas shell', () => {
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-bottom\s*\{[^}]*margin-top:\s*0[^}]*padding:\s*0/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-client-tab-title-text\s*\{[^}]*font-size:\s*15px/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-tab-title-group\s*\{[^}]*align-items:\s*center[^}]*justify-content:\s*space-between/);
+    // Без своей раскладки обёртка сжималась по содержимому, и space-between
+    // выше не делал ничего: дата прилипала к «Питание» вместо правого края.
+    const baseCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
+    expect(baseCss).toMatch(/\n\.hdr-tab-title-group\s*\{[^}]*display:\s*flex;[^}]*flex:\s*1;[^}]*justify-content:\s*space-between/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.date-picker-icon\s*\{[^}]*display:\s*none/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-sticky-strip\s*\{[^}]*padding:\s*11px 18px 0/);
     expect(nutritionCss).toMatch(/\.nutrition-v4 \.water-review\s*\{[^}]*margin-top:\s*10px/);
