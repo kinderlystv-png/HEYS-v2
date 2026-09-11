@@ -1882,6 +1882,21 @@
   color: transparent;
 }
 
+/* У резервного вопроса крест справа (решение владельца), и его правый край
+   встаёт по правому краю содержимого: цель 44 выходит за поле на
+   44/2 − 5 = 17, где 5 — половина видимого креста: (12,3 + 1,72) / √2 ≈ 9,9.
+   Вынос задан обёртке, а не кнопке: обёртка держит min-width 44, и
+   отрицательное поле самой кнопки она поглощала — крест не двигался.
+   Шторка причины пропуска держит крест слева, как в кадре, с прежним
+   выносом −12. */
+[data-heys-step-id="morning_activation_followup"] .mc-header-btn--close {
+  margin: -10px 0;
+}
+
+[data-heys-step-id="morning_activation_followup"] .mc-header-left {
+  margin-right: -17px;
+}
+
 [data-heys-step-id="morning_activation_followup"] .mc-header-btn--close::before,
 [data-heys-step-id="morning_activation_followup"] .mc-header-btn--close::after,
 [data-heys-step-id="morning_activation_skip_reason"] .mc-header-btn--close::before,
@@ -1890,10 +1905,14 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 19px;
-  height: 2.75px;
+  /* Кадр: SVG 15 px, viewBox 24, штрих 2,75 со скруглением, отрезок 12×12.
+     В пикселях это черта 12√2 + 2,75 = 19,7 единицы × 15/24 ≈ 12,3 px
+     толщиной 2,75 × 15/24 ≈ 1,7 px, тоном --ink-3. Прежние 19 × 2,75 px
+     рисовали крест в полтора раза крупнее и почти вдвое жирнее. */
+  width: 12.3px;
+  height: 1.72px;
   border-radius: 999px;
-  background: rgba(var(--v4-ink-rgb), 0.42) /* v4-intentional */;
+  background: var(--v4-ink-3) /* v4-intentional */;
 }
 
 [data-heys-step-id="morning_activation_followup"] .mc-header-btn--close::before,

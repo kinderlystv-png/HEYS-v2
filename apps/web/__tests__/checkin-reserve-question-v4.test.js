@@ -125,6 +125,29 @@ describe('резервный вопрос после еды', () => {
       expect(step, literal).not.toContain(literal);
     }
   });
+  it('крест тонкий и мелкий, как SVG кадра, тоном --ink-3', () => {
+    // Кадр: SVG 15 px, viewBox 24, штрих 2,75, отрезки 6→18 со скруглением.
+    // В пикселях черта ≈ 12,3 × 1,7 px. Прежние 19 × 2,75 были вдвое жирнее.
+    expect(FRAME).toContain('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75"');
+    expect(FRAME).toContain('M6 6l12 12M18 6L6 18');
+    const at = CSS.indexOf('[data-heys-step-id="morning_activation_followup"] .mc-header-btn--close::before,');
+    expect(at, 'правило черт креста найдено').toBeGreaterThan(-1);
+    const bar = CSS.slice(at, CSS.indexOf('}', at));
+    expect(bar).toContain('width: 12.3px');
+    expect(bar).toContain('height: 1.72px');
+    expect(bar).toContain('background: var(--v4-ink-3)');
+  });
+
+  it('крест справа встаёт правым краем по краю содержимого', () => {
+    const own = CSS.indexOf('[data-heys-step-id="morning_activation_followup"] .mc-header-btn--close {');
+    expect(own, 'своё правило положения креста').toBeGreaterThan(-1);
+    expect(CSS.slice(own, CSS.indexOf('}', own))).toContain('margin: -10px 0');
+    // Вынос на обёртке: у неё min-width 44, и поле кнопки она поглощала.
+    const wrap = CSS.indexOf('[data-heys-step-id="morning_activation_followup"] .mc-header-left {\n  margin-right');
+    expect(wrap, 'вынос обёртки креста').toBeGreaterThan(-1);
+    expect(CSS.slice(wrap, CSS.indexOf('}', wrap))).toContain('margin-right: -17px');
+  });
+
   it('крест справа, оба текста шапки слева, как в кадре', () => {
     // Кадр креста не рисует вовсе — лист v4 закрывается ручкой или свайпом, —
     // но выход из шторки продуктовый инвариант, и слева он спорил с
