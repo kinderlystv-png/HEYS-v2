@@ -47,7 +47,7 @@ describe('Белок · Как сейчас — сведённый кусок', 
     expect(contractValue(canvas, 'Белок · Как сейчас · 03'))
       .toBe('выравнивание baseline, зазор 3px, отступ сверху auto');
     expect(contractValue(canvas, 'Белок · Как сейчас · 04'))
-      .toBe('«112» — моноцифры: шрифт 600 21px/1 Figtree, трекинг -.02em, цвет var(--tx)');
+      .toBe('«112» — моноцифры: шрифт 600 21px/1 Manrope, трекинг -.02em, цвет var(--tx)');
     expect(contractValue(canvas, 'Белок · Как сейчас · 05'))
       .toBe('высота 4px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 7px');
     expect(contractValue(canvas, 'Белок · Как сейчас · 06'))

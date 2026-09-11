@@ -61,8 +61,8 @@ async function measureConsentTypography(palette) {
   const css = loadPaletteCss();
   await page.setContent(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${css}</style></head>
 <body style="margin:0;width:375px;background:var(--v4-hero,#efe3cf)">
-  <div id="hint" style="margin-top:8px;font:500 12.5px/1.55 Figtree,system-ui,sans-serif;color:var(--v4-ink-2,rgba(0,0,0,.55))">Оба документа открываются целиком</div>
-  <div id="reason" style="text-align:center;font:600 11.5px/1.45 Figtree,system-ui,sans-serif;color:var(--v4-ink-2,rgba(0,0,0,.55))">Откройте и дочитайте оба документа</div>
+  <div id="hint" style="margin-top:8px;font:500 12.5px/1.55 Manrope,system-ui,sans-serif;color:var(--v4-ink-2,rgba(0,0,0,.55))">Оба документа открываются целиком</div>
+  <div id="reason" style="text-align:center;font:600 11.5px/1.45 Manrope,system-ui,sans-serif;color:var(--v4-ink-2,rgba(0,0,0,.55))">Откройте и дочитайте оба документа</div>
 </body></html>`, { waitUntil: 'domcontentloaded' });
   await page.evaluate(({ theme, palette: pal, themeId }) => {
     document.documentElement.setAttribute('data-theme', theme);

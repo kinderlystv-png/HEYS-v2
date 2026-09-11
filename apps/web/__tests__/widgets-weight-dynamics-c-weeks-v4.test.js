@@ -54,7 +54,7 @@ describe('Динамика · C столбики — сведённый кусо
     expect(contractValue(canvas, 'Динамика · C столбики · 03'))
       .toBe('«Вес по неделям» — ключ');
     expect(contractValue(canvas, 'Динамика · C столбики · 04'))
-      .toBe('«−1,8» — моноцифры: шрифт 700 10px/1 Figtree');
+      .toBe('«−1,8» — моноцифры: шрифт 700 10px/1 Manrope');
     expect(contractValue(canvas, 'Динамика · C столбики · 05'))
       .toBe('выравнивание flex-end, зазор 4px, высота 24px, отступ сверху auto');
     expect(contractValue(canvas, 'Динамика · C столбики · 06'))

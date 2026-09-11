@@ -257,12 +257,12 @@
     "Мессенджер · пустой тред · 06": {
       "v": "=",
       "f": "пилюля «Как самочувствие» — EMPTY_THREAD_PROMPTS",
-      "h": "3383fdae227a"
+      "h": "ed0b2a21045e"
     },
     "Мессенджер · пустой тред · 07": {
       "v": "=",
       "f": "1000-messenger.css .messenger-empty__text + heys_messenger_v1.js EmptyThread copy — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
-      "h": "8b3c2896639f"
+      "h": "7de8aa63585f"
     },
     "Мессенджер · пустой тред · 08": {
       "v": "=",
@@ -297,7 +297,7 @@
     "Мессенджер · тред с карточкой дня · 05": {
       "v": "=",
       "f": "1000-messenger.css .messenger-show-older min-height 44px padding 0 14px radius 999px --v4-c1 11.5px/600 --v4-ink-2 center — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark Пакет 48: контракт перечитан, продукт сверен (ОТВЕТ-отступления §тач-цели, ОТВЕТ-findings).",
-      "h": "b57b53b2bdfd"
+      "h": "b29b1a01708a"
     },
     "Мессенджер · тред с карточкой дня · 06": {
       "v": "=",
@@ -322,12 +322,12 @@
     "Мессенджер · тред с карточкой дня · 10": {
       "v": "=",
       "f": "1000-messenger.css .msg-applied-card__title flex 1 12.5px/700 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
-      "h": "7305b55804d7"
+      "h": "e730413af1bc"
     },
     "Мессенджер · тред с карточкой дня · 11": {
       "v": "=",
       "f": "1000-messenger.css .msg-applied-card__meta 11px/500 --v4-ink-data — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
-      "h": "e3bc42508305"
+      "h": "1092263ce837"
     },
     "Мессенджер · тред с карточкой дня · 12": {
       "v": "=",
@@ -337,7 +337,7 @@
     "Мессенджер · тред с карточкой дня · 13": {
       "v": "=",
       "f": "1000-messenger.css .msg-applied-card__item gap 8px 12px/1.3 — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
-      "h": "90ec6f61c6ee"
+      "h": "92c1cc023e48"
     },
     "Мессенджер · тред с карточкой дня · 14": {
       "v": "=",
@@ -357,12 +357,12 @@
     "Мессенджер · тред с карточкой дня · 17": {
       "v": "=",
       "f": "1000-messenger.css .msg-applied-card__total 11.5px/700 --v4-ink — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
-      "h": "9db5a6e50cf8"
+      "h": "59c9058a11f7"
     },
     "Мессенджер · тред с карточкой дня · 18": {
       "v": "=",
       "f": "1000-messenger.css .msg-applied-card__open 11.5px/700 --v4-act — messenger-empty-applied-geometry.test.js chromium @375 sand+blue+sand-dark + CSS rules",
-      "h": "17e2d0a51910"
+      "h": "6971e6620090"
     },
     "Мессенджер · Ждём и подсказка · 01": {
       "v": "=",
@@ -392,12 +392,12 @@
     "Мессенджер · Ждём и подсказка · 06": {
       "v": "=",
       "f": ".messenger-food-hint__text 500 12px/1.45 var(--v4-ink); body flex:1 — composer-redesign + razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
-      "h": "5cb6d28abb1d"
+      "h": "ce24e13c84b1"
     },
     "Мессенджер · Ждём и подсказка · 07": {
       "v": "=",
       "f": ".messenger-food-hint__hide 600 11.5px/1 var(--v4-ink-2) flex:none — 1000-messenger.css:1903-1917 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
-      "h": "1220c0faa312"
+      "h": "2f6cf8e58f6f"
     },
     "Мессенджер · Ждём и подсказка · 08": {
       "v": "=",
@@ -437,12 +437,12 @@
     "Мессенджер · запись голосового · 06": {
       "v": "=",
       "f": ".msg-intent__value 800 20px/1 var(--v4-ink) margin-top 6px — states-redesign + razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
-      "h": "388b729a566e"
+      "h": "323bd0aa5348"
     },
     "Мессенджер · запись голосового · 07": {
       "v": "=",
       "f": ".msg-intent__details 500 11.5px/1.3 var(--v4-ink-2) — razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
-      "h": "6a51267d4a9a"
+      "h": "57427db337b3"
     },
     "Мессенджер · запись голосового · 08": {
       "v": "=",
@@ -524,12 +524,12 @@
     "Мессенджер · запись голосового · 21": {
       "v": "=",
       "f": ".msg-audio-meta 600 11px var(--v4-ink-2) — 1000-messenger.css:891-900 (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
-      "h": "85c4c09704f3"
+      "h": "db760871ca89"
     },
     "Мессенджер · запись голосового · 22": {
       "v": "=",
       "f": ".msg-audio-transcript 500 12.5px/1.45 margin-top 9px var(--v4-ink) — razbor (apps/web/__tests__/messenger-v4-canvas-razbor.test.js).",
-      "h": "90eb494b5965"
+      "h": "87b1f74adf5a"
     },
     "Мессенджер · запись голосового · 23": {
       "v": "=",
@@ -549,7 +549,7 @@
     "Мессенджер · запись голосового · 26": {
       "v": "=",
       "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
-      "h": "25e363cec4d9"
+      "h": "7238aa1b404b"
     },
     "Мессенджер · запись голосового · 27": {
       "v": "=",
@@ -589,7 +589,7 @@
     "Мессенджер · запись голосового · 34": {
       "v": "=",
       "f": "канон — блок над полем .messenger-recording-live (1000-messenger.css:1146-1200); кадр переснят под продукт — ОТВЕТ-22 #13, код без изменений",
-      "h": "f3c881391720"
+      "h": "5778f550217b"
     },
     "Мессенджер · лист действий · 01": {
       "v": "=",
@@ -619,7 +619,7 @@
     "Мессенджер · лист действий · 06": {
       "v": "=",
       "f": "1000-messenger.css:2947-2956 .messenger-action-sheet__quote 12px/500 --v4-ink-data ellipsis",
-      "h": "898623eb818e"
+      "h": "0db42ef13cd4"
     },
     "Мессенджер · лист действий · 07": {
       "v": "=",
@@ -714,7 +714,7 @@
     "Мессенджер · без сети · 08": {
       "v": "=",
       "f": "1000-messenger.css:3188-3203 .messenger-offline-bar__retry 700 11.5px var(--v4-act)",
-      "h": "426546800323"
+      "h": "456ee2c9cf4e"
     },
     "Мессенджер · без сети · 09": {
       "v": "=",
@@ -749,7 +749,7 @@
     "Мессенджер · согласие на расшифровку · 06": {
       "v": "=",
       "f": "1000-messenger.css:1282-1291 .messenger-consent-link 12px/600 var(--v4-act) margin-top 12px; heys_messenger_v1.js:4799",
-      "h": "ce332d1ef053"
+      "h": "4772ecffa554"
     },
     "Мессенджер · согласие на расшифровку · 07": {
       "v": "=",

@@ -784,8 +784,9 @@ describe('«Утренний чек-ин» · разбор кадров канв
     const block = STEPS_SRC.slice(STEPS_SRC.indexOf('if (estimated) {'));
     // Крупное число тоном чернил 45 %, а не акцентом: цифра не введена.
     expect(block).toMatch(/fontSize: 58, fontWeight: 600, lineHeight: 0\.9, color: 'rgba\(0,0,0,\.45\)'/);
-    // Плашка «Расчётный» / «Из профиля» — вторая поверхность, тон акцента.
-    expect(block).toMatch(/padding: '5px 12px', borderRadius: 999, background: 'var\(--v4-hero, #efe3cf\)'/);
+    // Плашка «Расчётный» / «Из профиля» — тон акцента на фоне --c1 (пакет 53,
+    // строки «Чек-ин · расчётный вес · 08»; прежде была вторая поверхность --c2).
+    expect(block).toMatch(/padding: '5px 12px', borderRadius: 999, background: 'var\(--v4-c1, #f7efe2\)'/);
     expect(block).toMatch(/fontSize: 10\.5, fontWeight: 700, letterSpacing: '0\.08em'/);
     // Карточка объяснения: первая поверхность, радиус 20, поля 15/17.
     expect(block).toMatch(/background: '#f7efe2', borderRadius: 20, padding: '15px 17px', marginTop: 22/);

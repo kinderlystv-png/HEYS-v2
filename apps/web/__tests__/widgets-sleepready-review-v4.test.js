@@ -45,11 +45,11 @@ describe('Готовность ко сну · Разбор — сведённы�
       .toBe('распределение space-between, выравнивание baseline');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 03')).toBe('«К вечеру» — ключ');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 04'))
-      .toBe('«до отбоя 2:40» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
+      .toBe('«до отбоя 2:40» — моноцифры: шрифт 600 9px/1 Manrope, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 05'))
       .toBe('выравнивание baseline, зазор 5px, отступ сверху 7px');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 06'))
-      .toBe('«2» — моноцифры: шрифт 600 26px/.9 Figtree, трекинг -.03em, цвет var(--tx)');
+      .toBe('«2» — моноцифры: шрифт 600 26px/.9 Manrope, трекинг -.03em, цвет var(--tx)');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 07'))
       .toBe('направление column, зазор 8px, отступ сверху auto');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 08'))
@@ -57,9 +57,9 @@ describe('Готовность ко сну · Разбор — сведённы�
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 09'))
       .toBe('флекс none, ширина 7px, высота 7px, радиус 999px, фон var(--gr2)');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 10'))
-      .toBe('«Вода» — моноцифры: флекс 1, шрифт 600 10px/1 Figtree, цвет var(--tx)');
+      .toBe('«Вода» — моноцифры: флекс 1, шрифт 600 10px/1 Manrope, цвет var(--tx)');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 11'))
-      .toBe('«2,4 из 2,7 л» — моноцифры: шрифт 600 8.5px/1 Figtree, цвет var(--ink-2)');
+      .toBe('«2,4 из 2,7 л» — моноцифры: шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · 12'))
       .toBe('флекс none, ширина 7px, высота 7px, радиус 999px, фон rgba(var(--ink),.08)');
     expect(contractValue(canvas, 'Готовность ко сну · Разбор · текст'))

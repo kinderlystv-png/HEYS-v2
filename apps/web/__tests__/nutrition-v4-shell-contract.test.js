@@ -20,7 +20,7 @@ describe('nutrition v4 · isolated Canvas shell', () => {
   });
 
   it('scopes the exact Canvas title/date rhythm to the Nutrition tab', () => {
-    expect(nutritionCss).toMatch(/\.wrap--tab-diary\s*\{[^}]*font-family:\s*Figtree, sans-serif/);
+    expect(nutritionCss).toMatch(/\.wrap--tab-diary\s*\{[^}]*font-family:\s*Manrope, sans-serif/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary\s*\{[^}]*padding-top:\s*0/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr\s*\{[^}]*padding:\s*16px 18px 0/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-bottom\s*\{[^}]*margin-top:\s*0[^}]*padding:\s*0/);

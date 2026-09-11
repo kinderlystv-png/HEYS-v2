@@ -154,14 +154,14 @@
 /* Строка «колесо — общий кадр»: шаг «Добавление» несёт КРУПНОЕ — 36/16/32
    тоном --ac, соседи чернила 24 %. */
 .meal-time-hero .mc-wheel-value--current {
-  font: 700 36px/1 Figtree, system-ui, sans-serif;
+  font: 700 36px/1 Manrope, system-ui, sans-serif;
   letter-spacing: -0.025em;
   color: var(--v4-act-text, #8a4a20);
 }
 
 .meal-time-hero .mc-wheel-value--prev,
 .meal-time-hero .mc-wheel-value--next {
-  font: 600 16px/1 Figtree, system-ui, sans-serif;
+  font: 600 16px/1 Manrope, system-ui, sans-serif;
   letter-spacing: -0.02em;
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
   opacity: 1;
@@ -4366,19 +4366,19 @@
 }
 
 .meal-time-step--sheet .mc-wheel-value--current {
-  font: 700 24px/1 Figtree, system-ui, sans-serif;
+  font: 700 24px/1 Manrope, system-ui, sans-serif;
   letter-spacing: -0.025em;
   color: var(--v4-act-text, #8a4a20);
 }
 
 .meal-time-step--sheet .mc-wheel-value--prev,
 .meal-time-step--sheet .mc-wheel-value--next {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
 .meal-time-step--sheet .meal-time-hero .mc-time-sep {
-  font: 700 20px/1 Figtree, system-ui, sans-serif;
+  font: 700 20px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -4481,7 +4481,7 @@
   box-shadow:
     0 1px 2px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.09),
     0 14px 40px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.12);
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
   -webkit-font-smoothing: antialiased;
   animation: copyMealScaleIn 180ms ease-out;
 }

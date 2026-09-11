@@ -1064,12 +1064,12 @@
     "Вода · свой объём · лист · 04": {
       "v": "=",
       "f": "Разбор ««750» — шрифт 600 26px/1 Figtree, трекинг -.03em, цвет var(--inkTxt)» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
-      "h": "c7b245270456"
+      "h": "23594b829d28"
     },
     "Вода · свой объём · лист · 05": {
       "v": "=",
       "f": "Разбор ««мл» — шрифт 600 11px/1 Figtree, цвет var(--dimTxt)» — heys_water_custom_volume_v1.js + .water-custom-sheet__* 400-water-and-hydration.css:3845; гейт water-add-v4-canvas-razbor.test.js",
-      "h": "fe16f1a6d34c"
+      "h": "a15e5465b6ca"
     },
     "Вода · свой объём · лист · 06": {
       "v": "=",
@@ -1099,7 +1099,7 @@
     "Вода · столбик · Питание · 02": {
       "v": "=",
       "f": "Столбик ««Питание» — шрифт 700 13px/1 Figtree, цвет var(--tx), отступ снизу 9px» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
-      "h": "826853a883e4"
+      "h": "e1bb535a4d3e"
     },
     "Вода · столбик · Питание · 03": {
       "v": "=",
@@ -1129,7 +1129,7 @@
     "Вода · столбик · Актив · 02": {
       "v": "=",
       "f": "Столбик ««Актив» — шрифт 700 13px/1 Figtree, цвет var(--tx), отступ снизу 9px» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
-      "h": "94f76bb1520d"
+      "h": "1a07e9035558"
     },
     "Вода · столбик · Актив · 03": {
       "v": "=",
@@ -1159,7 +1159,7 @@
     "Вода · столбик · Главная прокручена · 02": {
       "v": "=",
       "f": "Столбик ««Отчёт за день» — шрифт 700 13px/1 Figtree, цвет var(--tx), отступ снизу» — heys_day_water_v1.js renderWaterColumn + 400-water-and-hydration.css; water-add-v4.test.js",
-      "h": "49ed1457af39"
+      "h": "e679cb0e41a7"
     },
     "Вода · столбик · Главная прокручена · 03": {
       "v": "=",

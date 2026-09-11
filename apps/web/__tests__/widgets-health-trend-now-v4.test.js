@@ -48,7 +48,7 @@ describe('Тренд здоровья · Как сейчас — сведённ�
     expect(contractValue(canvas, 'Тренд здоровья · Как сейчас · 03'))
       .toBe('выравнивание baseline, зазор 5px, отступ сверху 10px');
     expect(contractValue(canvas, 'Тренд здоровья · Как сейчас · 04'))
-      .toBe('«+8» — моноцифры: шрифт 600 26px/1 Figtree, цвет var(--gr)');
+      .toBe('«+8» — моноцифры: шрифт 600 26px/1 Manrope, цвет var(--gr)');
     expect(contractValue(canvas, 'Тренд здоровья · Как сейчас · рисунок 01'))
       .toBe('поле рисунка 100%×40 (viewBox 0 0 130 40)');
     expect(contractValue(canvas, 'Тренд здоровья · Как сейчас · рисунок 02'))

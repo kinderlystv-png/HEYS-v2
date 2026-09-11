@@ -110,6 +110,6 @@ describe('Календарь зарядки читается неделями', 
 
 describe('Подпись пункта листа действия', () => {
   it('вес и интерлиньяж — числа кадра', () => {
-    expect(rule('.activity-v4-sheet__sub')).toContain('font: 600 11px/1 Figtree');
+    expect(rule('.activity-v4-sheet__sub')).toContain('font: 600 11px/1 Manrope');
   });
 });

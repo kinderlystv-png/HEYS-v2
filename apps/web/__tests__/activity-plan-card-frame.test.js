@@ -406,9 +406,9 @@ describe('Геометрия задана только внутри блока �
     expect(rule('.activity-v4-program .sb-plan-letter')).toContain('border-radius: 11px');
     expect(rule('.activity-v4-program .sb-plan-exercises')).toContain('gap: 6px');
     expect(rule('.activity-v4-program .sb-plan-actions--future .sb-plan-cta'))
-      .toContain('font: 700 12px/1 Figtree');
+      .toContain('font: 700 12px/1 Manrope');
     expect(rule('.activity-v4-program .sb-plan-week-days')).toContain('gap: 5px');
-    expect(rule('.activity-v4-program .sb-plan-exercises li > i')).toContain('Figtree');
+    expect(rule('.activity-v4-program .sb-plan-exercises li > i')).toContain('Manrope');
     expect(rule('.activity-v4-program .sb-plan-exercises li > i')).toContain('tabular-nums');
     const trace = rule('.activity-v4-program .sb-plan-feed > .sb-plan-trace');
     expect(trace).toContain('margin-top: 12px');

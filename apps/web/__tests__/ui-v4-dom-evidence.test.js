@@ -53,7 +53,7 @@ describe('UI v4 DOM evidence engine', () => {
   it('matches font shorthand/family and converts a unitless line-height to computed pixels', () => {
     const parsed = parseContractAssertions({
       identity: 'caption',
-      value: 'шрифт 600 10px/1 Figtree',
+      value: 'шрифт 600 10px/1 Manrope',
     });
     const result = evaluateDomEvidence({
       parsed,
@@ -62,13 +62,13 @@ describe('UI v4 DOM evidence engine', () => {
           fontWeight: '600',
           fontSize: '10px',
           lineHeight: '10px',
-          fontFamily: '"Figtree", sans-serif',
+          fontFamily: '"Manrope", sans-serif',
         },
       })],
     });
     const shorthand = evaluateDomEvidence({
       parsed,
-      evidence: [spec(parsed, parsed.assertions[0], '600 10px/10px "Figtree", sans-serif')],
+      evidence: [spec(parsed, parsed.assertions[0], '600 10px/10px "Manrope", sans-serif')],
     });
 
     expect(result.evidence[0]).toMatchObject({ status: 'matched' });

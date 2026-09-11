@@ -90,9 +90,9 @@ describe('Строка приведена к списку .cd только на 
 
   it('подпись и ссылка — числа кадра', () => {
     expect(rule('.activity-v4-program .program-next-sub'))
-      .toContain('font: 500 11px/1.3 Figtree');
+      .toContain('font: 500 11px/1.3 Manrope');
     expect(rule('.activity-v4-program .program-next-link'))
-      .toContain('font: 700 11.5px/1 Figtree');
+      .toContain('font: 700 11.5px/1 Manrope');
   });
 
   it('блок программы стоит выше яруса и отбит на 12', () => {

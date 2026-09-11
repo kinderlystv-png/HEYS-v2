@@ -53,9 +53,9 @@ describe('Клетчатка · Неделя — сведённый кусок',
     expect(contractValue(canvas, 'Клетчатка · Неделя · 03'))
       .toBe('выравнивание baseline, зазор 5px, отступ сверху 8px');
     expect(contractValue(canvas, 'Клетчатка · Неделя · 04'))
-      .toBe('«18» — моноцифры: шрифт 600 26px/.9 Figtree, трекинг -.03em, цвет var(--tx)');
+      .toBe('«18» — моноцифры: шрифт 600 26px/.9 Manrope, трекинг -.03em, цвет var(--tx)');
     expect(contractValue(canvas, 'Клетчатка · Неделя · 05'))
-      .toBe('«норма 26» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
+      .toBe('«норма 26» — моноцифры: шрифт 600 9px/1 Manrope, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Клетчатка · Неделя · 06'))
       .toBe('позиция relative, выравнивание flex-end, зазор 4px, высота 44px, отступ сверху auto');
     expect(contractValue(canvas, 'Клетчатка · Неделя · 07'))

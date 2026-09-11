@@ -45,15 +45,15 @@ describe('Готовность ко сну · Чек-лист — сведённ
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Готовность ко сну · Чек-лист · 03')).toBe('«К вечеру» — ключ');
     expect(contractValue(canvas, 'Готовность ко сну · Чек-лист · 04'))
-      .toBe('«2 из 3» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
+      .toBe('«2 из 3» — моноцифры: шрифт 600 9px/1 Manrope, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Готовность ко сну · Чек-лист · 05'))
       .toBe('зазор 10px, отступ сверху auto, перенос строк wrap');
     expect(contractValue(canvas, 'Готовность ко сну · Чек-лист · 06'))
-      .toBe('выравнивание center, зазор 4px, шрифт 600 8.5px/1 Figtree, цвет var(--gr)');
+      .toBe('выравнивание center, зазор 4px, шрифт 600 8.5px/1 Manrope, цвет var(--gr)');
     expect(contractValue(canvas, 'Готовность ко сну · Чек-лист · 07'))
       .toBe('ширина 6px, высота 6px, радиус 999px, фон var(--gr2)');
     expect(contractValue(canvas, 'Готовность ко сну · Чек-лист · 08'))
-      .toBe('выравнивание center, зазор 4px, шрифт 600 8.5px/1 Figtree, цвет var(--ink-2)');
+      .toBe('выравнивание center, зазор 4px, шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Готовность ко сну · Чек-лист · 09'))
       .toBe('ширина 6px, высота 6px, радиус 999px, фон rgba(var(--ink),.08)');
     expect(contractValue(canvas, 'Готовность ко сну · Чек-лист · текст'))

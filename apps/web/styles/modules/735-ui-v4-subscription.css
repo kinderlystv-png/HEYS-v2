@@ -31,7 +31,7 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  font-family: Figtree, system-ui, -apple-system, sans-serif;
+  font-family: Manrope, system-ui, -apple-system, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -57,7 +57,7 @@
 }
 
 .paywall-title {
-  font: 700 19px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 19px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   margin: 0;
   padding-right: 40px;
@@ -65,7 +65,7 @@
 }
 
 .paywall-subtitle {
-  font: 500 12.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.62));
   margin: 8px 0 0;
   text-wrap: pretty;
@@ -110,19 +110,19 @@
 }
 
 .paywall-plan-name {
-  font: 700 13.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 13.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .paywall-plan-desc {
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
   margin-top: 4px;
   text-wrap: pretty;
 }
 
 .paywall-plan-price {
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -130,7 +130,7 @@
 }
 
 .paywall-plan-period {
-  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  font: 500 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.5));
   font-weight: 500;
 }
@@ -139,7 +139,7 @@
   position: absolute;
   top: -9px;
   left: 14px;
-  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  font: 700 9px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   padding: 5px 8px;
@@ -156,7 +156,7 @@
   border-radius: 999px;
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -184,7 +184,7 @@
 }
 
 .paywall-divider-label {
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.45);
 }
 
@@ -200,7 +200,7 @@
 }
 
 .paywall-trial-title {
-  font: 700 13px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 13px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -210,7 +210,7 @@
   justify-content: center;
   gap: 7px;
   margin-top: 6px;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
 }
 
 .paywall-trial-status--ok {
@@ -248,7 +248,7 @@
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink, #201e1d);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -257,7 +257,7 @@
 }
 
 .paywall-footnote {
-  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
   text-align: center;
   margin-top: 10px;
@@ -287,19 +287,19 @@
 }
 
 .paywall-order-name {
-  font: 700 15px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 15px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .paywall-order-price {
-  font: 800 17px/1 Figtree, system-ui, sans-serif;
+  font: 800 17px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
 .paywall-order-period {
-  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  font: 500 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.5));
   margin-top: 4px;
   text-align: right;
@@ -337,7 +337,7 @@
 }
 
 .paywall-consent-text {
-  font: 500 12px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-wrap: pretty;
 }
@@ -356,7 +356,7 @@
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(32, 30, 29, 0.56));
   background: transparent;
   border: none;
@@ -366,7 +366,7 @@
 }
 
 .paywall-error {
-  font: 600 12px/1.4 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-bad-text, #a83c22);
   margin-top: 12px;
   text-align: center;
@@ -391,7 +391,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font: 500 12.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -405,7 +405,7 @@
   justify-content: center;
   min-height: 44px;
   margin-top: 6px;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   /* Канвас, строка «Подписка · очередь · заявка подана · 13»: «Отменить
      заявку» — цвет var(--ac) = --v4-act-text, та же подмена роли, что была у
      ссылок оферты. */
@@ -428,7 +428,7 @@
   border-radius: 999px;
   background: transparent;
   color: var(--v4-bad-text, #a83c22);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
   padding: 0 18px;
 }
@@ -446,7 +446,7 @@
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink, #201e1d);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -547,7 +547,7 @@
   border-radius: 999px;
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -596,14 +596,14 @@
 
 .readonly-toast-label {
   flex: 1;
-  font: 600 12px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 /* Не кнопка, а название того, куда ведёт плашка (решение 6 сентября). */
 .readonly-toast-action {
   flex: none;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   white-space: nowrap;
 }
@@ -612,7 +612,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  font-family: Figtree, system-ui, -apple-system, sans-serif;
+  font-family: Manrope, system-ui, -apple-system, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -632,7 +632,7 @@
 }
 
 .sub-screen__kick {
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-act-text, #8a4a20);
@@ -644,7 +644,7 @@
 
 .sub-screen__headline {
   margin-top: 10px;
-  font: 800 26px/1.1 Figtree, system-ui, sans-serif;
+  font: 800 26px/1.1 Manrope, system-ui, sans-serif;
   letter-spacing: -0.01em;
   color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
@@ -653,28 +653,28 @@
 .sub-screen__subline,
 .sub-screen__hint {
   margin-top: 6px;
-  font: 500 12px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
   font-variant-numeric: tabular-nums;
 }
 
 .sub-screen__readonly-title {
   margin-top: 10px;
-  font: 700 17px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 17px/1.25 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-wrap: pretty;
 }
 
 .sub-screen__readonly-copy {
   margin-top: 6px;
-  font: 500 12.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
   text-wrap: pretty;
 }
 
 .sub-screen__tier {
   margin: 18px 0 10px;
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-act-text, #8a4a20);
@@ -690,7 +690,7 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font: 500 12.5px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-wrap: pretty;
 }
@@ -705,7 +705,7 @@
 
 .sub-screen__note {
   margin-top: 16px;
-  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
   text-wrap: pretty;
 }
@@ -726,13 +726,13 @@
 }
 
 .sub-screen__footnote-title {
-  font: 700 12px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 12px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .sub-screen__footnote-text {
   margin-top: 5px;
-  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
   text-wrap: pretty;
 }
@@ -752,7 +752,7 @@
 }
 
 .sub-screen__support-link {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -797,14 +797,14 @@
 
 .sub-contact__title {
   margin: 14px 0 0;
-  font: 700 19px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 19px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-wrap: pretty;
 }
 
 .sub-contact__copy {
   margin: 8px 0 0;
-  font: 500 12.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.62));
   text-wrap: pretty;
 }
@@ -848,12 +848,12 @@
 }
 
 .sub-contact__row-text b {
-  font: 700 13px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 13px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .sub-contact__row-text small {
-  font: 500 11px/1.35 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 

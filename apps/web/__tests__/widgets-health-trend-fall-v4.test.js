@@ -46,7 +46,7 @@ describe('Тренд здоровья · падение — сведённый �
     expect(contractValue(canvas, 'Тренд здоровья · падение · 04'))
       .toBe('выравнивание flex-end, распределение space-between, зазор 8px, отступ сверху auto');
     expect(contractValue(canvas, 'Тренд здоровья · падение · 05'))
-      .toBe('«−6» — моноцифры: шрифт 600 26px/1 Figtree, цвет var(--val-bad)');
+      .toBe('«−6» — моноцифры: шрифт 600 26px/1 Manrope, цвет var(--val-bad)');
     expect(contractValue(canvas, 'Тренд здоровья · падение · 06'))
       .toBe('флекс none, отступ снизу 2px, цвет var(--val-bad)');
     expect(contractValue(canvas, 'Тренд здоровья · падение · рисунок 01'))

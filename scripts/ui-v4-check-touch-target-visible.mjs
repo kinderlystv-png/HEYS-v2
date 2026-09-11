@@ -1033,7 +1033,7 @@ function createMeasureWindow(cssText) {
   });
   const { window } = dom;
   const style = window.document.createElement('style');
-  style.textContent = `${cssText}\nbody{font-family:Figtree,sans-serif;margin:0}`;
+  style.textContent = `${cssText}\nbody{font-family:Manrope,sans-serif;margin:0}`;
   window.document.head.appendChild(style);
   window.document.documentElement.setAttribute('data-theme-id', 'sand');
   window.document.documentElement.setAttribute('data-palette', 'sand');

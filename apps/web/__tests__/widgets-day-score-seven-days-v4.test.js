@@ -49,7 +49,7 @@ describe('Оценка дня · Семь дней — сведённый кус
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 03'))
       .toBe('«Оценка · 7 дней» — ключ');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 04'))
-      .toBe('«6,2» — моноцифры: шрифт 600 16px/1 Figtree, цвет var(--ac)');
+      .toBe('«6,2» — моноцифры: шрифт 600 16px/1 Manrope, цвет var(--ac)');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 05'))
       .toBe('выравнивание flex-end, зазор 4px, высота 22px, отступ сверху auto');
     expect(contractValue(canvas, 'Оценка дня · Семь дней · 06'))

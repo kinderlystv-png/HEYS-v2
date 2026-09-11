@@ -49,23 +49,23 @@ describe('Ритм приёмов · Интервалы — сведённый �
       .toBe('распределение space-between, выравнивание baseline');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 03')).toBe('«Ритм · интервалы» — ключ');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 04'))
-      .toBe('«4 приёма» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
+      .toBe('«4 приёма» — моноцифры: шрифт 600 9px/1 Manrope, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 05'))
       .toBe('выравнивание baseline, зазор 5px, отступ сверху 7px');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 06'))
-      .toBe('«3:37» — моноцифры: шрифт 600 26px/.9 Figtree, трекинг -.03em, цвет var(--tx)');
+      .toBe('«3:37» — моноцифры: шрифт 600 26px/.9 Manrope, трекинг -.03em, цвет var(--tx)');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 07'))
       .toBe('направление column, зазор 6px, отступ сверху auto');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 08'))
       .toBe('выравнивание center, зазор 7px');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 09'))
-      .toBe('«8:40 → 13:05» — моноцифры: флекс none, ширина 74px, шрифт 600 8.5px/1 Figtree, цвет var(--ink-2)');
+      .toBe('«8:40 → 13:05» — моноцифры: флекс none, ширина 74px, шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 10'))
       .toBe('флекс 1, высота 5px, радиус 999px, фон rgba(var(--ink),.08)');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 11'))
       .toBe('ширина 88%, высота 5px, радиус 999px, фон #b7c29b');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 12'))
-      .toBe('«4 ч 25 м» — моноцифры: флекс none, шрифт 600 8.5px/1 Figtree, цвет var(--tx)');
+      .toBe('«4 ч 25 м» — моноцифры: флекс none, шрифт 600 8.5px/1 Manrope, цвет var(--tx)');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 13'))
       .toBe('ширина 72%, высота 5px, радиус 999px, фон #b7c29b');
     expect(contractValue(canvas, 'Ритм приёмов · Интервалы · 14'))

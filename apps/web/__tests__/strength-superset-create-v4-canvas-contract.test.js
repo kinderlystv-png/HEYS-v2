@@ -122,16 +122,16 @@ describe('strength builder · З1 superset create v4 canvas contract', () => {
 
   it('uses the canvas control, result and note typography', () => {
     expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-head\s*\{[\s\S]*align-items: flex-start;/);
-    expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-head-sub\s*\{[\s\S]*font: 600 10\.5px\/1 Figtree, sans-serif;[\s\S]*letter-spacing: 0\.04em;/);
+    expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-head-sub\s*\{[\s\S]*font: 600 10\.5px\/1 Manrope, sans-serif;[\s\S]*letter-spacing: 0\.04em;/);
     expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-step span\s*\{[\s\S]*font: inherit;[\s\S]*letter-spacing: inherit;/);
-    expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-radio \.sb-ex-num\s*\{[\s\S]*border-radius: 9px;[\s\S]*background: var\(--sb-soft\);[\s\S]*font: 700 11px\/1 Figtree, sans-serif;/);
+    expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-radio \.sb-ex-num\s*\{[\s\S]*border-radius: 9px;[\s\S]*background: var\(--sb-soft\);[\s\S]*font: 700 11px\/1 Manrope, sans-serif;/);
     expect(RAW_CSS).toMatch(/\.sb-superset-control\s*\{[\s\S]*padding: 12px;/);
     expect(RAW_CSS).toMatch(/\.sb-superset-controls\s*\{[\s\S]*margin-bottom: 21px;/);
-    expect(RAW_CSS).toMatch(/\.sb-control-label\s*\{[\s\S]*font: 600 10\.5px\/1 Figtree, sans-serif;[\s\S]*letter-spacing: 0\.04em;/);
+    expect(RAW_CSS).toMatch(/\.sb-control-label\s*\{[\s\S]*font: 600 10\.5px\/1 Manrope, sans-serif;[\s\S]*letter-spacing: 0\.04em;/);
     expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-stepper \.sb-btn\s*\{[\s\S]*background: var\(--sb-soft\);/);
     expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-block\s*\{[\s\S]*padding: 16px;/);
-    expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-tile span\s*\{[\s\S]*font: 600 10\.5px\/1 Figtree, sans-serif;[\s\S]*text-transform: none;/);
-    expect(RAW_CSS).toMatch(/\.sb-superset-note\s*\{[\s\S]*font: 500 11px\/1\.55 Figtree, sans-serif;/);
+    expect(RAW_CSS).toMatch(/\.sb-superset-create-screen \.sb-tile span\s*\{[\s\S]*font: 600 10\.5px\/1 Manrope, sans-serif;[\s\S]*text-transform: none;/);
+    expect(RAW_CSS).toMatch(/\.sb-superset-note\s*\{[\s\S]*font: 500 11px\/1\.55 Manrope, sans-serif;/);
   });
 
   it('matches the canvas copy without changing the superset calculation', () => {

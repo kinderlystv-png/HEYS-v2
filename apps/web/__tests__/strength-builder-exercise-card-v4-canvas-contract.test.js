@@ -88,7 +88,7 @@ describe('М1 · Упражнение · карточка · canvas contract', (
     expect(cssRule('.sb-ex-card-name')).toContain('box-shadow: inset 0 0 0 1.5px var(--acs);');
     expect(cssRule('.sb-ex-card-name')).toContain('padding: 0 14px;');
     expect(cssRule('.sb-ex-card-name')).toContain('margin-top: 12px;');
-    expect(cssRule('.sb-ex-card-name')).toContain('font: 600 13.5px/1 Figtree');
+    expect(cssRule('.sb-ex-card-name')).toContain('font: 600 13.5px/1 Manrope');
     expect(cssRule('.sb-ex-card-name')).toContain('color: var(--tx);');
     expect(cssRule('.sb-ex-card-units')).toContain('gap: 6px;');
     expect(cssRule('.sb-ex-card-pill')).toContain('flex: 1;');
@@ -97,9 +97,9 @@ describe('М1 · Упражнение · карточка · canvas contract', (
     expect(cssRule('.sb-ex-card-cd')).toContain('background: var(--c1);');
     expect(cssRule('.sb-ex-card-row.is-last')).toContain('border-bottom: 0;');
     expect(cssRule('.sb-ex-card-row-copy b')).toContain('color: var(--tx);');
-    expect(cssRule('.sb-ex-card-row-copy span')).toContain('font: 500 11px/1.3 Figtree');
+    expect(cssRule('.sb-ex-card-row-copy span')).toContain('font: 500 11px/1.3 Manrope');
     expect(cssRule('.sb-ex-card-row-copy span')).toContain('rgba(var(--ink), .56)');
-    expect(cssRule('.sb-ex-card-action')).toContain('font: 700 11.5px/1 Figtree');
+    expect(cssRule('.sb-ex-card-action')).toContain('font: 700 11.5px/1 Manrope');
     expect(cssRule('.sb-ex-card-action')).toContain('color: var(--ac);');
     expect(cssRule('.sb-ex-card-muted')).toContain('rgba(var(--ink), .42)');
     expect(cssRule('.sb-ex-card-save')).toContain('margin-top: 12px;');

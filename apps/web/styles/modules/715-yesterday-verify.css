@@ -302,7 +302,7 @@
 
 /* Подпись слева остаётся в своём кегле и использует общий data-floor. */
 .yv-slider-label {
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -321,7 +321,7 @@
 
 /* Кадр «Чек-ин · вчера по ощущениям», элемент 23: data-текст через 12 от дорожки. */
 .yv-slider-note {
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 12px;
 }
@@ -763,7 +763,7 @@
 /* Кадры развилки: data-строка под карточкой сводки и списком дней через 12. */
 .yv-pack-note {
   margin-top: 12px;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -799,7 +799,7 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
 }
 
 /* Кадр «Чек-ин · вчерашний день», элемент 09: подпись слева («Еда» и др.) —
@@ -858,7 +858,7 @@
 }
 
 .yv-force-title {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -867,7 +867,7 @@
 }
 
 .yv-force-kcal {
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
@@ -885,7 +885,7 @@
 }
 
 .yv-slider-value {
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -918,7 +918,7 @@
 
 .yv-slider-tick {
   position: absolute;
-  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 9.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1050,18 +1050,18 @@
 }
 
 .yv-pack-day-title {
-  font: 600 12.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .yv-pack-day-meta {
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 2px;
 }
 
 .yv-pack-chevron {
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
@@ -1077,7 +1077,7 @@
   min-height: 44px;
   border: none;
   background: transparent;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   cursor: pointer;
 }
@@ -1094,5 +1094,5 @@
 
 .yv-step--feelings .yv-hero-title,
 .yv-step--single .yv-hero-title {
-  font: 700 20px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 20px/1.25 Manrope, system-ui, sans-serif;
 }

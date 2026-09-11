@@ -56,7 +56,7 @@
   flex-direction: column;
   background: var(--sb-bg);
   color: var(--sb-tx);
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   overscroll-behavior: contain;
 }
 
@@ -316,7 +316,7 @@
 }
 
 .sb-input-table-head b {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
   font-variant-numeric: tabular-nums;
 }
@@ -403,7 +403,7 @@
 }
 
 .sb-ap-value.is-bw {
-  font: 600 12px/1 Figtree, sans-serif;
+  font: 600 12px/1 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(var(--ink, 0, 0, 0), 0.56));
 }
 
@@ -594,12 +594,12 @@
 }
 
 .sb-ss-ttl {
-  font: 700 13.5px/1.2 Figtree, sans-serif;
+  font: 700 13.5px/1.2 Manrope, sans-serif;
   color: var(--tx);
 }
 
 .sb-ss-key {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -609,7 +609,7 @@
   padding: 4px 8px;
   border-radius: 999px;
   background: var(--acs);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: .04em;
   text-transform: uppercase;
   color: var(--on-acs);
@@ -647,13 +647,13 @@
 }
 
 .sb-ss-member-card i {
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   font-style: normal;
   color: var(--ac);
 }
 
 .sb-ss-member-card span {
-  font: 600 11px/1.2 Figtree, sans-serif;
+  font: 600 11px/1.2 Manrope, sans-serif;
   color: var(--tx);
 }
 
@@ -676,7 +676,7 @@
 .sb-round-num {
   flex: none;
   width: 36px;
-  font: 700 10.5px/1 Figtree, sans-serif;
+  font: 700 10.5px/1 Manrope, sans-serif;
   text-transform: uppercase;
   color: rgba(var(--ink), .56);
 }
@@ -696,7 +696,7 @@
   background: var(--bg);
   box-shadow: inset 0 0 0 1px rgba(var(--ink), .1);
   color: var(--tx);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
@@ -743,25 +743,25 @@
 }
 
 .sb-ss-detail-note {
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
 .sb-ss-detail-row b {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--tx);
 }
 
 .sb-ss-footnote {
   margin: 10px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
 .sb-ss-runtime-note {
   margin: 8px 0 0;
-  font: 500 11.5px/1.45 Figtree, sans-serif;
+  font: 500 11.5px/1.45 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -791,20 +791,20 @@
 
 .sb-ss-flat-letter {
   flex: none;
-  font: 700 10.5px/1 Figtree, sans-serif;
+  font: 700 10.5px/1 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
 .sb-ss-flat-name {
   flex: 1;
   min-width: 0;
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--tx);
 }
 
 .sb-ss-flat-count {
   flex: none;
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -825,7 +825,7 @@
   background: var(--bg);
   box-shadow: inset 0 0 0 1px rgba(var(--ink), .1);
   color: var(--tx);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1278,7 +1278,7 @@
   border-radius: 14px;
   background: var(--v4-c1, var(--sb-card));
   text-align: center;
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
@@ -1299,7 +1299,7 @@
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-head-title b {
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
@@ -1409,12 +1409,12 @@
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-val.is-primary {
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   color: var(--ac, var(--v4-act-text, #8a4a20)); /* v4-intentional */
 }
 
 .sb-root.sb-screen:has(.sb-ex-name) .sb-ex-muscle-val:not(.is-primary) {
-  font: 600 11.5px/1 Figtree, sans-serif;
+  font: 600 11.5px/1 Manrope, sans-serif;
   color: rgba(var(--ink), 0.56); /* v4-intentional */
 }
 
@@ -1777,7 +1777,7 @@
   border-radius: 12px;
   background: var(--acs, var(--sb-acc-strong));
   color: var(--on-acs, #fff);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
 }
 
 .sb-rest-ended-copy {
@@ -1790,18 +1790,18 @@
 
 .sb-rest-ended-copy b {
   color: var(--tx, var(--sb-tx));
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
 }
 
 .sb-rest-ended-copy span {
   color: rgba(var(--ink, 15, 23, 42), 0.56);
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
 }
 
 .sb-rest-ended-now {
   flex: none;
   color: rgba(var(--ink, 15, 23, 42), 0.56);
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -2124,7 +2124,7 @@
    * итогов был не единственным, кто их читает. */
   background: var(--bg);
   color: var(--tx);
-  font-family: Figtree, system-ui, sans-serif;
+  font-family: Manrope, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -2144,7 +2144,7 @@
   border-radius: 999px;
   background: var(--c1);
   color: rgba(var(--ink), .56);
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
 }
 
 .sb-finish-screen .sb-finish-head .sb-head-title {
@@ -2158,12 +2158,12 @@
 
 .sb-finish-screen .sb-finish-head .sb-head-title b {
   color: var(--tx);
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
 }
 
 .sb-finish-screen .sb-finish-head .sb-head-sub {
   color: rgba(var(--ink), .56);
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: .04em;
 }
 
@@ -2187,7 +2187,7 @@
 
 .sb-finish-praise {
   color: var(--gr);
-  font: 700 14px/1.2 Figtree, sans-serif;
+  font: 700 14px/1.2 Manrope, sans-serif;
 }
 
 .sb-finish-metrics {
@@ -2213,7 +2213,7 @@
 
 .sb-finish-metric-label {
   color: rgba(var(--ink), .56);
-  font: 600 9.5px/1 Figtree, sans-serif;
+  font: 600 9.5px/1 Manrope, sans-serif;
   letter-spacing: .11em;
   text-transform: uppercase;
 }
@@ -2226,7 +2226,7 @@
 
 .sb-finish-metric-line b {
   color: var(--tx);
-  font: 800 17px/1 Figtree, sans-serif;
+  font: 800 17px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2236,7 +2236,7 @@
 
 .sb-finish-metric-line i {
   color: var(--gr);
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
   font-style: normal;
   font-variant-numeric: tabular-nums;
 }
@@ -2260,7 +2260,7 @@
   padding: 13px 0;
   border-bottom: 1px solid rgba(var(--ink), .07);
   color: var(--tx);
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
 }
 
 .sb-finish-row.is-last,
@@ -2271,7 +2271,7 @@
 .sb-finish-row b {
   margin-left: auto;
   color: var(--tx);
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
@@ -2299,7 +2299,7 @@
 
 .sb-finish-row--reason small {
   color: rgba(var(--ink), .56);
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
 }
 
 
@@ -2310,7 +2310,7 @@
 .sb-finish-tier {
   margin: 20px 0 10px;
   color: var(--ac);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: .16em;
   text-transform: uppercase;
 }
@@ -2353,7 +2353,7 @@
   outline: 0;
   background: transparent;
   color: var(--ac);
-  font: 700 14px/1 Figtree, sans-serif;
+  font: 700 14px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   text-align: center;
   appearance: textfield;
@@ -2375,7 +2375,7 @@
 
 .sb-finish-feedback span {
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
-  font: 600 9.5px/1 Figtree, sans-serif;
+  font: 600 9.5px/1 Manrope, sans-serif;
 }
 
 .sb-finish-screen .sb-finish-note {
@@ -2389,7 +2389,7 @@
   background: var(--bg);
   box-shadow: inset 0 0 0 1px rgba(var(--ink), .1);
   color: var(--tx);
-  font: 500 12.5px/1 Figtree, sans-serif !important;
+  font: 500 12.5px/1 Manrope, sans-serif !important;
 }
 
 .sb-finish-screen .sb-finish-note::placeholder {
@@ -2405,12 +2405,12 @@
 .sb-finish-chart-head span {
   flex: 1;
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
-  font: 600 11.5px/1.3 Figtree, sans-serif;
+  font: 600 11.5px/1.3 Manrope, sans-serif;
 }
 
 .sb-finish-chart-head b {
   color: var(--tx);
-  font: 800 17px/1 Figtree, sans-serif;
+  font: 800 17px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2436,7 +2436,7 @@
 .sb-finish-chart-column b,
 .sb-finish-chart-column small {
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
-  font: 700 9.5px/1 Figtree, sans-serif;
+  font: 700 9.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -2463,13 +2463,13 @@
 .sb-finish-chart-card p {
   margin: 10px 0 0;
   color: rgba(var(--ink), .56);
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
 }
 
 .sb-finish-footnote {
   margin: 12px 0 0;
   color: rgba(var(--ink), .56);
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
 }
 
 /* Д1 · История упражнения — бейджи сессий и чипы подходов */
@@ -2493,7 +2493,7 @@
   min-height: 20px;
   padding: 0 8px;
   border-radius: 999px;
-  font: 600 10px/1 Figtree, sans-serif;
+  font: 600 10px/1 Manrope, sans-serif;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
@@ -2522,14 +2522,14 @@
   background: var(--bg);
   box-shadow: inset 0 0 0 1px rgba(var(--ink), .1);
   color: var(--tx);
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .sb-history-growth-note,
 .sb-history-growth .sb-finish-row small {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -2561,7 +2561,7 @@
   border-radius: 999px;
   background: var(--acs);
   color: var(--on-acs);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
@@ -2654,7 +2654,7 @@
   border-radius: 12px;
   background: var(--v4-hero, var(--sb-soft));
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
-  font: 700 11px/1 Figtree, -apple-system, system-ui, sans-serif;
+  font: 700 11px/1 Manrope, -apple-system, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -2673,7 +2673,7 @@
   padding: 0 15px;
   border: 0;
   border-radius: 999px;
-  font: 700 11.5px/1 Figtree, -apple-system, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, -apple-system, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -2768,7 +2768,7 @@
 
 .sb-order-handle {
   flex: 0 0 auto;
-  font: 600 14px/1 Figtree, -apple-system, system-ui, sans-serif;
+  font: 600 14px/1 Manrope, -apple-system, system-ui, sans-serif;
   color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.32); /* v4-intentional */
   cursor: grab;
   touch-action: none;
@@ -2808,12 +2808,12 @@
 }
 
 .sb-order-row .sb-cat-title b {
-  font: 700 12.5px/1.2 Figtree, -apple-system, system-ui, sans-serif;
+  font: 700 12.5px/1.2 Manrope, -apple-system, system-ui, sans-serif;
   color: var(--v4-ink, var(--sb-tx));
 }
 
 .sb-order-row .sb-cat-title span {
-  font: 500 11px/1.3 Figtree, -apple-system, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, -apple-system, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
@@ -2847,7 +2847,7 @@
 
 .sb-order-toast-mark {
   flex: 0 0 auto;
-  font: 700 12px/1 Figtree, -apple-system, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, -apple-system, system-ui, sans-serif;
   color: var(--v4-ok-text, var(--sb-okTx));
 }
 
@@ -2860,13 +2860,13 @@
 }
 
 .sb-order-toast-copy b {
-  font: 700 12px/1.2 Figtree, -apple-system, system-ui, sans-serif;
+  font: 700 12px/1.2 Manrope, -apple-system, system-ui, sans-serif;
   color: var(--v4-ok-text, var(--sb-okTx));
   font-variant-numeric: tabular-nums;
 }
 
 .sb-order-toast-copy span {
-  font: 500 11px/1.3 Figtree, -apple-system, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, -apple-system, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
@@ -2879,7 +2879,7 @@
 
 .sb-order-foot {
   margin: 10px 12px 16px;
-  font: 500 11px/1.45 Figtree, -apple-system, system-ui, sans-serif;
+  font: 500 11px/1.45 Manrope, -apple-system, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
 }
 
@@ -2962,7 +2962,7 @@
 
 .sb-empty-card b {
   display: block;
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.32;
   font-weight: 700;
@@ -2971,7 +2971,7 @@
 
 .sb-empty-card p {
   margin: 8px 0 0;
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-size: 12px;
   line-height: 1.55;
   font-weight: 500;
@@ -3008,7 +3008,7 @@
 .sb-empty-plan-preview-name {
   flex: 1;
   min-width: 0;
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-size: 11.5px;
   line-height: 1.3;
   font-weight: 600;
@@ -3017,7 +3017,7 @@
 
 .sb-empty-plan-preview-dose {
   flex: none;
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-style: normal;
   font-size: 10.5px;
   line-height: 1.3;
@@ -3029,7 +3029,7 @@
 .sb-empty-plan-preview-more {
   display: block;
   margin-top: 7px;
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-size: 10.5px;
   line-height: 1.3;
   font-weight: 500;
@@ -3048,7 +3048,7 @@
      экрана паузы ниже. */
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-muted, rgba(var(--v4-ink-rgb), .58)); /* v4-intentional */
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-size: 13px;
   line-height: 1;
   font-weight: 700;
@@ -3067,7 +3067,7 @@
 .sb-empty-plan-meta {
   margin-top: 6px;
   text-align: center;
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-size: 11px;
   line-height: 1.4;
   font-weight: 500;
@@ -3092,7 +3092,7 @@
   border: 0;
   background: transparent;
   color: var(--v4-ink, var(--sb-tx));
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-size: 12.5px;
   line-height: 1;
   font-weight: 600;
@@ -3110,7 +3110,7 @@
 
 .sb-empty-note {
   margin: 12px 0 0;
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
   font-size: 11px;
   line-height: 1.55;
   font-weight: 500;
@@ -3136,7 +3136,7 @@
 .sb-root--interrupted {
   background: var(--v4-bg, var(--bg, #fffaf1));
   color: var(--v4-ink, var(--tx, #201e1d));
-  font-family: Figtree, -apple-system, system-ui, sans-serif;
+  font-family: Manrope, -apple-system, system-ui, sans-serif;
 }
 
 .sb-interrupted-head {
@@ -3165,12 +3165,12 @@
 }
 
 .sb-interrupted-head .sb-head-title b {
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
   color: var(--v4-ink, var(--tx, #201e1d));
 }
 
 .sb-interrupted-head .sb-head-sub {
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: .04em;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb), .56)); /* v4-intentional */
 }
@@ -3185,7 +3185,7 @@
 
 .sb-interrupted-copy {
   margin: 0;
-  font: 600 12.5px/1.55 Figtree, sans-serif;
+  font: 600 12.5px/1.55 Manrope, sans-serif;
   color: var(--v4-ink, var(--tx, #201e1d));
 }
 
@@ -3203,7 +3203,7 @@
   gap: 12px;
   padding: 13px 0;
   border-bottom: 1px solid rgba(var(--v4-ink-rgb), .07); /* v4-intentional */
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
   color: var(--v4-ink, var(--tx, #201e1d));
 }
 
@@ -3212,7 +3212,7 @@
 }
 
 .sb-interrupted-row b {
-  font: 600 12px/1 Figtree, sans-serif;
+  font: 600 12px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -3230,7 +3230,7 @@
   border-radius: 999px;
   background: var(--v4-chip-2, #efe3cf);
   color: var(--v4-muted, rgba(var(--v4-ink-rgb), .58)); /* v4-intentional */
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
 }
 
 .sb-interrupted-actions .sb-btn.is-accent {
@@ -3240,7 +3240,7 @@
 
 .sb-interrupted-note {
   margin: 12px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb), .56)); /* v4-intentional */
   text-wrap: pretty;
 }
@@ -3272,7 +3272,7 @@
 .sb-renumber-tier {
   margin: 14px 0 8px;
   color: rgba(var(--ink, 15, 23, 42), 0.56);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -3303,7 +3303,7 @@
   min-height: 32px;
   border: 0;
   border-radius: 10px;
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -3319,7 +3319,7 @@
 
 .sb-renumber-val {
   color: var(--tx, var(--sb-tx));
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   text-align: center;
 }
@@ -3337,7 +3337,7 @@
   border-radius: 11px;
   background: var(--gr-bg, var(--sb-okbg));
   color: var(--gr, var(--sb-okTx));
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
 }
 
 .sb-renumber-check.is-muted {
@@ -3352,7 +3352,7 @@
   margin-top: 8px;
   padding-top: 8px;
   color: var(--tx, var(--sb-tx));
-  font: 600 12px/1 Figtree, sans-serif;
+  font: 600 12px/1 Manrope, sans-serif;
 }
 
 .sb-renumber-tonnage-values {
@@ -3362,20 +3362,20 @@
 }
 
 .sb-renumber-tonnage b {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 .sb-renumber-delta {
   color: var(--ac2, var(--v4-act, #b4442a));
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 .sb-renumber-footnote {
   margin: 12px 0 0;
   color: rgba(var(--ink, 15, 23, 42), 0.56);
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   text-wrap: pretty;
 }
 
@@ -3409,7 +3409,7 @@
   --sb-okbg: var(--v4-ok-bg, #eaefe0);
   --sb-okTx: var(--v4-ok-text, #5c6a45);
   background: var(--sb-bg);
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
   -webkit-font-smoothing: antialiased;
   contain: layout style paint;
 }
@@ -3452,7 +3452,7 @@
 .sb-builder-screen .sb-head-title b,
 .sb-superset-create-screen .sb-head-title b {
   color: var(--sb-tx);
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen .sb-head-title b {
@@ -3464,7 +3464,7 @@
 .sb-builder-screen .sb-head-sub,
 .sb-superset-create-screen .sb-head-sub {
   color: var(--sb-mut);
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
 }
@@ -3477,11 +3477,11 @@
   border-radius: 999px;
   background: var(--sb-card);
   color: var(--sb-mut);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen .sb-head > .sb-icon-btn:first-child {
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
 }
 
 .sb-session-badge {
@@ -3549,7 +3549,7 @@
   border-radius: 9px;
   background: var(--sb-bg);
   color: var(--sb-mut);
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen .sb-ex.is-complete .sb-ex-num {
@@ -3579,16 +3579,16 @@
 
 .sb-builder-screen .sb-ex-title b {
   color: var(--sb-tx);
-  font: 700 13px/1.2 Figtree, sans-serif;
+  font: 700 13px/1.2 Manrope, sans-serif;
 }
 
 .sb-builder-screen.sb-root--rest-docked .sb-ex--collapsed .sb-ex-title b {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
 }
 
 .sb-builder-screen .sb-ex-sub {
   color: var(--sb-mut);
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
 }
 
 .sb-builder-screen .sb-ex-sub.is-reopened {
@@ -3601,18 +3601,18 @@
 }
 
 .sb-builder-screen .sb-ex.is-current .sb-ex-state {
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-ex-state {
   flex: 0 0 auto;
   color: var(--sb-okTx);
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen .sb-ex--collapsed.is-complete .sb-ex-state.is-editing {
   color: var(--ac, var(--sb-acc));
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen .sb-panel {
@@ -3632,7 +3632,7 @@
   border-radius: 999px;
   background: var(--sb-soft);
   color: rgba(var(--ink), 0.58);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen .sb-finish {
@@ -3703,12 +3703,12 @@
 
 .sb-builder-screen.is-exercise-open .sb-ex.is-complete .sb-ex-state {
   color: var(--sb-okTx);
-  font: 700 14px/1 Figtree, sans-serif;
+  font: 700 14px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-ex.is-complete .sb-ex-chevron {
   color: rgba(var(--ink), 0.3);
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-ex-toggle {
@@ -3720,7 +3720,7 @@
   border-radius: 999px;
   background: var(--sb-bg);
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-ex.is-open .sb-ex-num {
@@ -3735,12 +3735,12 @@
 
 .sb-builder-screen.is-exercise-open .sb-ex.is-open .sb-ex-count {
   color: var(--sb-acc);
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-ex.is-open .sb-ex-toggle {
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-ex-body {
@@ -3781,7 +3781,7 @@
 .sb-builder-screen.is-exercise-open .sb-aps-head {
   margin-top: 10px;
   padding: 0 8px;
-  font: 600 9.5px/1 Figtree, sans-serif;
+  font: 600 9.5px/1 Manrope, sans-serif;
   letter-spacing: 0.11em;
 }
 
@@ -3823,7 +3823,7 @@
   border-radius: 999px;
   background: var(--sb-bg);
   box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.1);
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-ap-value {
@@ -3858,7 +3858,7 @@
 }
 
 .sb-builder-screen.is-exercise-open .sb-ap-value.is-bw {
-  font: 600 12px/1 Figtree, sans-serif;
+  font: 600 12px/1 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
 }
 
@@ -3903,7 +3903,7 @@
 .sb-builder-screen.is-exercise-open .sb-rpe-label {
   flex: 0 0 auto;
   min-height: 0;
-  font: 700 9.5px/1 Figtree, sans-serif;
+  font: 700 9.5px/1 Manrope, sans-serif;
   letter-spacing: 1.045px;
 }
 
@@ -3945,7 +3945,7 @@
   background: var(--sb-bg);
   box-shadow: none;
   color: rgba(var(--ink), 0.56);
-  font: 500 11.5px/1.3 Figtree, sans-serif;
+  font: 500 11.5px/1.3 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-rest-manual {
@@ -3962,7 +3962,7 @@
   background: var(--sb-bg);
   box-shadow: inset 0 0 0 1px rgba(var(--ink), 0.1);
   color: var(--sb-tx);
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   text-transform: none;
   cursor: pointer;
 }
@@ -4006,7 +4006,7 @@
 
 .sb-builder-screen.is-exercise-open .sb-panel-add::before {
   content: '+';
-  font: 600 20px/1 Figtree, sans-serif;
+  font: 600 20px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-finish {
@@ -4016,7 +4016,7 @@
   padding: 0;
   border-radius: 999px;
   color: rgba(var(--ink), 0.58);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
   margin-top: 0;
 }
 
@@ -4035,18 +4035,18 @@
 .sb-builder-screen .sb-ex-chevron {
   flex: 0 0 auto;
   color: var(--sb-mut);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-ex.is-pending .sb-ex-title > b {
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
-  font: 700 13px/1.2 Figtree, sans-serif;
+  font: 700 13px/1.2 Manrope, sans-serif;
 }
 
 .sb-builder-note,
 .sb-superset-note {
   color: var(--sb-mut);
-  font: 500 10px/1.55 Figtree, sans-serif;
+  font: 500 10px/1.55 Manrope, sans-serif;
 }
 
 .sb-superset-create-screen .sb-head-title {
@@ -4058,7 +4058,7 @@
 }
 
 .sb-superset-create-screen .sb-head-sub {
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
 }
 
@@ -4070,7 +4070,7 @@
 .sb-superset-create-screen .sb-step {
   padding: 0 0 9px;
   color: var(--sb-acc);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -4117,7 +4117,7 @@
   border-radius: 9px;
   background: var(--sb-soft);
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 0, 0, 0), 0.56));
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-superset-create-screen .sb-radio.is-on .sb-ex-num {
@@ -4134,12 +4134,12 @@
 
 .sb-superset-create-screen .sb-radio .sb-cat-title b {
   color: var(--sb-tx);
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
 }
 
 .sb-superset-create-screen .sb-radio .sb-cat-title span {
   color: var(--sb-mut);
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
 }
 
 .sb-superset-create-screen .sb-radio.is-on .sb-cat-title span,
@@ -4149,7 +4149,7 @@
 
 .sb-radio-check {
   flex: 0 0 auto;
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
 }
 
 .sb-superset-controls {
@@ -4168,7 +4168,7 @@
 
 .sb-control-label {
   color: var(--sb-mut);
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
 }
 
@@ -4185,7 +4185,7 @@
   border-radius: 12px;
   background: var(--sb-soft);
   color: var(--sb-mut);
-  font: 700 18px/1 Figtree, sans-serif;
+  font: 700 18px/1 Manrope, sans-serif;
 }
 
 .sb-superset-create-screen .sb-stepper .sb-btn.is-accent {
@@ -4197,7 +4197,7 @@
   flex: 1;
   min-width: 0;
   color: var(--sb-tx);
-  font: 800 19px/1 Figtree, sans-serif;
+  font: 800 19px/1 Manrope, sans-serif;
 }
 
 .sb-rest-preview {
@@ -4210,14 +4210,14 @@
   background: var(--sb-bg);
   box-shadow: inset 0 0 0 1px var(--sb-br);
   color: var(--sb-tx);
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 .sb-control-hint {
   margin-top: 6px;
   color: var(--sb-mut);
-  font: 500 10px/1.35 Figtree, sans-serif;
+  font: 500 10px/1.35 Manrope, sans-serif;
 }
 
 .sb-superset-create-screen .sb-block {
@@ -4230,7 +4230,7 @@
 .sb-superset-create-screen .sb-superset-result .sb-step-hint {
   padding: 0;
   color: var(--sb-tx);
-  font: 600 12.5px/1.55 Figtree, sans-serif;
+  font: 600 12.5px/1.55 Manrope, sans-serif;
 }
 
 .sb-superset-create-screen .sb-tiles {
@@ -4252,14 +4252,14 @@
 
 .sb-superset-create-screen .sb-tile span {
   color: var(--sb-mut);
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: none;
 }
 
 .sb-superset-create-screen .sb-tile b {
   color: var(--sb-tx);
-  font: 800 16px/1 Figtree, sans-serif;
+  font: 800 16px/1 Manrope, sans-serif;
 }
 
 .sb-superset-create-screen .sb-finish {
@@ -4271,12 +4271,12 @@
   border-radius: 999px;
   background: var(--sb-acc-strong);
   color: var(--v4-btn-on-act, #fff5ef);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
 }
 
 .sb-superset-note {
   margin-top: 12px;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
 }
 
 /* ── Карточка плана куратора (экраны 02, 09) ─────────────────────────────── */
@@ -4369,7 +4369,7 @@
   --sb-okbg: var(--gr-bg);
   --sb-okTx: var(--gr);
   background: var(--sb-bg);
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
 }
 
 /* L6/Г2/Г5/Г6/Л10–Л12 proposal frames: contain for canvas-contract harness (task 187). */
@@ -4397,7 +4397,7 @@
 }
 
 .sb-missed-earlier-skipped-pill {
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
 }
 
@@ -4420,13 +4420,13 @@
 .sb-proposal-review .sb-head-title b,
 .sb-root.program-done .sb-head-title b {
   color: var(--sb-tx);
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-review .sb-head-sub,
 .sb-root.program-done .sb-head-sub {
   color: var(--sb-mut);
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-review .sb-icon-btn,
@@ -4437,7 +4437,7 @@
   border-radius: 999px;
   background: var(--sb-card);
   color: rgba(var(--ink), .56);
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-review .sb-list,
@@ -4622,7 +4622,7 @@
   border-radius: 999px;
   background: var(--acs);
   color: var(--on-acs);
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-strip-main {
@@ -4632,14 +4632,14 @@
 
 .sb-proposal-strip-main b {
   display: block;
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--ac);
 }
 
 .sb-proposal-strip-main span {
   display: block;
   margin-top: 2px;
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -4659,13 +4659,13 @@
 
 .sb-proposal-outcome-title {
   margin: 0 0 6px;
-  font: 700 12.5px/1.35 Figtree, sans-serif;
+  font: 700 12.5px/1.35 Manrope, sans-serif;
   color: var(--ac2);
 }
 
 .sb-proposal-outcome-prose {
   margin: 0 0 8px;
-  font: 500 11.5px/1.4 Figtree, sans-serif;
+  font: 500 11.5px/1.4 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -4690,14 +4690,14 @@
 
 .sb-proposal-outcome-main b {
   display: block;
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
   color: var(--tx);
 }
 
 .sb-proposal-outcome-main span {
   display: block;
   margin-top: 2px;
-  font: 500 11px/1.35 Figtree, sans-serif;
+  font: 500 11px/1.35 Manrope, sans-serif;
 }
 
 .sb-proposal-outcome-detail {
@@ -4716,12 +4716,12 @@
 
 .sb-proposal-outcome-mark {
   flex: none;
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-outcome-footnote {
   margin: 10px 0 0;
-  font: 500 11px/1.4 Figtree, sans-serif;
+  font: 500 11px/1.4 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -4741,7 +4741,7 @@
   border-radius: 999px;
   background: var(--gr-bg);
   color: var(--gr);
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-resolution-hero {
@@ -4756,7 +4756,7 @@
 }
 
 .sb-proposal-resolution-hero-title {
-  font: 700 12.5px/1.35 Figtree, sans-serif;
+  font: 700 12.5px/1.35 Manrope, sans-serif;
   color: var(--tx);
 }
 
@@ -4766,13 +4766,13 @@
 
 .sb-proposal-resolution-hero-prose {
   margin: 6px 0 0;
-  font: 500 12px/1.5 Figtree, sans-serif;
+  font: 500 12px/1.5 Manrope, sans-serif;
   color: var(--tx);
 }
 
 .sb-proposal-resolution-tier {
   margin-top: 14px;
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: rgba(var(--ink), .45);
@@ -4796,7 +4796,7 @@
   gap: 12px;
   padding: 13px 0;
   border-bottom: 1px solid rgba(var(--ink), .07);
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-resolution-row.is-last {
@@ -4809,7 +4809,7 @@
 
 .sb-proposal-resolution-mark {
   flex: none;
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   color: var(--tx);
   font-variant-numeric: tabular-nums;
 }
@@ -4833,14 +4833,14 @@
 }
 
 .sb-proposal-resolution-weight .is-old {
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
   text-decoration: line-through;
   font-variant-numeric: tabular-nums;
 }
 
 .sb-proposal-resolution-weight .is-new {
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   color: var(--ac);
   font-variant-numeric: tabular-nums;
 }
@@ -4855,7 +4855,7 @@
   margin-top: 12px;
   border: 0;
   border-radius: 14px;
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
@@ -4871,7 +4871,7 @@
 
 .sb-proposal-resolution-footnote {
   margin: 12px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -4931,7 +4931,7 @@
   border-radius: 999px;
   background: var(--acs);
   color: var(--on-acs);
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-started-banner-main {
@@ -4943,12 +4943,12 @@
 }
 
 .sb-proposal-started-banner-main b {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--ac);
 }
 
 .sb-proposal-started-banner-main span {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -5007,19 +5007,19 @@
 
 .sb-proposal-started-detail-label {
   flex: 1;
-  font: 600 11px/1.3 Figtree, sans-serif;
+  font: 600 11px/1.3 Manrope, sans-serif;
   color: var(--tx);
 }
 
 .sb-proposal-started-detail-old {
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: rgba(var(--ink), .56);
   text-decoration: line-through;
 }
 
 .sb-proposal-started-detail-new {
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--ac);
 }
@@ -5064,7 +5064,7 @@
   background: var(--bg);
   box-shadow: inset 0 0 0 1px var(--gr-bg);
   color: var(--gr);
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-proposal-started-card.is-remove .sb-proposal-started-num {
@@ -5081,18 +5081,18 @@
 }
 
 .sb-proposal-started-card-main b {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--tx);
 }
 
 .sb-proposal-started-card-main span {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
 .sb-proposal-started-tag {
   flex: 0 0 auto;
-  font: 700 9.5px/1 Figtree, sans-serif;
+  font: 700 9.5px/1 Manrope, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ac);
@@ -5119,7 +5119,7 @@
 
 .sb-proposal-started-footnote {
   margin: 10px 0 0;
-  font: 500 11px/1.4 Figtree, sans-serif;
+  font: 500 11px/1.4 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -5164,7 +5164,7 @@
 
 .sb-builder-screen.is-distance-entry.is-exercise-open .sb-aps-head > span:nth-child(3)::after {
   content: 'Метры';
-  font: 600 11px/1.3 Figtree, sans-serif;
+  font: 600 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -5226,7 +5226,7 @@
 
 .sb-builder-screen.is-bodyweight-entry.is-exercise-open .sb-aps-head > span:nth-child(2)::after {
   content: 'Довес, кг';
-  font: 600 11px/1.3 Figtree, sans-serif;
+  font: 600 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -5260,7 +5260,7 @@
 
 .sb-builder-screen.is-bodyweight-entry .sb-ap-value.is-bw::after {
   content: '—';
-  font: 600 12px/1 Figtree, sans-serif;
+  font: 600 12px/1 Manrope, sans-serif;
   color: rgba(var(--ink), .5);
 }
 
@@ -5320,11 +5320,11 @@
   border-radius: 999px;
   background: var(--ac);
   color: var(--bg);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
 }
 
 .sb-authorship-pill-text {
-  font: 600 10.5px/1.3 Figtree, sans-serif;
+  font: 600 10.5px/1.3 Manrope, sans-serif;
   color: var(--ac);
 }
 
@@ -5350,18 +5350,18 @@
 }
 
 .sb-weight-edit-cd-sub {
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
 .sb-weight-edit-cd-detail {
-  font: 600 11px/1.3 Figtree, sans-serif;
+  font: 600 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
 .sb-weight-edit-cd-foot {
   margin: 8px 0 0;
-  font: 500 10.5px/1.45 Figtree, sans-serif;
+  font: 500 10.5px/1.45 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -5395,23 +5395,23 @@
 .sb-bw-entry-summary-copy b,
 .sb-bw-entry-summary-title {
   color: var(--tx);
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
 }
 
 .sb-bw-entry-summary-copy span {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
 .sb-bw-entry-summary-val {
   flex: 0 0 auto;
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: rgba(var(--ink), 0.56);
 }
 
 .sb-bw-entry-summary-row.is-total .sb-bw-entry-summary-title {
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
   color: var(--tx);
 }
 
@@ -5422,7 +5422,7 @@
 
 .sb-time-entry-footnote {
   margin: 10px 0 0;
-  font: 500 11px/1.4 Figtree, sans-serif;
+  font: 500 11px/1.4 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -5443,7 +5443,7 @@
 }
 
 .sb-exercise-card-screen .sb-ex-card-head-title b {
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
   color: var(--tx);
 }
 
@@ -5462,13 +5462,13 @@
   background: var(--v4-bg, var(--sb-bg));
   box-shadow: inset 0 0 0 1.5px var(--acs);
   text-align: center;
-  font: 600 13.5px/1 Figtree, sans-serif;
+  font: 600 13.5px/1 Manrope, sans-serif;
   color: var(--tx);
 }
 
 .sb-ex-card-tier {
   margin: 20px 0 10px;
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--ac);
@@ -5489,7 +5489,7 @@
   border: 0;
   border-radius: 999px;
   background: var(--c2);
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   color: rgba(var(--ink), .58);
   cursor: pointer;
 }
@@ -5501,7 +5501,7 @@
 
 .sb-ex-card-footnote {
   margin-top: 12px;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
   text-wrap: pretty;
 }
@@ -5538,11 +5538,11 @@
 
 .sb-ex-card-row-copy b {
   color: var(--tx);
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
 }
 
 .sb-ex-card-row-copy span {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -5555,7 +5555,7 @@
   flex: 0 0 auto;
   border: 0;
   background: transparent;
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   color: var(--ac);
   cursor: pointer;
 }
@@ -5592,7 +5592,7 @@
   border: 0;
   border-radius: 999px;
   background: var(--c2);
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   color: var(--ac);
   cursor: pointer;
 }
@@ -5620,7 +5620,7 @@
   padding: 10px 12px;
   border-bottom: 1px solid rgba(var(--ink), .08);
   color: var(--tx);
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
 }
 
 .sb-time-summary-row:last-child {
@@ -5628,7 +5628,7 @@
 }
 
 .sb-time-summary-val {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--tx);
 }
@@ -5640,12 +5640,12 @@
 }
 
 .sb-time-summary-copy span {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
 .sb-time-summary-dash {
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   color: var(--tx);
 }
 
@@ -5699,7 +5699,7 @@
 .sb-ss-bound-label {
   display: block;
   margin-bottom: 6px;
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 700;
   font-size: 10px;
   line-height: 1;
@@ -5717,7 +5717,7 @@
 
 .sb-ss-bound-lines {
   display: block;
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 600;
   font-size: 11.5px;
   line-height: 1.5;
@@ -5735,7 +5735,7 @@
   flex: none;
   display: flex;
   align-items: center;
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
   font-weight: 700;
   font-size: 14px;
   line-height: 1;
@@ -5744,14 +5744,14 @@
 
 .sb-ss-bound-note {
   margin: 10px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-ss-bound-tier {
   margin: 20px 0 10px;
   color: var(--sb-acc);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: .16em;
   text-transform: uppercase;
 }
@@ -5779,12 +5779,12 @@
 
 .sb-ss-bound-row-title {
   color: var(--sb-tx);
-  font: 600 12.5px/1.2 Figtree, sans-serif;
+  font: 600 12.5px/1.2 Manrope, sans-serif;
 }
 
 .sb-ss-bound-row-sub {
   color: rgba(var(--ink, 0, 0, 0), .56);
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
 }
 
 .sb-ss-bound-badge {
@@ -5793,7 +5793,7 @@
   border-radius: 999px;
   background: var(--sb-okbg);
   color: var(--sb-okTx);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: .04em;
   text-transform: uppercase;
 }
@@ -5910,7 +5910,7 @@
   border-radius: 999px;
   background: var(--gr-bg);
   color: var(--gr);
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
 }
 
 .sb-root.program-done .program-done-date {
@@ -5926,7 +5926,7 @@
 
 .program-done-hero-label {
   display: block;
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(var(--ink), .56);
@@ -5935,14 +5935,14 @@
 .program-done-hero b {
   display: block;
   margin-top: 6px;
-  font: 800 30px/1 Figtree, sans-serif;
+  font: 800 30px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--tx);
 }
 
 .program-done-hero p {
   margin: 4px 0 0;
-  font: 500 11.5px/1.4 Figtree, sans-serif;
+  font: 500 11.5px/1.4 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -5963,21 +5963,21 @@
 }
 
 .program-done-stat-label {
-  font: 600 9.5px/1 Figtree, sans-serif;
+  font: 600 9.5px/1 Manrope, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(var(--ink), .56);
 }
 
 .program-done-stat b {
-  font: 800 19px/1 Figtree, sans-serif;
+  font: 800 19px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--tx);
 }
 
 .program-done-tier {
   margin: 20px 0 10px;
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ac);
@@ -5996,7 +5996,7 @@
   gap: 10px;
   padding: 13px 0;
   border-bottom: 1px solid rgba(var(--ink), .07);
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
   color: var(--tx);
 }
 
@@ -6006,7 +6006,7 @@
 
 .program-done-growth-val {
   flex: 0 0 auto;
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--gr);
 }
@@ -6021,14 +6021,14 @@
   border: 0;
   border-radius: 999px;
   background: var(--c2);
-  font: 700 13px/1 Figtree, sans-serif;
+  font: 700 13px/1 Manrope, sans-serif;
   color: rgba(var(--ink), .58);
 }
 
 /* Пропуски — одной строкой и без имён: факт, но не приговор. */
 .program-done-skips {
   margin: 12px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: rgba(var(--ink), .56);
 }
 
@@ -6040,7 +6040,7 @@
 
 .program-done-note {
   margin: 6px 0 0;
-  font: 500 11px/1.4 Figtree, sans-serif;
+  font: 500 11px/1.4 Manrope, sans-serif;
   text-align: center;
   color: rgba(var(--ink), .56);
 }
@@ -6060,7 +6060,7 @@
   --sb-accTx: var(--v4-act-text, #8a4a20);
   background: var(--sb-bg);
   color: var(--sb-tx);
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
 }
 
 .sb-catalog-screen .sb-head {
@@ -6079,7 +6079,7 @@
   border-radius: 999px;
   background: var(--sb-card);
   color: var(--v4-ink-2, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.56)); /* v4-intentional */
-  font: 600 14px/1 Figtree, sans-serif;
+  font: 600 14px/1 Manrope, sans-serif;
 }
 
 .sb-catalog-screen .sb-head-title {
@@ -6093,12 +6093,12 @@
 
 .sb-catalog-screen .sb-head-title b {
   color: var(--sb-tx);
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
 }
 
 .sb-catalog-screen .sb-head-sub {
   color: var(--sb-mut);
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
 }
 
@@ -6126,7 +6126,7 @@
 
 .sb-catalog-screen .sb-search > span {
   flex: 0 0 auto;
-  font: 500 13px/1 Figtree, sans-serif;
+  font: 500 13px/1 Manrope, sans-serif;
 }
 
 .sb-catalog-screen .sb-search input {
@@ -6139,7 +6139,7 @@
   outline: 0;
   background: transparent;
   color: var(--sb-tx);
-  font: 500 13px/1 Figtree, sans-serif;
+  font: 500 13px/1 Manrope, sans-serif;
 }
 
 .sb-catalog-screen .sb-search input::placeholder {
@@ -6223,7 +6223,7 @@
   border-radius: 0;
   background: transparent;
   color: var(--v4-ink-30, rgba(var(--v4-ink-rgb, 32, 30, 29), 0.3)); /* v4-intentional */
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
@@ -6241,12 +6241,12 @@
 
 .sb-catalog-screen .sb-cat-title b {
   color: var(--sb-tx);
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
 }
 
 .sb-catalog-screen .sb-cat-title span {
   color: rgba(var(--v4-ink-rgb, 32, 30, 29), 0.56); /* v4-intentional */
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
 }
 
 .sb-catalog-screen .sb-cat-add {
@@ -6261,7 +6261,7 @@
   background: var(--sb-bg);
   box-shadow: inset 0 0 0 1.5px var(--v4-act, #c67139);
   color: var(--sb-acc);
-  font: 600 18px/1 Figtree, sans-serif;
+  font: 600 18px/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
@@ -6282,7 +6282,7 @@
 
 .sb-catalog-screen .sb-cat-create .sb-cat-title b {
   color: var(--sb-acc);
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
 }
 
 .sb-catalog-screen .sb-cat-create .sb-cat-title span {
@@ -6292,7 +6292,7 @@
 .sb-catalog-note {
   margin: 12px 0 0;
   color: var(--sb-mut);
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
 }
 
 /* М2 «Упражнение · группы мышц» — pill44-чипы и моно-цифры объёма. */
@@ -6304,7 +6304,7 @@
   border-radius: 999px;
   background: var(--c2, var(--sb-soft));
   color: rgba(var(--ink, var(--v4-ink-rgb, 32, 30, 29)), 0.58);
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   letter-spacing: normal;
   text-transform: none;
 }
@@ -6315,7 +6315,7 @@
 }
 
 .sb-ex-muscle-screen .sb-ex-muscle-kg {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: rgba(var(--ink, var(--v4-ink-rgb, 32, 30, 29)), 0.55);
 }
@@ -6356,7 +6356,7 @@
 }
 
 .sb-ex-similar-screen .sb-ex-similar-factor {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: rgba(var(--ink, var(--v4-ink-rgb, 32, 30, 29)), 0.55);
 }
@@ -6373,7 +6373,7 @@
 }
 
 .sb-ex-similar-screen .sb-ex-similar-preview > b {
-  font: 700 12.5px/1.35 Figtree, sans-serif;
+  font: 700 12.5px/1.35 Manrope, sans-serif;
   color: var(--tx, var(--sb-tx));
 }
 
@@ -6407,7 +6407,7 @@
 .sb-warmup-drop-screen .sb-aps-head {
   margin-top: 0;
   padding: 0;
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: rgba(var(--ink), 0.42);
@@ -6461,7 +6461,7 @@
   border-radius: 0;
   background: var(--sb-soft);
   color: var(--sb-acc);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
 }
 
 .sb-wd-actions {
@@ -6485,7 +6485,7 @@
   padding: 8px 0;
   border-bottom: 1px solid rgba(var(--ink), 0.07);
   color: var(--sb-tx);
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
 }
 
 .sb-wd-volume-row.is-last {
@@ -6494,24 +6494,24 @@
 
 .sb-wd-volume-row > b,
 .sb-wd-volume-row > .n {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
 .sb-wd-muted {
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: rgba(var(--ink), 0.56);
 }
 
 .sb-wd-ok {
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
   color: var(--sb-okTx);
 }
 
 .sb-wd-footnote {
   margin: 12px 0 0;
   color: var(--sb-mut);
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
 }
 
 /* Ж2 · типы подходов · честный тоннаж */
@@ -6544,7 +6544,7 @@
 .sb-approach-types-screen .sb-aps-head {
   margin-top: 0;
   padding: 0;
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--sb-mut);
@@ -6586,7 +6586,7 @@
   padding: 0 7px;
   background: var(--sb-accbg);
   color: var(--sb-accTx);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
 }
 
 .sb-at-tonnage {
@@ -6602,31 +6602,31 @@
   justify-content: space-between;
   gap: 10px;
   color: var(--sb-tx);
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
 }
 
 .sb-at-tonnage-copy b {
   display: block;
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-at-tonnage-copy span {
   display: block;
   margin-top: 2px;
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-at-tonnage-row > .n {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--sb-tx);
 }
 
 .sb-at-tier {
   margin-top: 12px;
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--sb-mut);
@@ -6653,21 +6653,21 @@
 
 .sb-at-plates b {
   display: block;
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-at-plates span {
   display: block;
   margin-top: 2px;
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-at-footnote {
   margin: 12px 0 0;
   color: var(--sb-mut);
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
 }
 
 /* Ж3 · дроп-сет · свой экран */
@@ -6712,7 +6712,7 @@
   padding: 0 7px;
   background: var(--sb-accbg);
   color: var(--sb-accTx);
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
 }
 
 .sb-ds-add-drop {
@@ -6728,31 +6728,31 @@
   padding-top: 10px;
   border-top: 1px solid var(--sb-br);
   color: var(--sb-tx);
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
 }
 
 .sb-ds-volume-copy b {
   display: block;
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-ds-volume-copy span {
   display: block;
   margin-top: 2px;
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-ds-volume-row > .n {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--sb-tx);
 }
 
 .sb-ds-tier {
   margin-top: 12px;
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--sb-mut);
@@ -6766,13 +6766,13 @@
   display: flex;
   gap: 8px;
   padding: 6px 0;
-  font: 500 11.5px/1.5 Figtree, sans-serif;
+  font: 500 11.5px/1.5 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(var(--ink), 0.56));
 }
 
 .sb-ds-rule-num {
   flex: 0 0 auto;
-  font: 700 11px/1 Figtree, sans-serif;
+  font: 700 11px/1 Manrope, sans-serif;
   color: var(--sb-acc);
 }
 
@@ -6785,13 +6785,13 @@
 
 .sb-ds-why b {
   display: block;
-  font: 700 12px/1.2 Figtree, sans-serif;
+  font: 700 12px/1.2 Manrope, sans-serif;
   color: var(--sb-accTx);
 }
 
 .sb-ds-why p {
   margin: 6px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -6823,7 +6823,7 @@
 }
 
 .sb-context-chip-key {
-  font: 600 10px/1 Figtree, sans-serif;
+  font: 600 10px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: rgba(var(--ink), 0.56);
@@ -6834,7 +6834,7 @@
 }
 
 .sb-context-chip b {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--sb-tx);
 }
@@ -6856,7 +6856,7 @@
   border: 0;
   background: transparent;
   color: var(--sb-acc);
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
 }
 
 .sb-builder-screen.is-exercise-open .sb-approach-pills {
@@ -6876,7 +6876,7 @@
   border-radius: 12px;
   background: var(--sb-soft);
   color: var(--sb-tx);
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
@@ -6914,7 +6914,7 @@
   border: none;
   border-radius: 999px;
   background: var(--sb-card);
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -6932,7 +6932,7 @@
 }
 
 .sb-triset-work-screen .sb-tw-head-key {
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
 }
 
@@ -6969,7 +6969,7 @@
   border-radius: 999px;
   background: var(--sb-soft);
   color: rgba(var(--ink), 0.58);
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
@@ -7002,13 +7002,13 @@
 }
 
 .sb-tw-member-card i {
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   font-style: normal;
   color: var(--sb-acc);
 }
 
 .sb-tw-member-card span {
-  font: 600 11px/1.2 Figtree, sans-serif;
+  font: 600 11px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
@@ -7019,7 +7019,7 @@
   min-height: 44px;
   padding: 0;
   border-bottom: 1px solid rgba(var(--ink), 0.07);
-  font: 600 12px/1 Figtree, sans-serif;
+  font: 600 12px/1 Manrope, sans-serif;
 }
 
 .sb-tw-warmup {
@@ -7035,19 +7035,19 @@
   height: 26px;
   border-radius: 8px;
   background: rgba(var(--ink), 0.06);
-  font: 700 9.5px/1 Figtree, sans-serif;
+  font: 700 9.5px/1 Manrope, sans-serif;
   text-transform: uppercase;
   color: var(--sb-mut);
 }
 
 .sb-tw-warmup-copy {
   flex: 1;
-  font: 600 11.5px/1 Figtree, sans-serif;
+  font: 600 11.5px/1 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-tw-warmup-done {
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   color: rgba(var(--ink), 0.42);
 }
 
@@ -7068,7 +7068,7 @@
 .sb-tw-round-num {
   flex: none;
   width: 36px;
-  font: 700 10.5px/1 Figtree, sans-serif;
+  font: 700 10.5px/1 Manrope, sans-serif;
   text-transform: uppercase;
   color: var(--sb-mut);
 }
@@ -7120,7 +7120,7 @@
 
 .sb-tw-round-closed {
   flex: 1;
-  font: 600 10.5px/1.3 Figtree, sans-serif;
+  font: 600 10.5px/1.3 Manrope, sans-serif;
   color: var(--sb-acc);
 }
 
@@ -7131,7 +7131,7 @@
 
 .sb-tw-footnote {
   margin-top: 12px;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7139,7 +7139,7 @@
 
 .sb-tier {
   margin: 14px 0 8px;
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--sb-mut);
@@ -7170,7 +7170,7 @@
   height: 34px;
   border-radius: 11px;
   background: var(--sb-soft);
-  font: 700 14px/1 Figtree, sans-serif;
+  font: 700 14px/1 Manrope, sans-serif;
   color: var(--sb-acc);
 }
 
@@ -7183,12 +7183,12 @@
 }
 
 .sb-cur-plan-title {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-cur-plan-meta {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7210,13 +7210,13 @@
   border-radius: 12px;
   padding: 11px 12px;
   margin-top: 10px;
-  font: 500 12px/1.5 Figtree, sans-serif;
+  font: 500 12px/1.5 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-cur-comment-meta {
   margin: 7px 0 0;
-  font: 500 10.5px/1 Figtree, sans-serif;
+  font: 500 10.5px/1 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7228,7 +7228,7 @@
 
 .sb-cur-comment-foot {
   margin: 9px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7241,13 +7241,13 @@
 }
 
 .sb-pain--canvas b {
-  font: 700 12.5px/1.35 Figtree, sans-serif;
+  font: 700 12.5px/1.35 Manrope, sans-serif;
   color: var(--sb-accTx);
 }
 
 .sb-pain--canvas p {
   margin: 6px 0 0;
-  font: 500 12px/1.5 Figtree, sans-serif;
+  font: 500 12px/1.5 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
@@ -7289,24 +7289,24 @@
 }
 
 .sb-cur-sync-main b {
-  font: 600 12px/1.3 Figtree, sans-serif;
+  font: 600 12px/1.3 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-cur-sync-main span {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-cur-sync-ok {
   flex: none;
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   color: var(--sb-okTx);
 }
 
 .sb-cur-sync-offline {
   flex: none;
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   color: var(--sb-sync-muted);
 }
 
@@ -7315,7 +7315,7 @@
   border: 0;
   background: transparent;
   padding: 0;
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   color: var(--sb-acc);
   cursor: pointer;
   position: relative;
@@ -7330,7 +7330,7 @@
 
 .sb-cur-sync-foot {
   margin: 9px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7411,18 +7411,18 @@
 }
 
 .sb-sheet-menu-copy b {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-sheet-menu-copy span {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-sheet-menu-chevron {
   flex: none;
-  font: 600 14px/1 Figtree, sans-serif;
+  font: 600 14px/1 Manrope, sans-serif;
 }
 
 .sb-sheet-menu-chevron.is-muted {
@@ -7435,7 +7435,7 @@
 
 .sb-sheet-footnote {
   margin: 12px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7495,18 +7495,18 @@
 }
 
 .sb-plan-vs-row b {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-plan-vs-row span {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-plan-vs-empty {
   margin: 0;
-  font: 500 12px/1.5 Figtree, sans-serif;
+  font: 500 12px/1.5 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7531,7 +7531,7 @@
 
 .activity-v4-program .sb-plan-missed-lead {
   margin: 0;
-  font: 600 12.5px/1.55 Figtree, sans-serif;
+  font: 600 12.5px/1.55 Manrope, sans-serif;
   color: var(--v4-ink, var(--sb-tx, #201e1d));
 }
 
@@ -7549,7 +7549,7 @@
   border-radius: 999px;
   background: var(--v4-act, var(--sb-acc-strong, #c67139));
   color: var(--v4-btn-on-act, #2b1608);
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
 }
 
 .activity-v4-program .sb-plan-missed-release {
@@ -7559,12 +7559,12 @@
   border-radius: 999px;
   background: var(--v4-bg, var(--sb-bg, #fffaf1));
   color: var(--v4-ink, var(--sb-tx, #201e1d));
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
 }
 
 .activity-v4-program .sb-plan-missed-foot {
   margin: 9px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--v4-ink-2, var(--sb-mut, rgba(0, 0, 0, 0.56)));
 }
 
@@ -7583,7 +7583,7 @@
   border: none;
   background: var(--v4-hero, var(--sb-soft, #efe3cf));
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   text-transform: lowercase;
 }
 
@@ -7618,7 +7618,7 @@
   --sb-okbg: var(--gr-bg);
   --sb-okTx: var(--gr);
   background: var(--sb-bg);
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
 }
 
 .sb-root.program-cycle .sb-icon-btn {
@@ -7629,7 +7629,7 @@
   border-radius: 999px;
   background: var(--sb-card);
   color: rgba(var(--ink), .56);
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
 }
 
 .sb-cycle-top {
@@ -7649,12 +7649,12 @@
 }
 
 .sb-cycle-title {
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-cycle-key {
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7698,14 +7698,14 @@
 }
 
 .sb-cycle-metric-label {
-  font: 600 9.5px/1 Figtree, sans-serif;
+  font: 600 9.5px/1 Manrope, sans-serif;
   letter-spacing: .11em;
   text-transform: uppercase;
   color: var(--sb-mut);
 }
 
 .sb-cycle-metric-value {
-  font: 800 17px/1 Figtree, sans-serif;
+  font: 800 17px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--sb-tx);
 }
@@ -7716,7 +7716,7 @@
 
 .sb-cycle-tier {
   margin: 20px 0 10px;
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--sb-acc);
@@ -7749,7 +7749,7 @@
   border-radius: 9px;
   background: var(--sb-bg);
   box-shadow: inset 0 0 0 1px var(--sb-br);
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
@@ -7768,17 +7768,17 @@
 }
 
 .sb-cycle-phase-name {
-  font: 700 12.5px/1.2 Figtree, sans-serif;
+  font: 700 12.5px/1.2 Manrope, sans-serif;
   color: var(--sb-tx);
 }
 
 .sb-cycle-phase-detail {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: var(--sb-mut);
 }
 
 .sb-cycle-phase-pct {
-  font: 700 12px/1 Figtree, sans-serif;
+  font: 700 12px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--sb-mut);
 }
@@ -7800,7 +7800,7 @@
   justify-content: center;
   height: 22px;
   border-radius: 7px;
-  font: 700 10px/1 Figtree, sans-serif;
+  font: 700 10px/1 Manrope, sans-serif;
 }
 
 .sb-cycle-week-cell.is-done {
@@ -7836,11 +7836,11 @@
 
 .sb-cycle-week-label {
   color: var(--sb-tx);
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
 }
 
 .sb-cycle-week-status {
-  font: 700 11.5px/1 Figtree, sans-serif;
+  font: 700 11.5px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -7856,7 +7856,7 @@
 
 .sb-cycle-footnote {
   margin-top: 12px;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--sb-mut);
   text-wrap: pretty;
 }
@@ -7878,7 +7878,7 @@
   padding: 0 3px;
   border: none;
   background: transparent;
-  font: 600 12px/1 Figtree, sans-serif;
+  font: 600 12px/1 Manrope, sans-serif;
   color: var(--ac, var(--sb-acc));
   cursor: pointer;
   text-align: left;
@@ -7927,12 +7927,12 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font: 500 12.5px/1.35 Figtree, sans-serif;
+  font: 500 12.5px/1.35 Manrope, sans-serif;
   color: var(--tx);
 }
 
 .sb-period-outcome-detail {
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   /* Строка «вид · отчёт за период»: подробность переноса и пропуска — 45 %,
      а не 56 %: она стоит под значением и не должна спорить с ним по весу. */
   color: rgba(var(--ink), 0.45);
@@ -7940,7 +7940,7 @@
 
 .sb-period-outcome-val {
   flex: none;
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   /* «значения моноцифрами 12,5 px/700» — четыре исхода стоят столбиком, и
      без табличных цифр их разряды не выравниваются. */
   font-variant-numeric: tabular-nums;
@@ -7967,13 +7967,13 @@
 }
 
 .sb-period-debt-title {
-  font: 700 12.5px/1.35 Figtree, sans-serif;
+  font: 700 12.5px/1.35 Manrope, sans-serif;
   color: var(--ac2);
 }
 
 .sb-period-debt-prose {
   margin: 6px 0 0;
-  font: 500 12px/1.45 Figtree, sans-serif;
+  font: 500 12px/1.45 Manrope, sans-serif;
   color: rgba(var(--ink), 0.6);
 }
 
@@ -7985,7 +7985,7 @@
 
 .sb-period-footnote {
   margin: 12px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: var(--sb-mut);
   text-wrap: pretty;
 }

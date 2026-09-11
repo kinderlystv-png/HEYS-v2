@@ -29,7 +29,7 @@ function parseRules(css) {
   return rules;
 }
 
-// Канвас пишет шрифт шорткатом `font: 600 12.5px/1 Figtree`, продуктовый CSS —
+// Канвас пишет шрифт шорткатом `font: 600 12.5px/1 Manrope`, продуктовый CSS —
 // им же или раскладкой. Приводим обе формы к одному виду.
 function declarations(bodies) {
   const out = {};

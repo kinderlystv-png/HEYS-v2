@@ -4088,7 +4088,7 @@ color: var(--v4-sand-ink-slate, #1f2937);
 /* Замороженная копия прода (stable.heyslab.ru) — неинтерактивный признак режима */
 .hdr-readonly-banner {
   text-align: center;
-  font: 600 11px/1.4 Figtree, sans-serif;
+  font: 600 11px/1.4 Manrope, sans-serif;
   letter-spacing: 0.02em;
   padding: 4px 10px;
   color: var(--v4-warn-text, #a1471c);
@@ -10977,7 +10977,7 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__title {
-  font: 700 20px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 20px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -11023,19 +11023,19 @@ body:has(:is(
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__label {
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push-toggle .tab-settings-diary-toggle__hint {
   margin-top: 4px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__tier {
   margin: 14px 2px 8px;
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-act-text, #8a4a20);
@@ -11114,7 +11114,7 @@ body:has(:is(
   border: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   background: transparent;
-  font: 600 0.8125rem/1.2 Figtree, system-ui, sans-serif;
+  font: 600 0.8125rem/1.2 Manrope, system-ui, sans-serif;
   text-align: left;
   cursor: pointer;
   color: inherit;
@@ -11143,7 +11143,7 @@ body:has(:is(
   gap: 8px;
   flex: 0 0 auto;
   margin-left: auto;
-  font: 600 0.75rem/1.2 Figtree, system-ui, sans-serif;
+  font: 600 0.75rem/1.2 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -11184,7 +11184,7 @@ body:has(:is(
 
 .hdr-settings-sheet__row--exit .hdr-settings-sheet__label {
   color: var(--v4-act-text, var(--v4-sand-act-text, #8a4a20));
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
 }
 
 .hdr-settings-sheet__panel {
@@ -11192,7 +11192,7 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__panel-label {
-  font: 600 11.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1.35 Manrope, system-ui, sans-serif;
   letter-spacing: 0;
   text-transform: none;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
@@ -11244,7 +11244,7 @@ body:has(:is(
   padding: 9px 12px;
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-ink, #201e1d);
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -11271,7 +11271,7 @@ body:has(:is(
 
 .hdr-settings-sheet__fab-lead {
   margin: 0;
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -11300,7 +11300,7 @@ body:has(:is(
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
 }
 
 .hdr-settings-sheet__fab-chip-label {
@@ -11322,13 +11322,13 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__fab-count {
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .hdr-settings-sheet__fab-ok {
   flex: none;
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -11349,13 +11349,13 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__fab-notice-text {
-  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.45 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.6);
   text-wrap: pretty;
 }
 
 .hdr-settings-sheet__hint {
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -11370,7 +11370,7 @@ body:has(:is(
   padding: 0 3px;
   border: 0;
   background: transparent;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.45);
   cursor: pointer;
   text-align: left;
@@ -11399,7 +11399,7 @@ body:has(:is(
 }
 
 .hdr-settings-sheet__diag-copy {
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
   margin-bottom: 4px;
@@ -11412,7 +11412,7 @@ body:has(:is(
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
   box-shadow: inset 0 0 0 1.5px rgba(0, 0, 0, 0.14);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
@@ -11420,7 +11420,7 @@ body:has(:is(
 .hdr-settings-sheet__build {
   margin-top: 8px;
   padding: 0 3px;
-  font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -11611,7 +11611,7 @@ body:has(:is(
   border-radius: 26px;
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink, #201e1d);
-  font-family: Figtree, system-ui, sans-serif;
+  font-family: Manrope, system-ui, sans-serif;
   box-shadow: 0 -2px 20px color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
 }
 
@@ -11633,7 +11633,7 @@ body:has(:is(
 }
 
 .notify-detail__title {
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -11661,7 +11661,7 @@ body:has(:is(
 
 .notify-detail__tier {
   margin: 18px 0 8px;
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -11698,7 +11698,7 @@ body:has(:is(
 }
 
 .notify-detail__row-label {
-  font: 600 12.5px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -11735,7 +11735,7 @@ body:has(:is(
 }
 
 .notify-detail__quiet-prep {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -11756,7 +11756,7 @@ body:has(:is(
 }
 
 .notify-detail__capsule-value {
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
 }
@@ -11776,7 +11776,7 @@ body:has(:is(
 
 .notify-detail__quiet-note {
   margin: 10px 0 0;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -16751,7 +16751,7 @@ body:has(:is(
 
 .profile-v4__tier-title {
   margin: 6px 0 7px;
-  font: 600 10px/1 Figtree, sans-serif;
+  font: 600 10px/1 Manrope, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-act-text, var(--ac, #c67139));
@@ -16763,7 +16763,7 @@ body:has(:is(
 
 .profile-v4__subtier-title {
   margin: 10px 0 6px;
-  font: 600 9.5px/1 Figtree, sans-serif;
+  font: 600 9.5px/1 Manrope, sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: rgba(var(--ink, 0 0 0), 0.4);
@@ -16797,7 +16797,7 @@ body:has(:is(
 }
 
 .profile-v4__card .inline-field label {
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
   color: rgba(var(--ink, 0 0 0), 0.55);
   flex-shrink: 0;
 }
@@ -16807,7 +16807,7 @@ body:has(:is(
 }
 
 .profile-v4__value--readonly {
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
   color: rgba(var(--ink, 0 0 0), 0.42);
   text-align: right;
 }

@@ -257,7 +257,7 @@ export const FIXTURES = [
 <div class="sb-root"><div class="sb-pain--canvas">pain</div></div>
 <div class="sb-root"><div class="sb-sheet-back"></div></div>
 <div class="sb-root activity-v4-program"><span class="sb-plan-letter">B</span></div>
-<div class="sb-root"><div class="sb-curator-edit-card is-primary" style="background:var(--c1);border-radius:20px;padding:2px 16px;margin-top:12px"><span class="sb-curator-edit-mark is-ok" style="font:700 12px/1 Figtree,sans-serif;color:var(--gr)">✓</span></div></div>
+<div class="sb-root"><div class="sb-curator-edit-card is-primary" style="background:var(--c1);border-radius:20px;padding:2px 16px;margin-top:12px"><span class="sb-curator-edit-mark is-ok" style="font:700 12px/1 Manrope,sans-serif;color:var(--gr)">✓</span></div></div>
 <div class="sb-root sb-period-report"><div class="sb-period-outcomes"><div class="sb-period-outcome-row"><span class="sb-period-outcome-val is-ok">4</span></div></div></div>`,
     probes: [
       { id: 'sb-chip-on-bg', sel: '.sb-chip.is-on', prop: 'backgroundColor' },
@@ -468,20 +468,20 @@ async function measureFixture(fixture) {
   fs.writeFileSync(
     file,
     `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${cssImport(fixture.css)}
-body{margin:0;padding:16px;background:var(--v4-bg,#fffaf1);font-family:Figtree,system-ui,sans-serif}
+body{margin:0;padding:16px;background:var(--v4-bg,#fffaf1);font-family:Manrope,system-ui,sans-serif}
 .date-picker-day-nav{width:44px;height:44px;border:0;border-radius:999px}
 .date-picker--v4{display:flex;align-items:center;min-height:44px;border-radius:999px;padding:0 11px;background:var(--v4-tint)}
 .date-picker--past .date-picker-day-nav{background:var(--v4-tint)}
-.date-picker-btn{min-height:48px;border:0;border-radius:999px;padding:0 15px;font:700 13px/1 Figtree,sans-serif}
+.date-picker-btn{min-height:48px;border:0;border-radius:999px;padding:0 15px;font:700 13px/1 Manrope,sans-serif}
 .paywall-consent-box{width:22px;height:22px;border-radius:6px;display:inline-block}
-.paywall-cta{min-height:48px;border:0;border-radius:999px;width:100%;font:700 13px/1 Figtree,sans-serif}
+.paywall-cta{min-height:48px;border:0;border-radius:999px;width:100%;font:700 13px/1 Manrope,sans-serif}
 .paywall-order-card{background:var(--v4-surface);border-radius:18px;padding:14px;margin-top:16px}
 .reports-v4-summary-card__value{font-size:22px;font-weight:600}
 .heys-undo-bar{position:relative}
 .yv-pack-day{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:16px;background:var(--v4-c1)}
 .yv-food-card{padding:14px 16px;border-radius:20px;margin-top:16px;background:var(--v4-card)}
 .yv-food-row{color:rgba(0,0,0,.55)}
-.yv-text-later{min-height:44px;border:0;background:transparent;font:700 12px/1 Figtree,sans-serif;color:rgba(0,0,0,.45)}
+.yv-text-later{min-height:44px;border:0;background:transparent;font:700 12px/1 Manrope,sans-serif;color:rgba(0,0,0,.45)}
 .yv-pack-secondary{min-height:48px;border:0;border-radius:999px;background:var(--v4-c1);color:var(--v4-ink-2)}
 .mc-pill--choice{min-height:44px;border:0;border-radius:999px;padding:0 16px}
 .mc-rest-supp-add-icon{display:inline-block;width:26px;height:26px;border-radius:999px}
@@ -501,7 +501,7 @@ body{margin:0;padding:16px;background:var(--v4-bg,#fffaf1);font-family:Figtree,s
 .advice-v4-disclaimer-overlay{position:fixed;inset:0}
 .game-v4-sheet__bar{height:8px;background:var(--v4-track);border-radius:999px;overflow:hidden}
 .game-v4-sheet__hero--cream{padding:16px;border-radius:20px}
-.mc-estimated-badge{margin-top:12px;padding:5px 12px;border-radius:999px;background:var(--v4-hero,#efe3cf);font:700 10.5px/1 Figtree,sans-serif;color:var(--v4-act-text,#8a4a20)}
+.mc-estimated-badge{margin-top:12px;padding:5px 12px;border-radius:999px;background:var(--v4-hero,#efe3cf);font:700 10.5px/1 Manrope,sans-serif;color:var(--v4-act-text,#8a4a20)}
 .yv-v4-slider-fill--norm{position:relative;width:50%;height:26px;border-radius:999px}
 .cycle-card-v4{border-radius:16px;padding:12px}
 .cycle-card-v4__insight{font-size:12px}

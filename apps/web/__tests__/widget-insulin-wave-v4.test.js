@@ -50,6 +50,6 @@ describe('insulin wave v4', () => {
     expect(uiSrc).toContain('InsulinWaveDaySvg');
     expect(uiSrc).toContain('widget-v4-insulin-wave--day');
     expect(cssSrc).toMatch(/\.widget-v4-insulin-wave--day\s*\{[^}]*margin-top:\s*8px;/s);
-    expect(cssSrc).toMatch(/body:has\(\.widgets-tab\) \.widgets-grid\s*\{[^}]*font-family:\s*Figtree,/s);
+    expect(cssSrc).toMatch(/body:has\(\.widgets-tab\) \.widgets-grid\s*\{[^}]*font-family:\s*Manrope,/s);
   });
 });

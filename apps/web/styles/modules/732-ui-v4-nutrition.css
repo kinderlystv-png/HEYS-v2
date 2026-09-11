@@ -26,9 +26,9 @@
 }
 
 /* Nutrition owns a dedicated Canvas shell: no global gamification row, and the
-   title/date chrome uses the same Figtree metrics as the screen content. */
+   title/date chrome uses the same Manrope metrics as the screen content. */
 .wrap--tab-diary {
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
   padding-top: 0;
 }
 
@@ -683,7 +683,7 @@
 
 /* Кадры cycle ·04/·01: надстрока «Питание · блок «Особый период»». */
 .nutrition-v4-block__source {
-  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  font: 600 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -1684,13 +1684,13 @@
 }
 
 .readonly-banner-title {
-  font: 600 12px/1.35 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #111827);
 }
 
 .readonly-banner-text {
   margin-top: 4px;
-  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.45 Manrope, system-ui, sans-serif;
   color: var(--nut-dim);
   text-wrap: pretty;
 }
@@ -1767,7 +1767,7 @@
   padding: 0 8px;
   border-radius: 999px;
   box-shadow: inset 0 0 0 1px var(--v4-track, rgba(0, 0, 0, 0.12));
-  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 9.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: transparent;
 }

@@ -1065,7 +1065,7 @@
     "Конструктор · список свёрнут · 02": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 02. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a",
+      "h": "6900e9614588",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -1110,7 +1110,7 @@
     "Конструктор · список свёрнут · 07": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 07. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac",
+      "h": "800c0174aea1",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -1182,7 +1182,7 @@
     "Конструктор · список свёрнут · 15": {
       "v": "=",
       "f": ".sb-builder-screen .sb-ex--collapsed .sb-ex-title b font 13px/1.2 — 750:3391-3393; calm A2 ·14 computed 13px.",
-      "h": "a45ee30c055e",
+      "h": "633b18d856d3",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -1191,7 +1191,7 @@
     "Конструктор · список свёрнут · 16": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 16. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1d0a836959d0",
+      "h": "c3371fad8126",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -1200,7 +1200,7 @@
     "Конструктор · список свёрнут · 17": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 17.",
-      "h": "4668dbccd211",
+      "h": "d7972c7398b8",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -1227,7 +1227,7 @@
     "Конструктор · список свёрнут · 20": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 20.",
-      "h": "58182d9bbb24",
+      "h": "73ed00c91a97",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -1236,7 +1236,7 @@
     "Конструктор · список свёрнут · 21": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А2 · 21.",
-      "h": "f71e7844aea2",
+      "h": "1c98d478681a",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -1254,7 +1254,7 @@
     "Конструктор · список свёрнут · 23": {
       "v": "≠",
       "f": ".sb-ex.is-pending .sb-ex-title b 12.5px (К ·14, 750:3391) против 13px канваса — спор А1б/Г4/К, CANVAS_CONFLICTS calm; не правим код до дизайна. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "f02599786a2a",
+      "h": "5f4607feac6d",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -1297,7 +1297,7 @@
     "Конструктор · разминка и дроп-сет · 02": {
       "v": "=",
       "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 2 — strength-builder-warmup-drop-v4-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Конструктор · разминка и дроп-сет · 03": {
       "v": "=",
@@ -1317,7 +1317,7 @@
     "Конструктор · разминка и дроп-сет · 06": {
       "v": "=",
       "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 6 — strength-builder-warmup-drop-v4-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Конструктор · разминка и дроп-сет · 07": {
       "v": "=",
@@ -1387,12 +1387,12 @@
     "Конструктор · разминка и дроп-сет · 20": {
       "v": "=",
       "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 20 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
-      "h": "8acc718bd14c"
+      "h": "dcae963df635"
     },
     "Конструктор · разминка и дроп-сет · 21": {
       "v": "=",
       "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 21 — strength-builder-warmup-drop-v4-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "3326f41ed28a"
+      "h": "b544e12ffdfb"
     },
     "Конструктор · разминка и дроп-сет · 22": {
       "v": "=",
@@ -1402,7 +1402,7 @@
     "Конструктор · разминка и дроп-сет · 23": {
       "v": "=",
       "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 23 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
-      "h": "298042f9ad1e"
+      "h": "8a4526370570"
     },
     "Конструктор · разминка и дроп-сет · 24": {
       "v": "=",
@@ -1417,7 +1417,7 @@
     "Конструктор · каталог · 02": {
       "v": "=",
       "f": ".sb-catalog-screen .sb-icon-btn var(--v4-ink-2) (750-strength-builder.css:6063-6071); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
-      "h": "1d160e52c5ae"
+      "h": "8276f6510970"
     },
     "Конструктор · каталог · 03": {
       "v": "=",
@@ -1448,12 +1448,12 @@
     "Конструктор · каталог · 08": {
       "v": "=",
       "f": "⌕ span aria-hidden — :137; CSS .sb-search>span :4799–4802 ink 38%. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "27c5a2a730ea"
+      "h": "7bfd463c0946"
     },
     "Конструктор · каталог · 09": {
       "v": "=",
       "f": "placeholder «Поиск по названию» input search — :138–144; CSS placeholder :4817–4820. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "010ceefc02e6"
+      "h": "f030f0da56f7"
     },
     "Конструктор · каталог · 10": {
       "v": "=",
@@ -1483,7 +1483,7 @@
     "Конструктор · каталог · 15": {
       "v": "=",
       "f": "Избранная ★ .sb-star.is-on color --sb-acc/--v4-act-text — :175–176; CSS :4896–4898. Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68).",
-      "h": "2128e0253d09"
+      "h": "0d232fe46ec1"
     },
     "Конструктор · каталог · 16": {
       "v": "=",
@@ -1493,17 +1493,17 @@
     "Конструктор · каталог · 17": {
       "v": "=",
       "f": "sub «Группа · прошлый раз W × R» — previousResult :78–89, 171; CSS span :4913–4916 11px ink 56%. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1d22890cf30b"
+      "h": "6f1e93316b46"
     },
     "Конструктор · каталог · 18": {
       "v": "=",
       "f": "Кнопка + .sb-cat-add 44×44 radius 12 — :191–195; CSS :4918–4932 border inset 1.5px --v4-act.",
-      "h": "a4f58f803c14"
+      "h": "28228f7b6094"
     },
     "Конструктор · каталог · 19": {
       "v": "=",
       "f": ".sb-catalog-screen .sb-star off var(--v4-ink-30) (750-strength-builder.css:6103-6115); computed sand rgba(0, 0, 0, 0.3), blue rgba(0, 0, 0, 0.3) @375px Chromium.",
-      "h": "95b61fbbf10b"
+      "h": "8b0eb455396f"
     },
     "Конструктор · каталог · 20": {
       "v": "=",
@@ -1528,7 +1528,7 @@
     "Конструктор · каталог · 24": {
       "v": "=",
       "f": "«Создать «…»» b + подпись «каталог подсказывает…» — :207–208; CSS b :4949–4952 ac tone.",
-      "h": "9b5cf7765c29"
+      "h": "3e93d5e2a003"
     },
     "Конструктор · каталог · 25": {
       "v": "=",
@@ -1542,7 +1542,7 @@
     },
     "Конструктор · итоги · 02": {
       "v": "=",
-      "h": "07ba52e8675a",
+      "h": "6900e9614588",
       "f": "Кнопка ✕: .sb-finish-head .sb-icon-btn 36×36, border-radius 999px, background var(--c1), font 600 13px/1, color rgba(var(--ink),.56) — 750:1722-1729; glyph finish_ui:303-305. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
     "Конструктор · итоги · 03": {
@@ -1572,7 +1572,7 @@
     },
     "Конструктор · итоги · 08": {
       "v": "=",
-      "h": "7c8059955d00",
+      "h": "a3f782343233",
       "f": "«Отличная работа»: .sb-finish-praise { font:700 14px/1.2 Figtree; color:var(--gr) } — 750:1770-1773; finish_ui:315."
     },
     "Конструктор · итоги · 09": {
@@ -1587,7 +1587,7 @@
     },
     "Конструктор · итоги · 11": {
       "v": "=",
-      "h": "38cac7c85d08",
+      "h": "5e393a75a371",
       "f": "Ярус «Длительность»: .sb-finish-metric-label { font:600 9.5px/1; letter-spacing:.11em; text-transform:uppercase; color:rgba(var(--ink),.56) } — 750:1796-1801. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
     "Конструктор · итоги · 12": {
@@ -1597,12 +1597,12 @@
     },
     "Конструктор · итоги · 13": {
       "v": "=",
-      "h": "c5872848526b",
+      "h": "3d8ce37eee50",
       "f": "«54:30»: .sb-finish-metric-line b { font:800 17px/1; font-variant-numeric:tabular-nums; color:var(--tx) } — 750:1809-1813; fmtClock(elapsedSec) finish_ui:317."
     },
     "Конструктор · итоги · 14": {
       "v": "=",
-      "h": "00f49f637858",
+      "h": "369814fc0ff9",
       "f": "«↑ 12 %»: .sb-finish-metric-line i { font:700 11px/1; color:var(--gr); font-variant-numeric:tabular-nums } — 750:1819-1824; formatPct(tonnageDeltaPct) finish_ui:318."
     },
     "Конструктор · итоги · 15": {
@@ -1612,7 +1612,7 @@
     },
     "Конструктор · итоги · 16": {
       "v": "=",
-      "h": "ffaeaf0d5ee5",
+      "h": "d724483a2f7e",
       "f": "«1» в рекордах: .sb-finish-metric.is-accent .sb-finish-metric-line b { color:var(--ac); font:800 17px/1 } — 750:1815-1817; records.length finish_ui:320."
     },
     "Конструктор · итоги · 17": {
@@ -1632,17 +1632,17 @@
     },
     "Конструктор · итоги · 20": {
       "v": "=",
-      "h": "81d690c90603",
+      "h": "67886a7ff550",
       "f": "«19»: .sb-finish-row b { font:600 12.5px/1; font-variant-numeric:tabular-nums; color:var(--tx) } — 750:1853-1858; setCounts.working finish_ui:327."
     },
     "Конструктор · итоги · 21": {
       "v": "=",
-      "h": "db859120836b",
+      "h": "ea4ee0da6c55",
       "f": "«4 · вне объёма»: .sb-finish-row b.is-quiet { color:rgba(var(--ink),.55) } — 750:1861-1863; warmup+« · вне объёма» finish_ui:330. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
     "Конструктор · итоги · 22": {
       "v": "=",
-      "h": "b3e45ad60f71",
+      "h": "87178891d6e0",
       "f": "«Жим лёжа · 75 × 8»: .sb-finish-row b.is-record { color:var(--gr); font-weight:700 } — 750:1865-1868; recordLabel(record) finish_ui:333."
     },
     "Конструктор · итоги · 23": {
@@ -1657,7 +1657,7 @@
     },
     "Конструктор · итоги · 25": {
       "v": "=",
-      "h": "a8fb0d9fa055",
+      "h": "7d6a0a8e850d",
       "f": "Текст причины «… — вес тела неизвестен»: small внутри .sb-finish-row--reason { font:500 11px/1.3; color:rgba(var(--ink),.56) } — 750:1882-1885; unmeasuredRows().reason finish_ui:337-338. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
     "Конструктор · итоги · 26": {
@@ -1682,12 +1682,12 @@
     },
     "Конструктор · итоги · 30": {
       "v": "=",
-      "h": "e287269cab62",
+      "h": "e1c0c449b944",
       "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-mood input --gr (750-strength-builder.css:2312-2314)."
     },
     "Конструктор · итоги · 31": {
       "v": "=",
-      "h": "c7c775596dea",
+      "h": "2b607d97cd83",
       "f": ".sb-finish-feedback span var(--v4-ink-2) (750-strength-builder.css:2320-2323); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 32": {
@@ -1697,7 +1697,7 @@
     },
     "Конструктор · итоги · 33": {
       "v": "=",
-      "h": "a7f3763d1429",
+      "h": "ce7fc5b78066",
       "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-wellbeing input --ac (750-strength-builder.css:2316-2318)."
     },
     "Конструктор · итоги · 34": {
@@ -1707,12 +1707,12 @@
     },
     "Конструктор · итоги · 35": {
       "v": "=",
-      "h": "4fdb2c243d2f",
+      "h": "b8bef5c20676",
       "f": "Геометрия/акцент сведены: .sb-finish-feedback.is-stress input --ac2 (750-strength-builder.css:2316-2318)."
     },
     "Конструктор · итоги · 36": {
       "v": "=",
-      "h": "000379790468",
+      "h": "17fec23977f1",
       "f": ".sb-finish-note::placeholder var(--v4-ink-4) (750-strength-builder.css:2339-2341); computed sand rgba(0, 0, 0, 0.38), blue rgba(0, 0, 0, 0.38) @375px Chromium."
     },
     "Конструктор · итоги · 37": {
@@ -1722,7 +1722,7 @@
     },
     "Конструктор · итоги · 38": {
       "v": "=",
-      "h": "28ae4706bcf3",
+      "h": "99e6088b7553",
       "f": ".sb-finish-chart-head span var(--v4-ink-2) (750-strength-builder.css:2349-2353); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 39": {
@@ -1737,7 +1737,7 @@
     },
     "Конструктор · итоги · 41": {
       "v": "=",
-      "h": "3dceb60187ed",
+      "h": "67212c6bc0af",
       "f": ".sb-finish-chart-column b var(--v4-ink-2) (750-strength-builder.css:2380-2385); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 42": {
@@ -1747,7 +1747,7 @@
     },
     "Конструктор · итоги · 43": {
       "v": "=",
-      "h": "f11ffc03ce94",
+      "h": "d5469d99e431",
       "f": ".sb-finish-chart-column small var(--v4-ink-2) (750-strength-builder.css:2380-2385); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 44": {
@@ -1772,7 +1772,7 @@
     },
     "Конструктор · итоги · 48": {
       "v": "=",
-      "h": "599205dd752d",
+      "h": "544427c98840",
       "f": "Геометрия/акцент сведены: .sb-finish-chart-column.is-latest > b --ac (750-strength-builder.css:2398-2401)."
     },
     "Конструктор · итоги · 49": {
@@ -1782,7 +1782,7 @@
     },
     "Конструктор · итоги · 50": {
       "v": "=",
-      "h": "48a631dc319a",
+      "h": "d49a03e9e0fc",
       "f": "Геометрия/акцент сведены: .sb-finish-chart-column.is-latest > small --ac (750-strength-builder.css:2398-2401)."
     },
     "Конструктор · итоги · 51": {
@@ -1792,7 +1792,7 @@
     },
     "Конструктор · итоги · 52": {
       "v": "=",
-      "h": "0aa733f23349",
+      "h": "e46c3f9beb3f",
       "f": "Геометрия/акцент сведены: .sb-finish-day-total b --tx (750-strength-builder.css:2484)."
     },
     "Конструктор · итоги · 53": {
@@ -1802,12 +1802,12 @@
     },
     "Конструктор · итоги · 54": {
       "v": "=",
-      "h": "9c00ce7b3f26",
+      "h": "7b23bd467ede",
       "f": ".sb-finish-row b.is-quiet var(--v4-ink-2) (750-strength-builder.css:2223-2225); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium."
     },
     "Конструктор · итоги · 55": {
       "v": "=",
-      "h": "efb9ecff5e94",
+      "h": "925fc55e8f4a",
       "f": "Геометрия/акцент сведены: .sb-finish-other b --tx (750-strength-builder.css:2492)."
     },
     "Конструктор · итоги · 56": {
@@ -1875,12 +1875,12 @@
     "Связка · раунды · 10": {
       "v": "=",
       "f": "Буква «A»: .sb-ss-member-card i { font:700 10px/1; color:var(--ac) } — 750:581-585; memberLetter() superset_ui:59-61.",
-      "h": "14ba392f1cfc"
+      "h": "1df51f2e0dbc"
     },
     "Связка · раунды · 11": {
       "v": "=",
       "f": "Имя упражнения: .sb-ss-member-card span { font:600 11px/1.2; color:var(--tx) } — 750:587-590.",
-      "h": "fee4ed2f10d3"
+      "h": "237454a0fcf4"
     },
     "Связка · раунды · 12": {
       "v": "=",
@@ -1890,7 +1890,7 @@
     "Связка · раунды · 13": {
       "v": "=",
       "f": "«Р1»: .sb-round-num { width:36px; font:700 10.5px/1 uppercase; color:rgba(var(--ink),.56) } — 750:607-613. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "e70075b15d54"
+      "h": "b7faa7b84844"
     },
     "Связка · раунды · 14": {
       "v": "=",
@@ -1905,7 +1905,7 @@
     "Связка · раунды · 16": {
       "v": "=",
       "f": "Текущий раунд «Р3»: .sb-round-num.is-current { color:var(--ac) } — 750:615-617; currentRoundIndex() superset_ui:78-94.",
-      "h": "52439bd20851"
+      "h": "4bd0f0024da0"
     },
     "Связка · раунды · 17": {
       "v": "=",
@@ -1935,7 +1935,7 @@
     "Связка · раунды · 22": {
       "v": "=",
       "f": "«одной строкой, вне объёма»: .sb-ss-detail-note { font:600 11px/1; color:rgba(var(--ink),.56) } — 750:671-674. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "f5ff73543efb"
+      "h": "22f418a778d2"
     },
     "Связка · раунды · 23": {
       "v": "=",
@@ -1945,7 +1945,7 @@
     "Связка · раунды · 24": {
       "v": "=",
       "f": "«2:00» отдых: .sb-ss-detail-row b { font:700 12.5px/1 tabular-nums; color:var(--tx) } — 750:676-680; fmtClock(group.restSec) superset_ui:181.",
-      "h": "6ecef138c090"
+      "h": "47661d2a15f1"
     },
     "Связка · раунды · 25": {
       "v": "=",
@@ -1995,17 +1995,17 @@
     "Связка · старая, без раундов · 09": {
       "v": "=",
       "f": "Буква «A»: .sb-ss-flat-letter { font:700 10.5px/1; color:rgba(var(--ink),.56) } — 750:720-724; memberLetter() без суффикса раунда. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "4fb28efaf7d4"
+      "h": "9d85182ac666"
     },
     "Связка · старая, без раундов · 10": {
       "v": "=",
       "f": "Имя упражнения: .sb-ss-flat-name { flex:1; font:700 12.5px/1.2; color:var(--tx) } — 750:726-731.",
-      "h": "1d3d1c6a4c52"
+      "h": "5aa1f08577a5"
     },
     "Связка · старая, без раундов · 11": {
       "v": "=",
       "f": "Счёт «4 подхода»: .sb-ss-flat-count { font:600 11px/1; color:rgba(var(--ink),.56) } — 750:733-737; ruPlural в flat-ветке. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "634976e40f4c"
+      "h": "328e63731004"
     },
     "Связка · старая, без раундов · 12": {
       "v": "=",
@@ -2055,7 +2055,7 @@
     "Своё упражнение · 06": {
       "v": "=",
       "f": "input.sb-ap-field.sb-ex-name — catalog_ui:275–281; 750 :1217–1227 min-height 44 radius 14 padding 0 14 margin-top 12 font 700 13px/1 text-align center; фон через --v4-c1/--sb-card + CATALOG_V4_BRIDGE :47–48.",
-      "h": "b4146364c2dc"
+      "h": "bb6d25b8d0f1"
     },
     "Своё упражнение · 07": {
       "v": "=",
@@ -2100,7 +2100,7 @@
     "Своё упражнение · 15": {
       "v": "=",
       "f": "«спина» .sb-ex-muscle-val.is-primary 700 11.5px var(--ac) — catalog_ui; 750; sand #8a4a20 · blue #1d5e96.",
-      "h": "f0df850468b9"
+      "h": "8b006b2b4b7c"
     },
     "Своё упражнение · 16": {
       "v": "=",
@@ -2110,7 +2110,7 @@
     "Своё упражнение · 17": {
       "v": "=",
       "f": "«бицепс, плечи» .sb-ex-muscle-val 600 11.5px rgba(var(--ink),.56) — catalog_ui; sand rgba(0,0,0,.56) · blue rgba(16,24,38,.56). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "53abf2038a8b"
+      "h": "3a06851b7834"
     },
     "Своё упражнение · 18": {
       "v": "=",
@@ -2120,7 +2120,7 @@
     "Своё упражнение · 19": {
       "v": "=",
       "f": "При !needsFactor copy «Для «вес × повторы» третий вопрос не задаётся.» — catalog_ui:328–330. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "ed68b1eb7558"
+      "h": "7804bf6c39f2"
     },
     "Своё упражнение · 20": {
       "v": "=",
@@ -2185,12 +2185,12 @@
     "Программа · цикл · 09": {
       "v": "=",
       "f": ".sb-cycle-metric-label uppercase 9.5px; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "2e1e6598c03e"
+      "h": "b06b6298de00"
     },
     "Программа · цикл · 10": {
       "v": "=",
       "f": ".sb-cycle-metric-value 17/800 done/total; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "36d225f4a2a5"
+      "h": "7555837b6a8e"
     },
     "Программа · цикл · 11": {
       "v": "=",
@@ -2200,7 +2200,7 @@
     "Программа · цикл · 12": {
       "v": "=",
       "f": ".sb-cycle-metric-value.is-accent — recordCount; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "8d57a164224b"
+      "h": "0324365a411b"
     },
     "Программа · цикл · 13": {
       "v": "=",
@@ -2220,7 +2220,7 @@
     "Программа · цикл · 16": {
       "v": "=",
       "f": ".sb-cycle-phase-num.is-active 26×26 acs; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "c8323a8b26cb"
+      "h": "51f8b344df96"
     },
     "Программа · цикл · 17": {
       "v": "=",
@@ -2230,17 +2230,17 @@
     "Программа · цикл · 18": {
       "v": "=",
       "f": ".sb-cycle-phase-name 12.5/700; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "9e043e358931"
+      "h": "a1afcec16d16"
     },
     "Программа · цикл · 19": {
       "v": "=",
       "f": ".sb-cycle-phase-detail 11/500 mut; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "dfd0c7dc1417"
+      "h": "5c3a97f0a2f2"
     },
     "Программа · цикл · 20": {
       "v": "=",
       "f": ".sb-cycle-phase-pct.is-done gr; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "84794a68154a"
+      "h": "34740c608b08"
     },
     "Программа · цикл · 21": {
       "v": "=",
@@ -2250,12 +2250,12 @@
     "Программа · цикл · 22": {
       "v": "=",
       "f": ".sb-cycle-week-cell.is-done gr-bg ✓; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "b86b0476705d"
+      "h": "f48ac9d55641"
     },
     "Программа · цикл · 23": {
       "v": "=",
       "f": ".sb-cycle-week-cell.is-plan bg inset ·; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "c344c5246976"
+      "h": "64082dae9086"
     },
     "Программа · цикл · 24": {
       "v": "=",
@@ -2265,12 +2265,12 @@
     "Программа · цикл · 25": {
       "v": "=",
       "f": ".sb-cycle-phase-num plan 26×26; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "b5e809c8bf1d"
+      "h": "d212855e25b9"
     },
     "Программа · цикл · 26": {
       "v": "=",
       "f": ".sb-cycle-phase-pct «план»; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "9c6673ea99c3"
+      "h": "db0c70d26abc"
     },
     "Программа · цикл · 27": {
       "v": "=",
@@ -2290,7 +2290,7 @@
     "Программа · цикл · 30": {
       "v": "=",
       "f": ".sb-cycle-week-status.is-done gr; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "b57d6c61a777"
+      "h": "42d081142315"
     },
     "Программа · цикл · 31": {
       "v": "=",
@@ -2300,7 +2300,7 @@
     "Программа · цикл · 32": {
       "v": "=",
       "f": ".sb-cycle-week-status.is-today ac; CycleScreen (.sb-root.program-cycle) — proposal_ui CycleScreen+buildProgramCycleSnapshot; mount ProgramNextLine→openPath day_trainings:3189+; CSS 750-strength-builder.css .sb-cycle-*; смоук strength-builder-cycle-v4-canvas-contract.test.js",
-      "h": "5f0b3e3988e9"
+      "h": "3336247271f2"
     },
     "Программа · цикл · 33": {
       "v": "=",
@@ -2350,7 +2350,7 @@
     "Программа · назначено против сделано · 09": {
       "v": "=",
       "f": "731-ui-v4-activity.css:1722–1725 — «План выполнен на N %» 700 14px/1.2 var(--gr)",
-      "h": "f325fcd4586f"
+      "h": "74a5e6d0f67c"
     },
     "Программа · назначено против сделано · 10": {
       "v": "=",
@@ -2380,12 +2380,12 @@
     "Программа · назначено против сделано · 15": {
       "v": "=",
       "f": ".sb-plan-vs-row b — font:700 12.5px/1.2 Figtree, color var(--sb-tx) (750:6577–6579); jsdom: fontWeight=700, fontSize=12.5px, lineHeight=1.2; имя упражнения рендерится в <b> superset_ui:2151.",
-      "h": "1d3d1c6a4c52"
+      "h": "5aa1f08577a5"
     },
     "Программа · назначено против сделано · 16": {
       "v": "=",
       "f": "heys_strength_superset_ui_v1.js:2366 — buildPlanVsDoneRow.note → .sb-plan-vs-note Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "46511aedf8bb"
+      "h": "5527df899c91"
     },
     "Программа · назначено против сделано · 17": {
       "v": "=",
@@ -2400,12 +2400,12 @@
     "Программа · назначено против сделано · 19": {
       "v": "=",
       "f": "731-ui-v4-activity.css:1891–1819 — «Назначено» .sb-plan-vs-cell-label 600 9px uppercase .11em Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "4b6e1d6f45a4"
+      "h": "25064a36c050"
     },
     "Программа · назначено против сделано · 20": {
       "v": "=",
       "f": "heys_strength_superset_ui_v1.js:551 — planExerciseCellSummary assigned → «до N кг»; val 700 11.5px",
-      "h": "3fb7dfd86373"
+      "h": "9a639f453331"
     },
     "Программа · назначено против сделано · 21": {
       "v": "=",
@@ -2415,7 +2415,7 @@
     "Программа · назначено против сделано · 22": {
       "v": "=",
       "f": "731-ui-v4-activity.css:1903–1828 — progress .is-positive .sb-plan-vs-cell-val color var(--gr) Замер chromium 375 px: песочный rgb(0,0,0), тёмный rgb(0,0,0).",
-      "h": "13c97fed83b8"
+      "h": "f1581d227194"
     },
     "Программа · назначено против сделано · 23": {
       "v": "=",
@@ -2435,7 +2435,7 @@
     "Программа · назначено против сделано · 26": {
       "v": "=",
       "f": "731-ui-v4-activity.css:1830–1832 — actual «пропущено» color var(--ac2) when skipped",
-      "h": "cefaa68959a5"
+      "h": "57a9ccaed125"
     },
     "Программа · назначено против сделано · 27": {
       "v": "=",
@@ -2460,7 +2460,7 @@
     "Программа · назначено против сделано · 31": {
       "v": "=",
       "f": "heys_strength_superset_ui_v1.js:2461 — fmtPlanVolume(plannedVolume) .is-muted 600 12.5px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "52278d30f39b"
+      "h": "0650c1573da8"
     },
     "Программа · назначено против сделано · 32": {
       "v": "=",
@@ -2470,7 +2470,7 @@
     "Программа · назначено против сделано · 33": {
       "v": "=",
       "f": "heys_strength_superset_ui_v1.js:2462 — fmtPlanVolume(doneVolume) 700 12.5px var(--tx)",
-      "h": "f68d35b8e75e"
+      "h": "6cd1178b1d81"
     },
     "Программа · назначено против сделано · 34": {
       "v": "=",
@@ -2529,14 +2529,14 @@
     "Перенос · след в обе стороны · 07": {
       "v": "≠",
       "f": "Контракт: «День B · верх тела» 700 15px/1.32 var(--tx). Runtime: h('b','Сегодня по программе') — superset_ui:2615; CSS 700 13.5px/1.3 — 731:935-938. Зафиксировано apps/web/__tests__/activity-plan-card-frame.test.js:70-74.",
-      "h": "14a9e42b2548",
+      "h": "adab1edcbb9c",
       "reasonCode": "canvas-conflict",
       "decisionRef": "apps/web/__tests__/activity-plan-card-frame.test.js:70"
     },
     "Перенос · след в обе стороны · 08": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: «7 упражнений · назначил Артём» 500 11.5px/1.4 rgba(ink,.56) margin-top 4px. Runtime: planProse «{dayLabel} · {n} упр. · … В расход не идёт…» — superset_ui:2609-2619; .sb-plan-meta 500 12px/1.55 margin 8px 0 0 — 731:954-957. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "f41c6d0e10e6"
+      "h": "453cc0cbd270"
     },
     "Перенос · след в обе стороны · 09": {
       "v": "?",
@@ -2576,12 +2576,12 @@
     "Перенос · след в обе стороны · 16": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: «перенести»: font 700 11.5px/1 color var(--v4-act-text) — 731:1264-1267; песок #8a4a20, синий #1d5e96 из 002-ui-v4-palette-roles.css:147,470; DOM i «перенести» — superset_ui:2315.",
-      "h": "785ff4718b9c"
+      "h": "c1988e02be5a"
     },
     "Перенос · след в обе стороны · 17": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: Контракт: занятая дата rgba(var(--ink),.4). Нет правила на .is-busy .sb-move-day-copy b; заголовок занятого дня не приглушён — только opacity на legacy .sb-move-day.is-busy в 750:5148-5151, переопределено в 731 без dim текста. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "42c85486d059"
+      "h": "1e35b4e7d9b3"
     },
     "Перенос · след в обе стороны · 18": {
       "v": "?",
@@ -2601,7 +2601,7 @@
     "Перенос · след в обе стороны · 21": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: Пилюля «план»: .sb-plan-badge 9px ui-monospace, фон --v4-hero, color --v4-act-text — 731:941-951; на будущем дне h('span','план') — superset_ui:2530; moved-target в кадре — badge «план» :663.",
-      "h": "fd2c51fe496c"
+      "h": "d6675a74693e"
     },
     "Перенос · след в обе стороны · 22": {
       "v": "?",
@@ -2661,12 +2661,12 @@
     "Правка веса в сессии · 11": {
       "v": "=",
       "f": ".sb-authorship-pill-avatar: 20×20, radius 999px, bg var(--ac), color var(--bg), 700 10px/1 — 750:4915–4925; initial из weightEditSessionContext (builder_ui:971).",
-      "h": "b977c859d95d"
+      "h": "e36a9a84755f"
     },
     "Правка веса в сессии · 12": {
       "v": "=",
       "f": ".sb-authorship-pill-text: 600 10.5px/1.3 var(--ac) — 750:4928–4930; stamp «Артём поставил 25 кг · 19:12» из weightEditSessionContext (builder_ui:972, 1829); contract test:113.",
-      "h": "614894e87d52"
+      "h": "aa6562e975bf"
     },
     "Правка веса в сессии · 13": {
       "v": "=",
@@ -2696,7 +2696,7 @@
     "Правка веса в сессии · 18": {
       "v": "=",
       "f": "«после начала сессии»: .sb-weight-edit-cd-sub 600 11px/1 rgba(ink,.56) — 750:4954–4956; builder_ui:1834; contract test:115. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "6d418eba6b11"
+      "h": "77031d9105cd"
     },
     "Правка веса в сессии · 19": {
       "v": "=",
@@ -2746,17 +2746,17 @@
     "Программа пройдена · 08": {
       "v": "=",
       "f": ".program-done-hero-label — 600 10.5px/.12em uppercase rgba(var(--ink),.56); heys_strength_proposal_ui_v1.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "a851c66e884f"
+      "h": "1bb1e077be4f"
     },
     "Программа пройдена · 09": {
       "v": "=",
       "f": ".program-done-hero b — 800 30px/1 tabular-nums var(--tx); strength-proposal-v4-canvas-contract.test.js «9 из 12».",
-      "h": "dc75130a41b3"
+      "h": "ee50e79fa352"
     },
     "Программа пройдена · 10": {
       "v": "=",
       "f": ".program-done-hero p — 500 11.5px/1.4 rgba(var(--ink),.56); ProgramDoneScreen copy. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "4fafced955b4"
+      "h": "9612f27bafe9"
     },
     "Программа пройдена · 11": {
       "v": "=",
@@ -2771,12 +2771,12 @@
     "Программа пройдена · 13": {
       "v": "=",
       "f": "Л13 .program-done-stat-label 600 9.5px/.12em uppercase — 750-strength-builder.css:5954 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "8e22582b6fd4"
+      "h": "7d032ea04026"
     },
     "Программа пройдена · 14": {
       "v": "=",
       "f": "Л14 .program-done-stat b 800 19px tabular-nums --tx — 750-strength-builder.css:5938",
-      "h": "132e4802acef"
+      "h": "eebdb5a19602"
     },
     "Программа пройдена · 15": {
       "v": "=",
@@ -2801,7 +2801,7 @@
     "Программа пройдена · 19": {
       "v": "=",
       "f": "Л19 .program-done-growth-val 700 12.5px color var(--gr) — 750-strength-builder.css:5996; sand+blue contract test Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
-      "h": "6ee53d9dc46a"
+      "h": "4ce639304cc6"
     },
     "Программа пройдена · 20": {
       "v": "=",
@@ -2826,7 +2826,7 @@
     "Программа пройдена · 24": {
       "v": "=",
       "f": "Л24 .program-done-note 500 11px/1.4 center margin-top 6px — 750-strength-builder.css:6030 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "4cab453f3930"
+      "h": "a78b35ecd448"
     },
     "История упражнения · 01": {
       "v": "=",
@@ -2836,7 +2836,7 @@
     "История упражнения · 02": {
       "v": "=",
       "f": ".sb-icon-btn 36×36, radius 999px, bg var(--c1); contract test row 02 sand+blue. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1d160e52c5ae"
+      "h": "8276f6510970"
     },
     "История упражнения · 03": {
       "v": "=",
@@ -2871,12 +2871,12 @@
     "История упражнения · 09": {
       "v": "=",
       "f": "750:2014–2019 .sb-finish-metric-label — uppercase 9.5px tracking .11em ink 56% Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "c3e255286d35"
+      "h": "09be6770109a"
     },
     "История упражнения · 10": {
       "v": "=",
       "f": "recordValue formatSetChip → «75 × 8» accent 17px/800 var(--ac); finish_ui:498–500,546; contract test row 10.",
-      "h": "42426141041b"
+      "h": "a7d80c9c668d"
     },
     "История упражнения · 11": {
       "v": "=",
@@ -2886,7 +2886,7 @@
     "История упражнения · 12": {
       "v": "=",
       "f": "oneRmNow Math.round → «95 кг» — finish_ui:548–549; contract test row 12.",
-      "h": "ef10775d39b6"
+      "h": "089b015c9925"
     },
     "История упражнения · 13": {
       "v": "=",
@@ -2936,7 +2936,7 @@
     "История упражнения · 22": {
       "v": "=",
       "f": "fmtExactKg(row.volume) tonnage — finish_ui:579–580; contract test row 22 (2390 кг в fixture).",
-      "h": "8acc718bd14c"
+      "h": "dcae963df635"
     },
     "История упражнения · 23": {
       "v": "=",
@@ -2956,7 +2956,7 @@
     "История упражнения · 26": {
       "v": "=",
       "f": "750:2079–2081 .sb-finish-row b.is-quiet — tonnage дискомфорта rgba(ink,.55) font 600 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "ca7bfb5fba0b"
+      "h": "2cb1c9a89958"
     },
     "История упражнения · 27": {
       "v": "=",
@@ -2966,7 +2966,7 @@
     "История упражнения · 28": {
       "v": "=",
       "f": "«+N кг за M тренировок» из oneRmDelta/sessionCount — finish_ui:587–590; contract test regex +6 за 2 в fixture.",
-      "h": "17458b0d4be5"
+      "h": "3917f2fd8401"
     },
     "История упражнения · 29": {
       "v": "=",
@@ -2976,12 +2976,12 @@
     "История упражнения · 30": {
       "v": "=",
       "f": ".sb-history-growth-note copy — finish_ui:595; contract test row 30. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "6df1f8648d71"
+      "h": "0d7e741a6df4"
     },
     "История упражнения · 31": {
       "v": "=",
       "f": "750:2079–2081 .sb-finish-row b.is-quiet — «95 кг» оценка 12.5px/600 ink 55% Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "9ac5a2e68491"
+      "h": "6f64c377281b"
     },
     "История упражнения · 32": {
       "v": "=",
@@ -2996,12 +2996,12 @@
     "История упражнения · 34": {
       "v": "=",
       "f": "Copy «шесть последних недель» — finish_ui:606; contract test row 34. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "97b8531ae922"
+      "h": "402d88656314"
     },
     "История упражнения · 35": {
       "v": "=",
       "f": "750:2211–2214 .sb-finish-chart-head b — нужен 11px/700 var(--gr) для дельты недель (сейчас 17px/800 var(--tx))",
-      "h": "2480d4192cbf"
+      "h": "7b3ab673c7fb"
     },
     "История упражнения · 36": {
       "v": "=",
@@ -3016,7 +3016,7 @@
     "История упражнения · 38": {
       "v": "=",
       "f": "Chart label b 9.5px/700 ink56 — historyOneRmSeries + contract test row 38. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "3dceb60187ed"
+      "h": "67212c6bc0af"
     },
     "История упражнения · 39": {
       "v": "=",
@@ -3026,7 +3026,7 @@
     "История упражнения · 40": {
       "v": "=",
       "f": "small «н1» 9px/600 — finish_ui:618; contract test row 40. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "f11ffc03ce94"
+      "h": "d5469d99e431"
     },
     "История упражнения · 41": {
       "v": "=",
@@ -3051,7 +3051,7 @@
     "История упражнения · 45": {
       "v": "=",
       "f": ".is-latest b color var(--ac) — finish_ui:611–616; contract test row 45 sand+blue.",
-      "h": "599205dd752d"
+      "h": "544427c98840"
     },
     "История упражнения · 46": {
       "v": "=",
@@ -3061,7 +3061,7 @@
     "История упражнения · 47": {
       "v": "=",
       "f": ".is-latest small color var(--ac) — contract test row 47.",
-      "h": "48a631dc319a"
+      "h": "d49a03e9e0fc"
     },
     "История упражнения · 48": {
       "v": "=",
@@ -3114,7 +3114,7 @@
     "Правка легла не полностью · 07": {
       "v": "=",
       "f": ".sb-proposal-outcome-title — 700 12.5px/1.35 var(--ac2); ProposalOutcome heys_strength_proposal_ui_v1.js.",
-      "h": "d43fa4c15c22"
+      "h": "df111cb2fae2"
     },
     "Правка легла не полностью · 08": {
       "v": "=",
@@ -3139,22 +3139,22 @@
     "Правка легла не полностью · 12": {
       "v": "=",
       "f": ".is-applied .sb-proposal-outcome-detail — color var(--gr); 750-strength-builder.css.",
-      "h": "5a65406697e1"
+      "h": "634b31e41888"
     },
     "Правка легла не полностью · 13": {
       "v": "=",
       "f": ".is-applied .sb-proposal-outcome-mark «✓» — color var(--gr); proposal contract test.",
-      "h": "4668dbccd211"
+      "h": "d7972c7398b8"
     },
     "Правка легла не полностью · 14": {
       "v": "=",
       "f": ".is-rejected .sb-proposal-outcome-detail — color var(--ac2); CSS is-rejected row.",
-      "h": "e001501ab80e"
+      "h": "f21f3e24ca3f"
     },
     "Правка легла не полностью · 15": {
       "v": "=",
       "f": ".is-rejected .sb-proposal-outcome-mark «—» — color var(--ac2); proposal contract test.",
-      "h": "ccf0d4abcf6f"
+      "h": "a461499da305"
     },
     "Правка легла не полностью · 16": {
       "v": "=",
@@ -3211,17 +3211,17 @@
     "Связка · границы правки · 09": {
       "v": "=",
       "f": "Метка «было»: .sb-ss-bound-label--was { font:700 10px/1; letter-spacing:.04em; text-transform:uppercase; color:rgba(var(--ink),.56); margin-bottom:6px } — apps/web/styles/modules/750-strength-builder.css:4521-4531; apps/web/strength/heys_strength_superset_ui_v1.js:2696. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d9c8e1285394"
+      "h": "aff93903b46b"
     },
     "Связка · границы правки · 10": {
       "v": "=",
       "f": "Строки A1… в «было»: .sb-ss-bound-col--was .sb-ss-bound-lines { font:600 11.5px/1.5; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:4537-4544; memberLines — apps/web/strength/heys_strength_superset_ui_v1.js:2697-2700. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "b59301a937b6"
+      "h": "9e57ac33750b"
     },
     "Связка · границы правки · 11": {
       "v": "=",
       "f": "Стрелка «→»: .sb-ss-bound-arrow { flex:none; align-items:center; font:700 14px/1; color:rgba(var(--ink),.35) } — apps/web/styles/modules/750-strength-builder.css:4550-4556; apps/web/strength/heys_strength_superset_ui_v1.js:2702; computed row 11 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "2978ba058463"
+      "h": "3aa09fe4ffb3"
     },
     "Связка · границы правки · 12": {
       "v": "=",
@@ -3231,12 +3231,12 @@
     "Связка · границы правки · 13": {
       "v": "=",
       "f": "Метка «станет»: .sb-ss-bound-label--will { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:4533-4535; apps/web/strength/heys_strength_superset_ui_v1.js:2704.",
-      "h": "53fd7bda1f72"
+      "h": "a0139c502c92"
     },
     "Связка · границы правки · 14": {
       "v": "=",
       "f": "Строки A1… в «станет»: .sb-ss-bound-col--will .sb-ss-bound-lines { color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:4546-4548; computed row 14 apps/web/__tests__/strength-superset-boundaries-v4-canvas-contract.test.js.",
-      "h": "18928c901b35"
+      "h": "869c96382995"
     },
     "Связка · границы правки · 15": {
       "v": "=",
@@ -3266,7 +3266,7 @@
     "Связка · границы правки · 20": {
       "v": "=",
       "f": "«состав заморожен до конца»: .sb-ss-bound-row-sub { font:500 11px/1.3; color:rgba(var(--ink),.56) } — apps/web/styles/modules/750-strength-builder.css:4598-4601; apps/web/strength/heys_strength_superset_ui_v1.js:2721. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "2d20a9fbeaff"
+      "h": "b3d56368dfd3"
     },
     "Связка · границы правки · 21": {
       "v": "=",
@@ -3286,7 +3286,7 @@
     "Подход · таблица ввода · 02": {
       "v": "=",
       "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 2 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Подход · таблица ввода · 03": {
       "v": "=",
@@ -3317,7 +3317,7 @@
     "Подход · таблица ввода · 07": {
       "v": "=",
       "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 7 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Подход · таблица ввода · 08": {
       "v": "=",
@@ -3337,7 +3337,7 @@
     "Подход · таблица ввода · 11": {
       "v": "=",
       "f": "Плитки контекста: .sb-context-chips/.sb-context-chip на --c1/--c2 в ExerciseCard; в UI скрыты, геометрия в 750-strength-builder.css — strength-builder-approach-table-v4-canvas-contract.test.js.",
-      "h": "17b24c9c0115"
+      "h": "caa8512692bd"
     },
     "Подход · таблица ввода · 12": {
       "v": "=",
@@ -3392,7 +3392,7 @@
     "Подход · таблица ввода · 22": {
       "v": "=",
       "f": "Кадр Е1 в раскрытой карточке: ExerciseCard + is-exercise-open CSS; строка 22 — strength-builder-approach-table-v4-canvas-contract.test.js и/или strength-builder-calm-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "baed337ef863"
+      "h": "c3dbfbc16405"
     },
     "Подход · таблица ввода · 23": {
       "v": "≠",
@@ -3425,14 +3425,14 @@
     "Подход · таблица ввода · 27": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "6217fbca8bfe",
+      "h": "c64d144aec98",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-aria-hidden-rest-cd-2026-09-05"
     },
     "Подход · таблица ввода · 28": {
       "v": "≠",
       "f": "superset_ui:1713 .sb-rest-copy видим; .sb-rest-cd aria-hidden (:1724+). Кадр Е1 колонкой не сведён — 750-strength-builder.css rest-block.",
-      "h": "0e262d6e01f8",
+      "h": "7692620f06fb",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-aria-hidden-rest-cd-2026-09-05"
     },
@@ -3469,7 +3469,7 @@
     "Таблица · галочка не ставится · 02": {
       "v": "=",
       "f": "Кнопка закрытия ✕ 36px на --c1 ink 56% — apps/web/strength/heys_strength_builder_ui_v1.js:1044+; строка 02 — strength-builder-validation-v4-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Таблица · галочка не ставится · 03": {
       "v": "=",
@@ -3489,7 +3489,7 @@
     "Таблица · галочка не ставится · 06": {
       "v": "=",
       "f": "Кнопка ⋯ 36px на --c1 — .sb-icon-btn; строка 06 — strength-builder-validation-v4-canvas-contract.test.js. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Таблица · галочка не ставится · 07": {
       "v": "=",
@@ -3539,7 +3539,7 @@
     "Таблица · галочка не ставится · 16": {
       "v": "=",
       "f": ".sb-ap-value.is-bw var(--v4-ink-2) (750-strength-builder.css:385-388); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
-      "h": "df908a5793f6"
+      "h": "6584b5fe406d"
     },
     "Таблица · галочка не ставится · 17": {
       "v": "=",
@@ -3549,7 +3549,7 @@
     "Таблица · галочка не ставится · 18": {
       "v": "=",
       "f": "Заголовок правила «Ноль повторов…» — контрактная строка «повторы обязательны, вес — нет» уже =; строка 18 — strength-builder-validation-v4-canvas-contract.test.js.",
-      "h": "b3780ec4e22e"
+      "h": "d6df7b3b4775"
     },
     "Таблица · галочка не ставится · 19": {
       "v": "=",
@@ -3564,7 +3564,7 @@
     "Отдых · кольцо · 02": {
       "v": "=",
       "f": "Построчно подтверждено для «Отдых · кольцо · 02»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:721. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Отдых · кольцо · 03": {
       "v": "=",
@@ -3584,7 +3584,7 @@
     "Отдых · кольцо · 06": {
       "v": "=",
       "f": "Построчно подтверждено для «Отдых · кольцо · 06»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:721. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Отдых · кольцо · 07": {
       "v": "=",
@@ -3629,12 +3629,12 @@
     "Отдых · кольцо · 15": {
       "v": "=",
       "f": "Построчно подтверждено для «Отдых · кольцо · 15»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:136. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "36716a9996af"
+      "h": "64825bf52241"
     },
     "Отдых · кольцо · 16": {
       "v": "=",
       "f": "Построчно подтверждено для «Отдых · кольцо · 16»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/strength/heys_strength_superset_ui_v1.js:136.",
-      "h": "4668dbccd211"
+      "h": "d7972c7398b8"
     },
     "Отдых · кольцо · 17": {
       "v": "=",
@@ -3644,7 +3644,7 @@
     "Отдых · кольцо · 18": {
       "v": "=",
       "f": "Построчно подтверждено для «Отдых · кольцо · 18»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:842.",
-      "h": "af79072cccad"
+      "h": "5b098f1f8306"
     },
     "Отдых · кольцо · 19": {
       "v": "=",
@@ -3659,17 +3659,17 @@
     "Отдых · кольцо · 21": {
       "v": "=",
       "f": "Построчно подтверждено для «Отдых · кольцо · 21»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:869.",
-      "h": "cb32f3d033c6"
+      "h": "2cce18bcba1b"
     },
     "Отдых · кольцо · 22": {
       "v": "=",
       "f": "Построчно подтверждено для «Отдых · кольцо · 22»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:869. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "c2fa466fc958"
+      "h": "04621c97819a"
     },
     "Отдых · кольцо · 23": {
       "v": "=",
       "f": "Построчно подтверждено для «Отдых · кольцо · 23»: текущие source/CSS и Chromium-контракт 375×812 воспроизводят значение актуального HTML canvas; evidence apps/web/styles/modules/750-strength-builder.css:869. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "3acae3a79f52"
+      "h": "98876d900f88"
     },
     "Отдых · кольцо · 24": {
       "v": "=",
@@ -3749,12 +3749,12 @@
     "Таймер вне экрана · 10": {
       "v": "=",
       "f": "Подпись «идёт от подхода…» — .sb-rest-compact-copy span ink 0.56 (было 0.45) 750-strength-builder.css:1143-1150. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "0eedbcb45eef"
+      "h": "726c494fb62a"
     },
     "Таймер вне экрана · 11": {
       "v": "=",
       "f": "«развернуть» 11.5px var(--ac) — .sb-rest-compact i 750-strength-builder.css:1153-1158; тест Е4.",
-      "h": "f8a6cf1bc4c3"
+      "h": "7d9e07183050"
     },
     "Таймер вне экрана · 12": {
       "v": "=",
@@ -3764,7 +3764,7 @@
     "Таймер вне экрана · 13": {
       "v": "=",
       "f": "HS 36×36 radius 12px --acs — .sb-rest-ended-icon 1555-1566; тест Е4.",
-      "h": "dbaf9b6d9d8c"
+      "h": "ed1add6d0a49"
     },
     "Таймер вне экрана · 14": {
       "v": "=",
@@ -3774,7 +3774,7 @@
     "Таймер вне экрана · 15": {
       "v": "=",
       "f": "«Отдых закончился» 12.5px/700 — .sb-rest-ended-copy b 1576-1579; RestEndedPocket.",
-      "h": "e9d55b11c9b4"
+      "h": "c77a4e96aaf4"
     },
     "Таймер вне экрана · 16": {
       "v": "=",
@@ -3784,12 +3784,12 @@
     "Таймер вне экрана · 17": {
       "v": "=",
       "f": "«Тренировка продолжается · 52:14» — SummaryCard running branch fmtClock 1366-1370; тест Е4.",
-      "h": "ceff18c9f410"
+      "h": "4e2aa778d48c"
     },
     "Таймер вне экрана · 18": {
       "v": "=",
       "f": "Подпись last mark + progress — SummaryCard span 1371-1375; тест «последняя отметка в 19:24…». Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "654e7b302ed7"
+      "h": "b9193d40bac0"
     },
     "Таймер вне экрана · 19": {
       "v": "=",
@@ -3799,7 +3799,7 @@
     "Таймер вне экрана · 20": {
       "v": "=",
       "f": "Stale copy про остановку таймера — SummaryCard pastOpen span 1388-1393; тест Е4. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "15be9b5c090c"
+      "h": "9a848cc86441"
     },
     "Таймер вне экрана · 21": {
       "v": "=",
@@ -3829,7 +3829,7 @@
     "Перенумерация · 02": {
       "v": "=",
       "f": "Кнопка ✕ 36px --c1 ink 56% — .sb-icon-btn в builder head, css shared. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Перенумерация · 03": {
       "v": "=",
@@ -3849,7 +3849,7 @@
     "Перенумерация · 06": {
       "v": "=",
       "f": "Кнопка ⋯ 36px — .sb-icon-btn aria-label Ещё. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Перенумерация · 07": {
       "v": "=",
@@ -3889,7 +3889,7 @@
     "Перенумерация · 14": {
       "v": "=",
       "f": "«744 кг» 12.5px/700 — formatVolumeKg+exerciseVolumeKg parseWeightKg fix; тест Е5.",
-      "h": "f308eddd667f"
+      "h": "b8091bc096d3"
     },
     "Перенумерация · 15": {
       "v": "=",
@@ -3914,7 +3914,7 @@
     "Перенумерация · 19": {
       "v": "=",
       "f": "«−264 кг» --ac2 — .sb-renumber-delta formatDeltaKg; тест Е5.",
-      "h": "2112d6c96441"
+      "h": "0d17b7ec21d9"
     },
     "Перенумерация · 20": {
       "v": "=",
@@ -3929,7 +3929,7 @@
     "Порядок · режим перестановки · 02": {
       "v": "=",
       "f": "Кнопка ✕ 36px круг --c1 ink 56% — .sb-order-screen .sb-icon-btn--close 2419-2427. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Порядок · режим перестановки · 03": {
       "v": "=",
@@ -3949,7 +3949,7 @@
     "Порядок · режим перестановки · 06": {
       "v": "=",
       "f": "«Готово» 36px padding 0 15px pill tint+acs — .sb-order-done.obtn 2452-2458.",
-      "h": "8c11b6ab2e84"
+      "h": "0e08ea39f0fc"
     },
     "Порядок · режим перестановки · 07": {
       "v": "=",
@@ -3964,7 +3964,7 @@
     "Порядок · режим перестановки · 09": {
       "v": "=",
       "f": "Ручка ⠿ 600 14px ink 32% grab — .sb-order-handle 2495-2502. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "3b40edb27ad0"
+      "h": "5094ce34e116"
     },
     "Порядок · режим перестановки · 10": {
       "v": "=",
@@ -3979,12 +3979,12 @@
     "Порядок · режим перестановки · 12": {
       "v": "=",
       "f": "Название 700 12.5px/1.2 --tx — .sb-order-row .sb-cat-title b 2536-2539.",
-      "h": "01f3758b93c3"
+      "h": "9c1cde602184"
     },
     "Порядок · режим перестановки · 13": {
       "v": "=",
       "f": "Доза N × reps · weight — planExerciseSummary→span 2541-2544; живые reps вместо demo «8–12». Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1dfacc687a12"
+      "h": "0cac335356e2"
     },
     "Порядок · режим перестановки · 14": {
       "v": "=",
@@ -4004,7 +4004,7 @@
     "Порядок · режим перестановки · 17": {
       "v": "=",
       "f": "Акцентная ⠿ --ac при preview — .sb-order-handle.is-accent 2504-2506, catalog_ui:620.",
-      "h": "d7d74ea4d9c8"
+      "h": "e53d701b1053"
     },
     "Порядок · режим перестановки · 18": {
       "v": "=",
@@ -4014,7 +4014,7 @@
     "Порядок · режим перестановки · 19": {
       "v": "=",
       "f": "«переносится сюда» accent 11px --ac — preview subtitle catalog_ui:612, span.is-accent.",
-      "h": "5899756adc54"
+      "h": "5fdc2e52fa6d"
     },
     "Порядок · режим перестановки · 20": {
       "v": "=",
@@ -4029,17 +4029,17 @@
     "Порядок · режим перестановки · 22": {
       "v": "=",
       "f": "«✓» mark 700 12px --gr — .sb-order-toast-mark 2574-2578.",
-      "h": "602ccfa4754e"
+      "h": "d32027986091"
     },
     "Порядок · режим перестановки · 23": {
       "v": "=",
       "f": "«Подход засчитан · …» tabular-nums --gr — .sb-order-toast-copy b + builder approachUndo.",
-      "h": "1ad7f5801b37"
+      "h": "1f56e179d65b"
     },
     "Порядок · режим перестановки · 24": {
       "v": "=",
       "f": "«Отменить» 44px pill --gr inset border — .sb-order-toast-undo.obtn 2599-2604.",
-      "h": "4b620869d2cd"
+      "h": "8d0c5f20b1fc"
     },
     "Порядок · режим перестановки · 25": {
       "v": "=",
@@ -4054,7 +4054,7 @@
     "Типы подходов · честный тоннаж · 02": {
       "v": "=",
       "f": "«✕»: .sb-icon-btn 36×36 — apps/web/styles/modules/750-strength-builder.css:153-168; ApproachTypesScreen onBack — apps/web/strength/heys_strength_superset_ui_v1.js:1136-1139. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Типы подходов · честный тоннаж · 03": {
       "v": "=",
@@ -4074,7 +4074,7 @@
     "Типы подходов · честный тоннаж · 06": {
       "v": "=",
       "f": "«⋯»: .sb-icon-btn onOpenSheet — apps/web/strength/heys_strength_superset_ui_v1.js:1144-1147; apps/web/styles/modules/750-strength-builder.css:153-168. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Типы подходов · честный тоннаж · 07": {
       "v": "=",
@@ -4104,7 +4104,7 @@
     "Типы подходов · честный тоннаж · 12": {
       "v": "=",
       "f": ".sb-at-aps .sb-ap-num.is-warmup height:44px font-size:10px color var(--sb-mut) — apps/web/styles/modules/750-strength-builder.css:5003-5011; apps/web/__tests__/strength-builder-approach-types-v4-canvas-contract.test.js sand rgba(0,0,0,.56) height 44px. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "453b68e23786"
+      "h": "fd5704e09e39"
     },
     "Типы подходов · честный тоннаж · 13": {
       "v": "=",
@@ -4129,7 +4129,7 @@
     "Типы подходов · честный тоннаж · 17": {
       "v": "=",
       "f": ".sb-at-aps .sb-at-drop-tag { background:var(--sb-accbg); color:var(--sb-accTx) } — apps/web/styles/modules/750-strength-builder.css:5018-5026; apps/web/__tests__/strength-builder-approach-types-v4-canvas-contract.test.js sand/blue #f6e6dd/#a1471c row 17.",
-      "h": "3200ba0a2f54"
+      "h": "cd72a797f7ef"
     },
     "Типы подходов · честный тоннаж · 18": {
       "v": "=",
@@ -4159,12 +4159,12 @@
     "Типы подходов · честный тоннаж · 23": {
       "v": "=",
       "f": "«дроп внутри · разминка нет» — apps/web/strength/heys_strength_superset_ui_v1.js:1169; apps/web/styles/modules/750-strength-builder.css:5050-5054 color var(--sb-mut). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d48900d543ef"
+      "h": "4c775c1c0f42"
     },
     "Типы подходов · честный тоннаж · 24": {
       "v": "=",
       "f": "«2 980 кг»: exerciseVolumeKg done-only — apps/web/strength/heys_strength_superset_ui_v1.js:1118,11171; apps/web/__tests__/strength-builder-approach-types-v4-canvas-contract.test.js row 24 tabular-nums.",
-      "h": "dab6317b46ec"
+      "h": "2454d507738c"
     },
     "Типы подходов · честный тоннаж · 25": {
       "v": "=",
@@ -4194,12 +4194,12 @@
     "Типы подходов · честный тоннаж · 30": {
       "v": "=",
       "f": "«75 кг · гриф 20»: barbellPlateLayout refW — apps/web/_kernel/heys_kernel_strength_v1.js barbellPlateLayout; apps/web/strength/heys_strength_superset_ui_v1.js:1183-1185; apps/web/__tests__/strength-builder-approach-types-v4-canvas-contract.test.js row 30.",
-      "h": "297bed811442"
+      "h": "44987450b990"
     },
     "Типы подходов · честный тоннаж · 31": {
       "v": "=",
       "f": "«на сторону: 25 + 2,5»: plates.perSide join — apps/web/strength/heys_strength_superset_ui_v1.js:1124-1128; apps/web/__tests__/strength-builder-approach-types-v4-canvas-contract.test.js row 31. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "dda5e5e2fe8d"
+      "h": "66eba0a6137d"
     },
     "Типы подходов · честный тоннаж · 32": {
       "v": "=",
@@ -4214,7 +4214,7 @@
     "Дроп-сет · свой экран · 02": {
       "v": "=",
       "f": "«✕» .sb-icon-btn — apps/web/strength/heys_strength_superset_ui_v1.js:1238-1241; apps/web/styles/modules/750-strength-builder.css:153-168. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Дроп-сет · свой экран · 03": {
       "v": "=",
@@ -4234,7 +4234,7 @@
     "Дроп-сет · свой экран · 06": {
       "v": "=",
       "f": "«⋯» onOpenSheet — apps/web/strength/heys_strength_superset_ui_v1.js:1246-1249. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Дроп-сет · свой экран · 07": {
       "v": "=",
@@ -4259,7 +4259,7 @@
     "Дроп-сет · свой экран · 11": {
       "v": "=",
       "f": ".sb-ds-grp .sb-ap.is-ds-main .sb-ap-value { font-size:18px } — apps/web/styles/modules/750-strength-builder.css:5130-5132; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js row 11 18px «75».",
-      "h": "c3e2d606d5a3"
+      "h": "83c695d0ad4f"
     },
     "Дроп-сет · свой экран · 12": {
       "v": "=",
@@ -4269,7 +4269,7 @@
     "Дроп-сет · свой экран · 13": {
       "v": "=",
       "f": ".sb-ds-drop-tag { background:var(--sb-accbg); color:var(--sb-accTx) } — apps/web/styles/modules/750-strength-builder.css:5134-5141; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js sand/blue #f6e6dd/#a1471c row 13.",
-      "h": "3200ba0a2f54"
+      "h": "cd72a797f7ef"
     },
     "Дроп-сет · свой экран · 14": {
       "v": "=",
@@ -4294,12 +4294,12 @@
     "Дроп-сет · свой экран · 18": {
       "v": "=",
       "f": "«один подход в счётчике» span — apps/web/strength/heys_strength_superset_ui_v1.js:1262; apps/web/styles/modules/750-strength-builder.css:5166-5170 color var(--sb-mut). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "ec4aa603811c"
+      "h": "21ee6b8aef81"
     },
     "Дроп-сет · свой экран · 19": {
       "v": "=",
       "f": "«960 кг»: approachVolumeKg apIdx=5 — apps/web/strength/heys_strength_superset_ui_v1.js:1232,1264; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js row 19.",
-      "h": "bfe98c898b2e"
+      "h": "3a12f4f28d15"
     },
     "Дроп-сет · свой экран · 20": {
       "v": "=",
@@ -4324,12 +4324,12 @@
     "Дроп-сет · свой экран · 24": {
       "v": "=",
       "f": ".sb-ds-rule-num { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5198-5202; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js sand row 24 #8a4a20.",
-      "h": "5235d2ef6718"
+      "h": "36a3a8865559"
     },
     "Дроп-сет · свой экран · 25": {
       "v": "=",
       "f": ".sb-ds-rule var(--v4-ink-2) (750-strength-builder.css:6750-6756); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
-      "h": "421c4c59b72f"
+      "h": "656db6fbd6fa"
     },
     "Дроп-сет · свой экран · 26": {
       "v": "=",
@@ -4339,7 +4339,7 @@
     "Дроп-сет · свой экран · 27": {
       "v": "=",
       "f": ".sb-ds-why b { color:var(--sb-accTx) } — apps/web/styles/modules/750-strength-builder.css:5211-5214; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js sand/blue #a1471c row 27.",
-      "h": "e2ddac22d4d6"
+      "h": "d8599caf283b"
     },
     "Дроп-сет · свой экран · 28": {
       "v": "=",
@@ -4404,7 +4404,7 @@
     "Связка · создание · 12": {
       "v": "=",
       "f": "Подпись «два упражнения подряд без паузы»: .sb-cat-title span { font:500 11px/1.3; color:var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:3385-3388; apps/web/strength/heys_strength_catalog_ui_v1.js:366. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "15fbde15a96a"
+      "h": "69a1fe700808"
     },
     "Связка · создание · 13": {
       "v": "=",
@@ -4419,12 +4419,12 @@
     "Связка · создание · 15": {
       "v": "=",
       "f": "«три подряд — плотнее и тяжелее» у .is-on: .sb-cat-title span { color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:3390-3393; apps/web/strength/heys_strength_catalog_ui_v1.js:367.",
-      "h": "4297ede3cf2f"
+      "h": "a62631f05e3b"
     },
     "Связка · создание · 16": {
       "v": "=",
       "f": "Галочка «✓»: .sb-radio-check { font:700 12px/1; color:var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:3391-3398,402-403; computed row 16.",
-      "h": "9236c47a3332"
+      "h": "c213796771ef"
     },
     "Связка · создание · 17": {
       "v": "=",
@@ -4449,27 +4449,27 @@
     "Связка · создание · 21": {
       "v": "=",
       "f": "Кнопка «−»: .sb-stepper .sb-btn { font:700 18px/1; background:var(--sb-soft) } — apps/web/styles/modules/750-strength-builder.css:3425-3434; apps/web/strength/heys_strength_catalog_ui_v1.js:411-414.",
-      "h": "44102f1dd940"
+      "h": "eea49127b6b3"
     },
     "Связка · создание · 22": {
       "v": "=",
       "f": "Число раундов «3»: .sb-stepper b { flex:1; text-align:center; font:800 19px/1; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3441-3446; apps/web/strength/heys_strength_catalog_ui_v1.js:415.",
-      "h": "5218d4f95680"
+      "h": "8574b4ec197b"
     },
     "Связка · создание · 23": {
       "v": "=",
       "f": "Кнопка «+»: .sb-stepper .sb-btn.is-accent { background:var(--sb-acc-strong); color:var(--v4-btn-on-act); font:700 18px/1 } — apps/web/styles/modules/750-strength-builder.css:3436-3439; apps/web/strength/heys_strength_catalog_ui_v1.js:416-419. Плюс Замер chromium 375 px: песочный rgb(198,113,57), тёмный rgb(207,129,68); текст Замер chromium 375 px: песочный rgb(43,22,8), тёмный rgb(26,15,4).",
-      "h": "778be85ef026"
+      "h": "9043348831a4"
     },
     "Связка · создание · 24": {
       "v": "=",
       "f": "Поле «2:00»: .sb-rest-preview { height:44px; border-radius:12px; background:var(--sb-bg); box-shadow:inset 0 0 0 1px var(--sb-br); font:700 15px/1 } — apps/web/styles/modules/750-strength-builder.css:3448-3460; max restSec участников — apps/web/strength/heys_strength_catalog_ui_v1.js:358-363.",
-      "h": "a830c4b664d8"
+      "h": "f9adb0291025"
     },
     "Связка · создание · 25": {
       "v": "=",
       "f": "Подпись «максимум из значений участников»: .sb-control-hint { margin-top:6px; font:500 10px/1.35; color:var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:3462-3466; apps/web/strength/heys_strength_catalog_ui_v1.js:425. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d72400d9066f"
+      "h": "343f7350eef1"
     },
     "Связка · создание · 26": {
       "v": "=",
@@ -4479,7 +4479,7 @@
     "Связка · создание · 27": {
       "v": "=",
       "f": "Резюме «3 упражнения подряд…»: .sb-step-hint { font:600 12.5px/1.55; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3475-3479; строка из countWord/restLabel/rounds — apps/web/strength/heys_strength_catalog_ui_v1.js:431-432.",
-      "h": "b95286e88946"
+      "h": "09accb6d7d40"
     },
     "Связка · создание · 28": {
       "v": "=",
@@ -4494,7 +4494,7 @@
     "Связка · создание · 30": {
       "v": "=",
       "f": "Число «9»: .sb-tile b { font:800 16px/1; color:var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:3505-3508; totalApproaches=count*rounds — apps/web/strength/heys_strength_catalog_ui_v1.js:371.",
-      "h": "1b3f15833258"
+      "h": "c9dad7068809"
     },
     "Связка · создание · 31": {
       "v": "=",
@@ -4514,7 +4514,7 @@
     "Трисет в работе · 02": {
       "v": "=",
       "f": "«✕»: .sb-triset-work-screen .sb-icon-btn { flex:none; 36×36; radius 999; bg var(--sb-card); font 600 13px; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5564-5573; apps/web/strength/heys_strength_superset_ui_v1.js:1439-1442. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Трисет в работе · 03": {
       "v": "=",
@@ -4539,7 +4539,7 @@
     "Трисет в работе · 07": {
       "v": "=",
       "f": "«⋯»: .sb-head > .sb-icon-btn:last-child { font-weight 700 } — apps/web/styles/modules/750-strength-builder.css:5575-5577; apps/web/strength/heys_strength_superset_ui_v1.js:1448-1451. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Трисет в работе · 08": {
       "v": "=",
@@ -4579,12 +4579,12 @@
     "Трисет в работе · 15": {
       "v": "=",
       "f": "«A1»: .sb-tw-member-card i { font 700 10px; color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5658-5662; apps/web/strength/heys_strength_superset_ui_v1.js:1333-1335,1472; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 14.",
-      "h": "2eb03ce7b260"
+      "h": "21a6adafa58c"
     },
     "Трисет в работе · 16": {
       "v": "=",
       "f": "«Жим гантелей»: .sb-tw-member-card span { font 600 11px/1.2; color var(--sb-tx) } — apps/web/styles/modules/750-strength-builder.css:5664-5667; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 16.",
-      "h": "8fefed32067e"
+      "h": "c7c1975d2dcb"
     },
     "Трисет в работе · 17": {
       "v": "=",
@@ -4594,22 +4594,22 @@
     "Трисет в работе · 18": {
       "v": "=",
       "f": "«разм.»: .sb-tw-warmup-tag { width 44px; height 26px; radius 8px; bg rgba(ink,.06) } — apps/web/styles/modules/750-strength-builder.css:5683-5695; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 18. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1d7fb09b9e15"
+      "h": "f83a62e00e41"
     },
     "Трисет в работе · 19": {
       "v": "=",
       "f": "«общая для связки · 2 подхода»: .sb-tw-warmup-copy { font 600 11.5px; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5697-5701; apps/web/strength/heys_strength_superset_ui_v1.js:1477-1481. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "7cfdea57cebe"
+      "h": "f77249964623"
     },
     "Трисет в работе · 20": {
       "v": "=",
       "f": "«✓» разминки: .sb-tw-warmup-done { font 700 12px; color rgba(ink,.42) } — apps/web/styles/modules/750-strength-builder.css:5703-5706; apps/web/strength/heys_strength_superset_ui_v1.js:1482. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "a6c7f9d3d15d"
+      "h": "527501138861"
     },
     "Трисет в работе · 21": {
       "v": "=",
       "f": "«Р1»: .sb-tw-round-num { width 36px; font 700 10.5px uppercase; color var(--sb-mut) } — apps/web/styles/modules/750-strength-builder.css:5722-5728; apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 21. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "e70075b15d54"
+      "h": "b7faa7b84844"
     },
     "Трисет в работе · 22": {
       "v": "=",
@@ -4629,7 +4629,7 @@
     "Трисет в работе · 25": {
       "v": "=",
       "f": "«круг закрыт · отдых 2:00»: .sb-tw-round-closed { flex:1; font 600 10.5px/1.3; color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5767-5771; apps/web/strength/heys_strength_superset_ui_v1.js:1431-1432; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 25.",
-      "h": "a24fea36e1b7"
+      "h": "240320143c17"
     },
     "Трисет в работе · 26": {
       "v": "=",
@@ -4639,7 +4639,7 @@
     "Трисет в работе · 27": {
       "v": "=",
       "f": "«Р2» текущий: .sb-tw-round-num.is-current { color var(--sb-acc) } — apps/web/styles/modules/750-strength-builder.css:5730-5732; песок+синий apps/web/__tests__/strength-builder-triset-work-v4-canvas-contract.test.js row 27.",
-      "h": "e6d6bf201c7a"
+      "h": "e4673de128f8"
     },
     "Трисет в работе · 28": {
       "v": "=",
@@ -4696,7 +4696,7 @@
       "f": "Ряд буквы плана: .sb-cur-plan-head { align-items:center; gap:10px } — 750-strength-builder.css:7155."
     },
     "Куратор и зал · 08": {
-      "h": "addb1ad16c00",
+      "h": "1f4dc084f8e3",
       "v": "=",
       "f": "Буква дня: .sb-cur-plan-letter 34×34, radius 11px, color var(--sb-acc) — 750-strength-builder.css:7061; тест strength-builder-curator-gym-v4-canvas-contract sand+blue."
     },
@@ -4706,12 +4706,12 @@
       "f": "Копия плана: .sb-cur-plan-copy { flex:1; flex-direction:column; gap:3px } — 750-strength-builder.css:7174."
     },
     "Куратор и зал · 10": {
-      "h": "927ef58b2e57",
+      "h": "207f75356b21",
       "v": "=",
       "f": "Заголовок «Сегодня по плану · …»: .sb-cur-plan-title 700 12.5px — 750:5578-5582; CuratorPlanStrip:2022."
     },
     "Куратор и зал · 11": {
-      "h": "4ac361cb5e70",
+      "h": "4a7871447a96",
       "v": "=",
       "f": "Мета «… · назначил …»: .sb-cur-plan-meta 500 11px color var(--sb-mut) — 750:5584-5588; assignedDate()+muscleHint superset_ui:2016-2017. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
@@ -4758,12 +4758,12 @@
       "f": "Пузырь комментария: .sb-cur-comment-bubble { background var(--sb-soft); radius 12px; padding 11px 12px; margin-top 10px } — 750:5624-5631."
     },
     "Куратор и зал · 20": {
-      "h": "5faca90ab486",
+      "h": "c399b963e9a2",
       "v": "=",
       "f": "Текст ex.note в .sb-cur-comment-bubble — superset_ui:1644-1646; строка «Спину держи ровнее…» в curator-gym contract test."
     },
     "Куратор и зал · 21": {
-      "h": "05ecf5971beb",
+      "h": "7f2b7538ff10",
       "v": "=",
       "f": "Мета «Артём · куратор · …»: .sb-cur-comment-meta — 750:5633-5638; relativePlanWhen()+author superset_ui:1647-1649. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
@@ -4790,7 +4790,7 @@
       "f": "Карточка дискомфорта на tint: .sb-pain--canvas { background var(--v4-accent-bg) } — 750:5660-5666. Замер chromium 375 px: песочный rgb(240,220,198), тёмный rgb(58,38,32)."
     },
     "Куратор и зал · 26": {
-      "h": "8dcb74bc526f",
+      "h": "669cf340bb82",
       "v": "=",
       "f": "Заголовок дискомфорта: .sb-pain--canvas b 700 12.5px color var(--sb-accTx) — 750:5668-5672; curator-gym test sand+blue."
     },
@@ -4820,14 +4820,14 @@
       "f": "Заголовок строки «Подходы …»: .sb-cur-sync-main b color var(--sb-tx) — 750:5698-5701; buildSyncQueueRows title superset_ui:2048-2067."
     },
     "Куратор и зал · 32": {
-      "h": "7797069066df",
+      "h": "c090aa65b4e9",
       "v": "≠",
       "f": "«отправлено в …» — var(--sb-mut), не var(--gr): 750-strength-builder.css:5703-5706.",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-curator-gym-mid-session-2026-09-07"
     },
     "Куратор и зал · 33": {
-      "h": "4668dbccd211",
+      "h": "d7972c7398b8",
       "v": "=",
       "f": "Галочка ✓: .sb-cur-sync-ok color var(--sb-okTx) — 750:5708-5711; status ok SyncQueuePanel:2099."
     },
@@ -4842,14 +4842,14 @@
       "f": "Последняя строка без разделителя: .sb-cur-sync-row.is-last { border-bottom:none } — 750:5686-5688."
     },
     "Куратор и зал · 36": {
-      "h": "f5f8ab2f9dad",
+      "h": "e281d2d11eef",
       "v": "≠",
       "f": "«не отправлена» только при notePending+sync pending: buildSyncQueueRows:2071-2077.",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-curator-gym-mid-session-2026-09-07"
     },
     "Куратор и зал · 37": {
-      "h": "e038ead9bb32",
+      "h": "52386b2d0843",
       "v": "=",
       "f": "Кнопка «повторить»: .sb-cur-sync-retry 700 11.5px color var(--sb-acc) — 750:5722-5728; row.status retry superset_ui:2101-2105."
     },
@@ -4869,7 +4869,7 @@
       "f": "Шапка сессии под листом: .sb-head сохраняется при sheetOpen — builder_ui:1200-1228."
     },
     "Шторка ⋯ · 03": {
-      "h": "07ba52e8675a",
+      "h": "6900e9614588",
       "v": "=",
       "f": "Кнопка ✕ 36×36: .sb-icon-btn — 750 .sb-builder-screen .sb-icon-btn 36px; builder close :1201-1204. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
@@ -4884,7 +4884,7 @@
       "f": "Имя сессии sessionTitle в шапке — builder_ui:1208; не дублируется в листе."
     },
     "Шторка ⋯ · 06": {
-      "h": "d5f3269910ac",
+      "h": "800c0174aea1",
       "v": "=",
       "f": "Кнопка ⋯ 36×36 открывает лист — builder_ui:1223-1227; .sb-icon-btn 36px CSS. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
@@ -4904,12 +4904,12 @@
       "f": "Колонка подписи строки: .sb-sheet-menu-copy { flex:1; flex-direction:column; gap:2px } — 750:5780-5786; menu-sheet test."
     },
     "Шторка ⋯ · 10": {
-      "h": "a82bb13fc535",
+      "h": "0aab1ea114bf",
       "v": "=",
       "f": "Заголовок строки меню: .sb-sheet-menu-copy b 700 12.5px — 750:5787-5790; sheetRows titles superset_ui:2176-2209."
     },
     "Шторка ⋯ · 11": {
-      "h": "68c292457c95",
+      "h": "b1e1213e6e52",
       "v": "=",
       "f": "Подпись строки: .sb-sheet-menu-copy span 500 11px color var(--sb-mut) — 750:5792-5795. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён."
     },
@@ -5006,7 +5006,7 @@
     "План в ленте дня · 08": {
       "v": "=",
       "f": "letter B 34×34 r11 var(--v4-act-text): 731 .sb-plan-letter; day-feed test ·08 sand+blue color. Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
-      "h": "addb1ad16c00"
+      "h": "1f4dc084f8e3"
     },
     "План в ленте дня · 09": {
       "v": "=",
@@ -5016,12 +5016,12 @@
     "План в ленте дня · 10": {
       "v": "=",
       "f": "«Запланировано куратором» 700 12.5px var(--v4-ink): 731 b + superset_ui; day-feed ·10.",
-      "h": "00ceac024a98"
+      "h": "a87cc1542c3b"
     },
     "План в ленте дня · 11": {
       "v": "=",
       "f": "meta rgba(ink,.56) 500 11px: 731 .sb-plan-meta; superset_ui meta string; day-feed ·11. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "81c4cb6e59ba"
+      "h": "7d0ff01f86f6"
     },
     "План в ленте дня · 12": {
       "v": "=",
@@ -5042,12 +5042,12 @@
     "План в ленте дня · 15": {
       "v": "=",
       "f": "exercise name flex 1 600 12px: 731 li > span; superset_ui list; ·15.",
-      "h": "f250c86095df"
+      "h": "2c35fd542e5f"
     },
     "План в ленте дня · 16": {
       "v": "=",
       "f": "sets mono 600 11px ink-2: 731 li > i; day-feed ·16 sand ink56. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "59e8cc1969db"
+      "h": "d0a6df60398d"
     },
     "План в ленте дня · 17": {
       "v": "=",
@@ -5091,12 +5091,12 @@
     "План в ленте дня · 24": {
       "v": "=",
       "f": "weekday label 600 9.5px ink-2: 731 .is-done > i; ·24. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "5c1532092b1b"
+      "h": "7e4d23941aec"
     },
     "План в ленте дня · 25": {
       "v": "=",
       "f": "checkmark var(--v4-ok-text): 731 .is-done > b; day-feed ·25 sand+blue.",
-      "h": "0712125d3ac4"
+      "h": "8e451d285239"
     },
     "План в ленте дня · 26": {
       "v": "=",
@@ -5106,7 +5106,7 @@
     "План в ленте дня · 27": {
       "v": "=",
       "f": "rest dash 700 11px ink-2: 731 .is-rest > b; ·27. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "8592233068ba"
+      "h": "e6ca57ed3e42"
     },
     "План в ленте дня · 28": {
       "v": "=",
@@ -5116,12 +5116,12 @@
     "План в ленте дня · 29": {
       "v": "=",
       "f": "assigned dot var(--v4-act-text): 731 .is-assigned > b; day-feed ·29 blue ac.",
-      "h": "c5fea7338543"
+      "h": "2fd1aa8c38c6"
     },
     "План в ленте дня · 30": {
       "v": "=",
       "f": "legend row wrap gap 12 margin-top 10: 731 .sb-plan-week-legend; PLAN_FEED ·30. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "23b6ec88e6a7"
+      "h": "99bf38dd2d54"
     },
     "План в ленте дня · 31": {
       "v": "=",
@@ -5183,7 +5183,7 @@
     "День не состоялся · 07": {
       "v": "=",
       "f": "lead copy 600 12.5px/1.55 var(--v4-ink): 750 .sb-plan-missed-lead + superset_ui:2413-2415; ·07.",
-      "h": "a3f73d848f56",
+      "h": "5c0b9bc89569",
       "evidence": ["computed-style: apps/web/__tests__/strength-builder-day-missed-v4-canvas-contract.test.js"]
     },
     "День не состоялся · 08": {
@@ -5290,12 +5290,12 @@
     "Спорное · тап по закрытому во время отдыха · 09": {
       "v": "=",
       "f": ".sb-rest-compact-copy span — 500 11px/1.3 rgba(var(--ink),.56); 750-strength-builder.css:1142-1149. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "0eedbcb45eef"
+      "h": "726c494fb62a"
     },
     "Спорное · тап по закрытому во время отдыха · 10": {
       "v": "=",
       "f": ".sb-rest-compact i «развернуть» — 700 11.5px var(--ac); dispute-k test K1.",
-      "h": "f8a6cf1bc4c3"
+      "h": "7d9e07183050"
     },
     "Спорное · тап по закрытому во время отдыха · 11": {
       "v": "=",
@@ -5315,12 +5315,12 @@
     "Спорное · тап по закрытому во время отдыха · 14": {
       "v": "=",
       "f": ".sb-ex--collapsed .sb-ex-title b — 700 12.5px/1.2 var(--tx); builder_ui collapsedExerciseRow.",
-      "h": "34bb4503ef04"
+      "h": "faeed65d39f8"
     },
     "Спорное · тап по закрытому во время отдыха · 15": {
       "v": "=",
       "f": ".sb-ex-state.is-editing «правится» — 700 11px var(--ac); rest owner + openIdx≠index.",
-      "h": "b4c7c4fb05a2"
+      "h": "f1eace239a72"
     },
     "Спорное · тап по закрытому во время отдыха · 16": {
       "v": "=",
@@ -5402,12 +5402,12 @@
     "Спорное · подход добавлен к закрытому · 13": {
       "v": "=",
       "f": ".sb-ex-title b — 700 12.5px var(--tx).",
-      "h": "a82bb13fc535"
+      "h": "0aab1ea114bf"
     },
     "Спорное · подход добавлен к закрытому · 14": {
       "v": "=",
       "f": ".sb-ex-sub.is-reopened «было N из N · стало N из M» — builder_ui collapsedExerciseRow + ex.reopened после addApproach на закрытом.",
-      "h": "8ba3e1ec9380"
+      "h": "028d06d519cf"
     },
     "Спорное · подход добавлен к закрытому · 15": {
       "v": "=",
@@ -5479,12 +5479,12 @@
     "Спорное · рабочий стал разминкой · 09": {
       "v": "=",
       "f": ".sb-renumber-tonnage b — 700 12.5px tabular-nums var(--tx).",
-      "h": "c0e598bcaec9"
+      "h": "af1b7f285b6a"
     },
     "Спорное · рабочий стал разминкой · 10": {
       "v": "=",
       "f": ".sb-renumber-delta — color var(--ac2); tonnage drop animation row.",
-      "h": "95bf060da2d5"
+      "h": "5c021af296a7"
     },
     "Спорное · рабочий стал разминкой · 11": {
       "v": "=",
@@ -5494,7 +5494,7 @@
     "Спорное · рабочий стал разминкой · 12": {
       "v": "=",
       "f": ".sb-renumber-footnote — 500 11px rgba(var(--ink),.56); renumber copy. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "83ea788ed2da"
+      "h": "e35a7a8a979b"
     },
     "Спорное · рабочий стал разминкой · 13": {
       "v": "=",
@@ -5546,7 +5546,7 @@
     "Спорное · вес правят после галочки · 09": {
       "v": "=",
       "f": "lastMarkAt caption — 500 11px rgba(var(--ink),.56) margin-top 8px in approach meta. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "968966e01955"
+      "h": "19b733785a87"
     },
     "Спорное · вес правят после галочки · 10": {
       "v": "=",
@@ -5566,7 +5566,7 @@
     "Спорное · вес правят после галочки · 13": {
       "v": "=",
       "f": "«пересчитаны» — bold 11.5px var(--tx) in finish/stats feedback.",
-      "h": "0df48f690077"
+      "h": "78c23d4f44a9"
     },
     "Спорное · вес правят после галочки · 14": {
       "v": "=",
@@ -5576,12 +5576,12 @@
     "Спорное · вес правят после галочки · 15": {
       "v": "=",
       "f": "Record stays on historical date — historyFor, not sticky on approach. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "14aec45ec308"
+      "h": "6452301ac05d"
     },
     "Спорное · вес правят после галочки · 16": {
       "v": "=",
       "f": "Record badge removed — 700 11.5px var(--ac2) «снят» when weight drops.",
-      "h": "c6ba7f15e5e6"
+      "h": "09c9b85e7db6"
     },
     "Спорное · вес правят после галочки · 17": {
       "v": "=",
@@ -5623,17 +5623,17 @@
     "Спорное · дроп или разминка в связке · 07": {
       "v": "=",
       "f": ".sb-warmup-tag / warmup row — 44×26px uppercase 9.5px rgba(var(--ink),.56); warmup-drop CSS. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1d7fb09b9e15"
+      "h": "f83a62e00e41"
     },
     "Спорное · дроп или разминка в связке · 08": {
       "v": "=",
       "f": "Warmup row prose — 600 11.5px rgba(var(--ink),.56) flex 1. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "37ccecfc2161"
+      "h": "e52f76bf8247"
     },
     "Спорное · дроп или разминка в связке · 09": {
       "v": "=",
       "f": "Warmup done check — 700 12px var(--gr).",
-      "h": "4668dbccd211"
+      "h": "d7972c7398b8"
     },
     "Спорное · дроп или разминка в связке · 10": {
       "v": "=",
@@ -5643,12 +5643,12 @@
     "Спорное · дроп или разминка в связке · 11": {
       "v": "=",
       "f": ".sb-at-drop-tag / drop denied — bg var(--tint) color var(--ac2) 44×26.",
-      "h": "dcb392a39f9f"
+      "h": "f555f3aa23f5"
     },
     "Спорное · дроп или разминка в связке · 12": {
       "v": "=",
       "f": "Drop denied mark — — color var(--ac2).",
-      "h": "ccf0d4abcf6f"
+      "h": "a461499da305"
     },
     "Спорное · дроп или разминка в связке · 13": {
       "v": "=",
@@ -5762,7 +5762,7 @@
     "Спорное · запись куратора поверх вашей · 10": {
       "v": "=",
       "f": ".sb-curator-edit / meta «Артём поставил…» — 500 10.5px var(--ac).",
-      "h": "a619a4ae2eb2"
+      "h": "63f4e22fa311"
     },
     "Спорное · запись куратора поверх вашей · 11": {
       "v": "=",
@@ -5782,7 +5782,7 @@
     "Спорное · запись куратора поверх вашей · 14": {
       "v": "=",
       "f": "«куратор её не правит» — 600 11px rgba(var(--ink),.56) during session. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "8133b119707f"
+      "h": "d62a4d03081f"
     },
     "Спорное · запись куратора поверх вашей · 15": {
       "v": "=",
@@ -5792,12 +5792,12 @@
     "Спорное · запись куратора поверх вашей · 16": {
       "v": "=",
       "f": "Merge dialog deferred — prose 500 11px muted. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "9fbe01f341f5"
+      "h": "c66c91318d1f"
     },
     "Спорное · запись куратора поверх вашей · 17": {
       "v": "=",
       "f": "«отложен» — 700 11.5px var(--ac2).",
-      "h": "cf0c260654e5"
+      "h": "0470dafcdec2"
     },
     "Спорное · запись куратора поверх вашей · 18": {
       "v": "=",
@@ -5849,12 +5849,12 @@
     "Спорное · в связке разное число подходов · 09": {
       "v": "=",
       "f": "«кнопки нет» — 500 11px muted; per-member add absent. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "3f6a74697a4a"
+      "h": "4464bc92664b"
     },
     "Спорное · в связке разное число подходов · 10": {
       "v": "=",
       "f": "«нельзя» — 700 11.5px var(--ac2).",
-      "h": "38a8309cfc5d"
+      "h": "ed0c6cc18f9b"
     },
     "Спорное · в связке разное число подходов · 11": {
       "v": "=",
@@ -5864,7 +5864,7 @@
     "Спорное · в связке разное число подходов · 12": {
       "v": "=",
       "f": "«+ Раунд» symmetric — 700 11.5px var(--gr); addSupersetRound kernel.",
-      "h": "984be29f5a4e"
+      "h": "fed016a93d27"
     },
     "Спорное · в связке разное число подходов · 13": {
       "v": "=",
@@ -5911,12 +5911,12 @@
     "Спорное · тяжесть не отмечена · 08": {
       "v": "=",
       "f": ".sb-rpe-label — 700 9.5px uppercase rgba(var(--ink),.56). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "baed337ef863"
+      "h": "c3dbfbc16405"
     },
     "Спорное · тяжесть не отмечена · 09": {
       "v": "=",
       "f": "«не отмечена» — 600 10.5px rgba(var(--ink),.56). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "a4f2746eee43"
+      "h": "95a360ae9252"
     },
     "Спорное · тяжесть не отмечена · 10": {
       "v": "=",
@@ -5926,12 +5926,12 @@
     "Спорное · тяжесть не отмечена · 11": {
       "v": "=",
       "f": ".sb-rest-timer / ring time — 800 26px var(--tx) default 1:30.",
-      "h": "7bce4bbc5bcd"
+      "h": "5edddfd55a64"
     },
     "Спорное · тяжесть не отмечена · 12": {
       "v": "=",
       "f": "«по умолчанию» — 600 11.5px muted. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "2de3036a3d56"
+      "h": "bd7afbfe8cca"
     },
     "Спорное · тяжесть не отмечена · 13": {
       "v": "=",
@@ -5951,7 +5951,7 @@
     "Спорное · тяжесть не отмечена · 16": {
       "v": "=",
       "f": "«3:00» — 600 12px rgba(var(--ink),.55) coarse scale. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "00cf0b349937"
+      "h": "b85925c04a6f"
     },
     "Спорное · тяжесть не отмечена · 17": {
       "v": "=",
@@ -6008,12 +6008,12 @@
     "Спорное · старая связка неравная · 09": {
       "v": "=",
       "f": "«не строим» — 700 11.5px var(--ac2) for legacy flat list.",
-      "h": "74d3644a20f2"
+      "h": "fb9989264211"
     },
     "Спорное · старая связка неравная · 10": {
       "v": "=",
       "f": "«как было» — 700 11.5px var(--gr) preserve history.",
-      "h": "28abaaa778e8"
+      "h": "196734d54bf4"
     },
     "Спорное · старая связка неравная · 11": {
       "v": "=",
@@ -6023,7 +6023,7 @@
     "Спорное · старая связка неравная · 12": {
       "v": "=",
       "f": "Tonnage/count as flat list — 600 11px muted. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "905644dd8b92"
+      "h": "c72ffc21b80e"
     },
     "Спорное · старая связка неравная · 13": {
       "v": "=",
@@ -6065,7 +6065,7 @@
     "Спорное · участник добавлен по ходу · 07": {
       "v": "=",
       "f": ".sb-round-label «Р1» — 700 10.5px uppercase rgba(var(--ink),.56) width 36px. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "e70075b15d54"
+      "h": "b7faa7b84844"
     },
     "Спорное · участник добавлен по ходу · 08": {
       "v": "=",
@@ -6085,7 +6085,7 @@
     "Спорное · участник добавлен по ходу · 11": {
       "v": "=",
       "f": "Current round label accent var(--ac).",
-      "h": "52439bd20851"
+      "h": "4bd0f0024da0"
     },
     "Спорное · участник добавлен по ходу · 12": {
       "v": "=",
@@ -6110,7 +6110,7 @@
     "Спорное · участник добавлен по ходу · 16": {
       "v": "=",
       "f": "Dash not in count/tonnage — 500 11px muted policy. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "961eae44f616"
+      "h": "4f937e012b11"
     },
     "Спорное · участник добавлен по ходу · 17": {
       "v": "=",
@@ -6162,12 +6162,12 @@
     "Спорное · свой вес без коэффициента · 09": {
       "v": "=",
       "f": "Exercise hint — 500 11px muted why unmeasured. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "f45adef11363"
+      "h": "3ebaba915b90"
     },
     "Спорное · свой вес без коэффициента · 10": {
       "v": "=",
       "f": ".sb-stat unmeasured count — 600 12.5px rgba(var(--ink),.56). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "46aba9e44ad6"
+      "h": "4c1560b7d9ef"
     },
     "Спорное · свой вес без коэффициента · 11": {
       "v": "=",
@@ -6177,7 +6177,7 @@
     "Спорное · свой вес без коэффициента · 12": {
       "v": "=",
       "f": "«Почему без дефолта» — 700 12.5px var(--ac2).",
-      "h": "26b115c038a1"
+      "h": "07f1868fe483"
     },
     "Спорное · свой вес без коэффициента · 13": {
       "v": "=",
@@ -6222,12 +6222,12 @@
     "Правка · план ещё не начат · 07": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "2b7dc2eb227e"
+      "h": "dc9ceb31cc5f"
     },
     "Правка · план ещё не начат · 08": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "096d4fb6124e"
+      "h": "ddb33fb2c2af"
     },
     "Правка · план ещё не начат · 09": {
       "v": "=",
@@ -6247,7 +6247,7 @@
     "Правка · план ещё не начат · 12": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "e4fd334d2452"
+      "h": "88ef5e1efffe"
     },
     "Правка · план ещё не начат · 13": {
       "v": "=",
@@ -6257,17 +6257,17 @@
     "Правка · план ещё не начат · 14": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "ae1c2e185e15"
+      "h": "35b9a1d7621b"
     },
     "Правка · план ещё не начат · 15": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "c24dfdf6d10d"
+      "h": "049eef7df693"
     },
     "Правка · план ещё не начат · 16": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "b96acbb6edea"
+      "h": "31d81cee6756"
     },
     "Правка · план ещё не начат · 17": {
       "v": "=",
@@ -6277,12 +6277,12 @@
     "Правка · план ещё не начат · 18": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "bd33b994a665"
+      "h": "5214e6953fb3"
     },
     "Правка · план ещё не начат · 19": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "e84bd909b0fc"
+      "h": "a75a415aa7bb"
     },
     "Правка · клиент уже начал · 01": {
       "v": "=",
@@ -6292,7 +6292,7 @@
     "Правка · клиент уже начал · 02": {
       "v": "=",
       "f": ".sb-builder-screen .sb-icon-btn — 36×36, radius 999px, bg var(--c1), font 600 13px; 750:3278-3291. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Правка · клиент уже начал · 03": {
       "v": "=",
@@ -6327,7 +6327,7 @@
     "Правка · клиент уже начал · 09": {
       "v": "=",
       "f": ".sb-proposal-started-banner-icon — 28×28, bg var(--acs), color var(--on-acs); 750-strength-builder.css.",
-      "h": "f70e78565c7e"
+      "h": "c4369d460bcf"
     },
     "Правка · клиент уже начал · 10": {
       "v": "=",
@@ -6337,12 +6337,12 @@
     "Правка · клиент уже начал · 11": {
       "v": "=",
       "f": ".sb-proposal-started-banner-main b — 700 12.5px/1.2 var(--ac); 750-strength-builder.css.",
-      "h": "0edc4929be5d"
+      "h": "8faf1454c1a9"
     },
     "Правка · клиент уже начал · 12": {
       "v": "=",
       "f": ".sb-proposal-started-banner-main span — 500 11px rgba(var(--ink),.56); 750-strength-builder.css. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "8f6daf233ebf"
+      "h": "2b30479cfa7f"
     },
     "Правка · клиент уже начал · 13": {
       "v": "=",
@@ -6367,17 +6367,17 @@
     "Правка · клиент уже начал · 17": {
       "v": "=",
       "f": ".sb-proposal-started-card-main b — 700 12.5px/1.2 var(--tx); 750-strength-builder.css.",
-      "h": "e6081cb38fac"
+      "h": "54d9d22d8d3a"
     },
     "Правка · клиент уже начал · 18": {
       "v": "=",
       "f": ".sb-proposal-started-tag.is-done — 700 9.5px uppercase var(--gr); 750-strength-builder.css.",
-      "h": "b9288427c31a"
+      "h": "7b2b27ac588b"
     },
     "Правка · клиент уже начал · 19": {
       "v": "=",
       "f": ".sb-proposal-started-tag — 700 9.5px uppercase var(--ac); 750-strength-builder.css.",
-      "h": "f44330ed5850"
+      "h": "af8d183ce99f"
     },
     "Правка · клиент уже начал · 20": {
       "v": "=",
@@ -6387,17 +6387,17 @@
     "Правка · клиент уже начал · 21": {
       "v": "=",
       "f": ".sb-proposal-started-detail-label — flex 1, 600 11px/1.3 var(--tx); ProposalStartedScreen heys_strength_builder_ui_v1.js.",
-      "h": "9cabdfa6ccae"
+      "h": "894d7f4e2b91"
     },
     "Правка · клиент уже начал · 22": {
       "v": "=",
       "f": ".sb-proposal-started-detail-old — 700 11px tabular-nums rgba(var(--ink),.56) line-through; 750-strength-builder.css. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "93249db3a6ca"
+      "h": "b1e1833e3f8f"
     },
     "Правка · клиент уже начал · 23": {
       "v": "=",
       "f": ".sb-proposal-started-detail-new — 700 11.5px tabular-nums var(--ac); 750-strength-builder.css.",
-      "h": "484ee9f98912"
+      "h": "f4ee75cdedbe"
     },
     "Правка · клиент уже начал · 24": {
       "v": "=",
@@ -6407,7 +6407,7 @@
     "Правка · клиент уже начал · 25": {
       "v": "=",
       "f": ".sb-proposal-started-num на is-remove — inset var(--acs), color var(--ac); 750.",
-      "h": "7a669e67c254"
+      "h": "96cf2c711d3c"
     },
     "Правка · клиент уже начал · 26": {
       "v": "=",
@@ -6417,17 +6417,17 @@
     "Правка · клиент уже начал · 27": {
       "v": "=",
       "f": ".sb-proposal-started-num var(--v4-ink-2) (750-strength-builder.css:5024-5027); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
-      "h": "a52bd48d09a8"
+      "h": "b7050720b533"
     },
     "Правка · клиент уже начал · 28": {
       "v": "=",
       "f": ".sb-proposal-started-tag.is-remove — uppercase var(--ac2); 750-strength-builder.css.",
-      "h": "d2a78c3f9e44"
+      "h": "bafb9d75d2f6"
     },
     "Правка · клиент уже начал · 29": {
       "v": "=",
       "f": ".sb-proposal-started-tag.is-empty — 700 9.5px/.1em uppercase rgba(var(--ink),.56); 750-strength-builder.css. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "510009b36561"
+      "h": "01b8a5f81815"
     },
     "Правка · клиент уже начал · 30": {
       "v": "=",
@@ -6578,12 +6578,12 @@
     "Правка · одно живое предложение · 09": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "afe28a6d6d33"
+      "h": "317bd48a2632"
     },
     "Правка · одно живое предложение · 10": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "5d6b11c14b25"
+      "h": "757af2657b5f"
     },
     "Правка · одно живое предложение · 11": {
       "v": "=",
@@ -6598,7 +6598,7 @@
     "Правка · одно живое предложение · 13": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "24fcbcdbfba3"
+      "h": "13207e02dab0"
     },
     "Правка · одно живое предложение · 14": {
       "v": "=",
@@ -6653,12 +6653,12 @@
     "Правка · пропущен сегодня · 08": {
       "v": "=",
       "f": "proposal.note → .sb-missed-today-note-text 500 12px/1.5 Figtree var(--tx); contract test row 08.",
-      "h": "c070cfc1c99f"
+      "h": "44864cc086a3"
     },
     "Правка · пропущен сегодня · 09": {
       "v": "=",
       "f": "fmtMissedTodayAgo → .sb-missed-today-note-meta 500 10.5px/1 rgba(var(--ink),.56) margin-top 7px; contract test row 09. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "3038ff09ef54"
+      "h": "181ad75ab1a2"
     },
     "Правка · пропущен сегодня · 10": {
       "v": "=",
@@ -6678,12 +6678,12 @@
     "Правка · пропущен сегодня · 13": {
       "v": "=",
       "f": "buildMissedTodayChanges same → label «оставили» 600 11px/1 var(--gr); contract test row 13.",
-      "h": "862d232ff710"
+      "h": "004f6aba0ac1"
     },
     "Правка · пропущен сегодня · 14": {
       "v": "=",
       "f": "removed → label «убрали» 600 11px/1 var(--ac2); contract test row 14.",
-      "h": "65712ab5513a"
+      "h": "9f3e5c1b49b2"
     },
     "Правка · пропущен сегодня · 15": {
       "v": "=",
@@ -6753,7 +6753,7 @@
     "Правка · пропущен раньше · 09": {
       "v": "=",
       "f": "replacementLine «замена сегодня, 10 авг» .sb-missed-earlier-replacement-line 700 12.5px/1 var(--tx); contract test row 09.",
-      "h": "9353f7fd035e"
+      "h": "6f3b234463ea"
     },
     "Правка · пропущен раньше · 10": {
       "v": "=",
@@ -6788,12 +6788,12 @@
     "Правка · пропущен раньше · 16": {
       "v": "=",
       "f": "rulePastTail «остаётся пропуском» 600 11px/1 var(--ac2); contract test row 16.",
-      "h": "691c341d4d2f"
+      "h": "1685a9afa835"
     },
     "Правка · пропущен раньше · 17": {
       "v": "=",
       "f": "ruleReplacementTail «новая тренировка на свободный день» 600 11px/1 var(--ink56); contract test row 17. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "755e7d98f763"
+      "h": "1f65d5ac3b14"
     },
     "Правка · пропущен раньше · 18": {
       "v": "=",
@@ -6803,12 +6803,12 @@
     "Правка · пропущен раньше · 19": {
       "v": "=",
       "f": "ruleGuardSub «сейчас отбивает…» .sb-missed-earlier-rule-sub 500 11px/1.3 var(--ink56); contract test row 19. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "8a985d4545fa"
+      "h": "3ed551cef8e2"
     },
     "Правка · пропущен раньше · 20": {
       "v": "=",
       "f": "ruleGuardTail «нужна правка» 700 11.5px/1 var(--ac2); contract test row 20 sand+blue.",
-      "h": "20579290f513"
+      "h": "3c39eb69e034"
     },
     "Правка · пропущен раньше · 21": {
       "v": "=",
@@ -6823,7 +6823,7 @@
     "Исход · правка принята · 02": {
       "v": "=",
       "f": "Л10 ·02 ✕ 36×36: .sb-icon-btn в ProposalOutcomeScreen head — finish shell reuse 750-strength-builder.css:2129-2137 Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Исход · правка принята · 03": {
       "v": "=",
@@ -6858,7 +6858,7 @@
     "Исход · правка принята · 09": {
       "v": "=",
       "f": "Л10 ·09 «План обновлён · N изменений» 700 12.5px --gr: heroTitle buildAcceptedOutcomeSnapshot — proposal_ui_v1.js",
-      "h": "90a723b984ea"
+      "h": "413eee27f398"
     },
     "Исход · правка принята · 10": {
       "v": "=",
@@ -6888,7 +6888,7 @@
     "Исход · правка принята · 15": {
       "v": "=",
       "f": "Л10 ·15 «заморожено» --gr 11.5px: .sb-proposal-resolution-mark.is-ok — 750-strength-builder.css",
-      "h": "c426276268ff"
+      "h": "95a7bd2f81b3"
     },
     "Исход · правка принята · 16": {
       "v": "=",
@@ -6903,17 +6903,17 @@
     "Исход · правка принята · 18": {
       "v": "=",
       "f": "Л10 ·18 old weight ink56% strike: .sb-proposal-resolution-weight .is-old — 750-strength-builder.css Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "93249db3a6ca"
+      "h": "b1e1833e3f8f"
     },
     "Исход · правка принята · 19": {
       "v": "=",
       "f": "Л10 ·19 new weight --ac: .sb-proposal-resolution-weight .is-new — 750-strength-builder.css",
-      "h": "484ee9f98912"
+      "h": "f4ee75cdedbe"
     },
     "Исход · правка принята · 20": {
       "v": "=",
       "f": "Л10 ·20 «убран из плана» --ac2: mark is-warn в changed removed — proposal_ui_v1.js",
-      "h": "5678ec9c2d67"
+      "h": "f5ecd464e516"
     },
     "Исход · правка принята · 21": {
       "v": "=",
@@ -6933,7 +6933,7 @@
     "Исход · отказ · 02": {
       "v": "=",
       "f": "Л11 ·02 ✕: .sb-icon-btn на declined outcome head — ProposalOutcomeScreen Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Исход · отказ · 03": {
       "v": "=",
@@ -6963,7 +6963,7 @@
     "Исход · отказ · 08": {
       "v": "=",
       "f": "Л11 ·08 «План остался прежним» --tx: heroTitle buildDeclinedOutcomeSnapshot — proposal_ui_v1.js",
-      "h": "62cdd08ed1d4"
+      "h": "273373e29373"
     },
     "Исход · отказ · 09": {
       "v": "=",
@@ -6988,7 +6988,7 @@
     "Исход · отказ · 13": {
       "v": "=",
       "f": "Л11 ·13 «75 кг» mono --tx: row.value .sb-proposal-resolution-mark — proposal_ui_v1.js",
-      "h": "2fba62664fde"
+      "h": "72f171cf576d"
     },
     "Исход · отказ · 14": {
       "v": "=",
@@ -6998,7 +6998,7 @@
     "Исход · отказ · 15": {
       "v": "=",
       "f": "Л11 ·15 «остаётся в плане» ink56%: row.status .is-muted — buildDeclinedOutcomeSnapshot Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "2af39f376b83"
+      "h": "397a85305393"
     },
     "Исход · отказ · 16": {
       "v": "=",
@@ -7018,7 +7018,7 @@
     "Исход · без ответа · 02": {
       "v": "=",
       "f": "Л12 ·02 ✕: .sb-icon-btn expired outcome — ProposalOutcomeScreen Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "07ba52e8675a"
+      "h": "6900e9614588"
     },
     "Исход · без ответа · 03": {
       "v": "=",
@@ -7048,7 +7048,7 @@
     "Исход · без ответа · 08": {
       "v": "=",
       "f": "Л12 ·08 «Тренировка закрыта» --gr: heroTitle buildExpiredOutcomeSnapshot — proposal_ui_v1.js",
-      "h": "605d4650f44c"
+      "h": "67a924bf6f22"
     },
     "Исход · без ответа · 09": {
       "v": "=",
@@ -7073,7 +7073,7 @@
     "Исход · без ответа · 13": {
       "v": "=",
       "f": "Л12 ·13 «N подходов» mono --tx: rows[0].value .sb-proposal-resolution-mark — proposal_ui_v1.js",
-      "h": "d0e5214a8c98"
+      "h": "c2f7f8e5a873"
     },
     "Исход · без ответа · 14": {
       "v": "=",
@@ -7083,7 +7083,7 @@
     "Исход · без ответа · 15": {
       "v": "=",
       "f": "Л12 ·15 «не принято» ink56%: rows[1] muted mark — buildExpiredOutcomeSnapshot Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1a4acd7c4260"
+      "h": "fac1b52bf6b9"
     },
     "Исход · без ответа · 16": {
       "v": "=",
@@ -7129,7 +7129,7 @@
     "Принятие · ветка чата · 08": {
       "v": "—",
       "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант",
-      "h": "31f9424eefb3"
+      "h": "18c7889e61e6"
     },
     "Принятие · ветка чата · 09": {
       "v": "—",
@@ -7139,12 +7139,12 @@
     "Принятие · ветка чата · 10": {
       "v": "—",
       "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант",
-      "h": "533384116428"
+      "h": "9c3b20c27335"
     },
     "Принятие · ветка чата · 11": {
       "v": "—",
       "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "6473cd528a0d"
+      "h": "8417a356131a"
     },
     "Принятие · ветка чата · 12": {
       "v": "—",
@@ -7164,12 +7164,12 @@
     "Принятие · ветка чата · 15": {
       "v": "—",
       "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант",
-      "h": "4c46b72a35c3"
+      "h": "7acb6212f03d"
     },
     "Принятие · ветка чата · 16": {
       "v": "—",
       "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "b873c9198d36"
+      "h": "61c161e87f03"
     },
     "Принятие · ветка чата · 17": {
       "v": "—",
@@ -7199,12 +7199,12 @@
     "Принятие · ветка чата · 22": {
       "v": "—",
       "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант",
-      "h": "53bee799935f"
+      "h": "b87c88df712f"
     },
     "Принятие · ветка чата · 23": {
       "v": "—",
       "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант",
-      "h": "271ef900ce47"
+      "h": "aa4d870c6aad"
     },
     "Принятие · ветка чата · 24": {
       "v": "—",
@@ -7214,7 +7214,7 @@
     "Принятие · ветка чата · 25": {
       "v": "—",
       "f": "снято дизайнером: принята ветка карточки, кадр «Принятие · ветка чата» помечен «снято» самим канвасом; продукт следует принятой — решение живёт на дне, а не в переписке (heys_day_trainings_v1.js:3831). Строить нечего: строка описывает отвергнутый вариант Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "6e6ed6c9e8db"
+      "h": "bd4f8b390dd5"
     },
     "Принятие · ветка чата · 26": {
       "v": "—",
@@ -7269,12 +7269,12 @@
     "Принятие · ветка карточки · 10": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "eacee96b25d8"
+      "h": "5b83bacc2f7e"
     },
     "Принятие · ветка карточки · 11": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "8971f24cba71"
+      "h": "d7eacf2548be"
     },
     "Принятие · ветка карточки · 12": {
       "v": "=",
@@ -7289,12 +7289,12 @@
     "Принятие · ветка карточки · 14": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "36f888d42272"
+      "h": "6c787c42a945"
     },
     "Принятие · ветка карточки · 15": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "b15863e5f27a"
+      "h": "d87ee210acfb"
     },
     "Принятие · ветка карточки · 16": {
       "v": "=",
@@ -7324,12 +7324,12 @@
     "Принятие · ветка карточки · 21": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "2bbe38663985"
+      "h": "28c6c09cd3e9"
     },
     "Принятие · ветка карточки · 22": {
       "v": "=",
       "f": "Нужна построчная visual/runtime-сверка: прежнее основание описывало непроверенное совпадение кадра, а не конкретное отличие этой строки.",
-      "h": "56648f997820"
+      "h": "db09b0f6df51"
     },
     "Принятие · ветка карточки · 23": {
       "v": "=",
@@ -7411,7 +7411,7 @@
     "Правка · сторона куратора · 09": {
       "v": "=",
       "f": "подпись sentSub 500 11px/1.3 Figtree color var(--ink56); CURATOR_EDIT_STYLE.meta11 proposal_ui:507,635; contract test row 09 sand. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "988f415973a5",
+      "h": "5b0360d6f397",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js"
@@ -7420,7 +7420,7 @@
     "Правка · сторона куратора · 10": {
       "v": "=",
       "f": "«✓» .sb-curator-edit-mark.is-ok — 700 12px/1 Figtree color var(--gr); CURATOR_EDIT_STYLE.markOk proposal_ui:510,641; contract test row 10. Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
-      "h": "4668dbccd211",
+      "h": "d7972c7398b8",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js"
@@ -7447,7 +7447,7 @@
     "Правка · сторона куратора · 13": {
       "v": "=",
       "f": "partialSub «тяга блока · подходы уже закрыты» .sb-curator-edit-sub.is-warn 500 11px color var(--ac2); curatorRejectDetail proposal_ui:558-563,635; contract test row 13.",
-      "h": "8727c5c5decc",
+      "h": "651c279f11b9",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js"
@@ -7456,7 +7456,7 @@
     "Правка · сторона куратора · 14": {
       "v": "=",
       "f": "«—» .sb-curator-edit-mark.is-warn 700 12px color var(--ac2); CURATOR_EDIT_STYLE.markWarn proposal_ui:511,641-642; contract test row 14.",
-      "h": "ccf0d4abcf6f",
+      "h": "a461499da305",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js"
@@ -7474,7 +7474,7 @@
     "Правка · сторона куратора · 16": {
       "v": "=",
       "f": "«видно, причина — только если указана» .sb-curator-edit-policy 600 11px color var(--ink56); CURATOR_EDIT_STYLE.meta11Policy proposal_ui:509,701; contract test row 16. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "7742c28452ed",
+      "h": "456451c54603",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-curator-edit-v4-canvas-contract.test.js"
@@ -7517,7 +7517,7 @@
     "Упражнение · карточка · 06": {
       "v": "=",
       "f": ".sb-ex-card-name min-height 48px radius 14 bg var(--bg) inset 1.5px var(--acs) padding 0 14px margin-top 12px font 600 13.5px color var(--tx); 750.",
-      "h": "7cc524e35f9b"
+      "h": "7888b2a9277b"
     },
     "Упражнение · карточка · 07": {
       "v": "=",
@@ -7562,12 +7562,12 @@
     "Упражнение · карточка · 15": {
       "v": "=",
       "f": ".sb-ex-card-row-copy span 500 11px/1.3 rgba(var(--ink),.56) «берёт полный объём»; 750. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "84167eb94e35"
+      "h": "99ba3b31560a"
     },
     "Упражнение · карточка · 16": {
       "v": "=",
       "f": ".sb-ex-card-action 700 11.5px/1 color var(--ac) «сменить»/«выбрать»; 750.",
-      "h": "285fecd12428"
+      "h": "51d0de0ff629"
     },
     "Упражнение · карточка · 17": {
       "v": "=",
@@ -7652,12 +7652,12 @@
     "Упражнение · группы мышц · 14": {
       "v": "=",
       "f": ".sb-ex-muscle-kg.is-primary — 700 12.5px/1 Figtree tabular-nums var(--tx); 750:5798-5806.",
-      "h": "dab6317b46ec"
+      "h": "2454d507738c"
     },
     "Упражнение · группы мышц · 15": {
       "v": "=",
       "f": ".sb-ex-muscle-kg — 700 12.5px/1 Figtree tabular-nums rgba(ink,.55); 750:5798-5802. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1ff3b2953e74"
+      "h": "acb4b9647671"
     },
     "Упражнение · группы мышц · 16": {
       "v": "=",
@@ -7712,12 +7712,12 @@
     "Упражнение · на что похоже · 09": {
       "v": "=",
       "f": "Подсказка «поднимается всё тело» — span .sb-cat-title, цвет var(--ac) через bridge.",
-      "h": "0ea637d6659b"
+      "h": "d15eeac26433"
     },
     "Упражнение · на что похоже · 10": {
       "v": "=",
       "f": ".sb-ex-similar-factor.is-on — 700 12.5px/1 Figtree tabular-nums var(--ac); 750:5839-5847.",
-      "h": "20c5ec4f9884"
+      "h": "02235079402e"
     },
     "Упражнение · на что похоже · 11": {
       "v": "=",
@@ -7727,12 +7727,12 @@
     "Упражнение · на что похоже · 12": {
       "v": "=",
       "f": "Подсказка «почти всё, ноги на опоре» — option hint в span. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "535ad2ff5cab"
+      "h": "f7781ee77d5a"
     },
     "Упражнение · на что похоже · 13": {
       "v": "=",
       "f": ".sb-ex-similar-factor — 700 12.5px/1 Figtree tabular-nums rgba(ink,.55); 750:5839-5843. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "7957df276655"
+      "h": "9a3f7467f478"
     },
     "Упражнение · на что похоже · 14": {
       "v": "=",
@@ -7742,7 +7742,7 @@
     "Упражнение · на что похоже · 15": {
       "v": "=",
       "f": "«упражнение пойдёт без объёма» — unknown option; color var(--ac2) inline на span.",
-      "h": "d7c4a6134859"
+      "h": "0e1960b8dbfa"
     },
     "Упражнение · на что похоже · 16": {
       "v": "=",
@@ -7752,7 +7752,7 @@
     "Упражнение · на что похоже · 17": {
       "v": "=",
       "f": "Формула «{bw} кг × {factor} = {perRep} кг за повтор» — b в preview при bw>0.",
-      "h": "821d750ee97d"
+      "h": "f74cbf24b5e7"
     },
     "Упражнение · на что похоже · 18": {
       "v": "=",
@@ -7852,7 +7852,7 @@
     "Ввод · время под нагрузкой · 18": {
       "v": "=",
       "f": ".sb-time-summary-val — 700 12.5px tabular-nums var(--tx); 750.",
-      "h": "fd332bbc5414"
+      "h": "04eb24ebe3aa"
     },
     "Ввод · время под нагрузкой · 19": {
       "v": "=",
@@ -7862,12 +7862,12 @@
     "Ввод · время под нагрузкой · 20": {
       "v": "=",
       "f": ".sb-time-summary-copy span — 500 11px rgba(var(--ink),.56); 750. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d62029f28270"
+      "h": "84de5853f43e"
     },
     "Ввод · время под нагрузкой · 21": {
       "v": "=",
       "f": ".sb-time-summary-dash — 700 11.5px; 750-strength-builder.css.",
-      "h": "90cbb65c7972"
+      "h": "e400d3d25089"
     },
     "Ввод · время под нагрузкой · 22": {
       "v": "=",
@@ -7947,7 +7947,7 @@
     "Ввод · метры · 15": {
       "v": "=",
       "f": ".sb-time-summary-val — 700 12.5px tabular-nums var(--tx); «1 400 м» formatDistanceM builder_ui.",
-      "h": "446ba06ee9b5"
+      "h": "712d2053597b"
     },
     "Ввод · метры · 16": {
       "v": "=",
@@ -8022,12 +8022,12 @@
     "Ввод · свой вес с довесом · 14": {
       "v": "=",
       "f": ".sb-bw-entry-summary-copy span 500 11px/1.3 rgba(var(--ink),.56) — «78 кг за повтор»; 750. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "214bb3ba9a98"
+      "h": "732f478e0c2d"
     },
     "Ввод · свой вес с довесом · 15": {
       "v": "=",
       "f": ".sb-bw-entry-summary-val 700 12px tabular-nums rgba(var(--ink),.55); fmtVolumeKg «1 482 кг»; builder_ui. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "12cd6a89d8aa"
+      "h": "dec9acf4a78b"
     },
     "Ввод · свой вес с довесом · 16": {
       "v": "=",
@@ -8037,7 +8037,7 @@
     "Ввод · свой вес с довесом · 17": {
       "v": "=",
       "f": ".sb-bw-entry-summary-row.is-total .sb-bw-entry-summary-val 700 12.5px color var(--tx); «2 098 кг»; contract test.",
-      "h": "af1b398db6cd"
+      "h": "488c79f7dcf8"
     },
     "Ввод · свой вес с довесом · 18": {
       "v": "=",
@@ -8077,7 +8077,7 @@
     "Сессия · вернулись через час · 07": {
       "v": "=",
       "f": "Ветка истёкшего таймера: «Всё, что отмечено, на месте. Таймер отдыха истёк, пока вас не было, и заново не запускается.» (strength/heys_strength_builder_ui_v1.js:669) — вид .sb-interrupted-copy: 600 12.5px/1.55 тоном --v4-ink (750-strength-builder.css:2441-2445).",
-      "h": "6ec675e80fa8"
+      "h": "20520959fda3"
     },
     "Сессия · вернулись через час · 08": {
       "v": "=",
@@ -8097,7 +8097,7 @@
     "Сессия · вернулись через час · 11": {
       "v": "=",
       "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2382). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "0a9cda93cbdb"
+      "h": "2c158d9fcdf5"
     },
     "Сессия · вернулись через час · 12": {
       "v": "=",
@@ -8164,7 +8164,7 @@
     "Сессия · брошена вчера · 07": {
       "v": "≠",
       "f": "Кадр «Сессия · брошена вчера» требует три исхода незакрытой сессии, каждый на свою причину: «Завершить вчерашним» (дата по началу, не по завершению), «Дописать» (открывает вчерашнюю сессию как есть) и «Удалить сессию». Строка контракта отдельно несёт «Автозавершение · нет» — это решение, а не пропуск: закрыть сессию за человека значит выдумать время окончания, и в тоннаж уйдёт неизмеренное число. В продукте нет ни одного из трёх исходов: ни finishPastDay, ни deletePastSession, ни ветки «дописать» — поиск по apps/web/strength/ и apps/web/_kernel/heys_kernel_strength_v1.js даёт ноль совпадений, post-hoc жизненного цикла сессии в коде нет вовсе, поэтому адреса строки у отступления быть не может. Ответ дизайнера 5 сентября: верен кадр, правится код; незакрытая сессия не попадает в тоннаж дня, значит вчерашний день остаётся неверным навсегда и починить его человеку нечем. НЕ релиз-блокер: новую тренировку начать можно, вчерашняя ждёт. ОСНОВАНИЕ СЛАБОЕ И СИЛЬНЕЕ НЕ СТАНЕТ: адреса файл:строка у этого отступления быть не может, потому что отступление — отсутствие кода, а не его поведение. Проверяется только повторным поиском по apps/web/strength/ и _kernel/, и подтверждается нулём совпадений, а не строкой.",
-      "h": "af76e200bb8e",
+      "h": "75a4323f9bc2",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-abandoned-session-x22-2026-09-05"
     },
@@ -8220,28 +8220,28 @@
     "Сессия · брошена вчера · 15": {
       "v": "≠",
       "f": "Кадр «Сессия · брошена вчера» требует три исхода незакрытой сессии, каждый на свою причину: «Завершить вчерашним» (дата по началу, не по завершению), «Дописать» (открывает вчерашнюю сессию как есть) и «Удалить сессию». Строка контракта отдельно несёт «Автозавершение · нет» — это решение, а не пропуск: закрыть сессию за человека значит выдумать время окончания, и в тоннаж уйдёт неизмеренное число. В продукте нет ни одного из трёх исходов: ни finishPastDay, ни deletePastSession, ни ветки «дописать» — поиск по apps/web/strength/ и apps/web/_kernel/heys_kernel_strength_v1.js даёт ноль совпадений, post-hoc жизненного цикла сессии в коде нет вовсе, поэтому адреса строки у отступления быть не может. Ответ дизайнера 5 сентября: верен кадр, правится код; незакрытая сессия не попадает в тоннаж дня, значит вчерашний день остаётся неверным навсегда и починить его человеку нечем. НЕ релиз-блокер: новую тренировку начать можно, вчерашняя ждёт. ОСНОВАНИЕ СЛАБОЕ И СИЛЬНЕЕ НЕ СТАНЕТ: адреса файл:строка у этого отступления быть не может, потому что отступление — отсутствие кода, а не его поведение. Проверяется только повторным поиском по apps/web/strength/ и _kernel/, и подтверждается нулём совпадений, а не строкой. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "8fe1f7537a0c",
+      "h": "e9a2307eaba3",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-abandoned-session-x22-2026-09-05"
     },
     "Сессия · брошена вчера · 16": {
       "v": "≠",
       "f": "Кадр «Сессия · брошена вчера» требует три исхода незакрытой сессии, каждый на свою причину: «Завершить вчерашним» (дата по началу, не по завершению), «Дописать» (открывает вчерашнюю сессию как есть) и «Удалить сессию». Строка контракта отдельно несёт «Автозавершение · нет» — это решение, а не пропуск: закрыть сессию за человека значит выдумать время окончания, и в тоннаж уйдёт неизмеренное число. В продукте нет ни одного из трёх исходов: ни finishPastDay, ни deletePastSession, ни ветки «дописать» — поиск по apps/web/strength/ и apps/web/_kernel/heys_kernel_strength_v1.js даёт ноль совпадений, post-hoc жизненного цикла сессии в коде нет вовсе, поэтому адреса строки у отступления быть не может. Ответ дизайнера 5 сентября: верен кадр, правится код; незакрытая сессия не попадает в тоннаж дня, значит вчерашний день остаётся неверным навсегда и починить его человеку нечем. НЕ релиз-блокер: новую тренировку начать можно, вчерашняя ждёт. ОСНОВАНИЕ СЛАБОЕ И СИЛЬНЕЕ НЕ СТАНЕТ: адреса файл:строка у этого отступления быть не может, потому что отступление — отсутствие кода, а не его поведение. Проверяется только повторным поиском по apps/web/strength/ и _kernel/, и подтверждается нулём совпадений, а не строкой. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "9d051f521d57",
+      "h": "9b95b11a35d2",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-abandoned-session-x22-2026-09-05"
     },
     "Сессия · брошена вчера · 17": {
       "v": "≠",
       "f": "Кадр «Сессия · брошена вчера» требует три исхода незакрытой сессии, каждый на свою причину: «Завершить вчерашним» (дата по началу, не по завершению), «Дописать» (открывает вчерашнюю сессию как есть) и «Удалить сессию». Строка контракта отдельно несёт «Автозавершение · нет» — это решение, а не пропуск: закрыть сессию за человека значит выдумать время окончания, и в тоннаж уйдёт неизмеренное число. В продукте нет ни одного из трёх исходов: ни finishPastDay, ни deletePastSession, ни ветки «дописать» — поиск по apps/web/strength/ и apps/web/_kernel/heys_kernel_strength_v1.js даёт ноль совпадений, post-hoc жизненного цикла сессии в коде нет вовсе, поэтому адреса строки у отступления быть не может. Ответ дизайнера 5 сентября: верен кадр, правится код; незакрытая сессия не попадает в тоннаж дня, значит вчерашний день остаётся неверным навсегда и починить его человеку нечем. НЕ релиз-блокер: новую тренировку начать можно, вчерашняя ждёт. ОСНОВАНИЕ СЛАБОЕ И СИЛЬНЕЕ НЕ СТАНЕТ: адреса файл:строка у этого отступления быть не может, потому что отступление — отсутствие кода, а не его поведение. Проверяется только повторным поиском по apps/web/strength/ и _kernel/, и подтверждается нулём совпадений, а не строкой.",
-      "h": "01439cbc2fa0",
+      "h": "586d050d4cf0",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-abandoned-session-x22-2026-09-05"
     },
     "Сессия · брошена вчера · 18": {
       "v": "≠",
       "f": "Кадр «Сессия · брошена вчера» требует три исхода незакрытой сессии, каждый на свою причину: «Завершить вчерашним» (дата по началу, не по завершению), «Дописать» (открывает вчерашнюю сессию как есть) и «Удалить сессию». Строка контракта отдельно несёт «Автозавершение · нет» — это решение, а не пропуск: закрыть сессию за человека значит выдумать время окончания, и в тоннаж уйдёт неизмеренное число. В продукте нет ни одного из трёх исходов: ни finishPastDay, ни deletePastSession, ни ветки «дописать» — поиск по apps/web/strength/ и apps/web/_kernel/heys_kernel_strength_v1.js даёт ноль совпадений, post-hoc жизненного цикла сессии в коде нет вовсе, поэтому адреса строки у отступления быть не может. Ответ дизайнера 5 сентября: верен кадр, правится код; незакрытая сессия не попадает в тоннаж дня, значит вчерашний день остаётся неверным навсегда и починить его человеку нечем. НЕ релиз-блокер: новую тренировку начать можно, вчерашняя ждёт. ОСНОВАНИЕ СЛАБОЕ И СИЛЬНЕЕ НЕ СТАНЕТ: адреса файл:строка у этого отступления быть не может, потому что отступление — отсутствие кода, а не его поведение. Проверяется только повторным поиском по apps/web/strength/ и _kernel/, и подтверждается нулём совпадений, а не строкой.",
-      "h": "fe3d4447658a",
+      "h": "0afbe57e12d8",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-abandoned-session-x22-2026-09-05"
     },
@@ -8255,7 +8255,7 @@
     "Сессия · брошена вчера · 20": {
       "v": "≠",
       "f": "Кадр «Сессия · брошена вчера» требует три исхода незакрытой сессии, каждый на свою причину: «Завершить вчерашним» (дата по началу, не по завершению), «Дописать» (открывает вчерашнюю сессию как есть) и «Удалить сессию». Строка контракта отдельно несёт «Автозавершение · нет» — это решение, а не пропуск: закрыть сессию за человека значит выдумать время окончания, и в тоннаж уйдёт неизмеренное число. В продукте нет ни одного из трёх исходов: ни finishPastDay, ни deletePastSession, ни ветки «дописать» — поиск по apps/web/strength/ и apps/web/_kernel/heys_kernel_strength_v1.js даёт ноль совпадений, post-hoc жизненного цикла сессии в коде нет вовсе, поэтому адреса строки у отступления быть не может. Ответ дизайнера 5 сентября: верен кадр, правится код; незакрытая сессия не попадает в тоннаж дня, значит вчерашний день остаётся неверным навсегда и починить его человеку нечем. НЕ релиз-блокер: новую тренировку начать можно, вчерашняя ждёт. ОСНОВАНИЕ СЛАБОЕ И СИЛЬНЕЕ НЕ СТАНЕТ: адреса файл:строка у этого отступления быть не может, потому что отступление — отсутствие кода, а не его поведение. Проверяется только повторным поиском по apps/web/strength/ и _kernel/, и подтверждается нулём совпадений, а не строкой.",
-      "h": "4668dbccd211",
+      "h": "d7972c7398b8",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-abandoned-session-x22-2026-09-05"
     },
@@ -8659,7 +8659,7 @@
     "Конструктор · тренировка идёт · снято · 02": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "2159ed04d25c"
+      "h": "ab5aaeca5745"
     },
     "Конструктор · тренировка идёт · снято · 03": {
       "v": "—",
@@ -8679,7 +8679,7 @@
     "Конструктор · тренировка идёт · снято · 06": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac"
+      "h": "800c0174aea1"
     },
     "Конструктор · тренировка идёт · снято · 07": {
       "v": "—",
@@ -8709,7 +8709,7 @@
     "Конструктор · тренировка идёт · снято · 12": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "4e98855729cb"
+      "h": "e3ea5c2b9533"
     },
     "Конструктор · тренировка идёт · снято · 13": {
       "v": "—",
@@ -8724,12 +8724,12 @@
     "Конструктор · тренировка идёт · снято · 15": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "a45ee30c055e"
+      "h": "633b18d856d3"
     },
     "Конструктор · тренировка идёт · снято · 16": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1d0a836959d0"
+      "h": "c3371fad8126"
     },
     "Конструктор · тренировка идёт · снято · 17": {
       "v": "—",
@@ -8739,12 +8739,12 @@
     "Конструктор · тренировка идёт · снято · 18": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "4668dbccd211"
+      "h": "d7972c7398b8"
     },
     "Конструктор · тренировка идёт · снято · 19": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "aba908e3e100"
+      "h": "ba403ee0c013"
     },
     "Конструктор · тренировка идёт · снято · 20": {
       "v": "—",
@@ -8759,7 +8759,7 @@
     "Конструктор · тренировка идёт · снято · 22": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "91d0151785d0"
+      "h": "9547d2cc8821"
     },
     "Конструктор · тренировка идёт · снято · 23": {
       "v": "—",
@@ -8769,12 +8769,12 @@
     "Конструктор · тренировка идёт · снято · 24": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "e3c6d9b3cb61"
+      "h": "52037781325e"
     },
     "Конструктор · тренировка идёт · снято · 25": {
       "v": "—",
       "f": "Кадр А1 data-demo=protocol «снято» — демо-стоп, не runtime-экран конструктора (strength-builder.v4.dc.html:104).",
-      "h": "b805c2ad0650",
+      "h": "537c703143b5",
       "naKind": "demo-only"
     },
     "Конструктор · тренировка идёт · снято · 26": {
@@ -8800,12 +8800,12 @@
     "Конструктор · тренировка идёт · снято · 30": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "84d1d901086b"
+      "h": "bcb5948b57a0"
     },
     "Конструктор · тренировка идёт · снято · 31": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "ad5449502c81"
+      "h": "98f17023b628"
     },
     "Конструктор · тренировка идёт · снято · 32": {
       "v": "—",
@@ -8825,12 +8825,12 @@
     "Конструктор · тренировка идёт · снято · 35": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "eafba4ad0e47"
+      "h": "c0862fcbee19"
     },
     "Конструктор · тренировка идёт · снято · 36": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "81c84896f578"
+      "h": "b6342c0d395b"
     },
     "Конструктор · тренировка идёт · снято · 37": {
       "v": "—",
@@ -8845,7 +8845,7 @@
     "Конструктор · тренировка идёт · снято · 39": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "5f1bf892f828"
+      "h": "721b64a347b1"
     },
     "Конструктор · тренировка идёт · снято · 40": {
       "v": "—",
@@ -8860,7 +8860,7 @@
     "Конструктор · тренировка идёт · снято · 42": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "baed337ef863"
+      "h": "c3dbfbc16405"
     },
     "Конструктор · тренировка идёт · снято · 43": {
       "v": "—",
@@ -8870,12 +8870,12 @@
     "Конструктор · тренировка идёт · снято · 44": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "65b62b522fd3"
+      "h": "a0d069e7a074"
     },
     "Конструктор · тренировка идёт · снято · 45": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "bce6d8a3f180"
+      "h": "02ebe66b4d77"
     },
     "Конструктор · тренировка идёт · снято · 46": {
       "v": "—",
@@ -8885,7 +8885,7 @@
     "Конструктор · тренировка идёт · снято · 47": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "f02599786a2a"
+      "h": "5f4607feac6d"
     },
     "Конструктор · тренировка идёт · снято · 48": {
       "v": "—",
@@ -8895,7 +8895,7 @@
     "Конструктор · тренировка идёт · снято · 49": {
       "v": "—",
       "f": "Строка явно снята/служебна в актуальном canvas 1 сентября и не является runtime-контрактом.",
-      "h": "7bc2baeea572"
+      "h": "407d060ee21c"
     },
     "Конструктор · тренировка идёт · снято · 50": {
       "v": "—",
@@ -8919,7 +8919,7 @@
     "Конструктор · тренировка идёт · спокойнее · 02": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 02. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "2159ed04d25c",
+      "h": "ab5aaeca5745",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -8957,7 +8957,7 @@
     "Конструктор · тренировка идёт · спокойнее · 06": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 06. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5f3269910ac",
+      "h": "800c0174aea1",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9002,7 +9002,7 @@
     "Конструктор · тренировка идёт · спокойнее · 11": {
       "v": "≠",
       "f": "⠿ намеренно не рендерится (нет reorder persistence); calm-canvas-contract.test.js:243-244 .sb-builder-screen rows fixture. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "4e98855729cb",
+      "h": "e3ea5c2b9533",
       "reasonCode": "canvas-conflict",
       "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-builder-calm-canvas-a1b-g4-k-conflict-2026-09-06"
     },
@@ -9027,7 +9027,7 @@
     "Конструктор · тренировка идёт · спокойнее · 14": {
       "v": "≠",
       "f": "А1б ·14: .sb-ex--collapsed .sb-ex-title b 12.5px (750-strength-builder.css:3511) vs 13px канваса. calm-canvas-contract CANVAS_CONFLICTS А1б:14.",
-      "h": "a45ee30c055e",
+      "h": "633b18d856d3",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9038,7 +9038,7 @@
     "Конструктор · тренировка идёт · спокойнее · 15": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 15. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1d0a836959d0",
+      "h": "c3371fad8126",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9056,7 +9056,7 @@
     "Конструктор · тренировка идёт · спокойнее · 17": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 17.",
-      "h": "4f90e7e17d61",
+      "h": "c7879dd1e040",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9065,7 +9065,7 @@
     "Конструктор · тренировка идёт · спокойнее · 18": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 18. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "aba908e3e100",
+      "h": "ba403ee0c013",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9092,7 +9092,7 @@
     "Конструктор · тренировка идёт · спокойнее · 21": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 21.",
-      "h": "91d0151785d0",
+      "h": "9547d2cc8821",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9110,7 +9110,7 @@
     "Конструктор · тренировка идёт · спокойнее · 23": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 23.",
-      "h": "e3c6d9b3cb61",
+      "h": "52037781325e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9119,7 +9119,7 @@
     "Конструктор · тренировка идёт · спокойнее · 24": {
       "v": "=",
       "f": ".sb-ex-toggle color var(--v4-ink-2) (750-strength-builder.css:3714-3649); computed sand rgba(0, 0, 0, 0.55), blue rgba(0, 0, 0, 0.55) @375px Chromium.",
-      "h": "b805c2ad0650",
+      "h": "537c703143b5",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9166,7 +9166,7 @@
     "Конструктор · тренировка идёт · спокойнее · 29": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 29. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "84d1d901086b",
+      "h": "bcb5948b57a0",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9175,7 +9175,7 @@
     "Конструктор · тренировка идёт · спокойнее · 30": {
       "v": "≠",
       "f": "А1б ·30: .sb-aps-head > span:last-child computed --gr (#5c6a45 sand) vs ink .56. calm-canvas-contract sand+blue CANVAS_CONFLICTS А1б:30. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "ad5449502c81",
+      "h": "98f17023b628",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9217,7 +9217,7 @@
     "Конструктор · тренировка идёт · спокойнее · 34": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 34.",
-      "h": "fab65989cddd",
+      "h": "df704793f25e",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9237,7 +9237,7 @@
     "Конструктор · тренировка идёт · спокойнее · 36": {
       "v": "≠",
       "f": "А1б ·36: кольцо активного поля inset 1.5px (Г4) vs 2px канваса А1б. calm-canvas-contract CANVAS_CONFLICTS А1б:36.",
-      "h": "ea251809c8f3",
+      "h": "b54c8df54c26",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9266,7 +9266,7 @@
     "Конструктор · тренировка идёт · спокойнее · 39": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 39. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "baed337ef863",
+      "h": "c3dbfbc16405",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9284,7 +9284,7 @@
     "Конструктор · тренировка идёт · спокойнее · 41": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 41. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "65b62b522fd3",
+      "h": "a0d069e7a074",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9293,7 +9293,7 @@
     "Конструктор · тренировка идёт · спокойнее · 42": {
       "v": "=",
       "f": "Table-driven rendered DOM/computed-style тест доказывает точный контракт строки А1б · 42.",
-      "h": "bce6d8a3f180",
+      "h": "02ebe66b4d77",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9302,7 +9302,7 @@
     "Конструктор · тренировка идёт · спокойнее · 43": {
       "v": "=",
       "f": "Геометрия/акцент сведены: .sb-ex.is-pending .sb-ex-title b 13px (750-strength-builder.css:3491-3508); calm-canvas.",
-      "h": "f02599786a2a",
+      "h": "5f4607feac6d",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9320,7 +9320,7 @@
     "Конструктор · тренировка идёт · спокойнее · 45": {
       "v": "=",
       "f": "Геометрия/акцент сведены: .sb-panel-add (750-strength-builder.css:3986-3999).",
-      "h": "7bc2baeea572",
+      "h": "407d060ee21c",
       "evidence": [
         "dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js",
         "computed-style: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"
@@ -9387,22 +9387,22 @@
     "Программа · отчёт за период · 09": {
       "v": "=",
       "f": "750-strength-builder.css .sb-period-outcome-val.is-ok color var(--gr) 700 12.5px Замер chromium 375 px: песочный rgb(92,106,69), тёмный rgb(159,185,129).",
-      "h": "308ab4b3f76f"
+      "h": "2f959537b175"
     },
     "Программа · отчёт за период · 10": {
       "v": "=",
       "f": "750-strength-builder.css .sb-period-outcome-detail 11px/1.3 ink 56% Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "3a9caa51837a"
+      "h": "02c00aeb5b0b"
     },
     "Программа · отчёт за период · 11": {
       "v": "=",
       "f": "750-strength-builder.css .sb-period-outcome-val tone tx для перенесено",
-      "h": "2c0ad8beb0b0"
+      "h": "835d2b71c9b8"
     },
     "Программа · отчёт за период · 12": {
       "v": "=",
       "f": "750-strength-builder.css .sb-period-outcome-val.is-bad color var(--val-bad)",
-      "h": "fb2835f43636"
+      "h": "8ff44a2e7b31"
     },
     "Программа · отчёт за период · 13": {
       "v": "=",
@@ -9412,7 +9412,7 @@
     "Программа · отчёт за период · 14": {
       "v": "=",
       "f": "750-strength-builder.css .sb-period-outcome-val.is-muted 600 ink 55% Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "430ed35f8dfd"
+      "h": "65cfce725a5d"
     },
     "Программа · отчёт за период · 15": {
       "v": "=",
@@ -9422,7 +9422,7 @@
     "Программа · отчёт за период · 16": {
       "v": "=",
       "f": "heys_strength_proposal_ui_v1.js:1905 PERIOD_REPORT_DEBT_TITLE ac2 12.5px/700",
-      "h": "caa48b8f23b8"
+      "h": "f771201a628f"
     },
     "Программа · отчёт за период · 17": {
       "v": "=",
@@ -9462,12 +9462,12 @@
     "Ввод · метры · 17": {
       "v": "=",
       "f": ".sb-time-summary-copy span — 500 11px rgba(var(--ink),.56); «не идёт · метры не умножаются…» builder_ui. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "c77c2398d802"
+      "h": "311b77f7a490"
     },
     "Ввод · метры · 18": {
       "v": "=",
       "f": ".sb-time-summary-dash — 700 11.5px; 750 .sb-time-summary-dash.",
-      "h": "90cbb65c7972"
+      "h": "e400d3d25089"
     },
     "Ввод · метры · 19": {
       "v": "=",
@@ -9550,7 +9550,7 @@
     "Конструктор · пусто · плана нет · 08": {
       "v": "=",
       "f": "«Пустая тренировка» — b карточки: 700 15px/1.32 тоном --v4-ink (750-strength-builder.css:2246-2253), теми же числами.",
-      "h": "aeb3ab5baf24"
+      "h": "da9c1c711d96"
     },
     "Конструктор · пусто · плана нет · 09": {
       "v": "=",
@@ -9580,7 +9580,7 @@
     "Конструктор · пусто · плана нет · 14": {
       "v": "=",
       "f": "«7 упр.» — b строки: 700 11.5px/1 тоном --v4-act-text, то есть --ac кадра (750-strength-builder.css:2730).",
-      "h": "57090ba62a2d"
+      "h": "2c61cf63dcdc"
     },
     "Конструктор · пусто · плана нет · 15": {
       "v": "=",
@@ -9625,7 +9625,7 @@
     "Конструктор · пусто · план назначен · 08": {
       "v": "=",
       "f": "«План на сегодня готов» — b карточки: 700 15px/1.32 тоном --v4-ink (750-strength-builder.css:2246-2253).",
-      "h": "23ff526630ee"
+      "h": "de7c7eb308fb"
     },
     "Конструктор · пусто · план назначен · 09": {
       "v": "=",
@@ -9645,12 +9645,12 @@
     "Конструктор · пусто · план назначен · 12": {
       "v": "=",
       "f": "Название: .sb-empty-plan-preview-name — flex:1 min-width:0, font 600 11.5px/1.3 Figtree, var(--v4-ink) — 750-strength-builder.css:2291-2298; текст row.name — heys_strength_builder_ui_v1.js:866.",
-      "h": "78031c3f2483"
+      "h": "b6394a40cc3f"
     },
     "Конструктор · пусто · план назначен · 13": {
       "v": "=",
       "f": "Доза «4 × 8»: .sb-empty-plan-preview-dose — flex:none, font 500 10.5px/1.3 Figtree tabular-nums, rgba(var(--v4-ink-rgb),.56) — 750-strength-builder.css:2600. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "adb0f8b49c72"
+      "h": "15f3a7c98f1c"
     },
     "Конструктор · пусто · план назначен · 14": {
       "v": "=",
@@ -9660,7 +9660,7 @@
     "Конструктор · пусто · план назначен · 15": {
       "v": "=",
       "f": "Остаток: li.sb-empty-plan-preview-more — font 500 10.5px/1.3, rgba(var(--v4-ink-rgb),.45), margin-top 7px — 750-strength-builder.css:2312-2319; текст «и ещё N упражн…» — heys_strength_builder_ui_v1.js:870-876. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "0f0157be5c40"
+      "h": "93fcd071e145"
     },
     "Конструктор · пусто · план назначен · 16": {
       "v": "=",
@@ -9670,7 +9670,7 @@
     "Конструктор · пусто · план назначен · 17": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: Подпись «N упражнений · назначил …»: .sb-empty-plan-meta — margin-top 6px, text-align center, font 500 11px/1.4, var(--v4-ink-data) — 750-strength-builder.css:3056; JS:896-898. Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "1f742ce10e6e"
+      "h": "b3de8b674379"
     },
     "Сессия · вернулись через час · 16": {
       "v": "=",
@@ -9710,7 +9710,7 @@
     "Сессия · вернулись через час · без таймера · 07": {
       "v": "=",
       "f": "Ветка «таймера не было»: «Всё, что отмечено, на месте. Таймер отдыха вы не запускали — ждать нечего.» (strength/heys_strength_builder_ui_v1.js:662) — тот же вид .sb-interrupted-copy. Условие ветки — отсутствие wl.activeRest (strength/heys_strength_builder_ui_v1.js:657, :661).",
-      "h": "4a367e3ee318"
+      "h": "6f13a75453a5"
     },
     "Сессия · вернулись через час · без таймера · 08": {
       "v": "=",
@@ -9730,7 +9730,7 @@
     "Сессия · вернулись через час · без таймера · 11": {
       "v": "=",
       "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2382). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "0a9cda93cbdb"
+      "h": "2c158d9fcdf5"
     },
     "Сессия · вернулись через час · без таймера · 12": {
       "v": "=",
@@ -9790,7 +9790,7 @@
     "Сессия · вернулись через час · таймер идёт · 07": {
       "v": "=",
       "f": "Ветка идущего таймера: «Всё, что отмечено, на месте. Таймер отдыха ещё идёт — осталось M:SS.» (strength/heys_strength_builder_ui_v1.js:664-666), остаток берётся из restRemainingSec. Условие — сохранённый и не истёкший rest (strength/heys_strength_builder_ui_v1.js:658).",
-      "h": "4f2431eb3233"
+      "h": "e00da6d89c25"
     },
     "Сессия · вернулись через час · таймер идёт · 08": {
       "v": "=",
@@ -9810,7 +9810,7 @@
     "Сессия · вернулись через час · таймер идёт · 11": {
       "v": "=",
       "f": "«19:47» — b строки: 600 12px/1, моноцифры font-variant-numeric tabular-nums, тон --v4-ink-2 — в светлых наборах это ровно rgba(0,0,0,.55) кадра (750-strength-builder.css:2382). Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "0a9cda93cbdb"
+      "h": "2c158d9fcdf5"
     },
     "Сессия · вернулись через час · таймер идёт · 12": {
       "v": "=",
@@ -9930,7 +9930,7 @@
     "Конструктор · пусто · план назначен · 22": {
       "v": "=",
       "f": "«7 упр.»: .sb-empty-option b — font 700 11.5px/1, color var(--v4-act-text) — 750-strength-builder.css:3077; last.exercises.length — JS:937.",
-      "h": "57090ba62a2d"
+      "h": "2c61cf63dcdc"
     },
     "Конструктор · пусто · план назначен · 23": {
       "v": "=",
@@ -9956,7 +9956,7 @@
     "Программа · цикл · 34": {
       "v": "=",
       "f": "Подпись «Отчёт по циклу» — heys_strength_proposal_ui_v1.js:1612; правило 750-strength-builder.css:7758 font: 600 12px/1 Figtree (было 600 12,5px/1,3) и color var(--ac). Замер chromium 375 px: песочный rgb(0,0,0), тёмный rgb(0,0,0).",
-      "h": "bbd7e24a4256"
+      "h": "efadcc3dcd11"
     },
     "Программа · цикл · 35": {
       "v": "=",

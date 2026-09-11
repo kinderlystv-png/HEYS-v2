@@ -295,12 +295,12 @@
     "Подписка · экран · пробный период · 03": {
       "v": "=",
       "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
-      "h": "7cb50ddf0883"
+      "h": "77380314479e"
     },
     "Подписка · экран · пробный период · 04": {
       "v": "=",
       "f": "heys_paywall_v1.js:446: .sub-screen__hint font 500 12px/1.4 Figtree color var(--v4-ink-2) margin-top 6px font-variant-numeric tabular-nums Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "45eda9770458"
+      "h": "05b9cf76957c"
     },
     "Подписка · экран · пробный период · 05": {
       "v": "=",
@@ -315,7 +315,7 @@
     "Подписка · экран · пробный период · 07": {
       "v": "=",
       "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "b4685ebaefc7"
+      "h": "54c4d14c3cd3"
     },
     "Подписка · экран · пробный период · 08": {
       "v": "=",
@@ -330,12 +330,12 @@
     "Подписка · экран · пробный период · 10": {
       "v": "=",
       "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
-      "h": "f74b2fa32e9f"
+      "h": "7beb5284f3ab"
     },
     "Подписка · экран · пробный период · 11": {
       "v": "=",
       "f": "Сноска «Оплата и продление…» — .sub-screen__footnote-text margin-top 5px 500 11.5px/1.45 color var(--v4-ink-2) (735-ui-v4-subscription.css:734-738; heys_subscriptions_v1.js footnote).",
-      "h": "0f267cf3996e"
+      "h": "5980400ce1d1"
     },
     "Подписка · экран · пробный период · 12": {
       "v": "=",
@@ -345,7 +345,7 @@
     "Подписка · экран · пробный период · 13": {
       "v": "=",
       "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
-      "h": "9e987eb80379"
+      "h": "ee295ba808a4"
     },
     "Подписка · экран · пробный период · 14": {
       "v": "=",
@@ -380,17 +380,17 @@
     "Подписка · баннер сверху · 02": {
       "v": "=",
       "f": "«Доступ только для чтения» — .readonly-banner-title в .readonly-banner--sticky (heys_paywall_v1.js:503; 735-ui-v4-subscription.css:527-531): замер chromium 700 12px/15.6px (=1.3) Figtree, цвет var(--v4-ink) rgb(32,30,29) / rgb(16,24,38).",
-      "h": "653ea11b9829"
+      "h": "5a841efabe6d"
     },
     "Подписка · баннер сверху · 03": {
       "v": "=",
       "f": "«Чтобы записывать…» — .readonly-banner--sticky .readonly-banner-text margin-top 2px 500 11px/1.4 color var(--v4-ink-2) (735-ui-v4-subscription.css:533-538; heys_paywall_v1.js:504-506).",
-      "h": "75273c1b606f"
+      "h": "d201bf141176"
     },
     "Подписка · баннер сверху · 04": {
       "v": "=",
       "f": "«Подписка» — .readonly-banner-pill (heys_paywall_v1.js:508-512; 735-ui-v4-subscription.css:543-561): замер chromium обеих палитр — flex none (grow 0, shrink 0), min-height 44px, padding 0 16px, border-radius 999px, background var(--v4-act) rgb(198,113,57) / rgb(29,94,150), color var(--v4-btn-on-act) rgb(43,22,8) / rgb(255,255,255), 700 12px Figtree, align-items center. До правки правил у класса не было ни одного и браузер рисовал кнопку 75,4×21. Замер chromium 375 px: песочный rgb(246,230,221), тёмный rgb(58,36,26).",
-      "h": "0698029bf057"
+      "h": "6111bb6d0949"
     },
     "Подписка · баннер сверху · 05": {
       "v": "—",
@@ -406,17 +406,17 @@
     "Подписка · тост на действии · 02": {
       "v": "=",
       "f": "Заголовок полосы в кадре тоста: .readonly-banner-title 700 12px/15.6px тоном var(--v4-ink), замер chromium обеих палитр (heys_paywall_v1.js:503; 735-ui-v4-subscription.css:527-531).",
-      "h": "653ea11b9829"
+      "h": "5a841efabe6d"
     },
     "Подписка · тост на действии · 03": {
       "v": "=",
       "f": "Подстрока полосы в кадре тоста — .readonly-banner-text 500 11px/1.4 margin-top 2px color var(--v4-ink-2) (735-ui-v4-subscription.css:533-538; heys_paywall_v1.js:504-506).",
-      "h": "75273c1b606f"
+      "h": "d201bf141176"
     },
     "Подписка · тост на действии · 04": {
       "v": "=",
       "f": "Пилюля полосы в кадре тоста: .readonly-banner-pill min-height 44px, поля 0 16px, радиус 999px, фон var(--v4-act), текст var(--v4-btn-on-act), 700 12px/1, flex none — замер chromium обеих палитр (heys_paywall_v1.js:508-512; 735-ui-v4-subscription.css:543-561).",
-      "h": "0698029bf057"
+      "h": "6111bb6d0949"
     },
     "Подписка · тост на действии · 05": {
       "v": "—",
@@ -434,12 +434,12 @@
     "Подписка · тост на действии · 07": {
       "v": "=",
       "f": "«Запись недоступна — только чтение» — .readonly-toast-label (heys_paywall_v1.js:583,603-605; 735-ui-v4-subscription.css:595-600): замер chromium flex-grow 1, 600 12px/15.6px (=1.3) Figtree, цвет var(--v4-ink) rgb(32,30,29) / rgb(16,24,38). Тот же текст шлёт gateWrite (heys_paywall_v1.js:687).",
-      "h": "784e5503d910"
+      "h": "074251c363f8"
     },
     "Подписка · тост на действии · 08": {
       "v": "=",
       "f": "«Подписка» — .readonly-toast-action (heys_paywall_v1.js:601-613; 735-ui-v4-subscription.css:602-607): замер chromium 700 12px Figtree, цвет var(--v4-act-text) = --ac rgb(138,74,32) / rgb(29,94,150), полей нет. Прежняя синяя кнопка #3b82f6 снята вместе с ролью кнопки. Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
-      "h": "57dcfc7fa28f"
+      "h": "aecb2af0b2a3"
     },
     "Подписка · тост на действии · 09": {
       "v": "—",
@@ -532,7 +532,7 @@
     "Подписка · тарифы · места есть · 09": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5063e42ec48"
+      "h": "0bc92b4a8178"
     },
     "Подписка · тарифы · места есть · 10": {
       "v": "=",
@@ -542,12 +542,12 @@
     "Подписка · тарифы · места есть · 11": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:382: .paywall-trial-title «Пробный период 7 дней — бесплатно» font 700 13px/1.3",
-      "h": "436e6a0f6dc2"
+      "h": "9b0c2118670e"
     },
     "Подписка · тарифы · места есть · 12": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:466: .paywall-trial-status--ok color var(--v4-ok-text, #5c6a45); sand #5c6a45 · blue #1f6e4d Замер chromium 375 px: песочный rgb(246,230,221), тёмный rgb(58,36,26).",
-      "h": "e7a578bc6d35"
+      "h": "97101031590a"
     },
     "Подписка · тарифы · места есть · 13": {
       "v": "=",
@@ -603,7 +603,7 @@
     "Подписка · тарифы · мест нет · 09": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5063e42ec48"
+      "h": "0bc92b4a8178"
     },
     "Подписка · тарифы · мест нет · 10": {
       "v": "=",
@@ -613,12 +613,12 @@
     "Подписка · тарифы · мест нет · 11": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:382: .paywall-trial-title «Пробный период 7 дней — бесплатно» font 700 13px/1.3",
-      "h": "436e6a0f6dc2"
+      "h": "9b0c2118670e"
     },
     "Подписка · тарифы · мест нет · 12": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:407: .paywall-trial-status--busy color var(--v4-ink-2); «Мест нет · в очереди N» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "8855b58475ed"
+      "h": "53416996f6c0"
     },
     "Подписка · тарифы · мест нет · 13": {
       "v": "=",
@@ -664,7 +664,7 @@
     "Подписка · тарифы · Pro Спорт · 07": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:261: .paywall-footnote font 500 11.5px/1.45; margin-top 10px; текст про согласование Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "9849b4a1efbc"
+      "h": "841f568e4ae2"
     },
     "Подписка · проверьте заказ · 01": {
       "v": "—",
@@ -690,7 +690,7 @@
     "Подписка · проверьте заказ · 05": {
       "v": "=",
       "f": "735-ui-v4-subscription.css:289 .paywall-order-name — 700 15px/1.2 color var(--v4-ink). Замер chromium 375 px: песочный rgb(32,30,29), тёмный rgb(242,237,230).",
-      "h": "1045720b8968"
+      "h": "ad817c462cdf"
     },
     "Подписка · проверьте заказ · 06": {
       "v": "=",
@@ -700,12 +700,12 @@
     "Подписка · проверьте заказ · 07": {
       "v": "=",
       "f": "735-ui-v4-subscription.css:294 .paywall-order-price — 800 17px/1 tabular-nums color var(--v4-ink). Замер chromium 375 px: песочный rgb(32,30,29), тёмный rgb(242,237,230).",
-      "h": "78fabf7bf8c3"
+      "h": "855d9de85ebb"
     },
     "Подписка · проверьте заказ · 08": {
       "v": "=",
       "f": "«до 5 октября» — .paywall-order-period 500 11px/1 margin-top 4px color var(--v4-ink-2) (735-ui-v4-subscription.css:301-306); пакет 43 перевёл контракт с 50 % на --ink-2, продукт уже на роли.",
-      "h": "91e70b034a01"
+      "h": "478a4df92bd8"
     },
     "Подписка · проверьте заказ · 09": {
       "v": "=",
@@ -720,7 +720,7 @@
     "Подписка · проверьте заказ · 11": {
       "v": "=",
       "f": "735-ui-v4-subscription.css:335 .paywall-consent-text — 500 12px/1.45 color var(--v4-ink). Замер chromium 375 px: песочный rgb(32,30,29), тёмный rgb(242,237,230).",
-      "h": "c420a834021d"
+      "h": "96011d7b5b95"
     },
     "Подписка · проверьте заказ · 12": {
       "v": "=",
@@ -756,7 +756,7 @@
     "Подписка · оплата прошла · 05": {
       "v": "=",
       "f": "apps/web/heys_subscriptions_v1.js:1179: .paywall-success-card background var(--v4-surface); border-radius 18px; padding 14px; margin-top 14px; gap 6px; font 500 12.5px/1.4 Карточка Замер chromium 375 px: песочный rgb(247,239,226), тёмный rgb(35,32,27).",
-      "h": "deb774d4356f"
+      "h": "ff150291bc22"
     },
     "Подписка · оплата прошла · 06": {
       "v": "=",
@@ -781,12 +781,12 @@
     "Подписка · экран · активна · 03": {
       "v": "=",
       "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background, border-radius, padding",
-      "h": "671d161e7758"
+      "h": "2b73ab2958df"
     },
     "Подписка · экран · активна · 04": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:606-611: .sub-screen__subline font 500 12px/1.4 Figtree color var(--v4-ink-2) margin-top 6px tabular-nums; heys_subscriptions_v1.js:1204-1205 «7 990 ₽ в месяц · оплачено до этой даты» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "88b2b001aa13"
+      "h": "b06481332b54"
     },
     "Подписка · экран · активна · 05": {
       "v": "=",
@@ -811,12 +811,12 @@
     "Подписка · экран · активна · 09": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:681-683: .sub-screen__footnote-title font 700 12px/1.3 Figtree color var(--v4-ink); heys_subscriptions_v1.js:769 «Само ничего не спишется»",
-      "h": "f74b2fa32e9f"
+      "h": "7beb5284f3ab"
     },
     "Подписка · экран · активна · 10": {
       "v": "=",
       "f": "Сноска активной подписки — .sub-screen__footnote-text 500 11.5px/1.45 color var(--v4-ink-2) (735-ui-v4-subscription.css:734-738).",
-      "h": "0f267cf3996e"
+      "h": "5980400ce1d1"
     },
     "Подписка · экран · активна · 11": {
       "v": "=",
@@ -826,7 +826,7 @@
     "Подписка · экран · активна · 12": {
       "v": "=",
       "f": "heys_subscriptions_v1.js:874: .sub-screen__support-link font 600 12px/1 color var(--v4-act-text); sand #8a4a20 blue #1d5e96 Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
-      "h": "9e987eb80379"
+      "h": "ee295ba808a4"
     },
     "Подписка · экран · активна · 13": {
       "v": "=",
@@ -851,12 +851,12 @@
     "Подписка · экран · только чтение · 04": {
       "v": "=",
       "f": "apps/web/styles/modules/735-ui-v4-subscription.css: sub-screen/paywall background roles",
-      "h": "e77ccfe5f1a4"
+      "h": "b290af15cdb5"
     },
     "Подписка · экран · только чтение · 05": {
       "v": "=",
       "f": "«День и история открыты…» — .sub-screen__readonly-copy margin-top 6px 500 12.5px/1.5 color var(--v4-ink-2) (735-ui-v4-subscription.css:669-673).",
-      "h": "c1a0a7a8b76e"
+      "h": "fe6d89c8e0f0"
     },
     "Подписка · экран · только чтение · 06": {
       "v": "=",
@@ -876,12 +876,12 @@
     "Подписка · экран · только чтение · 09": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:681-683: .sub-screen__footnote-title font 700 12px/1.3; heys_subscriptions_v1.js:769 «Само ничего не спишется»",
-      "h": "f74b2fa32e9f"
+      "h": "7beb5284f3ab"
     },
     "Подписка · экран · только чтение · 10": {
       "v": "=",
       "f": "Сноска экрана только чтения — .sub-screen__footnote-text 500 11.5px/1.45 color var(--v4-ink-2) (735-ui-v4-subscription.css:734-738).",
-      "h": "0f267cf3996e"
+      "h": "5980400ce1d1"
     },
     "Подписка · экран · только чтение · 11": {
       "v": "=",
@@ -891,7 +891,7 @@
     "Подписка · экран · только чтение · 12": {
       "v": "=",
       "f": "heys_subscriptions_v1.js:874: .sub-screen__support-link font 600 12px/1 color var(--v4-act-text); sand #8a4a20 blue #1d5e96 Замер chromium 375 px: песочный rgb(138,74,32), тёмный rgb(226,164,104).",
-      "h": "9e987eb80379"
+      "h": "ee295ba808a4"
     },
     "Подписка · экран · только чтение · 13": {
       "v": "=",
@@ -942,7 +942,7 @@
     "Подписка · очередь · заявка подана · 09": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5063e42ec48"
+      "h": "0bc92b4a8178"
     },
     "Подписка · очередь · заявка подана · 10": {
       "v": "=",
@@ -952,17 +952,17 @@
     "Подписка · очередь · заявка подана · 11": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:464: paywall-trial-title «Заявка подана · вы N-й в очереди»",
-      "h": "337f5986df0e"
+      "h": "85ff230fca4e"
     },
     "Подписка · очередь · заявка подана · 12": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:1: подпись «Сообщим, когда место освободится» margin-top 4px Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "b179ba3feb06"
+      "h": "2258059c10e1"
     },
     "Подписка · очередь · заявка подана · 13": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:430: .paywall-text-btn min-height 44px «Отменить заявку» color --v4-act",
-      "h": "d812fde74701"
+      "h": "990b184d58ab"
     },
     "Подписка · очередь · место освободилось · 01": {
       "v": "—",
@@ -1008,7 +1008,7 @@
     "Подписка · очередь · место освободилось · 09": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:249: .paywall-divider-label font 600 11px/1; color rgba(var(--v4-ink-rgb), .45) Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d5063e42ec48"
+      "h": "0bc92b4a8178"
     },
     "Подписка · очередь · место освободилось · 10": {
       "v": "=",
@@ -1018,17 +1018,17 @@
     "Подписка · очередь · место освободилось · 11": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:464: paywall-trial-title «Место освободилось»",
-      "h": "b1e0c4a27140"
+      "h": "824721d2abac"
     },
     "Подписка · очередь · место освободилось · 12": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:401: offer timer font 800 26px/1 tabular-nums",
-      "h": "0a7e825ef51a"
+      "h": "70690c8f783d"
     },
     "Подписка · очередь · место освободилось · 13": {
       "v": "=",
       "f": "apps/web/heys_paywall_v1.js:1: подпись «на подтверждение» Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "b0c0e5795112"
+      "h": "f903bb76e45e"
     },
     "Подписка · очередь · место освободилось · 14": {
       "v": "=",
@@ -1374,7 +1374,7 @@
     "Подписка · проверьте заказ · 14": {
       "v": "=",
       "f": "«Отмена» — .paywall-cancel align-items center, justify-content center, min-height 44px, font 600 12px/1 (735-ui-v4-subscription.css:346-358); замер chromium: 339×44, 600, 12px, line-height 12px, цвет rgba(0,0,0,.55) через var(--v4-ink-2) под контрактные 56 % — та же ступень лестницы чернил, что уже закрыта в «Подписка · экран · активна · 04» и «· 10». Пакет 43 перевёл запись тона с доли на ступень набора; значение то же, вердикт сохранён.",
-      "h": "d1dd223bd149"
+      "h": "29826fc4c86a"
     }
   },
   "frames": {

@@ -1311,7 +1311,7 @@ body.tour-active .ios-pwa-banner {
   overflow: hidden;
   border-radius: 28px;
   background: var(--v4-bg, #fffaf1);
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -5553,7 +5553,7 @@ body.tour-active .ios-pwa-banner {
   padding: max(16px, calc(env(safe-area-inset-top, 0px) + 8px)) 14px 9px;
   background: #1c1712;
   color: #f2ede6;
-  font: 600 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 11px/1.3 Manrope, system-ui, sans-serif;
   text-align: center;
   box-shadow: none;
 }
@@ -6829,7 +6829,7 @@ body.tour-active .ios-pwa-banner {
   text-align: center;
   box-shadow: 0 22px 48px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.4);
   color: var(--v4-ink, #201e1d);
-  font-family: Figtree, system-ui, -apple-system, sans-serif;
+  font-family: Manrope, system-ui, -apple-system, sans-serif;
   /* Контракт pwa-update «язык, выделение, часовой пояс»: текст слоя не
      выделяется. Номер версии — исключение, см. .heys-update-modal__version. */
   user-select: none;
@@ -6901,14 +6901,14 @@ body.tour-active .ios-pwa-banner {
 .heys-update-modal__title,
 .heys-update-prompt__title {
   margin: 0;
-  font: 700 19px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 19px/1.25 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .heys-update-modal__subtitle,
 .heys-update-prompt__text {
   margin: 5px 0 0;
-  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.5 Manrope, system-ui, sans-serif;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
   text-wrap: pretty;
 }
@@ -7004,7 +7004,7 @@ body.tour-active .ios-pwa-banner {
   /* Строка «вид кнопки слоя»: заливка --acs, текст --on-acs — как у любой
      основной кнопки продукта. Градиент ушёл вместе с градиентом слоя. */
   background: var(--v4-act, #c67139);
-  font: 700 14px/1 Figtree, system-ui, sans-serif;
+  font: 700 14px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-btn-on-act, #2b1608);
   cursor: pointer;
   transition: transform 0.15s ease;
@@ -7020,7 +7020,7 @@ body.tour-active .ios-pwa-banner {
   min-height: 48px;
   margin-top: 8px;
   background: none;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   /* Кадр «Требуется обновление»: .updGhost — чернила набора под 50 %.
      Кремовый тон уехал вместе с тёмной карточкой: на --c1 он невидим. */
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);

@@ -4,11 +4,11 @@
  * maskable — тот же знак на полном грунте (Android ярлык + splash).
  * Run: node apps/web/scripts/generate-pwa-icons.mjs
  *
- * Шрифт. Контракт app-splash «что в иконке» требует букву H рубленой, Figtree
+ * Шрифт. Контракт app-splash «что в иконке» требует букву H рубленой, Manrope
  * весом 800. Растеризатор здесь — librsvg внутри sharp, а он рисует текст через
  * pango/fontconfig и `@font-face` в самом SVG игнорирует: сколько шрифт ни
  * вшивай в файл data-URL'ом, семейство ищется только среди тех, что видит
- * fontconfig. Прежняя редакция скрипта именно это и делала — подставляла Figtree
+ * fontconfig. Прежняя редакция скрипта именно это и делала — подставляла Manrope
  * base64-строкой — и молча получала системный запасной шрифт: на 2026-08-25 при
  * весе 800 это был брусковый шрифт с засечками, прямо против строки «буква
  * рубленая». Поэтому шрифт отдаётся fontconfig'у своим конфигом, а не через SVG;
@@ -30,8 +30,8 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const publicDir = path.resolve(__dirname, '../public');
-const fontDir = path.join(publicDir, 'fonts/figtree');
-const fontPath = path.join(fontDir, 'Figtree-Variable.ttf');
+const fontDir = path.join(publicDir, 'fonts/manrope');
+const fontPath = path.join(fontDir, 'Manrope-Variable.ttf');
 
 if (!fs.existsSync(fontPath)) {
   console.error('Missing', fontPath);
@@ -42,8 +42,8 @@ if (!fs.existsSync(fontPath)) {
 // уже стоит чужой конфиг, он про наш шрифт ничего не знает, и полагаться на него
 // нельзя.
 if (!process.env.HEYS_ICONS_FC_CACHE) {
-  // В конфиге назван только каталог Figtree: другого семейства растеризатору
-  // взять неоткуда, значит буква либо нарисована Figtree, либо не нарисована.
+  // В конфиге назван только каталог Manrope: другого семейства растеризатору
+  // взять неоткуда, значит буква либо нарисована Manrope, либо не нарисована.
   const confDir = fs.mkdtempSync(path.join(os.tmpdir(), 'heys-icons-fc-'));
   const cacheDir = path.join(confDir, 'cache');
   fs.mkdirSync(cacheDir);
@@ -102,7 +102,7 @@ for (const { source, name, size, flatten } of jobs) {
 const cacheDir = process.env.HEYS_ICONS_FC_CACHE;
 if (cacheDir && fs.readdirSync(cacheDir).length === 0) {
   console.error(
-    'fontconfig не прочитал свой конфиг — буква нарисована запасным шрифтом, не Figtree.\n' +
+    'fontconfig не прочитал свой конфиг — буква нарисована запасным шрифтом, не Manrope.\n' +
       `Проверьте ${fontPath} и FONTCONFIG_FILE=${process.env.FONTCONFIG_FILE}`,
   );
   process.exit(1);

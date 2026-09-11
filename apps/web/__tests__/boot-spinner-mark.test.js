@@ -252,7 +252,7 @@ describe('cold-start spinner mark', () => {
 
   // Решение владельца 25 августа: вид загрузчика возвращён к состоянию до
   // 24 августа — буквы знака нет, дуга стоит с первого кадра. Здесь раньше
-  // стояли два теста: «буква под знаком, Figtree 800» и «preload шрифта,
+  // стояли два теста: «буква под знаком, Manrope 800» и «preload шрифта,
   // чтобы буква не мигнула системным». Оба сторожили механику, которой
   // больше нет; вместо них — сторож возвращённого вида, чтобы следующий
   // проход не вернул букву молча «по контракту».
@@ -271,10 +271,10 @@ describe('cold-start spinner mark', () => {
 
     // Preload шрифта ставился ради буквы и ушёл вместе с ней: качать файл
     // до первого пейнта больше незачем.
-    expect(html).not.toContain('Figtree-Variable.ttf');
+    expect(html).not.toContain('Manrope-Variable.ttf');
 
     // Caprasimo при этом не возвращается: решение владельца касается вида
-    // знака, а не шрифта. В иконке приложения Figtree остаётся.
+    // знака, а не шрифта. В иконке приложения Manrope остаётся.
     expect(html).not.toContain('Caprasimo');
     expect(css.replace(/\/\*[\s\S]*?\*\//g, '')).not.toContain('Caprasimo');
   });
@@ -391,7 +391,7 @@ describe('cold-start spinner mark', () => {
     expect(manifest.theme_color).toBe('#fffaf1');
     expect(manifest.description).toContain('Nutrition Tracker');
     // Строка контракта app-splash «что в иконке» (двенадцатая сборка): H
-    // рубленая, Figtree весом 800, тоном --ac2 (#a1471c) прямо на фоне #fffaf1 — фон
+    // рубленая, Manrope весом 800, тоном --ac2 (#a1471c) прямо на фоне #fffaf1 — фон
     // заливает весь квадрат, подложки под буквой нет ни круга, ни скруглённого
     // квадрата, ни обводки. Прежде эта строка звалась «что в круге»; круга в
     // ней больше нет, поэтому отсутствие подложки проверяется явно.
@@ -400,7 +400,7 @@ describe('cold-start spinner mark', () => {
       ['icon-v4-apple.svg', appleSvg],
     ]) {
       expect(svg, name).toContain('<rect width="100" height="100" fill="#fffaf1" />');
-      expect(svg, name).toContain('Figtree');
+      expect(svg, name).toContain('Manrope');
       expect(svg, name).toContain('font-size="72"');
       expect(svg, name).toContain('font-weight="800"');
       expect(svg, name).toContain('fill="#a1471c"');
@@ -417,7 +417,7 @@ describe('cold-start spinner mark', () => {
       expect(svg.match(/<text/g), name).toHaveLength(1);
     }
     // «буква стоит по центру и занимает больше половины плитки»: считаем от
-    // самого файла — высота прописной у Figtree около 0,72 кегля, так что на
+    // самого файла — высота прописной у Manrope около 0,72 кегля, так что на
     // квадрате 100 половину перекрывает уже кегль 70.
     for (const [name, svg] of [
       ['icon-v4.svg', iconSvg],
@@ -432,7 +432,7 @@ describe('cold-start spinner mark', () => {
       expect(svg, name).toContain('text-anchor="middle"');
       expect(Number(svg.match(/\bx="(\d+)"\s/)[1]), name).toBe(side / 2);
       // По вертикали центрирует базовая линия. 80 досталось от времён, когда
-      // растеризатор молча подставлял вместо Figtree системный шрифт: по обмеру
+      // растеризатор молча подставлял вместо Manrope системный шрифт: по обмеру
       // готового PNG центр прописной стоял на 54,6 % высоты. 75,4 ставит его на
       // 50,1 % — обмер повторяется скриптом генератора.
       expect(svg, name).toContain('y="75.4"');

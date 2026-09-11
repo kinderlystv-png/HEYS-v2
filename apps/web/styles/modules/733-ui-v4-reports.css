@@ -30,7 +30,7 @@
   gap: 7px;
   flex: 1;
   min-width: 120px;
-  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  font: 500 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
@@ -43,7 +43,7 @@
   display: flex;
   flex: none;
   gap: 16px;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
 }
 
 .reports-v4-period-pill {
@@ -176,7 +176,7 @@
    500 10,5/1.4 чернил 42 % с отступом 6. */
 .reports-v4-weight-cycle-footnote {
   margin-top: 6px;
-  font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
@@ -185,7 +185,7 @@
    сноски графика веса, чтобы две подписи одного смысла не разъезжались. */
 .reports-v4-kcal-cycle-footnote {
   margin-top: 10px;
-  font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
   text-wrap: pretty;
 }
@@ -335,14 +335,14 @@
 }
 
 .reports-v4-dynamics-card__value {
-  font: 800 21px/1 Figtree, system-ui, sans-serif;
+  font: 800 21px/1 Manrope, system-ui, sans-serif;
   letter-spacing: -0.02em;
   color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
 
 .reports-v4-dynamics-card__delta {
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ok-text, #5c7a3f);
   font-variant-numeric: tabular-nums;
 }
@@ -722,7 +722,7 @@
 .reports-v4-days__more {
   padding: 14px 0 0;
   text-align: center;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -780,13 +780,13 @@
 }
 
 .sparkline-popup--retention__title {
-  font: 700 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 11px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .sparkline-popup--retention__text {
   margin-top: 3px;
-  font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.4 Manrope, system-ui, sans-serif;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 60%, transparent);
 }
 
@@ -804,7 +804,7 @@
 
 /* Оговорка к ярусу: 10,5 px/600 на общей ступени данных 56 %. */
 .reports-v4-tier__note {
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0;
   text-transform: none;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -839,7 +839,7 @@
 .reports-v4-discipline__name {
   flex: none;
   width: 88px;
-  font: 600 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 11px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #0f172a);
 }
 
@@ -871,14 +871,14 @@
   flex: none;
   min-width: 52px;
   text-align: right;
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
 
 .reports-v4-discipline__count {
   flex: 1;
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.62));
 }
 
@@ -886,7 +886,7 @@
   flex: none;
   min-width: 30px;
   text-align: right;
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -902,7 +902,7 @@
 .reports-v4-discipline__off {
   flex: 1;
   text-align: right;
-  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  font: 500 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
@@ -941,7 +941,7 @@
   flex: none;
   width: 62px;
   text-align: right;
-  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  font: 600 10px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -951,7 +951,7 @@
 
      Тон актуального кадра — общая ступень данных 56 %. */
   padding-top: 12px;
-  font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -979,7 +979,7 @@
 }
 
 .reports-v4-stub__title {
-  font: 700 16px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 16px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #0f172a);
   /* Кадр: 10 над заголовком, 8 над пояснением, 14 над рядом прогресса.
      Стояло 8 сверху и 14 снизу — нижнее поле спорило с отступом пояснения,
@@ -1008,13 +1008,13 @@
 .reports-v4-stub__count {
   margin-top: 8px;
   text-align: right;
-  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  font: 700 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-deep, #8a4a20);
 }
 
 .reports-v4-stub__note {
   margin-top: 8px;
-  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.5 Manrope, system-ui, sans-serif;
   /* Запасное обещало 62 %, роль даёт 55 % — кадр просит 55 %. */
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -1049,7 +1049,7 @@
   align-items: center;
   gap: 8px;
   padding: 11px 0 9px;
-  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  font: 700 9px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.35));
@@ -1075,7 +1075,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  font: 600 12px/1.2 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #0f172a);
 }
 
@@ -1124,7 +1124,7 @@
 
 .reports-v4-weeks__kcal,
 .reports-v4-weeks__weight {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1137,7 +1137,7 @@
 }
 
 .reports-v4-weeks__score {
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #0f172a);
 }
@@ -1162,7 +1162,7 @@
    четвёртой неделей, хотя это объяснение к таблице, а не её строка. */
 .reports-v4-weeks__note {
   padding: 0 0 13px;
-  font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
 }
 
@@ -1290,7 +1290,7 @@
      Подпись — --v4-ink-3: контракт просит 42 %, ближайшая ступень 45 %. */
   background: var(--v4-track, rgba(0, 0, 0, 0.12));
   box-shadow: inset 0 0 0 1px var(--v4-line, rgba(0, 0, 0, 0.08));
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   text-align: center;
 }
@@ -1304,7 +1304,7 @@
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
   /* Кадр «Отчёты · нет веса», элемент 15: 12,5 px. */
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -1319,7 +1319,7 @@
 }
 
 .reports-v4-measure__fact {
-  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.55 Manrope, system-ui, sans-serif;
   color: color-mix(in srgb, var(--v4-ink, #0f172a) 60%, transparent);
 }
 
@@ -1335,7 +1335,7 @@
      сильнее, чем сам отчёт. */
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-act-text, #8a4a20);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -1364,12 +1364,12 @@
   border-radius: 12px;
   background: var(--v4-card, #f7efe2);
   color: var(--v4-ink, #0f172a);
-  font: 700 18px/1 Figtree, system-ui, sans-serif;
+  font: 700 18px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
 .heys-score-screen__title {
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #0f172a);
 }
 
@@ -1397,7 +1397,7 @@
 }
 
 .heys-score-screen__tier {
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   /* Роль с именем набора набору не следует: --v4-sand-act-mid объявлена во
@@ -1414,7 +1414,7 @@
 }
 
 .heys-score-screen__number {
-  font: 600 44px/0.9 Figtree, system-ui, sans-serif;
+  font: 600 44px/0.9 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
 }
@@ -1425,7 +1425,7 @@
    красный занят под необратимое действие. Кадр показывает только рост, и по
    одному примеру правило для обоих знаков не выводится. */
 .heys-score-screen__delta {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1434,7 +1434,7 @@
 }
 
 .heys-score-screen__phrase {
-  font: 600 13px/1.45 Figtree, system-ui, sans-serif;
+  font: 600 13px/1.45 Manrope, system-ui, sans-serif;
   /* Контракт «вид · экран разбора Score»: слово состояния тоном --gr, не чернилами. */
   color: var(--v4-ok-text, #5c6a45);
 }
@@ -1451,7 +1451,7 @@
    строка контракта называет её словами, но кегля не даёт. Стояла 9,5/500 —
    на две ступени мельче шкалы зоны. */
 .heys-score-screen__note {
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1482,7 +1482,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
 }
 
 .heys-score-screen__row-label {
@@ -1539,7 +1539,7 @@
 
 .heys-score-screen__footnote {
   margin: 12px 0 0;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
@@ -1587,7 +1587,7 @@
 }
 
 .reports-v4-periods-sheet__title {
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1619,7 +1619,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-surface, #f7efe2);
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
@@ -1644,7 +1644,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font: 500 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1678,7 +1678,7 @@
   padding: 16px;
   border-radius: 20px;
   background: var(--v4-surface, #f7efe2);
-  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1705,7 +1705,7 @@
 }
 
 .reports-v4-periods-card__date {
-  font: 700 13px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 13px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1722,7 +1722,7 @@
 
 .reports-v4-periods-card__delta {
   flex: none;
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -1740,7 +1740,7 @@
 }
 
 .reports-v4-periods-card__reliability-text {
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -1760,7 +1760,7 @@
 }
 
 .reports-v4-periods-card__metric-value {
-  font: 700 14px/1 Figtree, system-ui, sans-serif;
+  font: 700 14px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
@@ -1770,13 +1770,13 @@
 }
 
 .reports-v4-periods-card__metric-label {
-  font: 500 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 500 9.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .reports-v4-periods-card__weight-note {
   margin-top: 10px;
-  font: 600 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 600 11px/1.4 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -1796,7 +1796,7 @@
 }
 
 .reports-v4-periods-card__days-label {
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -1804,13 +1804,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
 .reports-v4-periods-card__footnote {
   margin-top: 10px;
-  font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 

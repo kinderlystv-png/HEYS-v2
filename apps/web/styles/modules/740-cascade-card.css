@@ -1159,7 +1159,7 @@
 }
 
 .heys-score-tile__entry-label {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1203,7 +1203,7 @@
    прежней системы с запасным #1e293b. */
 .heys-score-tile__delta {
   flex: none;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }

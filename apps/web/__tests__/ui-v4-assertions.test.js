@@ -13,7 +13,7 @@ describe('UI v4 typed assertions v2', () => {
   it('parses a safe multi-kind element row and preserves reversible source spans', () => {
     const row = {
       identity: 'Стык · Главная · 06',
-      value: '«Эксперт» — шрифт 600 10px/1 Figtree, цвет rgba(var(--ink),.56)',
+      value: '«Эксперт» — шрифт 600 10px/1 Manrope, цвет rgba(var(--ink),.56)',
       index: 47,
     };
     const parsed = parseContractAssertions(row);
@@ -36,7 +36,7 @@ describe('UI v4 typed assertions v2', () => {
           weight: 600,
           size: { value: 10, unit: 'px' },
           lineHeight: { value: 1, unit: 'number' },
-          family: 'Figtree',
+          family: 'Manrope',
         },
       }),
       expect.objectContaining({

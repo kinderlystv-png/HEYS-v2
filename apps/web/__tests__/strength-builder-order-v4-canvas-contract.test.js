@@ -129,7 +129,7 @@ describe('Ж1 · порядок · canvas contract', () => {
     expect(lastRule('.sb-order-done.obtn')).toMatch(/height: 36px/);
     expect(lastRule('.sb-order-done.obtn')).toMatch(/padding: 0 15px/);
     expect(lastRule('.sb-order-list > .sb-order-ex:first-child')).toMatch(/margin-top: 12px/);
-    expect(exactRule('.sb-order-handle')).toMatch(/font: 600 14px\/1 Figtree/);
+    expect(exactRule('.sb-order-handle')).toMatch(/font: 600 14px\/1 Manrope/);
     expect(exactRule('.sb-order-row .sb-cat-title b')).toMatch(/12\.5px\/1\.2/);
     expect(exactRule('.sb-order-row .sb-cat-title span')).toMatch(/11px\/1\.3/);
     expect(lastRule('.sb-order-arrows')).toMatch(/gap: 3px/);

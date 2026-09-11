@@ -144,7 +144,7 @@ describe('Вид по кадру, и обе кнопки одного роста
 
   it('заголовок — 13,5/1,35 тоном предупреждения', () => {
     const head = rule('.activity-v4-program .sb-proposal-card b');
-    expect(head).toContain('font: 700 13.5px/1.35 Figtree');
+    expect(head).toContain('font: 700 13.5px/1.35 Manrope');
     expect(head).toContain('var(--v4-warn-text');
   });
 

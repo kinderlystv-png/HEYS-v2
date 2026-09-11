@@ -50,7 +50,7 @@ describe('Тренд здоровья · рост — сведённый кус�
     expect(contractValue(canvas, 'Тренд здоровья · рост · 04'))
       .toBe('выравнивание flex-end, распределение space-between, зазор 8px, отступ сверху auto');
     expect(contractValue(canvas, 'Тренд здоровья · рост · 05'))
-      .toBe('«+8» — моноцифры: шрифт 600 26px/1 Figtree, цвет var(--gr)');
+      .toBe('«+8» — моноцифры: шрифт 600 26px/1 Manrope, цвет var(--gr)');
     expect(contractValue(canvas, 'Тренд здоровья · рост · 06'))
       .toBe('флекс none, отступ снизу 2px, цвет var(--gr2)');
     expect(contractValue(canvas, 'Тренд здоровья · рост · рисунок 01'))

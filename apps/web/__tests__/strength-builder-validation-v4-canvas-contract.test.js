@@ -105,7 +105,7 @@ describe('Е2 · галочка и пустые поля · canvas contract', ()
     expect(SUPERSET).toContain('свой вес');
     expect(CSS).toMatch(/\.sb-ap-field\.is-reps-missing[\s\S]*1\.5px var\(--val-bad/);
     expect(CSS).toMatch(/\.sb-ap-check\.is-blocked:not\(\.is-done\)[\s\S]*v4-ink-30/);
-    expect(CSS).toMatch(/\.sb-ap-value\.is-bw[\s\S]*12px\/1 Figtree/);
+    expect(CSS).toMatch(/\.sb-ap-value\.is-bw[\s\S]*12px\/1 Manrope/);
   });
 
   it('доказывает пустые повторы, свой вес и приглушённую галочку в раскрытой карточке', () => {

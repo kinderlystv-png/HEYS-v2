@@ -2764,7 +2764,7 @@ body:has(.page-reports) .hdr::after {
 }
 
 .widgets-settings-fab__label {
-  font: 700 0.8125rem/1 Figtree, system-ui, sans-serif;
+  font: 700 0.8125rem/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.01em;
 }
 
@@ -10651,7 +10651,7 @@ body:has(.widgets-tab) {
 }
 
 body:has(.widgets-tab) .widgets-grid {
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
   /* Паддинг сетки 16 px и от ширины не зависит; сетка тянется до 480 px,
      дальше растут поля и она центрируется — колонка не шире 106 px
      (канвас v4, строки 8, 9, 78). */
@@ -11973,7 +11973,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 .widget-v4-macro__fact {
   margin-top: 5px;
   white-space: nowrap;
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
@@ -11996,7 +11996,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
 }
 
 .widget-v4-macro__num {
-  font: 600 12px Figtree, system-ui, sans-serif;
+  font: 600 12px Manrope, system-ui, sans-serif;
   fill: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
@@ -12048,7 +12048,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   justify-content: center;
   width: 46px;
   height: 46px;
-  font: 600 21px/1 Figtree, sans-serif;
+  font: 600 21px/1 Manrope, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.42));
   font-variant-numeric: tabular-nums;
 }
@@ -12599,7 +12599,7 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   border-radius: 999px;
   box-shadow: inset 0 0 0 1.5px #c67139;
   background: transparent;
-  font: 700 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
   position: relative;
@@ -15094,12 +15094,12 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 
 /* Листы виджетов портируются в document.body, а не остаются внутри
    .widgets-grid — иначе position:fixed считался бы от трансформированного
-   предка. Побочный эффект: Figtree объявлен на `body:has(.widgets-tab)
+   предка. Побочный эффект: Manrope объявлен на `body:has(.widgets-tab)
    .widgets-grid`, и до листа он не доходит — лист набирался системным
-   шрифтом, хотя плитка, из которой он открыт, набрана Figtree.
+   шрифтом, хотя плитка, из которой он открыт, набрана Manrope.
    Замер 2 сентября на живом дереве: подпись `.widget-bd-sheet__kicker`
    отдавала `ui-sans-serif, system-ui, …`, та же подпись внутри сетки —
-   `Figtree`. Кегль, вес, интерлиньяж, трекинг и цвет при этом сходились с
+   `Manrope`. Кегль, вес, интерлиньяж, трекинг и цвет при этом сходились с
    контрактом: расходилось только семейство, и потому расхождение не было
    видно проверкам, читающим правило класса. */
 .widget-bd-sheet,
@@ -15107,7 +15107,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 .widget-wd-sheet,
 .widget-wd-sheet__scrim,
 .widget-wd-sheet__blocker {
-  font-family: Figtree, sans-serif;
+  font-family: Manrope, sans-serif;
 }
 
 .widget-bd-sheet {
@@ -15963,7 +15963,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
 }
 
 .widgets-longpress-hint__title {
-  font: 700 12px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 12px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -15977,7 +15977,7 @@ html[data-theme-id="blue-dark"] .widget-water--2x1.widget-v4-stack {
    не следует набору и в тёмных наборах стал бы чёрным по тёмному. Отступление
    на 2 % названо здесь и в вердикте строки. */
 .widgets-longpress-hint__sub {
-  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 

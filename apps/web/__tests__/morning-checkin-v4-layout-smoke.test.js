@@ -9,12 +9,12 @@ const MODAL_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_step_modal_v1
 const DAILY_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/500-pwa-and-offline.css'), 'utf8');
 const PALETTE_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/002-ui-v4-palette-roles.css'), 'utf8');
 const YV_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/715-yesterday-verify.css'), 'utf8');
-const FIGTREE_FONT = path.resolve(__dirname, '../public/fonts/figtree/Figtree-Variable.ttf');
+const MANROPE_FONT = path.resolve(__dirname, '../public/fonts/manrope/Manrope-Variable.ttf');
 
 describe('morning check-in v4 layout vs canvas', () => {
   it('daily chrome: terracotta pills, full-width single primary, no green override', () => {
-    expect(fs.existsSync(FIGTREE_FONT)).toBe(true);
-    expect(PALETTE_CSS).toContain("url('/fonts/figtree/Figtree-Variable.ttf')");
+    expect(fs.existsSync(MANROPE_FONT)).toBe(true);
+    expect(PALETTE_CSS).toContain("url('/fonts/manrope/Manrope-Variable.ttf')");
     expect(DAILY_CSS).toMatch(/\.mc-progress-dots--pills \.mc-progress-dot\.active \{[\s\S]*?background: var\(--v4-sand-act/);
     expect(DAILY_CSS).toContain('.mc-daily-footer-primary:only-child');
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-daily-footer-primary.mc-btn--primary');

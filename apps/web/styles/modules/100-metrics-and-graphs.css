@@ -332,7 +332,7 @@
 }
 
 .kcal-realdata-card__meals {
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -350,7 +350,7 @@
   border-radius: 8px;
   /* Строка контракта «карточка · подтверждение чисел дня» и оба кадра сходятся
      на 11 px/600; стоял вес 700 — метка звучала громче заголовка над ней. */
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-warn-text, #a1471c);
   background: var(--v4-bg, #fffaf1);
   border: none;
@@ -368,7 +368,7 @@
   border: none;
   border-radius: 999px;
   padding: 10px 14px;
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-btn-on-act, #2b1608);
   background: var(--v4-act, #c67139);
   box-shadow: none;

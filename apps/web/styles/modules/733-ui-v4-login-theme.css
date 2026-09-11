@@ -30,7 +30,7 @@
   padding-bottom: calc(0px + env(safe-area-inset-bottom, 0px)) !important;
   background: var(--v4-hero, #efe3cf);
   color: var(--v4-ink, #201e1d);
-  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font-family: Manrope, "HEYS Manrope", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   /* Строка «уменьшенное движение»: перекраска при выборе палитры — мгновенно,
      переходов на этом экране нет и без системной настройки. */
@@ -1381,7 +1381,7 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   align-items: baseline;
   gap: 10px;
   margin-top: auto;
-  font: 700 9.5px/1 Figtree, sans-serif;
+  font: 700 9.5px/1 Manrope, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1860,7 +1860,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   border-radius: 26px 26px 0 0;
   background: var(--v4-sand-surface-soft, #fffaf1);
   color: var(--v4-ink, #201e1d);
-  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font-family: Manrope, "HEYS Manrope", system-ui, sans-serif;
   box-shadow: 0 18px 50px rgba(40, 20, 0, 0.28);
   pointer-events: auto;
 }
@@ -1892,14 +1892,14 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
    с разрядкой .14em тоном --ac, через 9 — название документа 16/700. */
 .heys-consent-sign-sheet__kicker {
   color: var(--v4-act-text, #8a4a20);
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .heys-consent-sign-sheet__title {
   margin: 9px 0 0;
-  font: 700 16px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 16px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-align: left;
   text-wrap: pretty;
@@ -1924,7 +1924,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 
 .heys-consent-sign-sheet__doc-edition {
   color: rgba(0, 0, 0, 0.55);
-  font: 600 12px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.3 Manrope, system-ui, sans-serif;
   /* Строка «язык, выделение, часовой пояс»: подписи, даты и версии не
      выделяются — в отличие от текста самих документов согласий. */
   user-select: none;
@@ -1939,7 +1939,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   padding: 0;
   background: none;
   color: var(--v4-act-text, #8a4a20);
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -1948,7 +1948,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 .heys-consent-sign-sheet__hint {
   margin: 0 0 10px;
   color: rgba(0, 0, 0, 0.55);
-  font: 500 12.5px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.45 Manrope, system-ui, sans-serif;
   text-align: left;
   text-wrap: pretty;
 }
@@ -2047,7 +2047,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 
 .heys-consent-sign-sheet__done-title {
   margin-top: 12px;
-  font: 700 16px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 16px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-align: center;
 }
@@ -2055,7 +2055,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 .heys-consent-sign-sheet__done-meta {
   margin-top: 5px;
   color: #5c6a45;
-  font: 600 12.5px/1.55 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.55 Manrope, system-ui, sans-serif;
   text-align: center;
   text-wrap: pretty;
   /* Строка «язык, выделение, часовой пояс»: подпись/дата не выделяются. */
@@ -2077,13 +2077,13 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 }
 
 .heys-consent-sign-sheet__doc-name {
-  font: 600 12px/1.4 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .heys-consent-sign-sheet__doc-version {
   flex: none;
-  font: 700 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 10.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-act-text, #8a4a20);
   /* Строка «язык, выделение, часовой пояс»: версия документа не выделяется. */
@@ -2099,7 +2099,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
 .heys-consent-sign-sheet__done-note {
   margin: 10px 0 0;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-  font: 500 12.5px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.55 Manrope, system-ui, sans-serif;
   text-align: center;
   text-wrap: pretty;
 }
@@ -2266,7 +2266,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   padding: 18px 16px 16px;
   background: var(--v4-sand-surface-soft, #fffaf1);
   color: var(--v4-ink, #201e1d);
-  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font-family: Manrope, "HEYS Manrope", system-ui, sans-serif;
   box-shadow: 0 -2px 20px rgba(80, 50, 20, 0.1);
   pointer-events: auto;
 }
@@ -2409,7 +2409,7 @@ html[data-theme-id="blue-dark"] .heys-login-theme__soft-mini-period > span.is-da
   overflow: hidden;
   background: var(--v4-sand-surface-soft, #fffaf1);
   color: var(--v4-sand-ink, #201e1d);
-  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font-family: Manrope, "HEYS Manrope", system-ui, sans-serif;
   box-shadow: 0 18px 50px rgba(40, 20, 0, 0.34);
 }
 

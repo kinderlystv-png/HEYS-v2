@@ -99,7 +99,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-hero__unit {
   /* Контракт (строка 34) называет 12,5 px/600; кадр рисует 13 px — верен
      контракт. Кадр просит 45 % — это ступень набора, --v4-ink-3. */
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
@@ -120,7 +120,7 @@ body:has(.activity-v4) .hdr::after {
   cursor: pointer;
   text-align: left;
   /* Кадр просит 50 %, ближайшая ступень набора — 55 %. */
-  font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -134,7 +134,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-hero__footer-link {
   flex: none;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -150,7 +150,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-breakdown__row {
   display: flex;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -172,18 +172,18 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-breakdown__name {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .activity-v4-breakdown__note {
-  font: 500 10px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 10px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .activity-v4-breakdown__value {
   flex: none;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
@@ -213,7 +213,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-breakdown__row:last-child .activity-v4-breakdown__value--total {
-  font: 800 13px/1 Figtree, system-ui, sans-serif;
+  font: 800 13px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
@@ -260,7 +260,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-steps__kcal {
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -271,7 +271,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-steps__note {
   margin-top: 10px;
-  font: 500 11px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 .activity-v4-today {
@@ -283,7 +283,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-today__row {
   display: flex;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -316,12 +316,12 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-today__name {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .activity-v4-today__sub {
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
@@ -331,7 +331,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-today__value {
   flex: none;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
@@ -348,7 +348,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-today__value--chevron i {
-  font: 700 18px/1 Figtree, system-ui, sans-serif;
+  font: 700 18px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -359,7 +359,7 @@ body:has(.activity-v4) .hdr::after {
 
 /* «не отмечено» — не число, поэтому мельче и приглушено. */
 .activity-v4-today__value--muted {
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -393,14 +393,14 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-steps__label {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .activity-v4-steps__values {
   /* Имя и число кадра одного кегля: 600 12,5 px/1 (кадр «день собран», 21–23).
      Прежние 13/700 остались от редакции до контракта. */
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
@@ -472,7 +472,7 @@ body:has(.activity-v4) .hdr::after {
      тон данных — и это то же правило, по которому текст мельче 12 px не стоит
      бледнее 56 %. Рядом «251 ккал» уже на нём. */
   flex: none;
-  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  font: 500 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -489,7 +489,7 @@ body:has(.activity-v4) .hdr::after {
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #c67139);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   /* Роли «текст на акценте» в наборе нет — цвет назван поимённо, как и был. */
   color: var(--v4-btn-on-act, #2b1608);
   cursor: pointer;
@@ -512,7 +512,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-history__link {
   flex: none;
   /* Кадр просит 42 %, ближайшая ступень набора — 45 %. */
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
@@ -783,7 +783,7 @@ body:has(.activity-v4) .hdr::after {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font: 500 10.5px/1.2 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -830,7 +830,7 @@ body:has(.activity-v4) .hdr::after {
   background: none;
   cursor: pointer;
   padding: 4px 10px;
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -843,7 +843,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-period-label--month {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -852,7 +852,7 @@ body:has(.activity-v4) .hdr::after {
    упражнений» не результат, и красить их как плохой результат нельзя. */
 .activity-v4-history__row {
   display: flex;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -891,18 +891,18 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-history__name {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .activity-v4-history__sub {
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .activity-v4-history__delta {
   flex: none;
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
@@ -921,7 +921,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-history__delta--muted {
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -940,13 +940,13 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-sheet__name {
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .activity-v4-sheet__sub {
   /* Подпись пункта листа — 600 11/1 кадра; тон 45 % вместо 42 %. */
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
@@ -998,7 +998,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .program-next-text {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1009,12 +1009,12 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .program-next-sub {
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .activity-v4-program .program-next-link {
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -1037,7 +1037,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-plan-card b {
-  font: 700 13.5px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 13.5px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1057,7 +1057,7 @@ body:has(.activity-v4) .hdr::after {
 /* Проза кадра — 12/1,55; кадр просит 60 %, ближайшая ступень набора — 55 %. */
 .activity-v4-program .sb-plan-meta {
   margin: 8px 0 0;
-  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1066,7 +1066,7 @@ body:has(.activity-v4) .hdr::after {
   border: none;
   border-radius: 999px;
   background: var(--v4-act, #c67139);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   /* Роли «текст на акценте» в наборе нет — цвет назван поимённо. */
   color: var(--v4-btn-on-act, #2b1608);
 }
@@ -1083,7 +1083,7 @@ body:has(.activity-v4) .hdr::after {
   border: none;
   border-radius: 999px;
   background: var(--v4-hero, #efe3cf);
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   /* Кадр просит 58 %, ближайшая ступень набора — 55 %. */
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -1109,7 +1109,7 @@ body:has(.activity-v4) .hdr::after {
   height: 34px;
   border-radius: 11px;
   background: var(--v4-hero, #efe3cf);
-  font: 700 14px/1 Figtree, system-ui, sans-serif;
+  font: 700 14px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -1122,12 +1122,12 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-plan-summary-copy > b {
-  font: 700 12.5px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1.2 Manrope, system-ui, sans-serif;
 }
 
 .activity-v4-program .sb-plan-summary-copy .sb-plan-meta {
   margin: 0;
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
   color: rgba(var(--ink), 0.56);
 }
 
@@ -1144,7 +1144,7 @@ body:has(.activity-v4) .hdr::after {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  font: 600 12px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1155,14 +1155,14 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-program .sb-plan-exercises li > i {
   flex: none;
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   font-style: normal;
   font-variant-numeric: tabular-nums;
   color: rgba(var(--ink), 0.56);
 }
 
 .activity-v4-program .sb-plan-exercises .sb-plan-exercises-more {
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
   color: rgba(var(--ink), 0.56);
 }
 
@@ -1176,12 +1176,12 @@ body:has(.activity-v4) .hdr::after {
   margin-top: 0;
   min-height: 44px;
   padding: 0 18px;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
 }
 
 .activity-v4-program .sb-plan-week-label {
   margin: 20px 0 10px;
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-act-text, #8a4a20);
@@ -1230,13 +1230,13 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-plan-week-days i {
-  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 9.5px/1 Manrope, system-ui, sans-serif;
   font-style: normal;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-program .sb-plan-week-days b {
-  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  font: 700 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1265,7 +1265,7 @@ body:has(.activity-v4) .hdr::after {
   flex-wrap: wrap;
   gap: 10px 12px;
   margin-top: 10px;
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1305,7 +1305,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-program .sb-plan-trace {
   display: block;
   margin-top: 10px;
-  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1359,14 +1359,14 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-move-day-copy b {
-  font: 600 12.5px/1.2 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.2 Manrope, system-ui, sans-serif;
   text-transform: none;
   color: var(--v4-ink, rgba(0, 0, 0, 0.82));
   -webkit-text-fill-color: var(--v4-ink, rgba(0, 0, 0, 0.82));
 }
 
 .activity-v4-program .sb-move-day-copy span {
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
   color: rgba(var(--ink), 0.56);
   -webkit-text-fill-color: rgba(var(--ink), 0.56);
 }
@@ -1377,13 +1377,13 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-move-day > i {
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   background: transparent;
 }
 
 .activity-v4-program .sb-move-day.is-busy > i {
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: rgba(var(--ink), 0.4);
   -webkit-text-fill-color: rgba(var(--ink), 0.4);
   background: transparent;
@@ -1405,7 +1405,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-program .sb-plan-footnote {
   margin-top: 12px;
-  font: 500 11px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.55 Manrope, system-ui, sans-serif;
   color: rgba(var(--ink), 0.56);
   text-wrap: pretty;
 }
@@ -1417,7 +1417,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-program .sb-proposal-card b {
-  font: 700 13.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 13.5px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-warn-text, #a1471c);
 }
 
@@ -1454,7 +1454,7 @@ body:has(.activity-v4) .hdr::after {
   background: none;
   cursor: pointer;
   text-align: center;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -1492,12 +1492,12 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4 .sb-card-clock {
-  font: 800 26px/1 Figtree, system-ui, sans-serif;
+  font: 800 26px/1 Manrope, system-ui, sans-serif;
   letter-spacing: -0.02em;
 }
 
 .activity-v4 .sb-card-count {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ok-text, #5c6a45);
 }
 
@@ -1511,7 +1511,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4 .sb-card-title b {
-  font: 700 13px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 13px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1520,7 +1520,7 @@ body:has(.activity-v4) .hdr::after {
      span отступ сверху не применяется вовсе, и состав прилипал к имени. */
   display: block;
   margin-top: 5px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
@@ -1547,19 +1547,19 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4 .sb-card-current {
   margin-top: 6px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
 .activity-v4 .sb-card-note {
   margin-top: 10px;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4 .sb-card-cta b {
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1571,13 +1571,13 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-history-empty__title {
-  font: 700 13px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 13px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .activity-v4-history-empty__text {
   margin-top: 8px;
-  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1590,19 +1590,19 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-load-warning__title {
-  font: 700 13px/1.32 Figtree, system-ui, sans-serif;
+  font: 700 13px/1.32 Manrope, system-ui, sans-serif;
   color: var(--v4-warn-text, #a1471c);
 }
 
 .activity-v4-load-warning__reason {
   margin-top: 4px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .activity-v4-load-warning__text {
   margin-top: 12px;
-  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1619,7 +1619,7 @@ body:has(.activity-v4) .hdr::after {
   border: 0;
   border-radius: 999px;
   background: var(--v4-bg, #fffaf1);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
@@ -1632,7 +1632,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-warning__confidence,
 .activity-v4-load-note {
   margin-top: 10px;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1652,7 +1652,7 @@ body:has(.activity-v4) .hdr::after {
   min-height: 44px;
   padding: 10px 0;
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1664,7 +1664,7 @@ body:has(.activity-v4) .hdr::after {
 .activity-v4-load-evidence__warn,
 .activity-v4-load-evidence__rest {
   flex: none;
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
 }
 
 .activity-v4-load-evidence__warn {
@@ -1685,7 +1685,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-load-evidence__rule span:last-child,
 .activity-v4-load-details__note {
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1700,13 +1700,13 @@ body:has(.activity-v4) .hdr::after {
   border: 0;
   border-radius: 999px;
   background: var(--v4-c1, #f7efe2);
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   cursor: pointer;
 }
 
 .activity-v4-load-toggle span:last-child {
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -1716,7 +1716,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-load-details__value {
   flex: none;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1735,7 +1735,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-load-details__value--number {
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1746,13 +1746,13 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .activity-v4-load-verdict__title {
-  font: 700 13px/1.32 Figtree, system-ui, sans-serif;
+  font: 700 13px/1.32 Manrope, system-ui, sans-serif;
   color: var(--v4-ok-text, #5c6a45);
 }
 
 .activity-v4-load-verdict__next {
   margin-top: 4px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1772,7 +1772,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-load-verdict__key {
   display: block;
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1801,7 +1801,7 @@ body:has(.activity-v4) .hdr::after {
 
 .activity-v4-load-verdict__value {
   display: block;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
@@ -1845,7 +1845,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .sb-plan-vs-done .sb-plan-vs-summary-title {
-  font: 700 14px/1.2 Figtree, sans-serif;
+  font: 700 14px/1.2 Manrope, sans-serif;
   color: var(--gr);
 }
 
@@ -1862,7 +1862,7 @@ body:has(.activity-v4) .hdr::after {
 
 .sb-plan-vs-done .sb-plan-vs-summary-sub {
   margin: 6px 0 0;
-  font: 500 11.5px/1.4 Figtree, sans-serif;
+  font: 500 11.5px/1.4 Manrope, sans-serif;
   color: rgba(var(--ink), 0.56);
 }
 
@@ -1899,7 +1899,7 @@ body:has(.activity-v4) .hdr::after {
 
 .sb-plan-vs-done .sb-plan-vs-note {
   margin: 3px 0 0;
-  font: 500 11px/1.3 Figtree, sans-serif;
+  font: 500 11px/1.3 Manrope, sans-serif;
   color: rgba(var(--ink), 0.56);
 }
 
@@ -1937,14 +1937,14 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .sb-plan-vs-done .sb-plan-vs-cell-label {
-  font: 600 9px/1 Figtree, sans-serif;
+  font: 600 9px/1 Manrope, sans-serif;
   letter-spacing: 0.11em;
   text-transform: uppercase;
   color: rgba(var(--ink), 0.56);
 }
 
 .sb-plan-vs-done .sb-plan-vs-cell-val {
-  font: 700 11.5px/1.3 Figtree, sans-serif;
+  font: 700 11.5px/1.3 Manrope, sans-serif;
   color: var(--tx);
 }
 
@@ -1961,7 +1961,7 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .sb-plan-vs-done .sb-plan-vs-cd-val {
-  font: 700 12.5px/1 Figtree, sans-serif;
+  font: 700 12.5px/1 Manrope, sans-serif;
   color: var(--tx);
 }
 
@@ -1983,6 +1983,6 @@ body:has(.activity-v4) .hdr::after {
 
 .sb-plan-vs-done .sb-plan-vs-foot {
   margin: 12px 0 0;
-  font: 500 11px/1.55 Figtree, sans-serif;
+  font: 500 11px/1.55 Manrope, sans-serif;
   color: rgba(var(--ink), 0.56);
 }

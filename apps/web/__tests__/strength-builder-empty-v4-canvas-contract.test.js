@@ -31,7 +31,7 @@ describe('strength builder · Б1 empty v4 canvas contract', () => {
   });
 
   it('uses the canvas geometry for scroll, card, actions, options and note', () => {
-    expect(css).toMatch(/\.sb-root\s*\{[\s\S]*font-family: Figtree, -apple-system, system-ui, sans-serif;/);
+    expect(css).toMatch(/\.sb-root\s*\{[\s\S]*font-family: Manrope, -apple-system, system-ui, sans-serif;/);
     expect(css).toMatch(/\.sb-head\.is-empty\s*\{[\s\S]*padding: 16px 18px 0;/);
     expect(css).toMatch(/\.sb-head\.is-empty \.sb-icon-btn--close\s*\{[\s\S]*width: 44px;[\s\S]*height: 44px;[\s\S]*margin: -10px 2px -10px -10px;/);
     expect(css).toMatch(/\.sb-empty-scroll\s*\{[\s\S]*padding: 7px 18px 18px;/);

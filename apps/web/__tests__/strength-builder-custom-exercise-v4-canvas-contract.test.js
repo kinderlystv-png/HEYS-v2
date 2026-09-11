@@ -31,7 +31,7 @@ describe('strength builder · Своё упражнение v4 canvas contract',
     expect(css).toMatch(/\.sb-root\.sb-screen:has\(\.sb-ex-name\) \.sb-head-title\s*\{[\s\S]*flex-direction: column;[\s\S]*gap: 3px;/);
     expect(css).toMatch(/\.sb-list\s*\{[\s\S]*overflow-y: auto;/);
     expect(css).toMatch(/\.sb-ex-name\s*\{[\s\S]*min-height: 44px;[\s\S]*border-radius: 14px;[\s\S]*padding: 0 14px;[\s\S]*margin-top: 12px;/);
-    expect(css).toMatch(/\.sb-ex-name\s*\{[\s\S]*font: 700 13px\/1 Figtree/);
+    expect(css).toMatch(/\.sb-ex-name\s*\{[\s\S]*font: 700 13px\/1 Manrope/);
     expect(css).toMatch(/\.sb-root\.sb-screen:has\(\.sb-ex-name\) \.sb-panel-column \.sb-finish\s*\{[\s\S]*margin-top: 12px;/);
     expect(css).toMatch(/\.sb-root\.sb-screen:has\(\.sb-ex-name\) \.sb-panel-column \.sb-btn\s*\{[\s\S]*margin-top: 9px;/);
     expect(css).toMatch(/\.sb-ex-unit-badges[\s\S]*gap: 6px;/);

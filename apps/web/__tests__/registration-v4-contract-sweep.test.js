@@ -115,7 +115,7 @@ describe('registration · сведение с контрактом v4', () => {
     });
     expect(nodes[ageIndex].props.style).toMatchObject({
       textAlign: 'center',
-      font: '700 24px/1 Figtree, system-ui, sans-serif',
+      font: '700 24px/1 Manrope, system-ui, sans-serif',
       color: '#8a4a20',
       marginTop: 14,
     });

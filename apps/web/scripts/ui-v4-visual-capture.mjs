@@ -36,8 +36,8 @@ const LOCAL_FIGTREE_PATH = path.join(
   'web',
   'public',
   'fonts',
-  'figtree',
-  'Figtree-Variable.ttf',
+  'manrope',
+  'Manrope-Variable.ttf',
 );
 const DRIFT_SCRIPT = path.join(ROOT, 'scripts', 'ui-v4-check-contract-drift.mjs');
 const cliArgs = process.argv.slice(2);
@@ -240,7 +240,7 @@ async function startCanvasServer() {
   const server = createServer((request, response) => {
     try {
       const url = new URL(request.url || '/', 'http://127.0.0.1');
-      if (url.pathname === '/__heys-font/Figtree-Variable.ttf') {
+      if (url.pathname === '/__heys-font/Manrope-Variable.ttf') {
         response.writeHead(200, {
           'content-type': 'font/ttf',
           'cache-control': 'no-store',
@@ -1876,9 +1876,9 @@ async function openCase(browser, item, snapshot, options = {}) {
           widgetCount: widgets.length,
           widgetTypes: widgets.map((widget) => widget.type),
           gridFontFamily: getComputedStyle(document.querySelector('.widgets-grid')).fontFamily,
-          gridUsesFigtree: getComputedStyle(document.querySelector('.widgets-grid')).fontFamily
+          gridUsesManrope: getComputedStyle(document.querySelector('.widgets-grid')).fontFamily
             .toLowerCase()
-            .startsWith('figtree'),
+            .startsWith('manrope'),
           canvasTokensPresent: ['1289', '1931', '3 приёма', '6,4', '8940', '5 из 7', 'низкий', '91,1', '115']
             .every((token) => (document.querySelector('.widgets-grid')?.textContent || '')
               .replace(/\s/g, '')
@@ -1888,7 +1888,7 @@ async function openCase(browser, item, snapshot, options = {}) {
       if (
         visualChecks.widgetCount !== 13
         || !visualChecks.canvasTokensPresent
-        || !visualChecks.gridUsesFigtree
+        || !visualChecks.gridUsesManrope
       ) {
         throw new Error(`Home filled fixture не соответствует Canvas-состоянию: ${JSON.stringify(visualChecks)}`);
       }
@@ -2392,8 +2392,8 @@ async function openCase(browser, item, snapshot, options = {}) {
         || visualChecks.card?.marginTop !== '12px'
         || visualChecks.card?.background !== 'rgb(247, 239, 226)'
         || visualChecks.card?.borderRadius !== '20px'
-        || visualChecks.title?.font !== '700 16px / 21.12px Figtree, sans-serif'
-        || visualChecks.body?.font !== '500 12px / 18.6px Figtree, sans-serif'
+        || visualChecks.title?.font !== '700 16px / 21.12px Manrope, sans-serif'
+        || visualChecks.body?.font !== '500 12px / 18.6px Manrope, sans-serif'
         // Кадр даёт вторичные чернила 56 %; литерал 60 % здесь сторожил
         // прежний цвет и падал ровно на его починке.
         || visualChecks.body?.color !== 'rgba(0, 0, 0, 0.56)'
@@ -2406,12 +2406,12 @@ async function openCase(browser, item, snapshot, options = {}) {
         || visualChecks.heroValue?.fontWeight !== '800'
         || visualChecks.heroValue?.lineHeight !== '30px'
         || visualChecks.heroValue?.fontVariantNumeric !== 'tabular-nums'
-        || visualChecks.heroCaption?.font !== '700 12px / 12px Figtree, sans-serif'
+        || visualChecks.heroCaption?.font !== '700 12px / 12px Manrope, sans-serif'
         || visualChecks.facts?.marginTop !== '12px'
         || visualChecks.lastFact?.borderBottom !== '0px none rgb(32, 30, 29)'
         || visualChecks.primary?.marginTop !== '14px'
         || visualChecks.secondary?.marginTop !== '9px'
-        || visualChecks.footnote?.font !== '500 11px / 17.05px Figtree, sans-serif'
+        || visualChecks.footnote?.font !== '500 11px / 17.05px Manrope, sans-serif'
         || visualChecks.footnote?.color !== 'rgba(0, 0, 0, 0.56)'
         || visualChecks.footnote?.marginTop !== '12px'
         || visualChecks.screen?.webkitFontSmoothing !== 'antialiased'
@@ -2623,7 +2623,7 @@ async function openCase(browser, item, snapshot, options = {}) {
       if (document.fonts?.ready) await document.fonts.ready;
       return {
         ready: document.fonts?.status === 'loaded',
-        figtree: document.fonts?.check?.('12px Figtree') ?? false,
+        figtree: document.fonts?.check?.('12px Manrope') ?? false,
       };
     });
     if (!item.preserveScroll) await page.evaluate(() => window.scrollTo(0, 0));
@@ -2758,7 +2758,7 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
     });
     await page.addStyleTag({
       content: [
-        `@font-face{font-family:Figtree;src:url("${canvasOrigin}/__heys-font/Figtree-Variable.ttf") format("truetype");font-weight:400 800;font-style:normal;font-display:block}`,
+        `@font-face{font-family:Manrope;src:url("${canvasOrigin}/__heys-font/Manrope-Variable.ttf") format("truetype");font-weight:400 800;font-style:normal;font-display:block}`,
         '*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}',
         'input,textarea{caret-color:transparent!important}',
       ].join(''),
@@ -2767,7 +2767,7 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
       if (document.fonts?.ready) await document.fonts.ready;
       return {
         ready: document.fonts?.status === 'loaded',
-        figtree: document.fonts?.check?.('12px Figtree') ?? false,
+        figtree: document.fonts?.check?.('12px Manrope') ?? false,
       };
     });
     // Кадр берётся по oid, когда он есть в пакете, и по метке, когда его нет:
@@ -3316,7 +3316,7 @@ async function main() {
           );
           if (!result.evidenceReady) {
             result.comparison.inconclusiveReason =
-              'Шрифт Figtree не подтверждён или во время capture были console/page errors.';
+              'Шрифт Manrope не подтверждён или во время capture были console/page errors.';
           }
           if (item.id === 'norm-correction-lowered-sand') {
             result.computedPair = compareNormCorrectionComputedPair(

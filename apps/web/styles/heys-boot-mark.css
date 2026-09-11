@@ -14,20 +14,20 @@ html[data-theme="dark"] { background: var(--v4-bg, #141210); }
 html[data-theme="blue"], html[data-theme-id="blue"] { background: var(--v4-bg, #ffffff); }
 html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: var(--v4-bg, #0d1a26); }
 
-/* Буквы в загрузчике больше нет (решение владельца 25 августа), но Figtree тут
+/* Буквы в загрузчике больше нет (решение владельца 25 августа), но Manrope тут
    всё ещё нужен: подписи ступеней холодного старта, кнопка «Повторить» и строка
    про куратора набраны им. Объявление продублировано здесь намеренно и слово в
    слово повторяет то, что стоит в 002-ui-v4-palette-roles.css: этот файл —
    критический стиль до первого пейнта, и текст ступеней не должен зависеть от
    того, дойдёт ли до браузера чужой файл. Один и тот же URL — значит один
    запрос за шрифтом, а не два. Caprasimo не возвращается: контракт app-splash
-   «что в иконке» держит Figtree весом 800. Роли v4 сюда всё так же не годятся,
+   «что в иконке» держит Manrope весом 800. Роли v4 сюда всё так же не годятся,
    поэтому цвета заданы литералами палитр v4-canvas.css. */
 @font-face {
-    font-family: Figtree;
-    src: url('/fonts/figtree/Figtree-Variable.ttf') format('truetype');
+    font-family: Manrope;
+    src: url('/fonts/manrope/Manrope-Variable.ttf') format('truetype');
     font-style: normal;
-    font-weight: 300 900;
+    font-weight: 200 800;
     font-display: swap;
 }
 
@@ -58,7 +58,7 @@ html[data-theme="blue-dark"], html[data-theme-id="blue-dark"] { background: var(
     min-height: 0;
     display: block;
     padding: 0;
-    font-family: Figtree, system-ui, -apple-system, sans-serif;
+    font-family: Manrope, system-ui, -apple-system, sans-serif;
     color: var(--boot-ink);
     background: inherit;
     pointer-events: auto;
@@ -205,7 +205,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
    записала — строка «вид диска в загрузчике» теперь просит ровно такой вид
    («Буквы в загрузчике нет вовсе, порога 300 мс нет»), расхождения больше нет.
    Диск при этом не менялся: 56 px, радиус 999, заливка --c2 (--boot-disc),
-   обводки и тени нет. Figtree остался у знака в иконке приложения — там шрифт
+   обводки и тени нет. Manrope остался у знака в иконке приложения — там шрифт
    менялся по другой строке и решение владельца его не отменяет.
    Переменная --boot-letter осталась объявленной во всех четырёх наборах: она
    пришла отдельным коммитом и вне этой задачи. */
@@ -280,20 +280,20 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
    якорем .heys-boot-mark__sign, поэтому margin-top здесь 0. */
 .heys-boot-mark__slow-text {
     margin-top: 0;
-    font: 700 15px/1.35 Figtree, system-ui, sans-serif;
+    font: 700 15px/1.35 Manrope, system-ui, sans-serif;
     color: var(--boot-muted);
     text-align: center;
     text-wrap: pretty;
 }
 .heys-boot-mark__title {
     margin-top: 0;
-    font: 700 15px/1.35 Figtree, system-ui, sans-serif;
+    font: 700 15px/1.35 Manrope, system-ui, sans-serif;
     text-align: center;
     text-wrap: pretty;
 }
 .heys-boot-mark__text {
     margin-top: 7px;
-    font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+    font: 500 12px/1.5 Manrope, system-ui, sans-serif;
     color: var(--boot-muted);
     text-align: center;
     text-wrap: pretty;
@@ -310,7 +310,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
     border-radius: 999px;
     background: var(--boot-disc);
     color: var(--boot-ink-58);
-    font: 700 13px/1 Figtree, system-ui, sans-serif;
+    font: 700 13px/1 Manrope, system-ui, sans-serif;
     cursor: pointer;
     text-align: center;
     text-decoration: none;
@@ -329,7 +329,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
    под кнопкой, 11,5/500 вторичным. */
 .heys-boot-mark__curator {
     margin-top: 12px;
-    font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+    font: 500 11.5px/1.45 Manrope, system-ui, sans-serif;
     color: var(--boot-muted);
     text-align: center;
     text-decoration: underline;
@@ -355,7 +355,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
     border-radius: 999px;
     background: var(--boot-disc);
     color: var(--boot-ink-58);
-    font: 700 13px/1 Figtree, system-ui, sans-serif;
+    font: 700 13px/1 Manrope, system-ui, sans-serif;
     text-decoration: none;
     box-sizing: border-box;
 }
@@ -367,7 +367,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
 .heys-boot-mark.is-fail-again .heys-boot-mark__status { order: 5; }
 .heys-boot-mark__status {
     margin-top: 12px;
-    font: 500 12px/1.4 Figtree, system-ui, sans-serif;
+    font: 500 12px/1.4 Manrope, system-ui, sans-serif;
     color: var(--boot-muted);
     display: none;
 }
@@ -405,7 +405,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
     padding: max(96px, calc(45% - 28px)) 26px 0;
     min-height: 240px;
     flex: 1;
-    font-family: Figtree, system-ui, -apple-system, sans-serif;
+    font-family: Manrope, system-ui, -apple-system, sans-serif;
     color: var(--boot-ink);
     /* Тот же знак ожидания, то же правило: текст не выделяется. */
     user-select: none;
@@ -447,13 +447,13 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
    12/500 тоном чернил 50 %. */
 .heys-wait-mark__title {
     margin-top: 18px;
-    font: 700 15px/1.35 Figtree, system-ui, sans-serif;
+    font: 700 15px/1.35 Manrope, system-ui, sans-serif;
     text-align: center;
     text-wrap: pretty;
 }
 .heys-wait-mark__text {
     margin-top: 7px;
-    font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+    font: 500 12px/1.5 Manrope, system-ui, sans-serif;
     color: var(--boot-muted);
     text-align: center;
     text-wrap: pretty;
@@ -472,7 +472,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
     border-radius: 999px;
     background: var(--boot-btn);
     color: var(--boot-btn-ink);
-    font: 700 13px/1 Figtree, system-ui, sans-serif;
+    font: 700 13px/1 Manrope, system-ui, sans-serif;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -484,7 +484,7 @@ html[data-theme="blue-dark"] .heys-wait-mark-overlay { background-color: var(--v
     min-height: 44px;
     background: transparent;
     color: var(--boot-muted);
-    font: 700 12px/1 Figtree, system-ui, sans-serif;
+    font: 700 12px/1 Manrope, system-ui, sans-serif;
 }
 .heys-wait-mark--button {
     display: inline-flex;

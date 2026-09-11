@@ -49,7 +49,7 @@
   padding: 0 6px;
   border: none;
   background: none;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   cursor: pointer;
 
@@ -169,13 +169,13 @@
 }
 
 .insights-priority-action__text {
-  font: 600 12.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .insights-priority-action__freeze-label {
   flex: none;
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -255,7 +255,7 @@
   border: none;
   border-radius: 0;
   background: none;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
@@ -393,13 +393,13 @@
 }
 
 .insights-v4-weight__key {
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.04em;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-weight__value {
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ok-text, #5c6a45);
   font-variant-numeric: tabular-nums;
 }
@@ -428,7 +428,7 @@
 }
 
 .insights-v4-weight__pace {
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-variant-numeric: tabular-nums;
 }
@@ -450,7 +450,7 @@
 }
 
 .heys-score-insights-v4__state {
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -458,7 +458,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
 }
 
 .heys-score-insights-v4__trend--up {
@@ -507,7 +507,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: 9px;
-  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 9.5px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.02em;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -518,7 +518,7 @@
 
 .heys-score-insights-v4__story {
   margin: 12px 0 0;
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -536,13 +536,13 @@
 }
 
 .heys-score-insights-v4__key {
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.04em;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .heys-score-insights-v4__contribution {
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   font-variant-numeric: tabular-nums;
 }
@@ -594,7 +594,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: 11px;
-  font: 500 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -609,7 +609,7 @@
   border: 0;
   border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: none;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: left;
   cursor: pointer;
@@ -714,7 +714,7 @@
   display: inline-block;
   padding: 4px 8px;
   border-radius: 999px;
-  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  font: 700 9px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   /* Бейдж риска срыва: запасное #b3402a — тон «разрушающего действия», и по
@@ -725,7 +725,7 @@
 
 /* Элемент 10: «окно — вечер» — data-текст 56 %. */
 .insights-v4-attention__risk-window {
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -737,7 +737,7 @@
 }
 
 .insights-v4-window__label {
-  font: 500 9.5px/1.2 Figtree, system-ui, sans-serif;
+  font: 500 9.5px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   max-width: 64px;
 }
@@ -748,7 +748,7 @@
   border: none;
   border-radius: 999px;
   background: none;
-  font: 600 11.5px/1.1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1.1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
   cursor: pointer;
   display: inline-flex;
@@ -768,7 +768,7 @@
 }
 
 .insights-v4-window__hint {
-  font: 500 9px/1 Figtree, system-ui, sans-serif;
+  font: 500 9px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
@@ -800,13 +800,13 @@
 .insights-v4-patterns__title {
   flex: 1;
   min-width: 0;
-  font: 700 12.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-patterns__support {
   flex: none;
-  font: 500 11px/1.2 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
@@ -827,7 +827,7 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.04em;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 12px;
@@ -860,7 +860,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.04em;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 12px;
@@ -872,7 +872,7 @@
 
 .meal-rec-v4__title {
   /* Окно времени 13,5/700 по контракту: 14 выбивалось из шкалы зоны. */
-  font: 700 13.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 13.5px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   margin-bottom: 12px;
 }
@@ -901,14 +901,14 @@
      Запись тоном чернил сама переворачивается в тёмных темах — --v4-ink там
      светлый. */
   box-shadow: inset 0 0 0 1px var(--v4-track, rgba(0, 0, 0, 0.12));
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink, #201e1d);
 }
 
 .meal-rec-v4__why {
   margin-top: 12px;
-  font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -924,7 +924,7 @@
   border-radius: 14px;
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #fff5ef);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -939,7 +939,7 @@
   margin-top: 4px;
   border: none;
   background: none;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   position: relative;
@@ -962,7 +962,7 @@
 
 .meal-rec-v4__how-line {
   margin: 0 0 8px;
-  font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -975,7 +975,7 @@
    подряд, и глаз не понимал, который из них главный. Начертание остаётся
    поясняющим, тон следует актуальной data-роли 56 %. */
 .insights-v4-nutrition__rhythm-line {
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-bottom: 10px;
 }
@@ -991,7 +991,7 @@
    и это разобрано вердиктом: кадр красит правое акцентом, потому что рисует
    границу окна («до 20:30»), а продукт показывает время последнего приёма. */
 .insights-v4-nutrition__rhythm-time {
-  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 9.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -1024,7 +1024,7 @@
 .insights-v4-nutrition__bzhu-name {
   flex: none;
   width: 96px;
-  font: 600 11.5px/1.2 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1064,7 +1064,7 @@
   flex: none;
   min-width: 58px;
   text-align: right;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -1076,7 +1076,7 @@
 }
 
 .insights-v4-nutrition__legend-item {
-  font: 500 10px/1 Figtree, system-ui, sans-serif;
+  font: 500 10px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   display: inline-flex;
   align-items: center;
@@ -1122,7 +1122,7 @@
 
 .insights-v4-stub__title {
   /* Кадр «новый пользователь», элемент 08: 700 16/1,35. */
-  font: 700 16px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 16px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   margin: 8px 0 14px;
 }
@@ -1148,7 +1148,7 @@
 .insights-v4-stub__count {
   margin-top: 8px;
   text-align: right;
-  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  font: 700 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
@@ -1167,7 +1167,7 @@
   gap: 12px;
   padding: 13px 0;
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1210,7 +1210,7 @@
 .insights-v4-pheno__name {
   flex: none;
   width: 86px;
-  font: 600 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 11px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1237,7 +1237,7 @@
   flex: none;
   width: 74px;
   text-align: right;
-  font: 500 10.5px/1.2 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1249,7 +1249,7 @@
 .insights-v4-pheno__note,
 .insights-v4-pheno__locked {
   margin: 10px 0 0;
-  font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
@@ -1268,7 +1268,7 @@
 .insights-v4-pheno__use {
   padding: 12px 0;
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
-  font: 500 12px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1304,7 +1304,7 @@
   align-items: baseline;
   gap: 10px;
   padding: 11px 0 7px;
-  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  font: 700 9px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -1322,7 +1322,7 @@
 .insights-v4-thresh__name {
   flex: 1;
   min-width: 0;
-  font: 600 11.5px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1335,7 +1335,7 @@
   flex: none;
   width: 56px;
   text-align: right;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-act-text, #8a4a20);
 }
@@ -1344,7 +1344,7 @@
   flex: none;
   width: 52px;
   text-align: right;
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
@@ -1375,7 +1375,7 @@
    человека действительно узнала. */
 .insights-v4-thresh__count {
   flex: none;
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
@@ -1387,14 +1387,14 @@
 
 .insights-v4-thresh__why {
   flex: none;
-  font: 600 10.5px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
 .insights-v4-thresh__note {
   margin-top: 10px;
   margin-bottom: 18px;
-  font: 500 10.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
   text-wrap: pretty;
 }
@@ -1404,19 +1404,19 @@
 /* Элемент 24: проза «Где они работают» — 500 12/1,55. */
 .insights-v4-thresh__where {
   margin-top: 2px;
-  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
 
 .insights-v4-stub__all-done {
   margin: 0;
-  font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ok-text, #5c6a45);
 }
 
 .insights-v4-nutrition__rhythm-more {
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
@@ -1468,7 +1468,7 @@
 .insights-v4-stub__ladder-day {
   flex: none;
   min-width: 22px;
-  font: 800 13px/1 Figtree, system-ui, sans-serif;
+  font: 800 13px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-act-text, #8a4a20);
 }
@@ -1481,7 +1481,7 @@
   flex: 1;
   min-width: 0;
   /* Элемент 27: 500 12/1,45. */
-  font: 500 12px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1504,7 +1504,7 @@
   background: var(--v4-card, #f7efe2);
   border-radius: 16px;
   padding: 14px 16px;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-align: left;
 }
@@ -1539,7 +1539,7 @@
 .insights-v4-whatif__note,
 .insights-v4-whatif__locked {
   margin: 0;
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1563,12 +1563,12 @@
 
 .insights-v4-whatif__title {
   margin: 0;
-  font: 700 15px/1 Figtree, sans-serif;
+  font: 700 15px/1 Manrope, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .insights-v4-whatif__place {
-  font: 500 11px/1 Figtree, sans-serif;
+  font: 500 11px/1 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1594,7 +1594,7 @@
   border-radius: 999px;
   background: var(--v4-surface, #f7efe2);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-  font: 600 12px/1 Figtree, sans-serif;
+  font: 600 12px/1 Manrope, sans-serif;
   cursor: pointer;
 }
 
@@ -1617,7 +1617,7 @@
 }
 
 .insights-v4-whatif__scenario-title {
-  font: 700 13.5px/1.35 Figtree, sans-serif;
+  font: 700 13.5px/1.35 Manrope, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1631,7 +1631,7 @@
 .insights-v4-whatif__parameter-value {
   flex: none;
   max-width: 48%;
-  font: 600 11px/1 Figtree, sans-serif;
+  font: 600 11px/1 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1660,14 +1660,14 @@
 }
 
 .insights-v4-whatif__score-label {
-  font: 600 10.5px/1 Figtree, sans-serif;
+  font: 600 10.5px/1 Manrope, sans-serif;
   letter-spacing: 0.04em;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .insights-v4-whatif__score-before,
 .insights-v4-whatif__score-after {
-  font: 800 22px/1 Figtree, sans-serif;
+  font: 800 22px/1 Manrope, sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1676,7 +1676,7 @@
 }
 
 .insights-v4-whatif__score-arrow {
-  font: 600 13px/1 Figtree, sans-serif;
+  font: 600 13px/1 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1703,7 +1703,7 @@
 
 .insights-v4-whatif__unavailable {
   margin: 16px 0 0;
-  font: 600 11px/1.45 Figtree, sans-serif;
+  font: 600 11px/1.45 Manrope, sans-serif;
   color: var(--v4-bad-text, #9b4635);
 }
 
@@ -1726,7 +1726,7 @@
   border-bottom: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
   background: transparent;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-  font: 600 12.5px/1 Figtree, sans-serif;
+  font: 600 12.5px/1 Manrope, sans-serif;
   text-align: left;
   cursor: pointer;
 }
@@ -1742,7 +1742,7 @@
 
 .insights-v4-whatif__explanation {
   margin: 12px 0 0;
-  font: 500 11px/1.5 Figtree, sans-serif;
+  font: 500 11px/1.5 Manrope, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -1752,7 +1752,7 @@
   padding: 0;
   border: none;
   background: none;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   cursor: pointer;
   text-align: left;
@@ -1795,14 +1795,14 @@
 
 /* Кадры раскрывашек, элемент 04: 700 16/1,3. */
 .insights-v4-sheet__title {
-  font: 700 16px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 16px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   margin-bottom: 12px;
 }
 
 .insights-v4-sheet__text {
   margin: 0 0 10px;
-  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   /* Абзацы листа состоят из чисел («больше 1500 ккал не копим», «от 80, от
      100, от 150», «возвращаем 75 %»), и человек сравнивает их между собой
@@ -1822,7 +1822,7 @@
    тона, которого нет ни в одном наборе. */
 .insights-v4-sources__tier {
   margin: 20px 0 10px;
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-act-text, #8a4a20);
@@ -1850,14 +1850,14 @@
 }
 
 .insights-v4-sources__name {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   text-decoration: none;
 }
 
 /* Сила источника — data-текст актуальной лестницы, 56 %. */
 .insights-v4-sources__strength {
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1869,7 +1869,7 @@
   border-radius: 14px;
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #fff5ef);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 

@@ -203,7 +203,7 @@ const MAIN = [
 // нарисован в подложке каждого листа и каждой шторки. Пара на форму закрывает
 // его везде, где форма в кадре одна.
 const SHAPES = [
-  ['шрифт 600 26px/1 Figtree', '.widget-v4-hero-num__val', ['fontWeight', 'fontSize', 'lineHeight']],
+  ['шрифт 600 26px/1 Manrope', '.widget-v4-hero-num__val', ['fontWeight', 'fontSize', 'lineHeight']],
   ['радиус 6px 6px 3px 3px, фон var(--acs)', '.widget-bd-sheet__bar > i', ['radius', 'background']],
   ['высота 5px, радиус 999px, фон var(--gr2)', '.widget-bd-sheet__hero-track-fill', ['height', 'radius', 'background']],
   ['высота 8px, радиус 999px, фон var(--acs)', '.widget-bd-sheet__wave-week-seg.is-active', ['height', 'radius']]
@@ -234,9 +234,9 @@ function shapePairs(razbor, stopFrames) {
 const SHEET_TAIL = [
   ['отступ сверху 16px, направление column, зазор 11px', '.widget-bd-sheet__stats', ['marginTop', 'direction', 'gap']],
   ['выравнивание baseline, распределение space-between, зазор 12px', '.widget-bd-sheet__stat-row', ['align', 'justify', 'gap']],
-  ['шрифт 500 11px/1.3 Figtree, цвет var(--ink-2)', '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  ['шрифт 500 11.5px/1.4 Figtree, цвет var(--ink-2), отступ сверху 14px', '.widget-bd-sheet__norm', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
-  ['моноцифры: флекс none, шрифт 700 12px/1 Figtree, цвет var(--tx)', '.widget-bd-sheet__stat-value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['шрифт 500 11px/1.3 Manrope, цвет var(--ink-2)', '.widget-bd-sheet__stat-label', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  ['шрифт 500 11.5px/1.4 Manrope, цвет var(--ink-2), отступ сверху 14px', '.widget-bd-sheet__norm', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
+  ['моноцифры: флекс none, шрифт 700 12px/1 Manrope, цвет var(--tx)', '.widget-bd-sheet__stat-value', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   ['высота от 48px, радиус 999px, фон var(--acs), цвет var(--on-acs)', ['.widget-bd-sheet__chip', '.widget-bd-sheet__action'], ['minHeight', 'radius', 'background', 'color', 'align', 'justify', 'fontWeight', 'fontSize', 'lineHeight']]
 ];
 
@@ -361,7 +361,7 @@ const WAVE_SLEEP = [
     '.widget-v4-sleep-window__target', ['radius', 'background']],
   ['Шторка · Сон', 'позиция absolute, ширина 57%, радиус 999px', 0,
     '.widget-v4-sleep-window__actual', ['radius', 'background']],
-  ['Шторка · Сон', 'распределение space-between, шрифт 600 9px/1 Figtree, цвет var(--ink-2), отступ сверху 7px', 0,
+  ['Шторка · Сон', 'распределение space-between, шрифт 600 9px/1 Manrope, цвет var(--ink-2), отступ сверху 7px', 0,
     '.widget-v4-sleep-window__labels', ['justify', 'fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']]
 ];
 

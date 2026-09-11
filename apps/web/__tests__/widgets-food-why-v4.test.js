@@ -50,11 +50,11 @@ describe('Качество еды · Что снизило — сведённы�
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Качество еды · Что снизило · 03')).toBe('«Качество еды» — ключ');
     expect(contractValue(canvas, 'Качество еды · Что снизило · 04'))
-      .toBe('«8 из 10» — моноцифры: шрифт 600 9px/1 Figtree, цвет var(--ink-2)');
+      .toBe('«8 из 10» — моноцифры: шрифт 600 9px/1 Manrope, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Качество еды · Что снизило · 05'))
       .toBe('выравнивание baseline, зазор 4px, отступ сверху auto');
     expect(contractValue(canvas, 'Качество еды · Что снизило · 06'))
-      .toBe('«−2» — моноцифры: шрифт 600 19px/1 Figtree, трекинг -.02em, цвет var(--tx)');
+      .toBe('«−2» — моноцифры: шрифт 600 19px/1 Manrope, трекинг -.02em, цвет var(--tx)');
     expect(contractValue(canvas, 'Качество еды · Что снизило · текст'))
       .toBe('46 › Качество еды › 8 из 10 › −2 › сладкое к кофе');
   });

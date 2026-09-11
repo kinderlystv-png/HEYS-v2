@@ -13,7 +13,7 @@
   z-index: 1100;
   padding: 0;
   animation: slideUpBanner 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font-family: Manrope, "HEYS Manrope", system-ui, sans-serif;
   pointer-events: none;
 }
 
@@ -225,7 +225,7 @@
   background: var(--scrim, rgba(42, 26, 12, 0.5));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
-  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font-family: Manrope, "HEYS Manrope", system-ui, sans-serif;
   animation: iosHomeInstallFadeIn 0.18s ease-out;
 }
 
@@ -695,7 +695,7 @@
   max-width: min(390px, 100%);
   max-height: calc(100dvh - var(--mc-daily-inset-top, 44px) - 12px - var(--safe-area-bottom));
   height: min(844px, calc(100dvh - var(--mc-daily-inset-top, 44px) - 12px - var(--safe-area-bottom)));
-  font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font-family: Manrope, "HEYS Manrope", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   overflow: hidden;
 }
@@ -795,7 +795,7 @@
 
 .mc-recorded-title {
   margin-top: 16px;
-  font: 700 16px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 16px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -805,7 +805,7 @@
 
 .mc-recorded .mc-recorded-sub {
   margin-top: 7px;
-  font: 500 12px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.5 Manrope, system-ui, sans-serif;
   color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.5);
 }
 
@@ -823,7 +823,7 @@
   justify-content: space-between;
   align-items: baseline;
   margin-top: 12px;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -844,7 +844,7 @@
 }
 
 .mc-recorded-row__mark {
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--v4-act-text, #8a4a20);
@@ -853,7 +853,7 @@
 .mc-recorded .mc-recorded-hint {
   margin-top: 11px;
   text-align: center;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -903,7 +903,7 @@
   min-height: 48px;
   border-radius: 999px;
   border: none;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -933,12 +933,12 @@
 }
 
 .mc-daily-header-caption {
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-daily-header-caption--layer {
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -968,7 +968,7 @@
 }
 
 .mc-step-kicker {
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.02em;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.6));
   /* Вопрос чек-ина — служебный текст, не выделяется (см. .mc-step-title). */
@@ -978,7 +978,7 @@
 
 .mc-hero-number {
   margin-top: 14px;
-  font: 600 50px/0.9 Figtree, system-ui, sans-serif;
+  font: 600 50px/0.9 Manrope, system-ui, sans-serif;
   letter-spacing: -0.04em;
   color: var(--v4-sand-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
@@ -1020,7 +1020,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   /* Подпись шкалы (настроение/самочувствие/стресс) — подпись оценки, не
      выделяется (см. .mc-step-title). */
@@ -1029,7 +1029,7 @@
 }
 
 .mc-scale-value {
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   user-select: none;
   -webkit-user-select: none;
@@ -1060,14 +1060,14 @@
 }
 
 .mc-weight-hero-value {
-  font: 600 58px/0.9 Figtree, system-ui, sans-serif;
+  font: 600 58px/0.9 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   letter-spacing: -0.045em;
   font-variant-numeric: tabular-nums;
 }
 
 .mc-weight-hero-unit {
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
@@ -1076,7 +1076,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 12px;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   /* Роль --gr канваса (кадр «Чек-ин · вес»: строка динамики color: var(--gr)).
      Песочное семейство стояло здесь только потому, что у --v4-ok-text в
      каноничной палитре было своё значение; палитры больше нет. */
@@ -1121,18 +1121,18 @@
 
 /* Тот же кадр, элементы 11 и 19: обе строки — data-подписи самого шага. */
 .mc-weight-hero > .mc-recorded-hint {
-  font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-weight-step > .mc-recorded-hint {
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-kilo-label,
 .mc-sleep-label {
-  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  font: 600 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -1145,7 +1145,7 @@
 }
 
 .mc-weight-comma {
-  font: 700 24px/1 Figtree, system-ui, sans-serif;
+  font: 700 24px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   padding: 0 1px;
 }
@@ -1174,13 +1174,13 @@
 
 .mc-sleep-norm {
   margin-top: 12px;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
 
 .mc-steps-unit {
-  font: 600 13px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font: 600 13px/1 Manrope, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
@@ -1194,7 +1194,7 @@
 }
 
 .mc-steps-hero-value {
-  font: 600 54px/0.9 Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font: 600 54px/0.9 Manrope, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: -0.045em;
   color: var(--v4-sand-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
@@ -1214,7 +1214,7 @@
   padding: 0;
   border: none;
   background: transparent;
-  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  font: 700 9px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--v4-sand-act-text, #8a4a20);
@@ -1243,7 +1243,7 @@
   border-radius: 999px;
   min-height: 44px;
   cursor: pointer;
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
 }
 
 .mc-pill--act {
@@ -1305,13 +1305,13 @@
 }
 
 .mc-rest-layer-title {
-  font: 700 18px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 18px/1.25 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .mc-rest-layer-hint {
   margin-top: 6px;
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -1337,7 +1337,7 @@
 }
 
 .mc-rest-measure-label {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -1356,7 +1356,7 @@
   padding: 0;
   margin: 0;
   text-align: right;
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
   outline: none;
@@ -1368,7 +1368,7 @@
 }
 
 .mc-rest-measure-unit {
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   flex: none;
 }
@@ -1382,7 +1382,7 @@
 }
 
 .mc-rest-measure-side-label {
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1398,7 +1398,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-sand-surface, #f7efe2);
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
 }
@@ -1427,7 +1427,7 @@
 
 .mc-rest-empty-note {
   margin-top: 14px;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -1443,7 +1443,7 @@
 /* Подпись порога справа от заголовка: тон приглушённый, а не зелёный, как у
    серии холодного душа, — она напоминает правило, а не хвалит за серию. */
 .mc-rest-coffee-note {
-  font: 500 11px/1.2 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
   flex: none;
@@ -1506,7 +1506,7 @@
    и кикер сняты. */
 .mc-rest-overdue-badge {
   margin-left: auto;
-  font: 700 10px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 10px/1.2 Manrope, system-ui, sans-serif;
   color: var(--v4-warn-text, #a1471c);
   white-space: nowrap;
   flex: none;
@@ -1525,13 +1525,13 @@
 }
 
 .mc-rest-consent-card-title {
-  font: 600 12.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .mc-rest-consent-card-body {
   margin-top: 4px;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -1545,7 +1545,7 @@
 }
 
 .mc-rest-consent-copy {
-  font: 500 11.5px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.45 Manrope, system-ui, sans-serif;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 78%, transparent);
 }
 
@@ -1561,7 +1561,7 @@
   min-height: 44px;
   border: none;
   border-radius: 999px;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -1597,13 +1597,13 @@
 }
 
 .mc-steps-refeed-title {
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .mc-steps-refeed-hint {
   margin-top: 3px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   max-width: 220px;
 }
@@ -1623,7 +1623,7 @@
   border: none;
   background: transparent;
   padding: 0;
-  font: 600 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
 }
@@ -1646,7 +1646,7 @@
   border-radius: 16px;
   padding: 12px 14px;
   margin-top: 22px;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.5);
   text-wrap: pretty;
 }
@@ -1657,7 +1657,7 @@
   border: none;
   border-radius: 12px;
   padding: 10px 12px;
-  font: 500 13px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 13px/1.4 Manrope, system-ui, sans-serif;
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink, #201e1d);
 }
@@ -1671,7 +1671,7 @@
 
 .mc-rest-cold-title,
 .mc-rest-card-title {
-  font: 700 16px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 16px/1.25 Manrope, system-ui, sans-serif;
   /* Стоял литерал var(--v4-ink, #201e1d) — чернила песочного светлого. Карточка шага фон по
      режиму меняет (--v4-surface даёт #23201b в тёмных), а заголовок нет: в
      обоих тёмных наборах разница яркости была 2, и заголовки шагов чек-ина
@@ -1683,7 +1683,7 @@
 }
 
 .mc-rest-cold-streak {
-  font: 700 10px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 10px/1.2 Manrope, system-ui, sans-serif;
   /* Роль --gr канваса (строка «вид карточки шага»: серия справа тоном --gr).
      Строка «палитры» того же контракта говорит, что тёмная, синяя и
      сине-тёмная собираются подстановкой токенов, — значит роль набора, а не
@@ -1697,7 +1697,7 @@
 .mc-rest-card-hint,
 .mc-recorded-hint,
 .mc-recorded-sub {
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 5px;
 }
@@ -1711,7 +1711,7 @@
 
 .mc-mood-step > .mc-recorded-hint {
   margin-top: 12px;
-  font: 500 10.5px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1720,12 +1720,12 @@
 }
 
 .mc-steps-slider-container > .mc-recorded-hint {
-  font: 600 10.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 .mc-steps-step > .mc-recorded-hint {
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1772,7 +1772,7 @@
   text-align: left;
   cursor: pointer;
   margin: 0;
-  font: 600 12.5px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.3 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.55);
 }
 
@@ -1825,7 +1825,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-chip, #efe3cf);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
 }
@@ -1861,19 +1861,19 @@
 }
 
 .mc-rest-cycle-week-title {
-  font: 700 16px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 16px/1.25 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .mc-rest-cycle-week-badge {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   white-space: nowrap;
 }
 
 .mc-rest-cycle-week-hint {
   margin-top: 5px;
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -1887,7 +1887,7 @@
 .mc-rest-cycle-none-btn {
   border: none;
   background: transparent;
-  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  font: 700 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   min-height: 44px;
@@ -1898,7 +1898,7 @@
 
 .mc-rest-cycle-tier {
   margin: 16px 0 8px;
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-sand-act-text, #8a4a20);
@@ -1917,7 +1917,7 @@
   border-radius: 14px;
   /* Строка «вид · выбор дня»: внутри карточки --c1 (.day.wl) клетка на грунт --bg. */
   background: var(--v4-bg, #fffaf1);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
@@ -1943,7 +1943,7 @@
   min-height: 44px;
   border: none;
   border-radius: 999px;
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -1960,7 +1960,7 @@
 
 .mc-rest-cycle-auto-hint {
   margin-top: 10px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.45);
 }
 
@@ -1975,7 +1975,7 @@
    .mc-rest-row роняет пятнадцать пар разбора. */
 .mc-rest-row--cold .mc-rest-card-title,
 .mc-rest-row--measurements-deferred .mc-rest-card-title {
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -2007,14 +2007,14 @@
 
 .mc-rest-cycle-ended-note {
   margin-top: 5px;
-  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
 /* В свёрнутой строке цикла пояснение компактнее общего текста карточки. */
 .mc-rest-row--cycle .mc-rest-card-hint {
   margin-top: 3px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
 }
 
 .profile-v4-cycle-toggle {
@@ -2032,12 +2032,12 @@
 }
 
 .profile-v4-cycle-toggle__title {
-  font: 600 13px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 13px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .profile-v4-cycle-toggle__hint {
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.45);
 }
 
@@ -2108,7 +2108,7 @@
 
 .cycle-card-v4__title,
 .cycle-card-v4__phase {
-  font: 600 12.5px/1.3 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -2122,7 +2122,7 @@
 .cycle-card-v4__action {
   border: none;
   background: transparent;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
   min-height: 44px;
@@ -2132,7 +2132,7 @@
 }
 
 .cycle-card-v4__day {
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.45);
 }
 
@@ -2148,7 +2148,7 @@
   border: none;
   border-radius: 14px;
   background: var(--v4-sand-surface-soft, #fffaf1);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.5);
   cursor: pointer;
 }
@@ -2172,7 +2172,7 @@
   padding: 0 10px;
   border-radius: 999px;
   background: var(--v4-sand-surface, #f7efe2);
-  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  font: 700 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
@@ -2201,14 +2201,14 @@
 
 .cycle-card-v4__date-confirm-title {
   display: block;
-  font: 600 12px/1.35 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .cycle-card-v4__date-confirm-sub {
   display: block;
   margin-top: 4px;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -2219,7 +2219,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-sand-surface-soft, #fffaf1);
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   cursor: pointer;
 }
@@ -2234,7 +2234,7 @@
 .cycle-card-v4__cancel {
   border: none;
   background: transparent;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.45);
   cursor: pointer;
   min-height: 44px;
@@ -2247,7 +2247,7 @@
 .cycle-card-v4__reset {
   border: none;
   background: transparent;
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   cursor: pointer;
   min-height: 44px;
@@ -2257,20 +2257,20 @@
 }
 
 .cycle-card-v4__actions .cycle-card-v4__action {
-  font: 700 11.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 11.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
 }
 
 .cycle-card-v4__day29-title,
 .cycle-card-v4__warn-title {
-  font: 700 12.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .cycle-card-v4__day29-sub,
 .cycle-card-v4__warn-text {
   margin-top: 7px;
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -2289,13 +2289,13 @@
 }
 
 .cycle-card-v4__insight-title {
-  font: 700 12px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 12px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ok-text, #5c6a45);
 }
 
 .cycle-card-v4__insight-text {
   margin-top: 7px;
-  font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -2310,7 +2310,7 @@
   justify-content: space-between;
   gap: 12px;
   padding: 8px 0;
-  font: 500 12.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.42));
 }
 
@@ -2327,7 +2327,7 @@
 }
 
 .cycle-card-v4__norm-pill {
-  font: 700 11px/1 Figtree, system-ui, sans-serif;
+  font: 700 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, var(--v4-sand-act-text, #8a4a20));
 }
 
@@ -2342,7 +2342,7 @@
   min-height: 48px;
   border: none;
   border-radius: 999px;
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -2393,13 +2393,13 @@
 }
 
 .cycle-v4-dialog__title {
-  font: 700 15px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 15px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .cycle-v4-dialog__text {
   margin-top: 10px;
-  font: 500 12px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.55 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.55);
 }
 
@@ -2412,7 +2412,7 @@
 }
 
 .cycle-date-picker-sheet__head b {
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -2458,7 +2458,7 @@
 
 .cycle-date-picker-sheet__month {
   margin-bottom: 11px;
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -2475,7 +2475,7 @@
   border: none;
   border-radius: 11px;
   background: var(--v4-c1, var(--v4-surface, #f7efe2));
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
   cursor: pointer;
@@ -2510,13 +2510,13 @@
 }
 
 .cycle-date-picker-sheet__selected-title {
-  font: 600 12.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .cycle-date-picker-sheet__selected-copy {
   margin-top: 4px;
-  font: 500 11px/1.45 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -2537,7 +2537,7 @@
 .date-picker-forecast-line {
   display: block;
   margin-top: 2px;
-  font: 600 10.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -2549,7 +2549,7 @@
 
 .reports-v4-weight-cycle-footnote {
   margin-top: 8px;
-  font: 500 10.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 10.5px/1.4 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.42);
 }
 
@@ -2566,7 +2566,7 @@
 .mc-rest-cold-time .mc-sleep-label,
 .mc-rest-cold-when-label {
   margin: 0;
-  font: 600 10px/1 Figtree, system-ui, sans-serif;
+  font: 600 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(0, 0, 0, 0.4);
@@ -2605,14 +2605,14 @@
 }
 
 .mc-rest-cold-time .mc-wheel-value--current {
-  font: 700 27px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 27px/1.25 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   letter-spacing: -0.02em;
 }
 
 .mc-rest-cold-time .mc-wheel-value--prev,
 .mc-rest-cold-time .mc-wheel-value--next {
-  font: 600 12px/1.5 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
   opacity: 1;
 }
@@ -2624,7 +2624,7 @@
   flex: none;
   margin: 0;
   padding: 0 1px;
-  font: 700 20px/1 Figtree, system-ui, sans-serif;
+  font: 700 20px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
@@ -2641,7 +2641,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   -webkit-appearance: none;
   appearance: none;
@@ -2664,7 +2664,7 @@
 
 .mc-rest-clear-mark-hint {
   margin-top: 4px;
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.42);
   text-align: left;
   text-wrap: pretty;
@@ -2682,12 +2682,12 @@
 
 .mc-rest-wave {
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.4));
-  font: 600 11px/1 Figtree, system-ui, sans-serif;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
 }
 
 .mc-rest-chevron {
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
 }
 
 /* Карточка добавок — вторичная, и все четыре кадра «Цикл · копия шага 5»
@@ -2702,7 +2702,7 @@
 }
 
 .mc-rest-card--supplements .mc-rest-card-title {
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Manrope, system-ui, sans-serif;
 }
 
 /* Кадр «Чек-ин · остальное», элемент 21: шапка добавок выровнена по центру, а
@@ -2736,7 +2736,7 @@
 
 .mc-rest-chevron--accent {
   color: var(--v4-warn-text, #a1471c);
-  font: 700 15px/1 Figtree, system-ui, sans-serif;
+  font: 700 15px/1 Manrope, system-ui, sans-serif;
 }
 
 .mc-rest-supp-list {
@@ -2759,19 +2759,19 @@
 }
 
 .mc-rest-supp-name {
-  font: 500 12px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 12px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .mc-rest-supp-time {
-  font: 500 11px/1 Figtree, system-ui, sans-serif;
+  font: 500 11px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   white-space: nowrap;
 }
 
 .mc-rest-supp-empty {
   margin-top: 0;
-  font: 500 11px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.5));
 }
 
@@ -2785,7 +2785,7 @@
   background: transparent;
   padding: 0;
   cursor: pointer;
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
@@ -2872,7 +2872,7 @@
   border: none;
   border-radius: 999px;
   cursor: pointer;
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
 }
 
 .mc-supp-flow-btn--primary {
@@ -2892,7 +2892,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.5);
   -webkit-appearance: none;
   appearance: none;
@@ -2928,20 +2928,20 @@
 }
 
 .mc-supp-flow-empty-title {
-  font: 700 15px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 15px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   margin-top: 12px;
 }
 
 .mc-supp-flow-empty-body {
-  font: 500 11.5px/1.55 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.55 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 6px;
   text-wrap: pretty;
 }
 
 .mc-supp-flow-note {
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 14px;
   text-wrap: pretty;
@@ -2958,7 +2958,7 @@
 }
 
 .mc-supp-flow-lead {
-  font: 500 11.5px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-wrap: pretty;
 }
@@ -2993,12 +2993,12 @@
 }
 
 .mc-supp-flow-course-copy b {
-  font: 700 12.5px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1.3 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
 .mc-supp-flow-course-copy span {
-  font: 500 11px/1.3 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.5);
 }
 
@@ -3019,7 +3019,7 @@
   border-radius: 16px;
   background: var(--v4-sand-hero, #efe3cf);
   cursor: pointer;
-  font: 700 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
 }
 
@@ -3051,7 +3051,7 @@
   min-width: 0;
   border: none;
   background: transparent;
-  font: 500 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 500 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   outline: none;
 }
@@ -3065,7 +3065,7 @@
 }
 
 .mc-supp-flow-tier {
-  font: 700 9px/1 Figtree, system-ui, sans-serif;
+  font: 700 9px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--v4-sand-act-text, #8a4a20);
@@ -3092,7 +3092,7 @@
   border: none;
   border-radius: 999px;
   background: var(--v4-card, #f3ece2);
-  font: 600 12px/1 Figtree, system-ui, sans-serif;
+  font: 600 12px/1 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.62);
   cursor: pointer;
   box-shadow: none;
@@ -3101,7 +3101,7 @@
 .mc-supp-flow-chip.is-on {
   background: var(--v4-sand-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
 }
 
 .mc-supp-flow-chip.is-on svg {
@@ -3110,14 +3110,14 @@
 
 .mc-supp-flow-selected-count {
   flex: none;
-  font: 700 12px/1.3 Figtree, system-ui, sans-serif;
+  font: 700 12px/1.3 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.5);
   max-width: 72px;
   line-height: 1.3;
 }
 
 .mc-supp-flow-dose-kicker {
-  font: 600 13px/1 Figtree, system-ui, sans-serif;
+  font: 600 13px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.02em;
   color: rgba(0, 0, 0, 0.6);
   text-align: center;
@@ -3151,18 +3151,18 @@
 }
 
 .mc-supp-flow-dose-num {
-  font: 600 46px/0.9 Figtree, system-ui, sans-serif;
+  font: 600 46px/0.9 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   letter-spacing: -0.04em;
 }
 
 .mc-supp-flow-dose-unit {
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   color: rgba(0, 0, 0, 0.38);
 }
 
 .mc-supp-flow-dose-hint {
-  font: 500 11px/1.5 Figtree, system-ui, sans-serif;
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   margin-top: 12px;
   text-align: center;
@@ -3171,7 +3171,7 @@
 
 .mc-supp-flow-timing-label {
   width: 100%;
-  font: 700 10px/1 Figtree, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--v4-sand-act-text, #8a4a20);
@@ -5341,7 +5341,7 @@
 .mc-wheel-value {
   position: relative;
   z-index: 1;
-  font: 600 13px/1.75 Figtree, system-ui, sans-serif;
+  font: 600 13px/1.75 Manrope, system-ui, sans-serif;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 22%, transparent);
   height: auto;
   min-height: 23px;
@@ -5367,7 +5367,7 @@
 
 .mc-wheel-value--prev,
 .mc-wheel-value--next {
-  font: 600 13px/1.75 Figtree, system-ui, sans-serif;
+  font: 600 13px/1.75 Manrope, system-ui, sans-serif;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 22%, transparent);
   opacity: 1;
 }
@@ -5387,7 +5387,7 @@
    Зоны с локальным переопределением (чек-ин, холодовая, приём) цвет уже
    называли сами; без базы зелёными оставались лист времени и колесо зон. */
 .mc-wheel-value--current {
-  font: 700 22px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 22px/1.35 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   min-height: 30px;
 }
@@ -5436,13 +5436,13 @@
 }
 
 .mc-wheel-picker--compact .mc-wheel-value--current {
-  font: 700 22px/1.35 Figtree, system-ui, sans-serif;
+  font: 700 22px/1.35 Manrope, system-ui, sans-serif;
   min-height: 30px;
 }
 
 .mc-wheel-picker--compact .mc-wheel-value--prev,
 .mc-wheel-picker--compact .mc-wheel-value--next {
-  font: 600 13px/1.75 Figtree, system-ui, sans-serif;
+  font: 600 13px/1.75 Manrope, system-ui, sans-serif;
   height: auto;
   min-height: 23px;
 }
@@ -5481,7 +5481,7 @@
   box-sizing: border-box;
   min-height: 44px !important;
   padding: 12px 15px !important;
-  font: 600 13px/1.5 Figtree, system-ui, sans-serif !important;
+  font: 600 13px/1.5 Manrope, system-ui, sans-serif !important;
 }
 
 /* Кадры «персональные данные · 08/10»: плейсхолдеры имени и фамилии. */
@@ -5554,7 +5554,7 @@
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--next {
   height: auto;
   min-height: 0;
-  font: 600 12.5px/2.1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/2.1 Manrope, system-ui, sans-serif;
   /* Кадр просит 38 % — ступень --v4-ink-4. Стояло 40 %, ступени нет. */
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
   opacity: 1;
@@ -5563,7 +5563,7 @@
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card .mc-wheel-value--current {
   height: auto;
   min-height: 0;
-  font: 700 15.5px/2 Figtree, system-ui, sans-serif;
+  font: 700 15.5px/2 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
 }
 
@@ -5723,7 +5723,7 @@
   display: flex;
   justify-content: space-between;
   margin-top: 8px;
-  font: 600 9.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 9.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
@@ -7178,14 +7178,14 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-daily-greeting-title {
-  font: 700 20px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 20px/1.25 Manrope, system-ui, sans-serif;
   color: var(--v4-ink, #201e1d);
   text-align: center;
 }
 
 .mc-modal--daily .mc-daily-greeting-date {
   margin-top: 6px;
-  font: 500 11.5px/1.4 Figtree, system-ui, sans-serif;
+  font: 500 11.5px/1.4 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   text-align: center;
 }
@@ -7202,13 +7202,13 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-daily-streak-count {
-  font: 800 15px/1 Figtree, system-ui, sans-serif;
+  font: 800 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act-text, #8a4a20);
   font-variant-numeric: tabular-nums;
 }
 
 .mc-modal--daily .mc-daily-streak-text {
-  font: 600 11.5px/1.35 Figtree, system-ui, sans-serif;
+  font: 600 11.5px/1.35 Manrope, system-ui, sans-serif;
   color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.6);
 }
 
@@ -7220,7 +7220,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-step-kicker {
-  font: 600 13px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font: 600 13px/1 Manrope, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0.02em;
   color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.6);
 }
@@ -7232,13 +7232,13 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-weight-hero-value {
-  font: 600 58px/0.9 Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font: 600 58px/0.9 Manrope, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: -0.045em;
   color: var(--v4-act-text, #8a4a20);
 }
 
 .mc-modal--daily .mc-weight-hero-unit {
-  font: 600 13px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font: 600 13px/1 Manrope, "HEYS Manrope", system-ui, sans-serif;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
 
@@ -7249,7 +7249,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
    спасли областью модалки, блок сна остался с прежним видом. */
 .mc-modal--daily .mc-kilo-label,
 .mc-modal--daily .mc-sleep-label {
-  font: 600 10px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font: 600 10px/1 Manrope, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
@@ -7340,20 +7340,20 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
    времени сна именно его: у шага «Сон» это единственный ввод. Код стоял на
    32/13/28 — ни прежнего ряда 24/12/20, ни крупного. */
 .mc-modal--daily .mc-sleep-combined .mc-wheel-value--current {
-  font: 700 36px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 36px/1.2 Manrope, system-ui, sans-serif;
   letter-spacing: -0.025em;
 }
 
 .mc-modal--daily .mc-sleep-combined .mc-wheel-value--prev,
 .mc-modal--daily .mc-sleep-combined .mc-wheel-value--next {
-  font: 600 16px/1.45 Figtree, system-ui, sans-serif;
+  font: 600 16px/1.45 Manrope, system-ui, sans-serif;
 }
 
 .mc-modal--daily .mc-sleep-combined .mc-time-sep {
   flex: none;
   margin: 0;
   padding: 0 2px;
-  font: 700 32px/1 Figtree, system-ui, sans-serif;
+  font: 700 32px/1 Manrope, system-ui, sans-serif;
 }
 
 .mc-modal--daily .mc-weight-pickers {
@@ -7375,7 +7375,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--prev,
 .mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--next {
-  font: 600 13px/1.45 Figtree, system-ui, sans-serif;
+  font: 600 13px/1.45 Manrope, system-ui, sans-serif;
 }
 
 /* checkin-morning «нажатие и крупный шрифт»: при крупном системном шрифте
@@ -7410,24 +7410,24 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   flex: 1;
   background: var(--v4-c1, #f7efe2);
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
 }
 
 .mc-modal--daily .mc-btn.mc-daily-footer-primary {
   flex: 1.3;
   background: var(--v4-act, #c67139);
   color: var(--v4-btn-on-act, #2b1608);
-  font: 700 13px/1 Figtree, system-ui, sans-serif;
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
 }
 
 .mc-modal--daily .mc-steps-hero-value {
-  font: 600 54px/0.9 Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font: 600 54px/0.9 Manrope, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: -0.045em;
   color: var(--v4-act-text, #8a4a20);
 }
 
 .mc-modal--daily .mc-steps-unit {
-  font: 600 13px/1 Figtree, "HEYS Manrope", system-ui, sans-serif;
+  font: 600 13px/1 Manrope, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0;
   color: var(--v4-ink-4, rgba(0, 0, 0, 0.38));
 }
@@ -7439,7 +7439,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-wheel-value--current {
-  font: 700 27px/1.25 Figtree, system-ui, sans-serif;
+  font: 700 27px/1.25 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
   letter-spacing: -0.02em;
   height: auto;
@@ -7448,7 +7448,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 
 .mc-modal--daily .mc-wheel-value--prev,
 .mc-modal--daily .mc-wheel-value--next {
-  font: 600 12px/1.5 Figtree, system-ui, sans-serif;
+  font: 600 12px/1.5 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
   opacity: 1;
   height: auto;
@@ -7472,18 +7472,18 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 .mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--current {
-  font: 700 36px/1.2 Figtree, system-ui, sans-serif;
+  font: 700 36px/1.2 Manrope, system-ui, sans-serif;
   letter-spacing: -0.025em;
 }
 
 .mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--prev,
 .mc-modal--daily .mc-weight-kilo-card .mc-wheel-value--next {
-  font: 600 16px/1.45 Figtree, system-ui, sans-serif;
+  font: 600 16px/1.45 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-30, rgba(0, 0, 0, 0.3));
 }
 
 .mc-modal--daily .mc-weight-comma {
-  font: 700 32px/1 Figtree, system-ui, sans-serif;
+  font: 700 32px/1 Manrope, system-ui, sans-serif;
   padding: 0 2px;
 }
 
@@ -7527,7 +7527,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   border-radius: 999px;
   background: color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
   color: var(--v4-ink, #201e1d);
-  font: 700 12px/1 Figtree, system-ui, sans-serif;
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -7539,7 +7539,7 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   border-radius: 12px;
   background: color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
   color: var(--v4-ink, #201e1d);
-  font: 600 12.5px/1 Figtree, system-ui, sans-serif;
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
   cursor: pointer;
 }
 

@@ -46,7 +46,7 @@ describe('Динамика · F компакт — сведённый кусок
     expect(contractValue(canvas, 'Динамика · F компакт · 03'))
       .toBe('выравнивание baseline, зазор 2px, отступ сверху auto');
     expect(contractValue(canvas, 'Динамика · F компакт · 04'))
-      .toBe('«−1,8» — моноцифры: шрифт 600 17px/1 Figtree, трекинг -.02em');
+      .toBe('«−1,8» — моноцифры: шрифт 600 17px/1 Manrope, трекинг -.02em');
     expect(contractValue(canvas, 'Динамика · F компакт · текст'))
       .toBe('Мес › −1,8 › кг');
   });
