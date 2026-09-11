@@ -562,7 +562,7 @@
         style: { fontSize: 20, fontWeight: 700, color: 'var(--v4-ink, #201e1d)', marginTop: 6, lineHeight: 1.3 }
       }, 'Расскажите о себе'),
       React.createElement('div', { className: 'profile-personal-name flex flex-col gap-2' },
-        React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
+        React.createElement('label', { className: 'text-sm font-medium', style: { color: 'var(--v4-ink, #201e1d)' } },
           'Имя ',
           React.createElement('span', { style: { color: '#8a4a20' } }, '*')
         ),
@@ -637,7 +637,7 @@
         })
       ),
       React.createElement('div', { className: 'profile-personal-gender flex flex-col gap-2' },
-        React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
+        React.createElement('label', { className: 'text-sm font-medium', style: { color: 'var(--v4-ink, #201e1d)' } },
           'Пол ',
           React.createElement('span', { style: { color: '#8a4a20' } }, '*')
         ),
@@ -673,7 +673,7 @@
       // Дата рождения (WheelPickers v2)
       React.createElement('div', { className: 'profile-personal-birth flex flex-col' },
         React.createElement('div', { className: 'flex items-center justify-between' },
-          React.createElement('label', { className: 'text-sm font-medium', style: { color: 'rgba(0,0,0,.7)' } },
+          React.createElement('label', { className: 'text-sm font-medium', style: { color: 'var(--v4-ink, #201e1d)' } },
             'Дата рождения ',
             React.createElement('span', { style: { color: '#8a4a20' } }, '*')
           )

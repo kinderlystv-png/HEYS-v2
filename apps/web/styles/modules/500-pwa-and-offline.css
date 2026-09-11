@@ -5464,6 +5464,26 @@
   margin: -8px 0;
 }
 
+/* Кадр «Регистрация · персональные данные»: первая группа через 16 от
+   заголовка, следующие — через 12. Поправки −4 у групп ниже рассчитаны на
+   промежуток 16, а «gap-4» в наших стилях — 4 px, не 16 как в Tailwind, и
+   группы стояли вплотную (4 − 4 = 0). Промежуток задан шагу явно. */
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-step {
+  gap: 16px;
+}
+
+/* Подпись поля — .flab общего слоя v4-canvas.css: 600 12,5/1,4 цветом текста;
+   поле под ней через 8 (.fld margin-top 8). Классов text-sm/font-medium в
+   наших стилях нет — подпись брала шрифт по умолчанию. */
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-step label {
+  font: 600 12.5px/1.4 Manrope, system-ui, sans-serif;
+}
+
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-name > input,
+.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-family > input {
+  margin-top: 8px;
+}
+
 .mc-modal[data-heys-step-id="profile-personal"] .profile-personal-name {
   margin-top: 0;
 }

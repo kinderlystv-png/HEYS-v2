@@ -38,6 +38,17 @@ describe('регистрация · колесо даты рождения по 
     expect(rule(`${SCOPE} .mc-wheel-values::before`)).toContain('display: none');
   });
 
+  it('ритм шага: группы через 12 (16 − 4), подпись .flab, поле через 8', () => {
+    // «gap-4» в наших стилях — 4 px, не Tailwind-16: промежуток задан явно.
+    expect(rule('.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-step')).toContain('gap: 16px');
+    expect(rule('.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-family')).toContain('margin-top: -4px');
+    expect(rule('.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-step label'))
+      .toContain('font: 600 12.5px/1.4 Manrope');
+    expect(CSS).toMatch(/\.profile-personal-name > input,\n[^{]*\.profile-personal-family > input \{\s*margin-top: 8px;/);
+    const PROFILE = fs.readFileSync(path.join(ROOT, 'apps/web/heys_profile_step_v1.js'), 'utf8');
+    expect(PROFILE).not.toContain("style: { color: 'rgba(0,0,0,.7)' }");
+  });
+
   it('соседние — 12,5 px/600 тоном ink-4, интерлиньяж 2,1', () => {
     const neighbours = rule(`${SCOPE} .mc-wheel-value--prev,\n${SCOPE} .mc-wheel-value--next`);
     expect(neighbours).toContain('font: 600 12.5px/2.1 Manrope');
