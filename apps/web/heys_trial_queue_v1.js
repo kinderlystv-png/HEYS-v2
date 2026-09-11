@@ -461,14 +461,14 @@
 
     if (diffMs <= 0) return 'Время истекло';
 
-    const minutes = Math.floor(diffMs / 60000);
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-
-    if (hours > 0) {
-      return `${hours}ч ${mins}м`;
-    }
-    return `${mins}м`;
+    // Канвас subscription, строка «очередь на пробный период»: «таймер
+    // показывает ч:мм:сс» (кадр — «1:47:12»). Прежнее «1ч 47м» стояло под
+    // таймером 26 px, который тикает раз в секунду, и секунды не показывало.
+    const totalSeconds = Math.floor(diffMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${hours}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   }
 
   /**

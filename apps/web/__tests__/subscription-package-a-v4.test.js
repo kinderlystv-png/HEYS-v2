@@ -18,9 +18,12 @@ const PAYWALL_CSS = fs.readFileSync(
 );
 const SUBS_SOURCE = fs.readFileSync(path.join(WEB_DIR, 'heys_subscriptions_v1.js'), 'utf8');
 
+// Карточка «только чтение» — на --tint (строка «вид · экран подписки · только
+// чтение», кадр «· только чтение · 02»). Прежде тест сторожил --v4-hero и
+// держал расхождение с контрактом зелёным.
 const EXPECT = Object.freeze({
-  sand: { card: '#f7efe2', hero: '#efe3cf', actText: '#8a4a20' },
-  blue: { card: '#eef3f9', hero: '#e2ecf6', actText: '#1d5e96' },
+  sand: { card: '#f7efe2', tint: '#f6e6dd', actText: '#8a4a20' },
+  blue: { card: '#eef3f9', tint: '#fbe6e2', actText: '#1d5e96' },
 });
 
 function normColor(value) {
@@ -90,7 +93,7 @@ describe('subscription package A · sub-screen colors sand/blue', () => {
       const link = host.querySelector('.sub-screen__support-link');
 
       expect(normColor(getComputedStyle(card).backgroundColor)).toBe(EXPECT[themeId].card);
-      expect(normColor(getComputedStyle(readonlyCard).backgroundColor)).toBe(EXPECT[themeId].hero);
+      expect(normColor(getComputedStyle(readonlyCard).backgroundColor)).toBe(EXPECT[themeId].tint);
       expect(normColor(getComputedStyle(link).color)).toBe(EXPECT[themeId].actText);
 
       host.remove();

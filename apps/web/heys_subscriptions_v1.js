@@ -1467,9 +1467,15 @@
     const contactUrl = HEYS.config.curatorContactUrl || (HEYS.support && HEYS.support.telegramUrl);
     const contactHandle = (HEYS.support && HEYS.support.telegramHandle) || '@heyslab_support_bot';
     const title = isReadOnly ? 'Пробный период закончился' : 'Оформление подписки';
+    // «Поддержка», а не «Куратор»: решение владельца 5 сентября (строки
+    // «контакт поддержки — список» и «контакты куратора — откуда») — контакт
+    // один и общий, ряд ниже ведёт в поддержку, и текст над ним не может
+    // называть другого человека. Так же пишет строка «Подписка · контакт
+    // поддержки · текст»; строка «вид · контакт поддержки» ещё держит
+    // прежнее слово — расхождение записано в docs/ui/UI_V4_FINDINGS.md.
     const copy = isReadOnly
-      ? 'Куратор подберёт тариф и оформит оплату. День и история остаются открытыми для чтения'
-      : 'Куратор подберёт тариф и оформит оплату.';
+      ? 'Поддержка подберёт тариф и оформит оплату. День и история остаются открытыми для чтения.'
+      : 'Поддержка подберёт тариф и оформит оплату.';
 
     return h('div', { className: 'sub-contact' },
       onClose && h('button', {
@@ -1479,7 +1485,7 @@
         'aria-label': 'Закрыть',
       }, paywallCloseIconMarkup()),
       h('div', { className: 'sub-contact__lock', 'aria-hidden': 'true' }, contactSupportLockIcon()),
-      h('h2', { className: 'sub-contact__title' }, title),
+      h('h2', { id: 'sub-contact-title', className: 'sub-contact__title' }, title),
       h('p', { className: 'sub-contact__copy' }, copy),
       h('a', {
         className: 'sub-contact__row',
@@ -1497,22 +1503,60 @@
     );
   }
 
+  let _contactModalHost = null;
+  let _contactModalRoot = null;
+
+  function closeCuratorContactModal() {
+    if (_contactModalRoot) _contactModalRoot.render(null);
+  }
+
   /**
-   * Открывает контактную модалку через StepModal или fallback на window.alert.
-   * Используется как обработчик upgrade-кликов в Фазе 1.
+   * Открывает модалку контакта поддержки — обработчик всех входов «Подписка»
+   * в Фазе 1.
+   *
+   * Канвас subscription, строка «слой — центральная модалка»: контакт
+   * поддержки — центральная модалка шириной экрана минус 14 px, под ней
+   * затемнение --scrim; тап по затемнению закрывает её, как крестик. Прежде
+   * вход открывал шаг payment_required шаговой модалки — во весь экран, с
+   * заголовком «🔒 Подписка не активна» и иконкой 💳, которые строка «иконки»
+   * снимает. Каркас модалки — тот же, что у тарифов (.paywall-overlay /
+   * .paywall-modal): это один слой продукта по двум фазам.
+   *
+   * opts.isReadOnly — заголовок «Пробный период закончился» против
+   * «Оформление подписки» (строка «вид · контакт поддержки»: второй — «если
+   * доступ ещё есть»). Без явного значения решает кэш статуса.
    */
   function openCuratorContactModal(opts = {}) {
-    if (HEYS.StepModal && HEYS.StepModal.show) {
-      HEYS.StepModal.show({
-        steps: ['payment_required'],
-        showProgress: false,
-        showGreeting: false,
-      });
+    const url = HEYS.config.curatorContactUrl || (HEYS.support && HEYS.support.telegramUrl);
+    const reactDom = window.ReactDOM;
+    if (typeof document === 'undefined' || !window.React || !reactDom?.createRoot) {
+      window.open(url, '_blank', 'noopener,noreferrer');
       return;
     }
-    // Fallback: открываем напрямую Telegram куратора в новой вкладке
-    const url = HEYS.config.curatorContactUrl || (HEYS.support && HEYS.support.telegramUrl);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    const isReadOnly = typeof opts.isReadOnly === 'boolean'
+      ? opts.isReadOnly
+      : HEYS.Paywall?.canWriteSync?.() !== true;
+
+    if (!_contactModalHost || !_contactModalHost.isConnected) {
+      _contactModalHost = document.createElement('div');
+      _contactModalHost.id = 'heys-contact-support-host';
+      document.body.appendChild(_contactModalHost);
+      _contactModalRoot = ReactDOM.createRoot(_contactModalHost);
+    }
+
+    _contactModalRoot.render(
+      h('div', {
+        className: 'paywall-overlay',
+        onClick: (e) => e.target === e.currentTarget && closeCuratorContactModal(),
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-labelledby': 'sub-contact-title',
+      },
+        h('div', { className: 'paywall-modal' },
+          h(ContactCuratorScreen, { onClose: closeCuratorContactModal, isReadOnly })
+        )
+      )
+    );
   }
 
   // =====================================================
@@ -1593,56 +1637,41 @@
    * Использует localStorage флаг heys_first_login_<clientId>.
    */
   function WelcomeFirstLogin({ clientName, trialEndsAt, onClose }) {
-    const days = trialEndsAt ? daysUntil(trialEndsAt) : 7;
+    // Канвас subscription, строка «вид · приветствие»: центральная модалка
+    // (каркас слоя подписки — .paywall-overlay / .paywall-modal, затемнение
+    // --scrim), заголовок «Анна, добро пожаловать» 19/700, текст 12,5/500
+    // --ink-2, кнопка .btn «Начать». Крестика нет, тап по затемнению тоже
+    // закрывает. Ни иллюстрации, ни эмодзи — прежние 🎉, «Триал» и синий
+    // градиент сняты.
+    // «на 7 дней» — длина пробного периода, а не остаток: прежде здесь стоял
+    // daysUntil, и человек, вошедший не в первый день, читал «Триал на 15
+    // дней» при семидневном пробном периоде.
+    const trialDays = HEYS.Paywall?.CONFIG?.trialDays || 7;
+    const title = clientName ? `${clientName}, добро пожаловать` : 'Добро пожаловать';
+    const until = trialEndsAt ? ` — до ${formatDateShort(trialEndsAt)}` : '';
 
     return h('div', {
-      style: {
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.55)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10000,
-      },
+      className: 'paywall-overlay',
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'welcome-first-login-title',
       onClick: (e) => { if (e.target === e.currentTarget) onClose(); }
     },
-      h('div', {
-        style: {
-          width: 420,
-          maxWidth: '92vw',
-          background: '#fff',
-          borderRadius: 18,
-          padding: 28,
-          boxShadow: '0 30px 80px rgba(0,0,0,0.35)',
-          textAlign: 'center',
-        }
-      },
-        h('div', { style: { fontSize: 56, marginBottom: 12 } }, '🎉'),
-        h('div', { style: { fontSize: 22, fontWeight: 700, color: '#0f172a', marginBottom: 8 } },
-          `${clientName ? clientName + ', добро пожаловать в HEYS!' : 'Добро пожаловать в HEYS!'}`
-        ),
-        h('div', { style: { fontSize: 14, color: '#64748b', marginBottom: 18, lineHeight: 1.55 } },
-          `Триал на ${days} дней начался${trialEndsAt ? ` — до ${formatDate(trialEndsAt)}.` : '.'}`,
-          h('br'),
-          h('br'),
-          'За это время вы успеете завести дневник, получить первые рекомендации и понять, ',
-          'подходит ли HEYS лично вам.'
+      h('div', { className: 'paywall-modal' },
+        h('h2', {
+          id: 'welcome-first-login-title',
+          className: 'paywall-title',
+          style: { paddingRight: 0 },
+        }, title),
+        h('p', { className: 'paywall-subtitle' },
+          `Пробный период на ${trialDays} дней начался${until}. За это время вы заведёте дневник, получите первые советы и поймёте, подходит ли HEYS.`
         ),
         h('button', {
+          type: 'button',
+          className: 'paywall-cta',
+          style: { marginTop: '20px' },
           onClick: onClose,
-          style: {
-            padding: '12px 24px',
-            borderRadius: 10,
-            border: 'none',
-            background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-            color: '#fff',
-            fontSize: 14,
-            fontWeight: 700,
-            cursor: 'pointer',
-            width: '100%',
-          }
-        }, 'Начать!')
+        }, 'Начать')
       )
     );
   }

@@ -205,7 +205,13 @@
       setShowPaymentScreen(false);
     }
 
-    const title = reason === 'trial_ended' ? 'Пробный период закончился' : 'Подписка';
+    // Из «только чтения» слой зовут двумя именами: сам баннер — 'trial_ended',
+    // пилюля баннера на «Питании» (heys_day_page_shell.js) — 'trial_expired'.
+    // Кадры тарифов под «Питанием» пишут «Пробный период закончился»; прежде
+    // заголовок узнавал только первое имя, и слой, открытый пилюлей, назывался
+    // «Подписка» — как будто доступ ещё есть.
+    const isTrialOver = reason === 'trial_ended' || reason === 'trial_expired';
+    const title = isTrialOver ? 'Пробный период закончился' : 'Подписка';
 
     return React.createElement('div', {
       className: 'paywall-overlay',

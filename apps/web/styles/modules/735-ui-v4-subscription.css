@@ -628,7 +628,10 @@
 }
 
 .sub-screen__status-card--readonly {
-  background: var(--v4-hero, #efe3cf);
+  /* Строка «вид · экран подписки · только чтение»: «карточка на фоне --tint»
+     (кадр «· только чтение · 02» — var(--tint)). Прежняя --v4-hero — вторая
+     поверхность, карточка читалась как обычная, а не как состояние. */
+  background: var(--v4-tint, #f6e6dd);
 }
 
 .sub-screen__kick {
@@ -769,8 +772,11 @@
 
 .sub-contact__close {
   position: absolute;
-  top: 0;
-  right: 0;
+  /* Кадр «контакт поддержки»: .xb стоит в 14 px от краёв модалки. Экран
+     живёт внутри .paywall-modal с полями 22/18, поэтому сдвиг — разница
+     полей: 22 − 14 сверху и 18 − 14 справа. */
+  top: -8px;
+  right: -4px;
   width: 44px;
   height: 44px;
   border: 0;
