@@ -140,6 +140,15 @@ describe('резервный вопрос после еды', () => {
     expect(base).toMatch(/\nbody \{\s*margin: 0;\s*font-family:\s*Manrope,/);
   });
 
+  it('«пропуск» в календаре — тон значений --val-bad, как в кадре', () => {
+    expect(FRAME).toContain('background:var(--val-bad)');
+    const activityCss = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'), 'utf8');
+    for (const sel of ['.ma-habit-cal-cell.is-missed {', '.ma-habit-cal-legend-dot.is-missed {']) {
+      const at = activityCss.indexOf(sel);
+      expect(activityCss.slice(at, activityCss.indexOf('}', at)), sel).toContain('var(--v4-val-bad');
+    }
+  });
+
   it('подписи под точками календаря высотой в кегль, как в кадре', () => {
     // Кадр: «выравнивание center, зазор 6px, шрифт 500 10.5px/1». При 1,2 блок
     // календаря выходил на 2,1 px выше, и всё ниже него съезжало.

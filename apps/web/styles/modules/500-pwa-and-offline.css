@@ -7222,7 +7222,8 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-modal--daily .mc-step-kicker {
   font: 600 13px/1 Manrope, "HEYS Manrope", system-ui, sans-serif;
   letter-spacing: 0.02em;
-  color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.6);
+  /* Чернила 56 % (--ink-2 кадра), а не 60 %: ступени 0,6 на лестнице нет. */
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .mc-modal--daily .mc-weight-hero-row {

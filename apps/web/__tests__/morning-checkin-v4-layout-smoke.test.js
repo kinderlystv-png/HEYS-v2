@@ -41,6 +41,8 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(DAILY_CSS).not.toContain('.mc-weight-step:has(.mc-daily-greeting) .mc-weight-hero');
     expect(DAILY_CSS).toMatch(/\.mc-weight-step:has\(\.mc-daily-streak-banner\) \.mc-weight-hero \{\s*margin-top: 34px;/);
     expect(DAILY_CSS).toMatch(/\.mc-daily-greeting:not\(:has\(\.mc-daily-streak-banner\)\) \+ \.mc-weight-hero \{\s*margin-top: 30px;/);
+    // «Вес на утро» — чернила 56 % (--ink-2 кадра); 0,6 на лестнице чернил нет.
+    expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-step-kicker \{[^}]*color: var\(--v4-ink-2\)/);
     // Регистрация держит свою цель 44 с выносом −8 — её кадр другой.
     expect(DAILY_CSS).toMatch(/\[data-heys-step-id="profile-personal"\] \.mc-header-spacer \{[^}]*height: 44px;[^}]*margin: -8px 0;/);
     expect(DAILY_CSS).toContain('.mc-backdrop:has(.mc-modal--daily)');

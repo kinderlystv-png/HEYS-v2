@@ -739,7 +739,9 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-missed {
-  background: var(--v4-bad-text, #a83c22);
+  /* «пропуск» — тон значений --val-bad (строка «легенда календаря»), а не
+     тон текста ошибок --bad-text: они различаются (#a8382b против #a83c22). */
+  background: var(--v4-val-bad, #a8382b);
   color: transparent;
 }
 
@@ -766,7 +768,9 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-missed {
-  background: var(--v4-bad-text, #a83c22);
+  /* «пропуск» — тон значений --val-bad (строка «легенда календаря»), а не
+     тон текста ошибок --bad-text: они различаются (#a8382b против #a83c22). */
+  background: var(--v4-val-bad, #a8382b);
 }
 
 /* Легенда календаря — ряд из четырёх пар «точка + слово» с переносом
@@ -807,7 +811,9 @@ body:has(.activity-v4) .hdr::after {
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-missed {
-  background: var(--v4-bad-text, #a83c22);
+  /* «пропуск» — тон значений --val-bad (строка «легенда календаря»), а не
+     тон текста ошибок --bad-text: они различаются (#a8382b против #a83c22). */
+  background: var(--v4-val-bad, #a8382b);
 }
 
 /* «Не вели» — тон времени до первой отметки: это не результат, и красить его
