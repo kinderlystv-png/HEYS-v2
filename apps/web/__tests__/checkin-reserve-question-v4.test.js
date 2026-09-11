@@ -238,4 +238,21 @@ describe('причина пропуска', () => {
     expect(activityCss).not.toContain('.activity-v4 .ma-habit-cal-shell.ma-habit-cal--activity-v4');
   });
 
+  it('сетка дней — во всю ширину блока и от левого края колонки', () => {
+    // Замер на стенде: шаг 43,5 и первая точка на x=40 совпадают с кадром до
+    // пикселя. До правки сетка была зажата в 252 px и центрирована прежней
+    // оболочкой, а точки стояли по центру колонок — ряд уезжал вправо.
+    const activityCss = fs.readFileSync(
+      path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'),
+      'utf8',
+    );
+    const matrix = activityCss.indexOf('.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-matrix');
+    expect(matrix, 'правило ширины сетки найдено').toBeGreaterThan(-1);
+    expect(activityCss.slice(matrix, activityCss.indexOf('}', matrix))).toContain('width: 100%');
+
+    const align = activityCss.indexOf('.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-grid--dot');
+    expect(align, 'правило выравнивания найдено').toBeGreaterThan(-1);
+    expect(activityCss.slice(align, activityCss.indexOf('}', align))).toContain('justify-items: start');
+  });
+
 });
