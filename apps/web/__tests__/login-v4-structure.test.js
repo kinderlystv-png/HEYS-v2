@@ -104,6 +104,10 @@ describe('login v4 canvas structure', () => {
     expect(html).toContain('aria-label="Служебный вход"');
     expect(html).not.toMatch(/hlg-service-entry[\s\S]{0,400}служебный вход/);
     expect(login).toContain('heys-auth-service-entry');
+    // Кадр «Вход · выбор свёрнут» (.svc): ключ контуром, наклонный, линия 1,7.
+    expect(login).toContain("React.createElement('circle', { cx: 8.5, cy: 15.5, r: 4.5 })");
+    expect(login).toContain("React.createElement('path', { d: 'M11.7 12.3L20.5 3.5' })");
+    expect(login).not.toContain('M7 14a5 5 0 1 1 4.9-6H21');
     expect(login).not.toContain("'служебный вход'");
   });
 

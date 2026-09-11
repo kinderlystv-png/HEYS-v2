@@ -782,13 +782,24 @@
 	            setMode('curator');
 	          },
 	        },
+	        // Кадр «Вход · выбор свёрнут» (.svc): ключ контуром, наклонный,
+	        // линия 1,7 со скруглением. Стоял залитый горизонтальный ключ.
 	        React.createElement('svg', {
 	          width: 14,
 	          height: 14,
 	          viewBox: '0 0 24 24',
-	          fill: 'currentColor',
+	          fill: 'none',
+	          stroke: 'currentColor',
+	          strokeWidth: 1.7,
+	          strokeLinecap: 'round',
+	          strokeLinejoin: 'round',
 	          'aria-hidden': 'true',
-	        }, React.createElement('path', { d: 'M7 14a5 5 0 1 1 4.9-6H21v3h-2v3h-2v-3h-2.1A5 5 0 0 1 7 14zm0-2a3 3 0 1 0 0-6 3 3 0 0 0 0 6z' })),
+	        },
+	          React.createElement('circle', { cx: 8.5, cy: 15.5, r: 4.5 }),
+	          React.createElement('path', { d: 'M11.7 12.3L20.5 3.5' }),
+	          React.createElement('path', { d: 'M17.5 6.5l2.5 2.5' }),
+	          React.createElement('path', { d: 'M14.6 9.4l2.5 2.5' }),
+	        ),
 	      );
 	    }
 
