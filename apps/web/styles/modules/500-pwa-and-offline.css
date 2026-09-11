@@ -7560,7 +7560,8 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 }
 
 /* Квадрат 198: код 150 и тихая зона по 24 — это поле самой картинки, отдельного
-   паддинга нет. Белое поле картинки сливается с --bg квадрата (multiply). */
+   паддинга нет. Код всегда тёмный на белом, в любом наборе: слияние поля с --bg
+   через multiply на тёмных наборах затемняло весь код, и камера его не читала. */
 .desktop-gate__qr {
   flex: none;
   width: 198px;
@@ -7575,7 +7576,6 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   display: block;
   width: 198px;
   height: 198px;
-  mix-blend-mode: multiply;
 }
 
 .desktop-gate__side {
