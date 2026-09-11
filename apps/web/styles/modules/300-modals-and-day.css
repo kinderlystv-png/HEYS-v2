@@ -1859,9 +1859,14 @@
   text-wrap: pretty;
 }
 
+/* Подпись выводит AutoFitText с кеглем 12 прямо в стиле элемента, поэтому
+   11,5 из строки контракта держится только с !important. И подпись стоит
+   отдельным блоком после заголовка, а не в его колонке, — зазор 4 из кадра
+   ставится ей отступом, gap колонки заголовка до неё не доходит. */
 [data-heys-step-id="morning_activation_followup"] .mc-header-hint,
 [data-heys-step-id="morning_activation_skip_reason"] .mc-header-hint {
-  font-size: 11.5px;
+  margin-top: 4px;
+  font-size: 11.5px !important;
   font-weight: 500;
   line-height: 1.4;
   color: var(--v4-ink-2) /* v4-intentional */;

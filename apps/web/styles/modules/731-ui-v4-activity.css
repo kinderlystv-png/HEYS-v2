@@ -783,7 +783,10 @@ body:has(.activity-v4) .hdr::after {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font: 500 10.5px/1.2 Manrope, system-ui, sans-serif;
+  /* Высота строки 1, как в кадрах «Актива» и шторки резервного вопроса
+     («шрифт 500 10.5px/1»): при 1,2 подписи держали 12,6 вместо 10,5, и блок
+     календаря выходил на 2,1 px выше кадра. */
+  font: 500 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 

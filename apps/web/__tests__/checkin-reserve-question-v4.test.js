@@ -125,6 +125,30 @@ describe('резервный вопрос после еды', () => {
       expect(step, literal).not.toContain(literal);
     }
   });
+  it('подпись шапки 11,5 с отступом 4 под заголовком, шрифт страницы Manrope', () => {
+    // Кадр: подпись 500 11,5/1,4 отступом 4 под заголовком. AutoFitText ставит
+    // кегль 12 прямо в стиль элемента — поэтому 11,5 держится только с !important,
+    // а gap колонки заголовка до подписи не доходит: она стоит отдельным блоком.
+    expect(FRAME).toContain('font:500 11.5px/1.4 Manrope,sans-serif;color:var(--ink-2);margin-top:4px');
+    const at = CSS.indexOf('[data-heys-step-id="morning_activation_skip_reason"] .mc-header-hint {');
+    const hint = CSS.slice(at, CSS.indexOf('}', at));
+    expect(hint).toContain('margin-top: 4px');
+    expect(hint).toContain('font-size: 11.5px !important');
+    // Своего шрифта у шаговых модалок нет — они берут шрифт страницы. Пока он
+    // был системным, диалог рисовался шрифтом телефона, а не Manrope кадра.
+    const base = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/000-base-and-gamification.css'), 'utf8');
+    expect(base).toMatch(/\nbody \{\s*margin: 0;\s*font-family:\s*Manrope,/);
+  });
+
+  it('подписи под точками календаря высотой в кегль, как в кадре', () => {
+    // Кадр: «выравнивание center, зазор 6px, шрифт 500 10.5px/1». При 1,2 блок
+    // календаря выходил на 2,1 px выше, и всё ниже него съезжало.
+    expect(FRAME).toContain('gap:6px;font:500 10.5px/1 Manrope');
+    const activityCss = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'), 'utf8');
+    const at = activityCss.indexOf('.ma-habit-cal--activity-v4 .ma-habit-cal-legend-item {');
+    expect(activityCss.slice(at, activityCss.indexOf('}', at))).toContain('font: 500 10.5px/1 Manrope');
+  });
+
   it('крест тонкий и мелкий, как SVG кадра, тоном --ink-3', () => {
     // Кадр: SVG 15 px, viewBox 24, штрих 2,75, отрезки 6→18 со скруглением.
     // В пикселях черта ≈ 12,3 × 1,7 px. Прежние 19 × 2,75 были вдвое жирнее.

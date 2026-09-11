@@ -244,9 +244,13 @@ body {
 }
 
 /* === 03. common.css === */
+/* Шрифт страницы — Manrope (пакет 54): до этого по умолчанию стоял системный,
+   и всё, у чего нет своего правила шрифта (шапки шаговых модалок, подписи,
+   поля), рисовалось шрифтом телефона, а не шрифтом кадров. */
 body {
   margin: 0;
   font-family:
+    Manrope,
     ui-sans-serif,
     system-ui,
     -apple-system,
@@ -278,8 +282,9 @@ body.emoji-twemoji img.emoji {
 }
 
 /* System default - use whatever OS provides (Windows = Segoe, Mac = Apple) */
+/* Системные эмодзи берутся из запасного шрифта; текст остаётся Manrope. */
 body.emoji-system {
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-family: Manrope, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
 .card {
