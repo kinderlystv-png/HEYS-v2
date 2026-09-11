@@ -649,10 +649,13 @@
 }
 
 
-/* У чек-ина от прежнего правила осталась только своя врезка: тон подложки и
-   размытие теперь общие. */
+/* Чек-ин — слой поверх дня (строка «вид шага», пакет 53): поля 44 сверху,
+   12 по бокам и снизу. 44 в кадре — это место под системную шапку телефона,
+   поэтому сверху берётся большее из 44 и безопасной зоны + 12, а не сумма:
+   иначе на телефоне с вырезом поле выросло бы вдвое. */
 .mc-backdrop:has(.mc-modal--daily) {
-  padding: calc(12px + var(--safe-area-top)) calc(12px + var(--safe-area-right)) calc(12px + var(--safe-area-bottom)) calc(12px + var(--safe-area-left));
+  --mc-daily-inset-top: max(44px, calc(12px + var(--safe-area-top)));
+  padding: var(--mc-daily-inset-top) calc(12px + var(--safe-area-right)) calc(12px + var(--safe-area-bottom)) calc(12px + var(--safe-area-left));
 }
 
 /* Кадры «Рутина · резервный вопрос» и «Рутина · причина пропуска»: отступы
@@ -684,11 +687,14 @@
 
 /* Чек-ин отличается размером и скруглением, но не поверхностью: тон и тень
    ушли в общее правило выше. */
+/* Карточка слоя: радиус 24 и тень 0 10 30 тона тени 16 % (строка «вид шага»);
+   высота — всё, что осталось под полями 44/12, на 812 это 756. */
 .mc-modal--daily {
-  border-radius: 28px;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.16);
   max-width: min(390px, 100%);
-  max-height: calc(100dvh - 24px - var(--safe-area-top) - var(--safe-area-bottom));
-  height: min(844px, calc(100dvh - 24px - var(--safe-area-top) - var(--safe-area-bottom)));
+  max-height: calc(100dvh - var(--mc-daily-inset-top, 44px) - 12px - var(--safe-area-bottom));
+  height: min(844px, calc(100dvh - var(--mc-daily-inset-top, 44px) - 12px - var(--safe-area-bottom)));
   font-family: Figtree, "HEYS Manrope", system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   overflow: hidden;
@@ -7377,13 +7383,16 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   min-height: 2.75rem;
 }
 
+/* Кнопки подвала без боковых полей, как в кадре: у flex 1 и 1,3 поля
+   прибавляются к доле, и при 22 у одной и 0 у другой пропорция уезжала с
+   1 : 1,3 на 1 : 1,7; при 22 у обеих «Не взвешивался» не влезало в строку. */
 .mc-modal--daily .mc-btn.mc-daily-footer-secondary,
 .mc-modal--daily .mc-btn.mc-daily-footer-primary {
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  padding: 0 22px;
+  padding: 0;
   border-radius: 999px;
   box-shadow: none;
 }

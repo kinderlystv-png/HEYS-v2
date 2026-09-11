@@ -29,7 +29,9 @@ describe('morning check-in v4 layout vs canvas', () => {
     // «вид шага» задаёт 16/18/0 (низ держит футер 12/18/20), поэтому проверка
     // переехала на контрактное значение выше и на футер 12/18/20.
     expect(DAILY_CSS).toMatch(/\.mc-daily-footer \{[\s\S]*?padding: 12px 18px calc\(20px/);
-    expect(DAILY_CSS).toContain('border-radius: 28px');
+    // Пакет 53, строка «вид шага»: чек-ин — слой поверх дня, карточка радиусом
+    // 24 (было 28, когда слой рисовался экраном целиком).
+    expect(DAILY_CSS).toMatch(/\.mc-modal--daily \{[\s\S]*?border-radius: 24px/);
     expect(DAILY_CSS).toContain('.mc-backdrop:has(.mc-modal--daily)');
     expect(STEPS_SRC).toContain('borderRadius: 20');
     expect(STEPS_SRC).toContain('borderRadius: 16');

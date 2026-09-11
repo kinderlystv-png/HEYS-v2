@@ -73,11 +73,13 @@ describe('оболочка шаговых модалок', () => {
   it('чек-ин не держит своей копии поверхности — она общая', () => {
     const daily = rule(SHELL, '.mc-modal--daily');
     expect(daily, 'правило .mc-modal--daily найдено').toBeTruthy();
-    // Своими у него остаются размер, скругление и шрифт, но не тон и не тень:
+    // Своими у него остаются размер, скругление и шрифт, но не тон:
     // дубль означал бы, что общее правило можно сломать незаметно для чек-ина.
     expect(daily).not.toContain('background:');
-    expect(daily).not.toContain('box-shadow:');
-    expect(daily).toContain('border-radius: 28px');
+    // Тень своя по контракту, а не копия общей: пакет 53, строка «вид шага» —
+    // карточка слоя 0 10 30 тона тени 16 %, радиус 24.
+    expect(daily).toContain('box-shadow: 0 10px 30px rgba(var(--dp-shadow-rgb, 80, 50, 20), 0.16)');
+    expect(daily).toContain('border-radius: 24px');
   });
 
   it('вид полосы прогресса один на всех: компактной вилки больше нет', () => {
