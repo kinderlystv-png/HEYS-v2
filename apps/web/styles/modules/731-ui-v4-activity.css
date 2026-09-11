@@ -706,7 +706,11 @@ body:has(.activity-v4) .hdr::after {
    тенью внутрь: у точки фиксированные 9 px, и border сдвинул бы геометрию. */
 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral {
   background: transparent;
-  box-shadow: inset 0 0 0 1.5px var(--v4-ink-30, rgba(0, 0, 0, 0.3));
+  /* Тон обводки — акцент набора, а не чернила 30 %: строка контракта называет
+     его прямо. С чернилами 30 % «сегодня» опять сливалось с «не вели» — тем
+     самым, ради чего форму и вводили: точки различались только контуром, а
+     тон у них оставался один. */
+  box-shadow: inset 0 0 0 1.5px var(--v4-sand-act, #c67139);
 }
 
 .ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-done {

@@ -190,4 +190,21 @@ describe('причина пропуска', () => {
     const hover = CSS.slice(CSS.indexOf('.ma-skip-reason-option:hover'));
     expect(hover.slice(0, hover.indexOf('}'))).toMatch(/background: var\(--v4-chip[,)]/);
   });
+  it('«сегодня» в календаре обведено акцентом, а не чернилами', () => {
+    // Строка «вид · календарь зарядки», решение 31 августа: «Сегодня» рисуется
+    // обводкой 1,5 px акцентом, «не вели» — чернила 30 %. Обводка стояла теми
+    // же чернилами 30 %, и два состояния снова различались только контуром —
+    // ровно тем, от чего форма и должна была увести.
+    const activityCss = fs.readFileSync(
+      path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'),
+      'utf8',
+    );
+    const at = activityCss.indexOf('.ma-habit-cal-cell.is-today.is-neutral');
+    expect(at, 'правило «сегодня» найдено').toBeGreaterThan(-1);
+    const todayRule = activityCss.slice(at, activityCss.indexOf('}', at));
+    expect(todayRule).toContain('inset 0 0 0 1.5px');
+    expect(todayRule).toContain('var(--v4-sand-act');
+    expect(todayRule).not.toContain('--v4-ink-30');
+  });
+
 });
