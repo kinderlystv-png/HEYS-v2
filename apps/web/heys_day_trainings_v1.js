@@ -3245,7 +3245,10 @@
           : status === 'skipped' || status === 'moved'
             ? status
             : ownerDay ? 'unknown' : 'rest';
-      return { date: date, weekday: WEEKDAY_SHORT[index === 6 ? 0 : index + 1], kind: kind };
+      // Полоса недели в кадре «План на день» подписывает дни с заглавной — «Пн»,
+      // «Вт»: это подпись клетки, а не слово внутри фразы, как в выборе переноса.
+      const shortName = WEEKDAY_SHORT[index === 6 ? 0 : index + 1];
+      return { date: date, weekday: shortName.charAt(0).toUpperCase() + shortName.slice(1), kind: kind };
     });
   }
 

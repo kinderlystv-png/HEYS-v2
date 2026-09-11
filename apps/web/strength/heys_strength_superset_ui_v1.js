@@ -2970,8 +2970,11 @@
                 runPlanAction('start', function () { return onStart(e, plan); });
               }
             }, pendingAction === 'start' ? 'Переношу…' : 'Начать сейчас'),
+            // Кадр «План на день»: «Перенести» — вторичная пилюля .pill44 на
+            // --c2 чернилами 56 %, по содержимому. Стояла той же акцентной, что
+            // «Начать сейчас», — две главные кнопки в одной карточке.
             canMoveFuture && h('button', {
-              type: 'button', className: 'sb-btn is-accent sb-plan-cta',
+              type: 'button', className: 'sb-btn sb-plan-move',
               disabled: !!pendingAction,
               onClick: function () { setMoveOpen(true); }
             }, 'Перенести')

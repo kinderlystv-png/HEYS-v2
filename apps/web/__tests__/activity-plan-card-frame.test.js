@@ -245,16 +245,24 @@ describe('Перенос и пропуск — два разных действ�
     expect(screen.queryByText('Мало сил')).toBeNull();
   });
 
-  it('на будущем дне «Начать сейчас» и «Перенести» — две равные пилюли', () => {
+  it('на будущем дне «Начать сейчас» — главная пилюля, «Перенести» — вторичная', () => {
     renderCard({
       isFutureDay: true,
       canStartNow: true,
       moveOptions: [{ date: '2026-08-31', label: 'Завтра, понедельник 31 августа' }],
     });
+    // Кадр «План на день» с первой поставки: «Начать сейчас» — акцентная на
+    // остаток ширины, «Перенести» — вторичная .pill44 на --c2 по содержимому.
+    // Две акцентные спорили за главное действие.
     const start = screen.getByText('Начать сейчас');
     const move = screen.getByText('Перенести');
     expect(start.className).toContain('is-accent');
-    expect(move.className).toContain('is-accent');
+    expect(move.className).not.toContain('is-accent');
+    expect(move.className).toContain('sb-plan-move');
+    const moveRule = rule('.activity-v4-program .sb-plan-actions--future .sb-plan-move');
+    expect(moveRule).toContain('flex: none');
+    expect(moveRule).toContain('var(--v4-hero');
+    expect(moveRule).toContain('var(--v4-ink-2');
   });
 
   it('занятый день назван причиной и не выбирается', () => {

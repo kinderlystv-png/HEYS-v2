@@ -263,7 +263,8 @@ describe('projectProgramWeek — проекция недели из owner-index 
       '2026-08-12',
       { id: 'pl_1', programId: 'pr_1', status: 'assigned' },
     );
-    expect(week.map((day) => day.weekday)).toEqual(['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']);
+    // Кадр «План на день»: полоса недели подписывает клетки с заглавной.
+    expect(week.map((day) => day.weekday)).toEqual(['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']);
     expect(week.map((day) => day.kind)).toEqual([
       'done', 'rest', 'assigned', 'rest', 'unknown', 'rest', 'rest',
     ]);

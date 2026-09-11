@@ -1188,6 +1188,19 @@ body:has(.activity-v4) .hdr::after {
   font: 700 12px/1 Manrope, system-ui, sans-serif;
 }
 
+/* Кадр «План на день»: «Перенести» — .pill44 (--c2, 700 12px, чернила 56 %)
+   по содержимому рядом с акцентной «Начать сейчас». */
+.activity-v4-program .sb-plan-actions--future .sb-plan-move {
+  flex: none;
+  min-height: 44px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--v4-hero, #efe3cf); /* v4-intentional: --c2 кадра */
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  font: 700 12px/1 Manrope, system-ui, sans-serif;
+}
+
 .activity-v4-program .sb-plan-week-label {
   margin: 20px 0 10px;
   font: 700 10px/1 Manrope, system-ui, sans-serif;
