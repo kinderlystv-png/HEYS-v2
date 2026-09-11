@@ -286,7 +286,8 @@ describe('интент-сообщения', () => {
     const { buildIntentCard, IntentCard } = loadMessengerComponentInternals();
     const card = buildIntentCard({ intent_type: 'weight', intent_payload: { weight_kg: 81.4 } });
 
-    expect(card).toEqual({ kicker: 'Вес', value: '81.4 кг', valueLarge: true });
+    // Десятичная запятая, как «71,4 кг» в кадре «запись голосового».
+    expect(card).toEqual({ kicker: 'Вес', value: '81,4 кг', valueLarge: true });
     const { container } = render(RealReact.createElement(IntentCard, { card }));
     expect(container.querySelector('.msg-intent__row--single')).toBeTruthy();
   });

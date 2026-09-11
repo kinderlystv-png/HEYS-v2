@@ -145,6 +145,9 @@ describe('обзор первого входа против кадров first-r
     expect(text).toContain('Обзор пройден. Вернуться к нему — в настройках');
     expect(TOUR).toContain("label: 'Обзор пройден. Вернуться к нему — в настройках', duration: 4000, notice: true");
     expect(TOUR).toContain('if (result.completed && !state.fromSettings)');
+    // Строка «возврат к обзору»: из настроек обзор запускается и при
+    // выключенном самостоятельном показе.
+    expect(TOUR).toContain('if (!ONBOARDING_TOUR_ENABLED && !options.fromSettings) {');
     expect(UNDO).toContain("typeof opts.onUndo !== 'function' && !opts.notice");
     expect(productRule('.heys-undo-bar--notice .heys-undo-bar__ring,\n.heys-undo-bar--notice .heys-undo-bar__btn')).toContain('display: none');
   });

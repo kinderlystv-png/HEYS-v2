@@ -121,7 +121,9 @@ describe('DayChecklistRow', () => {
 
     const { container } = render(RealReact.createElement(DayChecklistRow, { items }));
     expect(container.querySelectorAll('.messenger-day-checklist__chip--done')).toHaveLength(1);
-    expect(container.querySelector('.messenger-day-checklist__tick')?.textContent).toBe('✓');
+    // Галочка — иконка, а не символ «✓» (контракт «слова на экране»).
+    expect(container.querySelector('.messenger-day-checklist__tick svg.messenger-icon')).toBeTruthy();
+    expect(container.textContent).not.toContain('✓');
   });
 
   it('тап по ожидаемому пункту подставляет шаблон, закрытый — не кликается', () => {

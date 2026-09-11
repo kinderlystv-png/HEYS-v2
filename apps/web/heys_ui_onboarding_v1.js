@@ -401,7 +401,10 @@
      * @param {Object} options - { force: boolean, onComplete: func, skipWelcome: boolean }
      */
     async start(options = {}) {
-      if (!ONBOARDING_TOUR_ENABLED) {
+      // Строка «возврат к обзору»: ряд «Обзор приложения» в настройках
+      // запускает обзор с первого шага в любой момент. Флаг выключает только
+      // самостоятельный показ после первого входа — ручной запуск он не держит.
+      if (!ONBOARDING_TOUR_ENABLED && !options.fromSettings) {
         trackTourEvent('onboarding_tour_skipped', { reason: 'disabled' });
         return false;
       }

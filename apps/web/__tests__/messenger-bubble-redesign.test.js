@@ -95,7 +95,7 @@ describe('пузырь сообщения после редизайна', () => 
     });
 
     const status = container.querySelector('.msg-status--applied');
-    expect(status.textContent).toBe('Внесено в день · 09:41');
+    expect(status.textContent).toBe('Внесено в день · 9:41');
     expect(status.querySelector('svg.messenger-icon')).toBeTruthy();
   });
 
@@ -107,11 +107,11 @@ describe('пузырь сообщения после редизайна', () => 
     expect(justSent.container.querySelector('.msg-status--sent').textContent).toMatch(/^Отправлено · /);
 
     const watched = renderBubble({ message: message({ seen_at: seen }) });
-    expect(watched.container.querySelector('.msg-status--seen').textContent).toBe('Куратор смотрит · 09:30');
+    expect(watched.container.querySelector('.msg-status--seen').textContent).toBe('Куратор смотрит · 9:30');
 
     // Обработка куратором перекрывает «смотрит».
     const processed = renderBubble({ message: message({ seen_at: seen, done_at: done }) });
-    expect(processed.container.querySelector('.msg-status--acked').textContent).toBe('Обработано · 09:40');
+    expect(processed.container.querySelector('.msg-status--acked').textContent).toBe('Обработано · 9:40');
   });
 
   it('куратор на своём сообщении видит «Принято» клиентом', () => {
@@ -126,7 +126,8 @@ describe('пузырь сообщения после редизайна', () => 
     const { container } = renderBubble({ message: message({ sender_role: 'curator' }) });
 
     expect(container.querySelector('.msg-status')).toBeNull();
-    expect(container.querySelector('.msg-meta').textContent).toMatch(/^\d{2}:\d{2}$/);
+    // Время — внутри пузыря и без ведущего нуля (контракт «вид · тред»: «9:15»).
+    expect(container.querySelector('.msg-bubble .msg-time').textContent).toMatch(/^\d{1,2}:\d{2}$/);
   });
 
   it('«принять» — текстовое действие в мета-строке, а не круглая кнопка', () => {

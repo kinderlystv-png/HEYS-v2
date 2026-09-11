@@ -35,7 +35,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         d.getFullYear() === today.getFullYear() &&
         d.getMonth() === today.getMonth() &&
         d.getDate() === today.getDate();
-      const hh = String(d.getHours()).padStart(2, '0');
+      // Час без ведущего нуля — «9:15», как во всех строках контракта
+      // messenger.v4 («Отправлено · 9:12», «8:12»).
+      const hh = String(d.getHours());
       const mm = String(d.getMinutes()).padStart(2, '0');
       if (isToday) return `${hh}:${mm}`;
       const dd = String(d.getDate()).padStart(2, '0');
@@ -44,6 +46,18 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     } catch {
       return '';
     }
+  }
+
+  /**
+   * Время внутри треда и поиска — только «9:15». День уже назван рядом:
+   * разделителем над сообщением («Вчера», «3 сентября») или первой частью
+   * строки результата поиска, и дата во времени повторяла его
+   * («Вчера · 04.09 19:44», «Обработано · 04.09 09:02» под «Вчера»).
+   */
+  function formatClock(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
   }
 
   function formatDuration(ms) {
@@ -56,7 +70,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   function formatConsentDate(iso) {
     if (!iso) return '';
     try {
-      return new Date(iso).toLocaleDateString('ru-RU');
+      // «включена с 2 сентября» — текст кадра «меню Ещё», а не «02.09.2026».
+      return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
     } catch {
       return '';
     }
@@ -605,7 +620,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         },
         React.createElement('audio', {
           ref: audioRef,
-          src: resolvedSrc,
+          // Пустой src браузер считает провалом источника и шлёт error — под
+          // каждым голосовым висело «не удалось воспроизвести», пока файл
+          // ещё грузился, и не снималось до первого нажатия.
+          src: resolvedSrc || undefined,
           preload: 'metadata',
         }),
         React.createElement('button', {
@@ -828,6 +846,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     highlighted = false,
     eagerPhotos,
     transcriptionGranted = false,
+    showStatus = true,
   }) {
     const isMine = message.sender_role === viewerRole;
     const isCurator = viewerRole === 'curator';
@@ -854,20 +873,21 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     const replyText = message.body ? parsed.reply : '';
     // Под своим сообщением — одна строка состояния вместо голого времени:
     // человеку важно, дошло ли до куратора и попало ли в день, а не просто час
-    // отправки. Порядок состояний — от самого позднего к раннему.
+    // отправки. Порядок состояний — от самого позднего к раннему. Строка
+    // одна на тред — у последнего своего (showStatus решает тред).
     const ownStatus = (() => {
-      if (!isMine) return null;
+      if (!isMine || !showStatus) return null;
       if (message.applied_at) {
-        return { key: 'applied', icon: 'check', text: `Внесено в день · ${formatTime(message.applied_at)}` };
+        return { key: 'applied', icon: 'check', text: `Внесено в день · ${formatClock(message.applied_at)}` };
       }
       if (theirAckAt) {
         const label = isCurator ? 'Принято' : 'Обработано';
-        return { key: 'acked', icon: 'check', text: `${label} · ${formatTime(theirAckAt)}` };
+        return { key: 'acked', icon: 'check', text: `${label} · ${formatClock(theirAckAt)}` };
       }
       if (message.seen_at && !isCurator) {
-        return { key: 'seen', dot: true, text: `Куратор смотрит · ${formatTime(message.seen_at)}` };
+        return { key: 'seen', dot: true, text: `Куратор смотрит · ${formatClock(message.seen_at)}` };
       }
-      return { key: 'sent', text: `Отправлено · ${formatTime(message.created_at)}` };
+      return { key: 'sent', text: `Отправлено · ${formatClock(message.created_at)}` };
     })();
 
     // Зелёный пузырь ушёл: статус теперь метка в мета-строке, а не заливка
@@ -1032,35 +1052,33 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           ? React.createElement(IntentCard, { card: intentCard })
           : replyText &&
               React.createElement('div', { className: 'msg-body' }, replyText),
+      // Время — внутри пузыря, внизу (контракт «вид · тред», во всех кадрах
+      // .bt стоит в пузыре). У неотправленного вместо времени — «Ожидает
+      // сети» (контракт «без сети»).
+      !editing && React.createElement(
+        'span',
+        { className: 'msg-time' },
+        message.queued ? 'Ожидает сети' : formatClock(message.created_at),
+      ),
     );
 
-    // Мета живёт под пузырём, а не внутри: статусы, время и действия — это
-    // не часть сообщения, и в пузыре они спорили с самим текстом.
+    // Под пузырём — только строка состояния последнего своего сообщения и
+    // действия: на десктопе по наведению, на телефоне их нет — там лист по
+    // долгому нажатию.
     if (message.queued) {
-      return React.createElement(
-        'div',
-        { className: 'msg-row msg-row-mine' },
-        bubble,
-        React.createElement(
-          'div',
-          { className: 'msg-meta-row' },
-          React.createElement('span', { className: 'msg-meta' }, 'Ожидает сети'),
-        ),
-      );
+      return React.createElement('div', { className: 'msg-row msg-row-mine' }, bubble);
     }
 
     const metaRow = !editing && React.createElement(
       'div',
       { className: `msg-meta-row${touchActionsOpen ? ' is-actions-open' : ''}` },
-      ownStatus
-        ? React.createElement(
-            'span',
-            { className: `msg-status msg-status--${ownStatus.key}` },
-            ownStatus.dot && React.createElement('span', { className: 'msg-status__dot', 'aria-hidden': 'true' }),
-            ownStatus.icon && React.createElement(Icon, { name: ownStatus.icon, size: 11, strokeWidth: 1.8 }),
-            ownStatus.text,
-          )
-        : React.createElement('span', { className: 'msg-meta' }, formatTime(message.created_at)),
+      ownStatus && React.createElement(
+        'span',
+        { className: `msg-status msg-status--${ownStatus.key}` },
+        ownStatus.dot && React.createElement('span', { className: 'msg-status__dot', 'aria-hidden': 'true' }),
+        ownStatus.icon && React.createElement(Icon, { name: ownStatus.icon, size: 11, strokeWidth: 1.8 }),
+        ownStatus.text,
+      ),
       message.edited_at &&
         React.createElement('span', {
           className: 'msg-edited-marker',
@@ -1112,7 +1130,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       // Карточка идёт сразу за сообщением, из которого куратор собрал приём.
       message.applied_summary && React.createElement(AppliedDayCard, {
         summary: message.applied_summary,
-        onOpenDay,
+        onOpenDay: onOpenDay ? () => onOpenDay(message) : undefined,
       }),
     );
   }
@@ -1354,7 +1372,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   // ── Collapse старых дней ─────────────────────────────────────────────
   // Сколько последних дней показываем сразу. Всё что старее — за кнопкой.
-  const RECENT_DAYS_LIMIT = 7;
+  // Контракт messenger.v4 «история»: показываются последние 30 дней, старше —
+  // за «Показать ранее · N». Было 7, и неделя назад уже пряталась.
+  const RECENT_DAYS_LIMIT = 30;
 
   // Возвращает ISO-timestamp cutoff: всё с created_at < cutoff = "старое".
   function getOldCutoffISO() {
@@ -1672,15 +1692,26 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function MessageActionSheet({
     message,
+    isCurator = false,
+    canReply = false,
+    canAck = false,
+    isAcked = false,
     canEdit,
     canDelete,
     canCopy,
     onClose,
+    onReply,
+    onToggleAck,
     onEdit,
     onDelete,
   }) {
     if (!message) return null;
     const quote = actionSheetQuoteText(message);
+    // Контракт «действия над сообщением — лист снизу»: на чужом — «Ответить»,
+    // «Принять» (или «Снять отметку»), «Скопировать текст»; на своём —
+    // «Изменить», «Скопировать текст», «Удалить». На телефоне других мест
+    // для этих действий нет — строк под пузырями на касании не показываем.
+    const ackLabel = isAcked ? 'Снять отметку' : (isCurator ? 'Обработать' : 'Принять');
     return React.createElement(
       React.Fragment,
       null,
@@ -1697,6 +1728,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           'div',
           { className: 'messenger-action-sheet__quote' },
           quote,
+        ),
+        canReply && React.createElement('button', {
+          type: 'button',
+          role: 'menuitem',
+          className: 'messenger-action-sheet__item',
+          onClick: () => { onClose(); onReply?.(); },
+        },
+          React.createElement(Icon, { name: 'reply', size: 18, strokeWidth: 2.5 }),
+          'Ответить',
+        ),
+        canAck && React.createElement('button', {
+          type: 'button',
+          role: 'menuitem',
+          className: 'messenger-action-sheet__item',
+          onClick: () => { onClose(); onToggleAck?.(); },
+        },
+          React.createElement(Icon, { name: 'check', size: 18, strokeWidth: 2.5 }),
+          ackLabel,
         ),
         canEdit && React.createElement('button', {
           type: 'button',
@@ -2012,7 +2061,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
         'span',
         { className: 'messenger-offline-bar__text' },
         isOffline() ? 'Нет сети. ' : '',
-        `${parts.join(' и ')} ${count > 0 || hasDraft ? 'сохранены на устройстве.' : ''}`.trim(),
+        // Без точки: полоса — строка состояния, как в кадре «без сети».
+        `${parts.join(' и ')} ${count > 0 || hasDraft ? 'сохранены на устройстве' : ''}`.trim(),
       ),
       count > 0 && React.createElement('button', {
         type: 'button',
@@ -2066,7 +2116,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
 
   function formatSearchResultMeta(message) {
     const day = formatDayLabel(message.created_at);
-    const time = formatTime(message.created_at);
+    const time = formatClock(message.created_at);
     const hasAudio = (message.attachments || []).some(isAudioAttachment);
     const parts = [`${day} · ${time}`];
     if (hasAudio && !message.body) parts.push('голосовое');
@@ -2223,8 +2273,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           { className: 'messenger-search__scroll' },
           groups.map((group) => React.createElement(
             'div',
+            // Заголовка дня над группой нет: день — первая часть строки
+            // результата («Сегодня · 13:07»), и отдельная строка его повторяла.
             { key: group.label, className: 'messenger-search__group' },
-            React.createElement('div', { className: 'messenger-search__day' }, group.label),
             group.items.map((message) => React.createElement(
               onJump ? 'button' : 'div',
               {
@@ -2490,7 +2541,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     if (message?.intent_type === 'weight') {
       return {
         kicker: 'Вес',
-        value: payload.weight_kg != null ? `${payload.weight_kg} кг` : null,
+        // «71,4 кг» — десятичная запятая, а не точка из JSON.
+        value: payload.weight_kg != null
+          ? `${Number(payload.weight_kg).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} кг`
+          : null,
         valueLarge: true,
       };
     }
@@ -2745,7 +2799,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           'div',
           { className: 'messenger-food-hint__text' },
           React.createElement('b', null, 'Время и вес в граммах'),
-          ' — тогда куратор соберёт день сразу.',
+          ' — тогда куратор соберёт день сразу',
         ),
         React.createElement(
           'div',
@@ -2835,9 +2889,11 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   };
 
   function DayChecklistRow({ items, isCurator, onPick }) {
-    const visible = (Array.isArray(items) ? items : []).filter(
-      (item) => item && (item.status === 'missing' || item.status === 'done'),
-    );
+    const visible = (Array.isArray(items) ? items : [])
+      .filter((item) => item && (item.status === 'missing' || item.status === 'done'))
+      // Недостающие первыми (контракт «Ждём»): сервер отдаёт пункты в порядке
+      // правил, и внесённый «Приём пищи» вставал перед ожидаемой «Водой».
+      .sort((a, b) => (a.status === 'missing' ? 0 : 1) - (b.status === 'missing' ? 0 : 1));
     // Если ждать больше нечего — строка уходит целиком, а не висит галочками.
     if (!visible.some((item) => item.status === 'missing')) return null;
 
@@ -2870,7 +2926,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                 }
               : { title: dueHint || undefined }),
           },
-          missing ? null : React.createElement('span', { className: 'messenger-day-checklist__tick', 'aria-hidden': 'true' }, '✓'),
+          // Галочка — иконка Lucide 11 px, а не символ (контракт «слова на экране»).
+          missing ? null : React.createElement(
+            'span',
+            { className: 'messenger-day-checklist__tick', 'aria-hidden': 'true' },
+            React.createElement(Icon, { name: 'check', size: 11, strokeWidth: 3.5 }),
+          ),
           item.label || item.key,
         );
       }),
@@ -3385,6 +3446,19 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       setHighlightedId(target.id);
       wasAtBottomRef.current = false;
     }, [isCurator, threadClientId, hydrateLocalAudio]);
+
+    // «Открыть день» на карточке «Внесено в дневник» ведёт на вкладку
+    // «Питание» дня, когда было сообщение (контракт карточки). Раньше в треде
+    // ссылки не было вовсе: карточка получала onOpenDay только в тестах.
+    // Переписка закрывается — вкладка живёт под ней.
+    const openAppliedDay = useCallback((message) => {
+      const d = new Date(message?.created_at);
+      if (Number.isNaN(d.getTime())) return;
+      const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      onClose?.();
+      try { HEYS.ui?.setSelectedDate?.(day); } catch { /* вкладка откроется на своём дне */ }
+      try { HEYS.ui?.switchTab?.('diary'); } catch { /* ignore */ }
+    }, [onClose]);
 
     // Подсветка гаснет сама: это указатель «вот оно», а не состояние.
     useEffect(() => {
@@ -4475,6 +4549,13 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                   const visibleMessages = showOldMessages
                     ? messages
                     : recentMessages;
+                  // Строка состояния — одна, у самого позднего своего сообщения
+                  // (контракт «состояние своего сообщения — одна строка»):
+                  // столбик одинаковых «Обработано» читался как список ошибок.
+                  const lastOwnId = visibleMessages.reduce(
+                    (found, m) => (m.sender_role === viewerRole ? m.id : found),
+                    null,
+                  );
 
                   const nodes = [];
 
@@ -4544,6 +4625,8 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
                         highlighted: m.id === highlightedId,
                         eagerPhotos: msgIdx >= eagerThreshold,
                         transcriptionGranted: !!transcriptionConsent?.granted,
+                        showStatus: m.id === lastOwnId,
+                        onOpenDay: openAppliedDay,
                       }),
                     );
                     msgIdx++;
@@ -4863,6 +4946,12 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           }),
         actionSheetMessage && React.createElement(MessageActionSheet, {
           message: actionSheetMessage,
+          isCurator,
+          canReply: actionSheetMessage.sender_role !== viewerRole,
+          canAck: actionSheetMessage.sender_role !== viewerRole,
+          isAcked: !!(isCurator ? actionSheetMessage.done_at : actionSheetMessage.acked_at),
+          onReply: () => handleReply(actionSheetMessage),
+          onToggleAck: () => handleToggleAck(actionSheetMessage),
           canEdit: actionSheetMessage.sender_role === viewerRole && !actionSheetMessage.intent_type,
           canDelete: actionSheetMessage.sender_role === viewerRole,
           canCopy: !!actionSheetQuoteText(actionSheetMessage),

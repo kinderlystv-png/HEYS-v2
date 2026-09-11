@@ -614,6 +614,16 @@
     return acc;
   }
 
+  // Строка настроек «Дневник · N из M блоков» (settings-system.v4, кадр
+  // «Настройки · список») считает те же чипы, что ряд «Что показывать на этой
+  // вкладке»: доступные и включённые — одним путём, без своей копии правил.
+  function countConfigChips(profile) {
+    const source = profile && typeof profile === 'object' ? profile : readProfile();
+    const chips = listConfigChips(source);
+    const state = readChipState(source);
+    return { on: chips.filter((chip) => state[chip.key] !== false).length, total: chips.length };
+  }
+
   // Решение владельца 24.08: чип «Добавки» только прячет и показывает блок.
   // Отзыв согласия — отдельная строка в настройках («Мои согласия и данные»),
   // на вкладке его нет: выключение чипа не спрашивает подтверждения и не трогает
@@ -2107,6 +2117,7 @@
     CYCLE_CHIP,
     isCycleNutritionAvailable,
     listConfigChips,
+    countConfigChips,
     HARM_THRESHOLD,
     formatShortDate,
     formatNumber,

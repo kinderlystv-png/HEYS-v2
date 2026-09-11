@@ -108,22 +108,37 @@ body:has(.widgets-quick-fab-wrap) .fab-group--messenger-only {
   overscroll-behavior: contain;
 }
 
+/* Переписка — полный экран, а общая плашка «Нет сети» приложения лежит выше
+   всех слоёв (--v4-z-offline-banner) и накрывала шапку переписки вместе с
+   крестиком. Внутри переписки сеть уже названа самой шапкой («нет сети —
+   синхронизируем позже») и полосой очереди, поэтому плашка на это время
+   уходит, а не переставляется порядок слоёв всего приложения. */
+body:has(.messenger-overlay) .offline-banner {
+  display: none;
+}
+
 @keyframes messenger-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
+/* Контракт messenger.v4 «слой»: полный экран поверх вкладки, не шторка и не
+   модалка — у переписки нет операции, которую смахивают, а клавиатура
+   занимает половину высоты. Лист на 90 % с прозрачной полосой сверху
+   показывал под собой Главную и её плашку «Нет сети». Верхний отступ —
+   под вырез и строку состояния телефона. На широком экране ниже — карточка. */
 .messenger-modal {
   position: relative;
+  box-sizing: border-box;
   width: 100%;
   max-width: 600px;
-  height: 90vh;
-  height: 90dvh;
-  max-height: 720px;
+  height: 100vh;
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--v4-bg, #fffaf1);
   color: var(--v4-ink, #201e1d);
   border: none;
-  border-radius: 22px 22px 0 0;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -142,6 +157,7 @@ body:has(.widgets-quick-fab-wrap) .fab-group--messenger-only {
   }
   .messenger-modal {
     height: 80vh;
+    max-height: 720px;
     border-radius: 22px;
   }
 }
@@ -197,16 +213,16 @@ body:has(.widgets-quick-fab-wrap) .fab-group--messenger-only {
   gap: 3px;
 }
 
+/* Подзаголовок переносится, а не режется: «нет сети — синхронизируем позже»
+   обрезалось до «позж», а кадр «без сети» ставит его в две строки. */
 .messenger-subtitle {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 11px;
   font-weight: 500;
+  line-height: 1.3;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .messenger-subtitle--search-count {
@@ -427,8 +443,10 @@ button.messenger-day-checklist__chip:active {
   flex-direction: column;
   gap: 8px;
   /* Тёплая бумага вместо холодного градиента с диагональной штриховкой:
-     фон не должен спорить с фотографиями еды. */
-  background: var(--v4-hero, #efe3cf);
+     фон не должен спорить с фотографиями еды. Лента — на грунте экрана,
+     как в кадрах messenger.v4: свой пузырь на --c2 (hero), чужой на --c1 —
+     два тона на одном грунте. На hero свой пузырь сливался с лентой. */
+  background: var(--v4-bg, #fffaf1);
   scrollbar-width: thin;
   /* Пакет 51, строка «вид · полоса прокрутки ленты»: роль --v4-track, а не
      своя. Серый литерал запрещён — на тёмных наборах он не виден вовсе. */
@@ -631,6 +649,22 @@ button.messenger-day-checklist__chip:active {
   color: var(--v4-ink-2); /* v4-intentional: контракт 56%, роль во всех наборах */
 }
 
+/* Время внутри пузыря (контракт «вид · тред»: 10,5 px/500 тоном ink-2,
+   отступ 5 от текста; у своих справа, у чужих слева — как .bt в кадрах). */
+.msg-time {
+  display: block;
+  margin-top: 5px;
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--v4-ink-2); /* v4-intentional: контракт 56%, роль во всех наборах */
+  text-align: right;
+}
+
+.msg-bubble-theirs .msg-time {
+  text-align: left;
+}
+
 /* «Внесено в день» — единственный статус, который остаётся пилюлей:
    это результат работы куратора, а не отметка о прочтении. */
 .msg-applied {
@@ -694,6 +728,21 @@ button.messenger-day-checklist__chip:active {
 @media (hover: hover) {
   .msg-row:hover .msg-action--own {
     display: inline;
+  }
+}
+
+/* Контракт «действия над сообщением — лист снизу»: на телефоне «Ответить»,
+   «Принять», «Изменить», «Удалить» живут в листе по долгому нажатию, строк
+   действий под пузырями нет. Строка без состояния уходит целиком, иначе её
+   пустой зазор раздвигал пузыри. Кураторский режим не трогаем — его экран
+   рисует другой канвас (curator-cabinet). */
+@media (hover: none) {
+  .messenger-modal:not(.messenger-modal--curator) .msg-meta-row .msg-action {
+    display: none;
+  }
+
+  .messenger-modal:not(.messenger-modal--curator) .msg-meta-row:not(:has(.msg-status, .msg-edited-marker)) {
+    display: none;
   }
 }
 
@@ -1194,7 +1243,20 @@ button.messenger-day-checklist__chip:active {
   background: transparent;
 }
 
-.messenger-recording-live,
+/* Полоса записи — по контракту «вид · композер»: пилюля на --tint с точкой
+   --red, таймером «0:14» 13 px/700 табличными и кнопкой «Стоп» текстом
+   акцента. Надпись «Идёт запись» остаётся только для скринридера: в кадре и
+   в строке текста её нет, запись видна по точке и идущему таймеру. */
+.messenger-recording-live {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 4px 0 15px;
+  border-radius: 22px;
+  background: var(--v4-tint, #f6e6dd);
+}
+
 .messenger-audio-draft {
   min-height: 58px;
   display: flex;
@@ -1223,30 +1285,35 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-recording-label {
-  min-width: 0;
-  flex: 1;
-  color: var(--v4-bad-text, #a83c22);
-  font-size: 13px;
-  font-weight: 600;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .messenger-recording-time {
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
-  font-size: 12px;
-  font-weight: 600;
+  flex: 1;
+  color: var(--v4-ink, #201e1d);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
+/* Цель касания 44 — видимым размером строки; заливки нет, слово «Стоп»
+   тоном акцента, как в кадре. */
 .messenger-recording-stop {
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   min-height: 44px;
   min-width: 44px;
-  background: var(--v4-bad-text, #a83c22);
-  color: var(--v4-bg, #fffaf1);
+  background: transparent;
+  color: var(--v4-act, #c67139);
   padding: 0 12px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -1824,10 +1891,15 @@ button.messenger-day-checklist__chip:active {
 /* Плашка «время и граммы»: от неё зависит, соберёт куратор день с первого
    сообщения или пойдёт переспрашивать — поэтому она с действиями, а не
    просто предупреждающая полоска. */
+/* Раскладка кадра: первая строка — часы, текст и «Скрыть» справа сверху
+   (контракт «подсказка»), вторая — ряд пилюль во всю ширину карточки. Прежде
+   «Скрыть» стояла отдельной колонкой на всю высоту и зажимала ряд пилюль. */
 .messenger-food-hint {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 9px;
+  row-gap: 0;
   margin: 0 14px;
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 6%, transparent);
@@ -1842,15 +1914,15 @@ button.messenger-day-checklist__chip:active {
   color: var(--v4-act-text, #8a4a20);
 }
 
+/* Обёртка текста и пилюль не рисует ничего сама: её дети встают в строки
+   карточки напрямую. */
 .messenger-food-hint__body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  display: contents;
 }
 
 .messenger-food-hint__text {
+  flex: 1;
+  min-width: 0;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.45;
@@ -1862,17 +1934,28 @@ button.messenger-day-checklist__chip:active {
   color: var(--v4-ink, #201e1d);
 }
 
+/* Ряд пилюль — один (контракт «ряд пилюль 44 px», кадр рисует одну строку):
+   четвёртая уходит вбок и листается, как строка «Ждём», а не переносит
+   карточку на вторую строку и не прячется обрезом. */
 .messenger-food-hint__actions {
+  order: 2;
+  flex-basis: 100%;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   margin-top: 10px;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.messenger-food-hint__actions::-webkit-scrollbar {
+  display: none;
 }
 
 .messenger-food-hint__pill {
   display: inline-flex;
   align-items: center;
+  flex: none;
   min-height: 44px;
   padding: 0 11px;
   border-radius: 999px;
@@ -1882,12 +1965,17 @@ button.messenger-day-checklist__chip:active {
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
+/* Цель касания 44 остаётся, но строку не раздвигает: поля −13 сверху и снизу
+   ставят слово на уровень первой строки текста, как в кадре. */
 .messenger-food-hint__hide {
+  order: 1;
   flex: none;
   align-self: flex-start;
+  margin-block: -13px;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
@@ -2088,12 +2176,6 @@ button.messenger-day-checklist__chip:active {
 }
 
 @media (max-width: 420px) {
-  .messenger-modal {
-    height: min(90vh, 840px);
-    height: min(90dvh, 840px);
-    border-radius: 20px 20px 0 0;
-  }
-
   .messenger-header {
     padding: 14px 16px;
   }
@@ -2370,8 +2452,6 @@ button.messenger-day-checklist__chip:active {
   box-shadow: none;
 }
 
-[data-theme$="dark"] .messenger-recording-label,
-[data-theme$="dark"] .messenger-recording-time,
 [data-theme$="dark"] .messenger-audio-status {
   color: var(--v4-bad-text, #a83c22);
 }
@@ -2986,7 +3066,9 @@ button.messenger-day-checklist__chip:active {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--v4-hero, #efe3cf);
+  /* Поиск занимает место треда (контракт «поиск — режим, а не оверлей») —
+     и его грунт: поле на --c1 читается на --bg, как в кадре. */
+  background: var(--v4-bg, #fffaf1);
 }
 
 .messenger-search__bar {
@@ -3055,26 +3137,28 @@ button.messenger-day-checklist__chip:active {
   display: none;
 }
 
+/* Чипы фильтра — по правилу .chip канваса (строка «вид · поиск»): на --c1 без
+   обводки, 12 px/600 тоном ink-2; выбранный — заливка --acs (--v4-act) с
+   парной ролью текста, как кнопка отправки. */
 .messenger-search__filter {
   flex: none;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 11px;
-  border: 1px solid color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
+  padding: 0 16px;
+  border: none;
   border-radius: 999px;
-  background: var(--v4-bg); /* v4-intentional */
+  background: var(--v4-c1, #f7efe2);
   color: var(--v4-ink-2); /* v4-intentional */
   font-family: inherit;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 }
 
 .messenger-search__filter.is-active {
-  background: var(--v4-c1, #f7efe2);
-  border-color: color-mix(in srgb, var(--v4-ink, #201e1d) 10%, transparent);
-  color: var(--v4-ink, #201e1d);
+  background: var(--v4-act, #c67139);
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 .messenger-search__results {
@@ -3099,13 +3183,6 @@ button.messenger-day-checklist__chip:active {
   min-height: 0;
   overflow-y: auto;
   padding: 0 0 16px;
-}
-
-.messenger-search__day {
-  padding: 10px 14px 6px;
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--v4-ink-2); /* v4-intentional */
 }
 
 .messenger-search__item {
@@ -3162,15 +3239,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 [data-theme$="dark"] .messenger-search__filter {
-  background: var(--v4-bg, #141210);
-  border-color: color-mix(in srgb, var(--v4-ink, #f2ede6) 10%, transparent);
-  color: var(--v4-ink-2); /* v4-intentional */
-}
-
-[data-theme$="dark"] .messenger-search__filter.is-active {
   background: var(--v4-c1, #23201b);
-  border-color: color-mix(in srgb, var(--v4-ink, #f2ede6) 10%, transparent);
-  color: var(--v4-ink, #f2ede6);
+  color: var(--v4-ink-2); /* v4-intentional */
 }
 
 [data-theme$="dark"] .messenger-search__author,
@@ -3178,7 +3248,6 @@ button.messenger-day-checklist__chip:active {
   color: var(--v4-ink, #f2ede6);
 }
 
-[data-theme$="dark"] .messenger-search__day,
 [data-theme$="dark"] .messenger-search__meta,
 [data-theme$="dark"] .messenger-search__time,
 [data-theme$="dark"] .messenger-search__hint {
@@ -3285,6 +3354,8 @@ button.messenger-day-checklist__chip:active {
 }
 
 .messenger-food-hint__stepper {
+  order: 3;
+  flex-basis: 100%;
   display: flex;
   align-items: center;
   flex-wrap: wrap;

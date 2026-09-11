@@ -4682,6 +4682,35 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
         const settingsProductCount = Array.isArray(products)
             ? products.length
             : (window.HEYS?.products?.getAll?.() || []).length;
+        // Значение строки «Дневник»: «N из M блоков» по чипам вкладки «Питание»
+        // (тот же подсчёт, что у ряда «Что показывать на этой вкладке»). Модуль
+        // вкладки ленивый — пока он не загружен, значения нет, строка остаётся.
+        const settingsDiaryBlocksMeta = (() => {
+            try {
+                const counted = window.HEYS?.NutritionV4?.countConfigChips?.();
+                if (!counted || !counted.total) return '';
+                const noun = counted.total % 10 === 1 && counted.total % 100 !== 11 ? 'блока' : 'блоков';
+                return `${counted.on} из ${counted.total} ${noun}`;
+            } catch (_) {
+                return '';
+            }
+        })();
+        // Строка «Дневник» ведёт туда, где блоки и включаются, — к ряду чипов
+        // вкладки «Питание». Вкладка ленивая: ряд появляется не сразу.
+        const openDiaryBlocks = () => {
+            closeSettingsAndSwitch('diary', 'settings-sheet-diary-blocks');
+            const startedAt = Date.now();
+            const reduceMotion = !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+            const reveal = () => {
+                const row = document.querySelector('.nutrition-v4-config');
+                if (row) {
+                    row.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+                    return;
+                }
+                if (Date.now() - startedAt < 3000) requestAnimationFrame(reveal);
+            };
+            requestAnimationFrame(reveal);
+        };
         const [settingsTasksBadgeTick, setSettingsTasksBadgeTick] = React.useState(0);
         React.useEffect(() => {
             const bump = () => setSettingsTasksBadgeTick((value) => value + 1);
@@ -5459,6 +5488,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             label: 'Профиль и цели',
                             onClick: () => openUserSection('basic', 'settings-sheet-profile'),
                         }),
+                        // Кадр «Настройки · список»: «Дневник · 6 из 7 блоков» —
+                        // сколько чипов вкладки «Питание» включено; ведёт к их ряду.
+                        renderSettingsRow({
+                            key: 'diary',
+                            label: 'Дневник',
+                            meta: settingsDiaryBlocksMeta,
+                            onClick: openDiaryBlocks,
+                        }),
                         renderSettingsRow({
                             key: 'products',
                             label: 'Мои продукты',
@@ -5472,12 +5509,6 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         }),
                     ]),
                     renderSettingsGroup('app', 'Приложение', [
-                        renderSettingsRow({
-                            key: 'subscription',
-                            label: 'Подписка',
-                            meta: subscriptionSettingsMeta,
-                            onClick: () => openUserSection('subscription', 'settings-sheet-subscription'),
-                        }),
                         // Контракт «вход в лист»: строка стоит под общим
                         // тумблером и открывается только когда он включён;
                         // при выключенном гаснет до 40 % и не нажимается.
@@ -5731,6 +5762,26 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                             )
                         )
                         ),
+                        // Строка «ярус «Приложение» · пять рядов»: Оформление,
+                        // Домашняя вкладка, Подписка, Обзор приложения, Звук и
+                        // время. «Подписка» стояла первой в ярусе.
+                        renderSettingsRow({
+                            key: 'subscription',
+                            label: 'Подписка',
+                            meta: subscriptionSettingsMeta,
+                            onClick: () => openUserSection('subscription', 'settings-sheet-subscription'),
+                        }),
+                        // Строка «возврат к обзору» (first-run.v4): значения нет,
+                        // запускает обзор с первого шага; плашки «обзор пройден»
+                        // после такого запуска нет.
+                        renderSettingsRow({
+                            key: 'tour',
+                            label: 'Обзор приложения',
+                            onClick: () => {
+                                setSettingsMenuOpen(false);
+                                window.HEYS?.OnboardingTour?.start?.({ force: true, fromSettings: true });
+                            },
+                        }),
                         renderSettingsRow({
                             key: 'notify',
                             label: 'Звук и время напоминаний',

@@ -7786,12 +7786,9 @@ NOVA: 1
     }
 
     return React.createElement('div', { className: 'pe-step' },
-      // Кадры шагов правки ставят над полями только ярус словами: значка
-      // рядом с ним нет ни в одном из них.
-      React.createElement('div', { className: 'pe-step-header' },
-        React.createElement('span', { className: 'pe-step-title' }, 'Название и КБЖУ')
-      ),
-
+      // Кадр «Правка продукта · основные»: под точками шагов сразу подпись
+      // «Название, КБЖУ и порции» и поля. Ярус «Название и КБЖУ» стоял сверх
+      // кадра и повторял ту же подпись другими словами.
       React.createElement('div', { className: 'pe-field' },
         React.createElement('label', { className: 'pe-label' }, 'Название'),
         React.createElement('input', {
