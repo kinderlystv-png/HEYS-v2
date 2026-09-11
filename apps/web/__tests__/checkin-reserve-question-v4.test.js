@@ -138,14 +138,14 @@ describe('резервный вопрос после еды', () => {
     expect(bar).toContain('background: var(--v4-ink-3)');
   });
 
-  it('крест справа встаёт правым краем по краю содержимого', () => {
+  it('крест справа стоит зеркально кадру: вынос 12 за поле', () => {
     const own = CSS.indexOf('[data-heys-step-id="morning_activation_followup"] .mc-header-btn--close {');
     expect(own, 'своё правило положения креста').toBeGreaterThan(-1);
     expect(CSS.slice(own, CSS.indexOf('}', own))).toContain('margin: -10px 0');
     // Вынос на обёртке: у неё min-width 44, и поле кнопки она поглощала.
     const wrap = CSS.indexOf('[data-heys-step-id="morning_activation_followup"] .mc-header-left {\n  margin-right');
     expect(wrap, 'вынос обёртки креста').toBeGreaterThan(-1);
-    expect(CSS.slice(wrap, CSS.indexOf('}', wrap))).toContain('margin-right: -17px');
+    expect(CSS.slice(wrap, CSS.indexOf('}', wrap))).toContain('margin-right: -12px');
   });
 
   it('крест справа, оба текста шапки слева, как в кадре', () => {
