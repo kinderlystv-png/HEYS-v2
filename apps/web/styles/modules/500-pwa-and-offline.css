@@ -722,10 +722,14 @@
   overflow: visible;
 }
 
+/* Пустое место под «Назад» на шагах без возврата: в кадрах чек-ина и развилки
+   это span шириной 44 без высоты, поэтому строка шапки высотой с точки (или с
+   подпись), а не 44. Прежние 44 × 44 опускали точки на 19 px, а всё
+   содержимое шага — на 38 против кадра. */
 .mc-modal--daily .mc-header-spacer {
   display: block;
   width: 44px;
-  height: 44px;
+  height: 0;
   flex: none;
 }
 
@@ -5450,7 +5454,9 @@
 /* Registration · personal data: the Canvas frame uses a compact three-row
    birth-date drum. Scope every override to this step because the shared wheel
    also serves check-in, meals and training parameters. */
+/* Регистрация держит своё: в её кадре на этом месте цель 44 × 44 с выносом −8. */
 .mc-modal[data-heys-step-id="profile-personal"] .mc-header-spacer {
+  height: 44px;
   margin: -8px 0;
 }
 

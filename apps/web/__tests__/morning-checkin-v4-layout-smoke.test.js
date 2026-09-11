@@ -32,6 +32,11 @@ describe('morning check-in v4 layout vs canvas', () => {
     // Пакет 53, строка «вид шага»: чек-ин — слой поверх дня, карточка радиусом
     // 24 (было 28, когда слой рисовался экраном целиком).
     expect(DAILY_CSS).toMatch(/\.mc-modal--daily \{[\s\S]*?border-radius: 24px/);
+    // Пустое место под «Назад» — в кадре span шириной 44 без высоты: строка
+    // шапки высотой с точки. Спейсер 44 × 44 опускал весь шаг на 38 px.
+    expect(DAILY_CSS).toMatch(/\.mc-modal--daily \.mc-header-spacer \{[^}]*height: 0;/);
+    // Регистрация держит свою цель 44 с выносом −8 — её кадр другой.
+    expect(DAILY_CSS).toMatch(/\[data-heys-step-id="profile-personal"\] \.mc-header-spacer \{[^}]*height: 44px;[^}]*margin: -8px 0;/);
     expect(DAILY_CSS).toContain('.mc-backdrop:has(.mc-modal--daily)');
     expect(STEPS_SRC).toContain('borderRadius: 20');
     expect(STEPS_SRC).toContain('borderRadius: 16');
