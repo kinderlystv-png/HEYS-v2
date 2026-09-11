@@ -705,6 +705,13 @@ html .heys-auth-key.heys-auth-key--delete.is-available:active {
   text-decoration: none !important;
 }
 
+/* Кадр «Вход · выбор свёрнут»: ссылка стоит строкой 11 px/1.5 через 18 под
+   клавиатурой, и нижнее поле карточки — 18. Цель 44 остаётся, но выносится за
+   строку: без выноса ряд рос до 44, и карточка вытягивалась на 27 px. */
+.heys-auth-support-line .heys-auth-support-link {
+  margin: -14px 0;
+}
+
 .heys-auth-notice {
   display: flex;
   align-items: center;

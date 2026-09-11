@@ -387,6 +387,15 @@ async function openCase(browser, item, snapshot, options = {}) {
         }
       }
     }
+    // Кадр «Вход · выбор свёрнут» рисует экран после ввода телефона: номер
+    // набран, текущая клетка кода обведена. Клетку обводит класс по состоянию
+    // (телефон целиком → очередь кода), а не фокус, поэтому снимок без фокуса
+    // её сохраняет.
+    if (item.kind === 'login' && item.phone) {
+      const phoneInput = page.locator('#heys-client-phone');
+      await phoneInput.waitFor({ state: 'visible', timeout: 45_000 });
+      await phoneInput.fill(item.phone);
+    }
     if (item.kind === 'demo-water-custom') {
       await page.waitForFunction(
         () => typeof window.HEYS?.WaterCustomVolume?.open === 'function',

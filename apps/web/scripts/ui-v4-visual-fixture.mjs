@@ -331,6 +331,8 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     gate: 'diagnostic',
     kind: 'login',
     rootSelector: '.heys-auth-shell',
+    // Номер кадра «Вход · выбор свёрнут»: (962) 455-61-11.
+    phone: '9624556111',
   },
   {
     id: 'home-widgets-default',
