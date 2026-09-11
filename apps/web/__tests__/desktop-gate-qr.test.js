@@ -8,7 +8,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 const WEB_DIR = path.resolve(__dirname, '..');
 const ORIGIN = 'http://localhost:3001';
 const PROD_ORIGIN = 'https://app.heyslab.ru';
-const QR_CELL_PX = 4;
+// Контракт «QR рисует приложение»: 25 модулей по 6 px, тихая зона 4 модуля → 198.
+const QR_CELL_PX = 6;
 const QR_QUIET_MODULES = 4;
 const QR_MARGIN_PX = QR_CELL_PX * QR_QUIET_MODULES;
 
