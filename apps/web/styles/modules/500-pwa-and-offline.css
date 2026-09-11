@@ -2346,9 +2346,13 @@
   cursor: pointer;
 }
 
+/* Строка «вид · кнопки решений» (cycle, 2 сентября): вторая кнопка — обводка
+   inset 1,5 px чернил 16 % без заливки, текст --ink-2. Заливка --c1 стояла на
+   карточке --c1, и кнопки не было видно. */
 .cycle-v4-btn--secondary {
-  background: var(--v4-sand-surface, #f7efe2);
-  color: rgba(0, 0, 0, 0.55);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px rgba(var(--v4-ink-rgb, 0, 0, 0), 0.16);
+  color: var(--v4-ink-2) /* v4-intentional */;
 }
 
 .cycle-v4-btn--primary {
@@ -2425,12 +2429,16 @@
   background: color-mix(in srgb, var(--v4-ink, #201e1d) 14%, transparent);
 }
 
+/* Цель 44 для пальца, видимый круг 34, как в кадре «Цикл · другой день,
+   календарь»: поля 5 и фон по содержимому. Отрицательное поле 5 держит строку
+   шапки высотой в круг, а не в цель — иначе всё ниже съезжало на 10 px. */
 .cycle-date-picker-sheet__month-nav,
 .cycle-date-picker-sheet__month-nav-placeholder {
   width: 44px;
   height: 44px;
   min-height: 44px;
   flex: none;
+  margin: -5px;
   border-radius: 999px;
 }
 
@@ -2442,9 +2450,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 5px;
   border: 0;
   background: var(--v4-c1, var(--v4-surface, #f7efe2));
+  background-clip: content-box;
   color: color-mix(in srgb, var(--v4-ink, #201e1d) 50%, transparent);
   cursor: pointer;
 }
@@ -2522,11 +2531,6 @@
 
 .cycle-date-picker-sheet__actions {
   margin-top: 13px;
-}
-
-.cycle-date-picker-sheet .cycle-v4-btn--secondary {
-  background: var(--v4-c1, var(--v4-surface, #f7efe2));
-  color: color-mix(in srgb, var(--v4-ink, #201e1d) 55%, transparent);
 }
 
 .cycle-date-picker-sheet .cycle-v4-btn--primary {
