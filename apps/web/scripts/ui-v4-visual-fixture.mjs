@@ -517,6 +517,9 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     themeId: 'sand',
     stubGamificationMerge: true,
     rootSelector: '[data-heys-step-modal][data-heys-step-id="edit_basic"]',
+    // Кадр «Правка продукта · основные» — само окно шага 330 × 706 (строка
+    // «геометрия кадра»), а не экран под затемнением: снимаем окно.
+    captureSelector: '[data-heys-step-modal][data-heys-step-id="edit_basic"]',
     viewport: { width: 375, height: 812 },
   },
   {
@@ -574,6 +577,8 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
     kind: 'demo-settings',
     tab: 'widgets',
     rootSelector: '.tab-settings-menu--v4-sheet',
+    // Кадр «Настройки · список» — сам лист настроек, а не экран под ним.
+    captureSelector: '.tab-settings-menu--v4-sheet',
   },
   {
     id: 'water-custom-volume',
