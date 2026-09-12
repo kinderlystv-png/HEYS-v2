@@ -216,9 +216,19 @@
                     };
                 });
 
-                const mondayLabel = monday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                const sundayLabel = sundayDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-                const rangeLabel = `${mondayLabel} – ${sundayLabel}`;
+                // Кадр «Лист периодов» подписывает неделю «1–7 сентября»:
+                // месяц назван один раз и полным словом. Прежняя запись
+                // «24 авг. – 30 авг.» повторяла месяц дважды и с точками.
+                const dayOnly = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric' });
+                // Месяц берём из полной даты: отдельно ru-RU даёт «август», а
+                // в подписи нужен родительный падеж — «25–31 августа».
+                const monthOnly = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+                    .replace(/^\d+\s*/, '');
+                const sameMonth = monday.getMonth() === sundayDate.getMonth()
+                    && monday.getFullYear() === sundayDate.getFullYear();
+                const rangeLabel = sameMonth
+                    ? `${dayOnly(monday)}–${dayOnly(sundayDate)} ${monthOnly(sundayDate)}`
+                    : `${dayOnly(monday)} ${monthOnly(monday)} – ${dayOnly(sundayDate)} ${monthOnly(sundayDate)}`;
 
                 weeks.push({
                     rangeLabel,

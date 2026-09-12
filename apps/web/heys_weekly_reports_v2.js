@@ -345,7 +345,7 @@
 
         return {
             dates,
-            rangeLabel: Sparklines.formatDateRange ? Sparklines.formatDateRange(dates) : '',
+            rangeLabel: Sparklines.formatDateRange ? Sparklines.formatDateRange(dates, { long: true }) : '',
             days,
             daysWithData,
             daysWithRecords,

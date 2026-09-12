@@ -188,7 +188,11 @@
             Math.round(report?.avgCarbs || 0)
         ].join(' / ');
 
-        const planValue = isUnreliable ? '—' : formatSignedPct(targetPct);
+        // Уставка приходит положительным числом («дефицит 10 %»), а колонка
+        // показывает отклонение от затрат: кадр пишет «−10 %». Печатали как
+        // есть — выходило «+10 %», то есть «ели больше затрат», при том что
+        // соседняя колонка «вышло» показывала минус.
+        const planValue = isUnreliable ? '—' : formatSignedPct(-targetPct);
         const deltaValue = isUnreliable ? '—' : formatSignedPct(avgDeltaPct);
         const weightValue = isUnreliable ? '—' : formatWeight(avgWeight);
         const deltaIsGood = !isUnreliable && Number.isFinite(avgDeltaPct) && avgDeltaPct < 0;

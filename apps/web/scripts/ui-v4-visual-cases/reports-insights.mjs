@@ -372,5 +372,9 @@ export const REPORTS_INSIGHTS_VISUAL_CASES = [
   tabCase({
     id: 'reports-periods-sheet-sand', tab: 'stats', label: 'Лист периодов', oid: 'RI-PER1',
     days: richDays(), uiStep: 'periods-sheet', viewport: { width: 375, height: 783 },
+    // Колонка «план» — целевой дефицит из профиля. Без него в карточке
+    // недели стоял «0 %» при съеденных 833 из 1 740: число выглядело как
+    // расчёт, а было отсутствием уставки.
+    profile: { deficitPctTarget: 10 },
   }),
 ];

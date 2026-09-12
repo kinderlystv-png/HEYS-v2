@@ -31,12 +31,26 @@
         return dates;
     }
 
-    function formatDateRange(dates) {
+    // Кадры зоны «Отчёты и инсайты» пишут период как «23–29 авг» и
+    // «1–7 сентября»: месяц назван один раз и без точки. Прежняя запись
+    // «23 авг. — 29 авг.» повторяла месяц дважды и съедала строку шапки.
+    // `long: true` даёт полное название месяца — так подписаны карточки листа
+    // периодов.
+    function formatDateRange(dates, options) {
         if (!dates || dates.length === 0) return '';
         const first = new Date(dates[0]);
         const last = new Date(dates[dates.length - 1]);
-        const fmt = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-        return fmt(first) + ' — ' + fmt(last);
+        const monthStyle = options && options.long ? 'long' : 'short';
+        const dayOf = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric' });
+        // Месяц берём из полной даты: отдельно ru-RU даёт именительный падеж
+        // («август»), а подписи нужен родительный — «23–29 авг», «1–7 сентября».
+        const monthOf = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric', month: monthStyle })
+            .replace(/^\d+\s*/, '')
+            .replace('.', '');
+        if (first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear()) {
+            return dayOf(first) + '–' + dayOf(last) + ' ' + monthOf(last);
+        }
+        return dayOf(first) + ' ' + monthOf(first) + ' – ' + dayOf(last) + ' ' + monthOf(last);
     }
 
     function getByPath(obj, path) {
