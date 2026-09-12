@@ -11,6 +11,10 @@ export const REGISTRY_FILE = path.join(ROOT, 'docs', 'ui', 'UI_V4_SCREEN_COVERAG
 const SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx']);
 const SKIP_DIRS = new Set(['__tests__', 'coverage', 'dist', 'node_modules', 'public']);
 const CLASS_LITERAL_RE = /className\s*[:=]\s*(['"])([^'"]+)\1/g;
+// Корень экрана часто собирают шаблонной строкой: `messenger-modal${…}`. Пока
+// опись читала только кавычки, такой экран из неё молча исчезал — и проверка
+// охвата подтверждала не покрытие, а собственную слепоту.
+const CLASS_TEMPLATE_RE = /className\s*[:=]\s*`([^`$]+)/g;
 const ROOT_CLASS_RE = /(?:^|[-_])(modal|sheet|overlay|fullscreen|screen)$/;
 
 function normalizeClassToken(token) {
@@ -27,8 +31,12 @@ function lineAt(source, offset) {
 
 export function extractScreenRoots(source, { file = '<inline>' } = {}) {
   const found = new Map();
-  for (const match of String(source).matchAll(CLASS_LITERAL_RE)) {
-    for (const token of match[2].split(/\s+/)) {
+  const hits = [
+    ...String(source).matchAll(CLASS_LITERAL_RE),
+    ...String(source).matchAll(CLASS_TEMPLATE_RE),
+  ].map((m) => ({ index: m.index, value: m[2] === undefined ? m[1] : m[2] }));
+  for (const match of hits) {
+    for (const token of match.value.split(/\s+/)) {
       const identity = normalizeClassToken(token);
       if (!identity) continue;
       const key = `${identity}\u0000${file}`;

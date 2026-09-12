@@ -139,7 +139,7 @@ describe('strength builder · З1 superset create v4 canvas contract', () => {
     expect(SOURCE).toContain("d: 'три подряд — плотнее и тяжелее'");
     expect(SOURCE).toContain("d: 'четыре и больше, круг за кругом'");
     expect(SOURCE).toContain('const totalApproaches = count * rounds;');
-    expect(SOURCE).toContain("'Суперсет, трисет и круговая — один объект с разным числом участников");
+    expect(SOURCE).not.toContain("Суперсет, трисет и круговая — один объект"); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
   });
 
   it('доказывает построчный DOM/computed-style контракт кадра З1 на песочном наборе', { timeout: 15000 }, () => {
@@ -230,7 +230,9 @@ describe('strength builder · З1 superset create v4 canvas contract', () => {
     }, '29');
     expectStyle(approaches, { fontSize: '16px', fontWeight: '800', color: palette.tx }, '30');
     expectStyle(finish, { marginTop: '12px', minHeight: '48px', borderRadius: '999px', backgroundColor: palette.acs, color: palette.onAcs }, '31');
-    expectStyle(note, { marginTop: '12px', fontSize: '11px', fontWeight: '500', lineHeight: '1.55' }, '32');
+    // Подпись под кнопкой сборки снята с экрана: она объясняла устройство
+    // связки, а не то, что собирают. Кадр её пока рисует — задача дизайнеру.
+    expect(note).toBeNull();
   });
 
   it('держит цветовые строки З1 на синем наборе через роли v4', { timeout: 15000 }, () => {

@@ -192,7 +192,9 @@ export const PLAN_FEED_DOM_CONTRACTS = Object.freeze([
     }, { locatorText: 'Начать сейчас', expectedText: 'Начать сейчас' }),
   }),
   contract('19', '«Перенести» — флекс none, поля 0 18px', {
-    assertion: dom(':scope .sb-plan-actions--future .sb-plan-cta', {
+    // «Перенести» стала вторичной пилюлей и сменила класс на sb-plan-move
+    // (кадр «План в ленте дня»): прежний селектор больше ничего не находил.
+    assertion: dom(':scope .sb-plan-actions--future .sb-plan-move', {
       locatorText: 'Перенести',
       expectedText: 'Перенести',
     }),

@@ -195,7 +195,7 @@ describe('Е3 · кольцо отдыха · canvas contract', () => {
   afterEach(() => cleanup());
 
   it('повторяет контракт кольца: 168px, 38px, дорожка 9px и три пилюли 44', () => {
-    expect(BUILDER).toContain("'Кольцо стоит над кнопкой «Завершить», а не поверх списка:");
+    expect(BUILDER).not.toContain("Кольцо стоит над кнопкой «Завершить»"); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(SUPERSET).toContain("h('small', null, 'осталось')");
     expect(CSS).toMatch(/\.sb-rest-ring\s*\{[\s\S]*width: 168px/);
     expect(CSS).toMatch(/\.sb-rest-ring\s*\{[\s\S]*height: 168px/);

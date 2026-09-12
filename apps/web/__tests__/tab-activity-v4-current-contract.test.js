@@ -71,7 +71,7 @@ describe('Активность v4: нагрузка раскрывается в�
     expect(ACTIVITY).toContain('Силовая нагрузка · накопленная');
     expect(ACTIVITY).toContain('Кардио — отдельным рядом');
     expect(ACTIVITY).toContain('в одно число с силовой не сводится');
-    expect(ACTIVITY).toContain('Абсолютных значений нет намеренно');
+    expect(ACTIVITY).not.toContain('Абсолютных значений нет намеренно'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(ACTIVITY).not.toMatch(/trainingLoad\.(ctl|atl|tsb)/);
   });
 });

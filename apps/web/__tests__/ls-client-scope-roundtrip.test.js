@@ -106,6 +106,33 @@ describe('lsGet/lsSet · клиентский скоуп', () => {
     expect(booted.utils.lsGet('heys_profile', {}).weight).toBe(74);
   });
 
+  it('до авторизации обёртка и HEYS.store читают один слот', () => {
+    // Расхождение этих двух читателей и выходило наружу разной нормой воды:
+    // карточка «Питания» берёт профиль через обёртку, плитка Главной — через
+    // Store, и вторая уезжала на запасные 70 кг.
+    const first = boot(CID);
+    first.utils.lsSet('heys_profile', { weight: 74 });
+
+    const booted = boot(undefined);
+    localStorage.setItem('heys_client_current', JSON.stringify(CID));
+
+    expect(booted.utils.lsGet('heys_profile', {}).weight).toBe(74);
+    expect(booted.store.get('heys_profile', {}).weight).toBe(74);
+  });
+
+  it('до авторизации сжатое значение читается, а не подменяется пустым', () => {
+    const first = boot(CID);
+    first.utils.lsSet('heys_products', Array.from({ length: 40 }, (_, i) => ({
+      name: `Продукт ${i}`, kcal100: 100, protein100: 1, carbs100: 2, fat100: 3,
+    })));
+    expect(localStorage.getItem(`heys_${CID}_products`).startsWith('¤Z¤')).toBe(true);
+
+    const booted = boot(undefined);
+    localStorage.setItem('heys_client_current', JSON.stringify(CID));
+
+    expect(booted.utils.lsGet('heys_products', []).length).toBe(40);
+  });
+
   it('глобальные ключи остаются вне клиентского скоупа', () => {
     const HEYS = boot(CID);
 

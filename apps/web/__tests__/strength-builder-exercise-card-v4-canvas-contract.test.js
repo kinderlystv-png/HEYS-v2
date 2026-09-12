@@ -73,7 +73,7 @@ describe('М1 · Упражнение · карточка · canvas contract', (
     expect(BUILDER).toContain("'единица не «свой вес» — поля нет'");
     expect(BUILDER).toContain("'Сохранить упражнение'");
     expect(BUILDER).toContain('Единица решает две вещи сразу');
-    expect(BUILDER).toContain('Ничего из этого не заполняется за человека молча');
+    expect(BUILDER).not.toContain('Ничего из этого не заполняется за человека молча'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(BUILDER).toContain("view === 'new'");
     expect(BUILDER).toContain('CatUI.NewExerciseScreen');
     expect(BUILDER).not.toMatch(/view === 'new'[\s\S]{0,160}h\(ExerciseCardScreen/);

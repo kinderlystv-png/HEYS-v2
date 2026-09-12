@@ -605,7 +605,7 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
     expect(source).toContain("className: 'sb-finish-feedback-grid'");
     expect(source).toContain("className: 'sb-finish-chart'");
     expect(source).toContain('Своя строка, а не пропуск: иначе человек решит, что работа потерялась.');
-    expect(source).toContain('Упражнения, которые не попали в объём, названы поимённо с причиной:');
+    expect(source).not.toContain('Упражнения, которые не попали в объём, названы поимённо'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(daySource).toContain('finishSummaryFor: function (currentExercises)');
     expect(daySource).toContain('previousComparableTonnageKg');
     expect(daySource).toContain('currentBodyWeightKg');

@@ -224,7 +224,7 @@ describe('Карточка плана говорит словами кадра',
     renderCard();
     const footnote = document.querySelector('.sb-plan-footnote');
     expect(footnote).toBeTruthy();
-    expect(footnote.textContent).toContain('Отдельного механизма переноса нет');
+    expect(footnote.textContent).toContain('Переносите сами, без подтверждения куратора');
     expect(footnote.textContent).toContain('перенос превратится в пропуск');
   });
 });

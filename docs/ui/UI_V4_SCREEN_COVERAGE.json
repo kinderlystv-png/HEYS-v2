@@ -104,6 +104,10 @@
         }
       ]
     },
+    "aps-barcode-nf-screen": {
+      "status": "gap",
+      "reason": "Экран «Код не распознан» построен по находке 27 с порогом 10 секунд непрерывного поиска. Строку контракта дизайнер обещал добавить — её в канвасе ещё нет, поэтому пробел настоящий, а не только несверенный."
+    },
     "aps-barcode-not-found-screen": {
       "status": "covered",
       "frames": [
@@ -278,6 +282,10 @@
       "status": "gap",
       "reason": "Живой экран специализированного модуля; точного продуктового кадра в текущих 25 canvas-зонах нет."
     },
+    "game-v4-sheet": {
+      "status": "gap",
+      "reason": "Лист геймификации. Нашёлся 12 сентября, когда опись научилась читать корень, собранный шаблонной строкой: до этого экран в счёт охвата не входил вовсе."
+    },
     "gantt-quick-edit-sheet": {
       "status": "gap",
       "reason": "Живой planning-экран или конкретный sheet/modal, но среди текущих 25 canvas-зон точного кадра нет."
@@ -328,6 +336,10 @@
         }
       ]
     },
+    "heys-supp-revoke-sheet": {
+      "status": "gap",
+      "reason": "Лист отзыва согласия построен 6 сентября по находке 05: системное окно подтверждения снято, цена действия названа числом. Кадры в registration есть, привязка поимённо не сверялась."
+    },
     "heys-wait-mark-overlay": {
       "status": "covered",
       "frames": [
@@ -374,6 +386,18 @@
     "loading-overlay": {
       "status": "excluded",
       "reason": "Внутренний loading-слой OptimizedImage, не самостоятельный продуктовый экран."
+    },
+    "mc-modal": {
+      "status": "gap",
+      "reason": "Модалка шагов (ручной ввод). Нашлась 12 сентября вместе с остальными корнями на шаблонных строках."
+    },
+    "messenger-action-sheet": {
+      "status": "gap",
+      "reason": "Лист действий над сообщением. Кадр «действия над сообщением — лист снизу» в messenger есть, привязка не сверялась."
+    },
+    "messenger-modal": {
+      "status": "gap",
+      "reason": "Модалка мессенджера. Кадры удаления и подтверждения в messenger есть, привязка не сверялась."
     },
     "messenger-overlay": {
       "status": "gap",
@@ -440,6 +464,10 @@
           "frame": "Сверка · норма снизилась"
         }
       ]
+    },
+    "nutrition-v4-date-target-sheet": {
+      "status": "gap",
+      "reason": "Лист «На какой день записать?» — равный выбор вместо склонения к сегодня. Строка контракта в nutrition-tab закрыта, привязка к кадрам не сверялась."
     },
     "nutrition-v4-sheet": {
       "status": "covered",
@@ -733,24 +761,6 @@
         }
       ]
     },
-    "sb-ss-bound-screen": {
-      "status": "covered",
-      "frames": [
-        {
-          "zone": "strength-builder",
-          "frame": "Связка · границы правки"
-        }
-      ]
-    },
-    "sb-warmup-drop-screen": {
-      "status": "covered",
-      "frames": [
-        {
-          "zone": "strength-builder",
-          "frame": "Конструктор · разминка и дроп-сет"
-        }
-      ]
-    },
     "sb-screen": {
       "status": "covered",
       "frames": [
@@ -784,6 +794,15 @@
       "status": "gap",
       "reason": "Shared root содержит несколько live sheet-вариантов; соседние frames не покрывают их все точно."
     },
+    "sb-ss-bound-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Связка · границы правки"
+        }
+      ]
+    },
     "sb-superset-create-screen": {
       "status": "covered",
       "frames": [
@@ -792,6 +811,10 @@
           "frame": "Связка · создание"
         }
       ]
+    },
+    "sb-templates-screen": {
+      "status": "gap",
+      "reason": "Шаблоны тренировок силовой: экран построен, кадра в пакете дизайна нет — механика нарисована только упоминанием в шторке ⋯."
     },
     "sb-triset-work-screen": {
       "status": "covered",
@@ -802,9 +825,22 @@
         }
       ]
     },
+    "sb-warmup-drop-screen": {
+      "status": "covered",
+      "frames": [
+        {
+          "zone": "strength-builder",
+          "frame": "Конструктор · разминка и дроп-сет"
+        }
+      ]
+    },
     "score-explainer-modal": {
       "status": "gap",
       "reason": "Старый технический modal не равен экрану «Разбор Score»."
+    },
+    "settings-screen": {
+      "status": "gap",
+      "reason": "Экран вынесенного раздела настроек — «Подписка», «Уведомления и звук», «Система» — построен решением владельца 12 сентября. Кадры подписки (subscription.v4) он повторяет, но поимённой привязки к кадрам «Уведомления» и «Система» никто не сверял."
     },
     "sleep-quality-picker-modal": {
       "status": "gap",
@@ -813,6 +849,10 @@
     "sparkline-brush-overlay": {
       "status": "excluded",
       "reason": "SVG-подсветка диапазона графика, не самостоятельный UI."
+    },
+    "sub-screen": {
+      "status": "gap",
+      "reason": "Экран подписки сведён с канвасом пакетами A, B и C. Кадры в subscription есть, поимённая привязка не сверялась."
     },
     "sync-lock-overlay": {
       "status": "gap",
@@ -1014,33 +1054,13 @@
       "status": "gap",
       "reason": "Живой универсальный modal настроек/preview виджета отсутствует."
     },
+    "wn-modal": {
+      "status": "gap",
+      "reason": "Модалка «Что нового». Нашлась 12 сентября вместе с остальными корнями на шаблонных строках."
+    },
     "zone-picker-modal": {
       "status": "gap",
       "reason": "Picker минут по зонам отсутствует."
-    },
-    "heys-supp-revoke-sheet": {
-      "status": "gap",
-      "reason": "Лист отзыва согласия построен 6 сентября по находке 05: системное окно подтверждения снято, цена действия названа числом. Кадры в registration есть, привязка поимённо не сверялась."
-    },
-    "nutrition-v4-date-target-sheet": {
-      "status": "gap",
-      "reason": "Лист «На какой день записать?» — равный выбор вместо склонения к сегодня. Строка контракта в nutrition-tab закрыта, привязка к кадрам не сверялась."
-    },
-    "sub-screen": {
-      "status": "gap",
-      "reason": "Экран подписки сведён с канвасом пакетами A, B и C. Кадры в subscription есть, поимённая привязка не сверялась."
-    },
-    "messenger-modal": {
-      "status": "gap",
-      "reason": "Модалка мессенджера. Кадры удаления и подтверждения в messenger есть, привязка не сверялась."
-    },
-    "messenger-action-sheet": {
-      "status": "gap",
-      "reason": "Лист действий над сообщением. Кадр «действия над сообщением — лист снизу» в messenger есть, привязка не сверялась."
-    },
-    "aps-barcode-nf-screen": {
-      "status": "gap",
-      "reason": "Экран «Код не распознан» построен по находке 27 с порогом 10 секунд непрерывного поиска. Строку контракта дизайнер обещал добавить — её в канвасе ещё нет, поэтому пробел настоящий, а не только несверенный."
     }
   },
   "unreviewed": []

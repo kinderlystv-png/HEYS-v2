@@ -104,7 +104,7 @@ describe('М4 · Ввод · время под нагрузкой · canvas cont
     expect(BUILDER).toContain('is-time-entry');
     expect(BUILDER).toContain('sb-time-summary');
     expect(BUILDER).toContain('sb-time-entry-footnote');
-    expect(BUILDER).toContain('есть ли что взвешивать');
+    expect(BUILDER).not.toContain('есть ли что взвешивать'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(CSS).toMatch(/\.sb-builder-screen\.is-time-entry \.sb-ap[\s\S]*grid-template-columns:\s*44px 1fr 44px/);
     expect(CSS).toMatch(/\.is-time-entry\.is-exercise-open \.sb-ap\.is-done \.sb-ap-num[\s\S]*var\(--gr-bg\)/);
     expect(CSS).toMatch(/\.is-time-entry\.is-exercise-open \.sb-ap\.is-current \.sb-ap-num[\s\S]*var\(--acs\)/);
@@ -134,7 +134,7 @@ describe('М4 · Ввод · время под нагрузкой · canvas cont
       const headSub = document.querySelector('.sb-head-sub');
       expect(headSub && headSub.textContent).toBe('единица — время');
       expect(screen.getByText('Итого под нагрузкой')).toBeTruthy();
-      expect(screen.getByText(/есть ли что взвешивать/)).toBeTruthy();
+      expect(screen.queryByText(/есть ли что взвешивать/)).toBeNull();
     } finally {
       style.remove();
     }

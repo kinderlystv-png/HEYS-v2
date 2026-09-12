@@ -115,7 +115,7 @@ describe('Ж1 · порядок · canvas contract', () => {
     expect(SOURCE).toContain("'⠿'");
     expect(SOURCE).toContain("'переносится сюда'");
     expect(SOURCE).toContain("'Отменить'");
-    expect(SOURCE).toContain('Случайная галочка снимается тостом');
+    expect(SOURCE).not.toContain('Случайная галочка снимается тостом'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(BUILDER).toContain("'Подход засчитан · '");
     expect(BUILDER).toContain("'тост живёт несколько секунд'");
     expect(BUILDER).toContain('setApproachUndo');

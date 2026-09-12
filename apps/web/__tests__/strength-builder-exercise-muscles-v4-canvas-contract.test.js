@@ -17,7 +17,7 @@ describe('strength builder · Упражнение · группы мышц v4 c
     expect(catalogSource).toContain("'Основная — одна'");
     expect(catalogSource).toContain("'Синергисты — сколько нужно'");
     expect(catalogSource).toContain("'Как это ляжет в объём'");
-    expect(catalogSource).toContain('Список закрыт одиннадцатью и своих групп не принимает');
+    expect(catalogSource).not.toContain('Список закрыт одиннадцатью'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(catalogSource).toContain('CATALOG_V4_BRIDGE');
     expect(catalogSource).toContain('muscleVolumePreviewRows');
   });

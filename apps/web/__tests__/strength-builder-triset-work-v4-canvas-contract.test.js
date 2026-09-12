@@ -118,7 +118,7 @@ describe('З2 · трисет в работе · canvas contract', { timeout: 45
     expect(SUPERSET).toContain('разъединить');
     expect(SUPERSET).toContain('общая для связки');
     expect(SUPERSET).toContain('круг закрыт · отдых');
-    expect(SUPERSET).toContain('Раунд — строка, а не три карточки');
+    expect(SUPERSET).not.toContain('Раунд — строка, а не три карточки'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(CSS).toMatch(/\.sb-tw-round\.is-current[\s\S]*box-shadow: inset 0 0 0 2px var\(--sb-acc-strong\)/);
     expect(CSS).toMatch(/\.sb-tw-member-card[\s\S]*padding: 8px 9px;/);
     expect(CSS).toMatch(/\.sb-tw-warmup-tag[\s\S]*width: 44px;[\s\S]*height: 26px;/);

@@ -38,8 +38,8 @@ describe('strength builder · M7 interrupted-session v4 canvas contract', () => 
     expect(source).toContain('Таймер отдыха вы не запускали — ждать нечего.');
     expect(source).toContain('Таймер отдыха ещё идёт — осталось ');
     expect(source).toContain('Таймер отдыха истёк, пока вас не было, и заново не запускается.');
-    expect(source).toContain('Пауза больше 45 минут бывает и без таймера:');
-    expect(source).toContain('Редкий случай: таймер сохранился и не истёк.');
+    expect(source).not.toContain('Пауза больше 45 минут бывает и без таймера'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
+    expect(source).not.toContain('Редкий случай: таймер сохранился'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(source).toContain('Разрыв больше 45 минут — и второй кнопкой предлагаем закрыть тренировку временем последней отметки, а не текущим:');
     expect(source).toContain('Длительность в итогах всегда считается от первой отметки до последней.');
     expect(source).toContain('breakSec > 45 * 60');

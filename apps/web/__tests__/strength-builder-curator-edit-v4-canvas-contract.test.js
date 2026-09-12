@@ -126,8 +126,8 @@ describe('strength builder · Правка · сторона куратора (�
     expect(screen.getByText('Отметка «прочитано»')).toBeTruthy();
     expect(screen.getByText('не показывается')).toBeTruthy();
     expect(container.querySelectorAll('.sb-curator-edit-row').length).toBeGreaterThanOrEqual(5);
-    expect(container.querySelector('.sb-curator-edit-footnote')?.textContent)
-      .toMatch(/Куратор видит исход/);
+    // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
+    expect(container.querySelector('.sb-curator-edit-footnote')).toBeNull();
   });
 
   const rows = [
@@ -147,7 +147,6 @@ describe('strength builder · Правка · сторона куратора (�
     ['14', '.sb-curator-edit-mark.is-warn', '—', { fontWeight: '700', fontSize: '12px', color: SAND.ac2 }],
     ['15', '.sb-curator-edit-card.is-policy', null, { marginTop: '10px' }],
     ['16', '.sb-curator-edit-policy', 'видно, причина — только если указана', { fontWeight: '600', fontSize: '11px', color: SAND.ink56 }],
-    ['17', '.sb-curator-edit-footnote', null, { fontSize: '11px', color: SAND.ink56 }],
   ];
 
   rows.forEach(function ([id, selector, text, expected]) {
@@ -197,7 +196,7 @@ describe('strength builder · Правка · сторона куратора (�
     expect(text).toContain('тяга блока · подходы уже закрыты');
     expect(text).toContain('видно, причина — только если указана');
     expect(text).toContain('не показывается');
-    expect(text).toContain('Куратор видит исход');
+    // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
   });
 
   it('source exports CuratorEditStatusScreen in proposal_ui', () => {

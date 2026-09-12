@@ -392,7 +392,7 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
     let actual = document.body.textContent.replace(/\s+/g, ' ').trim();
     [
       'Верх тела B', 'правка принята в', 'принято', 'План обновлён',
-      'Продолжить тренировку', 'Исход виден составом',
+      'Продолжить тренировку',
     ].forEach((chunk) => expect(actual).toContain(chunk));
     cleanup();
 
@@ -403,7 +403,7 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
     actual = document.body.textContent.replace(/\s+/g, ' ').trim();
     [
       'Верх тела B', 'предложение отклонено', 'План остался прежним',
-      'Посмотреть, что он предлагал', 'Одна кнопка, и та тихая',
+      'Посмотреть, что он предлагал', 'Предложение сохраняется — к нему можно вернуться.',
     ].forEach((chunk) => expect(actual).toContain(chunk));
     cleanup();
 
@@ -583,7 +583,8 @@ describe('Л10–Л12 · исходы предложения · canvas contract'
       expect(screen.getByText('Пропущено')).toBeTruthy();
       expect(screen.getByText('Своих, вне плана')).toBeTruthy();
       expect(screen.getByText('Пропущенная не считается сделанной')).toBeTruthy();
-      expect(screen.getByText(/Отчёт дня и отчёт периода/)).toBeTruthy();
+      // Пояснение, почему сводка живёт на этом экране, снято.
+      expect(screen.queryByText(/Отчёт дня и отчёт периода/)).toBeNull();
     } finally {
       style.remove();
     }

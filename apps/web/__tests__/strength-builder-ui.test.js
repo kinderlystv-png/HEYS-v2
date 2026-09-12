@@ -287,8 +287,8 @@ describe('конструктор: тяжесть подхода без проф�
   });
 });
 
-const A2_COLLAPSED_NOTE = 'Состояние, в котором список живёт между упражнениями: карточку свернули, подход закрыт, следующее ещё не начато. Раскрытие — тап по карточке, и прежняя сворачивается сама: две открытые карточки не бывают. «Завершить» остаётся тихой, пока счёт незакрытых не дошёл до нуля.';
-const A1B_OPEN_NOTE = 'Тот же состав, шесть правок против шума. Сделанное не громче текущего: у закрытых упражнений и подходов снята зелёная заливка, сигнал остался один — галочка. Акцент указывает одно место: обводка карточки говорит «открыто здесь», рамка полей — «писать сюда»; номера, кольцо галочки и обводка активной строки приглушены, потому что шесть акцентов внутри одного блока не акцентируют ничего. Заливки больше не вложены тройкой: строки внутри карточки живут на её фоне. Шкала тяжести без обводок — это одна необязательная оценка, а не второй блок веса таблицы. Счётчик незакрытых снят с кнопки: он уже стоит бейджем в шапке.';
+// Пояснения из кадра сняты с экрана (решение владельца 12 сентября): они
+// объясняли переделку дизайна, а не то, что человек делает в зале.
 
 describe('конструктор: спокойная нижняя панель', () => {
   it('свёрнутый список показывает состояния из Canvas в номере и одной строке', () => {
@@ -305,10 +305,10 @@ describe('конструктор: спокойная нижняя панель',
       onClose: () => {},
     }));
 
-    expect(document.querySelector('.sb-builder-note')?.textContent).toBe(A1B_OPEN_NOTE);
+    expect(document.querySelector('.sb-builder-note')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /Жим лёжа/ }));
-    expect(document.querySelector('.sb-builder-note')?.textContent).toBe(A2_COLLAPSED_NOTE);
+    expect(document.querySelector('.sb-builder-note')).toBeNull();
     expect(screen.getByText('2 × 8–12 · 75 кг · рекорд')).toBeTruthy();
     expect(screen.getByText('сейчас · подход 2 из 2')).toBeTruthy();
     expect(screen.getByText('1 × 12 · 20 кг · не начато')).toBeTruthy();
@@ -510,7 +510,8 @@ describe('каталог конструктора по Canvas Б2', () => {
     expect(screen.getByText('Спина · прошлый раз 60 × 8')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Ноги' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Квадрицепс' })).toBeTruthy();
-    expect(screen.getByText(/Строка создания появляется/)).toBeTruthy();
+    // Пояснение из кадра снято с экрана: сама строка создания проверена выше.
+    expect(screen.queryByText(/Строка создания появляется/)).toBeNull();
   });
 
   it('строка создания открывает NewExerciseScreen внутри каталога, не builder M1', () => {
@@ -625,7 +626,8 @@ describe('конструктор: связка', () => {
     expect(screen.getByText('Жим закрыт')).toBeTruthy();
     expect(screen.getByText('дальше · следующий подход')).toBeTruthy();
     expect(screen.getByText('осталось')).toBeTruthy();
-    expect(screen.getByText(/Число подписано, откуда взялось — по правилу «по умолчанию»/)).toBeTruthy();
+    // Подпись кольца про раскладку снята; само кольцо и его действия — ниже.
+    expect(screen.queryByText(/Кольцо стоит над кнопкой/)).toBeNull();
     expect(screen.getByText('+10 секунд')).toBeTruthy();
     fireEvent.click(screen.getByText('+10 секунд'));
     expect(screen.getByText('1:40')).toBeTruthy();
@@ -758,7 +760,8 @@ describe('пустая тренировка (экран 02)', () => {
     expect(screen.getByText('Пустая тренировка')).toBeTruthy();
     expect(screen.getByText('пусто · 0 подходов')).toBeTruthy();
     expect(screen.getByText('Собрать свою')).toBeTruthy();
-    expect(screen.getByText(/Плана нет — главной становится/)).toBeTruthy();
+    // Какая кнопка главная, видно и без подписи — абзац снят.
+    expect(screen.queryByText(/Плана нет — главной становится/)).toBeNull();
     expect(screen.queryByText(/Начать по плану/)).toBeNull();
     expect(screen.queryByText(/Шаблон/)).toBeNull();
   });

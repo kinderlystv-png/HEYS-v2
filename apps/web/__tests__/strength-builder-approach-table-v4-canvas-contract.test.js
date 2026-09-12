@@ -67,8 +67,8 @@ describe('Е1 · таблица ввода · canvas contract', () => {
     expect(SUPERSET).toContain('sb-approach-pills');
     expect(SUPERSET).toContain('sb-context-chips');
     expect(SUPERSET).toContain('sb-rest-cd');
-    expect(SUPERSET).toContain('sb-ex-footnote');
-    expect(SUPERSET).toContain('Вес и повторы стоят столбцами');
+    expect(SUPERSET).not.toContain('sb-ex-footnote'); // подпись под таблицей снята вместе с пояснением
+    expect(SUPERSET).not.toContain('Вес и повторы стоят столбцами'); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
     expect(BUILDER).toContain("view === 'warmup-drop'");
     expect(CSS).toMatch(/\.sb-builder-screen\.is-exercise-open \.sb-approach-pills[\s\S]*display: flex;/);
     expect(CSS).toMatch(/\.sb-builder-screen\.is-exercise-open \.sb-pill\.is-accent[\s\S]*flex: 1;/);
@@ -143,7 +143,7 @@ describe('Е1 · таблица ввода · canvas contract', () => {
       expect(document.querySelector('.sb-aps > .sb-ap.is-current .sb-ap-num')?.textContent).toBe('3');
 
       const footnote = document.querySelector('.sb-ex-footnote');
-      expect(footnote?.textContent).toContain('Вес и повторы стоят столбцами');
+      expect(footnote).toBeFalsy(); // Пояснение из кадра снято с экрана (решение владельца 12 сентября).
 
       expect(mismatches).toEqual([]);
     } finally {

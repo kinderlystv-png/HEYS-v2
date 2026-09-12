@@ -141,7 +141,7 @@ describe('strength builder · Правка · пропущен сегодня (�
     expect(screen.getByText('Не сегодня')).toBeTruthy();
     expect(screen.getByText('Посмотреть')).toBeTruthy();
     expect(container.querySelector('.sb-missed-today-footnote')?.textContent)
-      .toMatch(/Отмеченных подходов нет/);
+      .toMatch(/День остаётся пропущенным/);
   });
 
   const rows = [
@@ -220,7 +220,7 @@ describe('strength builder · Правка · пропущен сегодня (�
     expect(text).toContain('добавили');
     expect(text).toContain('Не сегодня');
     expect(text).toContain('Посмотреть');
-    expect(text).toContain('пропуск был решением человека');
+    expect(text).toContain('День остаётся пропущенным');
   });
 
   it('source exports MissedTodayProposalScreen in proposal_ui', () => {
