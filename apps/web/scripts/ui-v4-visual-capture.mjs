@@ -1513,20 +1513,14 @@ async function openCase(browser, item, snapshot, options = {}) {
       );
       await page.evaluate((themeId) => {
         if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        // Кадр «Конструктор · пусто · плана нет»: плана у дня нет вовсе.
+        // Стенд подсовывал назначенный план, и снимок показывал соседнее
+        // состояние — «План на сегодня готов» вместо «Пустая тренировка».
+        // Ветка с планом снимается своим кейсом strength-empty-plan-sand.
         const emptyTraining = {
           type: 'strength',
           strengthEntryMode: 'workout_builder',
           workoutLog: { exercises: [] },
-          plan: {
-            id: 'visual-plan-b', status: 'assigned', dayLabel: 'День B', assignedBy: 'Артём',
-            assignedAt: new Date('2026-08-28T08:00:00+03:00').getTime(),
-          },
-          planSnapshot: {
-            exercises: Array.from({ length: 7 }, (_, index) => ({
-              name: 'План · упражнение ' + (index + 1),
-              approaches: [{ weightKg: '20', reps: 10, done: false }],
-            })),
-          },
         };
         const lastExercises = Array.from({ length: 7 }, (_, index) => ({
           name: 'Прошлое · упражнение ' + (index + 1), approaches: [],
@@ -1689,6 +1683,35 @@ async function openCase(browser, item, snapshot, options = {}) {
         .locator('#ui-v4-strength-superset-create-host .sb-radio.is-on')
         .filter({ hasText: 'Трисет' })
         .waitFor({ state: 'visible', timeout: 45_000 });
+    }
+    // Кадры зоны strength-builder: сценарий состояния лежит в
+    // apps/web/scripts/ui-v4-visual-cases/strength-builder.mjs — там же, где
+    // кейс. Одна ветка на всю зону вместо ветки на каждый из её кадров.
+    if (item.kind === 'demo-strength-zone') {
+      // Готовность опрашиваем evaluate-циклом, а не waitForFunction: тот
+      // поллит предикат через eval в странице, а CSP продукта запрещает
+      // 'unsafe-eval' — проверка падала до первого монтажа.
+      const sbDeadline = Date.now() + 45_000;
+      for (;;) {
+        if (await page.evaluate(item.sbReady)) break;
+        if (Date.now() > sbDeadline) {
+          throw new Error(`${item.id}: не дождались готовности — ${item.sbReady}`);
+        }
+        await page.waitForTimeout(250);
+      }
+      await page.evaluate(item.sbSetup);
+      for (const step of item.sbSteps || []) {
+        if (step.wait) {
+          await page.locator(step.wait).first()
+            .waitFor({ state: step.state || 'visible', timeout: 45_000 });
+        }
+        if (step.click) await page.locator(step.click).first().click();
+        if (step.fill) await page.locator(step.fill[0]).first().fill(step.fill[1]);
+        if (step.text) {
+          await page.locator(step.text[0]).filter({ hasText: step.text[1] }).first()
+            .waitFor({ state: 'visible', timeout: 45_000 });
+        }
+      }
     }
     if (item.kind === 'demo-food-copy-empty') {
       await page.waitForFunction(
