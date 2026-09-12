@@ -9,10 +9,14 @@ const FIXED_DAY = '2026-08-28';
 
 // Продукты снимка (PRODUCTS в ui-v4-visual-fixture.mjs) — по id, чтобы приёмы
 // считались тем же каталогом, что и остальные стенды.
-const OATS = { id: 'visual-oats', name: 'Овсяная каша' };
-const BERRIES = { id: 'visual-berries', name: 'Ягоды' };
-const CHICKEN = { id: 'visual-chicken', name: 'Куриная грудка' };
-const RICE = { id: 'visual-rice', name: 'Рис' };
+// Питательность кладётся в саму позицию приёма: продукты снимка доезжают до
+// страницы заготовками без нутриентов, и счёт дня по каталогу выходил нулевым.
+// Отсюда весь ноль зоны — «Дней в норме 0 из 0», «Питание не ведётся»,
+// «0 / 2 дней» на графике и вечный недобор в «Сделай сегодня».
+const OATS = { id: 'visual-oats', name: 'Овсяная каша', kcal100: 102, protein100: 3.5, carbs100: 15.7, fat100: 3.2 };
+const BERRIES = { id: 'visual-berries', name: 'Ягоды', kcal100: 46, protein100: 0.8, carbs100: 8.3, fat100: 0.4 };
+const CHICKEN = { id: 'visual-chicken', name: 'Куриная грудка', kcal100: 165, protein100: 31, carbs100: 0, fat100: 3.6 };
+const RICE = { id: 'visual-rice', name: 'Рис', kcal100: 128, protein100: 3.1, carbs100: 24.5, fat100: 2.1 };
 
 function mealItem(product, grams) {
   return {
@@ -21,6 +25,10 @@ function mealItem(product, grams) {
     productId: product.id,
     name: product.name,
     grams,
+    kcal100: product.kcal100,
+    protein100: product.protein100,
+    carbs100: product.carbs100,
+    fat100: product.fat100,
   };
 }
 
@@ -96,7 +104,16 @@ function richDays() {
 
 /** 18 спокойных дней: всё в норме, отклонений нет. */
 function calmDays() {
-  return Array.from({ length: 18 }, (_, offset) => fullDay(offset));
+  // Кадр «день без заданий» показывает пустое «Сделай сегодня», а задания
+  // рождаются из предупреждений: при обычных порциях день недобирает около
+  // восьмисот килокалорий, и движок всегда просит не пропускать приёмы.
+  // Здесь дни съедены по норме — около 2 000.
+  const fedMeals = (offset) => [
+    { id: `m-${offset}-1`, name: 'Завтрак', time: '08:40', items: [mealItem(OATS, 400), mealItem(CHICKEN, 150)] },
+    { id: `m-${offset}-2`, name: 'Обед', time: '13:05', items: [mealItem(CHICKEN, 250), mealItem(RICE, 400)] },
+    { id: `m-${offset}-3`, name: 'Ужин', time: '18:40', items: [mealItem(OATS, 200), mealItem(BERRIES, 200), mealItem(CHICKEN, 100)] },
+  ];
+  return Array.from({ length: 18 }, (_, offset) => fullDay(offset, { meals: fedMeals(offset) }));
 }
 
 /** 18 дней с накопленным напряжением: короткий сон, низкое самочувствие, недобор. */
