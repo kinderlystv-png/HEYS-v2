@@ -1679,7 +1679,15 @@
     const weekday = now.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
     const capWeekday = weekday ? weekday.charAt(0).toUpperCase() + weekday.slice(1) : '';
     const dateLine = firstMorning && capWeekday ? `${capWeekday} — первый день недели` : capWeekday;
-    const streak = firstMorning ? 0 : Number(HEYS.Day?.getStreak?.() || 0);
+    // Серия — только каноническим путём: HEYS.Day.getStreak это замыкание
+    // вкладки Дня, оно исчезает при её размонтировании, и плашка серии в шапке
+    // чек-ина молча становилась нулём (чек-ин открывается поверх любой вкладки).
+    // Тот же порядок, что у оболочки шагов (heys_step_modal_v1.js).
+    const streak = firstMorning ? 0 : Number(
+      HEYS.utils?.safeGetStreak?.()
+      ?? HEYS.dayCalendarMetrics?.getCurrentStreak?.()
+      ?? 0
+    );
     // Шапка первого вопроса — не вопрос чек-ина, но «Доброе утро» в 20:00 врёт.
     // Берём уже существующее в продукте вечернее приветствие (login-экран).
     // Строка «чек-ин не пройден до вечера» запрещает второй набор формулировок
@@ -1807,8 +1815,8 @@
         greeting,
         React.createElement('div', { className: 'mc-step-kicker' }, 'Вес на утро'),
         React.createElement('div', { style: { display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 14 } },
-          React.createElement('span', { style: { fontSize: 58, fontWeight: 600, lineHeight: 0.9, color: 'rgba(0,0,0,.45)', letterSpacing: '-0.045em' } }, weightLabel),
-          React.createElement('span', { style: { fontSize: 13, fontWeight: 600, lineHeight: 1, color: 'rgba(0,0,0,.38)' } }, 'кг')
+          React.createElement('span', { style: { fontSize: 58, fontWeight: 600, lineHeight: 0.9, color: 'var(--v4-ink-3, rgba(0,0,0,.45))', letterSpacing: '-0.045em' } }, weightLabel),
+          React.createElement('span', { style: { fontSize: 13, fontWeight: 600, lineHeight: 1, color: 'var(--v4-ink-4, rgba(0,0,0,.38))' } }, 'кг')
         ),
         React.createElement('div', {
           style: {
@@ -1818,15 +1826,26 @@
           }
         }, estimatedBadge),
         React.createElement('div', {
-          style: { width: '100%', background: '#f7efe2', borderRadius: 20, padding: '15px 17px', marginTop: 22 }
+          // Роль, а не литерал: в тёмных наборах --v4-c1 другая, и карточка
+          // расчётного веса оставалась песочной поверх тёмного экрана. Тем же
+          // ходом переведены на роли соседние чернила расчётного веса —
+          // крупное число (--v4-ink-3), «кг» (--v4-ink-4) и заголовок карточки
+          // (--v4-ink-2): кадр называет именно роли, а литералы rgba(0,0,0,…)
+          // за набором не следуют.
+          style: { width: '100%', background: 'var(--v4-c1, #f7efe2)', borderRadius: 20, padding: '15px 17px', marginTop: 22 }
         },
           estimateSource === 'estimated_avg' || estimateSource === 'average3'
             ? [
               React.createElement('div', {
                 key: 'title',
-                style: { fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: 'rgba(0,0,0,.6)' }
+                style: { fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: 'var(--v4-ink-2, rgba(0,0,0,.56))' }
               }, 'Среднее за три последних взвешивания'),
-              ...estimateSamples.map((sample) => React.createElement('div', {
+              // Кадр «Чек-ин · расчётный вес» перечисляет взвешивания от
+              // старого к свежему (13 → 14 → 15 августа), а собраны они
+              // обратным ходом от сегодня. Разворачиваем копию для показа:
+              // среднее от порядка не зависит, а свежая дата должна стоять
+              // ближе всего к крупному числу над карточкой.
+              ...[...estimateSamples].reverse().map((sample) => React.createElement('div', {
                 key: sample.date,
                 // Строка контракта «вторичные тоны» (уточнение 2 сентября по
                 // контрасту): строки прошлых взвешиваний стояли на 42–50 %
@@ -1839,12 +1858,16 @@
                 React.createElement('span', null, `${Number(sample.weight).toFixed(1).replace('.', ',')} кг`)
               ))
             ]
+            // Кадр «Чек-ин · расчётный вес без истории» красит этот текст
+            // ролью --ink-2; стоял литерал 60 %, за набором не следующий.
             : React.createElement('div', {
-              style: { fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: 'rgba(0,0,0,.6)' }
+              style: { fontSize: 11.5, fontWeight: 600, lineHeight: 1.5, color: 'var(--v4-ink-2, rgba(0,0,0,.56))' }
             }, 'Взвешиваний пока меньше трёх — среднее считать не из чего, берём вес из анкеты.')
         ),
         React.createElement('p', {
-          style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, color: 'rgba(0,0,0,.45)', marginTop: 14, textAlign: 'center' }
+          // Оба кадра расчётного веса красят сноску ролью --ink-2; стоял
+          // литерал 45 % — и тон не тот, и за набором он не идёт.
+          style: { fontSize: 11, fontWeight: 500, lineHeight: 1.5, color: 'var(--v4-ink-2, rgba(0,0,0,.56))', marginTop: 14, textAlign: 'center' }
         }, estimatedHint),
         !context?.dailyCheckin && React.createElement('button', {
           type: 'button',
@@ -1888,7 +1911,9 @@
             strokeLinecap: 'round',
             'aria-hidden': 'true'
           }, React.createElement('path', { d: 'M6 9l6 6 6-6' })),
-          `${weekDelta > 0 ? '+' : ''}${String(weekDelta).replace('.', ',')} кг за неделю`
+          // Знак минуса, а не дефис: у числа он ровно той же ширины, что и плюс,
+          // и строка не прыгает при смене знака; так же её рисует кадр.
+          `${weekDelta > 0 ? '+' : ''}${String(weekDelta).replace('-', '−').replace('.', ',')} кг за неделю`
         ),
         isFirstMorning && React.createElement('div', {
           className: 'mc-recorded-hint',
@@ -7436,7 +7461,15 @@
     const profile = lsGet('heys_profile', {}) || {};
     const estimated = isEstimatedMorningWeight(day);
     const weight = Number(day.weightMorning);
-    const streak = Number(HEYS.Day?.getStreak?.() || 0);
+    // Серия — тем же каноническим путём, что и в шапке первого шага:
+    // HEYS.Day.getStreak это замыкание вкладки Дня, и на итоге чек-ина,
+    // открытого поверх любой вкладки, оно давало ноль — вместо «Серия — N
+    // дней подряд» человек видел «Утро закрыто».
+    const streak = Number(
+      HEYS.utils?.safeGetStreak?.()
+      ?? HEYS.dayCalendarMetrics?.getCurrentStreak?.()
+      ?? 0
+    );
     const stepsGoal = Number(profile.stepsGoal) || 0;
     // Канон утренней нормы = resolveDailyTargets → optimum.
     let kcal = 0;
@@ -7462,7 +7495,9 @@
 
     return React.createElement('div', { className: 'mc-recorded' },
       React.createElement('div', { className: 'mc-recorded-check', 'aria-hidden': 'true' },
-        React.createElement('svg', { width: 26, height: 26, viewBox: '0 0 24 24', fill: 'none', stroke: '#5c6a45', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+        // Галка красится ролью --v4-ok-text (это --gr кадра): литерал за набором
+        // не следует и на тёмных палитрах оставался светло-оливковым.
+        React.createElement('svg', { width: 26, height: 26, viewBox: '0 0 24 24', fill: 'none', stroke: 'var(--v4-ok-text, #5c6a45)', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
           React.createElement('path', { d: 'M5 13l4 4L19 7' })
         )
       ),
