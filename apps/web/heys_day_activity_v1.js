@@ -1012,8 +1012,6 @@
         loadRow('Вклад этой сессии', 'в силовом ряду, своей единицей — тоннажем',
           trainingLoad.sessionContribution, 'number', true)
       ),
-      React.createElement('div', { className: 'activity-v4-load-note' },
-        'Абсолютных значений нет намеренно: шкала не откалибрована на живой истории, и «72 из 100» читалось бы как измерение. Числа не хранятся — считаются на чтении.'),
       trainingLoad.verdict && React.createElement(React.Fragment, null,
         React.createElement('div', { className: 'activity-v4-tier' }, 'Вердикт сессии'),
         React.createElement('div', { className: 'activity-v4-load-verdict' },
@@ -1044,8 +1042,6 @@
             )
           )
         ),
-        React.createElement('div', { className: 'activity-v4-load-note' },
-          'Вердикт ставится по тоннажу и тяжести подходов закрытой сессии — их считает конструктор. Восстановление названо процентом и часами, готовность — словом: часы человек проверяет по себе, а процент готовности проверить нечем.')
       )
     );
     return React.createElement('div', {

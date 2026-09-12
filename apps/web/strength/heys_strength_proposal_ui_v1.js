@@ -409,7 +409,7 @@
     );
   }
 
-  const CURATOR_EDIT_FOOTNOTE = 'Куратор видит исход, а не поведение клиента: отправлено, принято или «не сегодня», и что именно не легло. Полный кадр «не легло» с клиентской стороны — «Правка легла не полностью» в ярусе выше.';
+  const CURATOR_EDIT_FOOTNOTE = '';
 
   const CURATOR_REJECT_REASON = {
     done_approaches_kept: 'подходы уже закрыты',
@@ -628,13 +628,13 @@
               snapshot.policyReadSub)
           )
         ),
-        h('p', { className: 'sb-curator-edit-footnote', style: CURATOR_EDIT_STYLE.footnote },
+        snapshot.footnote && h('p', { className: 'sb-curator-edit-footnote', style: CURATOR_EDIT_STYLE.footnote },
           snapshot.footnote)
       )
     );
   }
 
-  const MISSED_TODAY_FOOTNOTE = 'Отмеченных подходов нет, поэтому правка безопасна технически. Опасность другая: пропуск был решением человека, и предложение не должно читаться как «ну всё-таки сделай». День остаётся пропущенным, пока клиент сам не возьмёт замену; отказ называется «не сегодня» и причины не спрашивает. Причину, если она указана, куратор видит — но спрашивать её интерфейс не будет.';
+  const MISSED_TODAY_FOOTNOTE = 'День остаётся пропущенным, пока вы сами не возьмёте замену. Отказ называется «не сегодня» и причины не спрашивает.';
 
   const MISSED_TODAY_STYLE = {
     headCol: { display: 'flex', flexDirection: 'column', gap: '3px' },
@@ -881,7 +881,7 @@
             onClick: onReview,
           }, snapshot.reviewLabel)
         ),
-        h('p', { className: 'sb-missed-today-footnote', style: MISSED_TODAY_STYLE.footnote },
+        snapshot.footnote && h('p', { className: 'sb-missed-today-footnote', style: MISSED_TODAY_STYLE.footnote },
           snapshot.footnote)
       )
     );
@@ -1638,7 +1638,7 @@
   const CYCLE_REPORT_FOOTNOTE = 'Перенос и пропуск — разные исходы: перенос освобождает исходный день заранее и пропуском не считается, пропуск остаётся навсегда — прошедший день не переигрываем.';
   const PERIOD_REPORT_DEBT_TITLE = 'Пропущенная не считается сделанной';
   const PERIOD_REPORT_DEBT_PROSE = 'Сейчас в счёт объёма попадает и пропущенная запись — отчёт говорит об этом прямо, а не делает вид, что работает.';
-  const PERIOD_REPORT_FOOTNOTE = 'Отчёт дня и отчёт периода — разные экраны: у дня спрашивают «что сегодня не сошлось», у периода — «сколько раз за две недели». Сводка по исходам живёт здесь, потому что за один день она всегда «4 · 1 · 1 · 2» из четырёх упражнений и не отвечает ни на что.';
+  const PERIOD_REPORT_FOOTNOTE = '';
 
   function fmtReportVolumeDisplay(kg, unmeasured, bodyWeightKg) {
     if (unmeasured > 0 && bodyWeightKg == null && !(+kg > 0)) return '—';
@@ -1910,7 +1910,7 @@
           className: 'sb-btn is-accent sb-period-cta',
           onClick: props.onWeekReport || onClose,
         }, 'Отчёт за неделю'),
-        h('p', { className: 'sb-period-footnote' }, PERIOD_REPORT_FOOTNOTE)
+        PERIOD_REPORT_FOOTNOTE && h('p', { className: 'sb-period-footnote' }, PERIOD_REPORT_FOOTNOTE)
       )
     );
   }
@@ -2026,8 +2026,8 @@
   Parts.buildPeriodReportSnapshot = buildPeriodReportSnapshot;
   Parts.openPeriodReport = openPeriodReport;
 
-  const ACCEPTED_OUTCOME_FOOTNOTE = 'Исход виден составом, а не словом «применено»: человек должен увидеть, что именно у него теперь в плане, и что отмеченное осталось на месте.';
-  const DECLINED_OUTCOME_FOOTNOTE = 'Одна кнопка, и та тихая: отказ — это не ошибка, которую надо исправлять формой с причиной. Предложение сохраняется, чтобы к нему можно было вернуться.';
+  const ACCEPTED_OUTCOME_FOOTNOTE = '';
+  const DECLINED_OUTCOME_FOOTNOTE = 'Предложение сохраняется — к нему можно вернуться.';
   const EXPIRED_OUTCOME_FOOTNOTE = 'Предложение не блокирует завершение и не превращается в долг: непринятое просто не случилось, и куратор видит именно это, а не «проигнорировал».';
 
   function exercisesBeforeAccept(training) {

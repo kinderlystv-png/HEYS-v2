@@ -445,7 +445,6 @@
           type: 'button', className: 'sb-finish-done',
           onClick: function () { onDone(note, feedback); }
         }, 'Готово'),
-        h('p', { className: 'sb-finish-footnote' }, 'Упражнения, которые не попали в объём, названы поимённо с причиной: секунды и метры копятся своими величинами, а свой вес без известной массы тела не считается вовсе.')
       ),
     );
   }
