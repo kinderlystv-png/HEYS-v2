@@ -2452,14 +2452,50 @@
     }
 
     function InsightsV4Patterns(props) {
-      const { patterns, daysWithData, period, onPeriodChange, historyDays } = props || {};
+      const { patterns, daysWithData, period, onPeriodChange, historyDays, onOpenPanel } = props || {};
       if (!patterns || patterns.length === 0) return null;
-      // Тумблер «Показать все» снят (контракт «что заметили»): скрытая
-      // незрелость превращала гипотезу в сюрприз — незрелое видно сразу со
-      // словом «гипотеза», лимит незрелых строк — три.
-      const available = patterns.filter(function (p) { return p && p.available; });
-      const immature = patterns.filter(function (p) { return p && !p.available; }).slice(0, 3);
-      if (available.length === 0 && immature.length === 0) return null;
+
+      // Контракт «пустые строки на первый экран не выходят»: «связь не
+      // выявлена», «недостаточно данных», «пока не наблюдается» — это отчёт
+      // детектора о собственной работе, а не наблюдение. На первом экране их
+      // нет: они занимали треть блока и не говорили человеку ничего, что он
+      // может сделать или узнать. Их место — панель «Ещё N», группа
+      // «Заметки на будущее».
+      const isEmptyFinding = function (p) {
+        const text = String((p && (p.title || p.insight)) || '');
+        return /не выявлен|недостаточно данных|пока не наблюда|мало данных/i.test(text);
+      };
+
+      // Контракт «сколько карточек в „Что заметили“»: порядок и есть
+      // приоритет, а приоритет задаёт лестница зрелости — правило, потом
+      // наблюдение, потом прогноз, потом гипотеза; внутри одного слова
+      // первым идёт то, что свежее. Отдельного лимита незрелых нет:
+      // ограничивает сама сортировка.
+      const MATURITY_ORDER = { 'правило': 0, 'наблюдение': 1, 'прогноз': 2, 'гипотеза': 3 };
+      const freshnessOf = function (p) {
+        const raw = (p && (p.updatedAt || p.lastSeenAt || p.detectedAt)) || 0;
+        const ms = typeof raw === 'number' ? raw : Date.parse(raw) || 0;
+        return ms;
+      };
+      const ranked = patterns
+        .filter(function (p) { return p && !isEmptyFinding(p); })
+        .map(function (p, idx) { return { p: p, idx: idx }; })
+        .sort(function (a, b) {
+          const wa = MATURITY_ORDER[buildPatternMaturityWord(a.p)];
+          const wb = MATURITY_ORDER[buildPatternMaturityWord(b.p)];
+          if (wa !== wb) return (wa == null ? 9 : wa) - (wb == null ? 9 : wb);
+          const fa = freshnessOf(a.p);
+          const fb = freshnessOf(b.p);
+          if (fa !== fb) return fb - fa;
+          return a.idx - b.idx;
+        })
+        .map(function (x) { return x.p; });
+      if (ranked.length === 0) return null;
+
+      // «Три — это предел, а не пример» (решение 12 сентября). Остальное
+      // живёт в панели «Ещё N», ничего не выключается.
+      const shown = ranked.slice(0, 3);
+      const hiddenCount = patterns.length - shown.length;
       const renderRow = function (p, idx) {
         const word = buildPatternMaturityWord(p);
         return h('li', { key: p.pattern || idx, className: 'insights-v4-patterns__row' },
@@ -2475,10 +2511,12 @@
           h('div', { className: 'insights-v4-tier' }, 'Что заметили'),
           h(InsightsV4WindowChips, { period: period, onPeriodChange: onPeriodChange, historyDays: historyDays })
         ),
-        h('ul', { className: 'insights-v4-patterns__list' },
-          available.map(renderRow),
-          immature.map(renderRow)
-        )
+        h('ul', { className: 'insights-v4-patterns__list' }, shown.map(renderRow)),
+        hiddenCount > 0 && onOpenPanel && h('button', {
+          type: 'button',
+          className: 'insights-v4-attention__more',
+          onClick: onOpenPanel
+        }, 'Ещё ' + hiddenCount + ' →')
       );
     }
 
@@ -3045,6 +3083,8 @@
       const [showInsightsDetail, setShowInsightsDetail] = useState(false);
       const [debtSheetOpen, setDebtSheetOpen] = useState(false); // лист «Как считается долг»
       const [ewsPanelOpen, setEwsPanelOpen] = useState(false);
+      // Какой блок открыл панель: «Стоит внимания» или «Что заметили».
+      const [panelSource, setPanelSource] = useState('attention');
       const [dataVersion, setDataVersion] = useState(0);
       const useInsightsV4 = true;
 
@@ -3675,7 +3715,7 @@
                 daysWithData: historyDaysWithData,
                 lsGet: lsGet,
                 profile: effectiveData.profile,
-                onOpenPanel: function () { setEwsPanelOpen(true); },
+                onOpenPanel: function () { setPanelSource('attention'); setEwsPanelOpen(true); },
                 onOpenDebtSheet: function () { setDebtSheetOpen(true); }
               }),
               h(InsightsV4Patterns, {
@@ -3683,7 +3723,11 @@
                 daysWithData: insightsDaysWithData,
                 period: insightsPeriod,
                 onPeriodChange: setInsightsPeriod,
-                historyDays: historyDaysWithData
+                historyDays: historyDaysWithData,
+                // Контракт «панель одна на два блока»: полный список
+                // открывается той же поверхностью, что и у «Стоит внимания»,
+                // меняется только шапка.
+                onOpenPanel: function () { setPanelSource('patterns'); setEwsPanelOpen(true); }
               }),
               // Контракт «вид · вход „Подробно“»: слово тоном чернил и шеврон
               // тоном акцента отдельным знаком. Стрелка внутри текста красила
