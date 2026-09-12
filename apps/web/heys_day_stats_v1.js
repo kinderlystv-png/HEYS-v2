@@ -399,9 +399,75 @@
     };
   }
 
+  /**
+   * Кадр «Отчёты · мало данных»: до семи дней вкладка показывает заглушку и
+   * список того, что уже считается, а не отчёт из нулей.
+   */
+  function ReportsV4FewDays(props) {
+    const { React, periodMeta } = props || {};
+    if (!React || !periodMeta) return null;
+      const have = periodMeta.historyDays || 0;
+      return React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'reports-v4-meta' },
+          React.createElement('span', { className: 'reports-v4-meta__title' }, 'Отчёты'),
+          React.createElement('span', { className: 'reports-v4-meta__range' }, periodMeta.dateRange || '')
+        ),
+        React.createElement('div', { className: 'reports-v4-stub' },
+          React.createElement('div', { className: 'reports-v4-stub__kicker' }, 'Пока копим данные'),
+          React.createElement('div', { className: 'reports-v4-stub__title' }, 'Итоги появятся с 7 дней'),
+          // Причина порога словами: без неё «7 дней» выглядит нашей прихотью.
+          React.createElement('div', { className: 'reports-v4-stub__note' },
+            'Отчёт сравнивает дни между собой — ' + pluralDaysReports(have)
+              .replace(/^/, have + ' ') + ' для сравнения мало.'),
+          // Счёт стоит справа от полосы, как в кадре: под ней он читался
+          // подписью к дорожке, а не тем же числом, что она показывает.
+          React.createElement('div', { className: 'reports-v4-stub__track' },
+            React.createElement('div', { className: 'reports-v4-stub__progress' },
+              React.createElement('div', {
+                className: 'reports-v4-stub__progress-fill',
+                style: { width: Math.min(100, Math.round((have / 7) * 100)) + '%' }
+              })
+            ),
+            React.createElement('div', { className: 'reports-v4-stub__count' }, have + ' из 7')
+          )
+        ),
+        // Контракт «карточка · список „уже считается“»: четыре строки с
+        // состоянием справа, порядок постоянный. Прежде это была одна фраза, в
+        // которой из четырёх пунктов названы два, — человек не знал, работают
+        // ли баланс и матрица и когда они появятся.
+        React.createElement('div', { className: 'reports-v4-tier' }, 'Уже считается'),
+        React.createElement('div', { className: 'reports-v4-ready' },
+          // Названия строк — по кадру «Отчёты · мало данных». Голые «Дни» и
+          // «Тренд веса» теряли главное — с какого момента это работает, а именно этот
+          // список и отвечает на вопрос «что уже считается».
+          [['Дни — лента с первого дня', have > 0],
+            ['Тренд веса — с трёх замеров', (periodMeta.measuredWeightDays || 0) >= 3],
+            ['Баланс и итог периода', false],
+            ['Матрица дисциплины', false]].map(function (pair) {
+            return React.createElement('div', {
+              key: pair[0], className: 'reports-v4-ready__row'
+            },
+              React.createElement('span', { className: 'reports-v4-ready__name' }, pair[0]),
+              React.createElement('span', {
+                className: 'reports-v4-ready__state' + (pair[1] ? ' is-on' : '')
+              }, pair[1] ? 'есть' : 'с 7 дней')
+            );
+          })
+        )
+    );
+  }
+
   function ReportsTabV4Top(props) {
     const { React, periodMeta, chartPeriod, handlePeriodChange, scoreTile, onBalanceFooterClick } = props || {};
     if (!React || !periodMeta) return null;
+
+    // Контракт «мало данных»: до семи дней вкладка — заглушка «итоги
+    // появятся с 7 дней» и список того, что уже считается. Проверка стояла
+    // в ReportsTabV4, но вкладку рисует этот Top напрямую (строка ~1489),
+    // и человек на третий день видел весь отчёт из нулей: «HEYS Score 0»,
+    // «Дней в норме 0 из 0», «Вода 0 из 3». Это читается как поломка, хотя
+    // просто рано.
+    if ((periodMeta.historyDays || 0) < 7) return ReportsV4FewDays({ React, periodMeta });
     const fmtNum = (n) => Math.round(n || 0).toLocaleString('ru-RU');
     const scoreSuffix = periodMeta.scoredCount > 0 && periodMeta.scoredCount < periodMeta.withData
       ? ' за ' + periodMeta.scoredCount + ' дней из ' + periodMeta.withData
@@ -854,57 +920,7 @@
     // «2 из 3» — не дисциплина); работают лента дней и тренд веса с трёх
     // замеров. Порог общий с Инсайтами.
     if (periodMeta && (periodMeta.historyDays || 0) < 7) {
-      const have = periodMeta.historyDays || 0;
-      return React.createElement(React.Fragment, null,
-        React.createElement('div', { className: 'reports-v4-meta' },
-          React.createElement('span', { className: 'reports-v4-meta__title' }, 'Отчёты'),
-          React.createElement('span', { className: 'reports-v4-meta__range' }, periodMeta.dateRange || '')
-        ),
-        React.createElement('div', { className: 'reports-v4-stub' },
-          React.createElement('div', { className: 'reports-v4-stub__kicker' }, 'Пока копим данные'),
-          React.createElement('div', { className: 'reports-v4-stub__title' }, 'Итоги появятся с 7 дней'),
-          // Причина порога словами: без неё «7 дней» выглядит нашей прихотью.
-          React.createElement('div', { className: 'reports-v4-stub__note' },
-            'Отчёт сравнивает дни между собой — ' + pluralDaysReports(have)
-              .replace(/^/, have + ' ') + ' для сравнения мало.'),
-          // Счёт стоит справа от полосы, как в кадре: под ней он читался
-          // подписью к дорожке, а не тем же числом, что она показывает.
-          React.createElement('div', { className: 'reports-v4-stub__track' },
-            React.createElement('div', { className: 'reports-v4-stub__progress' },
-              React.createElement('div', {
-                className: 'reports-v4-stub__progress-fill',
-                style: { width: Math.min(100, Math.round((have / 7) * 100)) + '%' }
-              })
-            ),
-            React.createElement('div', { className: 'reports-v4-stub__count' }, have + ' из 7')
-          )
-        ),
-        // Контракт «карточка · список „уже считается“»: четыре строки с
-        // состоянием справа, порядок постоянный. Прежде это была одна фраза, в
-        // которой из четырёх пунктов названы два, — человек не знал, работают
-        // ли баланс и матрица и когда они появятся.
-        React.createElement('div', { className: 'reports-v4-tier' }, 'Уже считается'),
-        React.createElement('div', { className: 'reports-v4-ready' },
-          // Названия строк — по кадру «Отчёты · мало данных». Голые «Дни» и
-          // «Тренд веса» теряли главное — с какого момента это работает, а именно этот
-          // список и отвечает на вопрос «что уже считается».
-          [['Дни — лента с первого дня', have > 0],
-            ['Тренд веса — с трёх замеров', (periodMeta.measuredWeightDays || 0) >= 3],
-            ['Баланс и итог периода', false],
-            ['Матрица дисциплины', false]].map(function (pair) {
-            return React.createElement('div', {
-              key: pair[0], className: 'reports-v4-ready__row'
-            },
-              React.createElement('span', { className: 'reports-v4-ready__name' }, pair[0]),
-              React.createElement('span', {
-                className: 'reports-v4-ready__state' + (pair[1] ? ' is-on' : '')
-              }, pair[1] ? 'есть' : 'с 7 дней')
-            );
-          })
-        ),
-        weightDynamics,
-        ReportsTabV4Bottom({ React, periodMeta, openReportsModal })
-      );
+      return ReportsV4FewDays({ React, periodMeta });
     }
 
     return React.createElement(React.Fragment, null,
@@ -1484,8 +1500,12 @@
       }
     };
 
+    // До семи дней вкладка — одна заглушка по кадру «Отчёты · мало данных»:
+    // остальные ярусы при таком объёме показывают нули и читаются как поломка.
+    const reportsFewDays = !!useReportsV4 && ((reportsPeriodMeta && reportsPeriodMeta.historyDays) || 0) < 7;
     const statsBlock = React.createElement('div', {
       className: 'compact-stats stats-section' + (useReportsV4 ? ' reports-v4' : '')
+        + (reportsFewDays ? ' reports-v4--few-days' : '')
     },
       useReportsV4 && ReportsTabV4Top({
         React,
