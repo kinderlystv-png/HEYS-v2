@@ -35,17 +35,21 @@
   --sb-tx: var(--tx, #201e1d);
   --sb-mut: var(--muted, #64748b);
   --sb-br: var(--border, #e2e8f0);
-  --sb-soft: #f1f5f9;
+  /* Вторая поверхность набора: на ней стоят чипы участников связки и
+     карточки разминки. Стоял сланцевый #f1f5f9 прежней системы. */
+  --sb-soft: var(--v4-hero, #efe3cf);
   --sb-acc: var(--v4-act, #c67139);
   --sb-acc-strong: var(--v4-warn-text, #a1471c);
   --sb-accbg: color-mix(in srgb, var(--v4-act, #c67139) 12%, transparent);
   --sb-accTx: var(--v4-act-text, #8a4a20);
-  --sb-okbg: rgba(34, 197, 94, 0.12);
-  --sb-okBr: rgba(34, 197, 94, 0.45);
-  --sb-okTx: #166534;
-  --sb-dropbg: rgba(139, 92, 246, 0.12);
-  --sb-dropBr: rgba(139, 92, 246, 0.45);
-  --sb-dropTx: #6d28d9;
+  /* Галочка закрытого подхода — роль «сделано» набора, а не изумруд. */
+  --sb-okbg: var(--v4-ok-bg, #eaefe0);
+  --sb-okBr: color-mix(in srgb, var(--v4-ok-text, #5c6a45) 45%, transparent);
+  --sb-okTx: var(--v4-ok-text, #5c6a45);
+  /* Ярлык «дроп» — подложка-подсказка и акцентные чернила, а не фиолетовый. */
+  --sb-dropbg: var(--v4-tint, #f6e6dd);
+  --sb-dropBr: color-mix(in srgb, var(--v4-act-text, #8a4a20) 45%, transparent);
+  --sb-dropTx: var(--v4-act-text, #8a4a20);
   --sb-warnbg: rgba(239, 68, 68, 0.1);
   --sb-warnBr: rgba(239, 68, 68, 0.5);
   --sb-warnTx: #b91c1c;
@@ -8077,4 +8081,23 @@
 
 .sb-cycle-report.sb-plan-vs-done .sb-finish-head .sb-icon-btn {
   flex: none;
+}
+
+/* Экран «Разминка и дроп-сет» (кадр А3) и экран связки рисуют ту же таблицу
+   подходов, что раскрытая карточка, но класса is-exercise-open на них нет —
+   и галочка закрытого подхода падала на старый вид: тёмно-зелёный квадрат с
+   белым знаком вместо мягкого круга роли «сделано». Кадр рисует круг. */
+.sb-warmup-drop-screen .sb-ap-check,
+.sb-triset-work-screen .sb-ap-check {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--sb-bg);
+}
+
+.sb-warmup-drop-screen .sb-ap-check.is-done,
+.sb-triset-work-screen .sb-ap-check.is-done {
+  border-color: transparent;
+  background: var(--sb-okbg);
+  color: var(--sb-okTx);
 }
