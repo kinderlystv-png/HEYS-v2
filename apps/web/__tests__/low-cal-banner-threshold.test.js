@@ -17,7 +17,7 @@ const SRC = fs.readFileSync(
 
 describe('баннер решения о дне · порог в тексте', () => {
   it('в тексте нет зашитого процента — он считается из порога', () => {
-    expect(SRC).toContain('${Math.round(THRESHOLD * 100)}%');
+    expect(SRC).toContain('${Math.round(THRESHOLD * 100)} %');
     expect(SRC).not.toMatch(/ниже порога 50%/);
   });
 

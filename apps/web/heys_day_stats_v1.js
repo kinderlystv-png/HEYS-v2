@@ -1267,7 +1267,7 @@
     // нормы)» — запись условия из кода, а не объяснение человеку.
     const recommendationText = isClearPrimary
       ? 'Рекомендуем очистить: день выглядит пустым — ни одного приёма и меньше 30 % нормы.'
-      : 'Рекомендуем подтвердить: в дне есть приёмы пищи, их лучше учесть в статистике.';
+      : 'Рекомендуем подтвердить: в дне есть приёмы пищи, их лучше учесть.';
     const impactHintText = typeof DayRealDataActions.getImpactHint === 'function'
       ? DayRealDataActions.getImpactHint()
       : 'Влияет на средний дефицит, тренд и рекомендации.';
@@ -1772,14 +1772,19 @@
               React.createElement('div', { className: 'kcal-realdata-card__copy' },
                 React.createElement('div', { className: 'kcal-realdata-card__title' }, 'Мало калорий — ещё не значит, что день пустой'),
                 React.createElement('div', { className: 'kcal-realdata-card__text' },
-                  'Сейчас ' + Math.round(displayHeroEaten || eatenKcal || 0) + ' из ' + Math.round(displayHeroOptimum || optimum || 0) + ' ккал, поэтому день временно исключён из статистики. Если это реальные данные — подтверди их.'
+                  // Кадры «Мало калорий»: на «вы» и с разделёнными тысячами
+                  // («1 737»). «Подтверди» было единственным «ты» в карточке.
+                  'Сейчас ' + Math.round(displayHeroEaten || eatenKcal || 0).toLocaleString('ru-RU')
+                    + ' из ' + Math.round(displayHeroOptimum || optimum || 0).toLocaleString('ru-RU')
+                    + ' ккал, поэтому день временно исключён из статистики. Если это реальные данные — подтвердите их.'
                 )
               )
             ),
             React.createElement('div', { className: 'kcal-realdata-card__footer' },
               React.createElement('div', { className: 'kcal-realdata-card__meta' },
                 React.createElement('span', { className: 'kcal-realdata-card__badge' },
-                  Math.round((currentRatio || 0) * 100) + '% от нормы'
+                  // Кадр пишет «45 % от нормы» — с пробелом перед знаком.
+                  Math.round((currentRatio || 0) * 100) + ' % от нормы'
                 ),
                 // Оба кадра «Мало калорий» ставят счёт приёмов рядом с меткой
                 // доли: «приёмов нет» либо «в дне 3 приёма». Строки не было, и
