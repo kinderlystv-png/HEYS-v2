@@ -31,18 +31,66 @@
 
     console.info('[pi_early_warning.js] 🔧 Initializing module...');
 
-    /** kcal for insights: no savedEatenKcal if diary has no food lines */
+    /**
+     * Тот же поиск продукта, что делает calculateItemKcal (pi_calculations.js).
+     * Нужен отдельно, потому что calculateItemKcal возвращает ноль и когда
+     * продукта нет в справочнике, и когда в еде действительно ноль калорий, —
+     * а для предупреждений это разные вещи.
+     * @param {object} item - Позиция приёма пищи.
+     * @param {object} pIndex - Индекс продуктов.
+     * @returns {object|null} Продукт или null, если его нет в справочнике.
+     */
+    function resolveMealProduct(item, pIndex) {
+        if (!item) return null;
+        const key = String(item.product_id || item.productId || item.id || '').toLowerCase();
+        if (!key) return null;
+        return pIndex?.byId?.get?.(key) || null;
+    }
+
+    /**
+     * Съеденное за день в ккал — или null, если посчитать нечем.
+     *
+     * Справочник продуктов приезжает из облака не мгновенно, а расчёт
+     * предупреждений стартует при открытии вкладки. В этом окне
+     * calculateItemKcal не находит ни одного продукта и молча возвращает ноль
+     * по каждой позиции — день выходит пустым, и человек получает «два дня
+     * подряд недобор около 1694 ккал», то есть свою дневную норму целиком,
+     * хотя еда записана. Замер 12.09.2026 на стенде дня без заданий:
+     * справочник пуст (0 продуктов), а приёмы в днях заполнены.
+     *
+     * Поэтому: ноль возвращается только когда он честный — еды не записано.
+     * Если еда записана, а продукты в справочнике не нашлись и сохранённой
+     * суммы нет, возвращается null, и правило про еду молчит вместо того,
+     * чтобы считать по нулю (контракт «слова блока наблюдений»: числа, которого
+     * нет, не показывается вовсе).
+     *
+     * @param {object} day - День.
+     * @param {object} pIndex - Индекс продуктов.
+     * @param {Function} calculateItemKcal - Счёт калорий позиции.
+     * @returns {number|null} Ккал за день или null, если посчитать нечем.
+     */
     function trustedEatenKcalForDay(day, pIndex, calculateItemKcal) {
         const hasLines = HEYS.dayMealsIntegrity?.hasAnyMealLines?.(day);
-        let fromMeals = 0;
-        if (day?.meals) {
-            fromMeals = day.meals.reduce((sum, meal) => {
-                if (!meal?.items) return sum;
-                return sum + meal.items.reduce((mealSum, item) => mealSum + calculateItemKcal(item, pIndex), 0);
-            }, 0);
-        }
         if (!hasLines) return 0;
-        return fromMeals > 0 ? fromMeals : (Number(day.savedEatenKcal) || 0);
+
+        let fromMeals = 0;
+        let lines = 0;
+        let unresolved = 0;
+        for (const meal of (day?.meals || [])) {
+            for (const item of (meal?.items || [])) {
+                lines++;
+                if (resolveMealProduct(item, pIndex)) fromMeals += calculateItemKcal(item, pIndex);
+                else unresolved++;
+            }
+        }
+
+        if (unresolved === 0 && fromMeals > 0) return fromMeals;
+
+        const saved = Number(day?.savedEatenKcal);
+        if (Number.isFinite(saved) && saved > 0) return saved;
+
+        if (unresolved > 0) return null;
+        return lines > 0 ? fromMeals : 0;
     }
 
     // PERF #6 + Foundation 0/2: per-day status score cache, версионируется через hashDay.
@@ -2015,6 +2063,19 @@
     }
 
     /**
+     * Дни от старого к свежему — порядок, который объявляет detectEarlyWarnings.
+     * Даты в формате YYYY-MM-DD, поэтому строкового сравнения достаточно.
+     * День без даты уходит в начало: там он не притворится сегодняшним.
+     * @param {object[]} days - Дни в любом порядке.
+     * @returns {object[]} Копия массива, отсортированная по дате по возрастанию.
+     */
+    function sortDaysChronologically(days) {
+        return days
+            .slice()
+            .sort((a, b) => String(a?.date || '').localeCompare(String(b?.date || '')));
+    }
+
+    /**
      * Detect consecutive decline in values
      * @param {number[]} values - Array of numeric values (most recent last)
      * @param {number} consecutiveDays - Number of consecutive days to check
@@ -2394,7 +2455,7 @@
         }
 
         // Get Status Score for recent days
-        const recentDays = days.slice(-7); // Most recent 7 days
+        const recentDays = days.slice(-7); // последние 7 дней
         const statusScores = [];
 
         // PERF #6: hashDay-versioned cache hit before any compute.
@@ -2538,7 +2599,7 @@
         }
 
         const targetSleep = profile?.sleepHours || 8;
-        const recentDays = days.slice(-7); // Most recent first
+        const recentDays = days.slice(-7); // последние 7 дней
 
         const sleepData = recentDays.map(day => {
             const sleep = getTotalSleepHours(day);
@@ -2550,8 +2611,8 @@
             return null;
         }
 
-        // Check last N consecutive days (most recent first)
-        const recent = sleepData.slice(0, THRESHOLDS.SLEEP_DEFICIT_DAYS);
+        // Последние N дней подряд — они в конце массива, а не в начале.
+        const recent = sleepData.slice(-THRESHOLDS.SLEEP_DEFICIT_DAYS);
         const allDeficit = recent.every(d => d.sleep < THRESHOLDS.SLEEP_DEFICIT_HOURS);
 
         console.log(`ews / detect 📊 sleep stats: recent=${recent.length}d, avgSleep=${(recent.reduce((s, d) => s + d.sleep, 0) / recent.length).toFixed(1)}h, target=${targetSleep}h, allDeficit=${allDeficit}`);
@@ -2574,6 +2635,9 @@
                 avgSleep: Math.round(avgSleep * 10) / 10,
                 targetSleep,
                 totalDeficit: Math.round(totalDeficit * 10) / 10,
+                // Даты окна — см. CALORIC_DEBT: без них не видно, на каких
+                // днях правило сработало.
+                windowDates: recent.map(d => d.date),
                 patternName: humanMsg.title,
                 message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
@@ -2615,18 +2679,28 @@
             return null;
         }
 
-        const recentDays = days.slice(-7); // Most recent first
+        const recentDays = days.slice(-7); // последние 7 дней
         const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // profile.optimum/norm.kcal не существуют — см. DERIVED_FIELDS_AUDIT_2026-08-02.md
 
         const caloricData = recentDays.map(day => {
             const eaten = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
-
-            const debt = Math.max(0, optimum - eaten);
+            const debt = eaten === null ? null : Math.max(0, optimum - eaten);
             return { date: day.date, eaten, optimum, debt };
         });
 
-        // Check last N consecutive days (most recent first)
-        const recent = caloricData.slice(0, THRESHOLDS.CALORIC_DEBT_DAYS);
+        // Последние N дней подряд — они в конце массива, а не в начале.
+        const recent = caloricData.slice(-THRESHOLDS.CALORIC_DEBT_DAYS);
+
+        // Если хотя бы один день окна не посчитался (справочник продуктов ещё
+        // не приехал из облака), правило молчит: недобор по такому дню — это
+        // незнание, а не наблюдение. Раньше он выходил на экран как «недобор
+        // около 1694 ккал», то есть вся дневная норма целиком.
+        if (recent.some(d => d.eaten === null)) {
+            console.info('ews / detect ⏭️ skip caloric debt: справочник продуктов не даёт посчитать день', {
+                unresolved: recent.filter(d => d.eaten === null).map(d => d.date)
+            });
+            return null;
+        }
         const totalDebt = recent.reduce((sum, d) => sum + d.debt, 0);
 
         console.log(`ews / detect 📊 caloric stats: recent=${recent.length}d, optimum=${optimum}kcal, totalDebt=${Math.round(totalDebt)}kcal, threshold=${THRESHOLDS.CALORIC_DEBT_THRESHOLD}kcal`);
@@ -2649,6 +2723,10 @@
                 optimum,
                 totalDebt: Math.round(totalDebt),
                 avgDebt: Math.round(avgDebt),
+                // Даты окна — чтобы проверяемо было видно, на каких днях
+                // сработало правило: без них дефект «считаем самую старую
+                // неделю» не ловится ни тестом, ни глазами.
+                windowDates: recent.map(d => d.date),
                 patternName: humanMsg.title,
                 message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
@@ -2684,7 +2762,7 @@
             return null;
         }
 
-        const recentDays = days.slice(-3).reverse(); // Most recent first
+        const recentDays = days.slice(-3).reverse(); // три последних дня, свежий первым
         const weightData = recentDays
             .map(day => ({
                 date: day.date,
@@ -2769,7 +2847,7 @@
         const minThreshold = 1500; // ml (critical minimum)
         const consecutiveDays = 3;
 
-        const recentDays = days.slice(-7); // Check last week
+        const recentDays = days.slice(-7); // последняя неделя
         const hydrationData = recentDays
             .map(day => ({
                 date: day.date,
@@ -2848,7 +2926,7 @@
         }
 
         const minConsecutiveGap = 2;
-        const recentDays = days.slice(-7); // Check last week
+        const recentDays = days.slice(-7); // последняя неделя
 
         // Determine if a day has meaningful food logging
         const loggingData = recentDays.map(day => {
@@ -3275,6 +3353,7 @@
             });
 
             const totalKcal = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
+            // День, который не посчитался, ниже отсеивается фильтром totalKcal > 0.
 
             // Binge indicators:
             // - 2+ large meals in one day
@@ -3380,7 +3459,7 @@
             return null;
         }
 
-        const recentDays = days.slice(-14); // Check last 2 weeks
+        const recentDays = days.slice(-14); // последние две недели
         const moodData = recentDays.map(day => ({
             date: day.date,
             mood: day.mood || null,
@@ -3473,7 +3552,7 @@
             return null;
         }
 
-        const recentDays = days.slice(-21); // Check last 3 weeks
+        const recentDays = days.slice(-21); // последние три недели
         const weightData = recentDays.map(day => ({
             date: day.date,
             weight: day.weightMorning || null
@@ -3561,7 +3640,7 @@
         }
 
         const optimum = HEYS.TDEE?.resolveDailyTargets?.(profile)?.kcal || 2000; // profile.optimum/norm.kcal не существуют — см. DERIVED_FIELDS_AUDIT_2026-08-02.md
-        const recentDays = days.slice(-21); // Last 3 weeks
+        const recentDays = days.slice(-21); // последние три недели
 
         const weekdayData = [];
         const weekendData = [];
@@ -3571,6 +3650,9 @@
             const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
             const totalKcal = trustedEatenKcalForDay(day, pIndex, calculateItemKcal);
+            // День без посчитанной еды в сравнение будни/выходные не входит:
+            // ноль от незнания занижает среднее той группы, куда он попал.
+            if (totalKcal === null) return;
 
             const excessKcal = totalKcal > optimum ? totalKcal - optimum : 0;
 
@@ -3666,12 +3748,24 @@
 
         if (days.length < MIN_DAYS) return null;
 
+        // `day.dayTot?.fiber || 0` считал день без посчитанных итогов днём с
+        // нулём клетчатки — и правило срабатывало на восемнадцати днях со
+        // «средним 0,0 г», то есть на отсутствии данных, а не на рационе.
+        // Считаем только дни, где клетчатка действительно посчитана.
         const lowFiberDays = [];
+        let daysWithFiber = 0;
         for (const day of days) {
-            const fiber = day.dayTot?.fiber || 0;
+            const fiber = Number(day.dayTot?.fiber);
+            if (!Number.isFinite(fiber)) continue;
+            daysWithFiber++;
             if (fiber < FIBER_THRESHOLD) {
                 lowFiberDays.push({ date: day.date, fiber });
             }
+        }
+
+        if (daysWithFiber < MIN_DAYS) {
+            console.info('ews / detect ⏭️ skip fiber: клетчатка посчитана меньше чем в', MIN_DAYS, 'днях');
+            return null;
         }
 
         if (lowFiberDays.length >= MIN_DAYS) {
@@ -3689,7 +3783,7 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: `Клетчатки меньше нормы в ${pluralDaysRu(lowFiberDays.length)} за месяц — в среднем ${avgFiber.toFixed(1)} г при цели ${FIBER_THRESHOLD}`,
+                    humanMessage: `Клетчатки меньше нормы в ${pluralDaysRu(lowFiberDays.length)} за месяц — в среднем ${avgFiber.toFixed(1).replace('.', ',')} г при цели ${FIBER_THRESHOLD}`,
                 detail: 'Проще всего добрать овощами в обед',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -4576,7 +4670,9 @@
      */
     function detectEarlyWarnings(days, profile, pIndex, options = {}) {
         // Mode validation & default
-        const mode = options.mode || 'full';
+        // `let`, а не `const`: ниже стоит откат на 'full', и на const он бросал
+        // TypeError вместо обещанного в том же сообщении отката.
+        let mode = options.mode || 'full';
         if (!['acute', 'full'].includes(mode)) {
             console.warn('ews / detect ⚠️ invalid mode:', mode, '→ defaulting to "full"');
             mode = 'full';
@@ -4629,11 +4725,26 @@
             };
         }
 
+        // Порядок дней — не предположение, а контракт функции: JSDoc выше
+        // говорит «sorted oldest to newest», и на нём построены все срезы
+        // `slice(-N)` («последние N дней») и хелпер isConsecutiveDecline
+        // («most recent last»). Ни один вызывающий код этот контракт не
+        // выполнял: дашборд, шапка и виджет риска собирают дни циклом
+        // `i = 0..29` с `d.setDate(d.getDate() - i)`, то есть от сегодня
+        // назад, а бейдж читает ключи localStorage вообще без сортировки.
+        // Из-за этого проверки смотрели на самую старую неделю истории:
+        // замер 12.09.2026 — «недобор калорий» при сегодняшнем 28 августа
+        // считал дни 17 и 16 августа. Приводим порядок один раз здесь,
+        // а не тринадцатью срезами по месту.
+        days = sortDaysChronologically(days);
+
         console.info('ews / detect 📥 input.valid:', {
             daysCount: days.length,
             profileId: profile?.id,
             hasPIndex: !!pIndex,
-            hasPatternSnapshot: !!options.previousPatterns
+            hasPatternSnapshot: !!options.previousPatterns,
+            oldest: days[0]?.date,
+            newest: days[days.length - 1]?.date
         });
 
         const warnings = [];
