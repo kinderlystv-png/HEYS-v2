@@ -103,12 +103,16 @@ function calmDays() {
 function riskDays() {
   const days = [];
   for (let offset = 0; offset < 18; offset += 1) {
-    const stressed = offset < 4;
+    // Кадр «Инсайты · риск срыва» рисует карточку риска, а она выходит только
+    // при уровне «высокий» — порог 60, движок считает по сегодняшнему дню и
+    // двум неделям истории. Четырёх тяжёлых дней из восемнадцати на это не
+    // хватало: напряжение должно копиться всю историю.
+    const stressed = true;
     days.push(fullDay(offset, {
       ...(stressed
         ? {
-            sleepStart: '01:30', sleepEnd: '06:30', sleepHours: 5, sleepQuality: 1,
-            moodMorning: 2, wellbeing: 2, stress: 5,
+            sleepStart: '01:30', sleepEnd: '06:20', sleepHours: 4.8, sleepQuality: 1,
+            moodMorning: 2, wellbeing: 2, stress: 8,
             meals: [
               { id: `m-${offset}-1`, name: 'Завтрак', time: '10:40', items: [mealItem(OATS, 120)] },
               { id: `m-${offset}-2`, name: 'Обед', time: '15:05', items: [mealItem(RICE, 150)] },
