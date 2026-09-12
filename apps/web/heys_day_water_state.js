@@ -37,6 +37,32 @@
         return undefined;
     }
 
+    // Профиль приходит сюда в двух видах, и это не случайность, а устройство
+    // продукта. В хранилище лежит сырой профиль: пол там только в `gender`
+    // («Мужской»/«Женский»), а поле `age` — снимок на момент заполнения,
+    // который никто не обновляет. Нормализует его HEYS.utils.getProfile():
+    // он и заводит `sex`, и пересчитывает возраст из даты рождения.
+    // Вкладка «Питание» читает профиль через getProfile, плитка Главной и
+    // геймификация — напрямую из хранилища. Норма воды считается здесь и
+    // только здесь, поэтому она обязана понимать оба вида: раньше `sex` у
+    // сырого профиля просто отсутствовал, женщина молча получала мужской
+    // коэффициент 30 вместо 28, а возраст брался устаревший — на двух
+    // экранах одного человека норма расходилась до 400 мл (2,0 л против
+    // 1,6 л у женщины 62 лет).
+    function isFemaleProfile(prof) {
+        const raw = prof && (prof.sex || prof.gender);
+        if (!raw) return false;
+        const value = String(raw).toLowerCase();
+        return value === 'female' || value.startsWith('ж');
+    }
+
+    /** Возраст — из даты рождения (поле `age` протухает молча), как в TDEE. */
+    function resolveAge(prof) {
+        const fromTdee = HEYS.TDEE?.ageFromProfile?.(prof || {});
+        if (Number.isFinite(fromTdee) && fromTdee > 0) return fromTdee;
+        return +(prof && prof.age) || 30;
+    }
+
     function buildWaterGoalParams({ day, profile, trainingKcals } = {}) {
         return {
             day: day || {},
@@ -49,8 +75,8 @@
         const { day: safeDay, profile: safeProf, trainingKcals } = buildWaterGoalParams(params || {});
 
         const w = +safeDay.weightMorning || +safeProf.weight || 70;
-        const age = +safeProf.age || 30;
-        const isFemale = safeProf.sex === 'female';
+        const age = resolveAge(safeProf);
+        const isFemale = isFemaleProfile(safeProf);
         const coef = isFemale ? 28 : 30;
 
         const baseRaw = w * coef;
@@ -126,7 +152,9 @@
                 profile: safeProf,
                 trainingKcals: [train1k, train2k, train3k]
             })
-        ), [safeDay.weightMorning, safeDay.steps, safeDay.cycleDay, safeDay.trainings, train1k, train2k, train3k, safeProf.weight, safeProf.age, safeProf.sex]);
+        // gender/birthDate в ключе обязательны: у сырого профиля пол и возраст
+        // лежат только в них, и без них норма пересчитывалась бы по старым.
+        ), [safeDay.weightMorning, safeDay.steps, safeDay.cycleDay, safeDay.trainings, train1k, train2k, train3k, safeProf.weight, safeProf.age, safeProf.sex, safeProf.gender, safeProf.birthDate]);
 
         const waterGoal = waterGoalBreakdown.finalGoal;
 
