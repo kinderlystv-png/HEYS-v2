@@ -196,6 +196,41 @@ describe('Главная: вжатая плитка под пальцем', () =
   });
 });
 
+describe('Главная: калории в переборе', () => {
+  /** Все правила, в чей список селекторов входит данный селектор. */
+  function blocksWithSelector(selector) {
+    const blocks = [];
+    const re = /([^{}]+)\{([^}]*)\}/g;
+    let match;
+    while ((match = re.exec(widgetsCss))) {
+      const selectors = match[1]
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .split(',')
+        .map((one) => one.replace(/\s+/g, ' ').trim())
+        .filter(Boolean);
+      if (selectors.includes(selector)) blocks.push(match[2]);
+    }
+    return blocks;
+  }
+
+  it('герой перебора остаётся 34 px и красным, а не кеглем прибавки', () => {
+    // Кадр «Калории · состояние · Перебор», строка 03: «−120» — 600 34px
+    // тоном var(--val-bad). Оба селектора перебора стояли в одном списке с
+    // прибавкой от активности, и её 9px/700 доставались им обоим: герой 2×2
+    // рисовался девятью пикселями, а красный ему не доставался вовсе — в
+    // списке остались размер и вес, но не цвет, ради которого он был написан.
+    const hero = '.widget-calories__hero-value .widget-calories__value--lg.widget-v4-val--bad';
+    const blocks = blocksWithSelector(hero);
+    expect(blocks.length, 'правило перебора для героя не найдено').toBeGreaterThan(0);
+    const joined = blocks.join(';');
+    expect(joined, 'цвет перебора не задан').toMatch(/color\s*:\s*var\(--v4-bad-text/);
+    expect(joined, 'герою перебора снова задают кегль').not.toMatch(/font-size\s*:/);
+    // Кегль прибавки от активности остаётся при ней.
+    expect(blocksWithSelector('.widget-calories__line-meta--gain').join(';'))
+      .toMatch(/font-size\s*:\s*9px/);
+  });
+});
+
 describe('Главная: каталог виджетов — одна колонка', () => {
   it('дорожка каталога одна и сжимается до контейнера', () => {
     const columns = cssProp('.widget-v4-catalog__grid', 'grid-template-columns');

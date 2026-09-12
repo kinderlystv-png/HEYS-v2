@@ -377,6 +377,33 @@ const SCREEN_CASES = [
     `Разбор · ${label}`,
     { data: HOME_BASE_DATA, layout: sheetLayoutFor(type), open: 'breakdown', target: type },
   )),
+
+  // ─── Калории 2×2: три состояния одной плитки ───
+  // Кадры нарисованы плиткой, а не экраном, поэтому снимается сам узел
+  // плитки и сводится с кадром по подписи (у кадров нет data-oid, oid служит
+  // только именем пары).
+  ...[
+    ['norm', 'В норме', { hasData: true, eaten: 1289, target: 1931 }],
+    ['over', 'Перебор', { hasData: true, eaten: 2051, target: 1931 }],
+    ['closed', 'Закрытый день', { hasData: true, eaten: 1786, target: 1931, isClosedDay: true }],
+  ].map(([key, word, calories]) => screenCase(
+    `home-widgets-calories-${key}`,
+    `Калории · состояние · ${word}`,
+    {
+      data: { ...HOME_BASE_DATA, calories },
+      layout: [{ type: 'calories', size: '2x2' }],
+      hideFabs: true,
+    },
+    {
+      captureSelector: '.widgets-grid [data-widget-type="calories"]',
+      canvasFrame: {
+        file: CANVAS_FILE,
+        label: `Калории · состояние · ${word}`,
+        oid: `HW-KCAL-${key.toUpperCase()}`,
+        palette: 'sand',
+      },
+    },
+  )),
 ];
 
 export const HOME_WIDGETS_VISUAL_CASES = Object.freeze(SCREEN_CASES);
