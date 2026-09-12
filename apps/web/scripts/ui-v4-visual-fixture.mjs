@@ -3,6 +3,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { readCanvasPackage } from '../../../scripts/lib/ui-v4-canvas-index.mjs';
+import { REPORTS_INSIGHTS_VISUAL_CASES } from './ui-v4-visual-cases/reports-insights.mjs';
+import { CURATOR_EDITS_VISUAL_CASES } from './ui-v4-visual-cases/curator-edits.mjs';
+import { DATE_REMAINDERS_VISUAL_CASES } from './ui-v4-visual-cases/date-remainders.mjs';
+import { NUTRITION_TAB_VISUAL_CASES } from './ui-v4-visual-cases/nutrition-tab.mjs';
+import { WATER_ADD_VISUAL_CASES } from './ui-v4-visual-cases/water-add.mjs';
+import { CHECKIN_MORNING_VISUAL_CASES } from './ui-v4-visual-cases/checkin-morning.mjs';
+import { NORM_CORRECTION_VISUAL_CASES } from './ui-v4-visual-cases/norm-correction.mjs';
+import { LOGIN_VISUAL_CASES } from './ui-v4-visual-cases/login.mjs';
+import { HOME_WIDGETS_VISUAL_CASES } from './ui-v4-visual-cases/home-widgets.mjs';
 
 const FIXTURE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const VISUAL_FIXTURE_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_ui_v4_visual_fixture_v1.js');
@@ -963,6 +972,15 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
       ? 'Транзиентное состояние проверяется без снимка в ui-v4-transient-geometry.test.js.'
       : 'Нужен отдельный детерминированный переход к состоянию Canvas после сведения вердиктов зоны.',
   })),
+  ...REPORTS_INSIGHTS_VISUAL_CASES,
+  ...CHECKIN_MORNING_VISUAL_CASES,
+  ...NORM_CORRECTION_VISUAL_CASES,
+  ...LOGIN_VISUAL_CASES,
+  ...HOME_WIDGETS_VISUAL_CASES,
+  ...CURATOR_EDITS_VISUAL_CASES,
+  ...DATE_REMAINDERS_VISUAL_CASES,
+  ...NUTRITION_TAB_VISUAL_CASES,
+  ...WATER_ADD_VISUAL_CASES,
 ]);
 
 const PRODUCTS = Object.freeze([
@@ -1109,13 +1127,21 @@ export function buildUiV4VisualSnapshot(item = {}) {
         updatedAt,
       } } : {}),
       ...(fixtureDay ? { [`heys_dayv2_${fixtureDay.date}`]: fixtureDay } : {}),
+      // История на несколько дней (Отчёты/Инсайты считают окна 7/14/30):
+      // каждый день ложится своим ключом, сегодняшний перекрывает дефолтный.
+      ...Object.fromEntries((item.fixtureDays || []).map((day) => [`heys_dayv2_${day.date}`, { ...day, updatedAt }])),
       heys_advice_settings: {
         toastsEnabled: false,
         soundEnabled: false,
         demoSeeded: true,
       },
+      // Прочие ключи хранилища, которые читает экран кадра (видимость плавающей
+      // кнопки воды, отметки голода): кейс кладёт их как есть, своим ключом.
+      ...(item.fixtureLsKeys || {}),
     },
-    products: PRODUCTS.map((product) => ({ ...product })),
+    // Кадры зон питания и воды называют продукты своими именами и калориями —
+    // кейс добавляет их к общему справочнику стенда, не переписывая его.
+    products: [...PRODUCTS, ...(item.fixtureProducts || [])].map((product) => ({ ...product })),
   };
 }
 

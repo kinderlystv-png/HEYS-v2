@@ -23,6 +23,7 @@ import {
   UI_V4_VISUAL_CASES,
   UI_V4_VISUAL_CLOCK,
 } from './ui-v4-visual-fixture.mjs';
+import { driveLoginCase, prepareLoginPage } from './ui-v4-visual-cases/login.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const APP_ORIGIN = process.env.HEYS_UI_V4_URL || 'http://localhost:3001';
@@ -200,6 +201,14 @@ async function installDeterminism(context, item, snapshot) {
           window.HEYS = window.HEYS || {};
           window.HEYS.currentClientId = clientId;
         } catch (_) {}
+      } else if (themeId) {
+        // Экран входа — без демо-режима, но палитровые копии кадров входа
+        // тоже снимаются в своём наборе: палитра до входа берётся с устройства.
+        try {
+          localStorage.setItem('heys_theme_id', themeId);
+          localStorage.setItem('heys_theme_mode_pref', themeId.endsWith('-dark') ? 'dark' : 'light');
+          localStorage.setItem('heys_theme_explicit', '1');
+        } catch (_) {}
       }
     },
     {
@@ -298,6 +307,20 @@ async function openCase(browser, item, snapshot, options = {}) {
       for (const [key, value] of Object.entries(seed)) sessionStorage.setItem(key, JSON.stringify(value));
     }, item.sessionSeed);
   }
+  // Кадр «Питание · офлайн без данных» показывается только при выключенной сети.
+  // Гасить сеть до загрузки нельзя: вход при navigator.onLine === false уходит в
+  // ветку «нет сети» и приложение не поднимается вовсе. Поэтому подменяем
+  // свойство флагом, а сам флаг поднимает шаг { goOffline: true } уже на
+  // собранном экране — как если бы связь пропала в руках.
+  if (item.offline) {
+    await context.addInitScript(() => {
+      window.__heysVisualOffline = false;
+      Object.defineProperty(window.navigator, 'onLine', {
+        configurable: true,
+        get: () => window.__heysVisualOffline !== true,
+      });
+    });
+  }
   const page = await context.newPage();
   const consoleErrors = [];
   page.on('console', (message) => {
@@ -315,11 +338,12 @@ async function openCase(browser, item, snapshot, options = {}) {
 
   const url =
     item.kind === 'login'
-      ? `${APP_ORIGIN}/`
+      ? `${APP_ORIGIN}/${item.query || ''}`
       : `${APP_ORIGIN}/?gender=female&defaultTab=${encodeURIComponent(item.tab || 'widgets')}`;
 
   try {
     console.info(`[ui-v4-visual] capture ${item.id}`);
+    if (item.kind === 'login' && item.loginScene) await prepareLoginPage(page, item);
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
     if (item.kind !== 'login') {
       await page.waitForFunction(() => localStorage.getItem('heys_profile') !== null, undefined, {
@@ -396,6 +420,9 @@ async function openCase(browser, item, snapshot, options = {}) {
       await phoneInput.waitFor({ state: 'visible', timeout: 45_000 });
       await phoneInput.fill(item.phone);
     }
+    // Состояния входа (ошибка, блокировки, свой код, новое устройство,
+    // куратор, выбор оформления) — сцены модуля зоны.
+    if (item.kind === 'login' && item.loginScene) await driveLoginCase(page, item);
     if (item.kind === 'demo-water-custom') {
       await page.waitForFunction(
         () => typeof window.HEYS?.WaterCustomVolume?.open === 'function',
@@ -581,6 +608,83 @@ async function openCase(browser, item, snapshot, options = {}) {
         window.__uiV4ReportsWeightRoot.render(element);
       }, item.themeId || null);
     }
+    // Зона reports-insights: настоящие вкладки «Отчёты»/«Инсайты» демо-режима
+    // (?defaultTab=stats|insights), состояние задаётся днями снимка
+    // (fixtureDays). Переходы внутри вкладки — тапом по продуктовым кнопкам.
+    if (item.kind === 'demo-reports-insights-tab') {
+      const rootSelector = item.rootSelector;
+      await page.locator(rootSelector).first().waitFor({ state: 'visible', timeout: 45_000 });
+      await page.evaluate((themeId) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        window.__heysLoadingProgress?.forceHide?.();
+      }, item.themeId || null);
+      // Каскад и ярусы догружаются ленивыми бандлами — ждём, пока вкладка
+      // перестанет меняться по высоте, а не первый кадр.
+      await page.waitForFunction((selector) => {
+        const node = document.querySelector(selector);
+        if (!node) return false;
+        const h = node.scrollHeight;
+        if (window.__uiV4RiStableHeight === h) {
+          window.__uiV4RiStableTicks = (window.__uiV4RiStableTicks || 0) + 1;
+        } else {
+          window.__uiV4RiStableHeight = h;
+          window.__uiV4RiStableTicks = 0;
+        }
+        return window.__uiV4RiStableTicks >= 6;
+      }, rootSelector, { timeout: 45_000, polling: 200 });
+      if (item.uiStep === 'detail') {
+        await page.locator('.insights-v4-detail-link').click();
+        await page.locator('.insights-v4--detail').waitFor({ state: 'visible', timeout: 45_000 });
+      }
+      if (item.uiStep === 'attention-more') {
+        await page.locator('.insights-v4-attention__more').click();
+      }
+      if (item.uiStep === 'debt-sheet') {
+        await page.locator('.insights-v4-attention__sheet-link').click();
+        await page.locator('.insights-v4-sheet').waitFor({ state: 'visible', timeout: 45_000 });
+      }
+      if (item.uiStep === 'periods-sheet') {
+        await page.locator('.reports-v4-periods').click();
+        await page.locator('.reports-v4-periods-sheet').waitFor({ state: 'visible', timeout: 45_000 });
+      }
+      // Вкладка листается внутри своего контейнера (.tab-active-viewport), а
+      // не окном: после тапа по «Подробно» прокрутка остаётся внизу — общий
+      // window.scrollTo(0,0) её не трогает. Возвращаем к верху каждый
+      // прокручиваемый контейнер над корнем.
+      await page.evaluate((selector) => {
+        let node = document.querySelector(selector);
+        while (node) {
+          if (node.scrollHeight > node.clientHeight) node.scrollTop = 0;
+          node = node.parentElement;
+        }
+      }, rootSelector);
+      if (item.uiScroll) {
+        // Кадр рисует ярус ниже первого экрана — прокручиваем к его узлу.
+        await page.locator(item.uiScroll).first().evaluate((node) => node.scrollIntoView({ block: 'start' }));
+      }
+      await page.waitForTimeout(400);
+      const domDump = await page.evaluate((selector) => {
+        const short = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '')
+          + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).slice(0, 3).join('.') : '');
+        const rect = (el) => { const r = el.getBoundingClientRect(); return `${Math.round(r.x)},${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)}`; };
+        const lines = [];
+        const walk = (el, depth) => {
+          if (depth > 4) return;
+          lines.push(`${'  '.repeat(depth)}${short(el)} [${rect(el)}]`);
+          for (const child of el.children) if (child.getBoundingClientRect().height > 0) walk(child, depth + 1);
+        };
+        walk(document.body, 0);
+        const tab = document.querySelector(selector);
+        const products = window.HEYS?.products?.getAll?.() || [];
+        const index = window.HEYS?.products?.buildIndex?.();
+        return {
+          tree: lines.slice(0, 80).join('\n'),
+          tabText: tab ? tab.innerText.slice(0, 1200) : null,
+          products: { count: products.length, sample: products[0] || null, indexSize: index?.byId?.size ?? null },
+        };
+      }, rootSelector);
+      if (process.env.HEYS_UI_V4_RI_DEBUG) console.info(domDump.tree, '\n---\n', domDump.tabText, '\n---\n', JSON.stringify(domDump.products));
+    }
     // Резервный вопрос после еды открывается тем же вызовом, что и из «Актива»
     // (heys_day_activity_v1.js): один шаг morning_activation_followup без
     // прогресса и подсказок. Свой план тут не строим — он разошёлся бы с
@@ -664,6 +768,170 @@ async function openCase(browser, item, snapshot, options = {}) {
       await page.waitForSelector('[data-heys-step-modal][data-heys-step-id="weight"]', {
         timeout: 45_000,
       });
+    }
+    // Чек-ин в состоянии кадра: данные дней и профиля пишутся в хранилище до
+    // открытия, план собирает сам продукт (buildMorningCheckinPlan), дальше
+    // стенд идёт по шагам теми же кнопками, что и человек. Подменяется только
+    // подтверждение облака (onStepSaved) — иначе каждое «Дальше» ждало бы сеть.
+    if (item.kind === 'demo-checkin-flow') {
+      const flow = item.checkin || {};
+      await page.waitForFunction(
+        (needYesterday) =>
+          typeof window.HEYS?.MorningCheckinUtils?.buildMorningCheckinPlan === 'function'
+          && !!window.HEYS?.StepModal?.show
+          && !!window.HEYS?.StepModal?.registry?.morningRest
+          && !!window.HEYS?.store?.set
+          && !!window.HEYS?.currentClientId
+          && (!needYesterday || (!!window.HEYS?.YesterdayVerify?.getPendingPastDays
+            && !!window.HEYS?.StepModal?.registry?.yesterdayVerify)),
+        flow.yesterdayVerify === true,
+        { timeout: 45_000 },
+      );
+      await page.evaluate(async ({ themeId, flow }) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const HEYS = window.HEYS;
+        const clientId = HEYS.currentClientId;
+        // Демо-облако — Proxy, отдающий функцию-заглушку на любое неизвестное
+        // свойство, поэтому `cloud._switchClientInProgress` в демо всегда
+        // истинно и Store.set откладывает каждую запись. Снимаем флаг ПОСЛЕ
+        // загрузки приложения (до неё он держит демо-вход) и заново отдаём
+        // каталог продуктов входом самого продукта: без него серия считает
+        // калории дней по пустому индексу и молча равна нулю.
+        if (HEYS.cloud) HEYS.cloud._switchClientInProgress = false;
+        if ((HEYS.products?.getAll?.() || []).length === 0) {
+          await HEYS.demoMode?.loadSnapshot?.('female');
+        }
+        const put = (key, value) => HEYS.store.set(key, value);
+        for (const [date, day] of Object.entries(flow.days || {})) {
+          const blob = { date, updatedAt: Date.now(), ...day };
+          put(`heys_${clientId}_dayv2_${date}`, blob);
+          put(`heys_dayv2_${date}`, blob);
+        }
+        for (const [key, value] of Object.entries(flow.ls || {})) put(key, value);
+        for (const [id, setting] of Object.entries(flow.supplementSettings || {})) {
+          HEYS.Supplements?.setSupplementSetting?.(id, setting);
+        }
+        // Серия кэшируется на 15 с, а до посева она равна нулю — сбрасываем
+        // кэш, иначе шапка чек-ина рисует ноль на уже засеянных днях.
+        HEYS.dayCalendarMetrics?.invalidateStreakCache?.();
+        const plan = HEYS.MorningCheckinUtils.buildMorningCheckinPlan({
+          mode: 'daily',
+          forceCheckinReplay: !flow.yesterdayVerify,
+          yesterdayVerifyRequired: !!flow.yesterdayVerify,
+          filterCompleted: false,
+          source: 'ui-v4-visual',
+        });
+        HEYS.StepModal.show({
+          steps: plan.steps,
+          onComplete: () => true,
+          closeOnComplete: 'after',
+          allowSwipe: false,
+          showTip: false,
+          showProgress: true,
+          showStreak: true,
+          showGreeting: false,
+          layout: 'daily',
+          freezeVisibleSteps: true,
+          requireStepAck: true,
+          allowProgressForwardNav: false,
+          onStepSaved: () => true,
+          context: { dateKey: plan.dateKey, dailyCheckin: true, checkinReplay: true },
+        });
+      }, { themeId: item.themeId || null, flow });
+      // Зонд стенда: выражение из кейса считается на странице и уходит в
+      // <id>.probe.json — так видно, что именно прочитал продукт из посева.
+      if (flow.probe) {
+        const probe = await page.evaluate((code) => {
+          try { return JSON.parse(JSON.stringify(new Function('HEYS', `return (${code});`)(window.HEYS))); }
+          catch (error) { return { error: String(error && error.message || error) }; }
+        }, flow.probe);
+        fs.writeFileSync(path.join(OUT_DIR, `${item.id}.probe.json`), JSON.stringify(probe, null, 2));
+      }
+      await page.waitForSelector('[data-heys-step-modal][data-heys-step-id]', { timeout: 45_000 });
+      const modalStep = () => page
+        .locator('[data-heys-step-modal]')
+        .first()
+        .getAttribute('data-heys-step-id');
+      for (const action of flow.walk || []) {
+        if (action.next) {
+          const before = await modalStep();
+          await page.locator('.mc-daily-footer-primary').click();
+          await page.waitForFunction(
+            (prev) => document.querySelector('[data-heys-step-modal]')?.getAttribute('data-heys-step-id') !== prev,
+            before,
+            { timeout: 20_000 },
+          );
+        } else if (action.secondary) {
+          await page.locator('.mc-daily-footer-secondary').click();
+        } else if (action.text) {
+          await page.getByText(action.text, { exact: true }).last().click();
+        } else if (action.selector) {
+          await page.locator(action.selector).first().click();
+        } else if (action.range) {
+          // Ползунок: значение ставится так же, как его ставит палец —
+          // через input-событие самого элемента.
+          await page.locator(action.range.selector).first().evaluate((node, value) => {
+            const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+            setter.call(node, String(value));
+            node.dispatchEvent(new Event('input', { bubbles: true }));
+            node.dispatchEvent(new Event('change', { bubbles: true }));
+          }, action.range.value);
+        } else if (action.drag) {
+          // Перетаскивание бегунка по дорожке: доля пути от левого края.
+          const track = page.locator(action.drag.selector).first();
+          const box = await track.boundingBox();
+          const y = box.y + box.height / 2;
+          const from = box.x + box.width * (action.drag.from ?? 0.5);
+          const to = box.x + box.width * action.drag.to;
+          await page.mouse.move(from, y);
+          await page.mouse.down();
+          await page.mouse.move((from + to) / 2, y, { steps: 6 });
+          await page.mouse.move(to, y, { steps: 6 });
+          await page.mouse.up();
+        }
+        await page.waitForTimeout(action.settle || 350);
+      }
+      await page.waitForSelector(
+        `[data-heys-step-modal][data-heys-step-id="${flow.expectStep}"]`,
+        { timeout: 45_000 },
+      );
+      await page.waitForTimeout(400);
+    }
+    // Понедельничная шторка сверки нормы: настоящий шаг weekly_wrap_v2 с
+    // неделей из семи записанных дней. Подменяется только сбор сверки
+    // (NormCorrection.gather): карточка строится движком продукта из чисел
+    // сквозного примера канваса, а не из 21 придуманного дня.
+    if (item.kind === 'demo-norm-correction-sync') {
+      const sync = item.sync || {};
+      await page.waitForFunction(
+        () =>
+          typeof window.HEYS?.NormCorrection?.buildWeeklySyncCard === 'function'
+          && typeof window.HEYS?.NormCorrection?.compute === 'function'
+          && typeof window.HEYS?.weeklyReports?.openWeeklyWrap === 'function'
+          && !!window.HEYS?.StepModal?.show
+          && !!window.HEYS?.store?.set
+          && !!window.HEYS?.currentClientId,
+        undefined,
+        { timeout: 45_000 },
+      );
+      await page.evaluate(({ themeId, sync, days }) => {
+        if (themeId) window.HEYS?.Theme?.setThemeId?.(themeId);
+        const HEYS = window.HEYS;
+        const clientId = HEYS.currentClientId;
+        for (const [date, day] of Object.entries(days || {})) {
+          const blob = { date, updatedAt: Date.now(), ...day };
+          HEYS.store.set(`heys_${clientId}_dayv2_${date}`, blob);
+          HEYS.store.set(`heys_dayv2_${date}`, blob);
+        }
+        const NC = HEYS.NormCorrection;
+        const result = NC.compute(sync.compute);
+        const card = NC.buildWeeklySyncCard({ result, tariff: sync.tariff, ...sync.card });
+        NC.gather = () => ({ result, card, weeks: [], lsSet: null });
+        HEYS.weeklyReports.openWeeklyWrap();
+      }, { themeId: item.themeId || null, sync, days: item.syncDays || {} });
+      await page.locator('.mc-modal--weekly-wrap-v4 .weekly-wrap-correction')
+        .waitFor({ state: 'visible', timeout: 45_000 });
+      await page.waitForTimeout(400);
     }
     // Карточка продукта: у зоны product-card не было стенда вовсе, а её экраны
     // видят при каждом добавлении еды. Открываем штатной модалкой правки, а не
@@ -1705,7 +1973,52 @@ async function openCase(browser, item, snapshot, options = {}) {
         throw new Error(`Visual case ${item.id} was not prepared by prepareUiV4VisualCase`);
       }
     }
+    // Стенды зон nutrition-tab / water-add / date-remainders / curator-edits
+    // доходят до состояния кадра шагами по настоящему UI, перечисленными в
+    // кейсе: `{ tap }` — тап по узлу продукта, `{ scroll, top }` — прокрутка
+    // контейнера вкладки, `{ waitFor }` — ждать узел, `{ reveal }` — подвести
+    // узел к середине экрана, чтобы его не перекрыла нижняя навигация.
+    // Подмены компонентов нет.
+    for (const step of item.uiSteps || []) {
+      if (step.reveal) {
+        const target = page.locator(step.reveal).first();
+        await target.waitFor({ state: 'visible', timeout: 45_000 });
+        await target.evaluate((node) => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForTimeout(step.settleMs || 300);
+      } else if (step.tap) {
+        const target = page.locator(step.tap).nth(step.nth || 0);
+        await target.waitFor({ state: 'visible', timeout: 45_000 });
+        await target.click();
+        await page.waitForTimeout(step.settleMs || 250);
+      } else if (step.scroll) {
+        await page.evaluate(({ selector, top }) => {
+          const node = document.querySelector(selector);
+          if (node) node.scrollTop = top;
+        }, { selector: step.scroll, top: step.top || 0 });
+        await page.waitForTimeout(step.settleMs || 400);
+      } else if (step.goOffline) {
+        // Связь пропала на собранном экране: поднимаем флаг, который подменяет
+        // navigator.onLine (см. item.offline выше), убираем день из хранилища —
+        // кадр «офлайн без данных» про первый вход дня без сети — и будим
+        // перерисовку тем же событием, что и обновление профиля.
+        await page.evaluate(() => {
+          window.__heysVisualOffline = true;
+          const today = new Date().toISOString().slice(0, 10);
+          const client = window.HEYS?.currentClientId || '';
+          localStorage.removeItem(`heys_dayv2_${today}`);
+          if (client) localStorage.removeItem(`heys_${client}_dayv2_${today}`);
+          window.dispatchEvent(new Event('offline'));
+          window.dispatchEvent(new CustomEvent('heys:profile-updated', { detail: { source: 'ui-v4-visual-offline' } }));
+        });
+        await page.waitForTimeout(step.settleMs || 600);
+      } else if (step.waitFor) {
+        await page.locator(step.waitFor).first().waitFor({ state: 'visible', timeout: 45_000 });
+      }
+    }
     await page.locator(item.rootSelector).first().waitFor({ state: 'visible', timeout: 45_000 });
+    if (item.kind === 'demo-home-widget') {
+      await prepareHomeWidgetCase(page, item);
+    }
     if (item.id === 'home-widgets-default') {
       // The strict pair is the Canvas grid crop. Product FABs are fixed overlays outside
       // that crop's DOM contract, so exclude them from this measurement only.
@@ -2766,6 +3079,154 @@ async function openCase(browser, item, snapshot, options = {}) {
   }
 }
 
+// Стенды Главной (apps/web/scripts/ui-v4-visual-cases/home-widgets.mjs):
+// данные плиток подменяются через getDataForWidget, раскладка собирается
+// штатным state.addWidget, а состояния открываются тем же путём, что пальцем:
+// удержание — pointerdown на плитке, разбор — тап, быстрые действия — кнопка,
+// расстановка — enterEditMode (то же, что кнопка настройки внизу слева).
+async function prepareHomeWidgetCase(page, item) {
+  const home = item.home || {};
+  if (home.hideFabs) {
+    await page.addStyleTag({ content: '.widgets-fab-left,.widgets-quick-fab-wrap{display:none!important}' });
+  }
+  await page.evaluate(({ data, layout, variants, fabVisibility }) => {
+    const W = window.HEYS?.Widgets;
+    const widgetData = W?.data;
+    if (!widgetData?.getDataForWidget) {
+      throw new Error('Home widget fixture: Widgets.data.getDataForWidget is unavailable.');
+    }
+    if (data) {
+      const original = widgetData.getDataForWidget.bind(widgetData);
+      widgetData.getDataForWidget = (widget) => data[widget?.type] || original(widget) || {};
+    }
+    if (fabVisibility) {
+      // Состав быстрых действий продукт читает из хранилища
+      // (`FabVisibility.read`), а стенд писать в хранилище не может: store.set
+      // в демо-режиме возвращает false, и `setVisible` молча терял состав —
+      // кадр «ни одного» снимался с полным набором кнопок. Подменяем ответ
+      // хранилища (это стенду разрешено) и шлём штатное событие состава:
+      // дальше работает настоящий путь продукта.
+      const fab = window.HEYS?.FabVisibility;
+      if (!fab?.read) throw new Error('Home widget fixture: HEYS.FabVisibility недоступен.');
+      const next = { ...fab.read(), ...fabVisibility };
+      fab.read = () => ({ ...next });
+      fab.isVisible = (key) => next[key] !== false;
+      window.dispatchEvent(new CustomEvent(fab.EVENT || 'heys:fab-visibility-changed', {
+        detail: { visibility: next, animated: false },
+      }));
+    }
+    const V4 = W.VariantsV4;
+    if (Array.isArray(layout)) {
+      W.state.getWidgets().forEach((widget) => W.state.removeWidget(widget.id, true));
+      layout.forEach((def, index) => {
+        const meta = def.variant
+          ? V4?.getVariantById?.(def.type, def.variant)
+          : V4?.getDefaultVariant?.(def.type);
+        const widget = W.registry.createWidget(def.type, {
+          id: `hw_${def.type}_${index}`,
+          size: def.size || meta?.size,
+          settings: meta?.id ? { displayVariant: meta.id } : {},
+        });
+        if (!widget) throw new Error(`Home widget fixture: неизвестный тип ${def.type}`);
+        if (!W.state.addWidget(widget, true)) throw new Error(`Home widget fixture: ${def.type} не встал в раскладку`);
+      });
+    }
+    if (variants) {
+      W.state.getWidgets().forEach((widget) => {
+        const variantId = variants[widget.type];
+        if (!variantId) return;
+        const meta = V4?.getVariantById?.(widget.type, variantId);
+        const updates = { settings: { ...(widget.settings || {}), displayVariant: variantId } };
+        if (meta?.size && meta.size !== widget.size) updates.size = meta.size;
+        W.state.updateWidget(widget.id, updates, true);
+      });
+    }
+    widgetData.refresh?.();
+  }, { data: home.data || null, layout: home.layout || null, variants: home.variants || null, fabVisibility: home.fabVisibility || null });
+  const tileSelector = (type) => `.widgets-grid [data-widget-type="${type}"]`;
+  const expectTypes = [
+    ...(home.layout || []).map((def) => def.type),
+    ...(home.target ? [home.target] : []),
+  ];
+  for (const type of expectTypes) {
+    await page.locator(tileSelector(type)).first().waitFor({ state: 'visible', timeout: 10_000 });
+  }
+  const LONG_PRESS_MS = await page.evaluate(() => window.HEYS?.Widgets?.VariantsV4?.LONG_PRESS_MS ?? 350);
+  const pressTile = async (type, release) => {
+    const box = await page.locator(tileSelector(type)).first().boundingBox();
+    if (!box) throw new Error(`Home widget fixture: плитка ${type} не имеет размеров`);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    if (release) {
+      await page.waitForTimeout(LONG_PRESS_MS + 150);
+      await page.mouse.up();
+    }
+  };
+  if (home.open === 'edit') {
+    await page.evaluate(() => window.HEYS.Widgets.enterEditMode());
+    await page.locator('.widget-v4-catalog').waitFor({ state: 'visible', timeout: 10_000 });
+    if (home.replace) {
+      // Бросок из каталога на занятое место — тем же вызовом, что и жест.
+      await page.evaluate(({ catalogType, target }) => {
+        const W = window.HEYS.Widgets;
+        const targetWidget = W.state.getWidgets().find((widget) => widget.type === target);
+        if (!targetWidget) throw new Error(`Home widget fixture: нет плитки ${target} для замены`);
+        W.replaceWidgetFromCatalog(targetWidget.id, catalogType);
+      }, home.replace);
+      await page.locator(tileSelector(home.replace.catalogType)).first().waitFor({ state: 'visible', timeout: 10_000 });
+    }
+    if (home.drag) {
+      // Плитка каталога взята и занесена над занятым местом: палец ещё не отпущен.
+      const source = page.locator('.widget-v4-catalog__item', { hasText: home.drag.catalogName || '' }).first();
+      const from = await source.boundingBox();
+      const to = await page.locator(tileSelector(home.drag.target)).first().boundingBox();
+      if (!from || !to) throw new Error('Home widget fixture: нет плитки каталога или цели броска');
+      await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+      await page.waitForTimeout(200);
+    }
+  }
+  if (home.open === 'quick' || home.open === 'quick-edit') {
+    await page.locator('.widgets-quick-fab').click();
+    await page.locator('.widgets-quick-sheet').waitFor({ state: 'visible', timeout: 10_000 });
+    if (home.open === 'quick-edit') {
+      await page.locator('.widgets-quick-pencil').click();
+      await page.locator('.widgets-quick-sheet.is-editing').waitFor({ state: 'visible', timeout: 10_000 });
+    }
+  }
+  if (home.open === 'breakdown') {
+    await page.locator(tileSelector(home.target)).first().click();
+    await page.locator('.widget-bd-sheet').waitFor({ state: 'visible', timeout: 10_000 });
+  }
+  if (home.open === 'hold') {
+    // Кадр «удержание» — плитка под пальцем до срабатывания долгого нажатия:
+    // таймер долгого нажатия отодвигаем, чтобы лист не открылся под снимком.
+    await page.evaluate((ms) => {
+      const originalSetTimeout = window.setTimeout;
+      window.setTimeout = function heysHoldSetTimeout(handler, delay, ...rest) {
+        return originalSetTimeout.call(window, handler, delay === ms ? 60_000 : delay, ...rest);
+      };
+    }, LONG_PRESS_MS);
+    await pressTile(home.target, false);
+    await page.locator('.widgets-tab__hold-hint').waitFor({ state: 'visible', timeout: 5_000 });
+  }
+  if (home.open === 'variant-sheet' || home.open === 'variant-pick') {
+    await pressTile(home.target, true);
+    await page.locator('.widget-wd-sheet').waitFor({ state: 'visible', timeout: 10_000 });
+    if (home.open === 'variant-pick') {
+      await page.locator('.widget-wd-sheet__opt', { hasText: home.pick }).first().click();
+      await page.locator('.widget-v4-hold-hint__pill--saved').waitFor({ state: 'visible', timeout: 10_000 });
+    }
+  }
+  if (home.scrollBottom) {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  }
+  if (home.scrollTo) {
+    await page.locator(home.scrollTo).first().scrollIntoViewIfNeeded();
+  }
+}
+
 export { ensureServer, openCase };
 
 async function captureCanvasFrame(browser, item, canvasOrigin) {
@@ -2851,6 +3312,13 @@ async function captureCanvasFrame(browser, item, canvasOrigin) {
       node.style.zIndex = '2147483647';
       document.documentElement.style.overflow = 'hidden';
       document.body.style.overflow = 'hidden';
+      // Палитровые копии кадров («· тёмная», «· синяя») и плитки воды под
+      // лупой лежат в контейнерах, которые канвас показывает переключателем
+      // (`display: none` у предка). Раскрываем предков — сам кадр несёт свою
+      // палитру классами `.pal.dk` / `.pal.bl` и рисуется как задуман.
+      for (let parent = node.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+        if (getComputedStyle(parent).display === 'none') parent.style.display = 'block';
+      }
     });
     await frame.waitFor({ state: 'visible', timeout: 45_000 });
     if (item.canvasFrame.pixelAlign) {
@@ -3297,8 +3765,21 @@ async function main() {
   const manifest = validateManifest();
   if (manifest.problems.length) {
     manifest.problems.forEach((problem) => console.error(`[ui-v4-visual] ${problem}`));
-    process.exitCode = 1;
-    return;
+    // Полный прогон по-прежнему падает на любой проблеме манифеста. Но когда
+    // просят один кейс или одну зону (параллельная работа помощников по зонам),
+    // чужая недоделанная зона не должна останавливать съёмку своей: жёстко
+    // роняем только на проблемах, которые называют запрошенный кейс/зону.
+    const scoped = requestedCaseId || requestedZoneId;
+    const mine = scoped
+      ? manifest.problems.filter((problem) =>
+          (requestedCaseId && problem.includes(requestedCaseId))
+          || (requestedZoneId && problem.includes(requestedZoneId)))
+      : manifest.problems;
+    if (!scoped || mine.length) {
+      process.exitCode = 1;
+      return;
+    }
+    console.error('[ui-v4-visual] Проблемы выше — в других зонах; запрошенная зона снимается.');
   }
 
   const allAutomated = UI_V4_VISUAL_CASES.filter((item) => item.status === 'automated');
