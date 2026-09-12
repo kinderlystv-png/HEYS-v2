@@ -2321,6 +2321,175 @@
       } catch (_) { return null; }
     }
 
+    // Контракт «пустые строки на первый экран не выходят»: «связь не
+    // выявлена», «недостаточно данных», «пока не наблюдается» — это отчёт
+    // детектора о собственной работе, а не наблюдение. У незрелого паттерна
+    // наблюдение ЕСТЬ и не хватает дней — он остаётся на первом экране со
+    // словом «гипотеза»; у пустого наблюдения нет вовсе.
+    function isEmptyPatternFinding(p) {
+      const text = String((p && (p.title || p.insight)) || '');
+      return /не выявлен|недостаточно данных|пока не наблюда|мало данных/i.test(text);
+    }
+
+    // Контракт «сколько карточек в „Что заметили“»: порядок и есть приоритет,
+    // а приоритет задаёт лестница зрелости — правило, наблюдение, прогноз,
+    // гипотеза; внутри одного слова первым идёт свежее. Отдельного лимита
+    // незрелых нет: ограничивает сама сортировка.
+    const PATTERN_MATURITY_ORDER = { 'правило': 0, 'наблюдение': 1, 'прогноз': 2, 'гипотеза': 3 };
+
+    function patternFreshness(p) {
+      const raw = (p && (p.updatedAt || p.lastSeenAt || p.detectedAt)) || 0;
+      return typeof raw === 'number' ? raw : (Date.parse(raw) || 0);
+    }
+
+    function rankPatterns(list) {
+      return (list || [])
+        .map(function (p, idx) { return { p: p, idx: idx }; })
+        .sort(function (a, b) {
+          const wa = PATTERN_MATURITY_ORDER[buildPatternMaturityWord(a.p)];
+          const wb = PATTERN_MATURITY_ORDER[buildPatternMaturityWord(b.p)];
+          if (wa !== wb) return (wa == null ? 9 : wa) - (wb == null ? 9 : wb);
+          const fa = patternFreshness(a.p);
+          const fb = patternFreshness(b.p);
+          if (fa !== fb) return fb - fa;
+          return a.idx - b.idx;
+        })
+        .map(function (x) { return x.p; });
+    }
+    // Что показывает панель «Ещё N». Группы те же и в том же порядке, что
+    // решает первый экран: «Сначала важное» — то, что на него попало,
+    // «Стоит знать» — остальные наблюдения, «Заметки на будущее» — пустые
+    // находки детектора («связь не выявлена», «недостаточно данных»).
+    // Разница принципиальная: у незрелого наблюдение ЕСТЬ и не хватает дней,
+    // у пустого наблюдения нет вовсе.
+    function buildMorePanelContent(opts) {
+      const o = opts || {};
+      if (o.source === 'patterns') {
+        const all = (o.patterns || []).filter(Boolean);
+        const empty = all.filter(isEmptyPatternFinding);
+        const real = rankPatterns(all.filter(function (p) { return !isEmptyPatternFinding(p); }));
+        const toCard = function (p, idx) {
+          return {
+            key: p.pattern || idx,
+            line: p.title || p.insight || p.pattern,
+            word: buildPatternMaturityWord(p),
+            support: buildPatternMaturityLabel(p, o.daysWithData)
+          };
+        };
+        return {
+          title: 'Что заметили',
+          countLabel: all.length + ' ' + pluralObservations(all.length),
+          groups: [
+            { tier: 'Сначала важное', items: real.slice(0, 3).map(toCard) },
+            { tier: 'Стоит знать', items: real.slice(3).map(toCard) },
+            { tier: 'Заметки на будущее', items: empty.map(toCard) }
+          ]
+        };
+      }
+
+      const warnings = (o.warnings || []).filter(Boolean);
+      const toWarnCard = function (w, idx) {
+        const line = w.humanMessage
+          || String(w.message || w.detail || '').replace(/^[^\p{L}\p{N}]+/u, '').trim();
+        return {
+          key: w.id || w.type || idx,
+          line: line,
+          word: w.maturity || 'наблюдение',
+          support: w.basis || ''
+        };
+      };
+      const bySeverity = function (level) {
+        return warnings.filter(function (w) { return (w.severity || 'low') === level; }).map(toWarnCard);
+      };
+      return {
+        title: 'Стоит внимания',
+        countLabel: warnings.length + ' ' + pluralSignals(warnings.length),
+        groups: [
+          { tier: 'Сначала важное', items: bySeverity('high') },
+          { tier: 'Стоит знать', items: bySeverity('medium') },
+          { tier: 'Заметки на будущее', items: bySeverity('low') }
+        ]
+      };
+    }
+
+    function pluralObservations(n) {
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return 'наблюдение';
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'наблюдения';
+      return 'наблюдений';
+    }
+
+    function pluralSignals(n) {
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return 'сигнал';
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'сигнала';
+      return 'сигналов';
+    }
+    // Контракт «вид · панель «Ещё N»» и «панель одна на два блока»:
+    // полный список без лимита, три группы человеческими ярусами, карточка
+    // компактнее первого экрана — фраза, пилюля зрелости и опора, действие
+    // не дублируется. Поверхность одна для «Стоит внимания» и «Что
+    // заметили»: меняется только шапка, она называет блок и считает его
+    // сигналы.
+    function InsightsV4MorePanel(props) {
+      const { isOpen, onClose, title, countLabel, groups } = props || {};
+      useEffect(function () {
+        if (!isOpen) return undefined;
+        const onKey = function (e) { if (e.key === 'Escape') onClose && onClose(); };
+        document.addEventListener('keydown', onKey, true);
+        return function () { document.removeEventListener('keydown', onKey, true); };
+      }, [isOpen, onClose]);
+      if (!isOpen) return null;
+
+      const renderCard = function (item, idx) {
+        return h('div', { key: item.key || idx, className: 'insights-v4-more__card' },
+          h('div', { className: 'insights-v4-more__line' }, item.line),
+          h('div', { className: 'insights-v4-more__meta' },
+            h('span', { className: 'insights-v4-more__word' }, item.word),
+            item.support && h('span', { className: 'insights-v4-more__support' }, item.support)
+          )
+        );
+      };
+
+      return h('div', {
+        className: 'insights-v4-more',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': title,
+        onClick: onClose
+      },
+        h('div', {
+          className: 'insights-v4-more__sheet',
+          onClick: function (e) { e.stopPropagation(); }
+        },
+          h('div', { className: 'insights-v4-more__head' },
+            h('span', { className: 'insights-v4-more__title' }, title),
+            h('span', { className: 'insights-v4-more__count' }, countLabel),
+            h('button', {
+              type: 'button',
+              className: 'insights-v4-more__close',
+              'aria-label': 'Закрыть',
+              onClick: onClose
+            }, h('svg', {
+              width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none',
+              stroke: 'currentColor', strokeWidth: 2.75, strokeLinecap: 'round',
+              'aria-hidden': 'true'
+            }, h('path', { d: 'M18 6L6 18M6 6l12 12' })))
+          ),
+          h('div', { className: 'insights-v4-more__scroll' },
+            (groups || []).filter(function (g) { return g.items && g.items.length; })
+              .map(function (g) {
+                return h(React.Fragment, { key: g.tier },
+                  h('div', { className: 'insights-v4-tier' }, g.tier),
+                  g.items.map(renderCard)
+                );
+              })
+          )
+        )
+      );
+    }
     function InsightsV4Attention(props) {
       const { warnings, daysWithData, onOpenPanel, onOpenDebtSheet, lsGet, profile } = props || {};
       const riskCard = buildRelapseRiskAttentionCard();
@@ -2455,41 +2624,9 @@
       const { patterns, daysWithData, period, onPeriodChange, historyDays, onOpenPanel } = props || {};
       if (!patterns || patterns.length === 0) return null;
 
-      // Контракт «пустые строки на первый экран не выходят»: «связь не
-      // выявлена», «недостаточно данных», «пока не наблюдается» — это отчёт
-      // детектора о собственной работе, а не наблюдение. На первом экране их
-      // нет: они занимали треть блока и не говорили человеку ничего, что он
-      // может сделать или узнать. Их место — панель «Ещё N», группа
-      // «Заметки на будущее».
-      const isEmptyFinding = function (p) {
-        const text = String((p && (p.title || p.insight)) || '');
-        return /не выявлен|недостаточно данных|пока не наблюда|мало данных/i.test(text);
-      };
-
-      // Контракт «сколько карточек в „Что заметили“»: порядок и есть
-      // приоритет, а приоритет задаёт лестница зрелости — правило, потом
-      // наблюдение, потом прогноз, потом гипотеза; внутри одного слова
-      // первым идёт то, что свежее. Отдельного лимита незрелых нет:
-      // ограничивает сама сортировка.
-      const MATURITY_ORDER = { 'правило': 0, 'наблюдение': 1, 'прогноз': 2, 'гипотеза': 3 };
-      const freshnessOf = function (p) {
-        const raw = (p && (p.updatedAt || p.lastSeenAt || p.detectedAt)) || 0;
-        const ms = typeof raw === 'number' ? raw : Date.parse(raw) || 0;
-        return ms;
-      };
-      const ranked = patterns
-        .filter(function (p) { return p && !isEmptyFinding(p); })
-        .map(function (p, idx) { return { p: p, idx: idx }; })
-        .sort(function (a, b) {
-          const wa = MATURITY_ORDER[buildPatternMaturityWord(a.p)];
-          const wb = MATURITY_ORDER[buildPatternMaturityWord(b.p)];
-          if (wa !== wb) return (wa == null ? 9 : wa) - (wb == null ? 9 : wb);
-          const fa = freshnessOf(a.p);
-          const fb = freshnessOf(b.p);
-          if (fa !== fb) return fb - fa;
-          return a.idx - b.idx;
-        })
-        .map(function (x) { return x.p; });
+      const ranked = rankPatterns(patterns.filter(function (p) {
+        return p && !isEmptyPatternFinding(p);
+      }));
       if (ranked.length === 0) return null;
 
       // «Три — это предел, а не пример» (решение 12 сентября). Остальное
@@ -3747,12 +3884,15 @@
             debtSheetOpen && h(InsightsV4DebtSheet, {
               onClose: function () { setDebtSheetOpen(false); }
             }),
-            ewsPanelOpen && HEYS.EarlyWarningPanel && h(HEYS.EarlyWarningPanel, {
+            ewsPanelOpen && h(InsightsV4MorePanel, Object.assign({
               isOpen: ewsPanelOpen,
-              onClose: function () { setEwsPanelOpen(false); },
+              onClose: function () { setEwsPanelOpen(false); }
+            }, buildMorePanelContent({
+              source: panelSource,
               warnings: ewsWarnings,
-              mode: 'full'
-            }),
+              patterns: insights.patterns,
+              daysWithData: insightsDaysWithData
+            }))),
             showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {
               lsGet: lsGet || (window.HEYS?.utils?.lsGet),
               profile: effectiveData.profile,

@@ -637,7 +637,14 @@ async function openCase(browser, item, snapshot, options = {}) {
         await page.locator('.insights-v4--detail').waitFor({ state: 'visible', timeout: 45_000 });
       }
       if (item.uiStep === 'attention-more') {
-        await page.locator('.insights-v4-attention__more').click();
+        await page.locator('.insights-v4-attention__more').first().click();
+        await page.locator('.insights-v4-more__sheet').waitFor({ state: 'visible', timeout: 45_000 });
+      }
+      // Панель «Ещё N» у блока наблюдений: кнопка та же, но нижняя — она
+      // стоит под «Что заметили», а верхняя принадлежит «Стоит внимания».
+      if (item.uiStep === 'patterns-more') {
+        await page.locator('.insights-v4-patterns ~ .insights-v4-attention__more, .insights-v4-attention__more').last().click();
+        await page.locator('.insights-v4-more__sheet').waitFor({ state: 'visible', timeout: 45_000 });
       }
       if (item.uiStep === 'debt-sheet') {
         await page.locator('.insights-v4-attention__sheet-link').click();

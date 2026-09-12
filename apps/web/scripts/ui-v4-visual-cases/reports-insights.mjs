@@ -166,6 +166,9 @@ function tabCase({ id, tab, label, oid, days, themeId = 'sand', uiStep = null, c
 export const REPORTS_INSIGHTS_VISUAL_CASES = [
   tabCase({ id: 'reports-insights-main-sand', tab: 'insights', label: 'Инсайты', oid: 'RI-INS1', days: richDays() }),
   tabCase({ id: 'reports-insights-detail-sand', tab: 'insights', label: 'Инсайты · подробно', oid: 'RI-INS2', days: richDays(), uiStep: 'detail' }),
+  // Панель «Ещё N» блока наблюдений: та же поверхность, что у «Стоит
+  // внимания», шапка называет блок и считает его сигналы.
+  tabCase({ id: 'reports-patterns-more-sand', tab: 'insights', label: 'Стоит внимания · панель Ещё', oid: 'RI-MORE', days: richDays(), uiStep: 'patterns-more' }),
   tabCase({ id: 'reports-few-days-sand', tab: 'stats', label: 'Отчёты · мало данных', oid: 'RI-REP1', days: reportsFewDays() }),
   tabCase({ id: 'reports-insights-new-user-sand', tab: 'insights', label: 'Инсайты · новый пользователь', oid: 'RI-INS3', days: newUserDays() }),
   tabCase({ id: 'reports-insights-no-tasks-sand', tab: 'insights', label: 'Инсайты · день без заданий', oid: 'RI-INS4', days: calmDays() }),

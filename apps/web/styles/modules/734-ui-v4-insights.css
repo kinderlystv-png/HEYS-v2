@@ -2082,3 +2082,119 @@
   line-height: 1.5;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
+
+/* Панель «Ещё N» — кадр «Стоит внимания · панель Ещё». Поверхность одна на
+   два блока: «Стоит внимания» и «Что заметили» открывают её же, меняется
+   только шапка. Внутри три группы человеческими ярусами, карточка компактнее
+   первого экрана: фраза, пилюля зрелости и опора, действие не дублируется. */
+.insights-v4-more {
+  position: fixed;
+  inset: 0;
+  z-index: var(--v4-z-sheet-2, 1210);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* v4-intentional */
+  background: var(--scrim);
+  /* v4-intentional */
+  backdrop-filter: blur(var(--v4-modal-backdrop-blur));
+  /* v4-intentional */
+  -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur));
+}
+
+.insights-v4-more__sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(375px, 100%);
+  max-height: 88%;
+  border-radius: 26px 26px 0 0;
+  /* v4-intentional */
+  background: var(--v4-bg);
+  overflow: hidden;
+}
+
+/* Шапка кадра: название блока слева, счёт его сигналов справа. */
+.insights-v4-more__head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 18px 18px 12px;
+}
+
+.insights-v4-more__title {
+  flex: 1;
+  font: 700 20px/1.2 Manrope, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+.insights-v4-more__count {
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  font-variant-numeric: tabular-nums;
+}
+
+.insights-v4-more__close {
+  flex: none;
+  align-self: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  /* v4-intentional */
+  background: var(--v4-surface);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.insights-v4-more__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Карточка панели: .grp кадра с полями 9 сверху. */
+.insights-v4-more__card {
+  margin-top: 9px;
+  padding: 14px;
+  border-radius: 18px;
+  /* v4-intentional */
+  background: var(--v4-c1);
+}
+
+.insights-v4-more__line {
+  font: 600 12.5px/1.45 Manrope, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+  text-wrap: pretty;
+}
+
+.insights-v4-more__meta {
+  display: flex;
+  align-items: center;
+  margin-top: 9px;
+}
+
+.insights-v4-more__word {
+  flex: none;
+  margin-right: 8px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  font: 700 9px/1 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  /* v4-intentional */
+  background: var(--v4-hero);
+  /* v4-intentional */
+  color: var(--v4-act-text);
+}
+
+.insights-v4-more__support {
+  font: 500 11px/1.5 Manrope, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+}
