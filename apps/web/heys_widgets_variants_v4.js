@@ -542,6 +542,9 @@
         lpHintTimerRef.current = null;
       }
       setVariantHoldHintActive(false);
+      // Палец увели — вжатие снимается вместе с подсказкой: иначе рамка висела
+      // бы на плитке до отрыва пальца, уже без подсказки.
+      setHolding(false);
     }, []);
 
     const onPointerDown = useCallback((event) => {
@@ -557,7 +560,14 @@
       // менять: у плитки без вариантов удержание ведёт в расстановку.
       if (hasVariants) {
         lpHintTimerRef.current = setTimeout(() => {
-          if (!sheetOpen && !sheetClosing) setVariantHoldHintActive(true);
+          if (sheetOpen || sheetClosing) return;
+          setVariantHoldHintActive(true);
+          // Кадр «Смена вида · удержание», строка 13: пока палец держит, плитка
+          // сжата до 0,965 и обведена рамкой 2 px — это и есть «вжимается» из
+          // строки «жест». Прежде `holding` включался вместе с открытием листа,
+          // то есть вжатую плитку не было видно вовсе: подсказка уже висела, а
+          // плитка стояла обычной.
+          setHolding(true);
         }, HOLD_HINT_MS);
       }
       lpTimerRef.current = setTimeout(() => {

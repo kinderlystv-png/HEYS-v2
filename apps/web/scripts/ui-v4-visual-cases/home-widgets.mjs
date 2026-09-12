@@ -120,9 +120,32 @@ export const HOME_BASE_DATA = Object.freeze({
       goalWeight: 87.5,
       goalReached: false,
       remainderLabel: 'до цели 3,6',
+      // Лист «Смена вида · лист выбора» рисует превью всех видов «Динамики
+      // веса» настоящим кодом плитки, и каждый вид читает своё поле. Без них
+      // «До цели» показывал дельту вместо остатка, «Недели» — пустое место, а
+      // «График» — плитку без кривой: это была дыра стенда, а не продукта.
+      remainderShort: 'осталось 3,6',
+      toGoalKg: 3.6,
+      goalProgressPct: 45,
+      monthRateKg: -1.8,
+      weighDayCount: 28,
+      weeklyBars: [
+        { heightPct: 100, isLast: false, state: 'neutral' },
+        { heightPct: 73, isLast: false, state: 'neutral' },
+        { heightPct: 47, isLast: false, state: 'neutral' },
+        { heightPct: 20, isLast: true, state: 'good' },
+      ],
       sparkline: {
         points: '2,6 11,9 20,7 29,13 38,12 47,17 56,19',
         last: { x: 56, y: 19 },
+      },
+      // Кривая вида «График» в системе координат самого продукта
+      // (CHART_VIEW 121×54, поля 2, полоса 9…38) — те же семь точек окна.
+      chart: {
+        points: '2,9 21.2,17.3 40.3,13.1 59.5,33.9 78.7,29.8 97.8,38 117,38',
+        area: 'M2 9 L21.2 17.3 L40.3 13.1 L59.5 33.9 L78.7 29.8 L97.8 38 L117 38 V54 H2 Z',
+        last: { x: 117, y: 38 },
+        days: 7,
       },
     },
   },

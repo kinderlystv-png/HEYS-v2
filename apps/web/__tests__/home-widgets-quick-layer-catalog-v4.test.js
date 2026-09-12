@@ -96,7 +96,10 @@ function cssProp(selector, prop) {
     `${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`,
   ).exec(widgetsCss);
   if (!block) return null;
-  const values = [...block[1].matchAll(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, 'g'))];
+  // Комментарии внутри блока убираем: иначе объявление сразу после комментария
+  // не опознаётся как начало строки.
+  const body = block[1].replace(/\/\*[\s\S]*?\*\//g, ';');
+  const values = [...body.matchAll(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, 'g'))];
   return values.length ? values[values.length - 1][1].trim() : null;
 }
 
@@ -156,6 +159,40 @@ describe('Главная: слой быстрых действий поверх 
     // Ступень ниже равна ступени нижней навигации, и кто окажется выше,
     // зависело бы от порядка узлов в body.
     expect(cssProp('.widgets-quick-portal', 'z-index')).toBe('var(--v4-z-fab, 1001)');
+  });
+});
+
+describe('Главная: вжатая плитка под пальцем', () => {
+  const variantsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_variants_v4.js'), 'utf8');
+
+  it('вжатие включается вместе с подсказкой, а не с открытием листа', () => {
+    // Кадр «Смена вида · удержание»: подсказка уже висит, и плитка под пальцем
+    // уже сжата и обведена. Пока `setHolding(true)` стоял только в таймере
+    // долгого нажатия, вжатую плитку не показывали вовсе — она включалась в тот
+    // же миг, что и лист поверх неё.
+    const hintTimer = /lpHintTimerRef\.current = setTimeout\(\(\) => \{([\s\S]*?)\}, HOLD_HINT_MS\);/
+      .exec(variantsSrc);
+    expect(hintTimer, 'таймер подсказки не найден').toBeTruthy();
+    expect(hintTimer[1]).toContain('setVariantHoldHintActive(true)');
+    expect(hintTimer[1]).toContain('setHolding(true)');
+    // Палец увели — вжатие снимается вместе с подсказкой.
+    const cancel = /const cancelLongPress = useCallback\(\(\) => \{([\s\S]*?)\}, \[\]\);/
+      .exec(variantsSrc);
+    expect(cancel, 'cancelLongPress не найден').toBeTruthy();
+    expect(cancel[1]).toContain('setHolding(false)');
+  });
+
+  it('обводка вжатой плитки — роль набора и скругление плитки', () => {
+    // Строка 13 кадра: «сдвиг scale(.965), рамка inset 0 0 0 2px var(--acs)».
+    // Литерал вместо роли оставлял обводку терракотовой на синем наборе, а
+    // прямые углы читались как чужая рамка поверх карточки.
+    for (const selector of ['.widget-wd--holding', '.widget-v4-tile--holding']) {
+      expect(cssProp(selector, 'transform'), selector).toBe('scale(0.965)');
+      expect(cssProp(selector, 'box-shadow'), selector)
+        .toBe('inset 0 0 0 2px var(--v4-act, #c67139)');
+      expect(cssProp(selector, 'border-radius'), selector)
+        .toBe('var(--widget-radius-lg, 16px)');
+    }
   });
 });
 
