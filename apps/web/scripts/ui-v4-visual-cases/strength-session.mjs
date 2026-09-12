@@ -109,7 +109,7 @@ function training(exercises, extra) {
   };
 }
 
-function sessionCase(id, label, oid, data, steps) {
+function sessionCase(id, label, oid, data, steps, captureSelector) {
   return {
     id,
     zone: 'strength-builder',
@@ -118,8 +118,10 @@ function sessionCase(id, label, oid, data, steps) {
     kind: 'demo-strength-zone',
     tab: 'widgets',
     themeId: 'sand',
-    rootSelector: '.sb-root',
-    captureSelector: '.sb-root',
+    // Экран связки открывается поверх списка, и .sb-root становится два —
+    // такому кейсу нужен свой корень съёмки.
+    rootSelector: captureSelector || '.sb-root',
+    captureSelector: captureSelector || '.sb-root',
     viewport: { width: 375, height: 812 },
     sbReady: ready,
     sbSetup: setupFor(Object.assign({
@@ -138,7 +140,7 @@ function sessionCase(id, label, oid, data, steps) {
 const inputTable = sessionCase(
   'strength-session-input-table',
   'Подход · таблица ввода',
-  'E1-INPUT-TABLE',
+  'Е1',
   { training: training(sessionExercises()) },
   [
     { wait: '.sb-ex-head' },
@@ -162,7 +164,7 @@ function blankRepsExercises() {
 const checkBlocked = sessionCase(
   'strength-session-check-blocked',
   'Таблица · галочка не ставится',
-  'E2-CHECK-BLOCKED',
+  'Е2',
   { training: training(blankRepsExercises()) },
   [
     { wait: '.sb-ex-head' },
@@ -196,7 +198,7 @@ function restExercises() {
 const restRing = sessionCase(
   'strength-session-rest-ring',
   'Отдых · кольцо',
-  'E3-REST-RING',
+  'Е3',
   { training: training(restExercises(), { activeRest: REST, lastMarkAt: Date.parse(NOW) - 26_000 }) },
   [{ wait: '.sb-rest-ring' }],
 );
@@ -205,16 +207,19 @@ const restRing = sessionCase(
 const restCollapsed = sessionCase(
   'strength-session-rest-collapsed',
   'Таймер вне экрана',
-  'E4-REST-OFFSCREEN',
+  'Е4',
   {
     training: training(restExercises(), {
-      activeRest: Object.assign({}, REST, { collapsed: true }),
-      lastMarkAt: Date.parse(NOW) - 26_000,
+      // Кадр первой панели пишет «Отдых 0:48»: отдых начат за 72 секунды до
+      // снимка, а не за 26, как у кольца.
+      activeRest: Object.assign({}, REST, { collapsed: true, startedAt: Date.parse(NOW) - 72_000 }),
+      lastMarkAt: Date.parse(NOW) - 72_000,
     }),
   },
   [
+    // Первое упражнение раскрыто по умолчанию — тап по его шапке карточку бы
+    // закрыл. Кадру нужна раскрытая карточка при свёрнутом кольце.
     { wait: '.sb-rest-compact' },
-    { click: '.sb-ex:nth-of-type(1) .sb-ex-head' },
     { text: ['.sb-ex.is-open', 'Жим лёжа'] },
   ],
 );
@@ -233,7 +238,7 @@ function renumberExercises() {
 const renumber = sessionCase(
   'strength-session-renumber',
   'Перенумерация',
-  'E5-RENUMBER',
+  'Е5',
   { training: training(renumberExercises()) },
   [
     { wait: '.sb-ex-head' },
@@ -248,7 +253,7 @@ const renumber = sessionCase(
 const order = sessionCase(
   'strength-session-order',
   'Порядок · режим перестановки',
-  'J1-ORDER',
+  'Ж1',
   { training: training(sessionExercises()) },
   [
     { wait: '.sb-ex-head' },
@@ -269,7 +274,7 @@ function unitExercises(unit, name, approaches, extra) {
 const timeEntry = sessionCase(
   'strength-session-time-entry',
   'Ввод · время под нагрузкой',
-  'M4-TIME',
+  'М4',
   {
     training: training(unitExercises('time', 'Планка', [
       { durationSec: 70, done: true },
@@ -288,7 +293,7 @@ const timeEntry = sessionCase(
 const distanceEntry = sessionCase(
   'strength-session-distance-entry',
   'Ввод · метры',
-  'M5-DISTANCE',
+  'М5',
   {
     training: training(unitExercises('distance', 'Гребной тренажёр', [
       { distanceM: 500, done: true },
@@ -307,7 +312,7 @@ const distanceEntry = sessionCase(
 const bodyweightEntry = sessionCase(
   'strength-session-bodyweight-entry',
   'Ввод · свой вес с довесом',
-  'M6-BODYWEIGHT',
+  'М6',
   {
     training: training(unitExercises('bodyweight', 'Подтягивания', [
       { weightKg: '', reps: 10, done: true },
@@ -344,13 +349,18 @@ function trisetExercises() {
 const triset = sessionCase(
   'strength-session-triset',
   'Трисет в работе',
-  'Z2-TRISET',
+  'З2',
   { training: training(trisetExercises()) },
   [
+    // Первое упражнение раскрыто по умолчанию и уводит связку под нижнюю
+    // панель — сворачиваем карточку, и кнопка связки становится доступной.
+    { wait: '.sb-ex.is-open .sb-ex-head' },
+    { click: '.sb-ex.is-open .sb-ex-head' },
     { wait: '.sb-ss-work-open' },
     { click: '.sb-ss-work-open' },
     { wait: '.sb-triset-work-screen' },
   ],
+  '.sb-root.sb-triset-work-screen',
 );
 
 // ── К2 «Спорное · подход добавлен к закрытому» ─────────────────────────────
@@ -365,7 +375,7 @@ function allDoneExercises() {
 const reopened = sessionCase(
   'strength-session-reopened',
   'Спорное · подход добавлен к закрытому',
-  'K2-REOPENED',
+  'К2',
   { training: training(allDoneExercises()) },
   [
     { wait: '.sb-ex-head' },
@@ -374,6 +384,9 @@ const reopened = sessionCase(
     { click: '.sb-head .sb-icon-btn[aria-label="Ещё"]' },
     { wait: '.sb-sheet' },
     { click: '.sb-sheet-row:has-text("Добавить подход")' },
+    // Счёт незакрытых стоит на кнопке только когда ни одна карточка не
+    // раскрыта: сворачиваем ту, в которую добавили подход.
+    { click: '.sb-ex.is-open .sb-ex-head' },
     { text: ['.sb-finish', 'не закрыто'] },
   ],
 );
@@ -395,11 +408,11 @@ function loweredWeightExercises() {
 const weightAfterCheck = sessionCase(
   'strength-session-weight-after-check',
   'Спорное · вес правят после галочки',
-  'K4-WEIGHT-AFTER-CHECK',
+  'К4',
   { training: training(loweredWeightExercises()) },
   [
+    // Первое упражнение раскрыто по умолчанию: тап по шапке его закрывает.
     { wait: '.sb-ex-head' },
-    { click: '.sb-ex:nth-of-type(1) .sb-ex-head' },
     { text: ['.sb-ex.is-open', 'Жим лёжа'] },
   ],
 );
@@ -410,7 +423,7 @@ const weightAfterCheck = sessionCase(
 const noFactorBodyweight = sessionCase(
   'strength-session-no-factor',
   'Спорное · свой вес без коэффициента',
-  'K12-NO-FACTOR',
+  'К12',
   {
     training: training(unitExercises('bodyweight', 'Подтягивания', [
       { weightKg: '', reps: 10, done: true },

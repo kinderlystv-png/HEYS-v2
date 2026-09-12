@@ -153,6 +153,16 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
     expect(captureSource).toContain('visualChecks.cloudTarget?.width < 44');
   });
 
+  // Канвас одной зоны разбирается один раз на прогон: кейсов больше трёхсот,
+  // и повторный разбор того же файла на каждый кейс упирался в таймаут.
+  const canvasCache = new Map();
+  const canvasByFile = (file) => {
+    if (!canvasCache.has(file)) {
+      canvasCache.set(file, parseCanvasHtml(fs.readFileSync(path.join(CANVAS_PACK_DIR, file), 'utf8'), { file }));
+    }
+    return canvasCache.get(file);
+  };
+
   it('fail-closed привязывает парный capture к точному Canvas oid и уникальному runtime-корню', () => {
     const paired = UI_V4_VISUAL_CASES.filter((item) => item.canvasFrame);
     expect(paired.map((item) => item.id)).toContain('strength-finish-sand');
@@ -167,10 +177,7 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
     for (const item of paired) {
       expect(item.captureSelector, item.id).toBeTruthy();
       expect(item.canvasFrame.palette, item.id).toBe(item.themeId);
-      const canvasPath = path.join(CANVAS_PACK_DIR, item.canvasFrame.file);
-      const canvas = parseCanvasHtml(fs.readFileSync(canvasPath, 'utf8'), {
-        file: item.canvasFrame.file,
-      });
+      const canvas = canvasByFile(item.canvasFrame.file);
       const frame = resolveCanvasFrame(canvas, item.canvasFrame);
       // oid сверяется, только когда он есть в пакете: 3 сентября дизайнер
       // снял data-oid во всех девяти канвасах, где он стоял, и привязка легла

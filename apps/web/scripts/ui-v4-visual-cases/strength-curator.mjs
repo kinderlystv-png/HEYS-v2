@@ -431,11 +431,13 @@ export const STRENGTH_CURATOR_VISUAL_CASES = Object.freeze([
   }),
   curatorCase({
     id: 'sbc-m7-interrupted-no-timer', slug: 'm7-no-timer', scenario: 'm7-interrupted-no-timer',
-    label: 'Сессия · вернулись через час · без таймера', oid: 'М7б', height: 640,
+    // Все три кадра «вернулись через час» несут в канвасе один data-oid М7 —
+    // различает их метка, как у пустого дня.
+    label: 'Сессия · вернулись через час · без таймера', oid: 'М7', height: 640,
   }),
   curatorCase({
     id: 'sbc-m7-interrupted-running', slug: 'm7-running', scenario: 'm7-interrupted-running',
-    label: 'Сессия · вернулись через час · таймер идёт', oid: 'М7в', height: 640,
+    label: 'Сессия · вернулись через час · таймер идёт', oid: 'М7', height: 640,
   }),
   curatorCase({
     id: 'sbc-m8-abandoned', slug: 'm8-abandoned', scenario: 'm8-abandoned-yesterday',
