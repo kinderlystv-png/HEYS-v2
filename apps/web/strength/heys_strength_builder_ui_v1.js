@@ -591,6 +591,62 @@
     );
   }
 
+  /**
+   * Шаблоны тренировок (вход «Шаблоны тренировок» шторки ⋯ и «Из шаблона» на
+   * пустой тренировке). Строки .cd: имя, состав; тап — старт того же состава
+   * без прошлых подходов. Кадра у экрана нет: строки те же, что у «Повторить»
+   * на пустой тренировке, шапка — служебная шапка сессии.
+   */
+  function TemplatesScreen(props) {
+    const { templates, onStart, onRemove, onBack, pending } = props;
+    const Parts = HEYS.StrengthBuilderParts || {};
+    const list = Array.isArray(templates) ? templates : [];
+    return h('div', { className: 'sb-root sb-screen sb-templates-screen' },
+      sessionServiceHead({
+        leading: closeIconButton(onBack, 'Назад к тренировке'),
+        title: 'Шаблоны тренировок',
+        subtitle: list.length
+          ? (typeof Parts.templateCountLabel === 'function' ? Parts.templateCountLabel(list.length) : list.length + ' шаблонов')
+            + ' · состав без прошлых подходов'
+          : 'пока ни одного'
+      }),
+      h('div', { className: 'sb-empty-scroll sb-templates-scroll' },
+        list.length
+          ? h('div', { className: 'sb-empty-options sb-templates-list' },
+            list.map(function (tpl) {
+              const exercisesCount = Array.isArray(tpl.exercises) ? tpl.exercises.length : 0;
+              const composition = (Array.isArray(tpl.exercises) ? tpl.exercises : [])
+                .map(function (ex) { return ex && ex.name; }).filter(Boolean).join(' · ');
+              return h('div', { key: tpl.id, className: 'sb-templates-row' },
+                h('button', {
+                  type: 'button', className: 'sb-empty-option sb-templates-start',
+                  disabled: !!pending,
+                  onClick: function () { onStart(tpl); }
+                },
+                  h('span', { className: 'sb-templates-copy' },
+                    h('span', null, tpl.name || 'Силовая'),
+                    composition && h('small', null, composition)
+                  ),
+                  h('b', null, exerciseCountLabel(exercisesCount).replace(/ упражнени.*$/, ' упр.'))
+                ),
+                typeof onRemove === 'function' && h('button', {
+                  type: 'button', className: 'sb-icon-btn sb-templates-remove',
+                  'aria-label': 'Удалить шаблон ' + (tpl.name || ''),
+                  onClick: function () { onRemove(tpl); }
+                }, '✕')
+              );
+            })
+          )
+          : h('div', { className: 'sb-empty-card' },
+            h('b', null, 'Шаблонов пока нет'),
+            h('p', null, 'Шаблон сохраняется из итогов кнопкой «В шаблоны» — в него идёт состав тренировки без прошлых подходов.')
+          ),
+        h('p', { className: 'sb-empty-note' },
+          'Старт из шаблона — тот же состав, веса и повторы как план, ни одной галочки. Тренировка с закрытыми подходами шаблоном не заменяется.')
+      )
+    );
+  }
+
   function repeatDateLabel(dateKey) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateKey || ''));
     if (!m) return String(dateKey || '');
@@ -738,6 +794,7 @@
     const [consumedPlanRevision, setConsumedPlanRevision] = React.useState(null);
     const [renumberCtx, setRenumberCtx] = React.useState(null);
     const [approachUndo, setApproachUndo] = React.useState(null);
+    const [templatesTick, setTemplatesTick] = React.useState(0);
     const skipUndoToastRef = React.useRef(false);
     const catalogScrollTopRef = React.useRef(0);
     const [rest, setRest] = React.useState(function () {
@@ -1404,6 +1461,35 @@
       if (SK) patchExercises(SK.addSupersetRound(exercises, groupId));
     }
 
+    // Шаблоны читаются на каждый рендер: список короткий, а хранилище общее с
+    // итогами (там «В шаблоны») — своя копия здесь устаревала бы молча.
+    const templatesApi = (HEYS.StrengthBuilderParts || {}).strengthTemplates;
+    const templates = templatesApi && typeof templatesApi.list === 'function' ? templatesApi.list() : [];
+    const sessionHasDone = exercises.some(function (ex) {
+      return SK && typeof SK.hasDoneApproach === 'function' && SK.hasDoneApproach(ex);
+    });
+    // Старт из шаблона = «Повторить прошлую» с другим источником: тот же
+    // owner-callback переписывает журнал дня и отдаёт состав без галочек.
+    const canStartTemplate = typeof onRepeatLast === 'function' && !sessionHasDone;
+
+    function startFromTemplate(tpl) {
+      if (!canStartTemplate || emptyActionPending || !tpl || !Array.isArray(tpl.exercises)) return;
+      const candidatePlan = plannedExercisesFor(training);
+      const planRevision = planRevisionFor(candidatePlan ? training.plan : null);
+      setEmptyActionPending(true);
+      Promise.resolve(onRepeatLast(tpl.exercises, planRevision)).then(function (startedExercises) {
+        if (!Array.isArray(startedExercises) || !startedExercises.length) return;
+        setExercises(startedExercises);
+        setOpenIdx(0);
+        setView('list');
+      }).finally(function () { setEmptyActionPending(false); });
+    }
+
+    function removeTemplate(tpl) {
+      if (templatesApi && tpl) templatesApi.remove(tpl.id);
+      setTemplatesTick(templatesTick + 1);
+    }
+
     function swapMembers(groupId) {
       const g = groups.filter(function (x) { return x.groupId === groupId; })[0];
       if (!g || !SK || g.indexes.length < 2) return;
@@ -1693,6 +1779,16 @@
         onBack: function () { setView('list'); }
       });
     }
+    if (view === 'templates') {
+      return h(TemplatesScreen, {
+        key: 'templates-' + templatesTick,
+        templates: templates,
+        pending: emptyActionPending,
+        onStart: canStartTemplate ? startFromTemplate : function () {},
+        onRemove: templatesApi ? removeTemplate : null,
+        onBack: function () { setView('list'); }
+      });
+    }
     if (view === 'order' && CatUI.OrderScreen) {
       return h(CatUI.OrderScreen, {
         exercises: exercises,
@@ -1842,6 +1938,23 @@
               },
                 h('span', null, 'Повторить ' + repeatDateLabel(last.dateKey)),
                 h('b', null, last.exercises.length + ' упр.')
+              )
+            ),
+          // «Из шаблона» — строкой .cd, как повтор (строка «пустая тренировка»).
+          // Решение 3 сентября сняло её, пока шаблонов не было ни в хранении,
+          // ни в применении; теперь строка стоит только когда есть что открыть —
+          // в пустоту она по-прежнему не ведёт.
+          templates.length > 0 && canStartTemplate
+            && h('div', { className: 'sb-empty-options sb-empty-options--templates' },
+              h('button', {
+                type: 'button', className: 'sb-empty-option',
+                disabled: emptyActionPending,
+                onClick: function () { setView('templates'); }
+              },
+                h('span', null, 'Из шаблона'),
+                h('b', null, (HEYS.StrengthBuilderParts || {}).templateCountLabel
+                  ? HEYS.StrengthBuilderParts.templateCountLabel(templates.length)
+                  : templates.length + ' шаблонов')
               )
             ),
           h('p', { className: 'sb-empty-note' }, canStartPlan
@@ -2169,6 +2282,8 @@
                 && Array.isArray(training.planSnapshot.exercises)
                 && training.planSnapshot.exercises.length),
               lastSessionFor: lastSessionFor,
+              templatesCount: canStartTemplate ? templates.length : 0,
+              openTemplates: function () { setView('templates'); },
               onRepeatLast: function (lastExercises) {
                 if (typeof onRepeatLast !== 'function') return;
                 const candidatePlan = plannedExercisesFor(training);

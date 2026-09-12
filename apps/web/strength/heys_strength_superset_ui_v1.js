@@ -2507,6 +2507,117 @@
   Parts.PlanVsDoneScreen = PlanVsDoneScreen;
 
   /**
+   * Шаблоны тренировок: состав завершённой тренировки без прошлых подходов
+   * («В шаблоны» на итогах, вход «Шаблоны тренировок» в шторке ⋯, «Из шаблона»
+   * на пустой тренировке). Хранятся тем же путём, что частота и избранное
+   * каталога: через utils (client-scoped, уезжает в облако), без второго
+   * способа. Старт из шаблона идёт через тот же owner-callback, что и «Повторить
+   * прошлую», — у конструктора своего доступа к журналу дня нет и быть не должно.
+   */
+  const TEMPLATES_KEY = 'heys_strength_templates_v1';
+  const TEMPLATES_MAX = 40;
+
+  function readTemplatesRaw() {
+    const u = HEYS.utils;
+    try {
+      let o = null;
+      if (u && typeof u.lsGet === 'function') o = u.lsGet(TEMPLATES_KEY, null);
+      if (!o && global.localStorage) {
+        const raw = global.localStorage.getItem(TEMPLATES_KEY);
+        o = raw ? JSON.parse(raw) : null;
+      }
+      return o && Array.isArray(o.items) ? o.items.filter(function (row) {
+        return row && row.id && Array.isArray(row.exercises) && row.exercises.length;
+      }) : [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  function writeTemplatesRaw(items) {
+    const payload = { items: items.slice(0, TEMPLATES_MAX) };
+    const u = HEYS.utils;
+    try {
+      if (u && typeof u.lsSet === 'function') u.lsSet(TEMPLATES_KEY, payload);
+      else if (global.localStorage) global.localStorage.setItem(TEMPLATES_KEY, JSON.stringify(payload));
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  /** Состав без прошлых подходов: веса и повторы как план, ни одной галочки. */
+  function templateExercisesFrom(exercises) {
+    return (Array.isArray(exercises) ? exercises : []).map(function (ex) {
+      const source = ex && typeof ex === 'object' ? ex : {};
+      const next = {};
+      Object.keys(source).forEach(function (key) {
+        // Прогресс сессии в шаблон не идёт: подходы пересобираются ниже,
+        // тяжесть, заметка и признак переоткрытия — факты одного дня.
+        if (key === 'approaches' || key === 'rpe' || key === 'note' || key === 'reopened' || key === 'id') return;
+        next[key] = source[key];
+      });
+      next.name = String(source.name || '');
+      next.approaches = (Array.isArray(source.approaches) ? source.approaches : []).map(function (a) {
+        const approach = { weightKg: a && a.weightKg != null ? String(a.weightKg) : '', reps: a && a.reps != null ? a.reps : 10, done: false };
+        if (a && a.type) approach.type = a.type;
+        if (a && Array.isArray(a.drops) && a.drops.length) {
+          approach.drops = a.drops.map(function (d) {
+            return { weightKg: d && d.weightKg != null ? String(d.weightKg) : '', reps: d && d.reps != null ? d.reps : 0, done: false };
+          });
+        }
+        if (a && a.durationSec != null) approach.durationSec = a.durationSec;
+        if (a && a.distanceM != null) approach.distanceM = a.distanceM;
+        return approach;
+      });
+      if (!next.approaches.length) next.approaches = [{ weightKg: '', reps: 10, done: false }];
+      return next;
+    }).filter(function (ex) { return ex.name.trim(); });
+  }
+
+  const strengthTemplates = {
+    list: function () {
+      return readTemplatesRaw();
+    },
+    /** Сохранить состав; шаблон с тем же именем заменяется, а не дублируется. */
+    save: function (name, exercises) {
+      const composition = templateExercisesFrom(exercises);
+      const title = String(name || '').trim() || 'Силовая';
+      if (!composition.length) return null;
+      const entry = {
+        id: 'tpl_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7),
+        name: title,
+        savedAt: Date.now(),
+        exercises: composition
+      };
+      const rest = readTemplatesRaw().filter(function (row) { return row.name !== title; });
+      writeTemplatesRaw([entry].concat(rest));
+      return entry;
+    },
+    remove: function (id) {
+      const items = readTemplatesRaw();
+      const next = items.filter(function (row) { return row.id !== id; });
+      if (next.length === items.length) return false;
+      writeTemplatesRaw(next);
+      return true;
+    },
+    fromExercises: templateExercisesFrom
+  };
+
+  function templateCountLabel(count) {
+    const n = Math.max(0, Math.round(+count || 0));
+    const mod100 = n % 100;
+    const mod10 = n % 10;
+    const word = mod100 >= 11 && mod100 <= 14 ? 'шаблонов'
+      : mod10 === 1 ? 'шаблон'
+        : mod10 >= 2 && mod10 <= 4 ? 'шаблона' : 'шаблонов';
+    return n + ' ' + word;
+  }
+
+  Parts.strengthTemplates = strengthTemplates;
+  Parts.templateCountLabel = templateCountLabel;
+
+  /**
    * Входы шторки ⋯ (экран 20). Только рабочие: кнопка в пустоту в разработку не
    * уходит (решение 9). Недоступные объясняют причину, а не просто гаснут.
    */
@@ -2518,7 +2629,22 @@
       && Array.isArray(lastSession.exercises)
       && lastSession.exercises.length
       && typeof ctx.onRepeatLast === 'function');
+    const templatesCount = typeof ctx.templatesCount === 'number'
+      ? ctx.templatesCount
+      : strengthTemplates.list().length;
+    const canOpenTemplates = templatesCount > 0 && typeof ctx.openTemplates === 'function';
     return [
+      // Строка «шторка — семь входов»: шаблоны стоят первыми. Пока сохранённых
+      // нет, вход не ведёт в пустоту — гаснет и говорит, откуда шаблоны берутся.
+      {
+        icon: '📋', t: 'Шаблоны тренировок',
+        d: templatesCount > 0
+          ? (templateCountLabel(templatesCount) + ' · состав без прошлых подходов')
+          : 'сохраняются из итогов кнопкой «В шаблоны»',
+        off: !canOpenTemplates,
+        chevron: 'dim',
+        go: function () { if (!canOpenTemplates) return; ctx.close(); ctx.openTemplates(); }
+      },
       {
         icon: '↕️', t: 'Порядок упражнений', d: 'стрелками или перетаскиванием',
         off: exercises.length < 2,

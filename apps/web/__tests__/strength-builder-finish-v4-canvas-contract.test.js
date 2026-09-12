@@ -406,6 +406,11 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
       ['57', '.sb-finish-other + .sb-finish-footnote', 'Своя строка, а не пропуск: иначе человек решит, что работа потерялась. Время и метры в тоннаж не идут — килограммы на секунды не умножаются. Свой вес идёт через коэффициент; нет коэффициента — здесь стоит строка «не посчитали».', {
         marginTop: '12px', color: CANVAS_COLORS.ink56, fontSize: '11px', fontWeight: '500', lineHeight: '1.55'
       }],
+      ['58', '.sb-finish-template', 'В шаблоны', {
+        display: 'flex', width: '100%', minHeight: '48px', alignItems: 'center', justifyContent: 'center',
+        marginTop: '12px', borderRadius: '999px', backgroundColor: CANVAS_COLORS.c2, color: CANVAS_COLORS.ink56,
+        fontSize: '13px', fontWeight: '700', lineHeight: '1'
+      }],
       ['59', '.sb-finish-done', 'Готово', {
         display: 'flex', width: '100%', minHeight: '48px', alignItems: 'center', justifyContent: 'center',
         marginTop: '9px', borderRadius: '999px', backgroundColor: CANVAS_COLORS.acs, color: CANVAS_COLORS.onAcs,
@@ -416,7 +421,6 @@ describe('Б3 · Конструктор · итоги', { timeout: 45_000 }, () 
     expect(rows.map(([id]) => id)).toEqual([
       ...Array.from({ length: 26 }, (_, index) => String(index + 1).padStart(2, '0')),
       ...Array.from({ length: 33 }, (_, index) => String(index + 27).padStart(2, '0'))
-        .filter((id) => id !== '58')
     ]);
 
     const mismatches = [];

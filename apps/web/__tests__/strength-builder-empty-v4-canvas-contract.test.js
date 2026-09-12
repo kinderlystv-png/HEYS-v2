@@ -27,7 +27,11 @@ describe('strength builder · Б1 empty v4 canvas contract', () => {
     expect(source).toContain("'Повторить ' + repeatDateLabel(last.dateKey)");
     expect(source).toContain("className: 'sb-empty-plan-preview'");
     expect(source).not.toContain("h('div', { className: 'sb-empty-emoji' }");
-    expect(source).not.toMatch(/Из шаблона/);
+    // Решение 3 сентября сняло «Из шаблона», пока шаблонов не было ни в
+    // хранении, ни в применении. Теперь они есть (11 сентября), и строка стоит
+    // только при сохранённых шаблонах: кадр «плана нет» без шаблонов — без неё.
+    expect(source).toContain("templates.length > 0 && canStartTemplate");
+    expect(source).toContain("h('span', null, 'Из шаблона')");
   });
 
   it('uses the canvas geometry for scroll, card, actions, options and note', () => {

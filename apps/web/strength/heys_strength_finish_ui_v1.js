@@ -18,6 +18,7 @@
   const React = global.React;
   if (!React) return;
   const h = React.createElement;
+  function CatUIRef() { return HEYS.StrengthCatalogUI || {}; }
 
   function fmtClock(totalSec) {
     const s = Math.max(0, Math.round(totalSec || 0));
@@ -276,6 +277,39 @@
       ? ((agg.totalVolume - comparableTonnageKg) / comparableTonnageKg) * 100
       : 0;
     const record = records[0] || null;
+    // «В шаблоны» (строка «вид · итоги сессии», кадр Б3 ·57): состав уходит в
+    // шаблоны без прошлых подходов; тост с «Отменить» — как у засчитанного
+    // подхода, а не диалог: человек уже закрыл тренировку и ничего не ждёт.
+    const [savedTemplate, setSavedTemplate] = React.useState(null);
+    const [templateToast, setTemplateToast] = React.useState(null);
+    const templatesApi = Parts.strengthTemplates;
+    const canSaveTemplate = !!(templatesApi && exercises.some(function (ex) {
+      return ex && String(ex.name || '').trim();
+    }));
+
+    React.useEffect(function () {
+      if (!templateToast) return undefined;
+      const id = global.setTimeout(function () { setTemplateToast(null); }, 5000);
+      return function () { global.clearTimeout(id); };
+    }, [templateToast]);
+
+    function saveTemplate() {
+      if (!canSaveTemplate || savedTemplate) return;
+      const title = String(wl.title || '').trim()
+        || (Parts.sessionTitle ? Parts.sessionTitle(exercises) : 'Силовая');
+      const entry = templatesApi.save(title, exercises);
+      if (!entry) return;
+      setSavedTemplate(entry);
+      setTemplateToast({
+        label: 'Шаблон сохранён · ' + entry.name,
+        hint: 'состав без прошлых подходов · вход в шторке ⋯',
+        onUndo: function () {
+          templatesApi.remove(entry.id);
+          setSavedTemplate(null);
+          setTemplateToast(null);
+        }
+      });
+    }
 
     function patchFeedback(key, value) {
       setFeedback(function (current) {
@@ -401,6 +435,12 @@
           h('p', { className: 'sb-finish-footnote' }, 'Своя строка, а не пропуск: иначе человек решит, что работа потерялась. Время и метры в тоннаж не идут — килограммы на секунды не умножаются. Свой вес идёт через коэффициент; нет коэффициента — здесь стоит строка «не посчитали».')
         ),
 
+        templateToast && CatUIRef().ApproachUndoToast && h(CatUIRef().ApproachUndoToast, { toast: templateToast }),
+        canSaveTemplate && h('button', {
+          type: 'button', className: 'sb-finish-template',
+          disabled: !!savedTemplate,
+          onClick: saveTemplate
+        }, savedTemplate ? 'В шаблонах' : 'В шаблоны'),
         h('button', {
           type: 'button', className: 'sb-finish-done',
           onClick: function () { onDone(note, feedback); }
