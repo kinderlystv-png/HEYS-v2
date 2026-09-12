@@ -12,9 +12,11 @@
 // кадра):
 //   · кадр рисует радиус 12, число 13 px, точку 5 px и зазор 4 — контракт
 //     говорит 14 / 12,5 / 4 / 3;
-//   · кадр заливает сегодняшний день терракотовой плашкой — контракт оставляет
-//     ему только начертание 700 и тон --ac;
-//   · кадр даёт выбранному дню обводку 2 px акцентом — контракт её не просит;
+//   · сегодняшний день залит акцентом, а выбранный получил обводку 2 px тем же
+//     цветом — решение владельца 12 сентября в пользу кадра: строка «вид
+//     клетки» оставляла сегодня только начертание 700 тоном --ac, и на сетке
+//     из тридцати клеток оно почти не читалось. Строка ждёт переписывания,
+//     запись `#calendar-legend-frame-behind-its-own-contract` в FINDINGS;
 //   · точку кадры красят ролью --val-good (#7a8a5e / #8faa6d / #3e9a6b /
 //     #4caf7d), а строка контракта называет --gr2 (#7a8a5e / #8a9a6a /
 //     #4f9a78 / #6fbf9a). Совпадают только в песочной. Верна строка.
@@ -64,6 +66,12 @@ function noGradient(cs) {
 
 function noFill(cs) {
   return noGradient(cs) && norm(cs.backgroundColor) === 'none';
+}
+
+// Значение роли берём из самого набора: тест должен охранять роль, а не
+// литерал — иначе он падает на переводе цвета на роль, то есть на починке.
+function role(name) {
+  return norm(window.getComputedStyle(document.documentElement).getPropertyValue(name));
 }
 
 function applySet(id) {
@@ -177,7 +185,10 @@ describe('date-remainders · «вид клетки»', () => {
     expect(cs.justifyContent).toBe('center');
   });
 
-  it.each(SETS)('%s: чернила числа и тон сегодняшнего дня — роли набора', (id) => {
+  it.each(SETS)('%s: чернила числа и заливка сегодняшнего дня — роли набора', (id) => {
+    // Решение владельца 12 сентября: сегодня отмечено заливкой акцентом, а не
+    // начертанием тоном --ac. На сетке из тридцати клеток тон почти не
+    // читался, а в этой шторке «сегодня» — главный ориентир.
     applySet(id);
     const { sheet } = renderSheet('2026-08-07');
     const plain = cellByDay(sheet, '18');
@@ -185,23 +196,35 @@ describe('date-remainders · «вид клетки»', () => {
 
     expect(norm(window.getComputedStyle(plain).color)).toBe(TX[id]);
     expect(window.getComputedStyle(today).fontWeight).toBe('700');
-    expect(norm(window.getComputedStyle(today).color)).toBe(AC[id]);
+    expect(norm(window.getComputedStyle(today).backgroundColor)).toBe(role('--v4-act'));
+    expect(norm(window.getComputedStyle(today).color)).toBe(role('--v4-btn-on-act'));
   });
 
-  it('сегодняшний день не залит: контракт даёт ему только начертание и тон', () => {
-    // 21 августа записей нет — клетка не подхватывает ни --c1 у has-data, ни
-    // --c2 у выбранного, и остаётся один на один с базовым правилом
-    // `.date-picker-day.today` legacy-пикера (синий градиент навигации).
+  it('сегодняшний день залит акцентом и в день с записями, и в день без них', () => {
+    // Стык каскада: заливку --v4-surface даёт `.has-data`, и она перебивала
+    // акцент — правило has-data весит больше из-за `:not(.selected)`. 12
+    // сентября сегодняшний день с записями от этого остался светлым, хотя
+    // решение уже было принято; замером это видно, грепом — нет.
     const { sheet } = renderSheet('2026-08-07');
-    const today = cellByDay(sheet, '21');
-    const cs = window.getComputedStyle(today);
+    const todayEmpty = cellByDay(sheet, '21');
+    const csEmpty = window.getComputedStyle(todayEmpty);
 
-    expect(today.className).not.toContain('has-data');
-    expect(noFill(cs)).toBe(true);
-    expect(cs.animation === '' || cs.animation.includes('none')).toBe(true);
+    expect(todayEmpty.className).not.toContain('has-data');
+    expect(norm(csEmpty.backgroundColor)).toBe(role('--v4-act'));
+    expect(noGradient(csEmpty)).toBe(true);
+    expect(csEmpty.animation === '' || csEmpty.animation.includes('none')).toBe(true);
+
+    const { sheet: sheetData } = renderSheet('2026-08-21');
+    const todayWithData = cellByDay(sheetData, '5');
+    expect(todayWithData.className).toContain('has-data');
+    // 5 августа — не сегодня: у клетки с записями остаётся своя поверхность.
+    expect(norm(window.getComputedStyle(todayWithData).backgroundColor)).not.toBe(role('--v4-act'));
   });
 
-  it.each(SETS)('%s: выбранный день — заливка --c2', (id) => {
+  it.each(SETS)('%s: выбранный день — заливка --c2 и обводка акцентом', (id) => {
+    // Тем же решением 12 сентября выбранный день получил обводку акцентом:
+    // два смысла — два разных приёма одного цвета, заливка у сегодня, контур
+    // у выбора. Обводка внутрь, чтобы не двигать клетку в сетке.
     applySet(id);
     const { sheet } = renderSheet('2026-08-07');
     const selected = sheet.querySelector('.date-picker-day.selected');
@@ -210,25 +233,27 @@ describe('date-remainders · «вид клетки»', () => {
     expect(selected.querySelector('.day-number').textContent).toBe('7');
     expect(norm(cs.backgroundColor)).toBe(C2[id]);
     expect(noGradient(cs)).toBe(true);
-    expect(cs.boxShadow === '' || cs.boxShadow === 'none').toBe(true);
+    expect(cs.boxShadow).toContain('inset');
     // Число выбранного дня остаётся чернилами: white базового пикера на --c2
     // почти исчезал.
     expect(norm(cs.color)).toBe(TX[id]);
   });
 
-  it.each(SETS)('%s: выбранный и сегодняшний одновременно — --c2 под тоном --ac', (id) => {
-    // Стык двух правил равного веса: заливку даёт `.selected`, начертание и
-    // тон — `.today`. Ни одно не выключает другое.
+  it.each(SETS)('%s: выбранный и сегодняшний одновременно — заливка акцентом', (id) => {
+    // Стык двух правил: заливку --c2 даёт `.selected`, акцент — `.today`.
+    // Громче сегодня: человек ищет в шторке, куда перейти от текущего дня, и
+    // выбор здесь совпадает с ним — отдельная отметка выбора ничего не
+    // добавляет.
     applySet(id);
     const { sheet } = renderSheet('2026-08-21');
     const both = sheet.querySelector('.date-picker-day.selected.today');
     const cs = window.getComputedStyle(both);
 
     expect(both.querySelector('.day-number').textContent).toBe('21');
-    expect(norm(cs.backgroundColor)).toBe(C2[id]);
+    expect(norm(cs.backgroundColor)).toBe(role('--v4-act'));
     expect(noGradient(cs)).toBe(true);
     expect(cs.fontWeight).toBe('700');
-    expect(norm(cs.color)).toBe(AC[id]);
+    expect(norm(cs.color)).toBe(role('--v4-btn-on-act'));
   });
 
   it.each(SETS)('%s: точка факта — 4 px через 3, тон --gr2', (id) => {

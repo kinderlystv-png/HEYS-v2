@@ -8768,7 +8768,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   font-variant-numeric: tabular-nums;
 }
 
-.date-picker-sheet .date-picker-day.has-data:not(.selected) {
+.date-picker-sheet .date-picker-day.has-data:not(.selected):not(.today) {
   /* v4-intentional */
   background: var(--v4-surface);
 }
@@ -8796,7 +8796,7 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
 
 /* Каноничные тёмные наборы вторую поверхность не объявляют: там срабатывает
    запасное значение, и светлое дало бы светлую заливку под светлыми чернилами. */
-[data-theme$="dark"] .date-picker-sheet .date-picker-day.selected,
+[data-theme$="dark"] .date-picker-sheet .date-picker-day.selected:not(.today),
 [data-theme$="dark"] .date-picker-sheet .legend-swatch--selected {
   background: var(--v4-chip-2, #2f2820);
 }
@@ -8817,17 +8817,13 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   box-shadow: none;
   animation: none;
 }
-
-/* Заливки у сегодняшнего дня нет — контракт «вид клетки» оставляет ему только
-   начертание 700 и тон --ac. Правило `background: transparent` у
-   `.date-picker-sheet .date-picker-day` этого не удерживало: базовое
-   `.date-picker-day.today` legacy-пикера того же веса и стоит ниже по файлу,
-   поэтому сегодняшний день без записей приезжал синим градиентом навигации.
-   Гасим адресно, не задевая две законные заливки: с записями клетка берёт
-   --c1 у `.has-data`, выбранная — --c2 у `.selected`. */
-.date-picker-sheet .date-picker-day.today:not(.has-data):not(.selected) {
-  background: transparent;
+/* Точка факта на залитой клетке: зелёная роль на терракоте почти не видна,
+   и кадр рисует её тёмной — тем же тоном, что и число на акценте. */
+.date-picker-sheet .date-picker-day.today .day-data-dot {
+  /* v4-intentional */
+  background: var(--v4-btn-on-act);
 }
+
 
 .date-picker-sheet .date-picker-day.future.disabled {
   background: transparent;
@@ -8847,19 +8843,21 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   flex-shrink: 0;
 }
 
-/* Метка цикла — вертикальная полоска слева от числа, 3×12. Так её рисует и
-   кадр «Календарь · легенда», и собственный образец легенды; в клетке же она
-   лежала горизонтальной полосой поверху, и легенда спорила с сеткой. */
+/* Метка цикла — лента по верхнему краю клетки: строка контракта «цикл и
+   загрузка» переписана 26 августа именно так, «отрезок, идущий подряд,
+   показывается одной формой». 12 сентября метку перевели в вертикальную
+   полоску слева по кадру «Календарь · легенда» — кадр рисует редакцию,
+   отменённую тем решением, и правку пришлось снять. Спор пакета с самим
+   собой (правило против кадра и обмеров 13/23) отдан дизайнеру. */
 .date-picker-sheet .date-picker-day.has-cycle::before {
   content: '';
   position: absolute;
-  left: 2px;
-  right: auto;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 12px;
-  width: 3px;
-  border-radius: 999px;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  width: auto;
+  border-radius: 0;
   /* v4-intentional */
   background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent); /* v4-intentional */
   pointer-events: none;

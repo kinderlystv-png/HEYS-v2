@@ -105,7 +105,7 @@ const SHEET = [
   [6, `${S} .date-picker-sheet-month-nav`, ['width', 'height', 'radius', 'background', 'align', 'justify', 'marginTop']],
   [9, `${S} .date-picker-days`, ['gap']],
   [10, [`.date-picker-weekday`, `${S} .date-picker-weekday`], ['textAlign', 'fontSize']],
-  [11, ['.date-picker-day', `${S} .date-picker-day`, `${S} .date-picker-day.has-data:not(.selected)`],
+  [11, ['.date-picker-day', `${S} .date-picker-day`, `${S} .date-picker-day.has-data:not(.selected):not(.today)`],
     ['minHeight', 'direction', 'align', 'justify', 'fontWeight', 'background']],
   [12, `${S} .day-data-dot`, ['radius', 'background']],
   [16, `${S} .date-picker-day.selected`, ['background', 'fontWeight']],

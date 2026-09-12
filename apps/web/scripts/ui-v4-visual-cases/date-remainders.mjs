@@ -146,6 +146,25 @@ const calendar = (themeId) => dateCase('calendar-legend', 'Календарь ·
   uiSteps: [{ tap: '.date-picker-trigger-lbl' }, { waitFor: '.date-picker-sheet .date-picker-legend' }],
 });
 
+// Тот же лист, но выбран не сегодняшний день: только так видно обводку
+// выбранного дня — когда выбран сегодня, её перекрывает заливка.
+const calendarOtherDay = (themeId) => dateCase('calendar-other-day', 'Календарь · легенда', themeId, {
+  clock: clock('2026-08-10T12:00:00+03:00'),
+  fixtureDay: day('2026-08-10', THREE_MEALS),
+  fixtureDays: CAL_MONTH_DAYS,
+  uiSteps: [
+    { tap: '.date-picker-trigger-lbl' },
+    { waitFor: '.date-picker-sheet .date-picker-legend' },
+    // Пустые клетки сетки несут тот же класс `date-picker-day` и стоят первыми,
+    // а обработчика у них нет: тап по ним лист не закрывал, и следующий тап по
+    // капсуле упирался в открытый лист. Берём клетку с записями — она и выбором
+    // служит, и точку факта показывает.
+    { tap: '.date-picker-sheet .date-picker-day.has-data:not(.today):not(.future)' },
+    { tap: '.date-picker-trigger-lbl' },
+    { waitFor: '.date-picker-sheet .date-picker-day.selected:not(.today)' },
+  ],
+});
+
 export const DATE_REMAINDERS_VISUAL_CASES = Object.freeze([
   ...['sand', 'sand-dark', 'blue', 'blue-dark'].map(night),
   ...['sand', 'sand-dark'].map(today),
@@ -153,4 +172,5 @@ export const DATE_REMAINDERS_VISUAL_CASES = Object.freeze([
   ...['sand', 'sand-dark'].map(otherDay),
   ...['sand', 'sand-dark'].map(pastScrolled),
   ...['sand', 'sand-dark', 'blue', 'blue-dark'].map(calendar),
+  ...['sand'].map(calendarOtherDay),
 ]);
