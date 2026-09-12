@@ -342,12 +342,13 @@ describe('UI v4 visual harness', { timeout: 45_000 }, () => {
     expect(cases).toHaveLength(15);
     expect(cases.every((entry) => entry.status === 'automated' && entry.rootSelector)).toBe(true);
     expect(cases.filter((entry) => entry.kind === 'demo-subscription')).toHaveLength(14);
-    // Корень — там, куда экран подписки монтирует продукт: секция профиля,
-    // открытая строкой «Подписка» листа настроек. Прежний '#ui-v4-subscription-
-    // screen-host' был рамкой стенда, а не местом продукта.
+    // Корень — весь экран подписки: с 12 сентября строка «Подписка» открывает
+    // свой экран с шапкой и крестиком, и кадр рисует его целиком, а не одну
+    // карточку внутри. Прежний '#ui-v4-subscription-screen-host' был рамкой
+    // стенда, а не местом продукта.
     expect(cases.find((entry) => entry.id === 'subscription-trial-screen')).toMatchObject({
       kind: 'demo-subscription',
-      rootSelector: '#profile-section-subscription .sub-screen',
+      rootSelector: '[data-settings-screen="subscription"]',
       bootstrap: { entry: 'settings-row', subscriptionStatus: 'trial', trial_ends_at: '2026-09-10' },
     });
     expect(UI_V4_VISUAL_CASES.some((entry) => entry.zone === 'subscription' && entry.status === 'scenario-pending'))

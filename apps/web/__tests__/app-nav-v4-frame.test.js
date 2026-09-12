@@ -176,8 +176,10 @@ describe('UI v4 Prompt 3b — шапка', () => {
         expect(baseCss).toContain('[data-theme$="dark"] .hdr-settings-sheet__group');
         const userTabSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_user_tab_impl_v1.js'), 'utf8');
         expect(userTabSrc).toContain('heys:open-user-section');
-        expect(userTabSrc).toContain("title: 'Уведомления и звук'");
-        expect(userTabSrc).toContain('profile-v4-external');
+        // Три раздела — свои экраны из листа настроек (решение владельца
+        // 12 сентября), поэтому названия живут в таблице заголовков экрана.
+        expect(userTabSrc).toContain("notifications: 'Уведомления и звук'");
+        expect(userTabSrc).toContain('SETTINGS_SECTION_SCREEN_TITLES');
         expect(userTabSrc).toContain("title: 'Медицинское'");
         expect(userTabSrc).toContain('PIN клиента');
         expect(userTabSrc).toContain('normalizeExclusiveSections');
@@ -294,8 +296,7 @@ describe('UI v4 — иконки', () => {
         const iconsSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_nav_icons_v1.js'), 'utf8');
         expect(iconsSrc).toContain('person:');
         expect(iconsSrc).toContain('heart:');
-        expect(userSrc).toContain("profileSvg('bell')");
-        expect(userSrc).toContain("profileSvg('gem')");
+        expect(userSrc).toContain("profileSvg('gem'");
         expect(userSrc).not.toMatch(/icon: '👤'/);
         expect(userSrc).not.toMatch(/icon: '🔔'/);
     });

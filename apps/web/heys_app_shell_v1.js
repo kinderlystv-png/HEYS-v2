@@ -4157,6 +4157,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         const [settingsMenuOpen, setSettingsMenuOpen] = React.useState(false);
         const [sheetExtra, setSheetExtra] = React.useState(null);
+        // Решение владельца 12 сентября: «Подписка», «Уведомления и звук» и
+        // «Система» — отдельные экраны поверх приложения, а не разделы внутри
+        // профиля. Здесь лежит открытый сейчас экран (или null).
+        const [settingsScreen, setSettingsScreen] = React.useState(null);
         const [boardNavTheme, setBoardNavTheme] = React.useState(() => (
             window.HEYS?.Board?.readTheme?.()
             || window.__HEYS_BOOT_THEME__?.boardTheme
@@ -4507,7 +4511,17 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             switchTab(nextTab, reason);
         };
 
+        // Три раздела вынесены из профиля в свои экраны: строка списка их
+        // открывает, крестик возвращает в список настроек. Остальные адреса
+        // по-прежнему ведут во вкладку профиля к своей группе.
+        const SETTINGS_SCREEN_SECTIONS = ['subscription', 'notifications', 'system'];
+
         const openUserSection = (sectionId, reason) => {
+            if (SETTINGS_SCREEN_SECTIONS.includes(sectionId)) {
+                setSettingsMenuOpen(false);
+                setSettingsScreen(sectionId);
+                return;
+            }
             window.__heysPendingUserSection = sectionId;
             setSettingsMenuOpen(false);
             switchTab('user', reason);
@@ -4515,6 +4529,12 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 window.dispatchEvent(new CustomEvent('heys:open-user-section', { detail: { id: sectionId } }));
             });
         };
+
+        // Возврат — туда, откуда пришли: в список настроек, а не на вкладку.
+        const closeSettingsScreen = React.useCallback(() => {
+            setSettingsScreen(null);
+            setSettingsMenuOpen(true);
+        }, []);
 
         const readSettingsPalette = () => {
             try {
@@ -5017,7 +5037,11 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
 
         // UI-гейт: цель — найти настройку по группе; главное — выбрать строку / закрыть;
         // слой 1 — ярусы + тумблер уведомлений; слой 2 — раскрытия; критическое не скрывать — выход/данные.
-        const subscriptionSettingsMeta = (() => {
+        // Подпись строки «Подписка» читалась один раз при отрисовке и молчала,
+        // когда статус приезжал позже: строка так и оставалась на «Загрузка…»
+        // или на прошлом состоянии. Держим её состоянием и пересчитываем по
+        // тому же событию, по которому обновляются остальные потребители.
+        const readSubscriptionSettingsMeta = React.useCallback(() => {
             try {
                 const details = window.HEYS?.Subscription?.getCachedDetails?.()
                     || { status: window.HEYS?.Subscription?.getLocalStatus?.() };
@@ -5025,7 +5049,18 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
             } catch (_) {
                 return '';
             }
-        })();
+        }, []);
+        const [subscriptionSettingsMeta, setSubscriptionSettingsMeta] = React.useState(readSubscriptionSettingsMeta);
+        React.useEffect(() => {
+            const sync = () => setSubscriptionSettingsMeta(readSubscriptionSettingsMeta());
+            sync();
+            window.addEventListener('heys:subscription-changed', sync);
+            window.addEventListener('heys:profile-updated', sync);
+            return () => {
+                window.removeEventListener('heys:subscription-changed', sync);
+                window.removeEventListener('heys:profile-updated', sync);
+            };
+        }, [readSubscriptionSettingsMeta, settingsMenuOpen]);
 
         const renderSettingsGroup = (key, title, children) => {
             const items = (Array.isArray(children) ? children : [children]).filter(Boolean);
@@ -5794,6 +5829,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                         renderSettingsRow({
                             key: 'notify',
                             label: 'Звук и время напоминаний',
+                            // Контракт «доступность»: строка называет своё текущее
+                            // состояние — «Включены», «Запрещены в браузере» и так далее.
+                            meta: settingsPushLabel,
                             onClick: () => openUserSection('notifications', 'settings-sheet-notify'),
                         }),
                         renderSettingsRow({
@@ -6050,6 +6088,20 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                     )
                 )
             ),
+            // Вынесенные из профиля разделы — свой экран поверх приложения
+            // (решение владельца 12 сентября). Крестик возвращает в список
+            // настроек, откуда человек и пришёл.
+            // Через портал в body: у нижней навигации стоят contain: paint и
+            // will-change, а они делают её containing block для position: fixed —
+            // экран оставался внутри полосы навигации и обрезался ею. Лист
+            // настроек обходит это классом tabs--settings-open, но он снимается,
+            // когда лист закрывается и открывается экран.
+            settingsScreen && window.HEYS?.UserTabImpl?.SettingsSectionScreen
+                && portalAppShellChrome(React.createElement(window.HEYS.UserTabImpl.SettingsSectionScreen, {
+                    key: 'settings-screen-' + settingsScreen,
+                    id: settingsScreen,
+                    onClose: closeSettingsScreen,
+                })),
             // Лист «Настроить подробно» — контракт settings-system, строки
             // «вид листа „Настроить подробно“», «состав листа», «тихие часы».
             // UI-гейт: цель — сузить поток уведомлений; главное действие —

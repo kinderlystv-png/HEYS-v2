@@ -11,39 +11,54 @@ const sources = [
   source: fs.readFileSync(path.resolve(__dirname, '..', name), 'utf8'),
 }));
 
-function normalizedSettingsHelpers(source) {
+// Решение владельца 12 сентября: строка «Подписка» открывает свой экран, а её
+// подпись считает лист настроек в heys_app_shell_v1.js. В профиле осталась
+// только формат-функция даты окончания — её и сверяем на дубли.
+function normalizedEndHeadline(source) {
   const start = source.indexOf('function formatSubscriptionEndHeadline');
-  const end = source.indexOf('// === SubscriptionStatusSection', start);
+  const subtitle = source.indexOf('function getSubscriptionSettingsSubtitle', start);
+  const end = subtitle > start
+    ? subtitle
+    : source.indexOf('// === SubscriptionStatusSection', start);
   if (start < 0 || end < 0) return '';
   return source.slice(start, end).replace(/\s+/g, ' ').trim();
 }
 
-function loadSettingsHelpers(source) {
+function loadEndHeadline(source) {
   const start = source.indexOf('function formatSubscriptionEndHeadline');
   const end = source.indexOf('// === SubscriptionStatusSection', start);
   const helperSource = source.slice(start, end);
-  return Function(`${helperSource}; return { formatSubscriptionEndHeadline, getSubscriptionSettingsSubtitle };`)();
+  return Function(`${helperSource}; return formatSubscriptionEndHeadline;`)();
+}
+
+// Подпись строки в листе настроек осталась в запасной реализации профиля:
+// heys_user_v12.js рисует вкладку, когда HEYS.UserTabImpl не загрузился.
+function loadSettingsSubtitle(source) {
+  const start = source.indexOf('function getSubscriptionSettingsSubtitle');
+  const end = source.indexOf('// === SubscriptionStatusSection', start);
+  const helperSource = source.slice(start, end);
+  return Function(`${helperSource}; return getSubscriptionSettingsSubtitle;`)();
 }
 
 describe('subscription settings status contract', () => {
-  it('keeps the duplicated settings implementations in sync', () => {
-    expect(normalizedSettingsHelpers(sources[0].source)).toBe(normalizedSettingsHelpers(sources[1].source));
+  it('keeps the duplicated end-date formatting in sync', () => {
+    expect(normalizedEndHeadline(sources[0].source)).toBe(normalizedEndHeadline(sources[1].source));
   });
 
-  it.each(sources)('$name uses subscription details for the collapsed and expanded views', ({ source }) => {
-    expect(source).toContain('subscription?.getCachedDetails?.()');
-    expect(source).toContain('window.HEYS.Subscription.getStatusDetails(true)');
-    expect(source).toContain('window.HEYS?.Subscriptions?.getSettingsRowMeta');
-    expect(source).toContain('subtitle: getSubscriptionSettingsSubtitle(window.HEYS?.Subscription)');
+  it('the settings row meta is computed by the settings sheet and follows the status', () => {
+    const shell = fs.readFileSync(path.resolve(__dirname, '..', 'heys_app_shell_v1.js'), 'utf8');
+    expect(shell).toContain('window.HEYS?.Subscriptions?.getSettingsRowMeta?.(details)');
+    // Подпись молчала, когда статус приезжал позже отрисовки: держим её
+    // состоянием и пересчитываем по тому же событию, что и остальные.
+    expect(shell).toContain("window.addEventListener('heys:subscription-changed', sync)");
   });
 
-  it.each(sources)('$name shows trial meta by end date', ({ source }) => {
-    const { getSubscriptionSettingsSubtitle, formatSubscriptionEndHeadline } = loadSettingsHelpers(source);
+  it('the fallback profile still labels the row by the end date', () => {
+    const getSubscriptionSettingsSubtitle = loadSettingsSubtitle(sources[1].source);
     const subscription = {
       getCachedDetails: () => ({ status: 'trial', trial_ends_at: '2026-09-10' }),
       getStatusMeta: () => ({ label: 'Пробный период', shortLabel: 'Триал' }),
     };
-
     const getSettingsRowMeta = (details) => {
       const d = new Date(details.trial_ends_at);
       const short = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace(/\.$/, '');
@@ -53,6 +68,14 @@ describe('subscription settings status contract', () => {
     globalThis.HEYS = { Subscriptions: { getSettingsRowMeta } };
     expect(getSubscriptionSettingsSubtitle(subscription)).toBe('Триал · до 10 сент');
     globalThis.HEYS = prev;
+  });
+
+  it.each(sources)('$name reads the status from the subscription module', ({ source }) => {
+    expect(source).toContain('window.HEYS.Subscription.getStatusDetails(true)');
+  });
+
+  it.each(sources)('$name shows the end date, not a countdown', ({ source }) => {
+    const formatSubscriptionEndHeadline = loadEndHeadline(source);
     expect(source).toContain("(status === 'read_only' || status === 'none')");
     expect(formatSubscriptionEndHeadline({ status: 'trial', trial_ends_at: '2026-09-10' })).toBe('до 10 сент');
     expect(formatSubscriptionEndHeadline({ status: 'active', subscription_ends_at: '2026-12-31' })).toMatch(/^до /);
@@ -98,9 +121,10 @@ describe('subscription settings entry mounts the v4 screen', () => {
     expect(element.type).toBe(legacy);
   });
 
-  it('the settings section renders the screen wrapper, not the legacy card directly', () => {
-    const section = IMPL.slice(IMPL.indexOf("id: 'subscription',"), IMPL.length).slice(0, 600);
-    expect(section).toContain('React.createElement(SubscriptionScreenSection)');
-    expect(section).not.toContain('React.createElement(SubscriptionStatusSection)');
+  it('the subscription screen renders the wrapper, not the legacy card directly', () => {
+    const body = IMPL.slice(IMPL.indexOf('function SettingsSectionScreenBody'));
+    const branch = body.slice(body.indexOf("if (id === 'subscription')"), body.indexOf("if (id === 'system')"));
+    expect(branch).toContain('React.createElement(SubscriptionScreenSection)');
+    expect(branch).not.toContain('React.createElement(SubscriptionStatusSection)');
   });
 });

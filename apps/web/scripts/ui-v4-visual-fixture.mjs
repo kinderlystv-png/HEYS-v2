@@ -12,6 +12,10 @@ import { CHECKIN_MORNING_VISUAL_CASES } from './ui-v4-visual-cases/checkin-morni
 import { NORM_CORRECTION_VISUAL_CASES } from './ui-v4-visual-cases/norm-correction.mjs';
 import { LOGIN_VISUAL_CASES } from './ui-v4-visual-cases/login.mjs';
 import { HOME_WIDGETS_VISUAL_CASES } from './ui-v4-visual-cases/home-widgets.mjs';
+import { STRENGTH_BUILDER_VISUAL_CASES } from './ui-v4-visual-cases/strength-builder.mjs';
+import { STRENGTH_CURATOR_VISUAL_CASES } from './ui-v4-visual-cases/strength-curator.mjs';
+import { STRENGTH_SESSION_VISUAL_CASES } from './ui-v4-visual-cases/strength-session.mjs';
+import { SETTINGS_SYSTEM_VISUAL_CASES } from './ui-v4-visual-cases/settings-system.mjs';
 
 const FIXTURE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const VISUAL_FIXTURE_SCRIPT = path.join(FIXTURE_ROOT, 'apps/web/heys_ui_v4_visual_fixture_v1.js');
@@ -205,7 +209,7 @@ export const SUBSCRIPTION_VISUAL_SCENARIOS = Object.freeze([
     id: 'subscription-trial-screen',
     frameLabel: 'Подписка · экран · пробный период',
     kind: 'demo-subscription',
-    rootSelector: '#profile-section-subscription .sub-screen',
+    rootSelector: '[data-settings-screen="subscription"]',
     bootstrap: { entry: 'settings-row', subscriptionStatus: 'trial', trial_ends_at: '2026-09-10' },
   },
   {
@@ -275,7 +279,7 @@ export const SUBSCRIPTION_VISUAL_SCENARIOS = Object.freeze([
     id: 'subscription-active-screen',
     frameLabel: 'Подписка · экран · активна',
     kind: 'demo-subscription',
-    rootSelector: '#profile-section-subscription .sub-screen',
+    rootSelector: '[data-settings-screen="subscription"]',
     bootstrap: {
       entry: 'settings-row',
       subscriptionStatus: 'active',
@@ -287,7 +291,7 @@ export const SUBSCRIPTION_VISUAL_SCENARIOS = Object.freeze([
     id: 'subscription-readonly-screen',
     frameLabel: 'Подписка · экран · только чтение',
     kind: 'demo-subscription',
-    rootSelector: '#profile-section-subscription .sub-screen',
+    rootSelector: '[data-settings-screen="subscription"]',
     bootstrap: { entry: 'settings-row', subscriptionStatus: 'read_only', plan: 'pro' },
   },
   {
@@ -977,10 +981,14 @@ export const UI_V4_VISUAL_CASES = Object.freeze([
   ...NORM_CORRECTION_VISUAL_CASES,
   ...LOGIN_VISUAL_CASES,
   ...HOME_WIDGETS_VISUAL_CASES,
+  ...STRENGTH_BUILDER_VISUAL_CASES,
+  ...STRENGTH_CURATOR_VISUAL_CASES,
+  ...STRENGTH_SESSION_VISUAL_CASES,
   ...CURATOR_EDITS_VISUAL_CASES,
   ...DATE_REMAINDERS_VISUAL_CASES,
   ...NUTRITION_TAB_VISUAL_CASES,
   ...WATER_ADD_VISUAL_CASES,
+  ...SETTINGS_SYSTEM_VISUAL_CASES,
 ]);
 
 const PRODUCTS = Object.freeze([
@@ -1220,6 +1228,12 @@ export async function prepareUiV4VisualCase(page, item) {
   await ensureUndoModule(page);
 
   await page.addScriptTag({ path: VISUAL_FIXTURE_SCRIPT });
+
+  // Кейс зоны может доложить свои сцены поверх общего mount (поле fixtureScript
+  // в модуле кейсов зоны) — иначе его frameLabel уйдёт в базовый mount и упадёт.
+  if (item.fixtureScript) {
+    await page.addScriptTag({ path: path.join(FIXTURE_ROOT, item.fixtureScript) });
+  }
 
   if (item.frameLabel.startsWith('Первый вход · шаг')) {
     await page.addScriptTag({

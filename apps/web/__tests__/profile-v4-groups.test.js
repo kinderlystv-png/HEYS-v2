@@ -27,14 +27,28 @@ describe('profile v4 — три группы (settings-system)', () => {
         expect(userTabSrc).not.toMatch(/ProfileSection[\s\S]{0,80}title: 'Обо мне'/);
     });
 
-    it('вынесенное: уведомления, подписка, система — вне profile-v4 и из листа настроек', () => {
-        expect(userTabSrc).toContain("className: 'profile-v4-external'");
-        expect(userTabSrc).toContain("id: 'notifications'");
-        expect(userTabSrc).toContain("id: 'subscription'");
-        expect(userTabSrc).toContain("id: 'system'");
+    // Решение владельца 12 сентября: три раздела открываются своим экраном
+    // с заголовком и крестиком, а не раскрываются секцией внутри профиля.
+    // Кадры subscription.v4 «Подписка · экран · …» рисуют именно экран.
+    it('вынесенное: уведомления, подписка, система — свои экраны из листа настроек', () => {
+        expect(userTabSrc).not.toContain("className: 'profile-v4-external'");
+        expect(userTabSrc).toContain('function SettingsSectionScreen(');
+        expect(userTabSrc).toContain("notifications: 'Уведомления и звук'");
+        expect(userTabSrc).toContain("subscription: 'Подписка'");
+        expect(userTabSrc).toContain("system: 'Система'");
         expect(shellSrc).toContain("openUserSection('subscription', 'settings-sheet-subscription')");
         expect(shellSrc).toContain("openUserSection('system', 'settings-sheet-system')");
-        expect(baseCss).toContain('.profile-v4-external:has(.profile-section--expanded)');
+        expect(shellSrc).toContain("const SETTINGS_SCREEN_SECTIONS = ['subscription', 'notifications', 'system']");
+        expect(baseCss).toContain('.settings-screen {');
+    });
+
+    // Возврат ведёт туда, откуда человек пришёл: в список настроек, а не на
+    // вкладку профиля. Без этого крестик выбрасывал бы на чужой экран.
+    it('крестик экрана возвращает в список настроек', () => {
+        expect(userTabSrc).toContain('settings-screen__close');
+        expect(userTabSrc).toContain("'aria-label': 'Назад в настройки'");
+        expect(shellSrc).toContain('setSettingsScreen(null);');
+        expect(shellSrc).toMatch(/closeSettingsScreen[\s\S]{0,160}setSettingsMenuOpen\(true\)/);
     });
 
     it('медицинское: согласия и конфиденциальность в tier consents', () => {

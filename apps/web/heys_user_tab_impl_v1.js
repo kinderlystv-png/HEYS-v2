@@ -223,16 +223,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         return short ? `до ${short}` : '';
     }
 
-    function getSubscriptionSettingsSubtitle(subscription) {
-        const details = subscription?.getCachedDetails?.();
-        if (!details?.status) return 'Загрузка...';
-        if (window.HEYS?.Subscriptions?.getSettingsRowMeta) {
-            return window.HEYS.Subscriptions.getSettingsRowMeta(details);
-        }
-        const meta = subscription.getStatusMeta(details.status);
-        return meta?.label || 'Тариф и оплата';
-    }
-
     // === SubscriptionStatusSection — отображение статуса подписки ===
     function SubscriptionStatusSection() {
         const [statusData, setStatusData] = React.useState(null);
@@ -459,21 +449,6 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
 
         // Строка «Уведомления» листа настроек: текст состояния до раскрытия
         // (UI v4, 2026-08-10 — колокольчик убран из шапки, единый вход сюда).
-        const [pushRowStatus, setPushRowStatus] = React.useState(null);
-        React.useEffect(() => {
-            if (!HEYS.push) return;
-            let cancelled = false;
-            const refresh = () => HEYS.push.getStatus().then((s) => { if (!cancelled) setPushRowStatus(s); }).catch(() => {});
-            refresh();
-            window.addEventListener('focus', refresh);
-            return () => { cancelled = true; window.removeEventListener('focus', refresh); };
-        }, []);
-        const pushRowStatusLabel = !pushRowStatus ? 'Напоминания, итог дня, стрики'
-            : pushRowStatus.subscribed ? 'Включены'
-                : pushRowStatus.needsInstall ? 'Нужно добавить HEYS на главный экран'
-                    : pushRowStatus.permission === 'denied' ? 'Запрещены в браузере'
-                        : 'Выключены';
-
         // Смена PIN
         const [pinStatus, setPinStatus] = React.useState('idle'); // idle | pending | success | error
         const [pinMessage, setPinMessage] = React.useState('');
@@ -1615,98 +1590,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
                 )
             )
 
-            ), // end profile-v4
-
-            // Вынесено из профиля — открывается из листа настроек (контракт settings-system)
-            React.createElement('div', { className: 'profile-v4-external' },
-                React.createElement(ProfileSection, {
-                    id: 'notifications',
-                    icon: profileSvg('bell'),
-                    title: 'Уведомления и звук',
-                    subtitle: pushRowStatusLabel,
-                    tone: 'cyan',
-                    expanded: expandedSections.notifications,
-                    onToggle: () => toggleSection('notifications')
-                },
-                    React.createElement('div', { className: 'profile-section__fields' },
-                        React.createElement(HEYS_PushSettingsCard, null),
-                        React.createElement(SoundSettingsCard, null)
-                    )
-                ),
-
-                React.createElement(ProfileSection, {
-                    id: 'subscription',
-                    icon: profileSvg('gem'),
-                    title: 'Подписка',
-                    subtitle: getSubscriptionSettingsSubtitle(window.HEYS?.Subscription),
-                    tone: 'emerald',
-                    expanded: expandedSections.subscription,
-                    onToggle: () => toggleSection('subscription')
-                },
-                    React.createElement(SubscriptionScreenSection)
-                ),
-
-                React.createElement(ProfileSection, {
-                    id: 'system',
-                    icon: profileSvg('settings'),
-                    title: 'Система',
-                    subtitle: 'Советы, достижения и аналитика',
-                    tone: 'slate',
-                    expanded: expandedSections.system,
-                    onToggle: () => toggleSection('system')
-                },
-                    React.createElement('div', { className: 'profile-section__fields' },
-                        isCuratorSession && React.createElement('div', { className: 'profile-field-group' },
-                            React.createElement('div', { className: 'profile-field-group__header' },
-                                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('desktop', 16)),
-                                React.createElement('span', { className: 'profile-field-group__title' }, 'Доступ с компьютера')
-                            ),
-                            React.createElement('div', { style: { marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
-                                React.createElement('span', { style: { color: 'var(--gray-600)' } },
-                                    'Разрешить вход с десктопа'
-                                ),
-                                React.createElement('label', { className: 'toggle-switch' },
-                                    React.createElement('input', {
-                                        type: 'checkbox',
-                                        checked: !!profile.desktopAllowed,
-                                        onChange: e => updateProfileField('desktopAllowed', e.target.checked)
-                                    }),
-                                    React.createElement('span', { className: 'toggle-slider' })
-                                )
-                            ),
-                            React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
-                                profile.desktopAllowed
-                                    ? 'Можно открывать на компьютере'
-                                    : 'Приложение работает только на телефоне'
-                            )
-                        ),
-                        React.createElement(LeaderboardSharingCard, null),
-                        React.createElement('div', { className: 'profile-field-group' },
-                            React.createElement('div', { className: 'profile-field-group__header' },
-                                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('cap', 16)),
-                                React.createElement('span', { className: 'profile-field-group__title' }, 'Обучение')
-                            ),
-                            React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
-                                'Обучение временно выключено'
-                            )
-                        ),
-                        React.createElement(HEYS_AdviceStatsCard, null),
-                        React.createElement(HEYS_AdviceSettingsCard, null),
-                        React.createElement(EmojiStyleSelector, null),
-                        window.HEYS.analyticsUI
-                            ? React.createElement('div', { className: 'profile-field-group' },
-                                React.createElement('div', { className: 'profile-field-group__header' },
-                                    React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('stats', 16)),
-                                    React.createElement('span', { className: 'profile-field-group__title' }, 'Аналитика')
-                                ),
-                                React.createElement('div', { style: { marginTop: '8px' } },
-                                    React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
-                                )
-                            )
-                            : null
-                    )
-                )
-            )
+            ) // end profile-v4
 
         );
     }
@@ -3533,6 +3417,159 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
         );
     }
 
+    // === Экраны, вынесенные из профиля ===
+    // Решение владельца 12 сентября: «Подписка», «Уведомления и звук» и
+    // «Система» открываются из строки листа настроек своим экраном с
+    // заголовком и крестиком, а не раскрываются секцией внутри профиля.
+    // Кадры subscription.v4 («Подписка · экран · активна» и соседние) рисуют
+    // именно экран с шапкой, и пара с секцией-аккордеоном не сходилась ни по
+    // шапке, ни по крестику, ни по тому, что вокруг.
+    const SETTINGS_SECTION_SCREEN_TITLES = {
+        notifications: 'Уведомления и звук',
+        subscription: 'Подписка',
+        system: 'Система',
+    };
+
+    // Тумблер десктопного доступа раньше читал профиль из состояния вкладки.
+    // На своём экране вкладки под ним нет, поэтому он читает и пишет профиль
+    // сам — тем же путём, которым вкладка сохраняет профиль.
+    function DesktopAccessCard() {
+        const [allowed, setAllowed] = React.useState(() => {
+            try { return !!(lsGet('heys_profile', DEFAULT_PROFILE) || {}).desktopAllowed; } catch { return false; }
+        });
+        const isCurator = (() => {
+            try { return HEYS.auth?.isCuratorSession?.() === true; } catch { return false; }
+        })();
+        if (!isCurator) return null;
+
+        const apply = (next) => {
+            setAllowed(next);
+            const prof = lsGet('heys_profile', DEFAULT_PROFILE) || {};
+            lsSet('heys_profile', {
+                ...prof,
+                desktopAllowed: next,
+                revision: (prof.revision || 0) + 1,
+                updatedAt: Date.now(),
+            });
+        };
+
+        return React.createElement('div', { className: 'profile-field-group' },
+            React.createElement('div', { className: 'profile-field-group__header' },
+                React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('desktop', 16)),
+                React.createElement('span', { className: 'profile-field-group__title' }, 'Доступ с компьютера')
+            ),
+            React.createElement('div', { style: { marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+                React.createElement('span', { style: { color: 'var(--gray-600)' } }, 'Разрешить вход с десктопа'),
+                React.createElement('label', { className: 'toggle-switch' },
+                    React.createElement('input', {
+                        type: 'checkbox',
+                        checked: allowed,
+                        onChange: (e) => apply(e.target.checked),
+                    }),
+                    React.createElement('span', { className: 'toggle-slider' })
+                )
+            ),
+            React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
+                allowed ? 'Можно открывать на компьютере' : 'Приложение работает только на телефоне'
+            )
+        );
+    }
+
+    function SettingsSectionScreenBody({ id }) {
+        if (id === 'notifications') {
+            return React.createElement('div', { className: 'profile-section__fields' },
+                React.createElement(HEYS_PushSettingsCard, null),
+                React.createElement(SoundSettingsCard, null)
+            );
+        }
+        if (id === 'subscription') {
+            return React.createElement(SubscriptionScreenSection);
+        }
+        if (id === 'system') {
+            return React.createElement('div', { className: 'profile-section__fields' },
+                React.createElement(DesktopAccessCard, null),
+                React.createElement(LeaderboardSharingCard, null),
+                React.createElement('div', { className: 'profile-field-group' },
+                    React.createElement('div', { className: 'profile-field-group__header' },
+                        React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('cap', 16)),
+                        React.createElement('span', { className: 'profile-field-group__title' }, 'Обучение')
+                    ),
+                    React.createElement('div', { className: 'muted', style: { marginTop: '6px', fontSize: '13px' } },
+                        'Обучение временно выключено'
+                    )
+                ),
+                React.createElement(HEYS_AdviceStatsCard, null),
+                React.createElement(HEYS_AdviceSettingsCard, null),
+                React.createElement(EmojiStyleSelector, null),
+                window.HEYS.analyticsUI
+                    ? React.createElement('div', { className: 'profile-field-group' },
+                        React.createElement('div', { className: 'profile-field-group__header' },
+                            React.createElement('span', { className: 'profile-field-group__icon' }, profileSvg('stats', 16)),
+                            React.createElement('span', { className: 'profile-field-group__title' }, 'Аналитика')
+                        ),
+                        React.createElement('div', { style: { marginTop: '8px' } },
+                            React.createElement(window.HEYS.analyticsUI.AnalyticsButton)
+                        )
+                    )
+                    : null
+            );
+        }
+        return null;
+    }
+
+    // UI-гейт: цель — открыть вынесенный раздел; главное действие — сам раздел;
+    // слой 1 — шапка с названием и содержимое; слой 2 — внутренние карточки;
+    // критическое не скрывать — возврат виден сразу и не уезжает с прокруткой.
+    function SettingsSectionScreen({ id, onClose }) {
+        const title = SETTINGS_SECTION_SCREEN_TITLES[id];
+        React.useEffect(() => {
+            if (!title) return undefined;
+            const onKey = (event) => {
+                if (event.key !== 'Escape') return;
+                event.stopPropagation();
+                if (typeof onClose === 'function') onClose();
+            };
+            document.addEventListener('keydown', onKey, true);
+            return () => document.removeEventListener('keydown', onKey, true);
+        }, [title, onClose]);
+        if (!title) return null;
+
+        return React.createElement('div', {
+            className: 'settings-screen',
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': title,
+            'data-settings-screen': id,
+        },
+            React.createElement('div', { className: 'settings-screen__head' },
+                React.createElement('span', { className: 'settings-screen__title' }, title),
+                React.createElement('button', {
+                    type: 'button',
+                    className: 'settings-screen__close',
+                    // Возврат ведёт в список настроек — человек пришёл оттуда.
+                    'aria-label': 'Назад в настройки',
+                    onClick: () => { if (typeof onClose === 'function') onClose(); },
+                },
+                    React.createElement('svg', {
+                        width: 15,
+                        height: 15,
+                        viewBox: '0 0 24 24',
+                        fill: 'none',
+                        stroke: 'currentColor',
+                        strokeWidth: 2.75,
+                        strokeLinecap: 'round',
+                        'aria-hidden': 'true',
+                    }, React.createElement('path', { d: 'M18 6L6 18M6 6l12 12' }))
+                )
+            ),
+            // id прежний: по нему находят экран подписки стенды и тесты.
+            React.createElement('div', {
+                className: 'settings-screen__body',
+                id: 'profile-section-' + id,
+            }, React.createElement(SettingsSectionScreenBody, { id }))
+        );
+    }
+
     function UserTab(props) {
         return React.createElement(UserTabBase, props);
     }
@@ -3552,6 +3589,7 @@ window.__heysPerfMark && window.__heysPerfMark('boot-app: execute start');
     HEYS.UserTabImpl.SupplementsRevokeSheet = SupplementsRevokeSheet;
     HEYS.UserTabImpl.ConsentRevokeSheet = ConsentRevokeSheet;
     HEYS.UserTabImpl.MyConsentsAndDataCard = MyConsentsAndDataCard;
+    HEYS.UserTabImpl.SettingsSectionScreen = SettingsSectionScreen;
 
     // Экспорт функций для использования в других модулях
     HEYS.calcSleepNorm = calcSleepNorm;

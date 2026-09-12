@@ -11032,6 +11032,75 @@ body:has(:is(
   inset: -5px;
 }
 
+/* Экран вынесенного раздела настроек — «Подписка», «Уведомления и звук»,
+   «Система» (решение владельца 12 сентября). Кадры subscription.v4
+   «Подписка · экран · активна» и соседние рисуют не секцию внутри профиля, а
+   свой экран во весь лист: шапка .ctxh, крестик .xb, тело .sc2. Открывается
+   из строки списка настроек и накрывает приложение целиком — в кадре нижней
+   навигации под ним нет. */
+.settings-screen {
+  position: fixed;
+  inset: 0;
+  z-index: var(--v4-z-sheet-2, 1210);
+  display: flex;
+  flex-direction: column;
+  background: var(--v4-bg, #fffaf1);
+  animation: settingsMenuSlideUp 0.18s ease;
+}
+
+/* .ctxh кадра: 18/18/12, заголовок и крестик по краям, зазор 10. */
+.settings-screen__head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 18px 12px;
+}
+
+/* .ctxt кадра. */
+.settings-screen__title {
+  font: 700 20px/1.2 Manrope, system-ui, sans-serif;
+  color: var(--v4-ink, #201e1d);
+}
+
+/* .xb кадра — круг 44 фоном первой поверхности. Тач-цель держится видимым
+   размером: строка контракта «тач-цели» от 5 сентября прямо отвергает
+   невидимый расширитель, он проходит замер и проваливается в руке. */
+.settings-screen__close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  /* v4-intentional */
+  background: var(--v4-surface);
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* .sc2 кадра: поля 18 по краям, содержимое прокручивается под шапкой.
+   Снизу поля не даём: у листа подписки свой подвал с полем 18, и лишний
+   отступ поднимал его над низом экрана. Разделам без своего подвала низ
+   добавляем отдельно. */
+.settings-screen__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 18px env(safe-area-inset-bottom, 0px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.settings-screen[data-settings-screen='notifications'] .settings-screen__body,
+.settings-screen[data-settings-screen='system'] .settings-screen__body {
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+}
+
 
 .tab-settings-menu.tab-settings-menu--v4-sheet .hdr-settings-sheet__push {
   margin: 0 0 2px;
