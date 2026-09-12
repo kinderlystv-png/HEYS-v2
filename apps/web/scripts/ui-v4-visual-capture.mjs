@@ -321,10 +321,31 @@ async function openCase(browser, item, snapshot, options = {}) {
       });
     });
   }
+  // Каталог продуктов кладём в хранилище до загрузки страницы — как дни. Иначе
+  // он приезжает уже после сборки вкладки: демо-режим применяет его через
+  // OverlayStore, но Store.set в демо-облаке откладывает запись (Proxy держит
+  // `_switchClientInProgress` истинным), и на странице каталог остаётся пустым.
+  // Пустой каталог — нулевые калории у позиций и молчащий планер.
+  if (Array.isArray(snapshot.products) && snapshot.products.length) {
+    await context.addInitScript((rows) => {
+      const gender = /gender=male/.test(location.search) ? 'male' : 'female';
+      const demoClientId = 'demo-client-' + gender;
+      const blob = JSON.stringify(rows);
+      try {
+        localStorage.setItem('heys_products', blob);
+        localStorage.setItem('heys_' + demoClientId + '_products', blob);
+        localStorage.setItem('heys_products_overlay_v2', blob);
+        localStorage.setItem('heys_' + demoClientId + '_products_overlay_v2', blob);
+      } catch (_) { /* стенд без хранилища не бывает */ }
+    }, snapshot.products);
+  }
   const page = await context.newPage();
   const consoleErrors = [];
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text());
+    // Стенд молча показывает пустое место, когда движок решил не рисовать
+    // карточку: причина видна только в его собственном логе.
+    if (process.env.HEYS_UI_V4_CONSOLE) console.info('[page]', message.type(), message.text());
   });
   page.on('pageerror', (error) => consoleErrors.push(error.message));
 
@@ -632,6 +653,32 @@ async function openCase(browser, item, snapshot, options = {}) {
         }
         return window.__uiV4RiStableTicks >= 6;
       }, rootSelector, { timeout: 45_000, polling: 200 });
+      // Кадры «День под порогом», «День пустой» и «Мало калорий» разбирают
+      // прошлый день: на дату переходим продуктовым переходом (тем же, что
+      // уводит на дату из копирования приёма), а не подменой вида.
+      if (item.uiDate) {
+        await page.evaluate((d) => { window.__heysSetSelectedDate?.(d); }, item.uiDate);
+        await page.waitForTimeout(1500);
+      }
+      if (process.env.HEYS_UI_V4_RI_DEBUG) {
+        // Планер глушит свои console.info, но держит их в кольцевом буфере —
+        // читаем оттуда, иначе причина пустого яруса не видна вовсе.
+        const plannerLog = await page.evaluate(() => (window.__heysPlannerLogBuffer || [])
+          .slice(-60).map((e) => `${e.level} ${e.msg} ${(e.args || []).join(' ')}`));
+        console.info('[planner]\n' + plannerLog.join('\n'));
+      }
+      // Планер считает рекомендацию асинхронно и до готовности отдаёт пусто:
+      // высота яруса при этом не меняется, и ожидание по устойчивости кадр
+      // закрывало раньше карточки.
+      if (item.uiWait) {
+        await page.locator(item.uiWait).first().waitFor({ state: 'visible', timeout: 45_000 });
+      }
+      // Окно отчёта переключается пилюлей «7 · 14 · 30» — той же, что нажимает
+      // человек: кадры матрицы и недель нарисованы на окне 30 дней.
+      if (item.uiPeriod) {
+        await page.locator('.reports-v4-period-pill', { hasText: new RegExp('^' + item.uiPeriod + '( дней)?$') }).first().click();
+        await page.waitForTimeout(800);
+      }
       if (item.uiStep === 'detail') {
         await page.locator('.insights-v4-detail-link').click();
         await page.locator('.insights-v4--detail').waitFor({ state: 'visible', timeout: 45_000 });
@@ -651,8 +698,50 @@ async function openCase(browser, item, snapshot, options = {}) {
         await page.locator('.insights-v4-sheet').waitFor({ state: 'visible', timeout: 45_000 });
       }
       if (item.uiStep === 'periods-sheet') {
-        await page.locator('.reports-v4-periods').click();
+        // Вход в лист стоит внизу вкладки, и его перекрывает плавающая кнопка
+        // «+»: клик ждал доступности до самого таймаута. Подводим строку к
+        // середине экрана — так до неё дотягивается и человек.
+        // Вход в лист на вкладке два: строка v4 «По месяцам и неделям» и
+        // прежняя карточка «ОТЧЕТЫ ПО МЕСЯЦАМ И НЕДЕЛЯМ» — нижняя половина
+        // вкладки ещё не сведена, и на стенде рисуется вторая. Открываем тем,
+        // что есть на экране: лист за обоими один и тот же.
+        const periodsEntry = page.locator('.reports-v4-periods, .reports-overview-card').first();
+        await periodsEntry.waitFor({ state: 'visible', timeout: 45_000 });
+        await periodsEntry.evaluate((node) => node.scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForTimeout(300);
+        await periodsEntry.click();
         await page.locator('.reports-v4-periods-sheet').waitFor({ state: 'visible', timeout: 45_000 });
+      }
+      // Лист «Как посчитано» открывается из карточки планера в ярусе
+      // «Питание» — та же поверхность, что у листа долга.
+      if (item.uiStep === 'howcalc-sheet') {
+        await page.locator('.meal-rec-v4__how').first().click();
+        await page.locator('.insights-v4-sheet').waitFor({ state: 'visible', timeout: 45_000 });
+      }
+      // Фенотип и пороги живут во втором слое: сначала «Подробно», потом
+      // раскрывающаяся секция «Метаболизм» (она закрыта по умолчанию).
+      if (item.uiStep === 'detail-metabolism' || item.uiStep === 'detail-thresholds') {
+        await page.locator('.insights-v4-detail-link').click();
+        await page.locator('.insights-v4--detail').waitFor({ state: 'visible', timeout: 45_000 });
+        if (item.uiStep === 'detail-metabolism') {
+          await page.locator('.insights-collapsible__header', { hasText: 'Метаболизм' }).first().click();
+          await page.locator('.insights-v4-pheno').waitFor({ state: 'visible', timeout: 45_000 });
+        } else {
+          await page.locator('.insights-v4-thresh').waitFor({ state: 'visible', timeout: 45_000 });
+        }
+      }
+      // Отказ расчёта: разбор считается на устройстве и падает сам по себе —
+      // обрываем счёт движка, а карточку рисует настоящая граница ошибки
+      // продукта (InsightsErrorBoundary).
+      if (item.uiStep === 'render-fail') {
+        await page.evaluate((day) => {
+          const card = window.HEYS?.MealRecCard;
+          if (card) card.renderCard = function () { throw new Error('ui-v4-visual: расчёт оборвался'); };
+          // Перерисовку запускает смена даты — тем же продуктовым переходом,
+          // которым пользуется копирование приёма.
+          window.__heysSetSelectedDate?.(day);
+        }, item.uiFailDate || '2026-08-27');
+        await page.locator('.insights-v4-fail').waitFor({ state: 'visible', timeout: 45_000 });
       }
       // Вкладка листается внутри своего контейнера (.tab-active-viewport), а
       // не окном: после тапа по «Подробно» прокрутка остаётся внизу — общий

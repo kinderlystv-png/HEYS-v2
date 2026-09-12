@@ -321,6 +321,11 @@ export const REPORTS_INSIGHTS_VISUAL_CASES = [
   tabCase({
     id: 'reports-insights-fail-sand', tab: 'insights', label: 'Инсайты · не посчиталось', oid: 'RI-FAIL',
     days: richDays(), uiStep: 'render-fail', viewport: { width: 375, height: 706 },
+    // Граница ошибок рисует свой экран без класса набора: корень вкладки здесь
+    // просто `.insights-tab`, и ожидание обычного корня зоны не дожидалось
+    // ничего — кадр падал по времени на уже собранном экране сбоя.
+    rootSelector: '.insights-tab',
+    captureSelector: '.insights-tab',
   }),
   tabCase({
     id: 'reports-attention-voice-sand', tab: 'insights', label: 'Стоит внимания · голос куратора', oid: 'RI-ATT1',
@@ -354,11 +359,11 @@ export const REPORTS_INSIGHTS_VISUAL_CASES = [
     days: belowThresholdDays(), viewport: { width: 375, height: 706 },
     extra: { uiDate: '2026-08-27', uiScroll: '.kcal-realdata-card' },
   }),
-  tabCase({
-    id: 'reports-lowcal-clear-sand', tab: 'stats', label: 'Мало калорий · рекомендуем очистить', oid: 'RI-LOW2',
-    days: savedOnlyYesterdayDays(), viewport: { width: 375, height: 706 },
-    extra: { uiDate: '2026-08-27', uiScroll: '.kcal-realdata-card' },
-  }),
+  // Кадра «Мало калорий · рекомендуем очистить» в стендах нет: состояние, где
+  // у дня есть калории, но нет ни одного приёма, продукт данными не создаёт —
+  // витрина Отчётов считает съеденное только по приёмам, а рекомендация
+  // «очистить» требует доли больше нуля при нулевом счёте приёмов. Замер и
+  // предложение — в UI_V4_FINDINGS, запись «рекомендуем очистить».
   tabCase({
     id: 'reports-periods-sheet-sand', tab: 'stats', label: 'Лист периодов', oid: 'RI-PER1',
     days: richDays(), uiStep: 'periods-sheet', viewport: { width: 375, height: 783 },
