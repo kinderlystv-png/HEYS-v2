@@ -2901,8 +2901,12 @@
       // Единый расчёт нормы — heys_day_water_state.js. Раньше звался
       // HEYS.Day.getWaterGoal, которого не существует, и геймификация
       // считала норму как «вес × 30».
-      const profileStr = readStoredValue('heys_profile', null);
-      const prof = profileStr ? JSON.parse(profileStr) : null;
+      // readStoredValue отдаёт уже разобранный объект, а не строку. JSON.parse
+      // поверх объекта приводил его к «[object Object]» и всегда бросал —
+      // исключение уносило управление в catch ниже, мимо и единого расчёта,
+      // и запасного «вес × 30». Норма воды для миссии дня и достижения
+      // «water_master» была захардкожена в 2000 мл для всех.
+      const prof = readStoredValue('heys_profile', null);
       if (typeof HEYS !== 'undefined' && HEYS.dayWaterState?.computeWaterGoal) {
         const day = HEYS.DayData?.getCurrentDay?.() || {};
         const goal = HEYS.dayWaterState.computeWaterGoal({ day, profile: prof || {} });
