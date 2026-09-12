@@ -20,6 +20,21 @@
         return arr.reduce((sum, v) => sum + (Number(v) || 0), 0) / arr.length;
     };
 
+    /**
+     * Промежуток в минутах словами: «4 ч 20 мин», «4 ч», «50 мин».
+     * Нулевую часть не печатаем — «4 ч 0 мин» это число, которого нет.
+     * @param {number} minutes - Промежуток в минутах.
+     * @returns {string} Читаемая запись промежутка.
+     */
+    function formatGap(minutes) {
+        const total = Math.round(Number(minutes) || 0);
+        const hours = Math.floor(total / 60);
+        const mins = total % 60;
+        if (hours > 0 && mins > 0) return `${hours} ч ${mins} мин`;
+        if (hours > 0) return `${hours} ч`;
+        return `${mins} мин`;
+    }
+
     const calculateItemKcal = piCalculations.calculateItemKcal || function (item, pIndex) {
         const prod = pIndex?.byId?.get?.(item?.product_id);
         if (!prod) return 0;
@@ -106,7 +121,7 @@
                 ? 'Следующий приём часто добавляется до завершения оценки предыдущего. Выбирайте частоту по голоду, самочувствию, медицинским ограничениям и способности соблюдать рацион.'
                 : avgGap > idealGap * 1.3
                     ? 'Большие перерывы между едой — риск переедания'
-                    : `Среднее между приёмами: ${Math.round(avgGap / 60)}ч ${Math.round(avgGap % 60)}мин`
+                    : `Среднее между приёмами: ${formatGap(avgGap)}`
         };
     }
 
@@ -197,7 +212,7 @@
             score: Math.round(score),
             confidence: days.length >= CONFIG.MIN_DAYS_FOR_FULL_ANALYSIS ? 0.8 : 0.5,
             insight: lateMeals.length === 0
-                ? '👍 Нет поздних приёмов — отлично для сна!'
+                ? 'Нет поздних приёмов — это хорошо для сна'
                 : `${lateMeals.length} поздних приёмов (после 21:00) — может влиять на сон и вес`
         };
     }
@@ -273,11 +288,11 @@
 
         let insight;
         if (avgScore >= 95) {
-            insight = '🌅 Идеальное распределение! Основные калории до обеда';
+            insight = 'Хорошее распределение: основные калории до обеда';
         } else if (avgScore >= 85) {
-            insight = `☀️ Хороший тайминг: ${Math.round(avgMorningPct)}% калорий утром`;
+            insight = `Хорошее распределение: ${Math.round(avgMorningPct)}% калорий утром`;
         } else if (avgEveningPct > 40) {
-            insight = `🌙 ${Math.round(avgEveningPct)}% калорий вечером — перенеси часть на утро`;
+            insight = `${Math.round(avgEveningPct)}% калорий вечером — перенесите часть на утро`;
         } else {
             insight = 'Распределение калорий по дню умеренное';
         }
@@ -384,11 +399,21 @@
         const avgScore = average(dailyData.map(d => d.score));
         const avgMorningProtein = average(dailyData.map(d => d.morningProtein));
 
+        // Белок утром ровно ноль за всё окно — это отсутствие данных о белке
+        // в продуктах, а не наблюдение. Числа нет — правило молчит.
+        if (!dailyData.some(d => d.morningProtein > 0)) {
+            return {
+                pattern: PATTERNS.NUTRIENT_TIMING,
+                available: false,
+                reason: 'no_protein_data'
+            };
+        }
+
         let insight;
         if (avgScore >= 80) {
-            insight = '🎯 Отличный тайминг нутриентов! Белок утром, углеводы после трени';
+            insight = 'Хорошее распределение нутриентов: белок утром, углеводы после тренировки';
         } else if (avgMorningProtein < 20) {
-            insight = `⚠️ Мало белка утром (${Math.round(avgMorningProtein)}г). Добавь яйца/творог`;
+            insight = `Мало белка утром: ${Math.round(avgMorningProtein)} г. Добавьте яйца или творог`;
         } else {
             insight = 'Тайминг нутриентов можно оптимизировать';
         }

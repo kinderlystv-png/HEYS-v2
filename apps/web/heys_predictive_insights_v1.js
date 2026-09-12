@@ -57,11 +57,55 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     return HEYS.InsightsPI?.patterns || global.piPatterns || {};
   }
 
+  // Правило без данных обязано сказать это словом: карточка подставляет
+  // `title || insight || pattern`, и без фразы на экран уезжает внутренний
+  // ключ вроде «nova_quality». Контракт «слова блока наблюдений» (12.09.2026):
+  // детектор без числа либо молчит, либо говорит словом.
+  const PATTERN_UNAVAILABLE_REASONS = {
+    module_not_loaded: 'Правило ещё не загрузилось',
+    min_days_required: 'Нужно больше дней наблюдений',
+    min_meals_required: 'Слишком мало приёмов в день для вывода',
+    no_meals_data: 'Нет записей о еде за этот период',
+    'min-products': 'Слишком мало продуктов в записях для вывода',
+    no_micronutrient_data: 'У продуктов нет данных по микроэлементам',
+    no_vitamin_data: 'У продуктов нет данных по витаминам',
+    no_nutrient_data: 'У продуктов нет данных по этим нутриентам',
+    no_bone_nutrient_data: 'У продуктов нет данных по кальцию, витаминам D и K',
+    no_antioxidant_data: 'У продуктов нет данных по антиоксидантам',
+    no_added_sugar_data: 'У продуктов нет данных по добавленному сахару',
+    no_protein_data: 'У продуктов нет данных по белку',
+    insufficient_data: 'Пока мало записей для вывода',
+    insufficient_after_outliers: 'После отсева случайных дней записей осталось мало',
+    insufficient_energy_data: 'Нет оценок энергии за этот период',
+    insufficient_gl_data: 'Мало данных об углеводах за этот период',
+    need_at_least_2_weeks: 'Нужно не меньше двух недель наблюдений',
+    min_trainings_required: 'Тренировок за период слишком мало для вывода',
+    no_measurements: 'Нет замеров обхватов за этот период',
+    no_sleep_quality: 'Нет оценок качества сна за этот период',
+    no_mood_data: 'Нет оценок настроения за этот период',
+    no_stress_data: 'Нет оценок стресса за этот период',
+    no_steps_data: 'Нет данных о шагах за этот период',
+    no_household_data: 'Нет данных о бытовой активности за этот период',
+    no_training: 'Нет записанных тренировок за этот период',
+    no_cycle_data: 'Нет данных о цикле за этот период',
+    male_only: 'Правило рассчитано на другой профиль',
+    acute_mode: 'Правило приостановлено: сейчас важнее срочные сигналы'
+  };
+
+  function withUnavailableReasonText(result, pattern) {
+    if (!result || typeof result !== 'object') return result;
+    if (result.available !== false || result.insight || result.title) return result;
+    return Object.assign({}, result, {
+      insight: PATTERN_UNAVAILABLE_REASONS[result.reason] || 'Пока недостаточно данных',
+      pattern: result.pattern || pattern
+    });
+  }
+
   function getPatternAnalyzer(name, pattern) {
     return function invokePatternAnalyzer(...args) {
       const analyzer = getPiPatterns()[name];
-      if (typeof analyzer === 'function') return analyzer(...args);
-      return { pattern, available: false, reason: 'module_not_loaded' };
+      if (typeof analyzer === 'function') return withUnavailableReasonText(analyzer(...args), pattern);
+      return withUnavailableReasonText({ pattern, available: false, reason: 'module_not_loaded' }, pattern);
     };
   }
 

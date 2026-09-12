@@ -456,7 +456,7 @@
                 value: scenarioConf.toFixed(2),
                 weight: '40%',
                 contribution: (scenarioConf * 0.4).toFixed(2),
-                note: boostPattern ? `✅ Boosted by ${boostPattern}` : 'Base 0.7 (rule-based)'
+                note: boostPattern ? `Boosted by ${boostPattern}` : 'Base 0.7 (rule-based)'
             },
             {
                 factor: 'Pattern Avg Score',
@@ -473,7 +473,7 @@
                 note: `${daysCount}d, thresholds=${thresholds?.source || 'N/A'}`
             },
             {
-                factor: '🎯 FINAL CONFIDENCE',
+                factor: 'FINAL CONFIDENCE',
                 value: confidence.toFixed(2),
                 weight: '100%',
                 contribution: confidence.toFixed(2),

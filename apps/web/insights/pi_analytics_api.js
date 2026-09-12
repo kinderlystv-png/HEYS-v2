@@ -280,7 +280,7 @@
         insight: tefPct >= 12
           ? `Отличный TEF! Белок сжигает калории на переваривание`
           : tefPct < 8
-            ? `Низкий TEF. Добавь белка для ускорения метаболизма`
+            ? `Низкий термический эффект пищи. Добавьте белка для ускорения метаболизма`
             : `Стандартный термический эффект`,
         pmid: SOURCE('westerterp2004')
       };
@@ -447,9 +447,9 @@
 
       // Советы по улучшению
       const advices = [];
-      if (volumeFactor < 70) advices.push('Продолжай вести учёт — данных пока мало');
-      if (completenessFactor < 60) advices.push('Заполняй вес, сон и шаги для полной картины');
-      if (consistencyFactor < 70) advices.push('Веди учёт регулярно каждый день');
+      if (volumeFactor < 70) advices.push('Продолжайте вести учёт — данных пока мало');
+      if (completenessFactor < 60) advices.push('Заполняйте вес, сон и шаги для полной картины');
+      if (consistencyFactor < 70) advices.push('Ведите учёт регулярно каждый день');
       if (recencyFactor < 80) advices.push('Не забывай заполнять данные сегодня!');
 
       return {
@@ -585,14 +585,14 @@
 
       strongCorrelations.slice(0, 3).forEach(c => {
         if (c.correlation > 0.4) {
-          insights.push(`📈 ${c.label}: сильная положительная связь (+${Math.round(c.correlation * 100)}%)`);
+          insights.push(`${c.label}: сильная положительная связь (+${Math.round(c.correlation * 100)}%)`);
         } else if (c.correlation < -0.4) {
-          insights.push(`📉 ${c.label}: сильная обратная связь (${Math.round(c.correlation * 100)}%)`);
+          insights.push(`${c.label}: сильная обратная связь (${Math.round(c.correlation * 100)}%)`);
         }
       });
 
       if (insights.length === 0) {
-        insights.push('Пока явных корреляций не выявлено. Продолжай вести учёт!');
+        insights.push('Пока явных связей не видно. Продолжайте вести учёт');
       }
 
       return {
@@ -658,10 +658,10 @@
           level: sensitivityLevel,
           value: Math.round(carbSensitivity * 100) / 100,
           insight: sensitivityLevel === 'high'
-            ? '⚠️ Высокая: простые углеводы сильно влияют на вес (задержка воды)'
+            ? 'Высокая: простые углеводы сильно влияют на вес (задержка воды)'
             : sensitivityLevel === 'moderate'
-              ? '📊 Умеренная: следи за простыми углеводами'
-              : '✅ Низкая: углеводы не сильно влияют на вес'
+              ? 'Умеренная: следите за простыми углеводами'
+              : 'Низкая: углеводы не сильно влияют на вес'
         });
       }
 
@@ -699,10 +699,10 @@
           level: adaptationLevel,
           value: Math.round(fatAdaptation * 10) / 10,
           insight: adaptationLevel === 'adapted'
-            ? '🔥 Хорошая: организм эффективно использует жиры'
+            ? 'Хорошая: организм эффективно использует жиры'
             : adaptationLevel === 'carb_dependent'
-              ? '⚡ Зависимость от углеводов: энергия падает без них'
-              : '📊 Нейтральная: организм гибко использует нутриенты'
+              ? 'Зависимость от углеводов: энергия падает без них'
+              : 'Нейтральная: организм гибко использует нутриенты'
         });
       }
 
@@ -735,10 +735,10 @@
           level: chronotype,
           value: Math.round(chronotypeScore * 10) / 10,
           insight: chronotype === 'early_bird'
-            ? '🌅 Жаворонок: ранние завтраки повышают качество дня'
+            ? 'Жаворонок: ранние завтраки повышают качество дня'
             : chronotype === 'night_owl'
-              ? '🌙 Сова: позднее начало дня тебе подходит'
-              : '⚖️ Нейтральный: время завтрака не сильно влияет'
+              ? 'Сова: позднее начало дня вам подходит'
+              : 'Нейтральный: время завтрака не сильно влияет'
         });
       }
 
@@ -758,12 +758,12 @@
           level: stressEatingLevel,
           value: Math.round(r * 100) / 100,
           insight: stressEatingLevel === 'high'
-            ? '🍫 Выражено: при стрессе ешь больше'
+            ? 'Выражено: при стрессе вы едите больше'
             : stressEatingLevel === 'restriction'
-              ? '🚫 Стресс подавляет аппетит'
+              ? 'Стресс подавляет аппетит'
               : stressEatingLevel === 'moderate'
-                ? '📊 Умеренная связь стресса и еды'
-                : '✅ Стресс не влияет на питание'
+                ? 'Умеренная связь стресса и еды'
+                : 'Стресс не влияет на питание'
         });
       }
 
@@ -778,13 +778,13 @@
       // Рекомендации на основе фенотипа
       const recommendations = [];
       if (phenotype.carbSensitive) {
-        recommendations.push('Сократи простые углеводы — твой организм чувствителен');
+        recommendations.push('Сократите простые углеводы — ваш организм чувствителен');
       }
       if (!phenotype.fatAdapted) {
-        recommendations.push('Увеличь долю полезных жиров для метаболической гибкости');
+        recommendations.push('Увеличьте долю полезных жиров для метаболической гибкости');
       }
       if (phenotype.stressEater) {
-        recommendations.push('Найди альтернативу еде при стрессе (прогулка, дыхание)');
+        recommendations.push('Найдите альтернативу еде при стрессе: прогулка, дыхание');
       }
 
       return {
@@ -829,7 +829,7 @@
         value: Math.round(stressEMA * 10) / 10,
         risk: Math.round(stressRisk),
         weight: 0.25,
-        insight: stressRisk > 60 ? '⚠️ Высокий накопленный стресс' : '✅ Стресс под контролем'
+        insight: stressRisk > 60 ? 'Высокий накопленный стресс' : 'Стресс под контролем'
       });
       totalRisk += stressRisk * 0.25;
 
@@ -846,7 +846,7 @@
         value: Math.round(sleepDebt * 10) / 10,
         risk: Math.round(sleepRisk),
         weight: 0.25,
-        insight: sleepRisk > 60 ? '😴 Накопился недосып — риск срыва' : '✅ Сон в норме'
+        insight: sleepRisk > 60 ? 'Накопился недосып — риск срыва' : 'Сон в норме'
       });
       totalRisk += sleepRisk * 0.25;
 
@@ -871,7 +871,7 @@
         value: Math.round(simpleCarbs),
         risk: Math.round(insulinVolatility),
         weight: 0.20,
-        insight: insulinVolatility > 50 ? '📈 Скачки инсулина — голод вернётся быстро' : '✅ Стабильный инсулин'
+        insight: insulinVolatility > 50 ? 'Скачки инсулина — голод вернётся быстро' : 'Стабильный инсулин'
       });
       totalRisk += insulinVolatility * 0.20;
 
@@ -892,7 +892,7 @@
         value: `${['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][dayOfWeek]} ${hour}:00`,
         risk: Math.round(temporalRisk),
         weight: 0.20,
-        insight: temporalRisk > 30 ? '🕐 Опасное время — будь внимательнее' : '✅ Время не критичное'
+        insight: temporalRisk > 30 ? 'Опасное время — будьте внимательнее' : 'Время не критичное'
       });
       totalRisk += temporalRisk * 0.20;
 
@@ -911,7 +911,7 @@
         value: `${Math.round(kcalPct * 100)}%`,
         risk: Math.round(debtRisk),
         weight: 0.10,
-        insight: debtRisk > 40 ? '🍽️ Мало съедено — голод ударит вечером' : '✅ Калории в норме'
+        insight: debtRisk > 40 ? 'Мало съедено — голод ударит вечером' : 'Калории в норме'
       });
       totalRisk += debtRisk * 0.10;
 
@@ -923,10 +923,10 @@
 
       // Предсказание и рекомендация
       const prediction = riskLevel === 'high'
-        ? 'Риск срыва в ближайшие 24ч — будь особенно внимательным!'
+        ? 'Риск срыва в ближайшие 24 ч — будьте особенно внимательны'
         : riskLevel === 'moderate'
-          ? 'Умеренный риск — следи за триггерами'
-          : 'Низкий риск — продолжай в том же духе!';
+          ? 'Умеренный риск — следите за триггерами'
+          : 'Низкий риск — продолжайте в том же духе';
 
       const topFactor = [...factors].sort((a, b) => b.risk - a.risk)[0];
       const recommendation = topFactor?.risk > 40
@@ -979,7 +979,7 @@
       const sleepHours = getDaySleepHours(today);
       const sleepQuality = today.sleepQuality || 3;
       const sleepMod = sleepHours >= 7 ? 1.1 : sleepHours >= 6 ? 1.0 : sleepHours >= 5 ? 0.85 : 0.7;
-      modifiers.push({ name: 'Сон', value: sleepMod, desc: `${sleepHours}ч сна` });
+      modifiers.push({ name: 'Сон', value: sleepMod, desc: `${sleepHours} ч сна` });
 
       // 2. Текущий калораж (энергия из еды)
       const todayKcal = calculateDayKcal(today, pIndex);
@@ -1031,19 +1031,19 @@
       const recommendations = [];
 
       if (peakWindow.energy >= 70) {
-        recommendations.push(`🔥 Пик энергии в ${peakWindow.hour}:00 — идеально для тренировки или важных дел`);
+        recommendations.push(`Пик энергии в ${peakWindow.hour}:00 — идеально для тренировки или важных дел`);
       }
 
       if (dipWindow.hour >= currentHour && dipWindow.hour <= 22) {
-        recommendations.push(`😴 Спад в ${dipWindow.hour}:00 — запланируй отдых или лёгкие задачи`);
+        recommendations.push(`Спад в ${dipWindow.hour}:00 — запланируйте отдых или лёгкие задачи`);
       }
 
       if (sleepMod < 0.9) {
-        recommendations.push('💤 Недосып снижает энергию на весь день');
+        recommendations.push('Недосып снижает энергию на весь день');
       }
 
       if (kcalMod < 0.9) {
-        recommendations.push('🍽️ Мало съел — энергия будет падать');
+        recommendations.push('Мало съел — энергия будет падать');
       }
 
       return {
@@ -1187,7 +1187,7 @@
         message: qualityGrade === 'excellent'
           ? 'Высокая точность предсказаний!'
           : qualityGrade === 'good'
-            ? 'Хорошая точность, продолжай вести учёт'
+            ? 'Хорошая точность, продолжайте вести учёт'
             : 'Нужно больше данных для точных предсказаний',
         pmid: '13524500', // Wishnofsky 1958 — 3500 kcal/lb
         hasData: true
@@ -1305,10 +1305,10 @@
             hasCausality,
             causalStrength: hasCausality ? 'confirmed' : bestLag.absCorrelation > 0.3 ? 'possible' : 'weak',
             insight: hasCausality
-              ? `✅ ${label}: подтверждено (лаг ${bestLag.lag} дн, r=${bestLag.correlation})`
+              ? `${label}: подтверждено, задержка ${bestLag.lag} дн.`
               : bestLag.absCorrelation > 0.3
-                ? `📊 ${label}: связь есть (r=${bestLag.correlation})`
-                : `⚪ ${label}: связь слабая`
+                ? `${label}: связь есть`
+                : `${label}: связь слабая`
           });
         }
       });
@@ -1420,13 +1420,13 @@
       // Рекомендации
       const recommendations = [];
       if (gvi > 36) {
-        recommendations.push('Стабилизируй углеводы — большие скачки GL вредны');
+        recommendations.push('Стабилизируйте углеводы — большие скачки гликемической нагрузки вредны');
       }
       if (conga > 15) {
-        recommendations.push('Избегай резких переходов: много сладкого → голодание');
+        recommendations.push('Избегайте резких переходов: много сладкого, а потом голодание');
       }
       if (mealGLMean > 25) {
-        recommendations.push('Снизь среднюю гликемическую нагрузку приёмов');
+        recommendations.push('Снизьте среднюю гликемическую нагрузку приёмов');
       }
 
       return {
@@ -1617,16 +1617,16 @@
       // Recovery recommendations
       const recovery = [];
       if (components.sleepDebt?.status === 'elevated') {
-        recovery.push('💤 Приоритет: восстановление сна');
+        recovery.push('Приоритет: восстановление сна');
       }
       if (components.cortisol?.status === 'elevated') {
-        recovery.push('🧘 Практики снижения стресса');
+        recovery.push('Практики снижения стресса');
       }
       if (components.activity?.status === 'elevated') {
-        recovery.push('🚶 Увеличь ежедневную активность');
+        recovery.push('Увеличьте ежедневную активность');
       }
       if (elevatedComponents.length >= 3) {
-        recovery.push('⚠️ Организм перегружен — нужен комплексный отдых');
+        recovery.push('Организм перегружен — нужен комплексный отдых');
       }
 
       return {
@@ -1703,8 +1703,8 @@
         value: Math.round(varianceRatio * 100) / 100,
         threshold: 1.5,
         insight: varianceSignal
-          ? '⚠️ Питание становится нестабильным'
-          : '✅ Стабильность в норме',
+          ? 'Питание становится нестабильным'
+          : 'Стабильность в норме',
         weight: 0.35
       });
 
@@ -1720,8 +1720,8 @@
         value: Math.round(lag1Autocorr * 100) / 100,
         threshold: 0.5,
         insight: autocorrSignal
-          ? '⚠️ Паттерны застревают — сложнее вернуться к норме'
-          : '✅ Гибкость сохраняется',
+          ? 'Паттерны застревают — сложнее вернуться к норме'
+          : 'Гибкость сохраняется',
         weight: 0.35
       });
 
@@ -1737,9 +1737,9 @@
         threshold: 0.5,
         insight: skewSignal
           ? skew > 0
-            ? '⚠️ Тенденция к перееданию'
-            : '⚠️ Тенденция к недоеданию'
-          : '✅ Баланс в норме',
+            ? 'Тенденция к перееданию'
+            : 'Тенденция к недоеданию'
+          : 'Баланс в норме',
         weight: 0.20
       });
 
@@ -1755,9 +1755,9 @@
         threshold: 0.05,
         insight: trendSignal
           ? trendSlope > 0
-            ? '📈 Калории растут день ото дня'
-            : '📉 Калории падают день ото дня'
-          : '➡️ Стабильный тренд',
+            ? 'Калории растут день ото дня'
+            : 'Калории падают день ото дня'
+          : 'Стабильный тренд',
         weight: 0.10
       });
 
@@ -1778,12 +1778,12 @@
 
       // Prediction
       const prediction = criticalTransitionRisk === 'high'
-        ? '⚠️ Система на грани срыва — нужны превентивные меры!'
+        ? 'Система на грани срыва — нужны превентивные меры!'
         : criticalTransitionRisk === 'elevated'
-          ? '📊 Повышенный риск срыва в ближайшие 3-5 дней'
+          ? 'Повышенный риск срыва в ближайшие 3-5 дней'
           : criticalTransitionRisk === 'moderate'
-            ? '📈 Небольшие признаки нестабильности'
-            : '✅ Система стабильна';
+            ? 'Небольшие признаки нестабильности'
+            : 'Система стабильна';
 
       return {
         ewsScore: Math.round(ewsScore),
@@ -1886,16 +1886,16 @@
       const recommendations = [];
 
       if (alertness < 50 && currentHour < 14) {
-        recommendations.push('☕ Низкая бодрость — кофеин или короткий сон (20 мин)');
+        recommendations.push('Низкая бодрость — кофеин или короткий сон (20 мин)');
       }
       if (processS > 0.7) {
-        recommendations.push('😴 Высокое давление сна — запланируй ранний отход ко сну');
+        recommendations.push('Высокое давление сна — запланируйте ранний отход ко сну');
       }
       if (peakWindow.hour > currentHour && peakWindow.hour < currentHour + 4) {
-        recommendations.push(`🎯 Пик бодрости в ${peakWindow.hour}:00 — запланируй важные задачи`);
+        recommendations.push(`Пик бодрости в ${peakWindow.hour}:00 — запланируйте важные задачи`);
       }
       if (sleepDebt > 1) {
-        recommendations.push('💤 Накопился недосып — сегодня ложись раньше');
+        recommendations.push('Накопился недосып — сегодня ложитесь раньше');
       }
 
       return {
@@ -2043,13 +2043,13 @@
       // === ОПРЕДЕЛЕНИЕ УРОВНЯ И РЕКОМЕНДАЦИЙ ===
       if (emotionalRisk.bingeRisk >= 75) {
         emotionalRisk.level = 'critical';
-        emotionalRisk.recommendation = '🚨 Высокий риск срыва! Съешь что-то прямо сейчас — это предотвратит переедание позже';
+        emotionalRisk.recommendation = 'Высокий риск срыва. Съешьте что-нибудь прямо сейчас — это предотвратит переедание позже';
       } else if (emotionalRisk.bingeRisk >= 50) {
         emotionalRisk.level = 'high';
-        emotionalRisk.recommendation = '⚠️ Будь внимательней — стресс + голод провоцируют переедание';
+        emotionalRisk.recommendation = 'Будьте внимательнее — стресс и голод провоцируют переедание';
       } else if (emotionalRisk.bingeRisk >= 25) {
         emotionalRisk.level = 'medium';
-        emotionalRisk.recommendation = 'Следи за собой — один из факторов риска присутствует';
+        emotionalRisk.recommendation = 'Следите за собой — один из факторов риска присутствует';
       }
 
       emotionalRisk.hasRisk = emotionalRisk.bingeRisk >= 25;

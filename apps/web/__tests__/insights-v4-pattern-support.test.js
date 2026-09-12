@@ -104,8 +104,12 @@ describe('голос куратора в предупреждениях', () => 
     // шаблоном и словарной быть не может. Считаем оба вида.
     const fromDict = (ews.match(/humanMessage: humanMsg\.message/g) || []).length;
     const templated = (ews.match(/humanMessage: `/g) || []).length;
+    // Третий вид: фразу собирает функция — когда часть чисел может
+    // отсутствовать и прочерк вместо оценки на экран выходить не должен
+    // (контракт «слова блока наблюдений», 12.09.2026).
+    const built = (ews.match(/humanMessage: build[A-Za-z]+\(/g) || []).length;
     expect(titles).toBeGreaterThan(20);
-    expect(fromDict + templated).toBeGreaterThanOrEqual(titles);
+    expect(fromDict + templated + built).toBeGreaterThanOrEqual(titles);
   });
 
   it('v4 предпочитает фразу, а эмодзи у старых снимков срезает', () => {

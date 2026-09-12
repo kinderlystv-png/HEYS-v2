@@ -453,8 +453,8 @@
       projectedScore: Math.max(0, Math.min(100, currentProjection)),
       trend: avgTrend > 0 ? 'up' : avgTrend < 0 ? 'down' : 'stable',
       actions: avgTrend >= 0
-        ? ['Продолжай в том же духе!']
-        : ['Обрати внимание на ухудшающиеся показатели']
+        ? ['Продолжайте в том же духе']
+        : ['Обратите внимание на ухудшающиеся показатели']
     });
 
     // Сценарий 3: Срыв
@@ -564,9 +564,9 @@
       // projectedWeight и не маскируется под наблюдение.
       series: weightData.slice(-7).map(d => ({ date: d.date, weight: d.weight })),
       insight: weeklyChange > 0.3
-        ? `📈 Набор ~${Math.round(weeklyChange * 100) / 100} кг/неделю`
+        ? `Набор ~${Math.round(weeklyChange * 100) / 100} кг/неделю`
         : weeklyChange < -0.3
-          ? `📉 Снижение ~${Math.abs(Math.round(weeklyChange * 100) / 100)} кг/неделю`
+          ? `Снижение ~${Math.abs(Math.round(weeklyChange * 100) / 100)} кг/неделю`
           : `→ Вес стабилен`
     };
   }
@@ -629,19 +629,19 @@
       if (!p.available) continue;
 
       if (p.pattern === PATTERNS.WAVE_OVERLAP && !p.hasOverlaps) {
-        hiddenWins.push('🎯 Идеальный тайминг приёмов — волны не пересекались');
+        hiddenWins.push('Идеальный тайминг приёмов — волны не пересекались');
       }
       if (p.pattern === PATTERNS.LATE_EATING && p.lateCount === 0) {
-        hiddenWins.push('🌙 Ни одного позднего приёма — отлично для сна');
+        hiddenWins.push('Ни одного позднего приёма — отлично для сна');
       }
       if (p.pattern === PATTERNS.PROTEIN_SATIETY && p.avgProteinPct >= 25) {
-        hiddenWins.push('💪 Белок на высоте — сытость обеспечена');
+        hiddenWins.push('Белок на высоте — сытость обеспечена');
       }
       if (p.pattern === PATTERNS.FIBER_REGULARITY && p.avgFiberPer1000 >= 14) {
-        hiddenWins.push('🥗 Клетчатка в норме — пищеварение скажет спасибо');
+        hiddenWins.push('Клетчатка в норме — пищеварение скажет спасибо');
       }
       if (p.pattern === PATTERNS.STRESS_EATING && p.correlation < 0) {
-        hiddenWins.push('🧘 Стресс не влияет на аппетит — крутой самоконтроль');
+        hiddenWins.push('Стресс не влияет на аппетит — крутой самоконтроль');
       }
     }
 
@@ -836,8 +836,8 @@
 
     // Главный прогресс — что юзер делает хорошо (≥75% дней)
     const progresses = [];
-    if (proteinPct >= 75) progresses.push({ pct: proteinPct, text: `Белок в норме (≥${Math.round(proteinTargetMin)}г) в ${proteinPct}% дней` });
-    if (sleepPct >= 75) progresses.push({ pct: sleepPct, text: `Сон ≥7ч в ${sleepPct}% дней` });
+    if (proteinPct >= 75) progresses.push({ pct: proteinPct, text: `Белок в норме — не ниже ${Math.round(proteinTargetMin)} г — в ${proteinPct}% дней` });
+    if (sleepPct >= 75) progresses.push({ pct: sleepPct, text: `Сон не меньше 7 ч в ${sleepPct}% дней` });
     if (latePct < 25 && daysWithMeals >= 14) progresses.push({ pct: 100 - latePct, text: `Поздних приёмов почти нет (только ${latePct}% дней)` });
     if (stressPct < 25 && daysWithStress >= 7) progresses.push({ pct: 100 - stressPct, text: `Стресс под контролем (<7/10 в ${100 - stressPct}% дней)` });
     const mainProgress = progresses.sort((a, b) => b.pct - a.pct)[0] || null;
@@ -845,7 +845,7 @@
     // Главный вызов — что нужно подтянуть (≥40% дней с проблемой)
     const challenges = [];
     if (proteinPct < 50 && daysWithMeals >= 14) challenges.push({ urgency: 100 - proteinPct, text: `Белок ниже нормы в ${100 - proteinPct}% дней` });
-    if (sleepPct < 50 && daysWithSleep >= 7) challenges.push({ urgency: 100 - sleepPct, text: `Сон <7ч в ${100 - sleepPct}% дней` });
+    if (sleepPct < 50 && daysWithSleep >= 7) challenges.push({ urgency: 100 - sleepPct, text: `Сон меньше 7 ч в ${100 - sleepPct}% дней` });
     if (latePct >= 40) challenges.push({ urgency: latePct, text: `Поздние приёмы в ${latePct}% дней (после 21:00)` });
     if (stressPct >= 40) challenges.push({ urgency: stressPct, text: `Высокий стресс в ${stressPct}% дней` });
     const mainChallenge = challenges.sort((a, b) => b.urgency - a.urgency)[0] || null;
@@ -854,16 +854,16 @@
     let nextMonthRecommendation = null;
     if (mainChallenge) {
       if (mainChallenge.text.includes('Белок')) {
-        nextMonthRecommendation = 'Цель: 25-30г белка к каждому приёму. Начни с завтрака — это даёт +30% к норме без напряга.';
+        nextMonthRecommendation = 'Цель: 25-30 г белка к каждому приёму. Начните с завтрака — это даёт +30% к норме без лишних усилий.';
       } else if (mainChallenge.text.includes('Сон')) {
-        nextMonthRecommendation = 'Цель: 7+ часов сна 25 дней из 30. Сдвинь отбой на 30 мин раньше — лёгкая привычка с большим эффектом.';
+        nextMonthRecommendation = 'Цель: 7+ часов сна 25 дней из 30. Сдвиньте отбой на 30 мин раньше — лёгкая привычка с большим эффектом.';
       } else if (mainChallenge.text.includes('Поздние')) {
         nextMonthRecommendation = 'Цель: последний приём до 20:00 в 80% дней. Пользы для сна и метаболизма больше всех других правок.';
       } else if (mainChallenge.text.includes('стресс')) {
         nextMonthRecommendation = 'Цель: 1 стресс-разрядка ежедневно (прогулка, дыхание, спорт). Стресс — главный триггер срывов диеты.';
       }
     } else if (mainProgress) {
-      nextMonthRecommendation = 'Главное — не сбиваться. Продолжай поддерживать текущие привычки в течение следующего месяца.';
+      nextMonthRecommendation = 'Главное — не сбиваться. Продолжайте поддерживать текущие привычки в течение следующего месяца.';
     }
 
     // Вес δ за период
@@ -917,7 +917,7 @@
     // Map warning type → action template
     const ACTION_TEMPLATES = {
       PROTEIN_DEFICIT: {
-        action: 'Добавь 20-30г белка к ближайшему приёму',
+        action: 'Добавьте 20-30 г белка к ближайшему приёму',
         domain: 'protein',
         direction: 'increase',
         forecast: '+8 к Score за неделю + лучшая сытость'
@@ -929,7 +929,7 @@
         forecast: '+12 к Score, ↓ риска срыва на 25%'
       },
       CALORIC_DEBT: {
-        action: 'Не пропускай приёмы — есть риск переедания вечером',
+        action: 'Не пропускайте приёмы — есть риск переедания вечером',
         domain: 'calories',
         direction: 'timing',
         forecast: 'Снижает риск binge на 30%'
@@ -941,37 +941,37 @@
         forecast: '↓ риска эмоциональной еды на 25%'
       },
       BINGE_RISK: {
-        action: 'Лёгкий перекус с белком вечером, не пропускай ужин',
+        action: 'Лёгкий перекус с белком вечером, не пропускайте ужин',
         domain: 'eating_behavior',
         direction: 'timing',
         forecast: 'Стабилизирует уровень глюкозы → меньше тяги'
       },
       HYDRATION_DEFICIT: {
-        action: 'Выпей стакан воды сейчас + ещё 1.5 л за день',
+        action: 'Выпейте стакан воды сейчас и ещё 1,5 л за день',
         domain: 'hydration',
         direction: 'increase',
         forecast: 'Меньше ложного голода и усталости'
       },
       WEIGHT_PLATEAU: {
-        action: 'Пересмотри дефицит — возможно нужна корректировка ±100 ккал',
+        action: 'Пересмотрите дефицит — возможно, нужна корректировка ±100 ккал',
         domain: 'calories',
         direction: 'timing',
         forecast: 'Сдвиг с плато за 1-2 недели'
       },
       SUGAR_DEPENDENCY: {
-        action: 'Замени сладкий перекус на белковый (творог/яйца/орехи)',
+        action: 'Замените сладкий перекус на белковый: творог, яйца или орехи',
         domain: 'carbs',
         direction: 'decrease',
         forecast: '↓ insulin spike, стабильная энергия'
       },
       FIBER_DEFICIT: {
-        action: 'Добавь овощи или цельные злаки к 2 приёмам',
+        action: 'Добавьте овощи или цельные злаки к 2 приёмам',
         domain: 'fiber',
         direction: 'increase',
         forecast: 'Лучше пищеварение + насыщение'
       },
       LOGGING_GAP: {
-        action: 'Запиши пропущенный приём — даже примерно',
+        action: 'Запишите пропущенный приём — даже примерно',
         domain: 'logging',
         direction: 'increase',
         forecast: 'Точнее анализ + меньше impulse eating'
@@ -1116,7 +1116,7 @@
       {
         type: 'sleep',
         count: countStreak(sleepOK, hasSleep),
-        label: 'дней подряд сон ≥7ч',
+        label: 'дней подряд сон не меньше 7 ч',
         icon: '😴'
       },
       {

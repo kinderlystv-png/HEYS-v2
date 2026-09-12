@@ -343,11 +343,11 @@
    * @param {number} confidence - raw confidence score [0-1]
    * @param {number} n - sample size
    * @param {number} threshold - warning threshold (default: 0.5)
-   * @returns {Object} { confidence: adjusted, warning: '⚠️ N=5 (min 7)' | null }
+   * @returns {Object} { confidence: adjusted, warning: 'Мало данных: 5 дней из семи' | null }
    */
   function confidenceWithWarning(confidence, n, threshold = 0.5) {
     const adjusted = applySmallSamplePenalty(confidence, n, 7);
-    const warning = adjusted < threshold ? `⚠️ N=${n} (min 7)` : null;
+    const warning = adjusted < threshold ? `Мало данных: ${n} дней из семи` : null;
     return { confidence: adjusted, warning };
   }
 

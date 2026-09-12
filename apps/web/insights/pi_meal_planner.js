@@ -487,14 +487,14 @@
         if (phenotypeApplied?.satiety === 'volume_eater') {
             out.push({ key: 'r13d_volume_eater', severity: 'low', text: 'Лучше насыщаешься объёмом — приоритет овощам и супам.' });
         } else if (phenotypeApplied?.satiety === 'low_satiety') {
-            out.push({ key: 'r13d_low_satiety', severity: 'low', text: 'Тебе трудно насыщаться — белок + клетчатка в начале приёма.' });
+            out.push({ key: 'r13d_low_satiety', severity: 'low', text: 'Вам трудно насыщаться — белок и клетчатка в начале приёма.' });
         }
         // R13-I water — особенно важно при выполненной цели вечером
         const waterMl = Number(params?.currentDay?.waterMl) || 0;
         const profileWeight = Number(params?.profile?.weight) || 70;
         const waterGoalMl = profileWeight * 30;
         if (waterMl > 0 && waterMl < waterGoalMl * 0.4 && currentTimeHours >= 18) {
-            out.push({ key: 'r13i_dehydration', severity: 'medium', text: `Воды сегодня мало (${waterMl}/${Math.round(waterGoalMl)} мл) — добавь стакан перед сном.` });
+            out.push({ key: 'r13i_dehydration', severity: 'medium', text: `Воды сегодня мало (${waterMl} из ${Math.round(waterGoalMl)} мл) — добавьте стакан перед сном.` });
         }
         // R13-H NEAT
         const todaySteps = Number(params?.currentDay?.steps) || 0;
@@ -509,7 +509,7 @@
         const ewArr = Array.isArray(earlyWarnings) ? earlyWarnings : [];
         const ewTypes = new Set(ewArr.map(w => w?.type).filter(Boolean));
         if (ewTypes.has('BINGE_RISK')) {
-            out.push({ key: 'r13e_binge_risk', severity: 'medium', text: 'Растёт риск переедания — следи за импульсивными перекусами на ночь.' });
+            out.push({ key: 'r13e_binge_risk', severity: 'medium', text: 'Растёт риск переедания — следите за импульсивными перекусами на ночь.' });
         }
         if (ewTypes.has('PROTEIN_DEFICIT')) {
             out.push({ key: 'r13e_protein_deficit', severity: 'medium', text: 'Дефицит белка по неделе — завтра приоритет белок:углеводы = 2:1.' });
@@ -518,17 +518,17 @@
         const cArr = Array.isArray(causalChains) ? causalChains : [];
         const chainTypes = new Set(cArr.map(c => c?.type || c?.id).filter(Boolean));
         if (chainTypes.has('SLEEP_STRESS_BINGE') || chainTypes.has('SLEEP→STRESS→BINGE')) {
-            out.push({ key: 'r13f_chain_sleep_stress', severity: 'high', text: 'Цепочка: плохой сон → стресс → переедание. Закрой день на воде, не еде.' });
+            out.push({ key: 'r13f_chain_sleep_stress', severity: 'high', text: 'Цепочка: плохой сон, затем стресс, затем переедание. Закройте день на воде, а не на еде.' });
         }
         // R13-C cascade — самое мотивационное при выполненной цели
         if (cascadeState) {
             if (cascadeState.state === 'BROKEN') {
                 out.push({ key: 'r13c_cascade_broken', severity: 'high', text: 'Каскад сломался — но цель дня выполнена. Это хороший шанс на восстановление с завтра.' });
             } else if (cascadeState.state === 'STRONG' && (cascadeState.daysAtPeak || 0) >= 7) {
-                out.push({ key: 'r13c_cascade_strong', severity: 'low', text: `${cascadeState.daysAtPeak} дней на пике — отличный ритм, держи.` });
+                out.push({ key: 'r13c_cascade_strong', severity: 'low', text: `${cascadeState.daysAtPeak} дней на пике — отличный ритм, держите.` });
             }
             if (Number.isFinite(cascadeState.todayContrib) && cascadeState.todayContrib < -0.15) {
-                out.push({ key: 'r13c_today_at_risk', severity: 'medium', text: 'Сегодня каскад под угрозой — спокойно закрой день, не сорвись на ночной перекус.' });
+                out.push({ key: 'r13c_today_at_risk', severity: 'medium', text: 'Сегодня каскад под угрозой — спокойно закройте день и не срывайтесь на ночной перекус.' });
             }
         }
         // dedup + filter low при BROKEN + sort + cap
@@ -1606,7 +1606,7 @@
             advisories.push({
                 key: 'wave_overlap',
                 severity: waveOverlapPct > 60 ? 'high' : 'medium',
-                text: `Приёмы часто накладываются по расчётному времени (${Math.round(waveOverlapPct)}% дней). Используй интервал как ориентир и учитывай голод.`
+                text: `Приёмы часто накладываются по расчётному времени (${Math.round(waveOverlapPct)}% дней). Используйте интервал как ориентир и учитывайте голод.`
             });
         }
         if (stressMoodSignals?.stressLevel === 'high') {
@@ -1647,7 +1647,7 @@
                     advisories.push({
                         key: 'c01_meal_timing',
                         severity: 'low',
-                        text: 'Время приёма смещено по твоему обычному ритму (история).'
+                        text: 'Время приёма смещено по вашему обычному ритму.'
                     });
                 } else if (p.pattern === 'C10') {
                     advisories.push({
@@ -1690,7 +1690,7 @@
             advisories.push({
                 key: 'high_gl_history',
                 severity: 'low',
-                text: `Средняя дневная GL у тебя ${glycemicLoadHistory.dailyClass || 'высокая'} — таргет для приёмов снижен (15 вместо 20).`
+                text: `Средняя дневная гликемическая нагрузка у вас ${glycemicLoadHistory.dailyClass || 'высокая'} — цель для приёмов снижена (15 вместо 20).`
             });
         }
         // R12-D: fiber advisory
@@ -1740,21 +1740,21 @@
             advisories.push({
                 key: 'r13d_low_satiety',
                 severity: 'low',
-                text: 'Тебе трудно насыщаться — белок + клетчатка в начале приёма.'
+                text: 'Вам трудно насыщаться — белок и клетчатка в начале приёма.'
             });
         }
         if (phenoStress === 'stress_eater' && stressMoodSignals?.stressLevel === 'high') {
             advisories.push({
                 key: 'r13d_stress_eater',
                 severity: 'medium',
-                text: 'Твой фенотип — стресс-едок: при высоком стрессе особенно важен лёгкий ужин.'
+                text: 'Ваш фенотип — стресс-едок: при высоком стрессе особенно важен лёгкий ужин.'
             });
         }
         if (isStressAnorexicWithDeficit) {
             advisories.push({
                 key: 'r13d_stress_anorexic',
                 severity: 'high',
-                text: 'В стрессе ты обычно недоедаешь — постарайся не пропустить этот приём.'
+                text: 'В стрессе вы обычно недоедаете — постарайтесь не пропустить этот приём.'
             });
         }
 
@@ -1764,14 +1764,14 @@
             advisories.push({
                 key: 'r13g_micronutrient_focus',
                 severity: 'medium',
-                text: `Дефицит ${microDeficits.slice(0, 3).join(', ')} по неделе — добавь источники: красное мясо, печень, тыквенные семечки, шпинат.`
+                text: `Дефицит ${microDeficits.slice(0, 3).join(', ')} по неделе — добавьте источники: красное мясо, печень, тыквенные семечки, шпинат.`
             });
         }
         if (microDeficits.includes('iron') && microDeficits.includes('calcium')) {
             advisories.push({
                 key: 'r13g_iron_calcium_timing',
                 severity: 'low',
-                text: 'Развести железо и кальций по разным приёмам (≥3ч gap) — кальций блокирует абсорбцию железа.'
+                text: 'Развести железо и кальций по разным приёмам, с перерывом от 3 ч: кальций мешает усвоению железа.'
             });
         }
 
@@ -1783,7 +1783,7 @@
             advisories.push({
                 key: 'r13i_dehydration',
                 severity: 'medium',
-                text: `Воды сегодня мало (${waterMl}/${Math.round(waterGoalMl)} мл) — добавь стакан перед едой: меньше ложного голода, лучше насыщение.`
+                text: `Воды сегодня мало (${waterMl} из ${Math.round(waterGoalMl)} мл) — добавьте стакан перед едой: меньше ложного голода, лучше насыщение.`
             });
         }
 
@@ -1830,7 +1830,7 @@
             advisories.push({
                 key: 'r13e_caloric_debt',
                 severity: 'medium',
-                text: 'Большой накопленный дефицит — не пропускай приём.'
+                text: 'Большой накопленный дефицит — не пропускайте приём.'
             });
         }
         if (ewTypes.has('STRESS_ACCUMULATION')

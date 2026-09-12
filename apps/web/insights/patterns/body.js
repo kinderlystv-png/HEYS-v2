@@ -132,19 +132,19 @@
 
         let insight = '';
         if (compositionQuality === 'muscle_gain') {
-            insight = `💪 Мышечная масса растёт! Бицепс ${bicepsTrend > 0 ? '+' : ''}${(bicepsTrend * 100).toFixed(1)}см/мес, бедро ${thighTrend > 0 ? '+' : ''}${(thighTrend * 100).toFixed(1)}см/мес`;
+            insight = `Мышечная масса растёт: бицепс ${bicepsTrend > 0 ? '+' : ''}${(bicepsTrend * 100).toFixed(1).replace('.', ',')} см в месяц, бедро ${thighTrend > 0 ? '+' : ''}${(thighTrend * 100).toFixed(1).replace('.', ',')} см в месяц`;
         } else if (compositionQuality === 'fat_loss') {
-            insight = `✅ Жир уходит, мышцы держатся! Белок ${Math.round(proteinAdequacy)}% дней >= 1.6г/кг`;
+            insight = `Жир уходит, мышцы держатся. Белок не ниже 1,6 г на кг в ${Math.round(proteinAdequacy)}% дней`;
         } else if (compositionQuality === 'fat_gain') {
-            insight = `⚠️ Вес растёт без роста мышц. Проверь белок (${Math.round(proteinAdequacy)}% дней) и силовые`;
+            insight = `Вес растёт без роста мышц. Проверьте белок (${Math.round(proteinAdequacy)}% дней) и силовые`;
         } else if (compositionQuality === 'recomposition') {
             const evidence = waistFalling ? 'талия уходит' : 'обхваты растут';
             const support = strengthDays > 0
-                ? `Белок ${Math.round(proteinAdequacy)}% дней >= 1.6г/кг, силовых за период: ${strengthDays}`
-                : `Белок ${Math.round(proteinAdequacy)}% дней >= 1.6г/кг`;
-            insight = `🔄 Вес стоит, а ${evidence} — похоже на перестройку состава. ${support}`;
+                ? `Белок не ниже 1,6 г на кг в ${Math.round(proteinAdequacy)}% дней, силовых за период: ${strengthDays}`
+                : `Белок не ниже 1,6 г на кг в ${Math.round(proteinAdequacy)}% дней`;
+            insight = `Вес стоит, а ${evidence} — похоже на перестройку состава. ${support}`;
         } else {
-            insight = `📊 Композиция стабильна. Белок ${Math.round(proteinAdequacy)}% дней >= 1.6г/кг`;
+            insight = `Состав тела стабилен. Белок не ниже 1,6 г на кг в ${Math.round(proteinAdequacy)}% дней`;
         }
 
         const confidence = measurements.length >= 7 ? 0.80 : 0.65;

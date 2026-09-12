@@ -158,9 +158,9 @@
 
         let insight;
         if (trend > 0.5) {
-            insight = `📈 Качество питания улучшается! +${Math.round(trend * 7)} за неделю`;
+            insight = `Качество питания улучшается: +${Math.round(trend * 7)} за неделю`;
         } else if (trend < -0.5) {
-            insight = '📉 Качество питания снижается. Обрати внимание на состав';
+            insight = 'Качество питания снижается. Обратите внимание на состав';
         } else {
             insight = `Стабильное качество питания: ${Math.round(avgScore)}/100`;
         }
@@ -298,11 +298,11 @@
 
         let insight;
         if (avgScore >= 80) {
-            insight = '🌿 Отличное качество питания: баланс и разнообразие на высоте';
+            insight = 'Хорошее качество питания: баланс и разнообразие в порядке';
         } else if (avgFiber < 10) {
-            insight = `⚠️ Мало клетчатки (${Math.round(avgFiber)}г/1000ккал) — добавь овощи`;
+            insight = `Мало клетчатки: ${Math.round(avgFiber)} г на 1000 ккал — добавьте овощи`;
         } else if (avgProtein < 20) {
-            insight = `⚠️ Белка маловато (${Math.round(avgProtein)}%) — добавь источник белка`;
+            insight = `Белка маловато: ${Math.round(avgProtein)}% — добавьте источник белка`;
         } else {
             insight = 'Качество питания в норме, есть потенциал улучшения';
         }
@@ -425,13 +425,13 @@
         let insight;
         const r = bayesResult.posteriorR;
         if (!corrResult.isSignificant) {
-            insight = `Связь белка и калорий пока не выявлена (N=${corrResult.n}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+            insight = `Связь белка и калорий на ваших данных пока не видна`;
         } else if (r < -0.3) {
-            insight = `🥩 Больше белка → меньше общих калорий! Белок насыщает (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+            insight = `Чем больше белка, тем меньше общих калорий: белок насыщает`;
         } else if (avgProteinPct >= 25) {
-            insight = `💪 Отличный уровень белка: ${Math.round(avgProteinPct)}% калоража`;
+            insight = `Хороший уровень белка: ${Math.round(avgProteinPct)}% калорийности`;
         } else if (avgProteinPct < 20) {
-            insight = `⚠️ Белок ${Math.round(avgProteinPct)}% — добавь для сытости`;
+            insight = `Белок ${Math.round(avgProteinPct)}% — добавьте для сытости`;
         } else {
             insight = `Белок в норме: ${Math.round(avgProteinPct)}%`;
         }
@@ -528,11 +528,11 @@
 
         let insight;
         if (avgFiberPer1000 >= 14) {
-            insight = `🥗 Отличный уровень клетчатки: ${Math.round(avgFiber)}г/день`;
+            insight = `Хороший уровень клетчатки: ${Math.round(avgFiber)} г в день`;
         } else if (avgFiberPer1000 >= 10) {
-            insight = `Клетчатка в норме: ${Math.round(avgFiber)}г/день. Можно чуть больше`;
+            insight = `Клетчатка в норме: ${Math.round(avgFiber)} г в день. Можно чуть больше`;
         } else {
-            insight = `⚠️ Мало клетчатки: ${Math.round(avgFiber)}г/день. Добавь овощи`;
+            insight = `Мало клетчатки: ${Math.round(avgFiber)} г в день. Добавьте овощи`;
         }
 
         return {
@@ -623,17 +623,17 @@
 
         let insight = '';
         if (ultraProcessedPct > 50) {
-            insight = `🔴 ${ultraProcessedPct}% калорий из ультрапереработки (NOVA-4). Высокий риск!`;
+            insight = `${ultraProcessedPct}% калорий из ультрапереработанных продуктов — это высокий риск`;
         } else if (ultraProcessedPct > 25) {
-            insight = `🟠 ${ultraProcessedPct}% ультрапереработки. Снижай колбасы/снеки/сладости`;
+            insight = `${ultraProcessedPct}% калорий из ультрапереработки. Снижайте долю колбас, снеков и сладостей`;
         } else if (ultraProcessedPct > 10) {
-            insight = `🟡 ${ultraProcessedPct}% ультрапереработки. В пределах нормы`;
+            insight = `${ultraProcessedPct}% калорий из ультрапереработки — в пределах нормы`;
         } else {
-            insight = `✅ ${ultraProcessedPct}% ультрапереработки. Отличное качество рациона!`;
+            insight = `${ultraProcessedPct}% калорий из ультрапереработки — хорошее качество рациона`;
         }
 
         if (livingFoodsPct > 5) {
-            insight += ` +${livingFoodsPct}% живых продуктов 🌱`;
+            insight += ` И ${livingFoodsPct}% живых продуктов`;
         }
 
         const confidence = days.length >= 14 ? 0.85 : 0.70;
@@ -768,13 +768,13 @@
         const score = Math.max(0, Math.min(100, Math.round(positives - sugarPenalty - sodiumPenalty)));
 
         let insight = '';
-        if (score >= 80) insight = `✅ Высокая нутриентная плотность (${score}/100).`;
-        else if (score >= 60) insight = `🟡 Средняя нутриентная плотность (${score}/100).`;
-        else insight = `🔴 Низкая нутриентная плотность (${score}/100): «пустые калории».`;
+        if (score >= 80) insight = `Высокая нутриентная плотность: ${score} из 100.`;
+        else if (score >= 60) insight = `Средняя нутриентная плотность: ${score} из 100.`;
+        else insight = `Низкая нутриентная плотность: ${score} из 100, много пустых калорий.`;
 
         if (density.fiber < targets.fiber) insight += ' Клетчатка на 1000 ккал ниже цели.';
-        if (density.sugar > 25) insight += ` Добавленный сахар ${density.sugar.toFixed(1)}г/1000ккал.`;
-        if (density.sodium > 1000) insight += ` Натрий ${Math.round(density.sodium)}мг/1000ккал.`;
+        if (density.sugar > 25) insight += ` Добавленный сахар ${density.sugar.toFixed(1).replace('.', ',')} г на 1000 ккал.`;
+        if (density.sodium > 1000) insight += ` Натрий ${Math.round(density.sodium)} мг на 1000 ккал.`;
 
         const baseConfidence = days.length >= 14 ? 0.8 : 0.7;
         const confidence = piStats.applySmallSamplePenalty

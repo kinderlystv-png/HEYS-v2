@@ -206,7 +206,7 @@
                 pattern: PATTERNS.SLEEP_WEIGHT,
                 available: false,
                 confidence: 0.2,
-                insight: `Недостаточно данных после фильтрации выбросов (${cleanSleep.length}/7)`
+                insight: `Недостаточно данных после фильтрации выбросов: ${cleanSleep.length} дней из семи`
             };
         }
 
@@ -226,13 +226,13 @@
         const r = bayesResult.posteriorR;
 
         if (!corrResult.isSignificant) {
-            insight = `Связь сна и веса пока не выявлена (N=${corrResult.n}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+            insight = `Связь сна и веса на ваших данных пока не видна`;
         } else if (r < -0.3) {
-            insight = `💤 Больше сна → меньше вес (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n}, shrinkage=${(bayesResult.shrinkage * 100).toFixed(0)}%)`;
+            insight = `Чем больше сна, тем меньше вес`;
         } else if (r > 0.3) {
-            insight = `⚠️ Недосып коррелирует с набором веса (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n}, shrinkage=${(bayesResult.shrinkage * 100).toFixed(0)}%)`;
+            insight = `Недосып идёт вместе с набором веса`;
         } else {
-            insight = `Умеренная связь сна и веса (r=${r.toFixed(2)}, p=${corrResult.pValue.toFixed(3)}, N=${corrResult.n})`;
+            insight = `Связь сна и веса умеренная`;
         }
 
         // Calculate confidence based on effect size, significance, and CI width
@@ -348,13 +348,13 @@
 
         // Use statistical significance instead of arbitrary threshold
         if (!corrResult.isSignificant) {
-            insight = `Связь недосыпа и аппетита пока не выявлена (N=${corrResult.n}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+            insight = `Связь недосыпа и аппетита на ваших данных пока не видна`;
         } else if (r > 0.3) {
-            insight = `😴 Недосып → +калории! При -1ч сна ≈ +${Math.round(r * 200)} ккал (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+            insight = `Каждый недоспанный час добавляет примерно ${Math.round(r * 200)} ккал`;
         } else if (r < -0.3) {
-            insight = `💪 Отлично контролируешь аппетит даже при недосыпе (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'})`;
+            insight = `Вы хорошо контролируете аппетит даже при недосыпе`;
         } else {
-            insight = `Умеренная связь сна и аппетита (r=${r.toFixed(2)}, p=${corrResult.pValue.toFixed(3)}, N=${corrResult.n})`;
+            insight = `Связь сна и аппетита умеренная`;
         }
 
         // Calculate confidence based on effect size and significance
@@ -553,7 +553,7 @@
                 requiredDataPoints: robustPairsRequired,
                 insight: hasLagData
                     ? 'Связь качества сна с метриками следующего дня пока не выявлена (недостаточно статистически значимых связей)'
-                    : `🌙 Есть оценки сна (${sleepQualityDays} дн.), но пока мало метрик следующего дня для надёжной связи`
+                    : `Оценки сна есть за ${sleepQualityDays} дней, но данных следующего дня пока мало для надёжного вывода`
             };
         }
 
@@ -580,11 +580,11 @@
 
         let insight;
         if (keyData.isSignificant && keyData.bayesianR < -0.4) {
-            insight = `💤 Хороший сон → ниже ${metricNames[keyMetric]} на след. день (r=${keyData.bayesianR.toFixed(2)}, p<${keyData.pValue < 0.01 ? '0.01' : '0.05'}, N=${keyData.dataPoints})`;
+            insight = `После хорошего сна ${metricNames[keyMetric]} на следующий день ниже`;
         } else if (keyData.isSignificant && keyData.bayesianR > 0.4) {
-            insight = `⚠️ Плохой сон → выше ${metricNames[keyMetric]} на след. день (r=${keyData.bayesianR.toFixed(2)}, p<${keyData.pValue < 0.01 ? '0.01' : '0.05'}, N=${keyData.dataPoints})`;
+            insight = `После плохого сна ${metricNames[keyMetric]} на следующий день выше`;
         } else {
-            insight = `Умеренная связь сна с ${metricNames[keyMetric]} (r=${keyData.bayesianR.toFixed(2)}, p=${keyData.pValue.toFixed(3)}, N=${keyData.dataPoints})`;
+            insight = `Связь сна с ${metricNames[keyMetric]} умеренная`;
         }
 
         const ciPenalty = Math.min(0.1, (Number(keyData?.confidenceInterval?.width) || 2) / 2 * 0.1);

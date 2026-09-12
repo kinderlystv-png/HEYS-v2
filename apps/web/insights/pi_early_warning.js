@@ -557,7 +557,7 @@
             science: 'Trend Score объединяет ключевые паттерны питания (timing, quality, balance), восстановления (сон, стресс) и активности (NEAT, тренировки). Снижение показателя 3+ дня указывает на системный дисбаланс, требующий внимания к конкретным слабым зонам. Исследования показывают: раннее выявление трендов (до появления симптомов) улучшает долгосрочные результаты на 40-60%.',
             actions: [
                 'Откройте раздел Insights → Паттерны, найдите 3 паттерна с наименьшим score — это ключевые зоны риска',
-                'Проверьте сон за 3 дня: если <7ч — приоритет на восстановление, а не новые нагрузки',
+                'Проверьте сон за 3 дня: если меньше 7 ч — сначала восстановление, а не новые нагрузки',
                 'Сравните калории с нормой: дефицит >500 ккал/день — слишком агрессивно, профицит >300 — проверьте читмилы'
             ]
         },
@@ -604,7 +604,7 @@
             science: 'Набор 1 кг жира требует избытка ~7700 ккал, что нереально за 1-2 дня. Быстрое увеличение веса обычно вызвано задержкой воды: 1 г гликогена удерживает 3-4 г воды, 1 г натрия — до 200 мл жидкости. Гормональные колебания (менструальный цикл) могут добавить 1-3 кг воды. Однако частые скачки могут указывать на нестабильное питание (binge-restrict cycle) или гормональные проблемы (кортизол, инсулин).',
             actions: [
                 'Проверьте потребление соли за 2 дня: ограничьте до 2000 мг/день',
-                'Увеличьте воду до 2.5-3 л/день для вывода задержавшейся жидкости',
+                'Увеличьте воду до 2,5-3 л в день, чтобы вывести задержавшуюся жидкость',
                 'Если скачки повторяются часто — проверьте гормоны (кортизол, щитовидка, инсулин)'
             ]
         },
@@ -614,7 +614,7 @@
             insight: 'Вода критична для всех процессов: транспорт питательных веществ, терморегуляция, вывод токсинов, работоспособность. Даже лёгкое обезвоживание (1-2%) снижает физическую и умственную продуктивность.',
             science: 'Норма: 30-40 мл/кг веса (для 70 кг — 2.1-2.8 л). Обезвоживание 1-2% массы тела снижает физическую выносливость на 10-20%, когнитивные функции на 10% (European Journal of Clinical Nutrition, 2003). Вода участвует в липолизе (жиросжигании): дефицит замедляет метаболизм на 3-5%. Хроническое обезвоживание повышает кортизол, ухудшает сон, усиливает голод (путается с жаждой).',
             actions: [
-                'Поставьте бутылку 1.5 л на видное место и выпейте до конца дня',
+                'Поставьте бутылку 1,5 л на видное место и выпейте до конца дня',
                 'Установите напоминание пить воду каждые 2 часа',
                 'Добавьте травяной чай, огурец, лимон для разнообразия'
             ]
@@ -680,7 +680,7 @@
             insight: 'Продолжительное снижение мотивации и энергии часто связано с перегрузкой, недосыпом, дефицитом питания или стрессом. Внимание: не игнорируйте сигналы тела.',
             science: 'Mood и wellbeing скоры коррелируют с серотонином, дофамином, HRV, уровнем воспаления. Снижение 7+ дней может указывать на: 1) хронический стресс (кортизол подавляет серотонин), 2) дефицит сна (<7ч снижает серотонин на 20%), 3) гипогликемия (дефицит углеводов снижает серотонин), 4) дефицит микронутриентов (B12, магний, omega-3). Исследования показывают: low mood в течение 2+ недель — критерий депрессивного эпизода (DSM-5). Burnout увеличивает риск сердечно-сосудистых заболеваний на 40-80% (J Psychosom Res, 2020).',
             actions: [
-                'Проверьте сон (7-9ч) + стресс (практики релаксации 15-20 мин ежедневно)',
+                'Проверьте сон (7-9 ч) и стресс: практики релаксации 15-20 мин ежедневно',
                 'Добавьте 30 мин прогулки на свежем воздухе при дневном свете каждый день',
                 'Если снижение настроения >14 дней — обратитесь к специалисту (депрессия требует профессиональной помощи)'
             ]
@@ -703,7 +703,7 @@
             science: 'Исследования показывают: потребление калорий в выходные на 15-20% выше, чем в будни, алкоголь добавляет 300-800 ккал (Obesity, 2008). Weekend warrior pattern — очень строго Пн-Пт, отказ Сб-Вс — ведёт к binge-restrict cycle. Алкоголь блокирует жиросжигание на 12-36 часов, ухудшает сон, снижает синтез белка на 20-30%. Стратегия: включить выходные в недельное планирование (calorie cycling), планировать приёмы пищи заранее (Nutr J, 2017).',
             actions: [
                 'Включите выходные в недельный план: calorie cycling 80/20 (5 дней дефицит, 2 дня maintenance)',
-                'Ограничьте алкоголь до 1-2 порций: вино 150 мл или пиво 330 мл (блокирует жиросжигание на 12-36ч)',
+                'Ограничьте алкоголь до 1-2 порций — вино 150 мл или пиво 330 мл: он тормозит жиросжигание на 12-36 ч',
                 'Планируйте приёмы пищи заранее: составьте menu на Сб-Вс в пятницу вечером'
             ]
         },
@@ -715,9 +715,9 @@
             insight: 'Клетчатка критична для микробиома, насыщения и регуляции сахара крови. Дефицит (<15г/день) ведёт к дисбиозу, запорам, повышенному аппетиту.',
             science: 'Fiber — prebiotic для микробиома: норма 25-35 г/день (WHO). Дефицит (<15 г) снижает SCFA production (масляная кислота — питание колоноцитов), ухудшает GLP-1 секрецию (гормон насыщения), повышает spike глюкозы после еды. Исследование NHANES: связь <15 г клетчатки с +40% риском obesity, +25% CVD (Nutrients, 2020). Постепенное повышение клетчатки (5 г/нед) предотвращает газообразование.',
             actions: [
-                'Добавьте 5-10г клетчатки: 1 яблоко (4г) + 30г овсянки (3г) + 100г брокколи (3г)',
-                'Включите бобовые/чечевицу 3-4 раза в неделю (8-10г клетчатки на порцию)',
-                'Замените белый рис на бурый/киноа (+2-3г клетчатки на порцию)'
+                'Добавьте 5-10 г клетчатки: яблоко даёт 4 г, 30 г овсянки — 3 г, 100 г брокколи — ещё 3 г',
+                'Включите бобовые и чечевицу 3-4 раза в неделю: 8-10 г клетчатки на порцию',
+                'Замените белый рис на бурый или киноа: плюс 2-3 г клетчатки на порцию'
             ]
         },
 
@@ -739,8 +739,8 @@
             insight: 'Циркадные ритмы контролируют insulin sensitivity, cortisol, GHOST production. Нарушения снижают fat burning, качество сна, повышают аппетит.',
             science: 'Peripheral clocks (печень, жировая ткань, мышцы) синхронизируются с едой. Поздний ужин (после 22:00) снижает insulin sensitivity на 20-35% vs дневной приём (Obesity, 2019). Sleep timing variance >2h между днями нарушает cortisol rhythm (утренний пик важен для жиросжигания), снижает GHOST secretion на 15-30%. Исследование: eating within 10-hour window (14:00-22:00) vs поздние перекусы — +5% fat loss при той же калорийности (Cell Metab, 2021).',
             actions: [
-                'Закончите последний приём пищи до 21:00 (минимум за 2ч до сна)',
-                'Стабилизируйте время отхода ко сну: вариативность <1ч между днями',
+                'Закончите последний приём пищи до 21:00 — минимум за 2 ч до сна',
+                'Стабилизируйте время отхода ко сну: разброс меньше 1 ч между днями',
                 'Если тренировка поздно — лёгкий ужин после (белок + овощи, без углеводов)'
             ]
         },
@@ -763,7 +763,7 @@
             insight: 'Качество жиров (omega-3 vs omega-6, насыщенные vs ненасыщенные) влияет на воспаление, insulin sensitivity, сердечно-сосудистое здоровье.',
             science: 'Optimal omega-6/omega-3 ratio: 4:1 to 1:1 (современная диета: 15:1 — proinflammatory). Omega-3 (EPA/DHA): снижают TNF-alpha, IL-6 (маркеры воспаления), улучшают insulin sensitivity на 10-20% (Lipids, 2018). Избыток насыщенных жиров (>10% калорий) при низком omega-3 повышает LDL oxidation, endothelial dysfunction. Стратегия: жирная рыба 2-3 раза/неделю (salmon, sardines), льняное масло, грецкие орехи; ограничить processed oils (подсолнечное, кукурузное — высокий omega-6).',
             actions: [
-                'Добавьте жирную рыбу 2 раза в неделю: лосось, сардины, скумбрия (EPA+DHA 1-2г)',
+                'Добавьте жирную рыбу 2 раза в неделю — лосось, сардины, скумбрия: это 1-2 г омега-3',
                 'Замените растительные масла на оливковое/льняное (выше omega-3)',
                 'Ограничьте processed foods с trans fats: маргарин, выпечка промышленная'
             ]
@@ -775,9 +775,9 @@
             insight: 'Добавленный сахар (>50 г/день) создаёт dopamine-driven cravings, insulin spikes, accumulation жира в печени (NAFLD).',
             science: 'Добавленный сахар: норма <25-50 г/день (WHO: <10% калорий). Избыток (>50 г) повышает fructose в печень → de novo lipogenesis (синтез жиров), insulin resistance в печени, visceral fat accumulation. Frequent sugar spikes подавляют leptin sensitivity (гормон насыщения), усиливают dopamine cravings (как addiction pattern). Исследование: снижение added sugar с 100г до 25г/день — -4% висцерального жира за 8 недель при той же калорийности (Hepatology, 2020).',
             actions: [
-                'Снизьте добавленный сахар до <30г/день: исключите сладкие напитки, соки (30-40г на стакан)',
+                'Снизьте добавленный сахар до 30 г в день: уберите сладкие напитки и соки — в стакане 30-40 г',
                 'Замените десерты на фрукты: 1-2 порции/день (fructose в фруктах с клетчаткой безопасен)',
-                'Читайте этикетки: added sugar скрыт в соусах, йогуртах, granola (5-15г на порцию)'
+                'Читайте этикетки: добавленный сахар прячется в соусах, йогуртах и граноле — 5-15 г на порцию'
             ]
         },
 
@@ -787,8 +787,8 @@
             insight: 'Дефицит микронутриентов (витамин D, магний, цинк, железо) снижает энергию, иммунитет, метаболизм, настроение.',
             science: 'Микронутриенты — cofactors для 300+ ферментов. Vitamin D (<30 ng/ml): снижает insulin sensitivity, иммунитет, testosterone synthesis. Magnesium (<400 mg/day): ухудшает sleep quality, повышает cortisol, снижает ATP production (энергия). Zinc (<11 mg/day мужчины, <8 мг женщины): подавляет immune function, замедляет wound healing. Iron deficiency (ferritin <30 ng/ml): fatigue, снижение VO2max на 10-15%. Стратегия: разнообразное питание (мясо, рыба, орехи, зелень), sunlight 15 мин/день (D), supplementation при дефиците.',
             actions: [
-                'Сдайте анализы на D, Mg, Zn, Fe: корректируйте дефициты с помощью врача',
-                'Добавьте разнообразие: шпинат/зелень (Mg, Fe), мясо/морепродукты (Zn), яйца (D)',
+                'Сдайте анализы на витамин D, магний, цинк и железо: корректируйте дефициты с врачом',
+                'Добавьте разнообразие: шпинат и зелень дают магний и железо, мясо и морепродукты — цинк, яйца — витамин D',
                 'Солнце 15-20 мин/день без SPF: синтез витамина D (альтернатива: D3 supplement 2000-4000 IU)'
             ]
         },
@@ -820,12 +820,12 @@
         ELECTROLYTE_IMBALANCE: {
             title: 'Дисбаланс электролитов',
             message: 'Электролиты низкие при активных тренировках. Помогает добавить соли и воды в дни нагрузки.',
-            insight: 'Электролиты (Na, K, Mg, Ca) критичны для мышечных сокращений, hydration, nerve conduction. Дисбаланс при тренировках снижает силу, вызывает судороги.',
-            science: 'Electrolyte losses: пот содержит Na 500-1200 mg/L, K 150-300 mg/L, Mg 20-50 mg/L. Интенсивная тренировка (60+ мин) — потеря 1-2L пота = 1000-2000 mg Na, 200-400 mg K. Недостаточное восполнение → мышечные судороги (Mg, Ca), падение силы на 10-15% (dehydration + electrolyte depletion), arrhythmias при severe дефиците. Стратегия: electrolyte drink при тренировках >60 мин (Na 300-600 mg, K 100-200 mg на порцию), увеличить овощи/фрукты (K, Mg).',
+            insight: 'Электролиты — натрий, калий, магний и кальций — нужны для сокращения мышц, удержания воды и передачи нервных сигналов. Их дисбаланс при тренировках снижает силу и вызывает судороги.',
+            science: 'С потом уходит много электролитов: в литре пота 500-1200 мг натрия, 150-300 мг калия и 20-50 мг магния. Интенсивная тренировка дольше часа — это 1-2 л пота, то есть 1000-2000 мг натрия и 200-400 мг калия. Если не восполнять, появляются мышечные судороги, сила падает на 10-15%, а при сильном дефиците возможны перебои сердечного ритма. Что делать: изотоник при тренировках дольше 60 мин (300-600 мг натрия и 100-200 мг калия на порцию) и больше овощей и фруктов как источника калия и магния.',
             actions: [
-                'Добавьте electrolyte drink при тренировках >60 мин: Na 300-600 мг, K 100-200 мг',
-                'Увеличьте потребление K/Mg: бананы, картофель (K 400-600 мг), шпинат/орехи (Mg 80-150 мг)',
-                'Солите пищу после тренировки: 1/4 ч.л. соли (500 мг Na) для восполнения потерь с потом'
+                'Добавьте изотоник при тренировках дольше 60 мин: 300-600 мг натрия и 100-200 мг калия',
+                'Больше калия и магния: бананы и картофель дают 400-600 мг калия, шпинат и орехи — 80-150 мг магния',
+                'Солите пищу после тренировки: четверть чайной ложки соли — это около 500 мг натрия для восполнения потерь с потом'
             ]
         }
     };
@@ -1117,7 +1117,7 @@
         const top3 = prioritizedWarnings.slice(0, 3);
         top3.forEach(w => {
             w.criticalPriority = true;
-            w.priorityLabel = '🔥 Fix First!';
+            w.priorityLabel = 'Сначала это';
         });
 
         console.info('ews / priority ✅ result:', {
@@ -2129,7 +2129,7 @@
                         totalDrop: Math.round(totalDrop),
                         percentChange,
                         patternName: humanMsg.title,
-                        message: `📉 ${humanMsg.title}`,
+                        message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2195,7 +2195,7 @@
                     totalDrop: Math.round(totalDrop),
                     percentChange,
                     patternName: humanMsg.title,
-                    message: `📉 ${humanMsg.title}`,
+                    message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2258,7 +2258,7 @@
                         currentScore: Math.round(currScore),
                         absoluteChange: Math.round(absoluteChange),
                         relativeChange: Math.round(relativeChange * 100),
-                        message: `⚠️ ${prev.pattern || patternId} ухудшился на ${Math.abs(Math.round(relativeChange * 100))}%`,
+                        message: `${prev.pattern || patternId} ухудшился на ${Math.abs(Math.round(relativeChange * 100))}%`,
                         // Раньше humanMessage тут не было вовсе, и карточка падала
                         // на технический заголовок с падежной ошибкой:
                         // «Связь сна и веса ухудшился на 27%».
@@ -2313,7 +2313,7 @@
                     patternName: humanMsg.title,
                     currentScore: Math.round(score),
                     threshold: PATTERN_LOW_SCORE_THRESHOLDS.critical,
-                    message: `🚨 ${humanMsg.title}`,
+                    message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2336,7 +2336,7 @@
                     patternName: humanMsg.title,
                     currentScore: Math.round(score),
                     threshold: 50,
-                    message: `⚠️ ${humanMsg.title}`,
+                    message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2359,7 +2359,7 @@
                     patternName: humanMsg.title,
                     currentScore: Math.round(score),
                     threshold: PATTERN_LOW_SCORE_THRESHOLDS.important,
-                    message: `⚠️ ${humanMsg.title}`,
+                    message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2502,7 +2502,7 @@
                     totalDrop: Math.round(totalDrop),
                     avgDailyDrop: Math.round(avgDailyDrop * 10) / 10,
                     patternName: humanMsg.title,
-                    message: `📊 ${humanMsg.title}`,
+                    message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2575,7 +2575,7 @@
                 targetSleep,
                 totalDeficit: Math.round(totalDeficit * 10) / 10,
                 patternName: humanMsg.title,
-                message: `💤 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2650,7 +2650,7 @@
                 totalDebt: Math.round(totalDebt),
                 avgDebt: Math.round(avgDebt),
                 patternName: humanMsg.title,
-                message: `🍽️ ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2727,7 +2727,7 @@
                 previous: Math.round(previous * 10) / 10,
                 percentChange,
                 patternName: humanMsg.title,
-                message: `⚖️ ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2809,7 +2809,7 @@
                 targetWater,
                 deficit: Math.round(targetWater - avgWater),
                 patternName: humanMsg.title,
-                message: `💧 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2891,7 +2891,7 @@
                 severity: consecutiveGap >= 4 ? 'high' : 'medium',
                 consecutiveGap,
                 patternName: humanMsg.title,
-                message: `📝 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -2990,7 +2990,7 @@
                 targetProtein: Math.round(minProteinGrams),
                 deficit: Math.round(minProteinGrams - avgProtein),
                 patternName: humanMsg.title,
-                message: `🥩 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3093,7 +3093,7 @@
                 avgStressLevel: Math.round(avgStressLevel),
                 avgSignals: Math.round(avgSignals * 10) / 10,
                 patternName: humanMsg.title,
-                message: `😰 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3200,7 +3200,7 @@
                 irregularRate: Math.round(irregularRate * 100),
                 avgMealCount: Math.round(avgMealCount * 10) / 10,
                 patternName: humanMsg.title,
-                message: `🍽️ ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3322,7 +3322,7 @@
                 bingeRate: Math.round(bingeRate * 100),
                 avgBingeMeals: Math.round(avgBingeMeals * 10) / 10,
                 patternName: humanMsg.title,
-                message: `🍔 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3353,6 +3353,26 @@
      * @param {object} profile
      * @returns {object|null}
      */
+    /**
+     * Фраза о настроении и самочувствии: называем только измеренное.
+     * @param {number|null} avgMood - Среднее настроение или null.
+     * @param {number|null} avgWellbeing - Среднее самочувствие или null.
+     * @returns {string} Фраза для карточки.
+     */
+    function buildMoodWellbeingMessage(avgMood, avgWellbeing) {
+        const say = (value) => value.toFixed(1).replace('.', ',');
+        if (avgMood !== null && avgWellbeing !== null) {
+            return `Неделю настроение и самочувствие держатся ниже пяти: ${say(avgMood)} и ${say(avgWellbeing)}`;
+        }
+        if (avgMood !== null) {
+            return `Неделю настроение держится ниже пяти: ${say(avgMood)}`;
+        }
+        if (avgWellbeing !== null) {
+            return `Неделю самочувствие держится ниже пяти: ${say(avgWellbeing)}`;
+        }
+        return 'Неделю настроение и самочувствие держатся ниже пяти';
+    }
+
     function checkMoodWellbeingDecline(days, profile) {
         console.info('ews / detect 😔 checking mood/wellbeing decline...');
         if (days.length < 7) {
@@ -3405,12 +3425,16 @@
                 avgMood: avgMood !== null ? Math.round(avgMood * 10) / 10 : null,
                 avgWellbeing: avgWellbeing !== null ? Math.round(avgWellbeing * 10) / 10 : null,
                 patternName: humanMsg.title,
-                message: `😔 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: `Неделю настроение и самочувствие держатся ниже пяти: ${avgMood !== null ? avgMood.toFixed(1) : '—'} и ${avgWellbeing !== null ? avgWellbeing.toFixed(1) : '—'}`,
+                    // Числа, которого нет, на экране быть не может: прочерк
+                    // вместо оценки — это дамп, а не фраза. Называем только то,
+                    // что действительно измерено (контракт «слова блока
+                    // наблюдений», 12.09.2026).
+                    humanMessage: buildMoodWellbeingMessage(avgMood, avgWellbeing),
                 detail: 'Обычно это перегрузка, а не питание — стоит сказать куратору',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3491,7 +3515,7 @@
                 variation: Math.round(variation * 100) / 100,
                 avgWeight: Math.round(avgWeight * 10) / 10,
                 patternName: humanMsg.title,
-                message: `⚖️ ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3605,7 +3629,7 @@
                 weekendExcessPercent: Math.round(weekendExcessPercent),
                 weekendAlcoholRate: Math.round(weekendAlcoholRate * 100),
                 patternName: humanMsg.title,
-                message: `🍻 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3660,7 +3684,7 @@
                 type: 'FIBER_DEFICIT',
                 severity: 'medium',
                 patternName: humanMsg.title,
-                message: `📊 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3714,7 +3738,7 @@
                 type: 'SODIUM_EXCESS',
                 severity: 'medium',
                 patternName: humanMsg.title,
-                message: `🧂 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3792,7 +3816,7 @@
                 type: 'CIRCADIAN_DISRUPTION',
                 severity: 'high',
                 patternName: humanMsg.title,
-                message: `🌙 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3863,7 +3887,7 @@
                 type: 'TRAINING_WITHOUT_RECOVERY',
                 severity: 'high',
                 patternName: humanMsg.title,
-                message: `💪 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3927,7 +3951,7 @@
                 type: 'FAT_QUALITY_DECLINE',
                 severity: 'medium',
                 patternName: humanMsg.title,
-                message: `🥑 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -3999,7 +4023,7 @@
                 type: 'SUGAR_DEPENDENCY',
                 severity: 'medium',
                 patternName: humanMsg.title,
-                message: `🍬 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -4076,13 +4100,13 @@
                 type: 'MICRONUTRIENT_GAP',
                 severity: 'medium',
                 patternName: humanMsg.title,
-                message: `🔬 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
                     humanMessage: humanMsg.message,
-                detail: `${lowPatterns.length} микронутриентов с низким score: ${lowPatterns.map(p => p.name).join(', ')}`,
+                detail: `${lowPatterns.length} микронутриентов с низкой оценкой: ${lowPatterns.map(p => p.name).join(', ')}`,
                 insight: humanMsg.insight,
                 science: humanMsg.science,
                 dates: days.map(d => d.date),
@@ -4152,7 +4176,7 @@
                 type: 'STEP_DECLINE',
                 severity: 'low',
                 patternName: humanMsg.title,
-                message: `🚶 ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -4216,7 +4240,7 @@
                 type: 'MEAL_TIMING_DRIFT',
                 severity: 'low',
                 patternName: humanMsg.title,
-                message: `⏰ ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -4288,7 +4312,7 @@
                 type: 'ELECTROLYTE_IMBALANCE',
                 severity: 'medium',
                 patternName: humanMsg.title,
-                message: `⚡ ${humanMsg.title}`,
+                message: `${humanMsg.title}`,
                     // Голос куратора для v4: фраза уже написана в
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
@@ -4978,7 +5002,7 @@
                 '#': check.num,
                 'Check Name': check.name,
                 'Tier': check.tier,
-                'Status': hasWarning ? '⚠️ WARNING' : '✓ Clean'
+                'Status': hasWarning ? 'WARNING' : '✓ Clean'
             };
         });
         if (showTables) {
@@ -5081,8 +5105,8 @@
             warnings: activeWarnings, // Prioritized warnings with scores + status='active'
             resolvedWarnings,  // R-INS-P2-cont: warnings которые недавно «потухли»
             summary: activeWarnings.length === 0
-                ? '✅ Негативных трендов не обнаружено'
-                : `⚠️ Обнаружено ${activeWarnings.length} warning signal${activeWarnings.length > 1 ? 's' : ''}`,
+                ? 'Негативных трендов не обнаружено'
+                : `Обнаружено ${activeWarnings.length} warning signal${activeWarnings.length > 1 ? 's' : ''}`,
             highSeverityCount: activeWarnings.filter(w => w.severity === 'high').length,
             mediumSeverityCount: activeWarnings.filter(w => w.severity === 'medium').length,
             // Trends tracking (v3.1)

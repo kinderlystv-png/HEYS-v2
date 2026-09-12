@@ -168,9 +168,9 @@
 
         let insight;
         if (diff > 200) {
-            insight = `🏋️ В дни тренировок ешь на ${Math.round(diff)} ккал больше — это нормально!`;
+            insight = `В дни тренировок вы едите на ${Math.round(diff)} ккал больше — это нормально`;
         } else if (diff < -200) {
-            insight = '⚠️ В дни тренировок ешь меньше — добавь белок для восстановления';
+            insight = 'В дни тренировок вы едите меньше — добавьте белок для восстановления';
         } else {
             insight = 'Калории стабильны независимо от тренировок';
         }
@@ -242,7 +242,7 @@
                 confidence: 0.25,
                 isPreliminary: true,
                 requiredDataPoints: 2,
-                insight: `👣 Есть ${directDataDays.length} дн. с шагами и весом. Добавь ещё 1 последовательный день для связи с динамикой веса`
+                insight: `Есть ${directDataDays.length} дней с шагами и весом. Добавьте ещё один день подряд, чтобы увидеть связь с динамикой веса`
             };
         }
 
@@ -287,13 +287,13 @@
         let insight;
         const r = bayesResult.posteriorR;
         if (!corrResult.isSignificant || cleanSteps.length < 2) {
-            insight = `Связь шагов и веса пока не выявлена (N=${cleanSteps.length}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+            insight = `Связь шагов и веса на ваших данных пока не видна`;
         } else if (r < -0.3) {
-            insight = `👟 Больше шагов → вес стабильнее! При ${Math.round(avgSteps)} шагов/день (p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+            insight = `Чем больше шагов, тем стабильнее вес: в среднем ${Math.round(avgSteps)} шагов в день`;
         } else if (r > 0.3) {
-            insight = `Интересно: больше ходишь, но вес растёт. Проверь калории (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'})`;
+            insight = `Шагов больше, но вес растёт — проверьте калории`;
         } else {
-            insight = `Умеренное влияние шагов на вес (r=${r.toFixed(2)}, p=${corrResult.pValue.toFixed(3)}, N=${corrResult.n})`;
+            insight = `Влияние шагов на вес умеренное`;
         }
 
         const isPreliminary = cleanSteps.length < robustPairsRequired;
@@ -384,13 +384,13 @@
 
         let insight;
         if (avgMinutes >= 60) {
-            insight = '🏡 Отличный NEAT: бытовая активность даёт ощутимый расход';
+            insight = 'Бытовая активность даёт ощутимый расход';
         } else if (avgMinutes < 20) {
-            insight = '⚠️ Мало бытовой активности. Добавь 20-30 минут движения';
+            insight = 'Мало бытовой активности. Добавьте 20-30 минут движения';
         } else if (trend > 1) {
-            insight = '📈 NEAT растёт — хорошая динамика';
+            insight = 'Бытовая активность растёт — хорошая динамика';
         } else if (trend < -1) {
-            insight = '📉 NEAT снижается — попробуй чаще вставать и двигаться';
+            insight = 'Бытовая активность снижается — попробуйте чаще вставать и двигаться';
         } else {
             insight = 'NEAT стабилен, можно чуть усилить';
         }
@@ -476,13 +476,13 @@
 
         let insight = '';
         if (overtrainingRisk) {
-            insight = `⚠️ Риск перетренированности! ${maxConsecutive} дней подряд высокой интенсивности + плохое восстановление`;
+            insight = `Риск перетренированности: ${maxConsecutive} дней подряд высокой интенсивности и плохое восстановление`;
         } else if (maxConsecutive >= 3) {
-            insight = `🟡 ${maxConsecutive} дней подряд тяжёлых тренировок. Добавь день отдыха`;
+            insight = `${maxConsecutive} дней подряд тяжёлых тренировок. Добавьте день отдыха`;
         } else if (avgRecovery < 60) {
-            insight = `🟠 Восстановление слабое (${Math.round(avgRecovery)}/100). Больше сна!`;
+            insight = `Восстановление слабое: ${Math.round(avgRecovery)} из 100. Нужно больше сна`;
         } else {
-            insight = `✅ Баланс нагрузки и восстановления оптимален (${Math.round(avgRecovery)}/100)`;
+            insight = `Баланс нагрузки и восстановления оптимален: ${Math.round(avgRecovery)} из 100`;
         }
 
         const confidence = daysWithZones.length >= 5 ? 0.80 : 0.65;

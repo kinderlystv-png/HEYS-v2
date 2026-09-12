@@ -14,6 +14,14 @@
         TRAINING_TYPE_MATCH: 'training_type_match'
     };
 
+    // Тип нагрузки словами: внутренний ключ в текст наблюдения не выходит.
+    const TRAINING_TYPE_NAMES = {
+        strength: 'силовые тренировки',
+        cardio: 'кардионагрузку',
+        hobby: 'лёгкую активность',
+        mixed: 'смешанную нагрузку'
+    };
+
     const average = piStats.average || ((arr) => {
         if (!Array.isArray(arr) || arr.length === 0) return 0;
         return arr.reduce((sum, value) => sum + value, 0) / arr.length;
@@ -103,6 +111,12 @@
             }
         }
 
+        // Белок за период ноль — продукты не дали данных. Печатать «0% приёмов
+        // в целевой зоне» и «0% от цели» нельзя: это не наблюдение, а пустота.
+        if (!dayTotals.some(v => v > 0)) {
+            return { pattern, available: false, reason: 'no_protein_data' };
+        }
+
         const distributionScore = totalMeals > 0 ? (optimalMeals / totalMeals) * 100 : 0;
         const avgSpread = spreads.length > 0 ? average(spreads) : 0;
         const evenBonus = avgSpread > 0 && avgSpread < 20 ? 10 : 0;
@@ -117,17 +131,17 @@
             )
         );
 
-        let insight = `Оптимальных белковых приёмов: ${optimalMeals}/${totalMeals}.`;
+        let insight = `Оптимальных белковых приёмов: ${optimalMeals} из ${totalMeals}.`;
         if (distributionScore >= 60) {
-            insight = `✅ Хорошее распределение белка: ${Math.round(distributionScore)}% приёмов в зоне 20-40г.`;
+            insight = `Хорошее распределение белка: ${Math.round(distributionScore)}% приёмов попадают в 20-40 г.`;
         } else if (distributionScore >= 35) {
-            insight = `🟡 Частично оптимально: ${Math.round(distributionScore)}% приёмов попадают в 20-40г.`;
+            insight = `Частично оптимально: ${Math.round(distributionScore)}% приёмов попадают в 20-40 г.`;
         } else {
-            insight = `🔴 Слабое распределение белка: только ${Math.round(distributionScore)}% приёмов в целевой зоне.`;
+            insight = `Слабое распределение белка: только ${Math.round(distributionScore)}% приёмов в целевой зоне.`;
         }
 
         if (evenBonus > 0) insight += ' Равномерное распределение по приёмам (+10).';
-        if (targetProteinPct < 80) insight += ` Суточный белок ${Math.round(targetProteinPct)}% от цели (${Math.round(targetProtein)}г).`;
+        if (targetProteinPct < 80) insight += ` Суточный белок ${Math.round(targetProteinPct)}% от цели в ${Math.round(targetProtein)} г.`;
 
         const baseConfidence = days.length >= 14 ? 0.8 : 0.7;
         const confidence = piStats.applySmallSamplePenalty
@@ -250,6 +264,11 @@
         }
 
         const avgAntioxidantIndex = average(dailyIndices.map(d => d.antioxidantIndex));
+        // Индекс ровно ноль означает отсутствие витаминов в карточках продуктов,
+        // а не низкую защиту: без числа правило молчит.
+        if (avgAntioxidantIndex <= 0) {
+            return { pattern, available: false, reason: 'no_antioxidant_data' };
+        }
         const dominantDemand = highDemandDays > 0 ? 'high' : (moderateDemandDays > 0 ? 'moderate' : 'low');
         const adjustedScore = Math.round(
             avgAntioxidantIndex * (dominantDemand === 'high' ? 0.85 : 1.0)
@@ -261,16 +280,16 @@
 
         let insight = '';
         if (adjustedScore >= 80) {
-            insight = `✅ Хорошая антиоксидантная защита (${adjustedScore}/100).`;
+            insight = `Хорошая антиоксидантная защита: ${adjustedScore} из 100.`;
         } else if (adjustedScore >= 60) {
-            insight = `🟡 Умеренная антиоксидантная защита (${adjustedScore}/100).`;
+            insight = `Умеренная антиоксидантная защита: ${adjustedScore} из 100.`;
         } else {
-            insight = `🔴 Низкая антиоксидантная защита (${adjustedScore}/100), требуется коррекция рациона.`;
+            insight = `Низкая антиоксидантная защита: ${adjustedScore} из 100, нужна коррекция рациона.`;
         }
 
-        if (defenseGapDays > 0) insight += ` Defense gap: ${defenseGapDays} дн.`;
-        if (vitCRiskDays > 0) insight += ` VitC risk при high-load: ${vitCRiskDays} дн.`;
-        if (doubleStressDays > 0) insight += ` Double oxidative stress: ${doubleStressDays} дн.`;
+        if (defenseGapDays > 0) insight += ` Защита проседала ${defenseGapDays} дн.`;
+        if (vitCRiskDays > 0) insight += ` Мало витамина C в дни тяжёлой нагрузки: ${vitCRiskDays} дн.`;
+        if (doubleStressDays > 0) insight += ` Двойная окислительная нагрузка: ${doubleStressDays} дн.`;
 
         const baseConfidence = days.length >= 14 ? 0.8 : 0.7;
         const confidence = piStats.applySmallSamplePenalty
@@ -409,13 +428,14 @@
             Math.min(100, Math.round(macroMatchScore * 0.5 + postWorkoutScore * 0.3 + recoveryNutrientScore * 0.2))
         );
 
-        let insight = `Тип нагрузки: ${dominantType}. Macro match: ${macroMatchScore}%.`;
-        if (score >= 80) insight = `✅ Отличный match питания под ${dominantType} (${score}/100).`;
-        else if (score >= 60) insight = `🟡 Частичный match под ${dominantType} (${score}/100).`;
-        else insight = `🔴 Выраженный mismatch питания и нагрузки (${score}/100).`;
+        const typeName = TRAINING_TYPE_NAMES[dominantType] || 'вашу нагрузку';
+        let insight = `Питание и ${typeName}: совпадение ${macroMatchScore}%.`;
+        if (score >= 80) insight = `Питание хорошо подходит под ${typeName}: ${score} из 100.`;
+        else if (score >= 60) insight = `Питание частично подходит под ${typeName}: ${score} из 100.`;
+        else insight = `Питание заметно расходится с нагрузкой: ${score} из 100.`;
 
         if (dominantType === 'strength' && avgProtPerKg < 1.6) insight += ' Белок ниже целевого для силовых.';
-        if (dominantType === 'cardio' && avgCarbsPerKg < 5) insight += ' Углеводы ниже целевого для cardio.';
+        if (dominantType === 'cardio' && avgCarbsPerKg < 5) insight += ' Углеводы ниже целевого для кардио.';
 
         const baseConfidence = days.length >= 10 ? 0.8 : 0.7;
         const confidence = piStats.applySmallSamplePenalty

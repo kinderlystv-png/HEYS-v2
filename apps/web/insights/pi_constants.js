@@ -415,7 +415,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       LOW: 'Нет срочных',
       MEDIUM: 'Рекомендации',
       HIGH: 'Внимание!',
-      CRITICAL: 'Критически 🔥'
+      CRITICAL: 'Критически'
     }
   };
 
@@ -450,7 +450,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '16825252', level: 'A', title: 'LaForgia et al., 2006 — Systematic review EPOC' }],
       evidenceLevel: 'A',
       confidenceScore: 0.90,
-      interpretation: '+6-15% к затратам тренировки. При HIIT эффект сильнее и дольше (до 24ч).',
+      interpretation: '+6-15% к затратам тренировки. При высокоинтенсивных интервалах эффект сильнее и держится дольше, до 24 ч.',
       priority: 'MEDIUM',
       category: 'METABOLISM',
       actionability: 'TODAY',
@@ -468,12 +468,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '15531540', level: 'A', title: 'Spiegel et al., 2004 — Meta-analysis sleep deprivation' }],
       evidenceLevel: 'A',
       confidenceScore: 0.95,
-      interpretation: 'Недосып 2ч+ → голод повышен на 15-28%. Это физиология, не сила воли!',
+      interpretation: 'Недосып от 2 ч поднимает голод на 15-28%. Это физиология, а не сила воли.',
       priority: 'CRITICAL',
       category: 'RECOVERY',
       actionability: 'TODAY',
       impactScore: 0.90,
-      whyImportant: '⚡ Недосып = гормональный голод. Самый частый триггер срывов! Высыпайся первым делом.'
+      whyImportant: 'Недосып = гормональный голод. Самый частый триггер срывов! Высыпайся первым делом.'
     },
     // Adaptive Thermogenesis — Высокий, замедление метаболизма
     ADAPTIVE: {
@@ -554,7 +554,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '24336217', level: 'B', title: 'Sonnenburg & Sonnenburg, 2014 — Gut microbiome diet impact' }],
       evidenceLevel: 'B',
       confidenceScore: 0.86,
-      interpretation: '>75 — здоровый микробиом. <50 — добавь клетчатку и разнообразие.',
+      interpretation: '>75 — здоровый микробиом. <50 — добавьте клетчатку и разнообразие.',
       priority: 'MEDIUM',
       category: 'NUTRITION',
       actionability: 'LONG_TERM',
@@ -571,29 +571,29 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '29754952', level: 'B', title: 'Sutton et al., 2018 — Time-restricted feeding composite' }],
       evidenceLevel: 'B',
       confidenceScore: 0.88,
-      interpretation: '80-100 — оптимум, жиросжигание работает. 60-79 — норма, есть резервы. <60 — метаболизм замедлен, обрати внимание на причины.',
+      interpretation: '80-100 — оптимум, жиросжигание работает. 60-79 — норма, есть резервы. <60 — метаболизм замедлен, обратите внимание на причины.',
       priority: 'CRITICAL',
       category: 'COMPOSITE',
       actionability: 'IMMEDIATE',
       impactScore: 1.0,
-      whyImportant: '⭐ ГЛАВНАЯ МЕТРИКА! Показывает общее состояние метаболизма прямо сейчас.'
+      whyImportant: 'ГЛАВНАЯ МЕТРИКА! Показывает общее состояние метаболизма прямо сейчас.'
     },
     // Crash Risk Quick — Критический, предупреждение срывов
     CRASH_RISK_QUICK: {
       name: 'Риск срыва (светофор)',
       short: 'Быстрый светофорный индикатор RRS: зелёный/жёлтый/красный по текущему Relapse Risk Score.',
       details: 'Упрощённое отображение RRS как светофора для быстрой самодиагностики. Зелёный — риск низкий, профилактика не нужна. Жёлтый — умеренный, стоит следить за сном и питанием. Красный — защитные механизмы ослаблены, включи профилактику: структурированный приём пищи с белком, минимизация триггеров, перерыв при стрессе. Использует тот же RRS-score, что и полная карточка «Риск срыва», просто в компактном формате.',
-      formula: 'RRS score → светофор:\n  • 0-19: 🟢 зелёный (low)\n  • 20-39: 🟡 жёлтый (guarded)\n  • 40-59: 🟠 оранжевый (elevated)\n  • 60-79: 🔴 красный (high)\n  • 80-100: 🔴 красный мигающий (critical)',
+      formula: 'RRS score → светофор:\n • 0-19: зелёный (low)\n • 20-39: жёлтый (guarded)\n • 40-59: оранжевый (elevated)\n • 60-79: красный (high)\n • 80-100: красный мигающий (critical)',
       source: 'Marlatt & Donovan, 2005; внутренняя модель RRS v1',
       sources: [{ pmid: '19179058', level: 'A', title: 'Marlatt & Donovan, 2005 — Relapse prevention meta-analysis' }],
       evidenceLevel: 'A',
       confidenceScore: 0.94,
-      interpretation: 'Зелёный — низкий риск, всё в порядке. Жёлтый — умеренный, обрати внимание. Красный — высокий риск, прими меры!',
+      interpretation: 'Зелёный — низкий риск, всё в порядке. Жёлтый — умеренный, обратите внимание. Красный — высокий риск, примите меры.',
       priority: 'CRITICAL',
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.95,
-      whyImportant: '🚨 Предупреждает о срыве ДО того как он случится. Красный = действуй сейчас!'
+      whyImportant: 'Предупреждает о срыве ДО того как он случится. Красный = действуй сейчас!'
     },
     // Trend Score — Высокий, сводная оценка за неделю/месяц
     HEALTH_SCORE: {
@@ -663,7 +663,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PATTERNS',
       actionability: 'WEEKLY',
       impactScore: 0.80,
-      whyImportant: 'Твои уникальные паттерны. Понимание себя = персональная стратегия.'
+      whyImportant: 'Ваши уникальные паттерны. Понимание себя — основа персональной стратегии.'
     },
 
     // === МЕТАБОЛИЧЕСКИЙ ФЕНОТИП ===
@@ -681,7 +681,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PERSONALIZATION',
       actionability: 'LONG_TERM',
       impactScore: 0.85,
-      whyImportant: '🧬 Твой уникальный метаболический тип! Питание по фенотипу эффективнее универсальных диет на 20-40%.'
+      whyImportant: 'Ваш уникальный метаболический тип. Питание по фенотипу эффективнее универсальных диет на 20-40%.'
     },
     PHENOTYPE_TRAITS: {
       name: 'Радар метаболических черт',
@@ -707,7 +707,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PERSONALIZATION',
       actionability: 'WEEKLY',
       impactScore: 0.75,
-      whyImportant: 'Персональные пороги точнее универсальных норм. Учитывают твою индивидуальность.'
+      whyImportant: 'Персональные пороги точнее универсальных норм. Они учитывают вашу индивидуальность.'
     },
 
     // === КАТЕГОРИИ HEALTH SCORE — Средний приоритет (детализация) ===
@@ -729,7 +729,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     },
     CATEGORY_TIMING: {
       name: 'Тайминг (25%)',
-      short: 'Когда ты ешь влияет на усвоение и контроль голода. Оценивает распределение приёмов пищи в течение дня, интервалы между едой и смещение калорий на утро-день.',
+      short: 'Время приёмов пищи влияет на усвоение и контроль голода. Оценивает распределение приёмов в течение дня, интервалы между едой и смещение калорий на утро и день.',
       details: 'Тайминг занимает 25% итогового score и учитывает четыре фактора: оптимальные интервалы между приёмами (3-5 часов, чтобы инсулиновые волны не накладывались), минимизацию поздней еды (после 21:00 не более 300 ккал), циркадное распределение калорий (большая часть до 15:00) и отсутствие хаотичных перекусов. Хороший тайминг помогает лучше контролировать голод физиологически, снижает вечернюю тягу к еде и улучшает метаболическую гибкость. Это не жёсткие правила, а практические ориентиры для тех, кто хочет получить больше отдачи от уже существующих привычек.',
       formula: 'Компоненты:\n  Интервалы: 30% (3-5ч между приёмами)\n  Инсулиновые волны: 30% (не перекрываются)\n  Поздняя еда: 25% (после 21:00 <300 ккал)\n  Циркадный ритм: 15% (>60% калорий до 15:00)',
       source: 'Sutton et al., 2018 — Early time-restricted feeding and metabolic health',
@@ -741,7 +741,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'TIMING',
       actionability: 'TODAY',
       impactScore: 0.60,
-      whyImportant: 'Когда ты ешь влияет на усвоение. Утро > вечер.'
+      whyImportant: 'Время приёмов пищи влияет на усвоение. Утро важнее вечера.'
     },
     CATEGORY_ACTIVITY: {
       name: 'Активность (20%)',
@@ -752,7 +752,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '25738456', level: 'B', title: 'Villablanca et al., 2015 — NEAT and energy expenditure' }],
       evidenceLevel: 'B',
       confidenceScore: 0.84,
-      interpretation: '>80 — активный образ жизни. <60 — добавь движения.',
+      interpretation: '>80 — активный образ жизни. <60 — добавьте движения.',
       priority: 'MEDIUM',
       category: 'METABOLISM',
       actionability: 'TODAY',
@@ -809,7 +809,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
 
     // === WHAT-IF SIMULATOR — Высокий ===
     WHATIF_SIMULATOR: {
-      name: '🧪 Симулятор еды',
+      name: 'Симулятор еды',
       short: 'Позволяет заранее увидеть, как выбранная еда повлияет на сытость, волну и риск срыва.',
       details: 'Это интерактивный инструмент, который позволяет «примерить» еду до того, как вы её съели. Система рассчитывает 4 показателя: (1) гликемическую нагрузку GL — насколько резко подскочит энергия; (2) длину инсулиновой волны — сколько часов будет стабильная энергия; (3) ожидаемое время сытости — когда появится голод (учитывает белок, клетчатку, жиры); (4) изменение риска срыва — усиливает ли эта еда тягу. Пример использования: в 15:00 перед выбором перекуса сравним «печенье + чай» (GL=18, волна 1.8ч, сытость 2.2ч, риск +12%) vs «орехи + яблоко» (GL=8, волна 3.2ч, сытость 3.8ч, риск -5%). Решение очевидно. Важно: симулятор не запрещает еду, а только показывает последствия. Если решили съесть высокогликемический перекус, вы уже знаете, что через 2 часа может снова захотеться есть — и готовы к этому.',
       formula: 'Алгоритм симуляции:\n  1. GL (гликемическая нагрузка) = GI × углеводы / 100\n  2. Волна = база × GI-модификатор × GL-модификатор × (белок/жир/клетчатка коррекции)\n  3. Сытость = 2ч + белок×0.03 + клетчатка×0.05 − (GI−50)×0.01\n  4. Риск = текущий + (GI>70?+8) + (перебор>1.3?+15) − (белок>25?−10)',
@@ -819,7 +819,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PREDICTION',
       actionability: 'IMMEDIATE',
       impactScore: 0.75,
-      whyImportant: 'Принимай осознанные решения о еде ДО того как съел!'
+      whyImportant: 'Принимайте решения о еде заранее, а не после.'
     },
 
     // === WEEKLY WRAP — Средний ===
@@ -834,7 +834,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'COMPOSITE',
       actionability: 'WEEKLY',
       impactScore: 0.55,
-      whyImportant: 'Рефлексия = прогресс. Смотри на неделю, а не на один день.'
+      whyImportant: 'Разбор недели двигает вперёд. Смотрите на неделю, а не на один день.'
     },
 
     // === METABOLIC STATUS CARD — Высокий/Критический ===
@@ -849,33 +849,33 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'COMPOSITE',
       actionability: 'IMMEDIATE',
       impactScore: 0.85,
-      whyImportant: 'Показывает ЧТО именно тянет статус вниз. Исправь главное!'
+      whyImportant: 'Показывает, что именно тянет статус вниз. Исправьте главное.'
     },
     PRIORITY_ACTIONS: {
       name: 'Приоритетные действия',
       short: 'Конкретные действия, которые максимально улучшат день прямо сейчас. Максимум 3 действия — фокус на главном.',
-      details: 'Система генерирует персонализированные действия, учитывая четыре фактора: (1) Текущие пробелы — что сильнее всего тянет score вниз; (2) Время суток — что ещё реально сделать сегодня (не предлагает утреннищ в 20:00); (3) История успешных дней — что работало у вас раньше; (4) Персональные паттерны — например, если белок у вас коррелирует с настроением, система приоритизирует его. Действия конкретные (не "лучше питайся", а "добавь 20г белка в ужин") и выполнимые сейчас. Ограничение 3 пунктами специальное — избыток задач вызывает паралич решений. Практический смысл: выполните хотя бы ОДНО действие — это уже +10-20% к score и реальное изменение дня.',
+      details: 'Система подбирает действия по четырём факторам: (1) текущие пробелы — что сильнее всего тянет оценку вниз; (2) время суток — что ещё реально сделать сегодня, поэтому утренние действия не предлагаются в 20:00; (3) история успешных дней — что работало у вас раньше; (4) персональные паттерны — например, если белок у вас связан с настроением, система ставит его выше. Действия конкретные (не «лучше питайтесь», а «добавьте 20 г белка в ужин») и выполнимые сейчас. Ограничение тремя пунктами намеренное: избыток задач вызывает паралич решений. Практический смысл: выполните хотя бы одно действие — это уже +10-20% к оценке и реальное изменение дня.',
       formula: 'Генерируются на основе:\n  1. Текущих пробелов (что ниже нормы)\n  2. Времени суток (что ещё можно сделать)\n  3. Истории успешных дней\n  4. Персональных паттернов\n\nМаксимум 3 действия — фокус на главном.',
       source: 'Behavior Change Theory',
-      interpretation: 'Выполни хотя бы 1 действие для улучшения дня.',
+      interpretation: 'Выполните хотя бы одно действие для улучшения дня.',
       priority: 'CRITICAL',
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.95,
-      whyImportant: '⚡ Конкретные действия ПРЯМО СЕЙЧАС. Сделай хотя бы одно!'
+      whyImportant: 'Конкретные действия прямо сейчас. Сделайте хотя бы одно.'
     },
     STATUS_RISK_FACTORS: {
       name: 'Факторы риска (в статусе)',
       short: 'Показывает, какие факторы увеличивают риск срыва и насколько. Цветовой индикатор показывает уровень опасности.',
       details: 'Факторы риска — это дополняемая панель к Crash Risk Quick, которая подробно расшифровывает, ПОЧЕМУ риск высокий. Каждый фактор показывается с процентным вкладом в общий риск, например: Недосып +25%, Голодание +20%, Низкий белок +15% и т.д. Сумма даёт общий риск, который окрашивается в зелёный (<30%), жёлтый (30-60%) или красный (>60%). Практическая ценность в коррекции: убрать один топ-фактор проще и эффективнее, чем пытаться «поднять без разбора всё». Если видите Недосып +25% — выспитесь сегодня раньше, это снимет 1/4 риска. Красные факторы отображаются ярко, чтобы привлечь внимание.',
-      formula: 'Показывают что увеличивает риск срыва:\n  • Каждый фактор = +X к риску\n  • Сумма определяет общий уровень риска\n  • 🟢 Низкий (<30%), 🟡 Средний (30-60%), 🔴 Высокий (>60%)',
-      interpretation: 'Минимизируй факторы с наибольшим влиянием.',
+      formula: 'Показывают что увеличивает риск срыва:\n • Каждый фактор = +X к риску\n • Сумма определяет общий уровень риска\n • Низкий (<30%), Средний (30-60%), Высокий (>60%)',
+      interpretation: 'Снижайте факторы с наибольшим влиянием.',
       source: 'Risk assessment (behavioral prevention)',
       priority: 'CRITICAL',
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.90,
-      whyImportant: '🚨 Что увеличивает риск срыва. Красные факторы требуют внимания!'
+      whyImportant: 'Что увеличивает риск срыва. Красные факторы требуют внимания!'
     },
 
     // === ADVANCED ANALYTICS v2.5 — Справочный ===
@@ -883,12 +883,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       name: 'Продвинутая аналитика',
       short: 'Глубокий слой аналитики, который выявляет персональные механики: триггеры, паттерны и зоны прогноза.',
       details: 'Это «meta-уровень» системы, где объединяются статистика качества данных, корреляции, риск-модель и прогноз энергии. Его главная ценность — не отдельные цифры, а связанная картина: какие факторы действительно управляют вашим состоянием, а какие выглядят важными только на уровне ощущений. Раздел особенно полезен при стагнации, когда базовые рекомендации уже выполняются, но прогресс замедлился. Интерпретировать блок стоит вместе с confidence: чем выше достоверность данных, тем сильнее практическая ценность выводов.',
-      formula: '5 модулей глубокого анализа:\n\n📊 Confidence Score:\n  volume × 0.30 + completeness × 0.25 + consistency × 0.25 + recency × 0.20\n\n🔗 Корреляционная матрица:\n  Pearson r для 12 пар метрик (сон↔калории, стресс↔сладкое, и др.)\n\n🧬 Метаболические паттерны:\n  • Чувствительность к углеводам (вес после простых)\n  • Метаболическая гибкость (жиры vs углеводы)\n  • Хронотип питания (утро vs вечер)\n\n⚠️ Predictive Risk (EMA):\n  накопленный стресс + недосып + инсулин волатильность + время\n\n⚡ Energy Forecast:\n  Циркадный профиль × модификаторы (сон, еда, стресс, тренировка)',
+      formula: '5 модулей глубокого анализа:\n\nConfidence Score:\n volume × 0.30 + completeness × 0.25 + consistency × 0.25 + recency × 0.20\n\nКорреляционная матрица:\n Pearson r для 12 пар метрик (сонкалории, стресссладкое, и др.)\n\nМетаболические паттерны:\n • Чувствительность к углеводам (вес после простых)\n • Метаболическая гибкость (жиры vs углеводы)\n • Хронотип питания (утро vs вечер)\n\nPredictive Risk (EMA):\n накопленный стресс + недосып + инсулин волатильность + время\n\nEnergy Forecast:\n Циркадный профиль × модификаторы (сон, еда, стресс, тренировка)',
       source: 'Композитный анализ: Brand-Miller 2003, Van Cauter 1997, Spiegel 2004',
       sources: [{ pmid: '12828192', level: 'B', title: 'Composite analytics — Multi-source evidence synthesis' }],
       evidenceLevel: 'B',
       confidenceScore: 0.85,
-      interpretation: 'Confidence >70% — выводы надёжны. Сильные корреляции (|r|>0.4) — твои персональные триггеры. Паттерны — база для персонализации.',
+      interpretation: 'Уверенность выше 70% — выводам можно доверять. Сильные связи — ваши персональные триггеры. Паттерны — база для персонализации.',
       priority: 'MEDIUM',
       category: 'PATTERNS',
       actionability: 'WEEKLY',
@@ -913,21 +913,21 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       name: 'Матрица корреляций',
       short: 'Показывает ваши персональные связи между привычками и самочувствием на реальных данных, а не по общим советам.',
       details: 'Матрица помогает отделить устойчивые связи от случайных совпадений: например, влияет ли сон на аппетит именно у вас и с какой силой. Это инструмент приоритизации: сильные и повторяемые корреляции — кандидаты на первые поведенческие изменения. Важно помнить, что корреляция сама по себе не доказывает причинность, поэтому результат лучше проверять на практике небольшими экспериментами 1–2 недели. Чем длиннее и чище история данных, тем меньше риск ложных выводов.',
-      formula: 'Pearson correlation r = Σ[(xi-x̄)(yi-ȳ)] / √[Σ(xi-x̄)² × Σ(yi-ȳ)²]\n\nАнализируемые пары:\n  • Сон ↔ Калории, Настроение, Сладкое\n  • Шаги ↔ Настроение, Вес\n  • Стресс ↔ Сладкое, Калории\n  • Белок/Клетчатка ↔ Настроение\n  • Вода ↔ Настроение\n  • Тренировки ↔ Сон, Настроение',
+      formula: 'Pearson correlation r = Σ[(xi-x̄)(yi-ȳ)] / √[Σ(xi-x̄)² × Σ(yi-ȳ)²]\n\nАнализируемые пары:\n • Сон Калории, Настроение, Сладкое\n • Шаги Настроение, Вес\n • Стресс Сладкое, Калории\n • Белок/Клетчатка Настроение\n • Вода Настроение\n • Тренировки Сон, Настроение',
       source: 'Statistical correlation analysis (Pearson 1895)',
       interpretation: '|r| > 0.7 — сильная связь. 0.4-0.7 — умеренная. <0.4 — слабая. Направление: + = прямая, − = обратная.',
       priority: 'MEDIUM',
       category: 'PATTERNS',
       actionability: 'WEEKLY',
       impactScore: 0.55,
-      whyImportant: 'Твои персональные связи. Понимание триггеров = контроль над ними.'
+      whyImportant: 'Ваши персональные связи. Когда триггер известен, им проще управлять.'
     },
     // Metabolic Patterns — Высокий, персонализация
     METABOLIC_PATTERNS: {
       name: 'Метаболические паттерны',
       short: 'Определяет индивидуальные метаболические реакции, чтобы стратегия питания была персональной, а не «средней по больнице».',
       details: 'Паттерны описывают устойчивые особенности ответа на еду и режим: чувствительность к углеводам, профиль энергии на жирах, хронотип и реакцию на стресс. Их сила в том, что они переводят данные в персональные правила: когда вам легче держать дефицит, какой формат питания устойчивее, в какие часы выше риск ошибок. Это не «ярлыки», а рабочие гипотезы, которые уточняются по мере накопления истории. Практический эффект — меньше трения в повседневных решениях и более предсказуемый прогресс.',
-      formula: '4 типа паттернов:\n\n1. Carb Sensitivity:\n  Δвес после >50г простых углеводов vs <30г\n  High (>0.5кг) / Moderate / Low\n\n2. Fat Adaptation:\n  Энергия при fat/carb ratio >0.5 vs <0.3\n  Adapted / Neutral / Carb-dependent\n\n3. Chronotype:\n  Качество дня при раннем (<9:00) vs позднем (>11:00) завтраке\n  Early bird / Night owl / Neutral\n\n4. Stress Eating:\n  Корреляция стресс ↔ калории\n  High / Moderate / Restriction / None',
+      formula: '4 типа паттернов:\n\n1. Carb Sensitivity:\n Δвес после >50г простых углеводов vs <30г\n High (>0.5кг) / Moderate / Low\n\n2. Fat Adaptation:\n Энергия при fat/carb ratio >0.5 vs <0.3\n Adapted / Neutral / Carb-dependent\n\n3. Chronotype:\n Качество дня при раннем (<9:00) vs позднем (>11:00) завтраке\n Early bird / Night owl / Neutral\n\n4. Stress Eating:\n Корреляция стресс калории\n High / Moderate / Restriction / None',
       source: 'Behavioral nutrition patterns (Taheri 2004, Van Cauter 1997)',
       sources: [{ pmid: '15602591', level: 'B', title: 'Taheri et al., 2004 — Short sleep duration metabolic patterns' }],
       evidenceLevel: 'B',
@@ -949,12 +949,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '19179058', level: 'A', title: 'Marlatt & Donovan, 2005 — Relapse prevention evidence synthesis' }],
       evidenceLevel: 'A',
       confidenceScore: 0.92,
-      interpretation: '>70% High — будь особенно внимательным. 40-70% Moderate — следи за триггерами. <40% Low — всё под контролем.',
+      interpretation: 'Выше 70% — будьте особенно внимательны. 40-70% — следите за триггерами. Ниже 40% — всё под контролем.',
       priority: 'CRITICAL',
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.92,
-      whyImportant: '🚨 Предсказывает срыв ДО того как он случится. Красный = действуй!'
+      whyImportant: 'Предсказывает срыв ДО того как он случится. Красный = действуй!'
     },
     // Energy Forecast — Высокий
     ENERGY_FORECAST: {
@@ -966,12 +966,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '9331550', level: 'B', title: 'Van Cauter et al., 1997 — Circadian variation in metabolism' }],
       evidenceLevel: 'B',
       confidenceScore: 0.86,
-      interpretation: 'Peak — оптимальное время для важных дел и тренировок. Dip — запланируй отдых или рутину.',
+      interpretation: 'Пик — время для важных дел и тренировок. Спад — запланируйте отдых или рутину.',
       priority: 'HIGH',
       category: 'PREDICTION',
       actionability: 'TODAY',
       impactScore: 0.70,
-      whyImportant: 'Планируй день по энергии. Важные дела — на пике!'
+      whyImportant: 'Планируйте день по энергии. Важные дела — на пике.'
     },
 
     // === SCIENTIFIC ANALYTICS v3.0 — Научные метрики ===
@@ -1053,7 +1053,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.88,
-      whyImportant: '⚡ Раннее предупреждение! Система замечает проблемы ДО срыва.'
+      whyImportant: 'Раннее предупреждение! Система замечает проблемы ДО срыва.'
     },
     // 2-Process — Средний, бодрость
     TWO_PROCESS_MODEL: {
@@ -1087,7 +1087,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'STATISTICS',
       actionability: 'INFORMATIONAL',
       impactScore: 0.25,
-      whyImportant: 'Чем больше данных — тем точнее анализ. Заполняй каждый день!'
+      whyImportant: 'Чем больше данных, тем точнее анализ. Заполняйте каждый день.'
     },
 
     // === RISK PANEL — Критический ===
@@ -1105,7 +1105,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.95,
-      whyImportant: '🚨 Главный индикатор! Предсказывает вероятность срыва в ближайшие часы.'
+      whyImportant: 'Главный индикатор! Предсказывает вероятность срыва в ближайшие часы.'
     },
     // Risk Factors — Высокий
     RISK_FACTORS: {
@@ -1119,7 +1119,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'RISK',
       actionability: 'TODAY',
       impactScore: 0.80,
-      whyImportant: 'Конкретные причины риска. Знаешь враг — побеждаешь!'
+      whyImportant: 'Конкретные причины риска. Когда причина известна, с ней проще справиться.'
     },
     // Prevention Strategy — Высокий
     PREVENTION_STRATEGY: {
@@ -1133,7 +1133,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'RISK',
       actionability: 'IMMEDIATE',
       impactScore: 0.85,
-      whyImportant: 'Конкретные действия для снижения риска. Следуй — победишь!'
+      whyImportant: 'Конкретные действия для снижения риска. Выполните их — риск снизится.'
     },
 
     // Next Meal — Высокий, ближайшее действие
@@ -1146,7 +1146,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '12828192', level: 'B', title: 'Brand-Miller et al., 2003 — Glycemic index and meal composition guidance' }],
       evidenceLevel: 'B',
       confidenceScore: 0.84,
-      interpretation: 'Следуй рекомендации для оптимального усвоения.',
+      interpretation: 'Следуйте рекомендации для оптимального усвоения.',
       priority: 'HIGH',
       category: 'TIMING',
       actionability: 'IMMEDIATE',
@@ -1159,7 +1159,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       name: 'Окна энергии',
       short: 'Показывает благоприятные периоды дня для задач, приёмов пищи и активности по прогнозу энергии.',
       details: 'Окна формируются на пересечении циркадного ритма, статуса волны, недавнего питания и активности. Это практический инструмент тайминга: сложные задачи и тренировки — в пики, рутину — в спады. Даже небольшое попадание в «свои» окна обычно повышает качество выполнения и снижает вечерние ошибки. Метрика особенно полезна в дни с высокой когнитивной нагрузкой.',
-      formula: 'Определяются на основе:\n  • Циркадного ритма (пик 10:00-12:00, 16:00-18:00)\n  • Состояния инсулиновой волны\n  • Времени последнего приёма пищи\n  • Уровня активности\n\n⭐ Оптимальное — когда все факторы совпадают.',
+      formula: 'Определяются на основе:\n • Циркадного ритма (пик 10:00-12:00, 16:00-18:00)\n • Состояния инсулиновой волны\n • Времени последнего приёма пищи\n • Уровня активности\n\nОптимальное — когда все факторы совпадают.',
       source: 'Van Cauter et al., 1997; Scheer et al., 2009',
       sources: [{ pmid: '19164701', level: 'B', title: 'Scheer et al., 2009 — Circadian meal timing metabolic effects' }],
       evidenceLevel: 'B',
@@ -1181,7 +1181,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       sources: [{ pmid: '22531613', level: 'B', title: 'Chtourou & Souissi, 2012 — Circadian timing and performance' }],
       evidenceLevel: 'B',
       confidenceScore: 0.85,
-      interpretation: 'Силовые — вечером (16-19ч), кардио — утром натощак.',
+      interpretation: 'Силовые — вечером, с 16:00 до 19:00; кардио — утром натощак.',
       priority: 'MEDIUM',
       category: 'TIMING',
       actionability: 'TODAY',
@@ -1210,9 +1210,9 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       name: 'Сценарии "Что если"',
       short: 'Сравнивает базовый и улучшенный сценарий, чтобы показать реальный потенциал изменений до конца дня.',
       details: 'Сценарии визуализируют разницу между «оставить как есть» и «выполнить 1-2 рекомендации». Это снижает неопределённость и усиливает мотивацию через понятный ожидаемый эффект. Важно воспринимать их как вероятностный ориентир, а не жёсткое предсказание: задача сценариев — помочь выбрать лучший следующий шаг. Метрика особенно полезна, когда нужно быстро решить, стоит ли менять план прямо сейчас.',
-      formula: 'Моделирование:\n  📊 Вероятный — текущий тренд без изменений\n  🌟 Оптимистичный — при выполнении рекомендаций\n\nКаждый сценарий рассчитывается на основе:\n  • Текущих показателей дня\n  • Исторических паттернов\n  • Времени до конца дня',
+      formula: 'Моделирование:\n Вероятный — текущий тренд без изменений\n Оптимистичный — при выполнении рекомендаций\n\nКаждый сценарий рассчитывается на основе:\n • Текущих показателей дня\n • Исторических паттернов\n • Времени до конца дня',
       source: 'Прогнозная аналитика временных рядов; Scenario-based decision support systems',
-      interpretation: 'Сравни сценарии — разница показывает потенциал улучшения.',
+      interpretation: 'Сравните сценарии — разница показывает запас для улучшения.',
       priority: 'MEDIUM',
       category: 'PREDICTION',
       actionability: 'TODAY',
@@ -1225,7 +1225,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       name: 'Панель фенотипа',
       short: 'Сводно показывает ваш метаболический тип и помогает персонализировать питание/нагрузку.',
       details: 'Панель фенотипа агрегирует долгосрочные паттерны (ритм, реакцию на углеводы, восстановление, стабильность), чтобы дать практическое направление персонализации. Это не «ярлык», а рабочая модель, которая уточняется по мере накопления данных. Полезно смотреть в динамике 3–6 недель и проверять рекомендации на практике.',
-      formula: 'Определение на основе 30+ дней данных:\n  • Анализ паттернов энергии (утро/вечер)\n  • Скорость инсулинового ответа\n  • Восстановление после нагрузок\n  • Стабильность веса и настроения\n\nТипы: 🏃Спринтер, 🏃‍♂️Марафонец, 🏋️Силовик, ⚖️Сбалансированный, 🦉Сова, 🐦Жаворонок',
+      formula: 'Определение на основе 30+ дней данных:\n • Анализ паттернов энергии (утро/вечер)\n • Скорость инсулинового ответа\n • Восстановление после нагрузок\n • Стабильность веса и настроения\n\nТипы:Спринтер,Марафонец,Силовик,Сбалансированный,Сова,Жаворонок',
       source: 'Хронобиология (Roenneberg, 2012); Метаболическая типология',
       sources: [{ pmid: '22738673', level: 'B', title: 'Roenneberg et al., 2012 — Chronotype and metabolic traits' }],
       evidenceLevel: 'B',
@@ -1235,7 +1235,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PATTERNS',
       actionability: 'LONG_TERM',
       impactScore: 0.55,
-      whyImportant: 'Твой метаболический тип. Понимание себя = персональная стратегия.'
+      whyImportant: 'Ваш метаболический тип. Понимание себя — основа персональной стратегии.'
     },
     // Phenotype Confidence — Низкий
     PHENOTYPE_CONFIDENCE: {
@@ -1249,7 +1249,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'STATISTICS',
       actionability: 'INFORMATIONAL',
       impactScore: 0.25,
-      whyImportant: 'Насколько точно определён твой тип.'
+      whyImportant: 'Насколько точно определён ваш тип.'
     },
     // Phenotype Radar — Средний
     PHENOTYPE_RADAR: {
@@ -1277,7 +1277,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PATTERNS',
       actionability: 'LONG_TERM',
       impactScore: 0.70,
-      whyImportant: 'Персональные значения вместо средних. Твои уникальные пороги!'
+      whyImportant: 'Персональные значения вместо средних. Ваши уникальные пороги.'
     },
 
     // === TRAITS — характеристики метаболизма ===
@@ -1346,12 +1346,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       name: 'Хронотип',
       short: 'Определяет ваш ритм «сова/жаворонок», чтобы точнее настроить тайминг дня.',
       details: 'Согласование режима с хронотипом повышает переносимость плана и снижает трение в повседневных решениях. Вместо борьбы с биоритмом лучше адаптировать ключевые действия под «свои» часы.',
-      formula: 'Определяется по:\n  • Времени первого приёма пищи\n  • Времени засыпания/пробуждения\n  • Распределению калорий (утро/вечер)\n  • Времени тренировок\n\n<40 = 🐦Жаворонок, >60 = 🦉Сова, 40-60 = нейтральный',
+      formula: 'Определяется по:\n • Времени первого приёма пищи\n • Времени засыпания/пробуждения\n • Распределению калорий (утро/вечер)\n • Времени тренировок\n\n<40 =Жаворонок, >60 =Сова, 40-60 = нейтральный',
       source: 'Roenneberg et al., 2003 — Munich Chronotype Questionnaire',
       sources: [{ pmid: '14715839', level: 'B', title: 'Roenneberg et al., 2003 — Chronotype assessment and validation' }],
       evidenceLevel: 'B',
       confidenceScore: 0.85,
-      interpretation: 'Подстраивай тайминги под свой хронотип для лучших результатов.',
+      interpretation: 'Подстраивайте время приёмов под свой хронотип — результат будет лучше.',
       priority: 'MEDIUM',
       category: 'PATTERNS',
       actionability: 'LONG_TERM',
@@ -1399,7 +1399,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PATTERNS',
       actionability: 'TODAY',
       impactScore: 0.80,
-      whyImportant: 'Конкретные персональные действия. Начни с первой!'
+      whyImportant: 'Конкретные персональные действия. Начните с первого.'
     },
 
     // === NEW v4.0 PATTERNS (B1-B6) ===
@@ -1494,7 +1494,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PATTERNS',
       actionability: 'WEEKLY',
       impactScore: 0.70,
-      whyImportant: 'Цикл влияет на голод, метаболизм, настроение. Научись работать с ним, а не против.'
+      whyImportant: 'Цикл влияет на голод, метаболизм и настроение. Научитесь работать с ним, а не против.'
     },
     // B6: Weekend Effect
     WEEKEND_EFFECT: {
@@ -1563,7 +1563,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     MICRONUTRIENT_RADAR: {
       name: 'Микронутриентный радар',
       short: 'Показывает, каких микроэлементов может не хватать по среднему рациону за неделю.',
-      details: 'Радар оценивает устойчивый недельный фон по ключевым микроэлементам (Fe, Mg, Zn, Ca), а не случайный один день. Порог <80% от RDA/AI используется как ранний сигнал возможного дефицита: это ещё не клинический диагноз, но повод усилить продукты‑источники и пересмотреть структуру рациона. Практически полезно смотреть динамику 2–4 недели подряд: если показатель стабильно низкий, вероятность функционального дефицита выше.',
+      details: 'Радар оценивает устойчивый недельный фон по ключевым микроэлементам — железу, магнию, цинку и кальцию, — а не случайный один день. Порог ниже 80% от нормы работает как ранний сигнал возможного дефицита: это ещё не диагноз, но повод добавить продукты-источники и пересмотреть структуру рациона. Полезно смотреть динамику 2-4 недели подряд: если показатель стабильно низкий, вероятность настоящего дефицита выше.',
       formula: '7-дневное среднее по Fe/Mg/Zn/Ca.\nДефицит = <80% от рекомендованной нормы (RDA/AI).',
       sources: [
         {
@@ -1575,7 +1575,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
           url: 'https://ods.od.nih.gov/factsheets/'
         }
       ],
-      interpretation: 'Если показатель <80% — вероятный дефицит. Усиль продукты‑источники.',
+      interpretation: 'Если показатель ниже 80% — вероятен дефицит. Добавьте продукты-источники.',
       priority: 'HIGH',
       category: 'NUTRITION',
       actionability: 'WEEKLY',
@@ -1617,7 +1617,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
           url: 'https://www.who.int/publications/i/item/9789241504829'
         }
       ],
-      interpretation: 'Na/K <1.0 — хорошо. Высокий натрий или низкий калий = риск давления.',
+      interpretation: 'Когда натрия меньше, чем калия, — хорошо. Много натрия или мало калия повышает риск по давлению.',
       priority: 'HIGH',
       category: 'NUTRITION',
       actionability: 'WEEKLY',
@@ -1684,7 +1684,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     // C13: Vitamin Defense Radar (NEW v6.0 — Phase 1, 12.02.2026)
     VITAMIN_DEFENSE: {
       name: 'Радар 11 витаминов',
-      short: 'Отслеживает дефицит ключевых витаминов относительно DRI: A, C, D, E, K, B1-B6, B9, B12.',
+      short: 'Отслеживает дефицит ключевых витаминов относительно суточной нормы: A, C, D, E, K, группы B и фолата.',
       details: 'Метрика анализирует поступление 11 витаминов за 7+ дней и выявляет дефициты (<70% DRI). Используется функциональная кластеризация: антиоксиданты (A/C/E), костная система (D/K), энергообмен (B1/B2/B3/B6), кроветворение (B9/B12). Снижение балла указывает на высокий риск: множественный дефицит (≥5 витаминов) требует коррекции рациона. Используются gender-adjusted DRI из IOM 2011.',
       formula: 'Для каждого витамина:\n  intake = Σ(products × grams/100) / days\n  pctDV = (intake / DRI[gender]) × 100\n  deficit = pctDV < 70%\n\nScore = 100 - (countDeficits × 8), clamp [0, 100]\nКластеры: antioxidant / bone / energy / blood.',
       sources: [
@@ -1753,7 +1753,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     // C15: Protein Distribution (NEW v6.0 — Phase 2, 12.02.2026)
     PROTEIN_DISTRIBUTION: {
       name: 'Распределение белка',
-      short: 'Показывает, насколько белок распределён по приёмам с попаданием в зону 20–40г/приём.',
+      short: 'Показывает, насколько ровно белок распределён по приёмам: цель — 20-40 г на приём.',
       details: 'Метрика оценивает не только суточный белок, но и распределение по приёмам. Для каждого приёма рассчитывается mealProtein = Σ(protein100 × grams / 100), затем классификация: <10г subthreshold, 10-20г below optimal, 20-40г optimal, >50г excess. На уровне дня считается доля optimal-приёмов и равномерность распределения (protein spread). Если разница между max и min приёмом <20г — даётся bonus за равномерность. Итоговый score объединяет распределение (70%), достижение суточной цели по белку (до 30%) и evenness-бонус.',
       formula: 'mealProtein = Σ(protein100 × grams / 100)\ndistributionScore = optimalMeals / totalMeals × 100\nevenBonus = 10 if (maxMealProtein - minMealProtein) < 20 else 0\n\nScore = distributionScore × 0.7 + min(100, totalProtein/targetProtein × 100) × 0.3 + evenBonus',
       sources: [
@@ -1780,7 +1780,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     // C16: Antioxidant Defense (NEW v6.0 — Phase 3, 12.02.2026)
     ANTIOXIDANT_DEFENSE: {
       name: 'Антиоксидантная защита',
-      short: 'Оценивает индекс антиоксидантной защиты (A/C/E + Se + Zn) с учётом тренировочной нагрузки.',
+      short: 'Оценивает антиоксидантную защиту по витаминам A, C и E, селену и цинку с учётом тренировочной нагрузки.',
       details: 'Метрика агрегирует 5 ключевых нутриентов антиоксидантной системы: витамин A (20%), витамин C (30%), витамин E (20%), селен (15%), цинк (15%). Дополнительно учитывается оксидативный спрос от тренировок: high demand при нагрузке Z4-Z5 >20 минут, moderate при любой тренировке, low при отсутствии тренировок. При high demand итоговый score понижается мультипликатором 0.85, поскольку одинаковое поступление нутриентов покрывает большую физиологическую потребность. Флаги риска: antioxidant index <60, vitC <50% при high demand, vitE <50% в связке с высокой долей NOVA-4.',
       formula: 'antioxidantIndex = min(1, A/DRI_A)×20 + min(1, C/DRI_C)×30 + min(1, E/DRI_E)×20 + min(1, Se/55)×15 + min(1, Zn/11)×15\n\nScore = antioxidantIndex × (demand === high ? 0.85 : 1.0)',
       sources: [
@@ -1830,8 +1830,8 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     // C17: Bone Health Index (NEW v6.0 — Phase 4, 12.02.2026)
     BONE_HEALTH: {
       name: 'Здоровье костей',
-      short: 'Комплексная оценка костного профиля: Ca + D + K + P + силовая нагрузка и Ca:P ratio.',
-      details: 'Метрика оценивает нутриентную поддержку костной ткани (кальций, витамин D, витамин K, фосфор), баланс Ca:P и наличие weight-bearing нагрузки (strength training). Базовые веса: Ca 35%, D 25%, K 15%, P 10%. Ratio-блок: оптимум Ca:P 1.0–2.0 даёт бонус, крайние значения дают штраф. Exercise-блок: регулярные силовые добавляют бонус как стимул костного ремоделирования. Риск-модификатор для женщин старшего возраста ужесточает целевые пороги. Синергетические флаги: VitD<50% и VitK<50% как признаки ухудшения утилизации кальция.',
+      short: 'Комплексная оценка костного профиля: кальций, витамины D и K, фосфор, силовая нагрузка и соотношение кальция с фосфором.',
+      details: 'Метрика оценивает нутриентную поддержку костной ткани (кальций, витамин D, витамин K, фосфор), баланс кальция с фосфором и наличие нагрузки с весом тела. Базовые веса: кальций 35%, витамин D 25%, витамин K 15%, фосфор 10%. Соотношение кальция и фосфора в диапазоне от 1 до 2 даёт бонус, крайние значения — штраф. Регулярные силовые добавляют бонус как стимул обновления кости. Для женщин старшего возраста пороги ужесточаются. Отдельно отмечается сочетание низких витаминов D и K: вместе они ухудшают усвоение кальция.',
       formula: 'Score = Ca_pct + VitD_pct + VitK_pct + P_pct + ratioBonus + exerciseBonus - riskPenalty\nwhere Ca_pct=min(1,Ca/1000)×35, VitD_pct=min(1,D/15)×25, VitK_pct=min(1,K/DRI_K)×15, P_pct=min(1,P/700)×10',
       sources: [
         {
@@ -1854,7 +1854,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     TRAINING_TYPE_MATCH: {
       name: 'Питание под тип тренировки',
       short: 'Сопоставляет тип тренировок (cardio/strength/hobby) с макро- и post-workout стратегией.',
-      details: 'Метрика определяет преобладающий тренировочный профиль и проверяет соответствие питания целям этой нагрузки. Для cardio-intense фокус на углеводах и восполнении гликогена; для strength — повышенный белок и белковое окно после тренировки; для hobby/light — поддерживающий режим без жёсткого тайминга. Дополнительно оценивается post-workout окно (2ч), а также recovery-нутриенты (Mg и VitC) как поддержка восстановления. Итоговый score объединяет macro-match (50%), post-workout (30%) и recovery-блок (20%).',
+      details: 'Метрика определяет преобладающий тип нагрузки и проверяет, отвечает ли питание её целям. Для интенсивного кардио важны углеводы и восполнение гликогена; для силовых — повышенный белок и белковый приём после тренировки; для лёгкой активности достаточно поддерживающего режима без жёсткого расписания. Дополнительно оценивается двухчасовое окно после тренировки и нутриенты восстановления — магний и витамин C. Итоговая оценка складывается из соответствия макронутриентов (50%), окна после тренировки (30%) и восстановления (20%).',
       formula: 'Score = macroMatchScore×0.5 + postWorkoutScore×0.3 + recoveryNutrientScore×0.2',
       sources: [
         {
@@ -1877,7 +1877,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     ELECTROLYTE_HOMEOSTASIS: {
       name: 'Электролитный баланс',
       short: 'Оценивает Na/K/Mg/Ca баланс с учётом потерь при тренировках и рисков гипонатриемии/дисбаланса.',
-      details: 'Метрика анализирует ключевые электролиты (натрий, калий, магний, кальций) и их соотношения. Основной риск-фактор — высокий Na:K ratio (цель <1.0), а также низкий натрий при высоком потоотделении (гипонатриемический паттерн) и дефицит магния. При нагрузках с потом >800 мл/ч потребности в электролитах повышаются, поэтому применяется demand-модификатор. Итоговый score учитывает ratio-блок, абсолютное покрытие и тренировочную нагрузку.',
+      details: 'Метрика анализирует ключевые электролиты (натрий, калий, магний, кальций) и их соотношения. Основной риск — когда натрия больше калия, а нужно наоборот; отдельно учитываются низкий натрий при сильном потоотделении и дефицит магния. При потере пота больше 800 мл в час потребность в электролитах растёт, и метрика это учитывает. Итоговая оценка складывается из соотношений, абсолютного покрытия и тренировочной нагрузки.',
       formula: 'Base = NaK_score×0.5 + Mg_score×0.2 + Ca_score×0.15 + K_score×0.15\nScore = Base - demandPenalty + adaptationBonus',
       sources: [
         {
@@ -1985,7 +1985,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'TIMING',
       actionability: 'TODAY',
       impactScore: 0.68,
-      whyImportant: '🌙 Поздняя еда = плохой сон + труднее худеть. Закрывай кухню за 3ч до сна!'
+      whyImportant: 'Поздняя еда ухудшает сон и мешает снижать вес. Закрывайте кухню за 3 ч до сна.'
     },
     MEAL_QUALITY_TREND: {
       name: 'Тренд качества приёмов',
@@ -2007,10 +2007,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'NUTRITION',
       actionability: 'WEEKLY',
       impactScore: 0.65,
-      whyImportant: '📈 Тренд важнее отдельных дней. Растущее качество = устойчивый прогресс!'
+      whyImportant: 'Тренд важнее отдельных дней. Растущее качество = устойчивый прогресс!'
     },
     SLEEP_WEIGHT: {
-      name: 'Сон ↔ Вес',
+      name: 'Сон Вес',
       short: 'Анализирует корреляцию между качеством/длительностью сна и динамикой веса.',
       details: 'Недостаток сна (<7ч) нарушает гормональный баланс: грелин (гормон голода) повышается на 15%, лептин (гормон сытости) снижается на 15-20%, что создаёт дополнительный голод ~300 ккал/день. Кортизол растёт, способствуя накоплению висцерального жира. Плюс снижается willpower и самоконтроль — выше риск срывов. Метрика отслеживает корреляцию: если в дни с <7ч сна вес растёт/не падает, а в дни с ≥7.5ч — снижается, это сильный сигнал. Threshold: |r| > 0.3 считается значимой связью. Для женщин связь сильнее из-за более выраженных гормональных флуктуаций.',
       formula: 'days[] = {sleepHours, weightChange}\ncorrelation = pearson(sleepHours, -weightChange)\n  // negative weight change = weight loss = positive outcome\n\nScore:\n  if |r| > 0.5 → 100 (сильная связь)\n  if |r| > 0.3 → 75 (умеренная)\n  if |r| < 0.2 → 50 (слабая/нет)',
@@ -2024,12 +2024,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
           pmid: '15531540'
         }
       ],
-      interpretation: '|r| > 0.5 — сильная связь (сон критичен для твоего веса). 0.3-0.5 — умеренная. <0.3 — слабая.',
+      interpretation: 'Сильная связь означает, что сон критичен для вашего веса. Дальше идут умеренная и слабая.',
       priority: 'HIGH',
       category: 'RECOVERY',
       actionability: 'DAILY',
       impactScore: 0.85,
-      whyImportant: '😴 Недосып = +300 ккал голода в день. Высыпайся — это самый простой путь к прогрессу!'
+      whyImportant: 'Недосып = +300 ккал голода в день. Высыпайся — это самый простой путь к прогрессу!'
     },
     SLEEP_HUNGER: {
       name: 'Сон → Голод',
@@ -2051,11 +2051,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'RECOVERY',
       actionability: 'TODAY',
       impactScore: 0.80,
-      whyImportant: '😴 Недосып = гормональный голод +300 ккал + тяга к джанку. Сон вместо силы воли!'
+      whyImportant: 'Недосып = гормональный голод +300 ккал + тяга к джанку. Сон вместо силы воли!'
     },
     TRAINING_KCAL: {
-      name: 'Тренировки ↔ Калории',
-      short: 'Анализирует паттерн компенсации тренировок едой: съедаешь ли ты больше в дни тренировок.',
+      name: 'Тренировки Калории',
+      short: 'Анализирует компенсацию тренировок едой: едите ли вы больше в дни тренировок.',
       details: 'Феномен exercise compensation — распространённая ловушка: после тренировки человек переоценивает расход калорий и переедает, компенсируя ~75-150% от реально потраченного. Это объясняет эффект «тренируюсь, но не худею». Метрика сравнивает калорийность в дни с тренировками vs без. Если разница > 400 ккал, а тренировка «стоит» ~300-500 ккал → compensation > 100% → прогресс блокируется. Оптимальный паттерн: небольшое повышение калорий (+10-15%) для восстановления, но не «награда за тренировку». Важный нюанс: для силовых тренировок допустимо +200-300 ккал, для кардио — минимальная компенсация (~50-100), так как цель обычно = дефицит.',
       formula: 'trainingDays[] = days with trainings\nrestDays[] = days without trainings\n\navgKcal_training = mean(trainingDays.kcal)\navgKcal_rest = mean(restDays.kcal)\ndelta = avgKcal_training - avgKcal_rest\n\navgExpenditure = mean(trainingDays.totalExpenditure)\ncompensationRatio = delta / avgExpenditure\n\nScore:\n  if compensationRatio < 0.2 → 100 (minimal comp)\n  if 0.2-0.5 → 80 (moderate)\n  if 0.5-0.8 → 60 (high comp)\n  if >0.8 → 40 (full comp, блокирует прогресс)',
       sources: [
@@ -2073,10 +2073,10 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'ACTIVITY',
       actionability: 'WEEKLY',
       impactScore: 0.70,
-      whyImportant: '🏋️ Тренировка не = +500 ккал к ужину. Не компенсируй весь расход едой!'
+      whyImportant: 'Тренировка не = +500 ккал к ужину. Не компенсируй весь расход едой!'
     },
     STEPS_WEIGHT: {
-      name: 'Шаги ↔ Вес',
+      name: 'Шаги Вес',
       short: 'Корреляция между количеством шагов (NEAT-активность) и динамикой веса.',
       details: 'NEAT (Non-Exercise Activity Thermogenesis) — бытовая активность, не являющаяся тренировкой: ходьба, уборка, игра с детьми. NEAT может давать 200-600 ккал/день расхода у активных людей (10-15k шагов) vs сидячих (<5k). Это мощный инструмент для дефицита без тренировок. Метрика анализирует связь: больше шагов → быстрее уходит вес. Correlation r > 0.4 считается сильной связью. Важный инсайт: NEAT эффективнее тренировок для долгосрочного контроля веса, так как не вызывает компенсаторного голода (в отличие от интенсивных кардио). 10k шагов/день — хороший baseline, 12-15k — отличный. Меньше 7k — риск застоя веса даже при дефиците калорий.',
       formula: 'days[] = {steps, weightChange}\ncorrelation = pearson(steps, -weightChange)\n  // more steps → weight loss → negative change\n\navgSteps = mean(days.steps)\n\nScore:\n  corr_score = |r| × 50\n  volume_score = min(50, avgSteps / 200)  // 10k steps = 50 points\n  total = corr_score + volume_score',
@@ -2095,7 +2095,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'ACTIVITY',
       actionability: 'DAILY',
       impactScore: 0.72,
-      whyImportant: '🚶 NEAT = 200-600 ккал расхода без тренировок. Больше шагов = легче худеть!'
+      whyImportant: 'NEAT = 200-600 ккал расхода без тренировок. Больше шагов = легче худеть!'
     },
     PROTEIN_SATIETY: {
       name: 'Белок → Сытость',
@@ -2117,7 +2117,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'NUTRITION',
       actionability: 'TODAY',
       impactScore: 0.75,
-      whyImportant: '🥩 Белок = сытость на 3-4ч без лишних калорий. 20-30г на приём!'
+      whyImportant: 'Белок даёт сытость на 3-4 ч без лишних калорий: 20-30 г на приём.'
     },
     FIBER_REGULARITY: {
       name: 'Клетчатка → Регулярность',
@@ -2134,12 +2134,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
           pmid: '30638909'
         }
       ],
-      interpretation: '≥80 — достаточно клетчатки (≥25г/день). 60-79 — умеренно. <60 — недостаток клетчатки.',
+      interpretation: '80 и выше — клетчатки достаточно, это от 25 г в день. 60-79 — умеренно. Ниже 60 — клетчатки не хватает.',
       priority: 'MEDIUM',
       category: 'NUTRITION',
       actionability: 'WEEKLY',
       impactScore: 0.68,
-      whyImportant: '🌾 Клетчатка = стабильная энергия + сытость + здоровый кишечник. Цель: 25-35г/день!'
+      whyImportant: 'Клетчатка даёт стабильную энергию, сытость и здоровый кишечник. Цель — 25-35 г в день.'
     },
     STRESS_EATING: {
       name: 'Стресс → Переедание',
@@ -2161,12 +2161,12 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PSYCHOLOGY',
       actionability: 'WEEKLY',
       impactScore: 0.72,
-      whyImportant: '😰 Стресс = кортизол = +300 ккал комфортной еды. Найди альтернативы заеданию!'
+      whyImportant: 'Стресс поднимает кортизол и добавляет около 300 ккал комфортной еды. Найдите альтернативы заеданию.'
     },
     MOOD_FOOD: {
-      name: 'Настроение ↔ Еда',
+      name: 'Настроение Еда',
       short: 'Двусторонняя связь: как еда влияет на настроение и как настроение влияет на выбор еды.',
-      details: 'Метрика анализирует bidirectional relationship. Направление 1: плохое настроение утром → выбор менее здоровой еды (↑GI, ↑простые углеводы, ↓белок) = эмоциональный выбор. Направление 2: качество еды → настроение через 2-4ч. Высокий GI/мало белка → sugar crash → падение настроения. Низкий GI + достаточно белка → stable energy → stable mood. Механизм: stable glucose → stable neurotransmitters (серотонин, дофамин). Метрика считает две корреляции: mood[morning] ↔ mealQuality[day], mealQuality[meal] ↔ mood[2h later]. Если обе значимы → bidirectional pattern подтверждён. Практически: начинай день с белкового завтрака → стабилизирует настроение → лучше выбор еды весь день.',
+      details: 'Метрика анализирует bidirectional relationship. Направление 1: плохое настроение утром → выбор менее здоровой еды (↑GI, ↑простые углеводы, ↓белок) = эмоциональный выбор. Направление 2: качество еды → настроение через 2-4ч. Высокий GI/мало белка → sugar crash → падение настроения. Низкий GI + достаточно белка → stable energy → stable mood. Механизм: stable glucose → stable neurotransmitters (серотонин, дофамин). Метрика считает две корреляции: mood[morning] mealQuality[day], mealQuality[meal] mood[2h later]. Если обе значимы → bidirectional pattern подтверждён. Практически: начинай день с белкового завтрака → стабилизирует настроение → лучше выбор еды весь день.',
       formula: 'For each day:\n  corr1 = pearson(mood_morning, avgMealQuality_day)\n  corr2 = pearson(mealGI, mood_afternoon)\n\navgMoodStability = stddev(mood across hours)\n\nScore:\n  pattern_strength = (|corr1| + |corr2|) / 2 × 50\n  stability_score = (1 - avgMoodStability / 3) × 50\n  total = pattern_strength + stability_score',
       sources: [
         {
@@ -2183,7 +2183,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'PSYCHOLOGY',
       actionability: 'DAILY',
       impactScore: 0.70,
-      whyImportant: '😊 Еда влияет на настроение, настроение — на выбор еды. Разорви цикл!'
+      whyImportant: 'Еда влияет на настроение, настроение — на выбор еды. Разорвите этот круг.'
     },
     HYPERTROPHY: {
       name: 'Гипертрофия',
@@ -2205,7 +2205,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'METABOLISM',
       actionability: 'LONG_TERM',
       impactScore: 0.78,
-      whyImportant: '💪 Композиция важнее веса. Цель: мышцы растут, жир уходит!'
+      whyImportant: 'Композиция важнее веса. Цель: мышцы растут, жир уходит!'
     },
 
     // === Умный планировщик — Sprint 9 science engine (v4.0.6) ===
@@ -2229,7 +2229,7 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
       category: 'TIMING',
       actionability: 'TODAY',
       impactScore: 0.89,
-      whyImportant: '🧠 9 принципов доказательной науки в каждом приёме. Хроно · MPS · GL · Анаб.окно · Сон · Фенотип · Личный ритм.'
+      whyImportant: '9 принципов доказательной науки в каждом приёме. Хроно · MPS · GL · Анаб.окно · Сон · Фенотип · Личный ритм.'
     }
   };
 

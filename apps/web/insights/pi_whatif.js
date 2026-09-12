@@ -595,31 +595,31 @@
             case ACTION_TYPES.ADD_PROTEIN: {
                 const grams = p.proteinGrams || 30;
                 const meal = getMealName(p.mealIndex || 0);
-                tips.push(`Добавьте ${grams}г белка в ${meal}`);
-                tips.push('🥚 Яйца, творог 5%, куриная грудка или протеиновый коктейль');
+                tips.push(`Добавьте ${grams} г белка в ${meal}`);
+                tips.push('Яйца, творог 5%, куриная грудка или протеиновый коктейль');
                 if (grams >= 30) {
-                    tips.push('Распределите белок равномерно в течение дня (25-35г на приём)');
+                    tips.push('Распределите белок равномерно в течение дня: 25-35 г на приём');
                 }
                 break;
             }
             case ACTION_TYPES.ADD_FIBER: {
                 const grams = p.fiberGrams || 15;
-                tips.push(`Добавьте ${grams}г клетчатки в рацион`);
-                tips.push('🥦 Брокколи, овёс, чечевица, ягоды, авокадо');
-                tips.push('Увеличивайте клетчатку постепенно (+5г/неделю) и пейте больше воды');
+                tips.push(`Добавьте ${grams} г клетчатки в рацион`);
+                tips.push('Брокколи, овёс, чечевица, ягоды, авокадо');
+                tips.push('Увеличивайте клетчатку постепенно, по 5 г в неделю, и пейте больше воды');
                 break;
             }
             case ACTION_TYPES.REDUCE_CARBS: {
                 const pct = p.carbsPercent || 25;
                 tips.push(`Снизить быстрые углеводы на ~${pct}%`);
-                tips.push('🍞 Замените белый хлеб → цельнозерновой, сахар → стевия');
+                tips.push('Замените белый хлеб → цельнозерновой, сахар → стевия');
                 tips.push('Сложные углеводы (гречка, бурый рис) в первой половине дня');
                 break;
             }
             case ACTION_TYPES.INCREASE_MEAL_GAP: {
                 const gap = p.targetGapHours || 4;
-                tips.push(`Увеличьте промежуток между приёмами до ${gap}ч`);
-                tips.push('☕ Между приёмами — вода, чай, чёрный кофе (без сахара)');
+                tips.push(`Увеличьте промежуток между приёмами до ${gap} ч`);
+                tips.push('Между приёмами — вода, чай, чёрный кофе (без сахара)');
                 tips.push('Это поможет инсулину вернуться к базальному уровню');
                 break;
             }
@@ -628,20 +628,20 @@
                 const direction = (p.shiftMinutes || -30) < 0 ? 'раньше' : 'позже';
                 const meal = getMealName(p.mealIndex || 0);
                 tips.push(`Сдвиньте ${meal} на ${shiftMin} мин ${direction}`);
-                tips.push('🕐 Оптимальное окно: завтрак 7-9, обед 12-14, ужин 18-19:30');
+                tips.push('Оптимальное окно: завтрак 7-9, обед 12-14, ужин 18-19:30');
                 tips.push('Придерживайтесь стабильного расписания каждый день');
                 break;
             }
             case ACTION_TYPES.SKIP_LATE_MEAL:
                 tips.push('Последний приём пищи — не позже 19:00-20:00');
-                tips.push('🌙 Если голодны вечером — травяной чай или кефир 1%');
-                tips.push('Пищевое окно 10-12ч (напр. 8:00-20:00) для циркадного ритма');
+                tips.push('Если голодны вечером — травяной чай или кефир 1%');
+                tips.push('Пищевое окно 10-12 ч, например с 8:00 до 20:00 — так ровнее циркадный ритм');
                 break;
 
             case ACTION_TYPES.INCREASE_SLEEP: {
                 const target = p.targetSleepHours || 8;
-                tips.push(`Целевая длительность сна: ${target}ч`);
-                tips.push('😴 Ложитесь на 30-60 мин раньше привычного');
+                tips.push(`Целевая длительность сна: ${target} ч`);
+                tips.push('Ложитесь на 30-60 мин раньше привычного');
                 tips.push('Установите будильник-напоминание «пора спать» за 30 мин');
                 if (target >= 9) {
                     tips.push('9+ часов подходит при высоких тренировочных нагрузках');
@@ -651,7 +651,7 @@
             case ACTION_TYPES.ADJUST_BEDTIME: {
                 const bt = p.targetBedtime || '22:30';
                 tips.push(`Оптимальное время отбоя: ${bt}`);
-                tips.push('🛏️ За 1 час до сна: нет экранов, тёплый душ, лёгкая растяжка');
+                tips.push('За 1 час до сна: нет экранов, тёплый душ, лёгкая растяжка');
                 tips.push('Фиксированное время отбоя ±15 мин, включая выходные');
                 break;
             }
@@ -660,14 +660,14 @@
                 const intensityLabels = ['лёгкая', 'средняя', 'высокая'];
                 const intLabel = intensityLabels[p.intensity || 1] || 'средняя';
                 tips.push(`Добавьте тренировку ${dur} мин, интенсивность: ${intLabel}`);
-                tips.push('🏋️ Силовая 2-3 раза/нед + кардио 2 раза/нед = оптимум');
-                tips.push('Приём белка 25-30г в течение 2ч после тренировки');
+                tips.push('Силовая 2-3 раза/нед + кардио 2 раза/нед = оптимум');
+                tips.push('Приём белка 25-30 г в течение 2 ч после тренировки');
                 break;
             }
             case ACTION_TYPES.INCREASE_STEPS: {
                 const target = p.targetSteps || 10000;
                 tips.push(`Цель: ${target.toLocaleString('ru')} шагов в день`);
-                tips.push('🚶 Прогулка 20 мин после обеда = ~2000 шагов');
+                tips.push('Прогулка 20 мин после обеда = ~2000 шагов');
                 tips.push('Используйте лестницу вместо лифта, паркуйтесь дальше');
                 break;
             }
@@ -676,7 +676,7 @@
         // Add impact-based tip if significant improvement expected
         const topImpact = impact[0];
         if (topImpact && topImpact.delta >= 8) {
-            tips.push(`📈 Наибольший эффект ожидается на: ${topImpact.desc} (+${topImpact.delta} баллов)`);
+            tips.push(`Наибольший эффект ожидается на: ${topImpact.desc} (+${topImpact.delta} баллов)`);
         }
 
         return tips;

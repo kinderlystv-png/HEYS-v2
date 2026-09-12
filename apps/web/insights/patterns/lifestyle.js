@@ -326,8 +326,8 @@
         };
 
         const insight = keyData.bayesianR > 0.4
-            ? `😊 ${factorNames[keyFactor]} ↑ → самочувствие ↑ (r=${keyData.bayesianR.toFixed(2)}, p<${keyData.pValue < 0.01 ? '0.01' : '0.05'}, N=${keyData.dataPoints})`
-            : `🔍 ${factorNames[keyFactor]} влияет на самочувствие (r=${keyData.bayesianR.toFixed(2)}, p<${keyData.pValue < 0.01 ? '0.01' : '0.05'}, N=${keyData.dataPoints})`;
+            ? `Чем выше ${factorNames[keyFactor]}, тем лучше самочувствие`
+            : `${factorNames[keyFactor]} влияет на самочувствие`;
 
         return {
             pattern: PATTERNS.WELLBEING_CORRELATION,
@@ -403,13 +403,13 @@
         let insight;
         if (avgAchievement >= 90) {
             score = 100;
-            insight = `💧 Отлично! ${Math.round(avgWater)}мл (${Math.round(avgAchievement)}% нормы)`;
+            insight = `Отлично: ${Math.round(avgWater)} мл, это ${Math.round(avgAchievement)}% нормы`;
         } else if (avgAchievement >= 70) {
             score = 75;
-            insight = `✅ Норма. ${Math.round(avgWater)}мл (${Math.round(avgAchievement)}%). Можно чуть больше`;
+            insight = `Норма: ${Math.round(avgWater)} мл, это ${Math.round(avgAchievement)}% нормы. Можно чуть больше`;
         } else {
             score = 50;
-            insight = `⚠️ Маловато. ${Math.round(avgWater)}мл (${Math.round(avgAchievement)}%). Цель: ${Math.round(avgGoal)}мл`;
+            insight = `Маловато: ${Math.round(avgWater)} мл, это ${Math.round(avgAchievement)}% нормы. Цель — ${Math.round(avgGoal)} мл`;
         }
 
         const confidence = hydrationData.length >= 7 ? 0.8 : 0.5;
@@ -479,12 +479,12 @@
         let insight;
         if (avgWHR < threshold) {
             score = isPreliminary ? 82 : 90;
-            const trendText = trend < -0.001 ? ' 📉 Улучшается!' : trend > 0.001 ? ' ⚠️ Растёт' : ' Стабильно';
-            insight = `✅ WHR ${avgWHR.toFixed(2)} < ${threshold} (норма).${trendText}`;
+            const trendText = trend < -0.001 ? ' Улучшается!' : trend > 0.001 ? ' Растёт' : ' Стабильно';
+            insight = `WHR ${avgWHR.toFixed(2)} < ${threshold} (норма).${trendText}`;
         } else {
             score = isPreliminary ? 56 : 60;
-            const trendText = trend < -0.001 ? ' 📉 Снижается — продолжай!' : trend > 0.001 ? ' ⚠️ Растёт' : '';
-            insight = `⚠️ WHR ${avgWHR.toFixed(2)} > ${threshold}. Висцеральный жир.${trendText}`;
+            const trendText = trend < -0.001 ? ' Снижается — продолжайте.' : trend > 0.001 ? ' Растёт' : '';
+            insight = `WHR ${avgWHR.toFixed(2)} > ${threshold}. Висцеральный жир.${trendText}`;
         }
 
         const confidence = isPreliminary
@@ -492,7 +492,7 @@
             : measurements.length >= 30 ? 0.9 : measurements.length >= 20 ? 0.7 : 0.5;
 
         if (isPreliminary) {
-            insight = `ℹ️ Предварительная оценка по ${measurements.length} замер${measurements.length === 1 ? 'у' : 'ам'}: ${insight} Точность будет высокой после 3+ замеров.`;
+            insight = `Предварительная оценка по ${measurements.length} замер${measurements.length === 1 ? 'у' : 'ам'}: ${insight} Точность будет высокой после 3+ замеров.`;
         }
 
         return {
@@ -584,13 +584,13 @@
 
         let insight;
         if (kcalDiff > 150 && moodDiff < -0.3) {
-            insight = `🌙 Лютеиновая фаза: +${Math.round(kcalDiff)}ккал, настроение хуже. Это норма (прогестерон↑)`;
+            insight = `Лютеиновая фаза: +${Math.round(kcalDiff)} ккал, настроение хуже. Это норма — растёт прогестерон`;
         } else if (kcalDiff > 150) {
-            insight = `🌙 Лютеиновая фаза: +${Math.round(kcalDiff)}ккал (прогестерон↑ BMR на 5-10%)`;
+            insight = `Лютеиновая фаза: +${Math.round(kcalDiff)} ккал — прогестерон поднимает обмен на 5-10%`;
         } else if (moodDiff < -0.5) {
-            insight = '😔 Настроение падает во 2-й фазе. ПМС? Цикл влияет';
+            insight = 'Настроение падает во второй фазе — цикл влияет';
         } else {
-            insight = '✅ Цикл влияет умеренно. Различия в норме';
+            insight = 'Цикл влияет умеренно. Различия в норме';
         }
 
         const score = Math.abs(kcalDiff) < 200 && Math.abs(moodDiff) < 0.5 ? 90 : 70;
@@ -675,13 +675,13 @@
         let insight;
         if (kcalDiffPct > 30) {
             score = 50;
-            insight = `⚠️ В выходные +${Math.round(kcalDiffPct)}% калорий! Дефицит улетает`;
+            insight = `В выходные +${Math.round(kcalDiffPct)}% калорий — дефицит уходит`;
         } else if (kcalDiffPct > 10 && kcalDiffPct <= 30) {
             score = 70;
-            insight = `🟡 Выходные +${Math.round(kcalDiffPct)}% ккал. Норма, но следи`;
+            insight = `Выходные +${Math.round(kcalDiffPct)}% калорий. Норма, но следите`;
         } else {
             score = 90;
-            insight = `✅ Стабильный режим! Выходные ${kcalDiffPct > 0 ? '+' : ''}${Math.round(kcalDiffPct)}% ккал`;
+            insight = `Стабильный режим: выходные ${kcalDiffPct > 0 ? '+' : ''}${Math.round(kcalDiffPct)}% калорий`;
         }
 
         const confidence = weekdays.length >= 8 && weekends.length >= 6 ? 0.8 : 0.6;

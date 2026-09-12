@@ -86,17 +86,17 @@
 
         let insight = '';
         if (naKRatio < 1.0 && avgSodium < 2000) {
-            insight = `✅ Отличный Na:K баланс (${naKRatio.toFixed(2)}), натрий ${Math.round(avgSodium)}мг/день`;
+            insight = `Хорошее соотношение натрия и калия, натрий ${Math.round(avgSodium)} мг в день`;
         } else if (naKRatio > 1.5) {
-            insight = `🔴 Na:K = ${naKRatio.toFixed(2)} (норма <1.0). Риск гипертензии! Меньше соли, больше овощей/фруктов`;
+            insight = `Натрия больше калия при норме наоборот — это риск повышенного давления. Меньше соли, больше овощей и фруктов`;
         } else if (avgSodium > 2300) {
-            insight = `🟠 Натрий ${Math.round(avgSodium)}мг/день (норма <2000мг). Меньше колбас/сыров/солений`;
+            insight = `Натрий ${Math.round(avgSodium)} мг в день при норме до 2000 мг. Меньше колбас, сыров и солений`;
         } else {
-            insight = `🟡 Na:K = ${naKRatio.toFixed(2)} (норма <1.0), натрий ${Math.round(avgSodium)}мг. Можно лучше`;
+            insight = `Натрия больше калия при норме наоборот, натрий ${Math.round(avgSodium)} мг. Можно лучше`;
         }
 
         if (avgCholesterol > 300) {
-            insight += `. Холестерин ${Math.round(avgCholesterol)}мг (много яиц/мяса)`;
+            insight += `. Холестерин ${Math.round(avgCholesterol)} мг — много яиц и мяса`;
         }
 
         const confidence = days.length >= 14 ? 0.80 : 0.65;
@@ -169,11 +169,11 @@
 
         let insight = '';
         if (omega6to3Ratio < 4) {
-            insight = `✅ Отличный баланс омега-6:3 = ${omega6to3Ratio.toFixed(1)} (оптимум <4:1)`;
+            insight = `Хорошее соотношение омега-6 к омега-3 — ${omega6to3Ratio.toFixed(1).replace('.', ',')} при оптимуме до 4`;
         } else if (omega6to3Ratio < 6) {
-            insight = `🟡 Омега-6:3 = ${omega6to3Ratio.toFixed(1)} (норма <4:1). Добавь рыбу/льняное масло`;
+            insight = `Соотношение омега-6 к омега-3 — ${omega6to3Ratio.toFixed(1).replace('.', ',')} при норме до 4. Добавьте рыбу или льняное масло`;
         } else {
-            insight = `🔴 Омега-6:3 = ${omega6to3Ratio.toFixed(1)} (риск воспаления!). Меньше подсолнечного масла, больше рыбы`;
+            insight = `Соотношение омега-6 к омега-3 — ${omega6to3Ratio.toFixed(1).replace('.', ',')}, это риск воспаления. Меньше подсолнечного масла, больше рыбы`;
         }
 
         if (inflammatoryLoad > 50) {
@@ -294,11 +294,11 @@
 
         let insight = '';
         if (dailyClass === 'low') {
-            insight = `✅ Низкая GL нагрузка: ${Math.round(avgDailyGL)} (цель <80).`;
+            insight = `Низкая гликемическая нагрузка: ${Math.round(avgDailyGL)} при цели до 80.`;
         } else if (dailyClass === 'medium') {
-            insight = `🟡 Умеренная GL нагрузка: ${Math.round(avgDailyGL)}. Контролируй порции быстрых углеводов.`;
+            insight = `Умеренная гликемическая нагрузка: ${Math.round(avgDailyGL)}. Контролируйте порции быстрых углеводов.`;
         } else {
-            insight = `🔴 Высокая GL нагрузка: ${Math.round(avgDailyGL)} (>120). Риск сахарных качелей.`;
+            insight = `Высокая гликемическая нагрузка: ${Math.round(avgDailyGL)}. Это риск сахарных качелей.`;
         }
 
         if (avgEveningRatio > 0.5) {
@@ -424,11 +424,11 @@
         const score = Math.max(0, Math.min(100, Math.round(rawScore - demandPenalty + adaptationBonus)));
 
         let insight = '';
-        if (score >= 80) insight = `✅ Электролитный профиль хороший (${score}/100).`;
-        else if (score >= 60) insight = `🟡 Умеренный электролитный риск (${score}/100).`;
-        else insight = `🔴 Выраженный электролитный дисбаланс (${score}/100).`;
+        if (score >= 80) insight = `Электролитный профиль хороший: ${score} из 100.`;
+        else if (score >= 60) insight = `Умеренный электролитный риск: ${score} из 100.`;
+        else insight = `Выраженный электролитный дисбаланс: ${score} из 100.`;
 
-        if (naKRatio > 1.5) insight += ` Na:K=${naKRatio.toFixed(2)} (цель <1.0).`;
+        if (naKRatio > 1.5) insight += ` Натрия больше калия, а нужно наоборот.`;
         if (hyponatremiaFlag) insight += ' Признаки гипонатриемического паттерна при высокой нагрузке.';
         if (magnesiumLowFlag) insight += ' Магний ниже желательного уровня.';
 
@@ -548,11 +548,11 @@
 
         let insight;
         if (avgScore >= 75) {
-            insight = '🩺 Хорошие маркеры инсулиновой чувствительности!';
+            insight = 'Хорошие маркеры инсулиновой чувствительности';
         } else if (avgGI > 65) {
-            insight = `⚠️ Высокий средний GI (${Math.round(avgGI)}). Замени быстрые углеводы на медленные`;
+            insight = `Высокий средний гликемический индекс: ${Math.round(avgGI)}. Замените быстрые углеводы на медленные`;
         } else if (avgFiber < 10) {
-            insight = `⚠️ Мало клетчатки (${Math.round(avgFiber)}г/1000ккал). Добавь овощи`;
+            insight = `Мало клетчатки: ${Math.round(avgFiber)} г на 1000 ккал. Добавьте овощи`;
         } else {
             insight = 'Инсулиновая чувствительность в норме';
         }
@@ -671,15 +671,15 @@
 
         let insight;
         if (avgScore >= 75) {
-            insight = '🦠 Отлично для микробиома! Много клетчатки и разнообразие';
+            insight = 'Хорошо для микробиома: много клетчатки и разнообразия';
         } else if (avgFiber < 20) {
-            insight = `⚠️ Мало клетчатки (${Math.round(avgFiber)}г). Добавь овощи, бобовые, цельнозерновые`;
+            insight = `Мало клетчатки: ${Math.round(avgFiber)} г. Добавьте овощи, бобовые, цельнозерновые`;
         } else if (avgCategoryDiversity < 8) {
-            insight = `⚠️ Мало разнообразия категорий (${Math.round(avgCategoryDiversity)}). Добавь новые группы продуктов`;
+            insight = `Мало разнообразия категорий: ${Math.round(avgCategoryDiversity)}. Добавьте новые группы продуктов`;
         } else if (avgDiversity < 10) {
-            insight = `⚠️ Мало разнообразия (${Math.round(avgDiversity)} продуктов/день). Пробуй новое!`;
+            insight = `Мало разнообразия: ${Math.round(avgDiversity)} продуктов в день. Пробуйте новое`;
         } else if (fermentedDays < dailyData.length * 0.3) {
-            insight = 'Добавь ферментированные продукты: кефир, йогурт, квашеную капусту';
+            insight = 'Добавьте ферментированные продукты: кефир, йогурт, квашеную капусту';
         } else {
             insight = 'Здоровье кишечника в норме';
         }

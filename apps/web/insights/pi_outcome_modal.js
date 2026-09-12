@@ -119,7 +119,7 @@
                 // Header
                 h('div', { className: 'outcome-modal__header' },
                     h('h3', { className: 'outcome-modal__title' },
-                        '🌟 Как прошёл день?'
+                        'Как прошёл день?'
                     ),
                     h('button', {
                         className: 'outcome-modal__close-btn',

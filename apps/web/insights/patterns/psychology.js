@@ -174,13 +174,13 @@
         let insight;
         const r = bayesResult.posteriorR;
         if (!corrResult.isSignificant) {
-            insight = `Связь стресса и еды пока не выявлена (N=${corrResult.n}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+            insight = `Связь стресса и еды на ваших данных пока не видна`;
         } else if (r > 0.3) {
-            insight = `😰 Стресс → переедание! При стрессе ≈ +${Math.round(r * 300)} ккал (p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+            insight = `При стрессе вы съедаете примерно на ${Math.round(r * 300)} ккал больше`;
         } else if (r < -0.3) {
-            insight = `💪 Стресс не влияет на аппетит — отлично! (r=${r.toFixed(2)}, p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'})`;
+            insight = `Стресс не влияет на аппетит`;
         } else {
-            insight = `Умеренная связь стресса и аппетита (r=${r.toFixed(2)}, p=${corrResult.pValue.toFixed(3)}, N=${corrResult.n})`;
+            insight = `Связь стресса и аппетита умеренная`;
         }
 
         return {
@@ -299,13 +299,13 @@
         let insight;
         const r = bayesResult.posteriorR;
         if (!corrResult.isSignificant) {
-            insight = `Связь настроения и качества еды пока не выявлена (N=${corrResult.n}, p=${corrResult.pValue.toFixed(3)}, 95% CI [${ci.lower.toFixed(2)}, ${ci.upper.toFixed(2)}])`;
+            insight = `Связь настроения и качества еды на ваших данных пока не видна`;
         } else if (r > 0.3) {
-            insight = `😊 Хорошее настроение → качественнее еда! Береги себя (p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+            insight = `В хорошем настроении вы едите качественнее. Берегите себя`;
         } else if (r < -0.3) {
-            insight = `🤔 При плохом настроении ешь лучше — это способ заботы? (p<${corrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${corrResult.n})`;
+            insight = `При плохом настроении вы едите лучше — возможно, так вы о себе заботитесь`;
         } else {
-            insight = `Умеренная связь настроения и питания (r=${r.toFixed(2)}, p=${corrResult.pValue.toFixed(3)}, N=${corrResult.n})`;
+            insight = `Связь настроения и питания умеренная`;
         }
 
         // Calculate confidence based on effect size and significance
@@ -475,21 +475,21 @@
         let primaryEffectSize = null;
 
         if (simpleCorrResult.isSignificant && simpleBayes.posteriorR < -0.3) {
-            insight = `😕 Настроение падает после простых углеводов (r=${simpleBayes.posteriorR.toFixed(2)}, p<${simpleCorrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${simpleCorrResult.n})`;
+            insight = `Настроение падает после простых углеводов`;
             score = 40;
             primaryCorr = simpleBayes.posteriorR;
             primaryPValue = simpleCorrResult.pValue;
             primaryIsSignificant = true;
             primaryEffectSize = simpleCorrResult.effectSize;
         } else if (proteinCorrResult.isSignificant && proteinBayes.posteriorR > 0.3) {
-            insight = `😊 Белок улучшает настроение (r=${proteinBayes.posteriorR.toFixed(2)}, p<${proteinCorrResult.pValue < 0.01 ? '0.01' : '0.05'}, N=${proteinCorrResult.n})`;
+            insight = `Белок улучшает настроение`;
             score = 80;
             primaryCorr = proteinBayes.posteriorR;
             primaryPValue = proteinCorrResult.pValue;
             primaryIsSignificant = true;
             primaryEffectSize = proteinCorrResult.effectSize;
         } else {
-            insight = `Настроение стабильнее при сбалансированных приёмах (simple: r=${safeR(simpleBayes.posteriorR).toFixed(2)}, p=${safeP(simpleCorrResult.pValue).toFixed(3)}; protein: r=${safeR(proteinBayes.posteriorR).toFixed(2)}, p=${safeP(proteinCorrResult.pValue).toFixed(3)})`;
+            insight = `Настроение стабильнее при сбалансированных приёмах`;
             // Take the more significant one as primary
             if (simpleCorrResult.pValue < proteinCorrResult.pValue) {
                 primaryCorr = simpleBayes.posteriorR;

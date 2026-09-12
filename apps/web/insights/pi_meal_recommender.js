@@ -560,7 +560,7 @@
             console.groupEnd();
             return {
                 scenario: SCENARIOS.SUGAR_RESET,
-                reason: `Reset после сладкого (${Math.round(lastMealSimpleSugar)}г сахара)`,
+                reason: `Разгрузка после сладкого: ${Math.round(lastMealSimpleSugar)} г сахара`,
                 icon: SCENARIO_ICONS[SCENARIOS.SUGAR_RESET],
                 metadata: { hint: 'низкий GL (<10), без added sugar, белок + клетчатка', lastMealSimpleSugar }
             };
@@ -1250,9 +1250,9 @@
 
             // Compact summary string for quick scanning (without expanding tables)
             const impactSummary = patternImpact.map(i => {
-                if (i.area === 'timing') return `⏰ ${i.before} → ${i.after}`;
-                if (i.area === 'macros') return `🍽️ ${i.before} → ${i.after}`;
-                if (i.area === 'productPicker') return `🛒 ${i.before} → ${i.after}`;
+                if (i.area === 'timing') return `${i.before} → ${i.after}`;
+                if (i.area === 'macros') return `${i.before} → ${i.after}`;
+                if (i.area === 'productPicker') return `${i.before} → ${i.after}`;
                 return `${i.pattern}: ${i.before} → ${i.after}`;
             }).join(' | ');
             console.info(`${LOG_PREFIX} [MEALREC / impact] 📋 Summary: ${impactSummary}`);
@@ -1597,7 +1597,7 @@
         if (!hasLastMeal) {
             idealStart = currentTime;
             idealEnd = currentTime + 1;
-            reason = `Первый прием дня — можешь начать сейчас`;
+            reason = `Первый приём дня — можно начать сейчас`;
             console.info(`[${LOG_FILTER}] ⏰ First meal timing:`, { idealStart, idealEnd, currentTime });
             return {
                 ideal: `${formatTime(idealStart)}-${formatTime(idealEnd)}`,
@@ -1636,29 +1636,29 @@
                 // Pre-workout meal
                 idealStart = Math.max(currentTime, trainingTime - 1.5);
                 idealEnd = trainingTime - 1;
-                reason = `Pre-workout за 1-1.5ч до тренировки`;
+                reason = `Приём перед тренировкой, за 1-1,5 ч до неё`;
             } else if (hoursToTraining < 0 && hoursToTraining > -2) {
                 // Post-workout meal
                 idealStart = currentTime;
                 idealEnd = currentTime + 0.5;
-                reason = `Post-workout сразу после тренировки`;
+                reason = `Приём сразу после тренировки`;
             } else {
                 // Regular meal timing
                 idealStart = baseTime + idealGapHours;
                 idealEnd = baseTime + maxGap;
-                reason = `Оптимальный gap ${Math.round(idealGapMin)}мин после последнего приёма`;
+                reason = `Оптимальный перерыв ${Math.round(idealGapMin)} мин после последнего приёма`;
             }
         } else {
             // No training nearby — standard meal timing
             idealStart = baseTime + idealGapHours;
             idealEnd = baseTime + maxGap;
-            reason = `Оптимальный gap ${Math.round(idealGapMin)}мин`;
+            reason = `Оптимальный перерыв ${Math.round(idealGapMin)} мин`;
         }
 
         if (phaseATimingShiftMin > 0) {
             idealStart += phaseATimingShiftMin / 60;
             idealEnd += phaseATimingShiftMin / 60;
-            reason += ` (Phase A: +${phaseATimingShiftMin}мин из C01/C02)`;
+            reason += ` (сдвиг на ${phaseATimingShiftMin} мин по вашим паттернам)`;
             patternImpact.push({
                 pattern: 'C01/C02',
                 area: 'timing',
@@ -1707,7 +1707,7 @@
             });
             idealStart = currentTime;
             idealEnd = Math.max(idealEnd, currentTime + 0.5);
-            reason = `Сейчас — оптимальное время (прошло ${hoursSinceLastMeal.toFixed(1)}ч)`;
+            reason = `Сейчас — оптимальное время: прошло ${hoursSinceLastMeal.toFixed(1).replace('.', ',')} ч`;
         }
 
         // Adjust for sleep target (no eating 3h before sleep)
@@ -1717,11 +1717,11 @@
                 // Already past ideal meal window — suggest eating now with short window
                 idealStart = currentTime;
                 idealEnd = Math.min(currentTime + 0.5, sleepTarget);
-                reason = `⚠️ Поздний приём — постарайся до ${formatTime(sleepTarget)}`;
+                reason = `Поздний приём — постарайся до ${formatTime(sleepTarget)}`;
             } else {
                 idealStart = Math.max(currentTime, mealDeadline - 1);
                 idealEnd = mealDeadline;
-                reason = `Последний приём — за 3ч до сна`;
+                reason = `Последний приём — за 3 ч до сна`;
             }
         }
 
@@ -2542,67 +2542,67 @@
         // Scenario-specific reasoning (v2.4)
         switch (scenario) {
             case SCENARIOS.GOAL_REACHED:
-                reasoning.push('🎯 Дневная цель достигнута — попей воды 💧');
-                reasoning.push('✅ Отличный контроль калорий сегодня!');
+                reasoning.push('Дневная цель достигнута — попейте воды');
+                reasoning.push('Отличный контроль калорий сегодня!');
                 break;
 
             case SCENARIOS.LIGHT_SNACK:
-                reasoning.push(`☕ Осталось всего ${Math.round(macrosRec.remainingKcal)} ккал — лёгкий перекус`);
-                reasoning.push('✨ Выбирай лёгкие продукты: кефир, фрукты, йогурт');
+                reasoning.push(`Осталось всего ${Math.round(macrosRec.remainingKcal)} ккал — лёгкий перекус`);
+                reasoning.push('Выбирайте лёгкие продукты: кефир, фрукты, йогурт');
                 break;
 
             case SCENARIOS.LATE_EVENING:
-                reasoning.push(`🌙 Поздний вечер (${Math.floor(timingRec.currentTime)}:00)`);
-                reasoning.push('🥛 Лёгкий белок (творог, кефир) — лучше для сна');
-                reasoning.push('⚠️ Избегай углеводов и больших порций');
+                reasoning.push(`Поздний вечер (${Math.floor(timingRec.currentTime)}:00)`);
+                reasoning.push('Лёгкий белок (творог, кефир) — лучше для сна');
+                reasoning.push('Избегайте углеводов и больших порций');
                 break;
 
             case SCENARIOS.PRE_WORKOUT:
-                reasoning.push(`⚡ Тренировка через ${Math.round(contextAnalysis.metadata.hoursToTraining * 60)} мин`);
-                reasoning.push('🍌 Быстрые углеводы для энергии');
-                reasoning.push('🥚 Немного белка для поддержки мышц');
+                reasoning.push(`Тренировка через ${Math.round(contextAnalysis.metadata.hoursToTraining * 60)} мин`);
+                reasoning.push('Быстрые углеводы для энергии');
+                reasoning.push('Немного белка для поддержки мышц');
                 break;
 
             case SCENARIOS.POST_WORKOUT:
-                reasoning.push('💪 Восстановление после тренировки');
-                reasoning.push('🥩 Высокий белок для восстановления мышц');
-                reasoning.push('🍚 Углеводы для восполнения гликогена');
+                reasoning.push('Восстановление после тренировки');
+                reasoning.push('Высокий белок для восстановления мышц');
+                reasoning.push('Углеводы для восполнения гликогена');
                 break;
 
             case SCENARIOS.PROTEIN_DEFICIT:
                 const proteinProgress = ((dayEaten.protein || 0) / (dayTarget.protein || 120)) * 100;
-                reasoning.push(`🥩 Белок: ${Math.round(proteinProgress)}% от цели`);
-                reasoning.push('🐟 Удели внимание белковым продуктам');
-                reasoning.push(`🎯 Нужно добрать ${macrosRec.protein}г белка`);
+                reasoning.push(`Белок: ${Math.round(proteinProgress)}% от цели`);
+                reasoning.push('Уделите внимание белковым продуктам');
+                reasoning.push(`Нужно добрать ${macrosRec.protein} г белка`);
                 break;
 
             case SCENARIOS.STRESS_EATING:
-                reasoning.push('‍🧘 Высокий уровень стресса');
-                reasoning.push('🍫 Здоровые comfort foods: тёмный шоколад, орехи, магний');
-                reasoning.push('☕ Или теплый чай с мёдом для расслабления');
+                reasoning.push('Высокий уровень стресса');
+                reasoning.push('Здоровые comfort foods: тёмный шоколад, орехи, магний');
+                reasoning.push('Или теплый чай с мёдом для расслабления');
                 break;
 
             case SCENARIOS.BALANCED:
             default:
                 // Standard reasoning
                 if (timingRec.reason) {
-                    reasoning.push(`⏰ ${timingRec.reason}`);
+                    reasoning.push(`${timingRec.reason}`);
                 }
 
                 const remainingKcal = macrosRec.remainingKcal || 0;
                 if (remainingKcal < 200) {
-                    reasoning.push(`⚠️ Осталось ${Math.round(remainingKcal)} ккал`);
+                    reasoning.push(`Осталось ${Math.round(remainingKcal)} ккал`);
                 } else {
-                    reasoning.push(`ℹ️ Осталось ${Math.round(remainingKcal)} ккал (${macrosRec.remainingMeals} приём(а) до сна)`);
+                    reasoning.push(`Осталось ${Math.round(remainingKcal)} ккал (${macrosRec.remainingMeals} приём(а) до сна)`);
                 }
 
                 const proteinPercent = ((dayEaten.protein || 0) / (dayTarget.protein || 120)) * 100;
                 if (proteinPercent < 80) {
-                    reasoning.push(`🥩 Белок: ${Math.round(proteinPercent)}% от цели`);
+                    reasoning.push(`Белок: ${Math.round(proteinPercent)}% от цели`);
                 }
 
                 if (training && training.time) {
-                    reasoning.push(`🏋️ Тренировка в ${training.time}`);
+                    reasoning.push(`Тренировка в ${training.time}`);
                 }
                 break;
         }

@@ -1079,7 +1079,9 @@ describe('Meal Recommender v2.6', () => {
             // idealStart should be around currentTime (not 04:00!)
             expect(startHours).toBeGreaterThanOrEqual(currentHours);
             expect(startHours).toBeLessThan(currentHours + 0.1); // Within ~6 minutes
-            expect(result.timing.reason).toContain('Первый прием дня');
+            // Сторожим смысл, а не буквальную запись: текст правила приведён к
+            // голосу продукта (контракт «слова блока наблюдений», 12.09.2026).
+            expect(result.timing.reason).toMatch(/Первый при[её]м дня/);
         });
 
         it('timing_never_in_past', () => {

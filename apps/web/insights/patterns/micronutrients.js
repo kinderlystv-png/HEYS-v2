@@ -24,6 +24,38 @@
         BONE_HEALTH: 'bone_health'
     };
 
+    // Названия микроэлементов словами: символы элементов в текст наблюдения не выходят.
+    const NUTRIENT_NAMES = {
+        iron: 'железо',
+        magnesium: 'магний',
+        zinc: 'цинк',
+        calcium: 'кальций'
+    };
+
+    const VITAMIN_NAMES = {
+        vitamin_a: 'витамин A',
+        vitamin_c: 'витамин C',
+        vitamin_d: 'витамин D',
+        vitamin_e: 'витамин E',
+        vitamin_k: 'витамин K',
+        vitamin_b1: 'витамин B1',
+        vitamin_b2: 'витамин B2',
+        vitamin_b3: 'витамин B3',
+        vitamin_b6: 'витамин B6',
+        vitamin_b9: 'фолат',
+        vitamin_b12: 'витамин B12'
+    };
+
+    /**
+     * Перечислить названия по-русски: «железо, магний и цинк».
+     * @param {Array<string>} list - Названия.
+     * @returns {string} Перечисление.
+     */
+    function joinRu(list) {
+        if (list.length <= 1) return list[0] || '';
+        return list.slice(0, -1).join(', ') + ' и ' + list[list.length - 1];
+    }
+
     /**
      * Resolve product data from a meal item via product index fallbacks.
      * @param {object} item - Meal item wrapper.
@@ -130,6 +162,13 @@
             calcium: average(micronutrients.calcium)
         };
 
+        // Нулевой фон по всем четырём — это отсутствие данных о микроэлементах
+        // в продуктах, а не дефицит: правило молчит вместо печати нулей.
+        const hasMicronutrientData = Object.values(avgIntake).some(v => v > 0);
+        if (!hasMicronutrientData) {
+            return { pattern, available: false, reason: 'no_micronutrient_data' };
+        }
+
         const deficits = [];
         for (const [nutrient, avgPct] of Object.entries(avgIntake)) {
             if (avgPct < 70) {
@@ -148,20 +187,28 @@
 
         let insight = '';
         if (deficits.length === 0) {
-            insight = `✅ Все 4 микроэлемента в норме (Fe ${Math.round(avgIntake.iron)}%, Mg ${Math.round(avgIntake.magnesium)}%, Zn ${Math.round(avgIntake.zinc)}%, Ca ${Math.round(avgIntake.calcium)}%)`;
+            insight = 'Все четыре микроэлемента в норме: железо, магний, цинк и кальций';
         } else {
-            const deficitNames = deficits.map(d => {
-                const names = { iron: 'Fe', magnesium: 'Mg', zinc: 'Zn', calcium: 'Ca' };
-                return `${names[d.nutrient]} ${d.avgPct}%`;
-            }).join(', ');
-            insight = `⚠️ Дефициты: ${deficitNames}. `;
+            const nearZero = deficits.filter(d => d.avgPct < 5);
+            const measured = deficits.filter(d => d.avgPct >= 5);
+
+            const parts = [];
+            if (nearZero.length) {
+                parts.push(`${joinRu(nearZero.map(d => NUTRIENT_NAMES[d.nutrient]))} — почти ноль за неделю`);
+            }
+            if (measured.length) {
+                parts.push(`не хватает: ${measured.map(d => `${NUTRIENT_NAMES[d.nutrient]} ${d.avgPct}%`).join(', ')}`);
+            }
+            insight = `${parts.join('. ')}. `;
+            insight = insight.charAt(0).toUpperCase() + insight.slice(1);
 
             if (deficits.some(d => d.nutrient === 'iron') && lowEnergyDays > days.length * 0.4) {
-                insight += `Низкое Fe → усталость (${lowEnergyDays} дней). `;
+                insight += `Мало железа — отсюда усталость (${lowEnergyDays} дней). `;
             }
             if (deficits.some(d => d.nutrient === 'magnesium') && poorSleepDays > days.length * 0.4) {
-                insight += `Низкий Mg → плохой сон (${poorSleepDays} дней). `;
+                insight += `Мало магния — отсюда плохой сон (${poorSleepDays} дней). `;
             }
+            insight = insight.trim();
         }
 
         const confidence = days.length >= 14 ? 0.75 : 0.60;
@@ -280,6 +327,11 @@
             };
         });
 
+        // Ни одного витамина с ненулевым потреблением — данных нет, а не дефицит.
+        if (!vitaminKeys.some(vk => vitaminData[vk].intake > 0)) {
+            return { pattern, available: false, reason: 'no_vitamin_data' };
+        }
+
         const deficitList = vitaminKeys.filter(vk => vitaminData[vk].deficit);
         const countDeficits = deficitList.length;
         const score = Math.max(0, Math.min(100, 100 - (countDeficits * 8)));
@@ -287,13 +339,13 @@
         const baseConfidence = validDays.length >= 14 ? 0.80 : 0.70;
         const confidence = applySmallSamplePenalty(baseConfidence, validDays.length, 10);
 
-        let insight = `Vitamin Defense Radar: ${countDeficits} из 11 витаминов ниже 70% DRI`;
+        let insight = `Ниже нормы ${countDeficits} витаминов из 11`;
         if (countDeficits === 0) {
-            insight = '🌟 Отлично! Все 11 витаминов в норме (≥70% DRI)';
+            insight = 'Все 11 витаминов в норме';
         } else if (countDeficits <= 2) {
-            insight = `⚠️ Легкий дефицит: ${deficitList.join(', ')} < 70% DRI`;
+            insight = `Лёгкий дефицит: ${joinRu(deficitList.map(vk => VITAMIN_NAMES[vk] || vk))} — меньше 70% нормы`;
         } else if (countDeficits >= 5) {
-            insight = `🚨 Множественный дефицит: ${countDeficits} витаминов требуют внимания`;
+            insight = `Множественный дефицит: ${countDeficits} витаминов требуют внимания`;
         }
 
         return {
@@ -387,6 +439,11 @@
         const bloodBscore = Math.round(average(bloodPair.map(v => Math.min(200, nutrientData[v]?.pctDV || 0))));
 
         const ironDeficit = nutrientData.iron?.pctDV < 70;
+        // Без данных о железе, B9 и B12 нулевые проценты выглядят как дефицит.
+        if (!nutrientKeys.some(nutrient => (nutrientData[nutrient]?.intake || 0) > 0)) {
+            return { pattern, available: false, reason: 'no_nutrient_data' };
+        }
+
         const b12Deficit = nutrientData.vitamin_b12?.pctDV < 70;
         const folateDeficit = nutrientData.vitamin_b9?.pctDV < 70;
 
@@ -412,10 +469,10 @@
             score,
             confidence: Math.round(confidence * 100) / 100,
             insight: anemiaRisk >= 70
-                ? '❌ Высокий риск анемии, нужна коррекция рациона'
+                ? 'Высокий риск анемии — нужна коррекция рациона'
                 : anemiaRisk >= 30
-                    ? '⚠️ Умеренный риск анемии, следи за железом/B9/B12'
-                    : '✅ Риск анемии низкий'
+                    ? 'Умеренный риск анемии: следите за железом, фолатом и витамином B12'
+                    : 'Риск анемии низкий'
         };
     }
 
@@ -488,6 +545,12 @@
         const avgDailySugar = average(dailySugar);
         const avgConfidence = average(dailyConfidence);
 
+        // Ноль добавленного сахара за всю неделю означает, что у продуктов нет
+        // этого поля. Сообщать «под контролем: 0,0 г» нельзя — числа просто нет.
+        if (avgDailySugar <= 0) {
+            return { pattern, available: false, reason: 'no_added_sugar_data' };
+        }
+
         let maxStreak = 0;
         let streak = 0;
         dailySugar.forEach((s) => {
@@ -513,10 +576,10 @@
             score,
             confidence: Math.round(applySmallSamplePenalty(0.7, days.length, minDays) * 100) / 100,
             insight: maxStreak >= 5
-                ? `🔴 Избыточный сахар ${avgDailySugar.toFixed(1)}г/день, streak ${maxStreak} дней`
+                ? `Избыточный сахар — ${avgDailySugar.toFixed(1).replace('.', ',')} г в день, подряд ${maxStreak} дней`
                 : avgDailySugar > 25
-                    ? `🟡 Сахар в зоне внимания: ${avgDailySugar.toFixed(1)}г/день`
-                    : `✅ Добавленный сахар под контролем: ${avgDailySugar.toFixed(1)}г/день`
+                    ? `Сахар в зоне внимания: ${avgDailySugar.toFixed(1).replace('.', ',')} г в день`
+                    : `Добавленный сахар под контролем: ${avgDailySugar.toFixed(1).replace('.', ',')} г в день`
         };
     }
 
@@ -570,6 +633,12 @@
         const avgK = kSum / days.length;
         const avgP = pSum / days.length;
 
+        // Все четыре нутриента по нулям — данных нет, оценка костного профиля
+        // была бы нулём не из-за рациона, а из-за пустых карточек продуктов.
+        if (avgCa <= 0 && avgD <= 0 && avgK <= 0 && avgP <= 0) {
+            return { pattern, available: false, reason: 'no_bone_nutrient_data' };
+        }
+
         const caPct = Math.min(1, avgCa / (1000 * targetMultiplier)) * 35;
         const dPct = Math.min(1, avgD / (15 * targetMultiplier)) * 25;
         const kPct = Math.min(1, avgK / (vitKTarget * targetMultiplier)) * 15;
@@ -598,10 +667,10 @@
             score,
             confidence: Math.round(applySmallSamplePenalty(0.7, days.length, minDays) * 100) / 100,
             insight: score >= 80
-                ? `✅ Костный профиль хороший (${score}/100)`
+                ? `Костный профиль хороший: ${score} из 100`
                 : score >= 60
-                    ? `🟡 Умеренный риск по костному профилю (${score}/100)`
-                    : `🔴 Высокий риск дефицита костной поддержки (${score}/100)`
+                    ? `Умеренный риск по костному профилю: ${score} из 100`
+                    : `Высокий риск дефицита костной поддержки: ${score} из 100`
         };
     }
 
