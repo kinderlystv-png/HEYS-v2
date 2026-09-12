@@ -756,7 +756,22 @@ async function openCase(browser, item, snapshot, options = {}) {
       }, rootSelector);
       if (item.uiScroll) {
         // Кадр рисует ярус ниже первого экрана — прокручиваем к его узлу.
-        await page.locator(item.uiScroll).first().evaluate((node) => node.scrollIntoView({ block: 'start' }));
+        // Над ярусом стоит шапка приложения: `block: 'start'` ставит узел под
+        // неё, и заголовок яруса уходит за кадр — отступаем на её высоту.
+        await page.locator(item.uiScroll).first().evaluate((node, offset) => {
+          node.scrollIntoView({ block: 'start' });
+          const head = document.querySelector('.hdr-gamification, .app-header, .hdr');
+          const pad = offset != null ? offset : Math.round(head?.getBoundingClientRect?.().height || 0) + 12;
+          if (!pad) return;
+          let scroller = node.parentElement;
+          while (scroller && scroller !== document.body) {
+            const cs = getComputedStyle(scroller);
+            if (/(auto|scroll)/.test(cs.overflowY) && scroller.scrollHeight > scroller.clientHeight) break;
+            scroller = scroller.parentElement;
+          }
+          if (scroller && scroller !== document.body) scroller.scrollTop = Math.max(0, scroller.scrollTop - pad);
+          else window.scrollBy(0, -pad);
+        }, item.uiScrollOffset);
       }
       await page.waitForTimeout(400);
       const domDump = await page.evaluate((selector) => {

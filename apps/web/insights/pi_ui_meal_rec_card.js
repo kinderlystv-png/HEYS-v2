@@ -2080,7 +2080,13 @@
                                 date: day?.date || todayISO(),
                                 timeStart: nextMeal?.timeStart || null,
                                 timeEnd: nextMeal?.timeEnd || (result.timing?.ideal || null),
-                                lastMealDeadline: result.mealsPlan?.summary?.lastMealDeadline || null
+                                lastMealDeadline: result.mealsPlan?.summary?.lastMealDeadline || null,
+                                // День закрыт — окно есть в расчёте, но звать
+                                // к приёму нечем: карточка выше говорит «На
+                                // сегодня всё», а «Ритм приёмов» рядом обещал
+                                // «следующий приём лучше до 21:40».
+                                closed: result.scenario === 'GOAL_REACHED'
+                                    || !!result.macros?.plannerEmptyPlan
                             };
                         } catch (e) { /* публикация окна не критична */ }
                         console.info(`${LOG_PREFIX} ✅ Rendered:`, {
@@ -2312,7 +2318,14 @@
                 protein: macros?.protein,
                 carbs: macros?.carbs
             });
-            if (isGoalReached) {
+            // Ярус «Питание» Инсайтов держит один вид закрытого дня — кадр
+            // «Ярус Питание · после последнего приёма»: плоская карточка
+            // набора с пилюлей и подписью «планер вернётся утром». Ниже стоит
+            // карточка дневника: синий фон и зелёная галка мимо набора,
+            // подзаголовок «ПЛАНЕР · ИТОГ ДНЯ» и табличка «Калории / Белок»,
+            // которых кадр не рисует. В дневнике она остаётся — это его
+            // виджет и его зона, — а в ярус не идёт.
+            if (isGoalReached && variant !== 'v4') {
                 return h('section', {
                     className: 'meal-rec-card widget widget--meal-rec-diary-goal',
                     style: { position: 'relative' },
@@ -2375,8 +2388,17 @@
             const isTooLate = isPlannerEmptyPlan;
             const plannerDecision = macros?.plannerDecision || mealsPlan?.summary || null;
             const titleText = isTooLate ? 'Плотный приём уже близко ко сну' : 'Приём сейчас не требуется';
+            // Причина приходит из движка без точки, а склеивалась с советом
+            // пробелом: на экране выходило «Дневная цель практически
+            // выполнена При сильном голоде выберите…» — два предложения
+            // слипались в одно.
+            const endSentence = (text) => {
+                const trimmed = String(text || '').trim();
+                if (!trimmed) return '';
+                return /[.!?…]$/.test(trimmed) ? trimmed : trimmed + '.';
+            };
             const bodyText = isTooLate
-                ? `${macros?.plannerEmptyReason || 'Новый плотный приём сейчас не вписывается.'} ${plannerDecision?.alternatives?.[0] || 'При сильном голоде выберите небольшой лёгкий приём.'}`
+                ? `${endSentence(macros?.plannerEmptyReason || 'Новый плотный приём сейчас не вписывается.')} ${endSentence(plannerDecision?.alternatives?.[0] || 'При сильном голоде выберите небольшой лёгкий приём.')}`.trim()
                 : 'Планнер не нашёл полезного дополнительного приёма в текущем остатке дня.';
             // Контракт «карточка · „На сегодня всё“»: плоская карточка набора —
             // заголовок, проза с фактом, ряд из пилюли «день закрыт» и подписи

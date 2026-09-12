@@ -161,11 +161,16 @@ function phenotypeDays() {
 }
 
 /**
- * Девять дней для кадра «Неделя к неделе · одна закрытая»: закрылась одна
- * полная неделя и одна неполная — ровно две строки таблицы.
+ * Дни для кадра «Неделя к неделе · одна закрытая»: две строки таблицы —
+ * полная неделя 17–23 августа и неполная 10–16 с двумя днями записей.
+ * Часы стенда — пятница 28 августа, поэтому текущая неделя (с 24-го) в
+ * таблицу не идёт, а четырнадцать дней назад дают ровно 15 и 16 августа
+ * во второй строке. Девяти дней не хватало: вторая неделя оставалась
+ * пустой и строка не рисовалась вовсе — «показывается всегда» относится к
+ * неделе с записями, а не к неделе без них.
  */
-function nineDays() {
-  return Array.from({ length: 9 }, (_, offset) => fullDay(offset));
+function weeksTableDays() {
+  return Array.from({ length: 14 }, (_, offset) => fullDay(offset));
 }
 
 /**
@@ -341,7 +346,7 @@ export const REPORTS_INSIGHTS_VISUAL_CASES = [
   }),
   tabCase({
     id: 'reports-weeks-one-sand', tab: 'stats', label: 'Неделя к неделе · одна закрытая', oid: 'RI-WK1',
-    days: nineDays(), viewport: { width: 375, height: 706 },
+    days: weeksTableDays(), viewport: { width: 375, height: 706 },
     extra: { uiScroll: '.reports-v4-tier--weeks' },
   }),
   tabCase({

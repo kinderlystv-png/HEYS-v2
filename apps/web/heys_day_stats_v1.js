@@ -205,8 +205,16 @@
 
       rows.push({
         key: iso(monday),
-        label: monday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-          + '—' + sunday.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }),
+        // Кадр «Неделя к неделе» пишет неделю как «17–23 авг»: месяц один раз
+        // и без точки. Прежняя запись «17 авг.—23 авг.» занимала половину
+        // строки, и три числа справа поджимались.
+        label: (function () {
+          const dayNum = (d) => d.toLocaleDateString('ru-RU', { day: 'numeric' });
+          const monthShort = (d) => d.toLocaleDateString('ru-RU', { month: 'short' }).replace('.', '');
+          return monday.getMonth() === sunday.getMonth()
+            ? dayNum(monday) + '–' + dayNum(sunday) + ' ' + monthShort(sunday)
+            : dayNum(monday) + ' ' + monthShort(monday) + ' – ' + dayNum(sunday) + ' ' + monthShort(sunday);
+        })(),
         filledDays,
         isPartial: filledDays < 7,
         planAvg: (enoughForNumbers && planDays) ? Math.round(planSum / planDays) : null,
