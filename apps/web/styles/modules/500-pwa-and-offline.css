@@ -7266,9 +7266,13 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   font-variant-numeric: tabular-nums;
 }
 
+/* Кадр «Чек-ин · вес», элемент 08: строка плашки набрана влево. Выключка
+   center приходила по наследству от приветствия (заголовок и дата в нём по
+   центру), и двухстрочная подпись серии вставала лесенкой. */
 .mc-modal--daily .mc-daily-streak-text {
   font: 600 11.5px/1.35 Manrope, system-ui, sans-serif;
   color: rgba(var(--v4-ink-rgb, 0, 0, 0), 0.6);
+  text-align: left;
 }
 
 /* 34 над «Вес на утро» — только когда над ним плашка серии (кадр «Чек-ин ·
