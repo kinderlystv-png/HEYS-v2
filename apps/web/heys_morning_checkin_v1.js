@@ -2752,6 +2752,13 @@
   HEYS.MorningCheckinUtils.hasPartialCoreCheckinPrefill = hasPartialCoreCheckinPrefill;
   HEYS.MorningCheckinUtils.hasStepsGoalConfirmedToday = hasStepsGoalConfirmedToday;
   HEYS.MorningCheckinUtils.needsStepsGoalCheckin = needsStepsGoalCheckin;
+  // Вопрос «Загрузочный день» в шаге «Шаги на сегодня» спрашивает об этом
+  // именно через неё, а наружу она не выходила — проверка
+  // `typeof HEYS.MorningCheckinUtils?.shouldIncludeRefeedStep === 'function'`
+  // всегда давала ложь, и карточки с «Да / Нет» не видел никто. Строка
+  // контракта «откуда данные» говорит обратное: загрузочный день отмечают
+  // каждое утро в чек-ине ползунком шагов, и это факт дня, а не предпочтение.
+  HEYS.MorningCheckinUtils.shouldIncludeRefeedStep = shouldIncludeRefeedStep;
   HEYS.MorningCheckinUtils.isMorningStepComplete = isMorningStepComplete;
   HEYS.MorningCheckinUtils.buildMorningCheckinPlan = buildMorningCheckinPlan;
   HEYS.MorningCheckinUtils.collapseLegacyCheckinStepIds = collapseLegacyCheckinStepIds;

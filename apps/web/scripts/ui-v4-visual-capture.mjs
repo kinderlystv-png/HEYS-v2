@@ -3112,6 +3112,17 @@ async function openCase(browser, item, snapshot, options = {}) {
     // фокуса вокруг кнопки, на которую слой сам ставит фокус (так требует
     // доступность). Человек, открывший слой пальцем, этой рамки не видит, а в
     // кадрах её нет — снимаем фокус перед снимком, как это делает касание.
+    // Начисление опыта рисует летящее «+N» поверх экрана на 1,2 с: оно попадало
+    // в снимок жёлтой плашкой между колёсами шага «Сон», хотя в кадре её нет и
+    // быть не должно — это анимация награды за предыдущий шаг, а не элемент
+    // экрана. Ждём, пока она отыграет.
+    await page
+      .waitForFunction(
+        () => !document.querySelector('.floating-xp-text, .flying-xp'),
+        undefined,
+        { timeout: 4_000, polling: 100 },
+      )
+      .catch(() => {});
     await page.evaluate(() => {
       const active = document.activeElement;
       if (active && active !== document.body && active.matches(':focus-visible')) active.blur();

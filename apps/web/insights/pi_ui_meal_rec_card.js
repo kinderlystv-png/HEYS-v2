@@ -2376,7 +2376,7 @@
             const plannerDecision = macros?.plannerDecision || mealsPlan?.summary || null;
             const titleText = isTooLate ? 'Плотный приём уже близко ко сну' : 'Приём сейчас не требуется';
             const bodyText = isTooLate
-                ? `${macros?.plannerEmptyReason || 'Новый плотный приём сейчас не вписывается.'} ${plannerDecision?.alternatives?.[0] || 'При сильном голоде выбери небольшой лёгкий приём.'}`
+                ? `${macros?.plannerEmptyReason || 'Новый плотный приём сейчас не вписывается.'} ${plannerDecision?.alternatives?.[0] || 'При сильном голоде выберите небольшой лёгкий приём.'}`
                 : 'Планнер не нашёл полезного дополнительного приёма в текущем остатке дня.';
             // Контракт «карточка · „На сегодня всё“»: плоская карточка набора —
             // заголовок, проза с фактом, ряд из пилюли «день закрыт» и подписи
@@ -2784,6 +2784,71 @@
                 : productsModalContent)
             : null;
 
+        // Кадр «Раскрывашка · Как посчитано» и строка контракта «карточка ·
+        // лист „Как посчитано“»: раскрывашка планера — такая же шторка снизу,
+        // что и «Как считается долг», и различаются они только текстом. Раньше
+        // здесь разворачивался абзац внутри карточки, куда движок подставлял
+        // свои строки хода расчёта («S4-POST_WORKOUT» и подобные): человек
+        // спрашивал «как посчитано», а получал журнал сценариев вместо метода.
+        //
+        // Шесть абзацев — перевод pi_meal_planner.js: личная волна (медиана
+        // промежутков за 14 дней, минимум 5 замеров — PERSONAL_WAVE_*), вилка
+        // белка за приём, потолок углеводов по гликемической нагрузке со
+        // снижением к вечеру, окно после тренировки, приём перед сном, калории
+        // из остатка дневной цели с учётом долга.
+        const HOW_CALCULATED_PARAGRAPHS = [
+            'Окно приёма начинается, когда спадёт инсулиновая волна от прошлой еды, и закрывается с запасом до сна. Длительность волны — ваша личная: медиана промежутков между приёмами за 14 дней; нужно минимум 5 замеров, до этого — стандартная.',
+            'Вилка белка — сколько организм усваивает за один приём с пользой для мышц; недобор белка за день распределяется по оставшимся приёмам.',
+            'Углеводы ограничены гликемической нагрузкой и к вечеру снижаются — утром организм справляется с ними лучше.',
+            'После тренировки окно меняется: два часа, когда белка и углеводов нужно больше.',
+            'Приём перед сном собирается из продуктов, не мешающих сну, и порция ограничена.',
+            'Калории — из остатка дневной цели, с учётом долга.'
+        ];
+
+        // Ярус «На чём основано»: кадр «Раскрывашка · Как посчитано» называет
+        // те же две работы, что и лист долга, — Leibel 1995 и Hall 2011. Это
+        // не совпадение: последняя строка листа говорит, что калории берутся
+        // из остатка дневной цели с учётом долга, а долг считается по ним.
+        // Свои id у планера появятся — возьмём их, пока берём долговые, а
+        // пустого яруса-заглушки не показываем.
+        const howSourcesTier = (() => {
+            const tier = global.HEYS?.TrainingKernel?.bibliographyUI?.SourcesTier;
+            const day = global.HEYS?.DayBibliography;
+            const ids = global.HEYS?.InsightsPI?.mealPlanner?.SOURCE_IDS
+                || global.HEYS?.dayCaloricDebtCore?.SOURCE_IDS;
+            if (!tier || !day || !ids || !ids.length) return null;
+            return h(tier, { registry: day.registry, ids, className: 'insights-v4-sources' });
+        })();
+
+        // Шторку уводим в body тем же порталом, что и лист продуктов. Изнутри
+        // карточки её `position: fixed` считался не от экрана: подложка
+        // получала размеры карточки (343×242 вместо 375×706 — замер на стенде
+        // 13 сентября), и лист уезжал верхним краем за экран.
+        const howCalculatedSheetContent = h('div', {
+            className: 'insights-v4-sheet-scrim',
+            onClick: (e) => { e.stopPropagation(); setExpanded(false); }
+        },
+            h('div', {
+                className: 'insights-v4-sheet',
+                onClick: (e) => e.stopPropagation()
+            },
+                h('div', { className: 'insights-v4-sheet__title' }, 'Как посчитано'),
+                HOW_CALCULATED_PARAGRAPHS.map((text, idx) =>
+                    h('p', { key: idx, className: 'insights-v4-sheet__text' }, text)
+                ),
+                howSourcesTier,
+                h('button', {
+                    type: 'button',
+                    className: 'insights-v4-sheet__ok',
+                    onClick: (e) => { e.stopPropagation(); setExpanded(false); }
+                }, 'Понятно')
+            )
+        );
+
+        const howCalculatedSheet = global.ReactDOM?.createPortal
+            ? global.ReactDOM.createPortal(howCalculatedSheetContent, document.body)
+            : howCalculatedSheetContent;
+
         // Контракт reports-insights.v4, кадр «Что съесть сейчас»: в ярусе
         // «Питание» Инсайтов карточка показывается компактным видом — окно
         // приёма, вилки чипами, объяснение, кнопка «Выбрать продукты · N
@@ -2842,12 +2907,7 @@
                     'aria-expanded': expanded ? 'true' : 'false',
                     onClick: (e) => { e.stopPropagation(); setExpanded((prev) => !prev); }
                 }, 'Как посчитано ', h('span', { 'aria-hidden': 'true' }, expanded ? '⌃' : '⌄')),
-                expanded && h('div', { className: 'meal-rec-v4__how-body' },
-                    h('p', { className: 'meal-rec-v4__how-line' }, logicFocus),
-                    (displayReasoning || []).slice(0, 4).map((line, idx) =>
-                        h('p', { key: idx, className: 'meal-rec-v4__how-line' }, line)
-                    )
-                ),
+                expanded && howCalculatedSheet,
                 productsModal
             );
 
