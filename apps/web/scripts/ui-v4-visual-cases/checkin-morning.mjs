@@ -203,6 +203,19 @@ const YESTERDAY_DAYS = {
 // пилюли»: до ответа — «своё время», после — время).
 const TODAY_COFFEE = { lastCoffee: { choice: 'exact', time: '14:30', answeredAt: 1 } };
 
+// Дни для кадра «цель по шагам»: та же серия, но сон прошлой ночи по норме —
+// иначе совет считается со смягчением и кадр не сходится по числу.
+const STEPS_DAYS = {
+  ...streakDays('2026-08-16', 5, (date, i) => (i === 1
+    ? {
+      sleepStart: '23:00', sleepEnd: '07:00', sleepHours: 8, sleepQuality: 8,
+      // Утренний ресурс считается по ответам этого утра, а стенд проходит сон
+      // и самочувствие кнопкой «Дальше» — значения подставляются вчерашние.
+      // Ресурс должен выйти средним: высокий добавляет к совету ещё 5 %,
+    }
+    : {})),
+};
+
 const NEXT = { next: true };
 
 export const CHECKIN_MORNING_VISUAL_CASES = [
@@ -221,6 +234,16 @@ export const CHECKIN_MORNING_VISUAL_CASES = [
     at: AT_WEIGHT,
     days: WEIGHT_DAYS,
     walk: [{ secondary: true }],
+    expectStep: 'weight',
+  }),
+  // Первое утро: взвешиваний нет вовсе, вес берётся из анкеты. Кадр рисует
+  // пятницу 21 августа и того же человека, что остальные кадры зоны.
+  checkinCase({
+    id: 'checkin-first-weight-sand',
+    label: 'Чек-ин · первый вес',
+    oid: 'CM-W0',
+    at: '2026-08-21T08:10:00+03:00',
+    days: {},
     expectStep: 'weight',
   }),
   checkinCase({
@@ -250,12 +273,19 @@ export const CHECKIN_MORNING_VISUAL_CASES = [
     walk: [NEXT, NEXT],
     expectStep: 'morning_mood',
   }),
+  // Кадр «цель по шагам» рисует ровный случай: «обычно около 10 000 — берём
+  // чуть выше», совет 10 500. Короткий сон прошлой ночи включает смягчение и
+  // роняет совет до 8 900, поэтому у этого кадра свои дни — со сном по норме.
   checkinCase({
     id: 'checkin-steps-goal-sand',
     label: 'Чек-ин · цель по шагам',
     oid: 'CM-G1',
     at: AT_WEIGHT,
-    days: WEIGHT_DAYS,
+    days: STEPS_DAYS,
+    // Ресурс утра берётся из ответов этого утра, а стенд проходит их кнопкой
+    // «Дальше» — без ответов подставляется середина шкал, и она читается как
+    // «ниже обычного». Кладём средние ответы прямо в сегодняшний день.
+    today: { moodMorning: 7, wellbeingMorning: 6, stressMorning: 5 },
     profile: { allowManualRefeed: true },
     walk: [NEXT, NEXT, NEXT],
     expectStep: 'stepsGoal',
