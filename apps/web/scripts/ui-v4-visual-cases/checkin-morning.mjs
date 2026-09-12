@@ -11,15 +11,15 @@ function clock(iso) {
   return Object.freeze({ iso, day: iso.slice(0, 10), epochMs: Date.parse(iso) });
 }
 
-// Калорийность продуктов снимка (PRODUCTS в ui-v4-visual-fixture.mjs). Кладём
-// её прямо в позицию приёма: счёт серии берёт kcal100 у продукта каталога, а
-// при промахе — у самой позиции, и стенд не должен зависеть от того, успел ли
+// Питательность продуктов снимка (PRODUCTS в ui-v4-visual-fixture.mjs). Кладём
+// её прямо в позицию приёма: счёт дня берёт данные у продукта каталога, а при
+// промахе — у самой позиции, и стенд не должен зависеть от того, успел ли
 // каталог доехать до страницы.
-const KCAL100 = {
-  'visual-oats': 102,
-  'visual-berries': 46,
-  'visual-chicken': 165,
-  'visual-rice': 128,
+const NUTRIENTS = {
+  'visual-oats': { kcal100: 102, protein100: 3.5, carbs100: 15.7, fat100: 3.2 },
+  'visual-berries': { kcal100: 46, protein100: 0.8, carbs100: 8.3, fat100: 0.4 },
+  'visual-chicken': { kcal100: 165, protein100: 31, carbs100: 0, fat100: 3.6 },
+  'visual-rice': { kcal100: 128, protein100: 3.1, carbs100: 24.5, fat100: 2.1 },
 };
 
 /** Приём из продуктов фикстуры (см. PRODUCTS в ui-v4-visual-fixture.mjs). */
@@ -28,13 +28,20 @@ function meal(id, name, time, items) {
     id,
     name,
     time,
+    // Позиция несёт свою калорийность и свой id, которого нет в каталоге
+    // снимка. Иначе счёт дня находит продукт каталога и берёт kcal100 у него —
+    // а продукты снимка доезжают до страницы заготовками без нутриентов
+    // (`_nutrientsPending: true`), и день выходил нулевым при двух приёмах:
+    // серия молча равнялась нулю, а разбор вчера писал «0 из 1 934 ккал».
     items: items.map(([productId, grams]) => ({
       id: `${id}-${productId}`,
-      product_id: productId,
-      productId,
-      name: productId,
+      product_id: `stand-${productId}`,
+      productId: `stand-${productId}`,
+      name: `Стенд · ${productId}`,
       grams,
-      kcal100: KCAL100[productId],
+      // И калории, и макросы: серия считает по kcal100, разбор вчерашнего дня —
+      // по белкам-жирам-углеводам, и на одних калориях он видел ноль.
+      ...NUTRIENTS[productId],
     })),
   };
 }
@@ -128,7 +135,7 @@ function checkinCase({ id, label, oid, at, profile, days, today: todayExtra, ls,
       yesterdayVerify: !!yesterdayVerify,
       walk: walk || [],
       expectStep,
-      probe: `(() => { const lsGet = HEYS.utils.lsGet; const prof = lsGet('heys_profile', {}); const all = HEYS.products.getAll(); const day = lsGet('heys_dayv2_2026-08-15', null); let kcal = 0; (day && day.meals || []).forEach((m) => (m.items || []).forEach((it) => { kcal += (+it.kcal100 || 0) * (+it.grams || 0) / 100; })); return { products: all.length, sample: all[0] || null, kcal15: Math.round(kcal), norm15: HEYS.dayNorm.kcal(day || {}, prof, {}), streak: HEYS.utils?.safeGetStreak?.(), metrics: HEYS.dayCalendarMetrics?.getCurrentStreak?.() }; })()`,
+      probe: `({ products: (HEYS.products?.getAll?.() || []).length, streak: HEYS.utils?.safeGetStreak?.(), today: HEYS.dayUtils?.todayISO?.(), lastWeight: HEYS.Steps.getLastKnownWeight() })`,
     },
     ...(notes ? { notes } : {}),
   };
