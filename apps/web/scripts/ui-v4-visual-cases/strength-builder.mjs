@@ -143,7 +143,10 @@ export const STRENGTH_BUILDER_VISUAL_CASES = [
   }),
 
   // А3: разминка и дроп-сет. В кадре это отдельный экран с шапкой сессии —
-  // в продукте это вид 'warmup-drop', вход из раскрытой карточки упражнения.
+  // в продукте это вид 'warmup-drop'. Войти в него человек не может: кнопка
+  // «Разминка и дроп-сет» в раскрытой карточке скрыта правилом display: none,
+  // и другого входа нет. Пока вход не вернут, стенд поднимает сам экран —
+  // настоящий продуктовый компонент WarmupDropScreen с теми же данными.
   sbCase({
     id: 'strength-warmup-drop-sand',
     slug: 'warmup-drop',
@@ -157,8 +160,7 @@ export const STRENGTH_BUILDER_VISUAL_CASES = [
     mount: ({ HEYS, h }) => {
       const caseNow = new Date('2026-08-28T19:27:12+03:00').getTime();
       window.Date.now = () => caseNow;
-      return h(HEYS.StrengthBuilder.BuilderScreen, {
-        training: {
+      const training = {
           type: 'strength',
           strengthEntryMode: 'workout_builder',
           time: '18:40',
@@ -186,19 +188,24 @@ export const STRENGTH_BUILDER_VISUAL_CASES = [
               },
             ],
           },
-        },
-        dateKey: '2026-08-28',
-        profile: { weight: 80 },
-        historyFor: () => null,
-        historyDetailFor: () => ({ usages: [], record: null }),
-        onPatch: () => {},
-        onPatchSession: () => {},
+      };
+      const ex = training.workoutLog.exercises[0];
+      return h(HEYS.StrengthBuilderParts.WarmupDropScreen, {
+        ex: ex,
+        index: 0,
+        exercises: training.workoutLog.exercises,
+        bodyWeightKg: 80,
+        onBack: () => {},
         onClose: () => {},
+        onOpenSheet: () => {},
+        onPatchApproach: () => {},
+        onToggleType: () => {},
+        onAddDrop: () => {},
+        onAddApproach: () => {},
+        readOnly: false,
       });
     },
     steps: [
-      { wait: '.sb-ex-warmup-drop' },
-      { click: '.sb-ex-warmup-drop' },
       { wait: '.sb-warmup-drop-screen' },
     ],
     captureSelector: '> .sb-root.sb-warmup-drop-screen',

@@ -1284,7 +1284,8 @@ async function openCase(browser, item, snapshot, options = {}) {
       await page.locator('#ui-v4-strength-plan-feed-host .sb-plan-week-label')
         .filter({ hasText: 'Неделя 2 из 4' })
         .waitFor({ state: 'visible', timeout: 45_000 });
-      await page.locator('#ui-v4-strength-plan-feed-host .sb-plan-actions--future .sb-plan-cta')
+      // «Перенести» стала вторичной пилюлей и сменила класс на sb-plan-move.
+      await page.locator('#ui-v4-strength-plan-feed-host .sb-plan-actions--future .sb-plan-move')
         .filter({ hasText: 'Перенести' })
         .waitFor({ state: 'visible', timeout: 45_000 });
     }
