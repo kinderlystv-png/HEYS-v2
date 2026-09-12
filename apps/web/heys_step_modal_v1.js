@@ -448,6 +448,11 @@
       secondaryLabelWhen: typeof config.secondaryLabelWhen === 'function' ? config.secondaryLabelWhen : null,
       applySecondary: typeof config.applySecondary === 'function' ? config.applySecondary : null,
       headerCaption: config.headerCaption ?? null,
+      // Крупная подпись шапки — только у слоёв внутри шага (курс добавок).
+      // Прежде она включалась у всех, кто прячет точки прогресса, и развилка
+      // разбора вчерашнего дня получала 15 px/700 полными чернилами вместо
+      // 11 px/600 тоном чернил, как её рисует кадр «Чек-ин · вчерашний день».
+      headerCaptionLayer: config.headerCaptionLayer === true,
       showHeaderBack: typeof config.showHeaderBack === 'function' ? config.showHeaderBack : null,
       applyHeaderBack: typeof config.applyHeaderBack === 'function' ? config.applyHeaderBack : null,
       getValidationMessage: typeof config.getValidationMessage === 'function' ? config.getValidationMessage : null,
@@ -1466,7 +1471,8 @@
                 )),
               !showDailyProgressDots && dailyHeaderCaption && React.createElement('div', {
                 className: 'mc-daily-header-caption'
-                  + (hideProgressDotsResolved ? ' mc-daily-header-caption--layer' : '')
+                  + (hideProgressDotsResolved && currentConfig?.headerCaptionLayer
+                    ? ' mc-daily-header-caption--layer' : '')
               }, dailyHeaderCaption),
               showDailyProgressDots && React.createElement('div', {
                 className: 'mc-progress-dots mc-progress-dots--in-header mc-progress-dots--pills',

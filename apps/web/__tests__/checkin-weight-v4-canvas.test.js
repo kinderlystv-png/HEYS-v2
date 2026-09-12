@@ -255,6 +255,28 @@ describe('чек-ин · ряд ответов «Последний кофе»',
   });
 });
 
+describe('чек-ин · крупная подпись шапки — только у слоёв', () => {
+  const MODAL_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_step_modal_v1.js'), 'utf8');
+  const STEPS = fs.readFileSync(path.join(WEB_DIR, 'heys_steps_v1.js'), 'utf8');
+
+  it('вариант «слой» включается флагом шага, а не отсутствием точек прогресса', () => {
+    // Кадр «Чек-ин · вчерашний день»: подпись «Перед чек-ином» — 11 px/600
+    // тоном чернил. Развилка прячет точки прогресса (она не входит в пять
+    // шагов), и по прежнему условию получала подпись слоя — 15 px/700
+    // полными чернилами.
+    expect(MODAL_SRC).toContain('headerCaptionLayer: config.headerCaptionLayer === true');
+    expect(MODAL_SRC).toMatch(/hideProgressDotsResolved && currentConfig\?\.headerCaptionLayer/);
+  });
+
+  it('флаг стоит у шага «Остальное» — там слой курса добавок', () => {
+    const rest = STEPS.slice(
+      STEPS.indexOf("registerStep('morningRest'"),
+      STEPS.indexOf('getInitialData', STEPS.indexOf("registerStep('morningRest'")),
+    );
+    expect(rest).toContain('headerCaptionLayer: true');
+  });
+});
+
 describe('чек-ин · метка совета на шаге «Цель по шагам»', () => {
   it('метка прижата к низу своего ряда — она стоит НАД дорожкой', () => {
     // Ряд метки высотой 17 px, а цель нажатия у метки 44 px: без привязки к

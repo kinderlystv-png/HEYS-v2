@@ -7282,6 +7282,9 @@
     component: MorningRestStepComponent,
     showHeaderBack: (data) => !!(data && (data.coldOpen === true || data.coffeeOpen === true || data.measurementsOpen === true || data.supplementsOpen === true)),
     hideProgressDots: (data) => !!(data && data.supplementsOpen === true),
+    // Крупная подпись шапки нужна именно здесь: у слоя курса добавок она
+    // заменяет заголовок экрана («Добавки», «Добавить в курс»).
+    headerCaptionLayer: true,
     headerCaption: (data) => {
       if (!data?.supplementsOpen) return null;
       if (data.supplementsLayer === 'add') return 'Добавить в курс';
