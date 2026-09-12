@@ -59,11 +59,16 @@ describe('water-add · разбор кадров канваса', () => {
     expect(compare({ razbor, rules, frame: 'Вода · свой объём · лист', pairs: CUSTOM_SHEET })).toEqual([]);
   });
 
-  it('чипы FAB — геометрия из кадра «вид · ряд чипов объёма»', () => {
-    expect(waterCss).toMatch(/\.water-fab-vol \{[\s\S]*?height: 44px/);
-    expect(waterCss).toMatch(/\.water-fab-vol--minus \{[\s\S]*?margin-right: 5px/);
-    expect(waterCss).toContain('border: 2px solid var(--water-fab-outline)');
-    expect(waterCss).not.toMatch(/\.water-fab-vol::before/);
+  // Кадры «Чипы объёма» рисуют ряд у плавающей кнопки воды. Самой кнопки в
+  // продукте нет с 27 августа (eb51d0ed2): ряд ±объёмов живёт в карточке воды,
+  // и правила кадра проверяются на нём. `.water-fab-vol*` ничего не рисует —
+  // прежняя версия этого теста сверяла мёртвый CSS.
+  it('чипы объёма — геометрия из кадра «вид · ряд чипов объёма»', () => {
+    expect(waterCss).toMatch(/\.water-review__chip \{[\s\S]*?height: 44px/);
+    expect(waterCss).toMatch(/\.water-review__chip--sub \{[\s\S]*?margin-right: 5px/);
+    expect(waterCss).toMatch(/\.water-review__chip--sub \{[\s\S]*?box-shadow: inset 0 0 0 2px/);
+    // Расширителя области нажатия нет — 44 px держатся видимым размером.
+    expect(waterCss).not.toMatch(/\.water-review__chip::after/);
   });
 
   it('гейт называет охват разбора', () => {

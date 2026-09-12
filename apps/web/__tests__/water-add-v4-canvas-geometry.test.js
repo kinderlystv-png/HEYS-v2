@@ -36,11 +36,15 @@ function declarations(bodies) {
       const prop = decl.slice(0, at).trim();
       const value = decl.slice(at + 1).trim();
       if (prop === 'font') {
-        const font = /^(\d+)\s+([\d.]+)px\/([\d.]+)/.exec(value);
+        // Кегль в шорткате пишут и в px (канвас), и в rem (карточка воды:
+        // `font: 700 0.71875rem/1`). Без rem шорткат не разбирался, и три
+        // свойства уезжали в «кода нет» на живом правиле.
+        const font = /^(\d+)\s+([\d.]+)(px|rem)\/([\d.]+)/.exec(value);
         if (font) {
+          const size = font[3] === 'rem' ? +(parseFloat(font[2]) * 16).toFixed(4) : parseFloat(font[2]);
           out['font-weight'] = font[1];
-          out['font-size'] = `${font[2]}px`;
-          out['line-height'] = font[3];
+          out['font-size'] = `${size}px`;
+          out['line-height'] = font[4];
           continue;
         }
       }
@@ -89,8 +93,12 @@ const PAIRS = [
   ['.wCardB .bRingTxt b', '.water-review__ring-fact'],
   ['.wCardB .bRingTxt span', '.water-review__ring-meta'],
   ['.wCardB .bChip', '.water-review__chip--quick'],
-  ['.chip', '.water-fab-vol'],
-  ['.chipSub', '.water-fab-vol--minus'],
+  // Ряд ±объёмов живёт в карточке воды: плавающей кнопки воды со своим рядом
+  // в продукте нет с 27 августа (eb51d0ed2, единая стопка быстрых действий), и
+  // `.water-fab-vol*` с тех пор ничего не рисует — пара на него сверяла CSS,
+  // которого не видит ни один экран.
+  ['.chip', '.water-review__chip'],
+  ['.chipSub', '.water-review__chip--sub'],
 ];
 
 const CHECKED = [
@@ -121,7 +129,7 @@ const EXCEPTIONS = new Set([
   '.water-review__chip--quick|line-height',
   '.water-review__chip--quick|background',
   '.water-review__chip--quick|color',
-  '.water-fab-vol--minus|color',
+  '.water-review__chip--sub|color',
 ]);
 
 const COVERAGE_FLOOR = 28;
