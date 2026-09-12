@@ -204,7 +204,7 @@ function mountStrengthCuratorCase(payload) {
       proposal: {
         id: 'pp-l9', status: 'accepted', proposedBy: 'Артём',
         proposedAt: at('09:14'), resolvedAt: at('09:31'), dayLabel: 'Верх тела B',
-        rejected: [{ name: 'тяга блока', reason: 'done' }],
+        rejected: [{ name: 'тяга блока', reason: 'done_approaches_kept' }],
       },
       onClose: function () {},
     });
