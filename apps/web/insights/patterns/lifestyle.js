@@ -651,6 +651,16 @@
 
         const weekdayKcal = average(weekdays.filter(d => d.kcal > 0).map(d => d.kcal));
         const weekendKcal = average(weekends.filter(d => d.kcal > 0).map(d => d.kcal));
+        // Дней хватает, а еды в них может не быть вовсе: тогда деление на ноль
+        // давало NaN, и человек читал «Выходные NaN% ккал».
+        if (!(weekdayKcal > 0) || !Number.isFinite(weekendKcal)) {
+            return {
+                pattern: PATTERNS.WEEKEND_EFFECT,
+                available: false,
+                confidence: 0.2,
+                insight: 'Недостаточно записей о еде, чтобы сравнить будни и выходные'
+            };
+        }
         const kcalDiffPct = ((weekendKcal - weekdayKcal) / weekdayKcal) * 100;
 
         const weekdaySleep = average(weekdays.filter(d => d.sleep).map(d => d.sleep));
