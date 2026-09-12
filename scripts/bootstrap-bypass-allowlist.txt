@@ -231,10 +231,10 @@ apps/web/heys_yesterday_verify_v1.js:1267
 apps/web/heys_yesterday_verify_v1.js:1265
 apps/web/heys_yesterday_verify_v1.js:36
 apps/web/heys_yesterday_verify_v1.js::heys_debug_yesterday_zero_payload
-apps/web/insights/pi_early_warning.js:1310
-apps/web/insights/pi_early_warning.js:1864
-apps/web/insights/pi_early_warning.js:884
-apps/web/insights/pi_early_warning.js:1389
+apps/web/insights/pi_early_warning.js:1358
+apps/web/insights/pi_early_warning.js:1912
+apps/web/insights/pi_early_warning.js:932
+apps/web/insights/pi_early_warning.js:1437
 apps/web/insights/pi_ui_meal_rec_card.js:1141
 apps/web/insights/pi_ui_meal_rec_card.js:1402
 apps/web/insights/pi_ui_meal_rec_card.js:2465
