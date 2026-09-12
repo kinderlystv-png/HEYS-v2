@@ -20,7 +20,7 @@ export default {
           <button type="button" class="date-picker-day selected has-data">5</button>
           <button type="button" class="date-picker-day has-data">12</button>
         </div>
-        <button type="button" class="date-picker-btn today-btn">Сегодня</button>
+        <button type="button" class="date-picker-btn today-btn">Вернуться к сегодня</button>
       </div>
     </div>
   

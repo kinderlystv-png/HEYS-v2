@@ -30,7 +30,10 @@ describe('nutrition v4 · isolated Canvas shell', () => {
     // выше не делал ничего: дата прилипала к «Питание» вместо правого края.
     const baseCss = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8');
     expect(baseCss).toMatch(/\n\.hdr-tab-title-group\s*\{[^}]*display:\s*flex;[^}]*flex:\s*1;[^}]*justify-content:\s*space-between/);
-    expect(nutritionCss).toMatch(/\.wrap--tab-diary \.date-picker-icon\s*\{[^}]*display:\s*none/);
+    // Иконка календаря в капсуле остаётся и на «Питании»: date-remainders
+    // («иконка календаря … во всех капсулах на всех вкладках») и кадр
+    // «Питание · блок · Шапка» этого канваса рисуют её внутри пилюли.
+    expect(nutritionCss).not.toMatch(/\.wrap--tab-diary \.date-picker-icon\s*\{[^}]*display:\s*none/);
     expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-sticky-strip\s*\{[^}]*padding:\s*11px 18px 0/);
     expect(nutritionCss).toMatch(/\.nutrition-v4 \.water-review\s*\{[^}]*margin-top:\s*10px/);
     expect(nutritionCss).toMatch(/\.nutrition-v4\s*\{[^}]*margin-top:\s*0/);

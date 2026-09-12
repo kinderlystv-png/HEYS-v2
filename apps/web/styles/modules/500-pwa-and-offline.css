@@ -1202,11 +1202,17 @@
 
 .mc-steps-advice-mark {
   position: absolute;
+  /* Ряд метки высотой 17 px стоит НАД дорожкой, а цель нажатия у метки 44 px.
+     Без привязки к низу ряда метка вставала от его верха и свисала на 27 px
+     вниз: текст совета ложился поверх заливки дорожки, а стрелка уезжала под
+     неё. Прижимаем низ метки к низу ряда — запас цели уходит вверх, в пустое
+     поле, а видимые текст и стрелка встают ровно над дорожкой, как в кадре. */
+  bottom: 0;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 3px;
   min-width: 44px;
   min-height: 44px;
@@ -2543,6 +2549,10 @@
   margin-top: 2px;
   font: 600 10.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  /* Строка живёт внутри .date-picker-title, а у него text-transform:capitalize
+     ради названия месяца. Он же поднимал регистр во всех словах строки:
+     на стенде 12 сентября под шапкой стояло «Следующий — 2-Го». */
+  text-transform: none;
 }
 
 .date-picker-title {

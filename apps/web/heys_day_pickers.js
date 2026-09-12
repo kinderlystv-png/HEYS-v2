@@ -400,7 +400,11 @@
             title: 'Предыдущий месяц'
           }, navChevron('left')),
           React.createElement('span', { className: 'date-picker-title' },
-            cur.toLocaleString('ru-RU', { month: 'long', year: 'numeric' }),
+            // Контракт «формат чисел»: «год в шапке шторки пишется полностью,
+            // без апострофа», кадр «Календарь · легенда» — «Август 2026».
+            // toLocaleString с year добавляет « г.», а text-transform:capitalize
+            // делал из него «Г.»: в шапке стояло «Август 2026 Г.».
+            `${cur.toLocaleString('ru-RU', { month: 'long' })} ${cur.getFullYear()}`,
             (() => {
               const CycleUI = HEYS.CycleUI;
               if (!isCycleForecastEnabled()) return null;
@@ -537,7 +541,11 @@
               if ((valueISO || todayStr) !== todayStr) onSelect(todayStr);
               setIsOpen(false);
             }
-          }, 'Сегодня')
+            // Контракт «тач-цели»: «диалоговое „Вернуться к сегодня“ под
+            // календарём» — так подписана кнопка и в кадре «Календарь ·
+            // легенда». Прежнее «Сегодня» повторяло пилюлю в капсуле и не
+            // говорило, что лист закроется.
+          }, 'Вернуться к сегодня')
         )
         )
       )
