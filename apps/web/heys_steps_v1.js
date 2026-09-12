@@ -7125,6 +7125,10 @@
     // рутины. Форма карточки — общая для шага (радиус 20, поля 16/17), как у
     // добавок и рутины: кадр рисует вторую форму, но контракт «вид карточки
     // шага» старше кадра (см. .mc-rest-card в 500-pwa-and-offline.css).
+    // Подпись средней пилюли по контракту: до ответа — «своё время», после —
+    // само время. Сноска под рядом зовёт её по имени, поэтому берёт ту же
+    // подпись: иначе она отсылала к «своё время», когда на пилюле уже «14:30».
+    const coffeeExactLabel = data.coffeeTime ? String(data.coffeeTime).slice(0, 5) : 'своё время';
     const coffeeCard = React.createElement('div', { className: 'mc-rest-card mc-rest-card--coffee' },
       React.createElement('div', { className: 'mc-rest-cold-head' },
         React.createElement('div', { className: 'mc-rest-card-title' }, 'Последний кофе'),
@@ -7133,7 +7137,7 @@
       React.createElement('div', { className: 'mc-rest-coffee-actions' },
         [
           { id: 'before12', label: 'до 12:00' },
-          { id: 'exact', label: data.coffeeTime ? String(data.coffeeTime).slice(0, 5) : 'своё время' },
+          { id: 'exact', label: coffeeExactLabel },
           { id: 'after17', label: 'после 17' },
           { id: 'none', label: 'не пил' }
         ].map((row) => React.createElement('button', {
@@ -7144,7 +7148,7 @@
         }, row.label))
       ),
       React.createElement('div', { className: 'mc-rest-card-hint mc-rest-coffee-why' },
-        'Нужно для пункта «Готовность ко сну»: кофе позже восьми часов до отбоя мешает сну. Точное время — тапом по «своё время».'
+        `Нужно для пункта «Готовность ко сну»: кофе позже восьми часов до отбоя мешает сну. Точное время — тапом по «${coffeeExactLabel}».`
       )
     );
 
