@@ -1,5 +1,5 @@
-task 118: close last 14 «?» in subscription verdicts
+docs(verdicts): close subscription last 14 question marks
 
-Re-verdict parent «вид ·» rows, queue cancel confirm, order period
-geometry, and tariff/payment copy chains against live 735-ui-v4-subscription.css
-and paywall JS. Extend sand/blue computed test for --scrim overlay.
+Re-verdict parent view rows, queue cancel confirm, order period geometry,
+and tariff/payment copy chains against live 735-ui-v4-subscription.css and
+paywall JS. Extend sand/blue computed test for --scrim overlay.

@@ -1,4 +1,0 @@
-docs(subscription): close task 124 readonly surface verdicts
-
-Set = on banner/toast/contact contract rows and six legacy-surface frame
-lines after v4 convergence; foreign-row guard in .task124 script.
