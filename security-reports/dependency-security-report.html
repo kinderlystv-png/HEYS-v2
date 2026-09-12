@@ -25,7 +25,7 @@
         <div class="header">
             <h1>📦 Dependency Security Report</h1>
             <p class="meta">Project: @heys/monorepo v13.0.0</p>
-            <p class="meta">Generated: 2026-09-02T17:18:03.642Z</p>
+            <p class="meta">Generated: 2026-09-09T19:17:32.654Z</p>
         </div>
         
         <div class="stats">
@@ -35,11 +35,11 @@
             </div>
             <div class="stat-card">
                 <h3>Direct Dependencies</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #059669;">16</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #059669;">17</p>
             </div>
             <div class="stat-card">
                 <h3>Total Vulnerabilities</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #dc2626;">0</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #dc2626;">7</p>
             </div>
             <div class="stat-card">
                 <h3>Critical</h3>
@@ -47,14 +47,261 @@
             </div>
             <div class="stat-card">
                 <h3>High</h3>
-                <p style="font-size: 24px; margin: 5px 0; color: #ea580c;">0</p>
+                <p style="font-size: 24px; margin: 5px 0; color: #ea580c;">4</p>
             </div>
         </div>
         
         <h2>Vulnerabilities</h2>
         
+            <div class="vulnerability high">
+                <h3>extract-zip unvalidated symlink path traversal</h3>
+                <p class="meta">Package: extract-zip | Severity: HIGH | ID: 1139346</p>
+                <p>extract-zip does not validate symlink targets when extracting zip archives. When processing a malicious zip file containing a symlink with a relative path like '../../../../etc/passwd', extract-zip will extract the symlink without validation, allowing it to point outside the extraction directory. Depending on how extract-zip is used, an attacker could read or write to arbitrary files.</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> None
+                </div>
+                <p class="meta">Vulnerable versions: <=2.0.1 | Patched: <0.0.0</p>
+            </div>
+        
+            <div class="vulnerability moderate">
+                <h3>fflate unzipSync can enter an infinite loop when parsing malformed ZIP64 archives</h3>
+                <p class="meta">Package: fflate | Severity: MODERATE | ID: 1164782</p>
+                <p>fflate through 0.8.2 is vulnerable to denial of service via an infinite loop in unzipSync(). A crafted ZIP archive with a central directory entry declaring compressed_size=0xFFFFFFFF (ZIP64 sentinel) but missing the required ZIP64 extra field tag 0x0001 causes z64e() to loop indefinitely due to out-of-bounds reads returning undefined, which coerces to 0, keeping the loop condition permanently true.</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> Upgrade to version 0.8.3 or later
+                </div>
+                <p class="meta">Vulnerable versions: >=0.8.0 <0.8.3 | Patched: >=0.8.3</p>
+            </div>
+        
+            <div class="vulnerability moderate">
+                <h3>Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock</h3>
+                <p class="meta">Package: vitest | Severity: MODERATE | ID: 1193683</p>
+                <p>## Summary
+`@vitest/mocker` registers a redirect mock's target path without validating it
+against the dev server's file-serving allowlist. An attacker who can reach the
+dev server's WebSocket can register a redirect mock pointing outside the project
+root; when the mocked module is requested, the plugin's `load` hook returns
+`readFile(<attacker path>)` as the module source, disclosing local files.
+
+This is exploitable **without authentication** only through the public
+`mockerPlugin` / standalone `interceptorPlugin` exports (used by third-party dev
+servers), which register the handler on Vite's unauthenticated HMR socket.
+Vitest's own browser mode registers mocks over a **token-authenticated** RPC and
+is not remotely reachable by default (see Scope).
+
+## Affected code
+`packages/mocker/src/node/interceptorPlugin.ts`.
+
+The `load` hook is the file-read sink:
+
+```ts
+if (mock.type === 'redirect') {
+  return readFile(mock.redirect, 'utf-8')
+}
+```
+
+`mock.redirect` is derived from client input at registration time with no
+boundary check:
+
+```ts
+if (event.type === 'redirect') {
+  const redirectUrl = new URL(event.redirect)
+  event.redirect = join(server.config.root, redirectUrl.pathname)
+}
+registry.register(event)
+```
+
+There is no `server.fs.allow` / `server.fs.deny` check and no assertion that the
+resolved path stays within the project root.
+
+## Registration paths and trust boundaries
+- **Public `mockerPlugin` / `interceptorPlugin` (unauthenticated).** In
+  `configureServer`, the plugin registers `server.ws.on('vitest:interceptor:register', …)`
+  on Vite's HMR WebSocket. That socket performs no token, Origin, or same-origin
+  check, so any client that can reach it can register a redirect mock. This is
+  the path the "unauthenticated" impact applies to.
+- **Vitest browser mode (authenticated).** Mocks register over the browser RPC
+  (`registerMock`), which sits behind a per-run token (`isValidApiRequest`, a
+  random `api.token`). The interceptor's `configureServer` socket is not used for
+  registration here (in v5 it does not run at all, as the plugin is injected per
+  environment). The same missing boundary check exists on the authenticated RPC
+  path, but reaching it requires the token, so it is not a remote-unauthenticated
+  read.
+
+## Path handling
+`new URL(redirect).pathname` combined with `join(root, pathname)` does **not**
+confine reads to the root:
+
+- Special/hierarchical schemes (`file:`, `http:`) are normalized by WHATWG URL,
+  so `..` segments are collapsed and the result stays under the root. Payloads of
+  the form `file:///../../etc/passwd` do **not** escape.
+- A non-special (opaque) scheme preserves `..` in `pathname`, so
+  `join(root, "../../…/etc/passwd")` resolves outside the root and reads an
+  arbitrary file.
+
+Even without escaping the root, the missing `server.fs` check allows reading any
+in-root file the dev server would otherwise refuse to serve (for example an
+in-root `.env` or source that is denied by `server.fs.deny`).
+
+## Scope / preconditions
+- This is a **development-server** issue. The dev server binds to `localhost` by
+  default and is not reachable from the network unless the developer exposes it
+  (`server.host` / `0.0.0.0`, a LAN bind, or a proxy).
+- A raw (non-browser) client against a reachable server bypasses browser origin
+  and CORS protections entirely and can both register the mock and read the
+  response.
+- A browser-based drive-by against a localhost server is substantially mitigated
+  by Vite defaults: the default CORS origin allowlist is limited to `localhost`
+  origins, and `server.allowedHosts` blocks DNS-rebinding, so a cross-origin page
+  cannot read the file contents back.
+
+## Impact
+Disclosure of local files readable by the dev-server process (source, in-root
+`.env`/secrets, and, via the opaque-scheme payload, files outside the project
+root). No integrity or availability impact.
+
+## Affected versions
+Present since `@vitest/mocker` was introduced.
+
+- **Affected: `@vitest/mocker` >= 2.1.0** (shipped in `vitest` and
+  `@vitest/browser` >= 2.1.0), through 4.1.x and the 5.0.0 pre-releases.
+- **Fixed:** Vitest 4.1.11 and 5.0.0. Older majors (2.1.x, 3.x) are not
+  maintained and are not planned to receive the fix.
+
+## Fix
+Validate the resolved redirect target against Vite's file-serving allowlist
+(`isFileLoadingAllowed`) before registering it, at every registration site, and
+stop registering the interceptor WebSocket events in Vitest's browser mode
+(mocks there flow through the authenticated RPC).</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> Upgrade to version 4.1.11 or later
+                </div>
+                <p class="meta">Vulnerable versions: >=2.1.0 <4.1.11 | Patched: >=4.1.11</p>
+            </div>
+        
+            <div class="vulnerability moderate">
+                <h3>Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock</h3>
+                <p class="meta">Package: @vitest/mocker | Severity: MODERATE | ID: 1193684</p>
+                <p>## Summary
+`@vitest/mocker` registers a redirect mock's target path without validating it
+against the dev server's file-serving allowlist. An attacker who can reach the
+dev server's WebSocket can register a redirect mock pointing outside the project
+root; when the mocked module is requested, the plugin's `load` hook returns
+`readFile(<attacker path>)` as the module source, disclosing local files.
+
+This is exploitable **without authentication** only through the public
+`mockerPlugin` / standalone `interceptorPlugin` exports (used by third-party dev
+servers), which register the handler on Vite's unauthenticated HMR socket.
+Vitest's own browser mode registers mocks over a **token-authenticated** RPC and
+is not remotely reachable by default (see Scope).
+
+## Affected code
+`packages/mocker/src/node/interceptorPlugin.ts`.
+
+The `load` hook is the file-read sink:
+
+```ts
+if (mock.type === 'redirect') {
+  return readFile(mock.redirect, 'utf-8')
+}
+```
+
+`mock.redirect` is derived from client input at registration time with no
+boundary check:
+
+```ts
+if (event.type === 'redirect') {
+  const redirectUrl = new URL(event.redirect)
+  event.redirect = join(server.config.root, redirectUrl.pathname)
+}
+registry.register(event)
+```
+
+There is no `server.fs.allow` / `server.fs.deny` check and no assertion that the
+resolved path stays within the project root.
+
+## Registration paths and trust boundaries
+- **Public `mockerPlugin` / `interceptorPlugin` (unauthenticated).** In
+  `configureServer`, the plugin registers `server.ws.on('vitest:interceptor:register', …)`
+  on Vite's HMR WebSocket. That socket performs no token, Origin, or same-origin
+  check, so any client that can reach it can register a redirect mock. This is
+  the path the "unauthenticated" impact applies to.
+- **Vitest browser mode (authenticated).** Mocks register over the browser RPC
+  (`registerMock`), which sits behind a per-run token (`isValidApiRequest`, a
+  random `api.token`). The interceptor's `configureServer` socket is not used for
+  registration here (in v5 it does not run at all, as the plugin is injected per
+  environment). The same missing boundary check exists on the authenticated RPC
+  path, but reaching it requires the token, so it is not a remote-unauthenticated
+  read.
+
+## Path handling
+`new URL(redirect).pathname` combined with `join(root, pathname)` does **not**
+confine reads to the root:
+
+- Special/hierarchical schemes (`file:`, `http:`) are normalized by WHATWG URL,
+  so `..` segments are collapsed and the result stays under the root. Payloads of
+  the form `file:///../../etc/passwd` do **not** escape.
+- A non-special (opaque) scheme preserves `..` in `pathname`, so
+  `join(root, "../../…/etc/passwd")` resolves outside the root and reads an
+  arbitrary file.
+
+Even without escaping the root, the missing `server.fs` check allows reading any
+in-root file the dev server would otherwise refuse to serve (for example an
+in-root `.env` or source that is denied by `server.fs.deny`).
+
+## Scope / preconditions
+- This is a **development-server** issue. The dev server binds to `localhost` by
+  default and is not reachable from the network unless the developer exposes it
+  (`server.host` / `0.0.0.0`, a LAN bind, or a proxy).
+- A raw (non-browser) client against a reachable server bypasses browser origin
+  and CORS protections entirely and can both register the mock and read the
+  response.
+- A browser-based drive-by against a localhost server is substantially mitigated
+  by Vite defaults: the default CORS origin allowlist is limited to `localhost`
+  origins, and `server.allowedHosts` blocks DNS-rebinding, so a cross-origin page
+  cannot read the file contents back.
+
+## Impact
+Disclosure of local files readable by the dev-server process (source, in-root
+`.env`/secrets, and, via the opaque-scheme payload, files outside the project
+root). No integrity or availability impact.
+
+## Affected versions
+Present since `@vitest/mocker` was introduced.
+
+- **Affected: `@vitest/mocker` >= 2.1.0** (shipped in `vitest` and
+  `@vitest/browser` >= 2.1.0), through 4.1.x and the 5.0.0 pre-releases.
+- **Fixed:** Vitest 4.1.11 and 5.0.0. Older majors (2.1.x, 3.x) are not
+  maintained and are not planned to receive the fix.
+
+## Fix
+Validate the resolved redirect target against Vite's file-serving allowlist
+(`isFileLoadingAllowed`) before registering it, at every registration site, and
+stop registering the interceptor WebSocket events in Vitest's browser mode
+(mocks there flow through the authenticated RPC).</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> Upgrade to version 4.1.11 or later
+                </div>
+                <p class="meta">Vulnerable versions: >=2.1.0 <4.1.11 | Patched: >=4.1.11</p>
+            </div>
+        
+            <div class="vulnerability high">
+                <h3>extract-zip allows arbitrary file writes through symlink archive entries</h3>
+                <p class="meta">Package: extract-zip | Severity: HIGH | ID: 1193685</p>
+                <p>extract-zip through 2.0.1 containment-checks only the parent directory of each archive entry and never the entry's own final path component, so an archive containing two entries with identical names - a symlink whose target is outside the destination, followed by a regular file - writes through the planted symlink and yields an arbitrary file write outside the destination directory.</p>
+                <div class="recommendation">
+                    <strong>Recommendation:</strong> None
+                </div>
+                <p class="meta">Vulnerable versions: <=2.0.1 | Patched: <0.0.0</p>
+            </div>
+        
         
         <h2>Security Recommendations</h2>
+        
+            <div class="vulnerability info">
+                <h3>[HIGH] High Priority Updates</h3>
+                <p>Found 4 high severity vulnerabilities. Schedule updates within 24-48 hours.</p>
+            </div>
         
     </div>
 </body>

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-02T17:18:03.642Z",
+  "timestamp": "2026-09-09T19:17:32.654Z",
   "scanType": "dependency-security",
   "projectInfo": {
     "name": "@heys/monorepo",
@@ -19,6 +19,7 @@
       "pg",
       "pino",
       "pino-pretty",
+      "qrcode-generator",
       "svelte",
       "tinyglobby",
       "zod"
@@ -58,6 +59,7 @@
       "happy-dom",
       "husky",
       "jsdom",
+      "jsqr",
       "lighthouse",
       "lint-staged",
       "msw",
@@ -86,20 +88,201 @@
   },
   "packages": {
     "total": 55,
-    "direct": 16,
-    "dev": 55,
-    "production": 16
+    "direct": 17,
+    "dev": 56,
+    "production": 17
   },
-  "vulnerabilities": [],
+  "vulnerabilities": [
+    {
+      "id": 1139346,
+      "title": "extract-zip unvalidated symlink path traversal",
+      "severity": "high",
+      "package": "extract-zip",
+      "versions": "<=2.0.1",
+      "patched": "<0.0.0",
+      "recommendation": "None",
+      "overview": "extract-zip does not validate symlink targets when extracting zip archives. When processing a malicious zip file containing a symlink with a relative path like '../../../../etc/passwd', extract-zip will extract the symlink without validation, allowing it to point outside the extraction directory. Depending on how extract-zip is used, an attacker could read or write to arbitrary files.",
+      "references": "- https://github.com/ziad626/extract-zip-security-research/security/advisories/GHSA-x7jf-2287-qcpf\n- https://nvd.nist.gov/vuln/detail/CVE-2026-56876\n- https://raw.githubusercontent.com/cisagov/CSAF/develop/csaf_files/IT/white/2026/va-26-177-01.json\n- https://www.cve.org/CVERecord?id=CVE-2026-56876\n- https://github.com/advisories/GHSA-jmr9-qjv8-65gv",
+      "cwe": ["CWE-22"],
+      "cvss": {
+        "score": 8.1,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:N"
+      },
+      "found": [
+        {
+          "version": "2.0.1",
+          "paths": [
+            ". > lighthouse@11.1.0 > puppeteer-core@21.11.0 > @puppeteer/browsers@1.9.1 > extract-zip@2.0.1",
+            ". > puppeteer@24.18.0 > @puppeteer/browsers@2.10.8 > extract-zip@2.0.1",
+            ". > puppeteer@24.18.0 > puppeteer-core@24.18.0 > @puppeteer/browsers@2.10.8 > extract-zip@2.0.1"
+          ]
+        },
+        {
+          "version": "1.7.0",
+          "paths": [
+            "packages\\ui > storybook@7.6.24 > @storybook/cli@7.6.24 > puppeteer-core@2.1.1 > extract-zip@1.7.0"
+          ]
+        }
+      ],
+      "timestamp": "2026-09-09T19:17:36.380Z"
+    },
+    {
+      "id": 1164782,
+      "title": "fflate unzipSync can enter an infinite loop when parsing malformed ZIP64 archives",
+      "severity": "moderate",
+      "package": "fflate",
+      "versions": ">=0.8.0 <0.8.3",
+      "patched": ">=0.8.3",
+      "recommendation": "Upgrade to version 0.8.3 or later",
+      "overview": "fflate through 0.8.2 is vulnerable to denial of service via an infinite loop in unzipSync(). A crafted ZIP archive with a central directory entry declaring compressed_size=0xFFFFFFFF (ZIP64 sentinel) but missing the required ZIP64 extra field tag 0x0001 causes z64e() to loop indefinitely due to out-of-bounds reads returning undefined, which coerces to 0, keeping the loop condition permanently true.",
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2026-45820\n- https://github.com/101arrowz/fflate/blob/f7873560ad229c22c4b23b06c6a3806ffde77569/src/index.ts#L2714\n- https://github.com/101arrowz/fflate/commit/e6d5e6e1076892f72770ac732d83c81da9f3316e\n- https://github.com/101arrowz/fflate/releases/tag/v0.8.3\n- https://github.com/advisories/GHSA-px8p-9vwx-vf98",
+      "cwe": ["CWE-400"],
+      "cvss": {
+        "score": 7.5,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+      },
+      "found": [
+        {
+          "version": "0.8.2",
+          "paths": [
+            ". > @vitest/coverage-v8@3.2.6 > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            ". > @vitest/ui@3.2.6 > fflate@0.8.2",
+            ". > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            "apps\\web > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            "packages\\assemble-day-engine > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            "packages\\core > @vitest/coverage-v8@3.2.6 > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            "packages\\core > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            "packages\\search > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            "packages\\shared > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            "packages\\storage > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2",
+            "packages\\ui > vitest@3.2.6 > @vitest/ui@3.2.6 > fflate@0.8.2"
+          ]
+        }
+      ],
+      "timestamp": "2026-09-09T19:17:36.380Z"
+    },
+    {
+      "id": 1193683,
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "severity": "moderate",
+      "package": "vitest",
+      "versions": ">=2.1.0 <4.1.11",
+      "patched": ">=4.1.11",
+      "recommendation": "Upgrade to version 4.1.11 or later",
+      "overview": "## Summary\n`@vitest/mocker` registers a redirect mock's target path without validating it\nagainst the dev server's file-serving allowlist. An attacker who can reach the\ndev server's WebSocket can register a redirect mock pointing outside the project\nroot; when the mocked module is requested, the plugin's `load` hook returns\n`readFile(<attacker path>)` as the module source, disclosing local files.\n\nThis is exploitable **without authentication** only through the public\n`mockerPlugin` / standalone `interceptorPlugin` exports (used by third-party dev\nservers), which register the handler on Vite's unauthenticated HMR socket.\nVitest's own browser mode registers mocks over a **token-authenticated** RPC and\nis not remotely reachable by default (see Scope).\n\n## Affected code\n`packages/mocker/src/node/interceptorPlugin.ts`.\n\nThe `load` hook is the file-read sink:\n\n```ts\nif (mock.type === 'redirect') {\n  return readFile(mock.redirect, 'utf-8')\n}\n```\n\n`mock.redirect` is derived from client input at registration time with no\nboundary check:\n\n```ts\nif (event.type === 'redirect') {\n  const redirectUrl = new URL(event.redirect)\n  event.redirect = join(server.config.root, redirectUrl.pathname)\n}\nregistry.register(event)\n```\n\nThere is no `server.fs.allow` / `server.fs.deny` check and no assertion that the\nresolved path stays within the project root.\n\n## Registration paths and trust boundaries\n- **Public `mockerPlugin` / `interceptorPlugin` (unauthenticated).** In\n  `configureServer`, the plugin registers `server.ws.on('vitest:interceptor:register', …)`\n  on Vite's HMR WebSocket. That socket performs no token, Origin, or same-origin\n  check, so any client that can reach it can register a redirect mock. This is\n  the path the \"unauthenticated\" impact applies to.\n- **Vitest browser mode (authenticated).** Mocks register over the browser RPC\n  (`registerMock`), which sits behind a per-run token (`isValidApiRequest`, a\n  random `api.token`). The interceptor's `configureServer` socket is not used for\n  registration here (in v5 it does not run at all, as the plugin is injected per\n  environment). The same missing boundary check exists on the authenticated RPC\n  path, but reaching it requires the token, so it is not a remote-unauthenticated\n  read.\n\n## Path handling\n`new URL(redirect).pathname` combined with `join(root, pathname)` does **not**\nconfine reads to the root:\n\n- Special/hierarchical schemes (`file:`, `http:`) are normalized by WHATWG URL,\n  so `..` segments are collapsed and the result stays under the root. Payloads of\n  the form `file:///../../etc/passwd` do **not** escape.\n- A non-special (opaque) scheme preserves `..` in `pathname`, so\n  `join(root, \"../../…/etc/passwd\")` resolves outside the root and reads an\n  arbitrary file.\n\nEven without escaping the root, the missing `server.fs` check allows reading any\nin-root file the dev server would otherwise refuse to serve (for example an\nin-root `.env` or source that is denied by `server.fs.deny`).\n\n## Scope / preconditions\n- This is a **development-server** issue. The dev server binds to `localhost` by\n  default and is not reachable from the network unless the developer exposes it\n  (`server.host` / `0.0.0.0`, a LAN bind, or a proxy).\n- A raw (non-browser) client against a reachable server bypasses browser origin\n  and CORS protections entirely and can both register the mock and read the\n  response.\n- A browser-based drive-by against a localhost server is substantially mitigated\n  by Vite defaults: the default CORS origin allowlist is limited to `localhost`\n  origins, and `server.allowedHosts` blocks DNS-rebinding, so a cross-origin page\n  cannot read the file contents back.\n\n## Impact\nDisclosure of local files readable by the dev-server process (source, in-root\n`.env`/secrets, and, via the opaque-scheme payload, files outside the project\nroot). No integrity or availability impact.\n\n## Affected versions\nPresent since `@vitest/mocker` was introduced.\n\n- **Affected: `@vitest/mocker` >= 2.1.0** (shipped in `vitest` and\n  `@vitest/browser` >= 2.1.0), through 4.1.x and the 5.0.0 pre-releases.\n- **Fixed:** Vitest 4.1.11 and 5.0.0. Older majors (2.1.x, 3.x) are not\n  maintained and are not planned to receive the fix.\n\n## Fix\nValidate the resolved redirect target against Vite's file-serving allowlist\n(`isFileLoadingAllowed`) before registering it, at every registration site, and\nstop registering the interceptor WebSocket events in Vitest's browser mode\n(mocks there flow through the authenticated RPC).",
+      "references": "- https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9\n- https://nvd.nist.gov/vuln/detail/CVE-2026-84373\n- https://github.com/vitest-dev/vitest/pull/10972\n- https://github.com/vitest-dev/vitest/pull/10974\n- https://github.com/vitest-dev/vitest/commit/51edf2b072902aec6d30c90ebaafd8f121c6f9d8\n- https://github.com/vitest-dev/vitest/commit/8ff9b9a9efca7c6cfd5243569440de8d7a33aec4\n- https://github.com/vitest-dev/vitest/commit/fe5a11d3ceac5ec10d6d7d21a46d4caca132c48f\n- https://github.com/vitest-dev/vitest/releases/tag/v4.1.11\n- https://github.com/vitest-dev/vitest/releases/tag/v5.0.0-rc.2\n- https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "cwe": ["CWE-22"],
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "found": [
+        {
+          "version": "3.2.6",
+          "paths": [
+            ". > @vitest/coverage-v8@3.2.6 > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            ". > @vitest/ui@3.2.6 > vitest@3.2.6",
+            ". > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            "apps\\web > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            "packages\\assemble-day-engine > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            "packages\\core > @vitest/coverage-v8@3.2.6 > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            "packages\\core > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            "packages\\search > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            "packages\\shared > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            "packages\\storage > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6",
+            "packages\\ui > vitest@3.2.6 > @vitest/ui@3.2.6 > vitest@3.2.6"
+          ]
+        }
+      ],
+      "timestamp": "2026-09-09T19:17:36.380Z"
+    },
+    {
+      "id": 1193684,
+      "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+      "severity": "moderate",
+      "package": "@vitest/mocker",
+      "versions": ">=2.1.0 <4.1.11",
+      "patched": ">=4.1.11",
+      "recommendation": "Upgrade to version 4.1.11 or later",
+      "overview": "## Summary\n`@vitest/mocker` registers a redirect mock's target path without validating it\nagainst the dev server's file-serving allowlist. An attacker who can reach the\ndev server's WebSocket can register a redirect mock pointing outside the project\nroot; when the mocked module is requested, the plugin's `load` hook returns\n`readFile(<attacker path>)` as the module source, disclosing local files.\n\nThis is exploitable **without authentication** only through the public\n`mockerPlugin` / standalone `interceptorPlugin` exports (used by third-party dev\nservers), which register the handler on Vite's unauthenticated HMR socket.\nVitest's own browser mode registers mocks over a **token-authenticated** RPC and\nis not remotely reachable by default (see Scope).\n\n## Affected code\n`packages/mocker/src/node/interceptorPlugin.ts`.\n\nThe `load` hook is the file-read sink:\n\n```ts\nif (mock.type === 'redirect') {\n  return readFile(mock.redirect, 'utf-8')\n}\n```\n\n`mock.redirect` is derived from client input at registration time with no\nboundary check:\n\n```ts\nif (event.type === 'redirect') {\n  const redirectUrl = new URL(event.redirect)\n  event.redirect = join(server.config.root, redirectUrl.pathname)\n}\nregistry.register(event)\n```\n\nThere is no `server.fs.allow` / `server.fs.deny` check and no assertion that the\nresolved path stays within the project root.\n\n## Registration paths and trust boundaries\n- **Public `mockerPlugin` / `interceptorPlugin` (unauthenticated).** In\n  `configureServer`, the plugin registers `server.ws.on('vitest:interceptor:register', …)`\n  on Vite's HMR WebSocket. That socket performs no token, Origin, or same-origin\n  check, so any client that can reach it can register a redirect mock. This is\n  the path the \"unauthenticated\" impact applies to.\n- **Vitest browser mode (authenticated).** Mocks register over the browser RPC\n  (`registerMock`), which sits behind a per-run token (`isValidApiRequest`, a\n  random `api.token`). The interceptor's `configureServer` socket is not used for\n  registration here (in v5 it does not run at all, as the plugin is injected per\n  environment). The same missing boundary check exists on the authenticated RPC\n  path, but reaching it requires the token, so it is not a remote-unauthenticated\n  read.\n\n## Path handling\n`new URL(redirect).pathname` combined with `join(root, pathname)` does **not**\nconfine reads to the root:\n\n- Special/hierarchical schemes (`file:`, `http:`) are normalized by WHATWG URL,\n  so `..` segments are collapsed and the result stays under the root. Payloads of\n  the form `file:///../../etc/passwd` do **not** escape.\n- A non-special (opaque) scheme preserves `..` in `pathname`, so\n  `join(root, \"../../…/etc/passwd\")` resolves outside the root and reads an\n  arbitrary file.\n\nEven without escaping the root, the missing `server.fs` check allows reading any\nin-root file the dev server would otherwise refuse to serve (for example an\nin-root `.env` or source that is denied by `server.fs.deny`).\n\n## Scope / preconditions\n- This is a **development-server** issue. The dev server binds to `localhost` by\n  default and is not reachable from the network unless the developer exposes it\n  (`server.host` / `0.0.0.0`, a LAN bind, or a proxy).\n- A raw (non-browser) client against a reachable server bypasses browser origin\n  and CORS protections entirely and can both register the mock and read the\n  response.\n- A browser-based drive-by against a localhost server is substantially mitigated\n  by Vite defaults: the default CORS origin allowlist is limited to `localhost`\n  origins, and `server.allowedHosts` blocks DNS-rebinding, so a cross-origin page\n  cannot read the file contents back.\n\n## Impact\nDisclosure of local files readable by the dev-server process (source, in-root\n`.env`/secrets, and, via the opaque-scheme payload, files outside the project\nroot). No integrity or availability impact.\n\n## Affected versions\nPresent since `@vitest/mocker` was introduced.\n\n- **Affected: `@vitest/mocker` >= 2.1.0** (shipped in `vitest` and\n  `@vitest/browser` >= 2.1.0), through 4.1.x and the 5.0.0 pre-releases.\n- **Fixed:** Vitest 4.1.11 and 5.0.0. Older majors (2.1.x, 3.x) are not\n  maintained and are not planned to receive the fix.\n\n## Fix\nValidate the resolved redirect target against Vite's file-serving allowlist\n(`isFileLoadingAllowed`) before registering it, at every registration site, and\nstop registering the interceptor WebSocket events in Vitest's browser mode\n(mocks there flow through the authenticated RPC).",
+      "references": "- https://github.com/vitest-dev/vitest/security/advisories/GHSA-82fw-gwwq-j7x9\n- https://nvd.nist.gov/vuln/detail/CVE-2026-84373\n- https://github.com/vitest-dev/vitest/pull/10972\n- https://github.com/vitest-dev/vitest/pull/10974\n- https://github.com/vitest-dev/vitest/commit/51edf2b072902aec6d30c90ebaafd8f121c6f9d8\n- https://github.com/vitest-dev/vitest/commit/8ff9b9a9efca7c6cfd5243569440de8d7a33aec4\n- https://github.com/vitest-dev/vitest/commit/fe5a11d3ceac5ec10d6d7d21a46d4caca132c48f\n- https://github.com/vitest-dev/vitest/releases/tag/v4.1.11\n- https://github.com/vitest-dev/vitest/releases/tag/v5.0.0-rc.2\n- https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+      "cwe": ["CWE-22"],
+      "cvss": {
+        "score": 5.9,
+        "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+      },
+      "found": [
+        {
+          "version": "3.2.6",
+          "paths": [
+            ". > @vitest/coverage-v8@3.2.6 > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            ". > @vitest/ui@3.2.6 > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            ". > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            "apps\\web > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            "packages\\assemble-day-engine > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            "packages\\core > @vitest/coverage-v8@3.2.6 > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            "packages\\core > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            "packages\\search > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            "packages\\shared > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            "packages\\storage > vitest@3.2.6 > @vitest/mocker@3.2.6",
+            "packages\\ui > vitest@3.2.6 > @vitest/mocker@3.2.6"
+          ]
+        }
+      ],
+      "timestamp": "2026-09-09T19:17:36.380Z"
+    },
+    {
+      "id": 1193685,
+      "title": "extract-zip allows arbitrary file writes through symlink archive entries",
+      "severity": "high",
+      "package": "extract-zip",
+      "versions": "<=2.0.1",
+      "patched": "<0.0.0",
+      "recommendation": "None",
+      "overview": "extract-zip through 2.0.1 containment-checks only the parent directory of each archive entry and never the entry's own final path component, so an archive containing two entries with identical names - a symlink whose target is outside the destination, followed by a regular file - writes through the planted symlink and yields an arbitrary file write outside the destination directory.",
+      "references": "- https://nvd.nist.gov/vuln/detail/CVE-2026-19693\n- https://github.com/max-mapper/extract-zip\n- https://www.npmjs.com/package/extract-zip\n- https://github.com/max-mapper/extract-zip/pull/160\n- https://github.com/advisories/GHSA-7pqw-9j4j-h8q3",
+      "cwe": ["CWE-22"],
+      "cvss": {
+        "score": 8.1,
+        "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:H"
+      },
+      "found": [
+        {
+          "version": "2.0.1",
+          "paths": [
+            ". > lighthouse@11.1.0 > puppeteer-core@21.11.0 > @puppeteer/browsers@1.9.1 > extract-zip@2.0.1",
+            ". > puppeteer@24.18.0 > @puppeteer/browsers@2.10.8 > extract-zip@2.0.1",
+            ". > puppeteer@24.18.0 > puppeteer-core@24.18.0 > @puppeteer/browsers@2.10.8 > extract-zip@2.0.1"
+          ]
+        },
+        {
+          "version": "1.7.0",
+          "paths": [
+            "packages\\ui > storybook@7.6.24 > @storybook/cli@7.6.24 > puppeteer-core@2.1.1 > extract-zip@1.7.0"
+          ]
+        }
+      ],
+      "timestamp": "2026-09-09T19:17:36.380Z"
+    }
+  ],
   "summary": {
     "critical": 0,
-    "high": 0,
-    "moderate": 0,
+    "high": 4,
+    "moderate": 3,
     "low": 0,
     "info": 0,
-    "total": 0,
+    "total": 7,
     "score": 0
   },
-  "recommendations": [],
-  "auditStatus": "ok"
+  "recommendations": [
+    {
+      "type": "high",
+      "title": "High Priority Updates",
+      "description": "Found 4 high severity vulnerabilities. Schedule updates within 24-48 hours.",
+      "priority": 2
+    }
+  ],
+  "auditStatus": "ok",
+  "accepted": [],
+  "exceptionProblems": ["исключение для no-such-package-xyz больше нечего гасить — уязвимости нет, уберите запись"]
 }

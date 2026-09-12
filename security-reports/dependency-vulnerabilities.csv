@@ -1,1 +1,12 @@
 ID,Package,Title,Severity,Vulnerable Versions,Patched Versions,Overview
+1139346,extract-zip,extract-zip unvalidated symlink path traversal,high,<=2.0.1,<0.0.0,extract-zip does not validate symlink targets when extracting zip archives. When processing a malicious zip file containing a symlink with a relative path like '../../../../etc/passwd'; extract-zip wi
+1164782,fflate,fflate unzipSync can enter an infinite loop when parsing malformed ZIP64 archives,moderate,>=0.8.0 <0.8.3,>=0.8.3,fflate through 0.8.2 is vulnerable to denial of service via an infinite loop in unzipSync(). A crafted ZIP archive with a central directory entry declaring compressed_size=0xFFFFFFFF (ZIP64 sentinel) 
+1193683,vitest,Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock,moderate,>=2.1.0 <4.1.11,>=4.1.11,## Summary
+`@vitest/mocker` registers a redirect mock's target path without validating it
+against the dev server's file-serving allowlist. An attacker who can reach the
+dev server's WebSocket can regi
+1193684,@vitest/mocker,Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock,moderate,>=2.1.0 <4.1.11,>=4.1.11,## Summary
+`@vitest/mocker` registers a redirect mock's target path without validating it
+against the dev server's file-serving allowlist. An attacker who can reach the
+dev server's WebSocket can regi
+1193685,extract-zip,extract-zip allows arbitrary file writes through symlink archive entries,high,<=2.0.1,<0.0.0,extract-zip through 2.0.1 containment-checks only the parent directory of each archive entry and never the entry's own final path component; so an archive containing two entries with identical names -
