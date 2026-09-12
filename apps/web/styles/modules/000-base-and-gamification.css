@@ -8773,15 +8773,18 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   background: var(--v4-surface);
 }
 
-/* Контракт «вид клетки»: «выбранный день — заливка --c2». Обводка 2 px
-   акцентом, которую рисует кадр, снята: она спорила с сегодняшним днём —
-   два кольца навигации на одной сетке читались как одно состояние. */
+/* Выбранный день — заливка --c2 плюс обводка акцентом, как рисует кадр
+   (решение владельца 12 сентября). Раньше обводка была снята, потому что
+   спорила с кольцом сегодняшнего дня; теперь сегодня отмечено заливкой, и
+   спорить не с чем: два смысла — два разных приёма одного цвета. */
 .date-picker-sheet .date-picker-day.selected {
   /* Роль второй поверхности в каноничных наборах намеренно не задана —
      запасное значение там срабатывает по-настоящему и держит классику. */
   background: var(--v4-chip-2, #efe3cf);
   font-weight: 600;
-  box-shadow: none;
+  /* Обводка внутрь: контур не двигает клетку в сетке. */
+  /* v4-intentional */
+  box-shadow: inset 0 0 0 2px var(--v4-act);
   /* Контракт «вид клетки»: число всегда чернилами, выбор меняет только
      заливку. Базовое `.date-picker-day.selected` legacy-пикера лежит ниже по
      файлу и красит число в white — на песочной --c2 оно почти исчезало.
@@ -8798,16 +8801,20 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   background: var(--v4-chip-2, #2f2820);
 }
 
-/* Контракт «вид клетки»: «сегодняшнее — 700 тоном --ac», без заливки.
-   Кадры красят сегодня терракотовой плашкой — верен контракт: заливка
-   акцентом и заливка --c2 у выбранного дня давали два одинаково громких
-   состояния навигации на одной сетке. */
+/* Решение владельца 12 сентября: делаем как в кадре — сегодняшний день
+   заливкой акцентом, выбранный день обводкой того же цвета. В этой шторке
+   человек ищет, куда перейти, и «сегодня» — главный ориентир: громче должен
+   быть он. Прежнее правило оставляло сегодня только начертание 700 тоном
+   --ac, и на сетке из тридцати клеток это почти не читалось. */
 .date-picker-sheet .date-picker-day.today,
 .date-picker-sheet .date-picker-day.selected.today {
   font-weight: 700;
   /* v4-intentional */
-  color: var(--v4-act-text);
+  background: var(--v4-act);
+  /* v4-intentional */
+  color: var(--v4-btn-on-act);
   border: none;
+  box-shadow: none;
   animation: none;
 }
 
@@ -8840,15 +8847,19 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   flex-shrink: 0;
 }
 
+/* Метка цикла — вертикальная полоска слева от числа, 3×12. Так её рисует и
+   кадр «Календарь · легенда», и собственный образец легенды; в клетке же она
+   лежала горизонтальной полосой поверху, и легенда спорила с сеткой. */
 .date-picker-sheet .date-picker-day.has-cycle::before {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 3px;
-  width: auto;
-  border-radius: 0;
+  left: 2px;
+  right: auto;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 12px;
+  width: 3px;
+  border-radius: 999px;
   /* v4-intentional */
   background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent); /* v4-intentional */
   pointer-events: none;
@@ -8982,22 +8993,27 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   background: color-mix(in srgb, var(--v4-ink) var(--dp-mark-alpha), transparent); /* v4-intentional */
 }
 
+/* Образец «сегодня» в легенде повторяет клетку: обводка акцентом вокруг
+   числа (решение владельца 12 сентября). Пока сегодня отмечалось только
+   начертанием, образец был просто оранжевой цифрой и от «есть записи»
+   почти не отличался. */
+/* Образцы легенды повторяют клетки: «сегодня» — заливка акцентом,
+   «выбран» — обводка того же цвета (решение владельца 12 сентября). */
 .date-picker-sheet .legend-swatch--today {
-  min-width: 11px;
-  text-align: center;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  background: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 4px;
+  font-size: 0;
   /* v4-intentional */
-  color: var(--v4-act-text);
+  background: var(--v4-act);
 }
 
 .date-picker-sheet .legend-swatch--selected {
   width: 11px;
   height: 11px;
   border-radius: 4px;
-  box-shadow: none;
+  /* v4-intentional */
+  box-shadow: inset 0 0 0 1.5px var(--v4-act);
   background: var(--v4-chip-2, #efe3cf);
 }
 
