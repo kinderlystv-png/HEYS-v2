@@ -4435,8 +4435,10 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                 );
             }
             if (iconName === 'meal') {
+                // Кадр «Настройки · чипы быстрых действий» рисует у «Еды» приборы;
+                // плюс здесь читался как «добавить», а не как вид быстрого действия.
                 return React.createElement('svg', stroke,
-                    React.createElement('path', { d: 'M12 5v14M5 12h14' })
+                    React.createElement('path', { d: 'M6 3v18M4 3v5a2 2 0 004 0V3M16 3c-2 4-2 8 0 9v9' })
                 );
             }
             return null;
@@ -5584,9 +5586,14 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                     + FAB_VISIBILITY_OPTIONS.length,
                                 onClick: (e) => e.stopPropagation(),
                             },
+                                // Текст подписи — строка контракта «Что показывать в карточке
+                                // под кнопкой на всех вкла…»: она же объясняет, что будет при
+                                // одном и при нуле включённых пунктов.
                                 React.createElement('p', {
                                     className: 'hdr-settings-sheet__fab-lead',
-                                }, 'Что держать под пальцем на всех вкладках. Включайте чипами, порядок снизу вверх как в списке.'),
+                                }, 'Что показывать в карточке под кнопкой на всех вкладках. Порядок в карточке снизу вверх'
+                                    + ' как в этом списке, перетаскивания нет. Останется один пункт — кнопка станет им самим,'
+                                    + ' не останется ни одного — кнопки не будет.'),
                                 React.createElement('div', {
                                     className: 'hdr-settings-sheet__chips hdr-settings-sheet__chips--fab',
                                 },
@@ -5648,7 +5655,9 @@ if (typeof window !== 'undefined' && window.document && !window.__heysAdviceTabC
                                     )
                                 ),
                                 React.createElement('span', { className: 'hdr-settings-sheet__fab-notice-text' },
-                                    'Кнопки перестроятся, когда закроете настройки'
+                                    // Строка контракта «плашка «Список обновится, когда закроете
+                                    // настройки» стоит ниже карточки»: текст задан дословно.
+                                    'Список обновится, когда закроете настройки'
                                 )
                             ),
                             // Контракт «где живёт раздел»: порядок ярусов
