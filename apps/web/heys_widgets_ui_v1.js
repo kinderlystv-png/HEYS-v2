@@ -10176,19 +10176,7 @@
       )
       : null;
 
-    // Карточка и scrim в body — как другие v4-модалки: не растут в flex-стопке
-    // и не зависят от transform предков вкладки.
-    const quickPortal = open && global.document?.body && ReactDOM?.createPortal
-      ? ReactDOM.createPortal(
-        React.createElement('div', { className: 'widgets-quick-portal' },
-          quickScrim,
-          quickSheet
-        ),
-        global.document.body
-      )
-      : null;
-
-    return React.createElement('div', {
+    const fabWrap = React.createElement('div', {
       ref: wrapRef,
       ...(id ? { id } : {}),
       className: 'widgets-quick-fab-wrap' + (open ? ' is-open' : '')
@@ -10200,7 +10188,6 @@
       // обходе с клавиатуры и для скринридера её быть не должно.
       'aria-hidden': fabPhase === 'leave' ? 'true' : undefined
     },
-      quickPortal,
       chipsRow,
       pencil,
       React.createElement('button', {
@@ -10229,6 +10216,28 @@
         )
       )
     );
+
+    /*
+     * Кнопка, карандаш, чипы, scrim и карточка — один слой в body.
+     *
+     * Раньше в body уезжали только scrim и карточка («не растут в flex-стопке
+     * и не зависят от transform предков вкладки»), а кнопка с карандашом
+     * оставались во вкладке. У `.wrap` стоит `isolation: isolate`, поэтому
+     * весь слой вкладки — отдельный контекст наложения с `z-index: auto`, и
+     * никакой свой `z-index` кнопке не помогал: портал в body перекрывал её
+     * целиком. Карандаш от этого не просто гас под затемнением — нажатие по
+     * нему приходило в scrim и закрывало карточку, то есть в режим правки
+     * списка было не войти вовсе. В кадре «Быстрые действия · раскрыто»
+     * scrim нарисован до карандаша и кнопки — они поверх затемнения.
+     */
+    const quickLayer = React.createElement('div', { className: 'widgets-quick-portal' },
+      quickScrim,
+      quickSheet,
+      fabWrap
+    );
+    return global.document?.body && ReactDOM?.createPortal
+      ? ReactDOM.createPortal(quickLayer, global.document.body)
+      : quickLayer;
   }
 
   /** «нужно 3 дня» вместо «нужно 3 дней»: число в строке живое. */

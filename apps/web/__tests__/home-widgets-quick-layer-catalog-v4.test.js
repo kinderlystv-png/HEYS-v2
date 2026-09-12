@@ -1,0 +1,170 @@
+/**
+ * Главная: слой быстрых действий и ширина строк каталога.
+ *
+ * Кадр «Быстрые действия · раскрыто» (home-widgets.v4.dc.html) рисует
+ * затемнение ДО карандаша и кнопки — они поверх него, в полном тоне. В
+ * продукте затемнение с карточкой уезжали в body, а кнопка с карандашом
+ * оставались во вкладке, у которой `.wrap { isolation: isolate }`. Весь слой
+ * вкладки — отдельный контекст наложения с `z-index: auto`, поэтому свой
+ * `z-index: 1001` кнопке не помогал: портал перекрывал её целиком. Карандаш от
+ * этого не просто гас — нажатие по нему приходило в затемнение и закрывало
+ * карточку, то есть в режим правки списка было не войти вовсе (кадр «Быстрые
+ * действия · правка · режим» недостижим).
+ *
+ * Кадры «Каталог · нет места · 09–14» и «Каталог · значки вместо эмодзи ·
+ * 09–14»: строки каталога идут одна под другой во всю ширину. В продукте
+ * стояло `grid-template-columns: 1fr 1fr`, а `1fr` — это `minmax(auto, 1fr)`:
+ * собственная минимальная ширина строки растягивала дорожки до 302 и 291 px
+ * при контейнере 343, и вторая колонка уезжала за правый край экрана 375.
+ *
+ * Смоуком, а не глазами: обе поломки видны только в раскрытом состоянии и
+ * обе — про порядок слоёв и раскладку, которые пара «макет — приложение»
+ * показывает, а регресс потом ловить нечем.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { act, render } from '@testing-library/react';
+import * as RealReact from 'react';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+const WEB_DIR = path.resolve(__dirname, '..');
+const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
+const widgetsCss = fs.readFileSync(
+  path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'),
+  'utf8',
+);
+
+const originalReact = globalThis.React;
+const originalReactDOM = globalThis.ReactDOM;
+const originalHEYS = window.HEYS;
+
+const ALL_ON = { water: true, hunger: true, message: true, activity: true, meal: true };
+
+function stubHeys(state) {
+  globalThis.React = RealReact;
+  globalThis.ReactDOM = {
+    createRoot: () => ({ render: () => {}, unmount: () => {} }),
+    // Портал возвращаем на месте: тест смотрит порядок узлов внутри слоя,
+    // а не то, в какой контейнер React его положил.
+    createPortal: (node) => node,
+  };
+
+  window.HEYS = {
+    motion: { prefersReducedMotion: () => false },
+    Widgets: {
+      emit: () => {},
+      on: () => () => {},
+      registry: {
+        getAvailableTypes: () => [],
+        getType: () => null,
+        getSize: () => null,
+        normalizeSizeId: (id) => id,
+        getCategories: () => [],
+      },
+      state: { isEditMode: () => false, getWidgets: () => [] },
+      data: { getWaterData: () => ({ hasData: true, drunk: 1700, target: 2700 }) },
+      VariantsV4: {
+        getCatalog: () => [],
+        getDefaultVariant: () => null,
+        getActiveVariant: () => null,
+        getVariantById: () => null,
+        useWidgetVariantTile: null,
+      },
+    },
+    FabVisibility: {
+      EVENT: 'heys:fab-visibility-changed',
+      read: () => ({ ...state }),
+      setVisible: (key, value) => {
+        state[key] = !!value;
+        window.dispatchEvent(new CustomEvent('heys:fab-visibility-changed'));
+      },
+    },
+    WaterCustomVolume: { PRESETS_ML: [200, 500] },
+    utils: { lsGet: () => ({}) },
+    dayUtils: {},
+  };
+
+  // eslint-disable-next-line no-eval
+  eval(uiSrc);
+  return window.HEYS.Widgets;
+}
+
+/** Правило CSS по селектору: последнее объявление свойства в блоке. */
+function cssProp(selector, prop) {
+  const block = new RegExp(
+    `${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`,
+  ).exec(widgetsCss);
+  if (!block) return null;
+  const values = [...block[1].matchAll(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, 'g'))];
+  return values.length ? values[values.length - 1][1].trim() : null;
+}
+
+describe('Главная: слой быстрых действий поверх затемнения', () => {
+  beforeEach(() => {
+    globalThis.React = RealReact;
+  });
+
+  afterEach(() => {
+    globalThis.React = originalReact;
+    globalThis.ReactDOM = originalReactDOM;
+    window.HEYS = originalHEYS;
+  });
+
+  it('кнопка и карандаш лежат в том же слое, что затемнение, и после него', () => {
+    const Widgets = stubHeys({ ...ALL_ON });
+    const { container } = render(
+      RealReact.createElement(Widgets.QuickActionsFab, { waterMl: 1700 }),
+    );
+
+    act(() => {
+      container.querySelector('.widgets-quick-fab').click();
+    });
+
+    const layer = container.querySelector('.widgets-quick-portal');
+    expect(layer, 'слой быстрых действий не собран').toBeTruthy();
+    const scrim = layer.querySelector(':scope > .widgets-quick-scrim');
+    const wrap = layer.querySelector(':scope > .widgets-quick-fab-wrap');
+    expect(scrim, 'затемнение не в слое').toBeTruthy();
+    expect(wrap, 'кнопка с карандашом не в слое — она снова под затемнением').toBeTruthy();
+    // Кадр рисует затемнение раньше карандаша и кнопки: порядок узлов и есть
+    // порядок наложения внутри слоя.
+    const order = [...layer.children];
+    expect(order.indexOf(scrim)).toBeLessThan(order.indexOf(wrap));
+    expect(wrap.querySelector('.widgets-quick-pencil'), 'карандаша нет').toBeTruthy();
+  });
+
+  it('карандаш переводит карточку в режим правки', () => {
+    // Пока кнопка лежала под затемнением, это нажатие закрывало карточку.
+    const Widgets = stubHeys({ ...ALL_ON });
+    const { container } = render(
+      RealReact.createElement(Widgets.QuickActionsFab, { waterMl: 1700 }),
+    );
+
+    act(() => {
+      container.querySelector('.widgets-quick-fab').click();
+    });
+    act(() => {
+      container.querySelector('.widgets-quick-pencil').click();
+    });
+
+    expect(container.querySelector('.widgets-quick-sheet.is-editing')).toBeTruthy();
+    expect(container.querySelector('.widgets-quick-pencil.is-editing')).toBeTruthy();
+  });
+
+  it('ступень слоя — ступень кнопки, а не на единицу ниже', () => {
+    // Ступень ниже равна ступени нижней навигации, и кто окажется выше,
+    // зависело бы от порядка узлов в body.
+    expect(cssProp('.widgets-quick-portal', 'z-index')).toBe('var(--v4-z-fab, 1001)');
+  });
+});
+
+describe('Главная: каталог виджетов — одна колонка', () => {
+  it('дорожка каталога одна и сжимается до контейнера', () => {
+    const columns = cssProp('.widget-v4-catalog__grid', 'grid-template-columns');
+    expect(columns, 'правило дорожек каталога не найдено').toBeTruthy();
+    // minmax(0, 1fr): без нуля дорожка снова вырастет по минимальной ширине
+    // строки и уедет за правый край экрана.
+    expect(columns).toBe('minmax(0, 1fr)');
+  });
+});
