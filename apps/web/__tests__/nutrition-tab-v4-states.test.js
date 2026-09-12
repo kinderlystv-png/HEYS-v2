@@ -125,6 +125,11 @@ describe('вкладка «Питание» v4 — состояния', () => {
     expect(neutral.value).toBe('98');
     expect(neutral.right).toBe('105' + NBSP + '%');
     expect(neutral.zone).toBe('over');
+    // До порога предупреждения полоса цельная: обе доли одного тона, и разрез
+    // рисовал бы стык, которого в кадре «зона нейтральная» нет (строка 05
+    // контракта — «ширина 100%»).
+    expect(neutral.fillPct).toBe(100);
+    expect(neutral.overPct).toBe(0);
 
     const warn = at(2190); // 113 %
     expect(warn.zone).toBe('warn');

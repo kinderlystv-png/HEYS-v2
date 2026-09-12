@@ -350,15 +350,18 @@
     }
 
     if (pct != null && pct > 100) {
-      // Полоса делится внутри дорожки: бюджет и то, что сверх него.
+      // Полоса делится внутри дорожки: бюджет и то, что сверх него. До порога
+      // предупреждения делить нечем — обе доли одного тона, и разрез рисует
+      // стык, которого в кадре «зона нейтральная» нет (строка 05 «ширина 100%»).
       const overShare = eaten > 0 ? ((eaten - budget) / eaten) * 100 : 0;
       const zone = zoneOf(pct, thresholds);
+      const splitBar = zone === 'warn' || zone === 'red';
       return {
         label: 'Перебор',
         value: formatNumber(eaten - budget),
         zone,
-        fillPct: 100 - overShare,
-        overPct: overShare,
+        fillPct: splitBar ? 100 - overShare : 100,
+        overPct: splitBar ? overShare : 0,
         left: 'съедено ' + formatNumber(eaten),
         right: formatPercent(pct),
         rightZone: zone

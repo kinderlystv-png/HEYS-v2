@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const NUTRITION_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_nutrition_v1.js'), 'utf8');
 const NUTRITION_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css'), 'utf8');
 const DIARY_SECTION_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_diary_section.js'), 'utf8');
+const BASE_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/000-base-and-gamification.css'), 'utf8');
 
 function loadModule() {
   eval(NUTRITION_SRC);
@@ -201,6 +202,41 @@ describe('nutrition-tab · правки зоны', () => {
     const loaded = loadModule();
     api = loaded.api;
     renderFn = loaded.render;
+  });
+
+  // Кадры «зона нейтральная / предупреждения / красная» плюс строки контракта
+  // «· 04»: число героя красится ролью зоны, а до 110 % остаётся акцентом.
+  // Решение дизайнера 01.09: «акцент здесь база, от которой читаются и
+  // предупреждение, и красный». Прежнее правило возвращало числу чернила.
+  it('число героя до 110 % — акцент, а не чернила', () => {
+    expect(NUTRITION_CSS).not.toMatch(
+      /\.nutrition-v4-hero\[data-zone='over'\]\s+\.nutrition-v4-hero__value\s*\{/,
+    );
+    const value = /\.nutrition-v4-hero__value\s*\{([^}]*)\}/.exec(NUTRITION_CSS);
+    expect(value?.[1]).toContain('var(--v4-act-text');
+    expect(NUTRITION_CSS).toMatch(
+      /\.nutrition-v4-hero\[data-zone='warn'\]\s+\.nutrition-v4-hero__value\s*\{[^}]*var\(--v4-warn-text/,
+    );
+    expect(NUTRITION_CSS).toMatch(
+      /\.nutrition-v4-hero\[data-zone='red'\]\s+\.nutrition-v4-hero__value\s*\{[^}]*var\(--v4-bad-text/,
+    );
+  });
+
+  // Строка контракта «вид карточки офлайна»: причина, под ней через 6 px строка
+  // про прошлые дни, ниже через 16 — кнопка «Обновить». Общий gap 6 px давал
+  // 6 px и перед кнопкой.
+  it('карточка офлайна: 6 px до строки про прошлые дни и 16 до кнопки', () => {
+    const rule = (selector) => {
+      const at = BASE_CSS.indexOf(`\n${selector} {`);
+      expect(at).toBeGreaterThan(-1);
+      return BASE_CSS.slice(at, BASE_CSS.indexOf('}', at));
+    };
+    expect(rule('.offline-nodata-overlay')).not.toMatch(/\bgap:/);
+    expect(rule('.offline-nodata-text')).toMatch(/margin-top:\s*6px/);
+    expect(rule('.offline-nodata-retry')).toMatch(/margin-top:\s*16px/);
+    expect(rule('.offline-nodata-title')).toMatch(/font-size:\s*13\.5px/);
+    expect(rule('.offline-nodata-overlay')).toMatch(/border-radius:\s*22px/);
+    expect(rule('.offline-nodata-overlay')).toMatch(/padding:\s*20px 18px/);
   });
 
   it('клетчатка: дорожка идёт по шкале зон, а не вечно is-ok', () => {
