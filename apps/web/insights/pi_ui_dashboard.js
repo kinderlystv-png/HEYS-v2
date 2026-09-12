@@ -382,8 +382,12 @@
             h('div', { className: 'insights-v4-fail' },
               h('div', { className: 'insights-v4-fail__title' }, 'Разбор не собрался'),
               h('div', { className: 'insights-v4-fail__note' },
-                'Расчёт оборвался на этом устройстве. Записи целы — потерять их '
-                + 'разбор не может, он только читает.'),
+                // Слова кадра «Инсайты · не посчиталось»: сначала о том, что
+                // цело, и только потом о сбое. Прежняя фраза начиналась с
+                // «расчёт оборвался» — человек читает это как «данные
+                // потерялись».
+                'Дневник и вес на месте — не сложился только разбор. '
+                + 'Ваши записи в порядке, ничего не потерялось.'),
               h('button', {
                 type: 'button',
                 className: 'insights-v4-fail__retry',
@@ -403,13 +407,13 @@
               h('div', { className: 'insights-v4-fail__tier' }, 'Что осталось доступным'),
               h('div', { className: 'insights-v4-fail__list' },
                 [['Дневник и приёмы', 'работает'],
-                  ['Отчёты', 'работает'],
-                  ['Разбор', 'вернётся сам']].map(function (pair) {
+                  ['Отчёты', 'работают'],
+                  ['Разбор дня', 'вернётся сам']].map(function (pair) {
                   return h('div', { key: pair[0], className: 'insights-v4-fail__row' },
                     h('span', { className: 'insights-v4-fail__row-name' }, pair[0]),
                     h('span', {
                       className: 'insights-v4-fail__row-state'
-                        + (pair[1] === 'работает' ? ' is-ok' : '')
+                        + (pair[1].startsWith('работа') ? ' is-ok' : '')
                     }, pair[1])
                   );
                 })
