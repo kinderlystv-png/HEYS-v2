@@ -180,6 +180,81 @@ describe('чек-ин · шаг «Вес» против кадров v4', () => 
   });
 });
 
+describe('чек-ин · итог утра', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete window.HEYS;
+    delete window.React;
+  });
+
+  function renderRecorded(configs) {
+    return renderToStaticMarkup(React.createElement(configs.checkinRecorded.component, {
+      stepData: {},
+      context: { dateKey: TODAY },
+    }));
+  }
+
+  it('печатает серию, а не «Утро закрыто», когда вкладка Дня не смонтирована', () => {
+    // Кадр «Чек-ин · записано»: под заголовком стоит «Серия — N дней подряд».
+    const { configs } = loadSteps({ days: WEIGHT_DAYS, streak: 5 });
+    const html = renderRecorded(configs);
+    expect(html).toContain('Чек-ин записан');
+    expect(html).toContain('Серия — 5 дней подряд');
+    expect(html).not.toContain('Утро закрыто');
+  });
+
+  it('галка итога красится ролью палитры', () => {
+    const { configs } = loadSteps({ days: WEIGHT_DAYS, streak: 5 });
+    const html = renderRecorded(configs);
+    expect(html).toContain('--v4-ok-text');
+    expect(html).not.toMatch(/stroke="#5c6a45"/);
+  });
+});
+
+describe('чек-ин · ряд ответов «Последний кофе»', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    delete window.HEYS;
+    delete window.React;
+  });
+
+  function renderRest(configs, data) {
+    return renderToStaticMarkup(React.createElement(configs.morningRest.component, {
+      data: { _dateKey: TODAY, coldType: 'none', selected: [], ...data },
+      onChange: () => {},
+      context: { dateKey: TODAY },
+    }));
+  }
+
+  it('сноска зовёт среднюю пилюлю тем же словом, что на ней написано', () => {
+    // Строка контракта «подпись средней пилюли»: до ответа — «своё время»,
+    // после — само время. Сноска отсылает к пилюле, значит берёт ту же подпись.
+    const { configs } = loadSteps({ days: WEIGHT_DAYS });
+    const empty = renderRest(configs, {});
+    expect(empty).toContain('тапом по «своё время»');
+
+    const answered = renderRest(configs, { coffeeChoice: 'exact', coffeeTime: '14:30' });
+    expect(answered).toContain('тапом по «14:30»');
+    expect(answered).not.toContain('тапом по «своё время»');
+  });
+
+  it('пилюли ряда делят ширину поровну — строки разбора «· 17» и «· 18»', () => {
+    const start = PWA_CSS.indexOf('.mc-rest-coffee-actions .mc-pill {');
+    const rule = PWA_CSS.slice(start, PWA_CSS.indexOf('}', start));
+    expect(start).toBeGreaterThan(0);
+    expect(rule).toContain('flex: 1');
+    expect(rule).toContain('min-width: 64px');
+  });
+});
+
 describe('чек-ин · метка совета на шаге «Цель по шагам»', () => {
   it('метка прижата к низу своего ряда — она стоит НАД дорожкой', () => {
     // Ряд метки высотой 17 px, а цель нажатия у метки 44 px: без привязки к
@@ -194,5 +269,14 @@ describe('чек-ин · метка совета на шаге «Цель по �
     expect(rule).toContain('justify-content: flex-end');
     expect(rule).toContain('min-height: 44px');
     expect(rule).not.toMatch(/\btop:/);
+  });
+
+  it('подпись плашки серии набрана влево, а не по центру', () => {
+    // Кадр «Чек-ин · вес», элемент 08. Выключка center наследовалась от
+    // приветствия, и двухстрочная подпись вставала лесенкой.
+    const start = PWA_CSS.indexOf('.mc-modal--daily .mc-daily-streak-text {');
+    const rule = PWA_CSS.slice(start, PWA_CSS.indexOf('}', start));
+    expect(start).toBeGreaterThan(0);
+    expect(rule).toContain('text-align: left');
   });
 });
