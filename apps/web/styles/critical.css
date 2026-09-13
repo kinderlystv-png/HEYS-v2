@@ -827,7 +827,9 @@ body.board-dark-nav .heys-tab-skeleton {
   .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
     height: 38px;
     min-height: 38px;
-    padding: 0 4px 0 11px;
+    /* Правое поле 9 (56-я сборка, строка «вид чипа „Сегодня“»): зазор от чипа
+       до края капсулы вровень с левыми 11 до иконки календаря. */
+    padding: 0 9px 0 11px;
     gap: 5px;
   }
 

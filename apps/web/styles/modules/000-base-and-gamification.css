@@ -8504,7 +8504,10 @@ body:has(.offline-banner) .wrap {
   border: none;
   border-radius: 999px;
   gap: 5px;
-  padding: 0 4px 0 11px;
+  /* Правое поле 9, а не 4 (56-я сборка, строка «вид чипа „Сегодня“»): зазор
+     от чипа до края капсулы читается вровень с левыми 11 px до иконки
+     календаря, прежние 4 выглядели ошибкой вёрстки. */
+  padding: 0 9px 0 11px;
   justify-content: flex-start;
 }
 
@@ -8569,15 +8572,23 @@ body:has(.offline-banner) .wrap {
 /* date-remainders «вид чужого дня» (правка 1 сентября): «Сегодня» — надпись
    11 px/700 тоном --ac, без заливки; min-height 44 — строка «тач-цели»
    (6 сентября), видимая цель без ::after. */
+/* Строка «вид чипа „Сегодня“» (56-я сборка): кнопка возврата в капсуле чужого
+   дня — чип, а не голое слово. Подложка --bg на тинтованной капсуле, радиус
+   999, поля 0 10, высота 28. Без подложки она отличалась от подписи только
+   цветом — то есть выглядела пометкой, хотя это единственное нажимаемое место
+   капсулы. Цель нажатия остаётся всей капсулой (строка «тач-цели»), поэтому
+   собственные 44 чипу больше не нужны. */
 .date-picker--v4 .date-picker-inline-today {
   flex: none;
   display: inline-flex;
   align-items: center;
-  min-height: 44px;
+  min-height: 28px;
   margin: 0;
-  padding: 0;
+  padding: 0 10px;
   border: none;
-  background: transparent;
+  border-radius: 999px;
+  /* v4-intentional */
+  background: var(--v4-bg);
   position: relative;
   /* Запасное — песочное значение САМОЙ роли (002-ui-v4-palette-roles.css:147),
      а не соседней поверхности. Прежде голую роль легализовал маркер
@@ -9828,7 +9839,7 @@ svg.date-picker-icon {
   .date-picker--v4 .date-picker-trigger--not-today {
     min-height: 44px;
     gap: 5px;
-    padding: 0 4px 0 11px;
+    padding: 0 9px 0 11px;
   }
 
   .date-picker--v4 .date-picker-day-nav {

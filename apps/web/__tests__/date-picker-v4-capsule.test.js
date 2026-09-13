@@ -26,7 +26,11 @@ describe('DatePicker v4 капсула', () => {
         expect(baseCss).toContain('.date-picker--v4 .date-picker-trigger-lbl');
     });
 
-    // date-remainders «вид чужого дня» (1 сентября) — надпись 11 px/700 без заливки.
+    // date-remainders «вид чипа „Сегодня“» (56-я сборка, 13 сентября): кнопка
+    // возврата — чип с подложкой --bg, радиусом 999 и полями 0 10, а не голая
+    // надпись. Прежняя редакция строки требовала заливки transparent — она
+    // отменена: без подложки единственное нажимаемое место капсулы отличалось
+    // от подписи только цветом.
     it('CSS — кегли по контракту (12.5 / 11 / 10)', () => {
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-lbl-inner \.date-picker-main[\s\S]{0,120}font-size:\s*12\.5px/,
@@ -35,7 +39,10 @@ describe('DatePicker v4 капсула', () => {
             /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,320}font-size:\s*11px/,
         );
         expect(baseCss).toMatch(
-            /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,320}background:\s*transparent/,
+            /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,400}background:\s*var\(--v4-bg\)/,
+        );
+        expect(baseCss).toMatch(
+            /\.date-picker--v4 \.date-picker-inline-today \{[\s\S]{0,400}padding:\s*0 10px/,
         );
         expect(baseCss).toMatch(
             /\.date-picker--v4 \.date-picker-sub--relative[\s\S]{0,120}font-size:\s*10px/,
