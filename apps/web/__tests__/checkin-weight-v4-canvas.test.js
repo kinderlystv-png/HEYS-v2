@@ -237,11 +237,19 @@ describe('чек-ин · ряд ответов «Последний кофе»',
   it('сноска зовёт среднюю пилюлю тем же словом, что на ней написано', () => {
     // Строка контракта «подпись средней пилюли»: до ответа — «своё время»,
     // после — само время. Сноска отсылает к пилюле, значит берёт ту же подпись.
+    // Карточка живёт в шаге «Сон» с 57-й сборки — рисуем его, а не «Остальное».
     const { configs } = loadSteps({ days: WEIGHT_DAYS });
-    const empty = renderRest(configs, {});
+    const renderSleep = (data) => renderToStaticMarkup(
+      React.createElement(configs.sleep.component, {
+        data: { sleepQuality: 7, ...data },
+        onChange: () => {},
+        context: {},
+      }),
+    );
+    const empty = renderSleep({});
     expect(empty).toContain('тапом по «своё время»');
 
-    const answered = renderRest(configs, { coffeeChoice: 'exact', coffeeTime: '14:30' });
+    const answered = renderSleep({ coffeeChoice: 'exact', coffeeTime: '14:30' });
     expect(answered).toContain('тапом по «14:30»');
     expect(answered).not.toContain('тапом по «своё время»');
   });

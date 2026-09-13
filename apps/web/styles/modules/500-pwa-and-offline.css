@@ -1434,11 +1434,27 @@
 /* Выключка по центру — обмер 19 кадра «Чек-ин · замеры». Общее правило
    подписи отмены (`.mc-rest-clear-mark-hint`) ставит текст влево и стоит ниже
    по файлу, поэтому адресуем обоими классами. */
-.mc-rest-measure-foot-hint,
-.mc-rest-clear-mark-hint.mc-rest-measure-foot-hint {
-  text-align: center;
-  margin-top: 2px;
+/* Строка контракта «подвал блока замеров» (57-я сборка): подвал внизу карточки,
+   выключка left, кегль 11/1,5, отступ 8 от блока выше. Было по центру и 2 px от
+   кнопки «Не сейчас» — сноска отсылала к кнопке, а принадлежит замерам. */
+.mc-rest-measure-foot {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Отступ 8 живёт на самой сноске, а не на обёртке: кадр называет его у строки
+   подвала, и гейт зоны сверяет именно её правило. */
+.mc-rest-measure-foot-hint {
+  text-align: left;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 8px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+}
+
+/* Между двумя сносками подвала — 6, а не 8: они одна мысль в двух строках. */
+.mc-rest-measure-foot-hint + .mc-rest-measure-foot-hint {
+  margin-top: 6px;
 }
 
 .mc-recorded-check {
@@ -1539,9 +1555,16 @@
    Кадр «Чек-ин · замеры просрочены» рисует её кикером слева над строкой
    (9,5 px/700 с точкой) — контракт старше кадра, поэтому метка справа, а точка
    и кикер сняты. */
+/* Строка кадра «Чек-ин · замеры просрочены · 30» (57-я сборка): метка набрана
+   700 9,5px/1 с трекингом .12em в верхнем регистре. Кегль остаётся 10 — его
+   называет строка контракта «вид просроченной строки», и она старше кадра;
+   отступление названо в списке исключений гейта зоны. Межстрочный, трекинг и
+   регистр контракт не называет, поэтому берутся из кадра. */
 .mc-rest-overdue-badge {
   margin-left: auto;
-  font: 700 10px/1.2 Manrope, system-ui, sans-serif;
+  font: 700 10px/1 Manrope, system-ui, sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--v4-warn-text, #a1471c);
   white-space: nowrap;
   flex: none;
@@ -7814,4 +7837,64 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
   content: '';
   position: absolute;
   inset: -11px;
+}
+
+/* Карточка «Последний кофе вчера» в шаге «Сон» — строки кадра «Чек-ин · сон ·
+   28…36» 57-й сборки: отступ сверху 10, радиус 16, фон --c1, поля 13/14; ряд
+   пилюль с переносом, зазор 6, отступ сверху 11; сноска 11/1.45 тоном --ink-2.
+   Поля 13/14 взяты у строки кадра, а не у названного правила «форма карточки
+   кофе — общая шага» (16/17): с общими полями ряд пилюль не помещается в 375.
+   Спор двух строк отдан дизайнеру — checkin-coffee-card-padding-two-lines. */
+.mc-sleep-coffee {
+  margin-top: 10px;
+  border-radius: 16px;
+  background: var(--v4-c1, #f7efe2);
+  padding: 13px 14px;
+}
+
+.mc-sleep-coffee-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mc-sleep-coffee-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--v4-ink, #171b1e);
+}
+
+.mc-sleep-coffee-note {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+}
+
+.mc-sleep-coffee-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.mc-sleep-coffee-actions .mc-pill {
+  flex: 1;
+  min-width: 64px;
+  min-height: 44px;
+}
+
+.mc-sleep-coffee-why {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.45;
+  margin-top: 10px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+}
+
+.mc-sleep-coffee-back {
+  margin-top: 12px;
 }

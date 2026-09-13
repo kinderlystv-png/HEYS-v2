@@ -19,6 +19,8 @@ const VARIANTS_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_variants_v
 const UI_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 
 const TODAY = '2026-08-30';
+// Кофе спрашивается за вчера: ответ живёт во вчерашней записи дня.
+const YESTERDAY = '2026-08-29';
 
 /** Шаги чек-ина с подставленным localStorage: день лежит в карте, а не в облаке. */
 function loadSteps(dayMap = {}) {
@@ -49,11 +51,12 @@ function loadSteps(dayMap = {}) {
   return { configs, store, Steps: window.HEYS.Steps };
 }
 
-/** Разметка шага «Остальное» как её увидит человек. */
+/** Разметка шага «Сон» как её увидит человек: карточка кофе переехала туда
+ *  (строка контракта «место карточки кофе — шаг „Сон"», 57-я сборка). */
 function renderStep(configs, data) {
-  const Step = configs.morningRest.component;
+  const Step = configs.sleep.component;
   return renderToStaticMarkup(React.createElement(Step, {
-    data: Object.assign({ _dateKey: TODAY, coldType: 'none', selected: [] }, data),
+    data: Object.assign({ _dateKey: TODAY, sleepQuality: 7 }, data),
     onChange: () => {},
     context: { dateKey: TODAY }
   }));
@@ -103,39 +106,50 @@ describe('чек-ин · блок «Последний кофе»', () => {
     expect(at('exact', null)).toBeUndefined();
   });
 
-  it('ответ уезжает в день и читается обратно, снятие — удаляет поле', () => {
-    const { configs, store } = loadSteps({ [TODAY]: { date: TODAY } });
-    const rest = configs.morningRest;
+  it('ответ уезжает во ВЧЕРАШНИЙ день и читается обратно, снятие — удаляет поле', () => {
+    const { configs, store } = loadSteps({ [TODAY]: { date: TODAY }, [YESTERDAY]: { date: YESTERDAY } });
+    const sleep = configs.sleep;
+    const sleepData = { sleepStartH: 23, sleepStartM: 0, sleepEndH: 7, sleepEndM: 0, sleepQuality: 7 };
 
-    rest.save({ _dateKey: TODAY, coffeeChoice: 'exact', coffeeTime: '14:30' }, { dateKey: TODAY });
-    const saved = store[`heys_dayv2_${TODAY}`];
+    sleep.save({ ...sleepData, coffeeChoice: 'exact', coffeeTime: '14:30' }, { dateKey: TODAY });
+    // Чек-ин проходят утром: ответ про кофе — это вчерашний день, а не сегодня.
+    expect(store[`heys_dayv2_${TODAY}`].lastCoffee).toBeUndefined();
+    const saved = store[`heys_dayv2_${YESTERDAY}`];
     expect(saved.lastCoffee.choice).toBe('exact');
     expect(saved.lastCoffee.time).toBe('14:30');
 
-    const back = rest.getInitialData({ dateKey: TODAY });
+    const back = sleep.getInitialData({ dateKey: TODAY });
     expect(back.coffeeChoice).toBe('exact');
     expect(back.coffeeTime).toBe('14:30');
 
-    rest.save({ _dateKey: TODAY, coffeeChoice: null }, { dateKey: TODAY });
-    expect(store[`heys_dayv2_${TODAY}`].lastCoffee).toBeUndefined();
-    expect(rest.getInitialData({ dateKey: TODAY }).coffeeChoice).toBeNull();
+    sleep.save({ ...sleepData, coffeeChoice: null }, { dateKey: TODAY });
+    expect(store[`heys_dayv2_${YESTERDAY}`].lastCoffee).toBeUndefined();
+    expect(sleep.getInitialData({ dateKey: TODAY }).coffeeChoice).toBeNull();
   });
 
-  it('мусорный ответ в дне не становится выбранной пилюлей', () => {
-    const { configs } = loadSteps({ [TODAY]: { date: TODAY, lastCoffee: { choice: 'вчера' } } });
-    expect(configs.morningRest.getInitialData({ dateKey: TODAY }).coffeeChoice).toBeNull();
+  it('мусорный ответ во вчерашнем дне не становится выбранной пилюлей', () => {
+    const { configs } = loadSteps({ [YESTERDAY]: { date: YESTERDAY, lastCoffee: { choice: 'вчера' } } });
+    expect(configs.sleep.getInitialData({ dateKey: TODAY }).coffeeChoice).toBeNull();
   });
 
-  it('карточка рисуется первой из редких: до добавок и рутины', () => {
+  it('карточка стоит последним блоком шага сна, после ряда «Легли / Встали»', () => {
     const { configs } = loadSteps({ [TODAY]: { date: TODAY } });
     const html = renderStep(configs, { coffeeChoice: 'exact', coffeeTime: '14:30' });
-    expect(html).toContain('mc-rest-card--coffee');
-    expect(html).toContain('Последний кофе');
+    expect(html).toContain('mc-sleep-coffee');
+    expect(html).toContain('Последний кофе вчера');
     expect(html).toContain('до отбоя 8 ч');
     ['до 12:00', '14:30', 'после 17', 'не пил'].forEach((label) => expect(html).toContain(label));
     // Выбранная пилюля одна, и это своё время.
     expect(html.match(/mc-pill--choice is-on/g)).toHaveLength(1);
-    expect(html.indexOf('mc-rest-card--coffee')).toBeLessThan(html.indexOf('mc-rest-card--routine'));
+    // Последним блоком: ряд капсул времени стоит выше карточки.
+    expect(html.indexOf('mc-sleep-times')).toBeLessThan(html.indexOf('mc-sleep-coffee'));
+    // В шаге «Остальное» карточки больше нет.
+    const rest = renderToStaticMarkup(React.createElement(configs.morningRest.component, {
+      data: { _dateKey: TODAY, coldType: 'none', selected: [] },
+      onChange: () => {},
+      context: { dateKey: TODAY }
+    }));
+    expect(rest).not.toContain('Последний кофе');
   });
 
   it('без ответа выбранной пилюли нет, а средняя зовётся «своё время»', () => {
@@ -145,11 +159,11 @@ describe('чек-ин · блок «Последний кофе»', () => {
     expect(html).not.toContain('mc-pill--choice is-on');
   });
 
-  it('лист своего времени даёт стрелку назад — иначе из него не выйти', () => {
-    const { configs } = loadSteps();
-    const rest = configs.morningRest;
-    expect(rest.showHeaderBack({ coffeeOpen: true })).toBe(true);
-    expect(rest.applyHeaderBack({ coffeeOpen: true }).coffeeOpen).toBe(false);
+  it('из листа своего времени есть выход — кнопка «Готово» в самом слое', () => {
+    const { configs } = loadSteps({ [TODAY]: { date: TODAY } });
+    const html = renderStep(configs, { coffeeOpen: true, coffeeTime: '14:30' });
+    expect(html).toContain('mc-sleep-coffee-back');
+    expect(html).toContain('Готово');
   });
 });
 

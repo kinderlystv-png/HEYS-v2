@@ -83,7 +83,7 @@ const EXCEPTIONS = new Map([
   // кегль у всех таких кнопок один — 12,5. Контракт старше кадра.
   ['Чек-ин · замеры просрочены · 31|minHeight', 'контракт «минимальная область нажатия»: не ниже 44'],
   ['Чек-ин · замеры просрочены · 31|fontSize', 'кегль кнопки выбора один на все ряды: 12,5'],
-  ['Чек-ин · замеры просрочены · 35|fontSize', 'контракт «вид просроченной строки»: 10 px'],
+  ['Чек-ин · замеры просрочены · 30|fontSize', 'контракт «вид просроченной строки»: 10 px, кадр 9,5'],
   // Отбивка яруса в списке добавок: у первого яруса кадр даёт 14, у второго
   // 13. Один отступ на ряд ярусов.
   ['Добавки · добавление · 8|marginTop', 'один отступ на ряд ярусов: 13'],
@@ -110,6 +110,9 @@ const EXCEPTION_DRIFT = [
   '.mc-recorded .mc-recorded-sub { color }',
   '.mc-rest-measure-side-pill { min-height }',
   '.mc-rest-measure-side-pill.is-on { min-height }',
+  // Кегль метки просрочки: контракт «вид просроченной строки» называет 10 px,
+  // кадр 57-й сборки рисует 9,5. Контракт старше кадра, отступление названо.
+  '.mc-rest-overdue-badge { font-size }',
 ];
 
 function siftCheckin(drift) {
@@ -129,27 +132,20 @@ const STEP5 = [
   [9, '.mc-rest-cold-hint', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   [10, '.mc-rest-cold-actions', ['gap', 'marginTop']],
   [11, ['.mc-pill', '.mc-pill--choice'], ['minHeight', 'radius', 'background', 'fontSize', 'lineHeight']],
-  [13, ['.mc-rest-card', '.mc-rest-card--coffee'], ['background']],
-  [15, '.mc-rest-coffee-note', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [16, '.mc-rest-coffee-actions', ['gap', 'marginTop']],
-  [18, ['.mc-pill', '.mc-pill--choice.is-on'],
-    ['minHeight', 'radius', 'background', 'color', 'fontWeight', 'fontSize', 'lineHeight']],
-  [19, ['.mc-rest-card-hint', '.mc-rest-coffee-why'],
-    ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
-  [20, ['.mc-rest-card', '.mc-rest-card--supplements'], ['background']],
-  [21, '.mc-rest-supp-head', ['align', 'justify', 'gap']],
-  // Ширину чипу задаёт контекстное правило ряда, а не сам класс кнопки.
-  [17, ['.mc-pill', '.mc-pill--choice', '.mc-rest-coffee-actions .mc-pill'],
-  ['flex', 'minWidth', 'minHeight', 'radius', 'background', 'fontSize', 'lineHeight', 'ring']],
-  [23, '.mc-rest-supp-list', ['direction', 'gap', 'marginTop']],
-  [24, '.mc-rest-supp-name', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [25, '.mc-rest-supp-time', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [26, '.mc-rest-supp-add', ['align', 'gap', 'marginTop', 'minHeight']],
-  [27, '.mc-rest-supp-add-icon',
+  // 57-я сборка: карточка кофе уехала в шаг «Сон», её строки 13…19 из кадра
+  // сняты, и всё, что стояло ниже, поднялось на семь. Номера ниже — новые,
+  // сверены со строками кадра, а не пересчитаны арифметикой.
+  [13, ['.mc-rest-card', '.mc-rest-card--supplements'], ['background']],
+  [14, '.mc-rest-supp-head', ['align', 'justify', 'gap']],
+  [17, '.mc-rest-supp-list', ['direction', 'gap', 'marginTop']],
+  [18, '.mc-rest-supp-name', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [19, '.mc-rest-supp-time', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [20, '.mc-rest-supp-add', ['align', 'gap', 'marginTop', 'minHeight']],
+  [21, '.mc-rest-supp-add-icon',
   ['width', 'height', 'radius', 'background', 'align', 'justify', 'flex']],
-  [28, '.mc-rest-supp-add', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-  [32, '.mc-rest-row', ['radius', 'background', 'padding', 'minHeight', 'align', 'justify', 'gap']],
-  [34, '.mc-rest-chevron', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [22, '.mc-rest-supp-add', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [27, '.mc-rest-row', ['radius', 'background', 'padding', 'minHeight', 'align', 'justify', 'gap']],
+  [29, '.mc-rest-chevron', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
 // Шаг веса: приветствие, серия, крупное число и капсула колёс.
@@ -192,6 +188,20 @@ const SLEEP = [
   [22, ['.mc-sleep-label', '.mc-modal--daily .mc-sleep-label'],
     ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform', 'color', 'textAlign']],
   [23, '.mc-modal--daily .mc-sleep-block .mc-time-pickers', ['align', 'justify', 'marginTop']],
+  // Карточка «Последний кофе вчера» — строки кадра «Чек-ин · сон · 29…36»
+  // 57-й сборки: она переехала сюда из шага «Остальное».
+  // Отступ карточки от ряда капсул назван отдельной строкой 28, форма — 29.
+  [28, '.mc-sleep-coffee', ['marginTop']],
+  [29, '.mc-sleep-coffee', ['radius', 'background', 'padding']],
+  [30, '.mc-sleep-coffee-head', ['align', 'justify', 'gap']],
+  [31, '.mc-sleep-coffee-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [32, '.mc-sleep-coffee-note', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
+  [33, '.mc-sleep-coffee-actions', ['gap', 'marginTop']],
+  [34, ['.mc-pill', '.mc-pill--choice', '.mc-sleep-coffee-actions .mc-pill'],
+  ['flex', 'minWidth', 'minHeight', 'radius', 'background', 'fontSize', 'lineHeight']],
+  [35, ['.mc-pill', '.mc-pill--choice.is-on', '.mc-sleep-coffee-actions .mc-pill'],
+  ['flex', 'minWidth', 'minHeight', 'radius', 'background', 'fontSize', 'lineHeight']],
+  [36, '.mc-sleep-coffee-why', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
 ];
 
 // Развилка разбора вчера. Три кадра рисуют один и тот же набор управлений
@@ -417,11 +427,12 @@ const REST_FRAMES = [
     // но на экране надпись стоит там же.
     [11, ['.mc-pill', '.mc-pill--choice'],
     ['flex', 'minHeight', 'radius', 'background', 'fontSize', 'lineHeight']],
-    [16, '.mc-rest-coffee-actions', ['gap', 'marginTop']],
-    [19, ['.mc-rest-card-hint', '.mc-rest-coffee-why'],
-    ['fontSize', 'lineHeight', 'marginTop']],
-    [31, ['.mc-pill', '.mc-pill--choice'],
+    // Карточка кофе ушла из этого кадра вместе с переездом в шаг «Сон»:
+    // строки 16, 19 и 31 теперь про добавки и рутину, пары сняты.
+    [26, ['.mc-pill', '.mc-pill--choice'],
     ['flex', 'radius', 'background', 'lineHeight']],
+    // Метка просрочки и её точка — строки 29 и 30 нового кадра.
+    [30, '.mc-rest-overdue-badge', ['fontWeight', 'fontSize', 'lineHeight', 'tracking', 'transform']],
   ]],
   ['Чек-ин · записано', [
     [4, '.mc-recorded',
@@ -583,23 +594,24 @@ const REST_FRAMES = [
     ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
   ]],
   ['Чек-ин · замеры просрочены', [
-    [23, '.mc-rest-supp-list',
+    // 57-я сборка: карточка кофе ушла из кадра, строки ниже поднялись на семь.
+    [17, '.mc-rest-supp-list',
     ['direction', 'gap', 'marginTop']],
-    [24, '.mc-rest-supp-name',
+    [18, '.mc-rest-supp-name',
     ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-    [25, '.mc-rest-supp-time',
+    [19, '.mc-rest-supp-time',
     ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-    [26, '.mc-rest-supp-add',
+    [20, '.mc-rest-supp-add',
     ['align', 'gap', 'marginTop', 'minHeight']],
-    [27, '.mc-rest-supp-add-icon',
+    [21, '.mc-rest-supp-add-icon',
     ['width', 'height', 'radius', 'background', 'align', 'justify', 'flex']],
-    [28, '.mc-rest-supp-add',
+    [22, '.mc-rest-supp-add',
     ['fontWeight', 'fontSize', 'lineHeight', 'color']],
-    [32, ['.mc-rest-row', '.mc-rest-row.mc-rest-row--overdue'],
+    [27, ['.mc-rest-row', '.mc-rest-row.mc-rest-row--overdue'],
     ['radius', 'padding', 'minHeight', 'align', 'justify', 'gap']],
-    [35, '.mc-rest-overdue-badge',
+    [30, '.mc-rest-overdue-badge',
     ['fontWeight', 'color']],
-    [38, ['.mc-rest-chevron', '.mc-rest-chevron--accent'],
+    [33, ['.mc-rest-chevron', '.mc-rest-chevron--accent'],
     ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   ]],
   ['Чек-ин · согласие не подписано', [
@@ -666,7 +678,7 @@ const YV_FRAMES = [
 // значит, что строка выпала из сверки и вердикт на неё больше ничем не
 // подкреплён; рост — что охват расширили и число пора поднять.
 // Five corrupted snapshot rows are deliberately excluded; visible content is asserted below.
-const COVERAGE_FLOOR = 341;
+const COVERAGE_FLOOR = 342;
 
 describe('«Утренний чек-ин» · разбор кадров канваса', () => {
   const razbor = readRazbor(fs.readFileSync(CANVAS, 'utf8'));
@@ -783,13 +795,20 @@ describe('«Утренний чек-ин» · разбор кадров канв
   it('расчётный вес набран числами своих кадров', () => {
     const block = STEPS_SRC.slice(STEPS_SRC.indexOf('if (estimated) {'));
     // Крупное число тоном чернил 45 %, а не акцентом: цифра не введена.
-    expect(block).toMatch(/fontSize: 58, fontWeight: 600, lineHeight: 0\.9, color: 'rgba\(0,0,0,\.45\)'/);
+    // Сторожим РОЛЬ, а не литерал: цвет переведён на --v4-ink-3, и проверка на
+    // голое rgba(0,0,0,.45) падала бы на самой починке — тот случай, который
+    // CLAUDE.md называет «тест охраняет литерал, а не правило».
+    expect(block).toMatch(
+      /fontSize: 58, fontWeight: 600, lineHeight: 0\.9, color: 'var\(--v4-ink-3, rgba\(0,0,0,\.45\)\)'/,
+    );
     // Плашка «Расчётный» / «Из профиля» — тон акцента на фоне --c1 (пакет 53,
     // строки «Чек-ин · расчётный вес · 08»; прежде была вторая поверхность --c2).
     expect(block).toMatch(/padding: '5px 12px', borderRadius: 999, background: 'var\(--v4-c1, #f7efe2\)'/);
     expect(block).toMatch(/fontSize: 10\.5, fontWeight: 700, letterSpacing: '0\.08em'/);
     // Карточка объяснения: первая поверхность, радиус 20, поля 15/17.
-    expect(block).toMatch(/background: '#f7efe2', borderRadius: 20, padding: '15px 17px', marginTop: 22/);
+    expect(block).toMatch(
+      /background: 'var\(--v4-c1, #f7efe2\)', borderRadius: 20, padding: '15px 17px', marginTop: 22/,
+    );
     // Ряд строк среднего — один отступ на все строки.
     expect(block).toMatch(/justifyContent: 'space-between', marginTop: 11, fontSize: 12, fontWeight: 600/);
     // Строка «вторичные тоны» (уточнение 2 сентября): строки прошлых

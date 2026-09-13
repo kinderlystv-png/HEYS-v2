@@ -814,6 +814,60 @@
   // «Готовность ко сну», второго алгоритма нет.
   const MORNING_COFFEE_CHOICES = ['before12', 'exact', 'after17', 'none'];
 
+  // Строка контракта «кофе спрашивается за вчера» (57-я сборка, решение
+  // владельца 13 сентября): чек-ин проходят утром, и ответ про сегодняшний кофе
+  // был бы намерением, а не фактом. Ответ уходит во вчерашнюю запись дня, порог
+  // кофеина считается до вчерашнего отбоя. Смысл поля не менялся — оно и раньше
+  // значило «последний кофе этого дня», просто заполнялось не тем днём.
+  function previousDateKey(dateKey) {
+    const key = resolveDateKey(dateKey);
+    const d = new Date(`${key}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return key;
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function readYesterdayCoffee(dateKey) {
+    const coffee = readDayData(previousDateKey(dateKey), {}).lastCoffee || {};
+    return {
+      coffeeChoice: MORNING_COFFEE_CHOICES.includes(coffee.choice) ? coffee.choice : null,
+      coffeeTime: coffee.choice === 'exact' && coffee.time ? coffee.time : null,
+      coffeeOpen: false
+    };
+  }
+
+  // Ответ живёт во вчерашней записи, поэтому пишется отдельным сохранением:
+  // шаг сна пишет свой день, а кофе — предыдущий. Без ответа поле не заводим и
+  // старое убираем — «нет данных» у пункта кофеина это отсутствие записи, а не
+  // отдельное значение (строка «кофе не обязателен»).
+  function saveYesterdayCoffee(dateKey, data) {
+    const prevKey = previousDateKey(dateKey);
+    const dayData = getFreshDayData(prevKey);
+    const answered = MORNING_COFFEE_CHOICES.includes(data.coffeeChoice)
+      && (data.coffeeChoice !== 'exact' || !!data.coffeeTime);
+    const had = !!dayData.lastCoffee;
+    if (!answered && !had) return null;
+    dayData.date = prevKey;
+    if (answered) {
+      dayData.lastCoffee = {
+        choice: data.coffeeChoice,
+        time: data.coffeeChoice === 'exact' ? data.coffeeTime : null,
+        answeredAt: Date.now()
+      };
+    } else {
+      delete dayData.lastCoffee;
+    }
+    dayData.updatedAt = Date.now();
+    saveDayData(prevKey, dayData);
+    window.dispatchEvent(new CustomEvent('heys:day-updated', {
+      detail: {
+        date: prevKey, field: 'lastCoffee', source: 'sleep-combined-step', forceReload: true,
+        data: mergeDayMealsPreferLiveIfRicher(prevKey, { ...dayData, date: prevKey })
+      }
+    }));
+    return prevKey;
+  }
+
   /**
    * Минута последнего кофе из ответа чек-ина — одно чтение поля на всех, кто
    * считает порог. `null` — не пил, `undefined` — не отвечал: ноль здесь
@@ -2741,6 +2795,55 @@
     const qualityWord = SLEEP_QUALITY_LABELS[Math.max(0, Math.min(9, sleepQuality - 1))] || '';
     const update = (patch) => onChange({ ...data, sleepStartH, sleepStartM, sleepEndH, sleepEndM, sleepQuality, sleepNote, ...patch });
 
+    // Слой своего времени переехал вместе с карточкой: «своё время» на пилюле
+    // открывает колесо, и открываться ему теперь тоже в шаге сна.
+    if (data.coffeeOpen === true) {
+      // Колесо шага сна крутит минуты по десять (SLEEP_MINUTES), поэтому чужое
+      // время округляем к тому же шагу — иначе пикер встал бы на первую строку
+      // и молча подменил ответ.
+      const clock = snapSleepMinutes(
+        ...String(data.coffeeTime || new Date().toTimeString().slice(0, 5)).split(':')
+      );
+      const two = (n) => String(n).padStart(2, '0');
+      const setClock = (hours, minutes) => onChange({
+        ...data,
+        coffeeTime: `${two(hours)}:${two(minutes)}`
+      });
+      return React.createElement('div', { className: 'mc-sleep-combined mc-sleep-combined--layer' },
+        React.createElement('div', { className: 'mc-sleep-coffee' },
+          React.createElement('div', { className: 'mc-sleep-coffee-head' },
+            React.createElement('div', { className: 'mc-sleep-coffee-title' }, 'Последний кофе вчера'),
+            React.createElement('div', { className: 'mc-sleep-coffee-note' }, 'до отбоя 8 ч')
+          ),
+          React.createElement('div', { className: 'mc-sleep-coffee-why' },
+            'Во сколько была последняя чашка — считаем от неё до отбоя.'
+          ),
+          React.createElement('div', { className: 'mc-rest-cold-time' },
+            React.createElement('div', { className: 'mc-sleep-label mc-rest-cold-when-label' }, 'Когда'),
+            TimePicker && React.createElement(TimePicker, {
+              hours: clock.hours,
+              minutes: clock.minutes,
+              onHoursChange: (hours) => setClock(hours, clock.minutes),
+              onMinutesChange: (minutes) => setClock(clock.hours, minutes),
+              onTimeChange: setClock,
+              minutesValues: SLEEP_MINUTES,
+              hoursLabel: '',
+              minutesLabel: '',
+              display: null,
+              linkedScroll: true,
+              compact: true,
+              className: 'mc-rest-cold-clock'
+            })
+          )
+        ),
+        React.createElement('button', {
+          type: 'button',
+          className: 'mc-note-toggle mc-sleep-coffee-back',
+          onClick: () => onChange({ ...data, coffeeOpen: false })
+        }, 'Готово')
+      );
+    }
+
     return React.createElement('div', { className: 'mc-sleep-combined' },
       React.createElement('div', { className: 'mc-step-kicker' }, 'Сон этой ночью'),
       React.createElement('div', { className: 'mc-hero-number' }, formatSleepDuration(sleepHours)),
@@ -2828,6 +2931,50 @@
             className: 'mc-sleep-clock'
           })
         )
+      ),
+      renderYesterdayCoffeeCard(data, onChange)
+    );
+  }
+
+  // Строка контракта «место карточки кофе — шаг „Сон"» (57-я сборка): карточка
+  // стоит последним блоком шага, после ряда «Легли / Встали». Кофе по смыслу
+  // принадлежит прошедшей ночи, как и весь шаг; в «Остальном» она стояла среди
+  // душа, добавок и рутины, где связи со сном не видно.
+  // Форма взята из строки кадра «Чек-ин · сон · 29» — радиус 16, фон --c1,
+  // поля 13/14. Названное правило «форма карточки кофе — общая шага» требует
+  // радиус 20 и поля 16/17; спор двух строк отдан дизайнеру записью
+  // checkin-coffee-card-padding-two-lines, до ответа держим строку кадра —
+  // с общими полями ряд пилюль не помещается в 375.
+  function renderYesterdayCoffeeCard(data, onChange) {
+    const choice = data.coffeeChoice || null;
+    const exactLabel = data.coffeeTime ? String(data.coffeeTime).slice(0, 5) : 'своё время';
+    const pick = (id) => onChange({ ...data, coffeeChoice: id, coffeeOpen: false, coffeeTime: null });
+    const openExact = () => onChange({
+      ...data,
+      coffeeChoice: 'exact',
+      coffeeTime: data.coffeeTime || new Date().toTimeString().slice(0, 5),
+      coffeeOpen: true
+    });
+    return React.createElement('div', { className: 'mc-sleep-coffee' },
+      React.createElement('div', { className: 'mc-sleep-coffee-head' },
+        React.createElement('div', { className: 'mc-sleep-coffee-title' }, 'Последний кофе вчера'),
+        React.createElement('div', { className: 'mc-sleep-coffee-note' }, 'до отбоя 8 ч')
+      ),
+      React.createElement('div', { className: 'mc-sleep-coffee-actions' },
+        [
+          { id: 'before12', label: 'до 12:00' },
+          { id: 'exact', label: exactLabel },
+          { id: 'after17', label: 'после 17' },
+          { id: 'none', label: 'не пил' }
+        ].map((row) => React.createElement('button', {
+          key: row.id,
+          type: 'button',
+          className: 'mc-pill mc-pill--choice' + (choice === row.id ? ' is-on' : ''),
+          onClick: row.id === 'exact' ? openExact : () => pick(row.id)
+        }, row.label))
+      ),
+      React.createElement('div', { className: 'mc-sleep-coffee-why' },
+        `Нужно для пункта «Готовность ко сну»: кофе позже восьми часов до отбоя мешает сну. Точное время — тапом по «${exactLabel}».`
       )
     );
   }
@@ -2853,7 +3000,8 @@
         sleepEndM,
         sleepQuality: hasPositiveStepNumber(dayData.sleepQuality) ? dayData.sleepQuality : (last.sleepQuality || 7),
         sleepNote: '',
-        noteOpen: false
+        noteOpen: false,
+        ...readYesterdayCoffee(dateKey)
       };
     },
     save: (data, context) => {
@@ -2892,7 +3040,10 @@
           }
         }));
       }
-      return { affectedKeys: [`heys_dayv2_${dateKey}`], completed: true };
+      const coffeeKey = saveYesterdayCoffee(dateKey, data);
+      const affectedKeys = [`heys_dayv2_${dateKey}`];
+      if (coffeeKey) affectedKeys.push(`heys_dayv2_${coffeeKey}`);
+      return { affectedKeys, completed: true };
     },
     xpAction: 'sleep_logged'
   });
@@ -4489,14 +4640,21 @@
     if (last.waist && (!last.hips || !last.thigh || !last.biceps)) return true;
 
     const daysAgo = Number(last.daysAgo);
-    if (Number.isFinite(daysAgo) && daysAgo < 7) return false;
-    return Number.isFinite(daysAgo) && daysAgo >= 7;
+    if (Number.isFinite(daysAgo) && daysAgo < MEASUREMENTS_OVERDUE_DAYS) return false;
+    return Number.isFinite(daysAgo) && daysAgo >= MEASUREMENTS_OVERDUE_DAYS;
   }
+
+  // Строка контракта «порог „давно не мерили"» (57-я сборка, подтверждена):
+  // СЕМЬ дней. До семи строка периода говорит «Прошло N дней с прошлых»
+  // обычным тоном, с семи карточка получает подложку с обводкой и метку.
+  // Порог не двигался — двигался кадр: он рисовал девять обычной строкой и
+  // спорил с соседним кадром на четырнадцати.
+  const MEASUREMENTS_OVERDUE_DAYS = 7;
 
   function isMeasurementsOverdue(lastMeasurements) {
     if (!lastMeasurements || !lastMeasurements.measuredAt) return true;
     const daysAgo = Number(lastMeasurements.daysAgo);
-    return Number.isFinite(daysAgo) && daysAgo >= 7;
+    return Number.isFinite(daysAgo) && daysAgo >= MEASUREMENTS_OVERDUE_DAYS;
   }
 
   // «21 день», а не «21 дней»: русское склонение считается по последним двум
@@ -4514,11 +4672,14 @@
   // Контракт checkin-morning, «вид просроченной строки»: метка числом дней стоит
   // справа, 10 px/700. Это именно число дней — когда замеров не было ни разу,
   // числа нет и метки нет: про «ещё не было» говорит подпись самой строки.
+  // Строка кадра «Чек-ин · замеры просрочены · 30» (57-я сборка) называет метку
+  // целиком: «14 дней без замеров». Голое «14 дней» рядом с «4 дня подряд» у
+  // соседней карточки читалось как ещё одна серия, то есть как похвала.
   function formatMeasurementsOverdueBadge(lastMeasurements) {
     if (!lastMeasurements?.measuredAt) return null;
     const daysAgo = Number(lastMeasurements.daysAgo);
-    if (!Number.isFinite(daysAgo) || daysAgo < 7) return null;
-    return `${daysAgo} ${pluralDays(daysAgo)}`;
+    if (!Number.isFinite(daysAgo) || daysAgo < MEASUREMENTS_OVERDUE_DAYS) return null;
+    return `${daysAgo} ${pluralDays(daysAgo)} без замеров`;
   }
 
   function MeasurementsStepComponent({ data, onChange }) {
@@ -5990,16 +6151,16 @@
     return map[timing] || '';
   }
 
-  // Кадр «Чек-ин · остальное» пишет дозу «5000 МЕ» без разделителя: у
-  // четырёхзначных доз он только рвёт короткую строку, а «5 000 МЕ» рядом с
-  // «400 мг» читается как два разных порядка величин. С пяти знаков
-  // разделитель возвращается — там без него уже не сосчитать.
+  // Строка контракта «разряд тысяч у доз добавок» (57-я сборка): доза читается
+  // как обозначение препарата, а не как величина, которую сравнивают, — «1 000
+  // МЕ» выглядит опечаткой в названии. Разряда не получает ни одна доза, в том
+  // числе пятизначная: прежняя граница в 10 000 возвращала пробел ровно там,
+  // где витамин D пишут «10000 МЕ». Всё остальное в зоне — калории, граммы,
+  // миллилитры, шаги — разряд получает как прежде.
   function formatSuppDoseNumber(value) {
     const num = Number(value);
     if (!Number.isFinite(num)) return String(value ?? '');
-    const rounded = Math.round(num);
-    if (Math.abs(rounded) < 10000) return String(rounded);
-    return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    return String(Math.round(num));
   }
 
   function getMorningRestSuppCardName(id) {
@@ -7028,9 +7189,20 @@
           )
         ),
         renderClearMark(clearMeasurementsMark, 'Не сейчас'),
-        React.createElement('div', {
-          className: 'mc-recorded-hint mc-rest-clear-mark-hint mc-rest-measure-foot-hint'
-        }, 'Можно заполнить только талию. Пропустите — напомним через неделю.')
+        // Строка контракта «подвал блока замеров» (57-я сборка): две сноски
+        // одним подвалом внизу карточки, выключка left. Вторая отвечает на
+        // вопрос, который иначе человек решает сам и решает неверно — мерит то
+        // левую, то правую и видит скачки, которых нет. Отступ считается от
+        // блока выше, а не от кнопки «Не сейчас»: подвал принадлежит замерам, и
+        // привязка к кнопке ломала его при смене подвала.
+        React.createElement('div', { className: 'mc-rest-measure-foot' },
+          React.createElement('div', { className: 'mc-rest-measure-foot-hint' },
+            'Можно заполнить только талию. Пропустите — напомним через неделю'
+          ),
+          React.createElement('div', { className: 'mc-rest-measure-foot-hint' },
+            'Мерьте одну сторону — какую удобнее — и держитесь её: сравнивать имеет смысл только с собой'
+          )
+        )
       );
     }
 
@@ -7173,30 +7345,10 @@
     // Подпись средней пилюли по контракту: до ответа — «своё время», после —
     // само время. Сноска под рядом зовёт её по имени, поэтому берёт ту же
     // подпись: иначе она отсылала к «своё время», когда на пилюле уже «14:30».
-    const coffeeExactLabel = data.coffeeTime ? String(data.coffeeTime).slice(0, 5) : 'своё время';
-    const coffeeCard = React.createElement('div', { className: 'mc-rest-card mc-rest-card--coffee' },
-      React.createElement('div', { className: 'mc-rest-cold-head' },
-        React.createElement('div', { className: 'mc-rest-card-title' }, 'Последний кофе'),
-        React.createElement('div', { className: 'mc-rest-coffee-note' }, 'до отбоя 8 ч')
-      ),
-      React.createElement('div', { className: 'mc-rest-coffee-actions' },
-        [
-          { id: 'before12', label: 'до 12:00' },
-          { id: 'exact', label: coffeeExactLabel },
-          { id: 'after17', label: 'после 17' },
-          { id: 'none', label: 'не пил' }
-        ].map((row) => React.createElement('button', {
-          key: row.id,
-          type: 'button',
-          className: 'mc-pill mc-pill--choice' + (coffeeChoice === row.id ? ' is-on' : ''),
-          onClick: row.id === 'exact' ? openCoffeeLayer : () => setCoffeeChoice(row.id)
-        }, row.label))
-      ),
-      React.createElement('div', { className: 'mc-rest-card-hint mc-rest-coffee-why' },
-        `Нужно для пункта «Готовность ко сну»: кофе позже восьми часов до отбоя мешает сну. Точное время — тапом по «${coffeeExactLabel}».`
-      )
-    );
-
+    // Карточка кофе уехала в шаг «Сон» (строка «место карточки кофе — шаг
+    // „Сон"», 57-я сборка): кофе принадлежит прошедшей ночи, как и сам шаг, а
+    // здесь стояла среди душа, добавок и рутины, где связи со сном не видно.
+    const coffeeCard = null;
     const measurementsDeferred = cycleWeekTop;
     const measurementsNode = showMeasurements && (measurementsDeferred
       ? React.createElement('div', {
@@ -7387,7 +7539,6 @@
         : true;
       const planned = supplementsConsentOn ? (HEYS.Supplements?.getPlanned?.() || []) : [];
       const cold = dayData.coldExposure || {};
-      const coffee = dayData.lastCoffee || {};
       const maState = normalizeMorningActivationState(dateKey, dayData);
       const routineStatus = isMorningActivationCheckinStatus(maState.status) ? maState.status : null;
       const cycleDayValue = Number(dayData.cycleDay);
@@ -7402,9 +7553,6 @@
         coldTime: cold.time || null,
         coldPicked: !!cold.type,
         coldOpen: false,
-        coffeeChoice: MORNING_COFFEE_CHOICES.includes(coffee.choice) ? coffee.choice : null,
-        coffeeTime: coffee.choice === 'exact' && coffee.time ? coffee.time : null,
-        coffeeOpen: false,
         cycleDay,
         cycleOpen: false,
         cycleEndedOnDay: Number.isFinite(Number(dayData.cycleEndedOnDay)) ? Number(dayData.cycleEndedOnDay) : null,
@@ -7433,19 +7581,10 @@
         time: data.coldType && data.coldType !== 'none' ? (data.coldTime || new Date().toTimeString().slice(0, 5)) : null,
         answeredAt: Date.now()
       };
-      // Без ответа поле не заводим и старое убираем: «нет данных» у пункта
-      // кофеина — это отсутствие записи, а не отдельное значение.
-      const coffeeAnswered = MORNING_COFFEE_CHOICES.includes(data.coffeeChoice)
-        && (data.coffeeChoice !== 'exact' || !!data.coffeeTime);
-      if (coffeeAnswered) {
-        dayData.lastCoffee = {
-          choice: data.coffeeChoice,
-          time: data.coffeeChoice === 'exact' ? data.coffeeTime : null,
-          answeredAt: Date.now()
-        };
-      } else if (dayData.lastCoffee) {
-        delete dayData.lastCoffee;
-      }
+      // Кофе этот шаг больше не пишет: карточка уехала в шаг «Сон» и пишет
+      // вчерашний день (строки «место карточки кофе — шаг „Сон"» и «кофе
+      // спрашивается за вчера»). Прежняя ветка чистила поле у сегодняшнего дня
+      // и, оставшись здесь, стирала бы чужой ответ при каждом сохранении шага.
       if (Array.isArray(data.selected)) {
         dayData.supplementsPlanned = data.selected;
         dayData.supplementsPlannedUpdatedAt = Date.now();
