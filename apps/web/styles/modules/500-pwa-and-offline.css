@@ -4820,10 +4820,15 @@
   transition: opacity 120ms ease;
 }
 
-.mc-quality-btn.active {
-  background: rgba(139, 92, 246, 0.1);
-  border-color: var(--v4-water, #3b82f6);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+/* Строка контракта «вид · выбранная оценка сна» (57-я сборка): выбранная
+   отличается ЗАЛИВКОЙ — фон --acs, текст --on-acs, рамки нет, масштаб 1.
+   Правила ниже стояли на `.mc-quality-btn.active`, а код выводит
+   `mc-quality-btn--active` (heys_steps_v1.js:2560) — ни одно из них не
+   рисовалось, и выбранная отличалась только увеличением на 5 %. Снято вместе с
+   тёмными копиями тех же мёртвых правил. */
+.mc-quality-btn--active {
+  background: var(--v4-act, #c67139);
+  border-color: transparent;
 }
 
 .mc-quality-btn-emoji {
@@ -4836,8 +4841,8 @@
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
 }
 
-.mc-quality-btn.active .mc-quality-btn-label {
-  color: var(--v4-water, #3b82f6);
+.mc-quality-btn--active .mc-quality-btn-label {
+  color: var(--v4-btn-on-act, #2b1608);
 }
 
 /* Footer */
@@ -4948,17 +4953,11 @@
   background: var(--v4-hero, #efe3cf);
 }
 
-[data-theme$="dark"] .mc-quality-btn.active {
-  background: rgba(139, 92, 246, 0.2);
-  border-color: var(--v4-act-text, #60a5fa);
-}
-
+/* Тёмные копии правил выбранной оценки сняты вместе со светлыми: они тоже
+   стояли на `.active`, которого код не выводит. Заливка и текст выбранной идут
+   ролями набора, поэтому отдельного тёмного правила им не нужно. */
 [data-theme$="dark"] .mc-quality-btn-label {
   color: var(--v4-ink, #f2ede6);
-}
-
-[data-theme$="dark"] .mc-quality-btn.active .mc-quality-btn-label {
-  color: var(--v4-act-text, #60a5fa);
 }
 
 /* Dark mode - Deficit Step */
@@ -5968,10 +5967,10 @@
   transition: all 0.3s ease;
 }
 
-/* Quality button active state */
-.mc-quality-btn--active {
-  transform: scale(1.05);
-}
+/* Увеличение на 5 % снято решением 13 сентября: 1,05 — это анимация нажатия
+   (120 мс по общему правилу зоны), а не состояние выбора. Состояние, показанное
+   масштабом, не читается в статике и не видно человеку, который уже выбрал и
+   вернулся к шагу. Заливка выбранной — выше, у `.mc-quality-btn--active`. */
 
 /* Buttons v2 */
 .mc-buttons {
