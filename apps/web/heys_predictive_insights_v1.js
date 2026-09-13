@@ -1380,7 +1380,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       advice.push({
         type: 'add_protein',
         icon: '🥚',
-        text: 'Добавь белок — дольше сытость',
+        text: 'Добавьте белок — дольше сытость',
         priority: 3
       });
     }

@@ -1689,22 +1689,26 @@
       return { key: 'poor', label: 'тянет score вниз', accent: '#ef4444' };
     }
 
+    // Строка контракта «слова блока наблюдений» (58-я сборка): во всём продукте
+    // к человеку на «вы», и разбор Score не исключение. Было на «ты» —
+    // «добавь», «сохрани», «начни с», — и это единственное место зоны, где
+    // продукт обращался иначе, чем везде.
     function getScoreExplainerAction(categoryKey, weakestSignal) {
-      const weakestName = weakestSignal?.name ? ` Начни с: ${weakestSignal.name.toLowerCase()}.` : '';
+      const weakestName = weakestSignal?.name ? ` Начните с: ${weakestSignal.name.toLowerCase()}.` : '';
 
       switch (categoryKey) {
         case 'nutrition':
-          return `Добавь сегодня один понятный апгрейд рациона: белок в приём пищи и источник клетчатки.${weakestName}`;
+          return `Добавьте сегодня один понятный апгрейд рациона: белок в приём пищи и источник клетчатки.${weakestName}`;
         case 'timing':
-          return `Сохрани 3–5 часов между приёмами и не сдвигай основной ужин слишком поздно.${weakestName}`;
+          return `Сохраните 3–5 часов между приёмами и не сдвигайте основной ужин слишком поздно.${weakestName}`;
         case 'activity':
-          return `Добери движение самым дешёвым способом: шаги, короткая прогулка или короткая тренировка.${weakestName}`;
+          return `Доберите движение самым дешёвым способом: шаги, короткая прогулка или короткая тренировка.${weakestName}`;
         case 'recovery':
           return `Самый быстрый апгрейд здесь — сон и снижение вечернего стресса.${weakestName}`;
         case 'metabolism':
-          return `Сделай ставку на более ровную энергию: меньше резких углеводов, больше белка и овощей.${weakestName}`;
+          return `Сделайте ставку на более ровную энергию: меньше резких углеводов, больше белка и овощей.${weakestName}`;
         default:
-          return `Сфокусируйся на одном улучшении за раз.${weakestName}`;
+          return `Сфокусируйтесь на одном улучшении за раз.${weakestName}`;
       }
     }
 
@@ -5280,7 +5284,7 @@
           h('div', { className: 'metabolic-quick-status__cards' },
             h('div', { className: 'metabolic-quick-status__card' },
               h('div', { className: 'metabolic-quick-status__empty-icon' }, '📊'),
-              h('div', { className: 'metabolic-quick-status__empty-text' }, 'Добавь данные')
+              h('div', { className: 'metabolic-quick-status__empty-text' }, 'Добавьте данные')
             ),
             h('div', { className: 'metabolic-quick-status__card' },
               h('div', { className: 'metabolic-quick-status__empty-icon' }, '✅'),
@@ -5471,7 +5475,7 @@
         return h('div', { className: 'metabolic-status-card metabolic-status-card--empty' },
           h('div', { className: 'metabolic-status-card__icon' }, '📊'),
           h('div', { className: 'metabolic-status-card__message' },
-            status?.message || 'Добавь данные для анализа статуса'
+            status?.message || 'Добавьте данные для анализа статуса'
           )
         );
       }

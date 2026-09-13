@@ -738,7 +738,7 @@
       if (!metabolism || !metabolism.hasData) {
         return h('div', { className: 'insights-metabolism-empty' },
           h('div', { className: 'insights-metabolism-empty__icon' }, '📊'),
-          'Добавь данные для анализа метаболизма'
+          'Добавьте данные для анализа метаболизма'
         );
       }
 
@@ -1361,7 +1361,7 @@
         advice.push({
           type: 'add_protein',
           icon: '🥚',
-          text: 'Добавь белок — дольше сытость',
+          text: 'Добавьте белок — дольше сытость',
           priority: 3
         });
       }
@@ -1851,7 +1851,7 @@
         ),
         h('div', { className: 'data-completeness-card__suggestions' },
           completeness.weight < 80 && h('p', { className: 'completeness-suggestion' },
-            '⚠️ Добавь вес — анализ композиции точнее на 35%'
+            'Добавьте вес — анализ композиции точнее на 35 %'
           ),
           completeness.sleep < 70 && h('p', { className: 'completeness-suggestion' },
             '⚠️ Отмечай сон — раскроет 6 паттернов восстановления'
