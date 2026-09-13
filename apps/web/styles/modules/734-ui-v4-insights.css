@@ -244,19 +244,24 @@
 
    Тон кадра 58 % ступенью набора не является (лестница 55/45/38/30) — стоит
    ближайшая 55 %. */
+/* Строки «Инсайты · 71» и «· 72» (58-я сборка) и правило «сколько карточек в
+   „Что заметили"»: вход в полный список — кнопка во всю ширину, высота от 48,
+   радиус 999, фон --c2, надпись 700 12,5 тоном акцента. Плоская ссылка тоном
+   чернил читалась как подпись под карточками, а не как вход в панель. Ряд общий
+   для «Стоит внимания» и «Что заметили»: панель у них одна. */
 .insights-v4-attention__more {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   margin-top: 12px;
   padding: 0;
   border: none;
-  border-radius: 0;
-  background: none;
-  font: 600 12px/1 Manrope, system-ui, sans-serif;
-  color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
+  border-radius: 999px;
+  background: var(--v4-c2, #efe3cf);
+  font: 700 12.5px/1 Manrope, system-ui, sans-serif;
+  color: var(--v4-act, #c67139);
   cursor: pointer;
 }
 

@@ -105,7 +105,11 @@ const HEAD_AND_HERO = [
   ['выравнивание center, распределение space-between, фон var(--c1)', 0,
     '.insights-v4-detail-link',
     ['align', 'justify', 'background', 'radius', 'padding', 'marginTop']],
-  ['«Подробно»', 0, '.insights-v4-detail-link__text',
+  // 58-я сборка: подпись внутри плашки «Подробно» потеряла свою строку в кадре
+  // — сама плашка осталась, правило на текст исчезло. Пара снята, вопрос ушёл
+  // дизайнеру (insights-detail-link-label-lost-its-line). Взамен заведена пара
+  // на кнопку «Ещё N →», которую та же сборка описала строками 71 и 72.
+  ['«Ещё 16 →»', 0, '.insights-v4-attention__more',
     ['fontWeight', 'fontSize', 'lineHeight', 'color']],
 ];
 
