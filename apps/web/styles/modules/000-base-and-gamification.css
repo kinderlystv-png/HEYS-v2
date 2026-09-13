@@ -8911,7 +8911,10 @@ html[data-theme-id="blue-dark"] .date-picker-sheet {
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: 10px 14px;
-  padding: 0 2px 4px;
+  /* Пять пунктов занимают 340 px при 339 доступных — боковые поля 2 px
+     сталкивали «выбран» на вторую строку, хотя кадр держит легенду в одну.
+     Снимаем их: обмер кадра полей у легенды не задаёт. */
+  padding: 0 0 4px;
   margin: 16px 0 0;
   font-size: 10.5px;
   font-weight: 600;

@@ -2122,8 +2122,20 @@ async function openCase(browser, item, snapshot, options = {}) {
         await page.waitForTimeout(step.settleMs || 300);
       } else if (step.tap) {
         const target = page.locator(step.tap).nth(step.nth || 0);
-        await target.waitFor({ state: 'visible', timeout: 45_000 });
-        await target.click();
+        // `optional` — шаг для того, что может и не появиться (понедельничная
+        // шторка итогов недели). Нет узла — идём дальше, а не валим кадр.
+        if (step.optional) {
+          const appeared = await target.waitFor({ state: 'visible', timeout: step.waitMs || 4_000 })
+            .then(() => true).catch(() => false);
+          if (!appeared) continue;
+        } else {
+          await target.waitFor({ state: 'visible', timeout: 45_000 });
+        }
+        // `viaDom` для узлов, которые продукт держит в постоянном движении
+        // (капсула даты пульсирует после перехода): обычный тап ждёт покоя и
+        // не дожидается его никогда, а событие click у продукта то же самое.
+        if (step.viaDom) await target.evaluate((node) => node.click());
+        else await target.click();
         await page.waitForTimeout(step.settleMs || 250);
       } else if (step.scroll) {
         await page.evaluate(({ selector, top }) => {
@@ -2146,6 +2158,19 @@ async function openCase(browser, item, snapshot, options = {}) {
           window.dispatchEvent(new CustomEvent('heys:profile-updated', { detail: { source: 'ui-v4-visual-offline' } }));
         });
         await page.waitForTimeout(step.settleMs || 600);
+      } else if (step.setDate) {
+        // Переход на другой день тем же вызовом, которым пользуется продукт
+        // при копировании приёма на дату. Стрелками это тоже делается, но в
+        // календаре с полным месяцем шапка между тапами пересобирается, и
+        // второй тап ловит исчезающую стрелку.
+        const applied = await page.evaluate((date) => {
+          const fn = window.__heysSetSelectedDate;
+          if (typeof fn !== 'function') return 'нет перехода';
+          fn(date);
+          return 'ок';
+        }, step.setDate);
+        if (process.env.HEYS_UI_V4_RI_DEBUG) console.info('[setDate]', step.setDate, applied);
+        await page.waitForTimeout(step.settleMs || 1200);
       } else if (step.waitFor) {
         await page.locator(step.waitFor).first().waitFor({ state: 'visible', timeout: 45_000 });
       }

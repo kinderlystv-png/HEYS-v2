@@ -141,9 +141,28 @@ const CAL_MONTH_DAYS = [1, 2, 3, 4, 5, 7, 8, 9].map((d) => {
 // («Август 2026», сегодня — 10-е).
 const calendar = (themeId) => dateCase('calendar-legend', 'Календарь · легенда', themeId, {
   clock: clock('2026-08-10T12:00:00+03:00'),
-  fixtureDay: day('2026-08-10', THREE_MEALS),
+  // Кадр держит открытым не сегодняшний день: 10-е залито как «сегодня», а
+  // рамка выбора стоит на 7-м. Пока стенд открывал сегодня, заливка
+  // перекрывала рамку и правило «выбранный день — обводка» проверить было
+  // нечем.
+  fixtureDay: day('2026-08-07', THREE_MEALS),
   fixtureDays: CAL_MONTH_DAYS,
-  uiSteps: [{ tap: '.date-picker-trigger-lbl' }, { waitFor: '.date-picker-sheet .date-picker-legend' }],
+  // Открытый день переключается стрелкой «назад» — тем же, чем листает
+  // человек: три тапа от воскресенья 10-го доводят до пятницы 7-го, и в сетке
+  // видно оба правила разом: заливка у сегодня, обводка у выбранного.
+  uiSteps: [
+    // Три шага «назад» — тот же путь, которым человек уходит на прошлый день.
+    // Через вызов перехода нельзя: на прошлом дне приложение открывает свою
+    // шторку «Итоги недели», и снимок ловит её вместо календаря.
+    { tap: '.date-picker-day-nav', nth: 0, settleMs: 900, viaDom: true },
+    { tap: '.date-picker-day-nav', nth: 0, settleMs: 900, viaDom: true },
+    { tap: '.date-picker-day-nav', nth: 0, settleMs: 900, viaDom: true },
+    // Переход через границу недели поднимает ритуал «Итоги недели» — человек
+    // закрывает его и идёт дальше, стенд делает то же.
+    { tap: 'button:has-text("Закрыть")', optional: true, settleMs: 700, viaDom: true },
+    { tap: '.date-picker-trigger-lbl', settleMs: 600, viaDom: true },
+    { waitFor: '.date-picker-sheet .date-picker-legend' },
+  ],
 });
 
 // Тот же лист, но выбран не сегодняшний день: только так видно обводку
