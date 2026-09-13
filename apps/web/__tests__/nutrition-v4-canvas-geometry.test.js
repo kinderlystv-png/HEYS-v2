@@ -201,11 +201,12 @@ const EXCEPTIONS = new Set([
   // Строкой списка владеет food-meal: там «Окно приёмов» переведено на
   // актуальный уровень данных 56 %, пока дубль nutrition-tab ещё хранит --dim.
   '.nutrition-v4-window__label|color',
-  // Решение дизайнера 31.08 в строке «шкала полосы» новее CSS демо-кадра:
-  // дорожка теперь --v4-track, вклад — --gr2. В helmet канваса пока остались
-  // прежние rgba(...,.08) и --acs; отдельный тест ниже держит текстовый контракт.
+  // Дорожка: решение 31.08 новее CSS демо-кадра — --v4-track против прежнего
+  // rgba(...,.08) в helmet канваса.
   '.nutrition-v4-timeline__track|background',
-  '.nutrition-v4-timeline__track i|background',
+  // Заливка исключением быть перестала: строка «тон сегмента приёмов» (58-я
+  // сборка) говорит, что ответ 31.08 про --gr2 касался только «Ритма приёмов»,
+  // а сегмент «Приёмов за день» красится --acs — как и рисует кадр.
 ]);
 
 // Строка приёма дня сверяется не здесь. Контракт этого канваса сам отдаёт её
@@ -244,7 +245,7 @@ const DELEGATED = new Set([
 // food-meal вместе с самой строкой (см. DELEGATED выше), а не перестали
 // сверяться. Затем с 275 до 267 — туда же уехало «Удалить приём» листа правки.
 // До 266 снята конфликтующая копия тона «Окно приёмов»: её проверяет food-meal.
-const COVERAGE_FLOOR = 264;
+const COVERAGE_FLOOR = 265;
 
 describe('геометрия вкладки «Питание» против кадров канваса', () => {
   const canvasSource = fs.readFileSync(CANVAS, 'utf8');
@@ -295,17 +296,18 @@ describe('геометрия вкладки «Питание» против ка
       '.nutrition-v4-chip|min-height',
       '.nutrition-v4-window__label|color',
       '.nutrition-v4-timeline__track|background',
-      '.nutrition-v4-timeline__track i|background',
     ]);
   });
 
-  it('ритм приёмов следует новому текстовому контракту, а не старой краске кадра', () => {
-    expect(canvasSource).toContain('Полосы «Ритма приёмов» показывают ВКЛАД промежутка');
-    expect(canvasSource).toContain('заливка одна — --gr2, дорожка --v4-track');
+  it('сегмент «Приёмов за день» красится акцентом, дорожка — своей ролью', () => {
+    // Строка «тон сегмента приёмов» (58-я сборка): одну величину назвали двумя
+    // строками по-разному, решено в пользу --acs. Ответ 31.08 про --gr2
+    // остаётся, но относится только к «Ритму приёмов».
+    expect(canvasSource).toContain('Сегмент «Приёмов за день» красится --acs');
     const track = declarations(product.get('.nutrition-v4-timeline__track'));
     const fill = declarations(product.get('.nutrition-v4-timeline__track i'));
     expect(track.background).toContain('var(--v4-track');
-    expect(fill.background).toContain('var(--v4-ok-fill');
+    expect(fill.background).toContain('var(--v4-act');
   });
 
   it('гейт называет свой охват', () => {

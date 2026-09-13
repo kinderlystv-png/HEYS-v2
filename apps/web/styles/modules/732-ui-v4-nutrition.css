@@ -852,13 +852,17 @@
   overflow: hidden;
 }
 
+/* Строка «тон сегмента приёмов» (58-я сборка): сегмент «Приёмов за день»
+   красится --acs. Ответ дизайнера 31 августа про --gr2 касался только «Ритма
+   приёмов» — одну величину назвали двумя строками по-разному, и это решено в
+   пользу --acs. Отступление из гейта снято вместе с правкой. */
 .nutrition-v4-timeline__track i {
   position: absolute;
   top: 0;
   display: block;
   height: 8px;
   border-radius: 999px;
-  background: var(--v4-ok-fill, #7a8a5e);
+  background: var(--v4-act, #c67139);
 }
 
 .nutrition-v4-timeline__track i.is-overlap {
@@ -1771,4 +1775,24 @@
   font: 600 9.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   background: transparent;
+}
+
+/* Строка «блоки под карточкой офлайна» (58-я сборка): при холодном старте без
+   данных блоки вкладки СКРЫВАЮТСЯ, а карточка «нет данных» встаёт по центру
+   области содержимого. Пустые блоки под сообщением обещают, что данные есть:
+   человек видит заголовки «Приёмы», «Вода», «Норма» и пустоту под ними и читает
+   это как «всё обнулилось», а не как «нет связи». */
+.page-day:has(> .offline-nodata-overlay) .nutrition-v4 {
+  display: none;
+}
+
+.page-day:has(> .offline-nodata-overlay) {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+}
+
+.page-day > .offline-nodata-overlay {
+  margin: 0 18px;
 }
