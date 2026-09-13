@@ -3079,7 +3079,14 @@
             }),
             previewRows.length > shown.length && h('li', { className: 'sb-plan-exercises-more' },
               'и ещё ' + previewRows.slice(shown.length).reduce(function (sum, row) { return sum + row.memberCount; }, 0)
-              + (totalApproaches ? ' · всего ' + totalApproaches + ' подходов' : ''))
+              // Склонение по числу, а не жёсткое «подходов»: «23 подхода», но
+              // «25 подходов». Кадр «План в ленте дня» пишет «всего 23
+              // подхода» и прав — прежняя запись в журнале утверждала
+              // обратное и разобрана 13 сентября как ошибка разбора.
+              + (totalApproaches
+                ? ' · всего ' + totalApproaches + ' '
+                  + ruPlural(totalApproaches, 'подход', 'подхода', 'подходов')
+                : ''))
           ),
           h('div', { className: 'sb-plan-actions sb-plan-actions--future' },
             h('button', {
