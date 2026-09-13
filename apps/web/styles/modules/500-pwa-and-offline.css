@@ -1367,6 +1367,16 @@
   background: transparent;
   padding: 0;
   margin: 0;
+  /* Под 640 px общее правило `input, select, textarea` ставит полям
+     `min-height: 36px !important`, и строка замера вырастала до 60 при 44 по
+     кадру — четыре строки съедали экран. Своё `!important` здесь
+     единственный способ: чужое стоит с ним же (тот же приём, что у галочки
+     оговорки в 400-water). Тап остаётся по всей строке — она сама 44 и
+     обёрнута в label. */
+  min-height: 15px !important;
+  height: 15px;
+  line-height: 15px;
+  padding: 0 !important;
   text-align: right;
   font: 700 15px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-sand-act-text, #8a4a20);
@@ -1421,7 +1431,11 @@
   font-weight: 700;
 }
 
-.mc-rest-measure-foot-hint {
+/* Выключка по центру — обмер 19 кадра «Чек-ин · замеры». Общее правило
+   подписи отмены (`.mc-rest-clear-mark-hint`) ставит текст влево и стоит ниже
+   по файлу, поэтому адресуем обоими классами. */
+.mc-rest-measure-foot-hint,
+.mc-rest-clear-mark-hint.mc-rest-measure-foot-hint {
   text-align: center;
   margin-top: 2px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));

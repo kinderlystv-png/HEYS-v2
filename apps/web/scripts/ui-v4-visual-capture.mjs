@@ -3158,6 +3158,21 @@ async function openCase(browser, item, snapshot, options = {}) {
       }, item.captureSelector || item.rootSelector || 'body')
       .then((text) => fs.writeFileSync(path.join(OUT_DIR, `${item.id}.txt`), text || ''))
       .catch(() => {});
+    if (process.env.HEYS_UI_V4_MEASURE) {
+      const measured = await page.evaluate((selector) => {
+        const nodes = Array.from(document.querySelectorAll(selector));
+        return nodes.slice(0, 6).map((node) => {
+          const r = node.getBoundingClientRect();
+          const cs = getComputedStyle(node);
+          return {
+            cls: String(node.className || '').slice(0, 60),
+            h: Math.round(r.height), w: Math.round(r.width),
+            pad: cs.padding, align: cs.textAlign, font: cs.font, minH: cs.minHeight,
+          };
+        });
+      }, process.env.HEYS_UI_V4_MEASURE);
+      console.info('[measure]', JSON.stringify(measured, null, 1));
+    }
     const file = path.join(OUT_DIR, `${item.id}${item.canvasFrame ? '.runtime' : ''}.png`);
     if (item.captureSelector) {
       const captureRoot = page.locator(item.captureSelector);
