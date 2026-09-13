@@ -55,7 +55,20 @@ const mode = args.has('--check')
       ? 'update-baselines'
       : 'capture';
 
-function validateManifest() {
+// Разбор канваса стоит дорого (JSDOM на файл в несколько мегабайт), а кадры
+// трёхсот кейсов лежат в двух десятках файлов: без кеша один и тот же канвас
+// разбирался по разу на кейс, и проверка манифеста занимала 72 секунды из 82
+// при съёмке одного стенда.
+const canvasIndexCache = new Map();
+function canvasIndexOf(file) {
+  if (!canvasIndexCache.has(file)) {
+    const full = path.join(CANVAS_PACK_DIR, file);
+    canvasIndexCache.set(file, parseCanvasHtml(fs.readFileSync(full, 'utf8'), { file }));
+  }
+  return canvasIndexCache.get(file);
+}
+
+function validateManifest(scope) {
   // Вердикты лежат по файлу на зону — см. scripts/lib/ui-v4-verdicts.mjs.
   const registryZones = fs.readdirSync(VERDICTS_DIR)
     .filter((file) => file.endsWith('.json'))
@@ -87,15 +100,16 @@ function validateManifest() {
       if (!item.captureSelector) {
         problems.push(`Парный сценарий ${item.id} не имеет уникального captureSelector.`);
       }
+      // Привязку кадра к канвасу проверяем у тех кейсов, которые сейчас
+      // снимаются: при одиночном кейсе разбор двадцати чужих канвасов ничего
+      // не решает, а стоит секунд. Полный прогон проверяет всё.
+      const inScope = !scope || scope(item);
       const canvasPath = path.join(CANVAS_PACK_DIR, item.canvasFrame.file || '');
       if (!fs.existsSync(canvasPath)) {
         problems.push(`Canvas-файл ${item.id} не найден: ${path.relative(ROOT, canvasPath)}.`);
       } else {
         try {
-          const canvas = parseCanvasHtml(fs.readFileSync(canvasPath, 'utf8'), {
-            file: item.canvasFrame.file,
-          });
-          resolveCanvasFrame(canvas, item.canvasFrame);
+          if (inScope) resolveCanvasFrame(canvasIndexOf(item.canvasFrame.file), item.canvasFrame);
         } catch (error) {
           problems.push(`Canvas-привязка ${item.id} неоднозначна: ${error?.message || error}`);
         }
@@ -3192,6 +3206,7 @@ async function openCase(browser, item, snapshot, options = {}) {
           return {
             cls: String(node.className || '').slice(0, 60),
             h: Math.round(r.height), w: Math.round(r.width),
+            x: Math.round(r.left), right: Math.round(r.right),
             pad: cs.padding, align: cs.textAlign, font: cs.font, minH: cs.minHeight,
           };
         });
@@ -3958,7 +3973,9 @@ function compareNormCorrectionComputedPair(runtime, canvas) {
 }
 
 async function main() {
-  const manifest = validateManifest();
+  const manifest = validateManifest((requestedCaseId || requestedZoneId)
+    ? (item) => (requestedCaseId ? item.id === requestedCaseId : item.zone === requestedZoneId)
+    : null);
   if (manifest.problems.length) {
     manifest.problems.forEach((problem) => console.error(`[ui-v4-visual] ${problem}`));
     // Полный прогон по-прежнему падает на любой проблеме манифеста. Но когда
@@ -4015,10 +4032,16 @@ async function main() {
   const results = [];
   try {
     for (const item of automated) {
+      const startedAt = Date.now();
       const snapshot = buildUiV4VisualSnapshot(item);
       const result = await openCase(browser, item, snapshot);
+      const standMs = Date.now() - startedAt;
       if (result.status === 'captured' && item.canvasFrame) {
+        const canvasStartedAt = Date.now();
         result.canvas = await captureCanvasFrame(browser, item, canvasServer.origin);
+        if (process.env.HEYS_UI_V4_TIMING) {
+          console.info(`[timing] ${item.id}: стенд ${(standMs / 1000).toFixed(1)} с, кадр ${((Date.now() - canvasStartedAt) / 1000).toFixed(1)} с`);
+        }
         if (result.canvas.status !== 'captured') {
           result.status = 'failed';
           result.error = `Канонический кадр не снят: ${result.canvas.error}`;
