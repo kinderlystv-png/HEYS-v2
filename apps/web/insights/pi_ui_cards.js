@@ -691,7 +691,11 @@
         onClick: () => setShowDetails(!showDetails)
       },
         h('div', { className: 'insights-metabolism-card__header' },
-          h('div', { className: 'insights-metabolism-card__icon', style: { color } }, icon),
+          // Строка «слова блока наблюдений» (58-я сборка): значков в зоне нет
+          // ни в одном слое. Зрелость уже сказана бейджем, тревожность — тоном,
+          // значок добавляет третий язык поверх двух работающих. Карточки
+          // метаболизма стоят во втором слое «Подробно» и правилу подчиняются.
+          icon && h('div', { className: 'insights-metabolism-card__icon', style: { color } }, icon),
           h('div', { className: 'insights-metabolism-card__info' },
             h('div', { className: 'insights-metabolism-card__title' },
               title,
@@ -709,7 +713,10 @@
             target: '_blank',
             rel: 'noopener',
             onClick: e => e.stopPropagation()
-          }, '📚')
+            // Ссылка на источник — словом, не значком: строка «слова блока
+            // наблюдений» снимает значки во всех слоях зоны, а «источник»
+            // говорит то же самое и читается голосом экрана.
+          }, 'источник')
         ),
         showDetails && h('div', { className: 'insights-metabolism-card__details' },
           h('div', { className: 'insights-metabolism-card__insight' }, insight),
@@ -748,8 +755,10 @@
       const summaryParts = [];
       if (tefAnalysis.percent > 0) summaryParts.push(`TEF ${tefAnalysis.percent}%`);
       if (epocAnalysis.kcal > 0) summaryParts.push(`EPOC +${epocAnalysis.kcal}`);
-      if (hormonalBalance.isDisrupted) summaryParts.push('⚠️ Гормоны');
-      else summaryParts.push('✓ Гормоны');
+      // Состояние гормонов — словом, а не значком: тревожность в зоне
+      // передаётся тоном, значок был третьим языком поверх двух работающих.
+      if (hormonalBalance.isDisrupted) summaryParts.push('гормоны сбиты');
+      else summaryParts.push('гормоны в норме');
 
       const today = HEYS.dayUtils?.todayISO?.() || new Date().toISOString().split('T')[0];
       const baseDate = selectedDate || today;
@@ -763,7 +772,6 @@
         // Header с InfoButton
         h('div', { className: 'metabolism-section__header' },
           h('div', { className: 'metabolism-section__title' },
-            h('span', { className: 'metabolism-section__icon' }, '🔥'),
             h('span', null, 'Метаболизм'),
             h(getInfoButton(), { infoKey: 'TEF' })
           ),
@@ -774,7 +782,6 @@
           // TEF — v2.0: добавлен infoKey и debugData
           h(MetabolismCard, {
             title: 'Термический эффект (TEF)',
-            icon: '🔥',
             value: tefAnalysis.total,
             unit: 'ккал',
             quality: tefAnalysis.quality,
@@ -792,7 +799,6 @@
           // EPOC — v2.0: добавлен infoKey и debugData
           epocAnalysis.hasTraining && h(MetabolismCard, {
             title: 'Дожиг после тренировки (EPOC)',
-            icon: '⚡',
             value: epocAnalysis.kcal > 0 ? `+${epocAnalysis.kcal}` : '—',
             unit: 'ккал',
             quality: epocAnalysis.kcal > 50 ? 'excellent' : epocAnalysis.kcal > 20 ? 'good' : 'normal',
@@ -810,7 +816,6 @@
           // Гормоны — v2.0: добавлен infoKey и debugData
           h(MetabolismCard, {
             title: 'Гормональный баланс',
-            icon: '😴',
             value: hormonalBalance.isDisrupted ? `+${hormonalBalance.ghrelinIncrease}%` : '✓',
             unit: hormonalBalance.isDisrupted ? 'голод' : 'норма',
             quality: hormonalBalance.ghrelinIncrease > 15 ? 'warning' : hormonalBalance.ghrelinIncrease > 0 ? 'low' : 'good',
@@ -828,7 +833,6 @@
           // Адаптивный термогенез — v2.0: добавлен infoKey и debugData
           adaptiveThermogenesis.isAdapted && h(MetabolismCard, {
             title: 'Адаптация метаболизма',
-            icon: '📉',
             value: `-${Math.round(adaptiveThermogenesis.metabolicReduction * 100)}%`,
             unit: 'замедление',
             quality: 'warning',
