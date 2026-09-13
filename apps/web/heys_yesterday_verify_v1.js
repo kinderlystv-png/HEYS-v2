@@ -2706,6 +2706,26 @@
       }));
     });
 
+    // Сеть безопасности: ни один разобранный день не остаётся без маркера.
+    // Часть веток выходит без записи (например «очистить» на дне, где еда всё
+    // же есть, или пачка, где день не попал ни в один список). Без маркера
+    // день остаётся «непроверенным», шаг при этом отчитывается успехом — и
+    // утренний чек-ин не закрывается до конца дня. Мягкий 'fill_later'
+    // закрывает текущий чек-ин, не трогает ни одного числа дня и вернёт
+    // вопрос завтра.
+    const writtenDates = new Set(affectedKeys.map((key) => String(key).replace('heys_dayv2_', '')));
+    pendingDays.forEach((dayInfo) => {
+      const dateKey = dayInfo && dayInfo.date;
+      if (!dateKey || writtenDates.has(dateKey)) return;
+      const dayData = readDayDataScoped(dateKey, { date: dateKey }) || { date: dateKey };
+      if (isExplicitlyVerified(dayData)) return;
+      markYesterdayVerified(dayData, 'fill_later', nowTs);
+      dayData.date = dayData.date || dateKey;
+      dayData.updatedAt = Math.max(nowTs, (Number(dayData.updatedAt) || 0) + 1);
+      writeDayDataScoped(dateKey, dayData);
+      affectedKeys.push(`heys_dayv2_${dateKey}`);
+    });
+
     devLog('[YesterdayVerify] ✅ Applied action for pending days:', {
       action: data.incompleteAction,
       dates: pendingDays.map((day) => day.date),

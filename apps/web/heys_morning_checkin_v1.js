@@ -2401,14 +2401,22 @@
     let ledger = readMorningProgress(dateKey, clientId);
     if (!shouldShowYesterdayVerifyRequired()) return ledger;
 
+    const yesterdayRow = ledger?.steps?.yesterdayVerify || null;
+    // Шаг уже пройден в этом чек-ине. «Нужен разбор» может снова стать
+    // правдой к финалу той же сессии: норма прошлого дня пересчитывается по
+    // профилю и шагам, которые правятся дальше по чек-ину, а облако может
+    // догрузить прошлый день позже. Прежний код в этом случае сбрасывал
+    // пройденный шаг обратно в план — и чек-ин не закрывался никогда:
+    // на пересборке плана шаг считался пройденным и не показывался, а на
+    // завершении снова требовался (checkin_incomplete_steps:проверка вчера).
+    // Новый «вчера» спрашиваем следующим утром, а не по кругу в этом же.
+    if (yesterdayRow && isMorningStatusTerminal(yesterdayRow)) return ledger;
+
     const plannedStepIds = Array.from(new Set([
       ...(ledger?.plannedStepIds || []),
       'yesterdayVerify'
     ]));
-    const yesterdayRow = ledger?.steps?.yesterdayVerify || null;
-    const replannedStepIds = yesterdayRow && isMorningStatusTerminal(yesterdayRow)
-      ? ['yesterdayVerify']
-      : [];
+    const replannedStepIds = [];
     ledger = ensureMorningProgress({
       dateKey,
       clientId,
