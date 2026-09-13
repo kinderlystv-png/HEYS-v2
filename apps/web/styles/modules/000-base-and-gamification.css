@@ -4225,14 +4225,14 @@ html[data-theme-id="blue-dark"] {
   box-shadow: none;
 }
 
-.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav {
-  /* v4-intentional */
-  box-shadow: 0 1px 2px rgba(var(--dp-shadow-rgb), 0.1), 0 6px 16px rgba(var(--dp-shadow-rgb), 0.14);
-}
-
+/* Строка «вид липкого слоя — плавающий ряд» (57-я сборка) называет ОДНУ тень:
+   0 6px 18px тона тени 10 %, и принадлежит она капсуле, а не подложке. Две
+   тени с разными радиусами стояли до того, как строка появилась: ближняя
+   держала край, дальняя отрывала ряд. Теперь число названо — держим его. */
+.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav,
 .hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-trigger {
   /* v4-intentional */
-  box-shadow: 0 1px 2px rgba(var(--dp-shadow-rgb), 0.1), 0 8px 22px rgba(var(--dp-shadow-rgb), 0.16);
+  box-shadow: 0 6px 18px rgba(var(--dp-shadow-rgb), 0.1);
 }
 
 .hdr-sticky-strip .past-day-banner-wrap {
@@ -8438,7 +8438,11 @@ body:has(.offline-banner) .wrap {
   /* v4-intentional */
   background: var(--v4-surface);
   border: none;
-  border-radius: 14px;
+  /* Решение владельца 13 сентября: капсула — пилюля в любом дне. Кадры
+     рисуют три разные формы у одного элемента (сегодня 14, чужой день 999,
+     прокрученный экран снова 999), и ряд с круглыми стрелками по краям
+     разваливался. Форма не должна зависеть ни от дня, ни от прокрутки. */
+  border-radius: 999px;
   cursor: pointer;
   box-shadow: none;
   transition: box-shadow 0.15s ease;
