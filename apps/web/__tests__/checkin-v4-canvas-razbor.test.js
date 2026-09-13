@@ -197,10 +197,12 @@ const SLEEP = [
   [31, '.mc-sleep-coffee-title', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [32, '.mc-sleep-coffee-note', ['fontWeight', 'fontSize', 'lineHeight', 'color']],
   [33, '.mc-sleep-coffee-actions', ['gap', 'marginTop']],
+  // 58-я сборка: ряд стал сеткой 2×2, ширину пилюлям задаёт колонка, поэтому
+  // своих flex и min-width у них больше нет.
   [34, ['.mc-pill', '.mc-pill--choice', '.mc-sleep-coffee-actions .mc-pill'],
-  ['flex', 'minWidth', 'minHeight', 'radius', 'background', 'fontSize', 'lineHeight']],
+  ['minHeight', 'radius', 'background', 'fontSize', 'lineHeight']],
   [35, ['.mc-pill', '.mc-pill--choice.is-on', '.mc-sleep-coffee-actions .mc-pill'],
-  ['flex', 'minWidth', 'minHeight', 'radius', 'background', 'fontSize', 'lineHeight']],
+  ['minHeight', 'radius', 'background', 'fontSize', 'lineHeight']],
   [36, '.mc-sleep-coffee-why', ['fontWeight', 'fontSize', 'lineHeight', 'color', 'marginTop']],
 ];
 
