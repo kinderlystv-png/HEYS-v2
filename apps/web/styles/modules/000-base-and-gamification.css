@@ -4173,8 +4173,13 @@ color: var(--v4-sand-ink-slate, #1f2937);
   min-width: 0;
   box-sizing: border-box;
   padding: 16px 18px 10px;
-  /* v4-intentional */
-  background: var(--v4-bg);
+  /* Решение владельца 13 сентября: делаем как в кадре — плавающий ряд без
+     полноширинной подложки. Контент проезжает между капсулой и кружками, и
+     это нормально, пока сами они непрозрачны: рябило раньше потому, что
+     кружки были полупрозрачными. Прежняя редакция строки «вид липкой
+     капсулы» (подложка --bg во всю ширину с тенью) отменена этим решением и
+     ждёт переписывания. */
+  background: transparent;
   box-shadow: none;
   transition: box-shadow 0.15s ease;
 }
@@ -4213,7 +4218,9 @@ html[data-theme-id="blue-dark"] {
    Тень висит на подложке, а не на капсуле и кружках: контракт «вид липкой
    капсулы» — «сама капсула геометрию не меняет». */
 .hdr-sticky-strip.is-pinned {
-  box-shadow: 0 6px 18px rgba(var(--dp-shadow-rgb), 0.1);
+  /* Тени у плавающего ряда нет: она рисовала бы прямоугольник там, где фона
+     не осталось. Капсула и кружки держат себя сами. */
+  box-shadow: none;
 }
 
 .hdr-sticky-strip .past-day-banner-wrap {
@@ -8379,9 +8386,18 @@ body:has(.offline-banner) .wrap {
    берётся оттуда, где оно есть. Стояло 0.35. */
 .date-picker--v4 .date-picker-day-nav--disabled,
 .date-picker--v4 .date-picker-day-nav:disabled {
-  opacity: 0.4;
+  /* Гаснет значок, а не кнопка целиком: при прокрутке ряд капсулы стал
+     плавающим (решение владельца 13 сентября), и через полупрозрачный кружок
+     просвечивал уезжающий контент — рябило ровно то, чем объясняли
+     полноширинную подложку. Фон кружка остаётся плотным.  */
+  opacity: 1;
   cursor: default;
   pointer-events: none;
+}
+
+.date-picker--v4 .date-picker-day-nav--disabled > *,
+.date-picker--v4 .date-picker-day-nav:disabled > * {
+  opacity: 0.4;
 }
 
 [data-theme$="dark"] .date-picker--v4 .date-picker-day-nav {

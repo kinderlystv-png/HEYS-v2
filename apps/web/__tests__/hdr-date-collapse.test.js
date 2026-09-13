@@ -67,8 +67,14 @@ describe('hdr date collapse — CSS', () => {
     expect(baseCss).toMatch(/\.tab-active-viewport > \.hdr-sticky-strip\s*\{[^}]*top:\s*env\(safe-area-inset-top/);
     expect(baseCss).not.toMatch(/\.hdr-sticky-strip\.is-pinned\s*\{[^}]*padding-top/);
     expect(baseCss).toMatch(/\.hdr-sticky-strip\s*\{[^}]*padding:\s*16px 18px 10px/);
-    expect(baseCss).toMatch(/\.hdr-sticky-strip\s*\{[^}]*background:\s*var\(--v4-bg\)/);
-    expect(baseCss).toMatch(/\.hdr-sticky-strip\.is-pinned\s*\{[^}]*box-shadow:\s*0 6px 18px/);
+    // Решение владельца 13 сентября: липкий ряд плавает, как рисует кадр, —
+    // без полноширинной подложки и без тени на ней. Рябь, которой объясняли
+    // подложку, шла от полупрозрачных кружков: гаснет значок, а не кнопка.
+    expect(baseCss).toMatch(/\.hdr-sticky-strip\s*\{[^}]*background:\s*transparent/);
+    expect(baseCss).toMatch(/\.hdr-sticky-strip\.is-pinned\s*\{[^}]*box-shadow:\s*none/);
+    expect(baseCss).toMatch(
+      /\.date-picker--v4 \.date-picker-day-nav--disabled,[\s\S]{0,400}opacity:\s*1/,
+    );
     expect(baseCss).not.toMatch(/\.hdr-sticky-strip\.is-pinned[^{]*\.date-picker-trigger:not\(\.open\)\s*\{[^}]*box-shadow/);
     expect(baseCss).toContain('.hdr-sticky-sentinel');
     expect(baseCss).toMatch(/\.tab-active-viewport > \.hdr:not\(\.hdr--date-collapse\)\s*\{[^}]*position:\s*sticky/);
