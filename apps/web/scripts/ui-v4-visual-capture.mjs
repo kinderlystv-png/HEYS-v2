@@ -3145,7 +3145,17 @@ async function openCase(browser, item, snapshot, options = {}) {
     // Текст экрана рядом со снимком: по нему к стенду подбирается кадр того же
     // состояния (у кадров текст записан строкой «<кадр> · текст»).
     await page
-      .evaluate((selector) => (document.querySelector(selector) || document.body).innerText, item.captureSelector || item.rootSelector || 'body')
+      .evaluate((selector) => {
+        const root = document.querySelector(selector) || document.body;
+        // Значения полей ввода живут в value, а не в тексте узла: без них
+        // текст снимка терял введённые числа (замеры, свой объём), и машинная
+        // сверка считала их пропавшими с экрана.
+        const text = root.innerText || '';
+        const values = Array.from(root.querySelectorAll('input, textarea'))
+          .map((node) => String(node.value || '').trim())
+          .filter(Boolean);
+        return values.length ? text + String.fromCharCode(10) + values.join(String.fromCharCode(10)) : text;
+      }, item.captureSelector || item.rootSelector || 'body')
       .then((text) => fs.writeFileSync(path.join(OUT_DIR, `${item.id}.txt`), text || ''))
       .catch(() => {});
     const file = path.join(OUT_DIR, `${item.id}${item.canvasFrame ? '.runtime' : ''}.png`);
