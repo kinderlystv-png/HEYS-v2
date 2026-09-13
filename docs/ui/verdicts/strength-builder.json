@@ -1310,8 +1310,8 @@
       "h": "c098ce750809"
     },
     "Конструктор · разминка и дроп-сет · 05": {
-      "v": "=",
-      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 5 — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
+      "v": "≠",
+      "f": "Кадр А3: WarmupDropScreen + 750-strength-builder.css (.sb-warmup-drop-screen, .sb-wd-*); строка 5 — strength-builder-warmup-drop-v4-canvas-contract.test.js. Кадр сам себе противоречит: строк подходов четыре (разм. 40×10 и три рабочих по 80, у последнего две ступени дропа), а подзаголовок говорит «7». Строка контракта «номера идут только по рабочим» даёт 3. 13 сентября дизайнер признал число написанным на глаз и исправил подзаголовок на «3 подхода · 1 разминочный» — пересъёмка кадра ещё не приехала, поэтому расхождение названо.",
       "h": "6114466e5f74"
     },
     "Конструктор · разминка и дроп-сет · 06": {
@@ -8313,8 +8313,8 @@
       "evidence": ["dom: apps/web/__tests__/strength-builder-calm-canvas-contract.test.js"]
     },
     "Конструктор · разминка и дроп-сет · текст": {
-      "v": "=",
-      "f": "Составная строка А3: WarmupDropScreen рендер с Приседания, №/тип, разм., дроп, объём и сноска — strength-builder-warmup-drop-v4-canvas-contract.test.js.",
+      "v": "≠",
+      "f": "Составная строка А3: WarmupDropScreen рендер с Приседания, №/тип, разм., дроп, объём и сноска — strength-builder-warmup-drop-v4-canvas-contract.test.js. Расходится только счётом подходов: кадр «7», продукт «3» — см. строку 05.",
       "h": "6f7676c0defe"
     },
     "Конструктор · каталог · текст": {

@@ -51,15 +51,18 @@ function loadParts() {
   return globalThis.HEYS.StrengthBuilderParts;
 }
 
+// Заготовка повторяет строки кадра А3 буквально: разм. 40×10, три рабочих по
+// 80, у последнего две ступени дропа. Подзаголовок считает только рабочие —
+// «3 подхода · 1 разминочный». Раньше здесь лежало шесть рабочих подходов:
+// их набрали не с кадра, а из числа «7» в его подзаголовке. Кадр не сходился
+// сам с собой (1 + 3 + 2 = 6), 13 сентября дизайнер признал число написанным
+// на глаз и исправил его на «3».
 function canvasExercise() {
   return {
     name: 'Приседания',
     unit: 'weight_reps',
     approaches: [
       { weightKg: '40', reps: 10, done: true, type: 'warmup' },
-      { weightKg: '80', reps: 8, done: true },
-      { weightKg: '80', reps: 8, done: true },
-      { weightKg: '80', reps: 8, done: true },
       { weightKg: '80', reps: 8, done: true },
       { weightKg: '80', reps: 8, done: true },
       {
@@ -117,7 +120,7 @@ describe('А3 · разминка и дроп-сет · canvas contract', { time
           width: '36px', height: '36px', backgroundColor: CANVAS.c1
         }],
         ['04', '.sb-warmup-drop-screen .sb-head-title > b', 'Приседания', { color: CANVAS.tx }],
-        ['05', '.sb-warmup-drop-screen .sb-head-sub', '7 подходов · 1 разминочный', { color: CANVAS.ink56 }],
+        ['05', '.sb-warmup-drop-screen .sb-head-sub', '3 подхода · 1 разминочный', { color: CANVAS.ink56 }],
         ['09', '.sb-wd-grp .sb-aps-head', null, { gridTemplateColumns: '56px 1fr 1fr 44px' }],
         ['10', '.sb-wd-grp .sb-aps-head > span:nth-child(2)', 'Вес, кг', { textAlign: 'center' }],
         ['12', '.sb-wd-aps .sb-ap-num.is-warmup', 'разм.', { fontSize: '10px', color: CANVAS.ink56 }],
@@ -156,7 +159,7 @@ describe('А3 · разминка и дроп-сет · canvas contract', { time
         document.querySelector('.sb-wd-volume-row:first-child > b')?.textContent || '',
         document.querySelector('.sb-wd-footnote')?.textContent?.slice(0, 40) || ''
       ].join(' › ');
-      if (!composite.includes('Приседания › 7 подходов · 1 разминочный › № / тип › разм. › дроп › Объём упражнения')) {
+      if (!composite.includes('Приседания › 3 подхода · 1 разминочный › № / тип › разм. › дроп › Объём упражнения')) {
         mismatches.push({ id: 'текст', field: 'composite', expected: 'A3 composite prefix', actual: composite });
       }
 
