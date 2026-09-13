@@ -5990,10 +5990,16 @@
     return map[timing] || '';
   }
 
+  // Кадр «Чек-ин · остальное» пишет дозу «5000 МЕ» без разделителя: у
+  // четырёхзначных доз он только рвёт короткую строку, а «5 000 МЕ» рядом с
+  // «400 мг» читается как два разных порядка величин. С пяти знаков
+  // разделитель возвращается — там без него уже не сосчитать.
   function formatSuppDoseNumber(value) {
     const num = Number(value);
     if (!Number.isFinite(num)) return String(value ?? '');
-    return String(Math.round(num)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const rounded = Math.round(num);
+    if (Math.abs(rounded) < 10000) return String(rounded);
+    return String(rounded).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 
   function getMorningRestSuppCardName(id) {
