@@ -6245,14 +6245,25 @@
   opacity: 1;
 }
 
+/* Строка контракта «ряд фильтров каталога» (59-я сборка): ОДНА строка с
+   горизонтальной прокруткой, а не перенос. Групп мышц четырнадцать, и при
+   переносе они занимали четыре строки — список упражнений уезжал вниз на
+   140 px. Фильтр не содержимое экрана, а способ его сузить, и отдавать ему
+   треть высоты нельзя. Полосы прокрутки нет, чипы не сжимаются. */
 .sb-catalog-screen .sb-chips {
   display: flex;
   flex: 0 0 auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   margin-top: 10px;
   padding: 0;
-  overflow: visible;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.sb-catalog-screen .sb-chips::-webkit-scrollbar {
+  display: none;
 }
 
 .sb-catalog-screen .sb-chip {

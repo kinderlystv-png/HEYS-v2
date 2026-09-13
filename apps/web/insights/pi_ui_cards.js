@@ -768,6 +768,12 @@
         summaryParts.push(`данные за ${shortDate}`);
       }
 
+      // Порядок карточек назван строкой контракта «ярус „Метаболизм“ — входы,
+      // не карточки» (59-я сборка): от того, на что человек влияет сегодня, к
+      // тому, что объясняет фон — термический эффект, дожиг, адаптация,
+      // гормональный фон. Гормоны стояли третьими и разрывали эту логику.
+      // Сами карточки той же строкой уезжают за вход «Продвинутая аналитика»,
+      // но экрана за входом дизайнер ещё не нарисовал — переезд ждёт кадра.
       return h('div', { className: 'metabolism-section' },
         // Header с InfoButton
         h('div', { className: 'metabolism-section__header' },
@@ -813,6 +819,22 @@
             }
           }),
 
+          // Адаптивный термогенез — v2.0: добавлен infoKey и debugData
+          adaptiveThermogenesis.isAdapted && h(MetabolismCard, {
+            title: 'Адаптация метаболизма',
+            value: `-${Math.round(adaptiveThermogenesis.metabolicReduction * 100)}%`,
+            unit: 'замедление',
+            quality: 'warning',
+            insight: adaptiveThermogenesis.insight,
+            pmid: adaptiveThermogenesis.pmid,
+            details: `Дней в жёстком дефиците: ${adaptiveThermogenesis.chronicDeficitDays}`,
+            infoKey: 'ADAPTIVE',
+            debugData: {
+              chronicDeficitDays: adaptiveThermogenesis.chronicDeficitDays,
+              metabolicReduction: adaptiveThermogenesis.metabolicReduction
+            }
+          }),
+
           // Гормоны — v2.0: добавлен infoKey и debugData
           h(MetabolismCard, {
             title: 'Гормональный баланс',
@@ -827,22 +849,6 @@
               sleepDebt: hormonalBalance.sleepDebt,
               ghrelinIncrease: hormonalBalance.ghrelinIncrease,
               leptinDecrease: hormonalBalance.leptinDecrease
-            }
-          }),
-
-          // Адаптивный термогенез — v2.0: добавлен infoKey и debugData
-          adaptiveThermogenesis.isAdapted && h(MetabolismCard, {
-            title: 'Адаптация метаболизма',
-            value: `-${Math.round(adaptiveThermogenesis.metabolicReduction * 100)}%`,
-            unit: 'замедление',
-            quality: 'warning',
-            insight: adaptiveThermogenesis.insight,
-            pmid: adaptiveThermogenesis.pmid,
-            details: `Дней в жёстком дефиците: ${adaptiveThermogenesis.chronicDeficitDays}`,
-            infoKey: 'ADAPTIVE',
-            debugData: {
-              chronicDeficitDays: adaptiveThermogenesis.chronicDeficitDays,
-              metabolicReduction: adaptiveThermogenesis.metabolicReduction
             }
           })
         )
