@@ -7898,3 +7898,54 @@ html[data-theme-id="blue-dark"] .ca-tab-dot-mark,
 .mc-sleep-coffee-back {
   margin-top: 12px;
 }
+
+/* Верхний отступ содержимого шага — по кадрам 57-й сборки. Решение владельца
+   13 сентября: «на макете как — так и сделай». Кадры дают это число разным под
+   разный экран (14, 18, 22, 24, 34), поэтому и правило поэкранное, а не одно на
+   оболочку. Базовые 16 из .mc-modal--daily .mc-step-content остаются там, где
+   кадр их и рисует. Строки контракта на этот отступ нет — расхождение самих
+   кадров записано вопросом дизайнеру; до его ответа держим кадр. */
+.mc-modal--daily[data-heys-step-id='sleep'] .mc-step-content {
+  padding-top: 22px;
+}
+
+.mc-modal--daily[data-heys-step-id='morning_mood'] .mc-step-content {
+  padding-top: 24px;
+}
+
+.mc-modal--daily[data-heys-step-id='stepsGoal'] .mc-step-content {
+  padding-top: 24px;
+}
+
+.mc-modal--daily[data-heys-step-id='morningRest'] .mc-step-content {
+  padding-top: 14px;
+}
+
+/* Слой замеров кадр рисует просторнее самого шага: 18 против 14. */
+.mc-modal--daily[data-heys-step-id='morningRest'] .mc-step-content:has(.mc-rest-measure-foot) {
+  padding-top: 18px;
+}
+
+/* Расчётный вес открывается без приветствия, и кадр даёт ему 34 вместо 14 —
+   крупное число стоит ниже, чем на шаге с введённым весом. */
+.mc-modal--daily .mc-step-content:has(.mc-weight-step--estimated) {
+  padding-top: 34px;
+}
+
+.mc-modal--daily[data-heys-step-id='yesterdayVerify'] .mc-step-content {
+  padding-top: 18px;
+}
+
+/* Первая карточка шага стоит вплотную к верхнему отступу содержимого: у кадра
+   её поле сверху нулевое, а отступ между карточками начинается со второй. Без
+   этого «Остальное» уезжало вниз на все шестнадцать. Первой бывает и карточка
+   холода, и любая другая — правило на первого ребёнка ряда, а не на класс. */
+.mc-rest-step > *:first-child {
+  margin-top: 0;
+}
+
+/* Шаг «Вчерашний день» держит свои 4 сверху поверх отступа содержимого — у
+   кадра их нет, весь зазор даёт область прокрутки. */
+.mc-modal--daily[data-heys-step-id='yesterdayVerify'] .yv-step {
+  padding-top: 0;
+}
