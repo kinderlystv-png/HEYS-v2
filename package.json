@@ -146,6 +146,7 @@
     "ui:v4:visual:capture": "node apps/web/scripts/ui-v4-visual-capture.mjs",
     "ui:v4:visual:check": "node apps/web/scripts/ui-v4-visual-capture.mjs --check",
     "ui:v4:visual:verify": "node apps/web/scripts/ui-v4-visual-capture.mjs --verify",
+    "ui:v4:why": "node scripts/ui-v4-why.mjs",
     "validate:ci": "ruby -ryaml -e \"Dir['.github/workflows/*.{yml,yaml}'].each { |f| YAML.load_file(f) }; puts 'CI YAML OK'\"",
     "verify:legacy-bundles": "node scripts/verify-legacy-bundles.mjs",
     "workspace:graph": "pnpm list --depth=0 --json"
