@@ -132,7 +132,7 @@
     <div class="spec"><b>контакты куратора — откуда</b><span data-v="РЕШЕНИЕ ВЛАДЕЛЬЦА 5 сентября: ОДИН ОБЩИЙ КОНТАКТ ПОДДЕРЖКИ, не персональный. В коде один контакт (телеграм и почта) и один клиентский бот; в схеме curators контактных полей нет вовсе. Персональные контакты куратора — это колонка в базе, экран профиля куратора и модерация того, что он публикует; в релиз не идёт. Кадр рисует один ряд: «Поддержка HEYS · @heys_support · отвечаем в рабочее время», внешняя ссылка. Три ряда (Telegram, телефон, почта) сняты 5 сентября, вместе с ними снят и вопрос «откуда брать поля»"></span></div>
     <div class="spec"><b>срок подписки</b><span data-v="РЕШЕНИЕ ВЛАДЕЛЬЦА 5 сентября: КАЛЕНДАРНЫЙ МЕСЯЦ, и развилки тут не было — был баг. Сервер считает календарными месяцами, клиент показывал 30 дней: подписка с 31 января даёт 28 февраля, а экран рисовал 2 марта, то есть обещал больше, чем есть. Правится в коде. ДЛЯ КАДРА это значит: экран показывает ДАТУ ОКОНЧАНИЯ, а не «осталось N дней» и не «30 дней». Дату даёт сервер, экран её не вычисляет — ни вычитанием, ни прибавлением 30. Карточки статуса перерисованы 5 сентября: вместо числа 34 px и подписи «дней осталось» — дата 26 px/800 («до 10 сентября», «до 3 октября»); значение ряда в настройках — «Триал · до 10 сент», «Pro · до 3 окт»"></span></div>
     <div class="spec" style="border-bottom:none"><b>отмена и возврат</b><span data-v="РЕШЕНИЕ ВЛАДЕЛЬЦА 5 сентября: КНОПКИ «ОТМЕНИТЬ ПОДПИСКУ» НЕТ, и это не экономия, а честность. Автосписаний в продукте нет ни одного: рекуррентных платежей нет, ЮKassa выключена флагом до второй фазы, «Оформить подписку» ведёт в поддержку, Pro Спорт — только туда. Отменять нечего: ничто не спишется само, и кнопка «отменить» на этом фоне обещает управление тем, чего не происходит. Вместо неё на экранах подписки стоит СТРОКА ПРАВДЫ — карточка на --c1 радиусом 16, поля 12/14: заголовок «Само ничего не спишется» 12 px/700 и текст «Оплата и продление идут через поддержку — деньги не уходят без вашего слова. Продлить или сменить тариф: написать в поддержку» 11,5 px/500 тоном var(--ink-2); под карточкой тихий ряд «Написать в поддержку» 44 px тоном --ac. Тихий ряд «Вопрос по тарифу — куратору» снят — поддержка одна, и звать её надо одним словом. К вопросу возвращаемся в день, когда включат ЮKassa с рекуррентом: с автосписанием кнопка отмены становится обязательной"></span></div>
-                                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                  <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Подписка · строка в настройках · 01</b><span data-v="позиция static"></span></div>
     <div class="spec"><b>Подписка · строка в настройках · 02</b><span data-v="«Вы» — ярус: отступы 4px 0 8px"></span></div>
@@ -142,34 +142,34 @@
     <div class="spec"><b>Подписка · строка в настройках · 06</b><span data-v="«3 новые» — моноцифры: цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · экран · пробный период · 01</b><span data-v="позиция static"></span></div>
     <div class="spec"><b>Подписка · экран · пробный период · 02</b><span data-v="фон var(--c1), радиус 20px, поля 16px"></span></div>
-    <div class="spec"><b>Подписка · экран · пробный период · 03</b><span data-v="«до 10 сентября» — моноцифры: шрифт 800 26px/1.1 Manrope, цвет var(--tx), отступ сверху 10px, трекинг -.01em"></span></div>
-    <div class="spec"><b>Подписка · экран · пробный период · 04</b><span data-v="«дату окончания даёт сервер» — шрифт 500 12px/1.4 Manrope, цвет var(--ink-2), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Подписка · экран · пробный период · 03</b><span data-v="«до 10 сентября» — моноцифры: шрифт 800 26px/1.1 Manrope,sans-serif, цвет var(--tx), отступ сверху 10px, трекинг -.01em"></span></div>
+    <div class="spec"><b>Подписка · экран · пробный период · 04</b><span data-v="«дату окончания даёт сервер» — шрифт 500 12px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 6px"></span></div>
     <div class="spec"><b>Подписка · экран · пробный период · 05</b><span data-v="«Что открыто» — ярус: отступы 18px 0 10px"></span></div>
     <div class="spec"><b>Подписка · экран · пробный период · 06</b><span data-v="направление column, зазор 10px"></span></div>
-    <div class="spec"><b>Подписка · экран · пробный период · 07</b><span data-v="«Когда пробный период закончится, день и история ос» — шрифт 500 12px/1.5 Manrope, цвет var(--ink-2), отступ сверху 16px"></span></div>
+    <div class="spec"><b>Подписка · экран · пробный период · 07</b><span data-v="«Когда пробный период закончится, день и история ос» — шрифт 500 12px/1.5 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 16px"></span></div>
     <div class="spec"><b>Подписка · экран · пробный период · 08</b><span data-v="отступ сверху auto, поля 0 18px 18px"></span></div>
     <div class="spec"><b>Подписка · экран · пробный период · 09</b><span data-v="фон var(--c1), радиус 16px, поля 12px 14px"></span></div>
-    <div class="spec"><b>Подписка · экран · пробный период · 10</b><span data-v="«Само ничего не спишется» — шрифт 700 12px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · экран · пробный период · 11</b><span data-v="«Оплата и продление идут через поддержку — деньги н» — шрифт 500 11.5px/1.45 Manrope, цвет var(--ink-2), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Подписка · экран · пробный период · 10</b><span data-v="«Само ничего не спишется» — шрифт 700 12px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · экран · пробный период · 11</b><span data-v="«Оплата и продление идут через поддержку — деньги н» — шрифт 500 11.5px/1.45 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 5px"></span></div>
     <div class="spec"><b>Подписка · экран · пробный период · 12</b><span data-v="выравнивание center, распределение space-between, высота от 44px, поля 0 3px, отступ сверху 6px"></span></div>
-    <div class="spec"><b>Подписка · экран · пробный период · 13</b><span data-v="«Написать в поддержку» — шрифт 600 12px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Подписка · экран · пробный период · 13</b><span data-v="«Написать в поддержку» — шрифт 600 12px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · экран · пробный период · 14</b><span data-v="цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · приветствие · 01</b><span data-v="отступ сверху 0, высота 120px"></span></div>
     <div class="spec"><b>Подписка · приветствие · 02</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
     <div class="spec"><b>Подписка · приветствие · 03</b><span data-v="«Начать» — главная кнопка: отступ сверху 20px"></span></div>
     <div class="spec"><b>Подписка · баннер сверху · 01</b><span data-v="фон var(--tint), поля 10px 18px, высота от 44px, выравнивание center, распределение space-between, зазор 12px"></span></div>
-    <div class="spec"><b>Подписка · баннер сверху · 02</b><span data-v="«Доступ только для чтения» — шрифт 700 12px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · баннер сверху · 03</b><span data-v="«Чтобы записывать — напишите в поддержку» — шрифт 500 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 2px"></span></div>
-    <div class="spec"><b>Подписка · баннер сверху · 04</b><span data-v="«Подписка» — флекс none, высота от 44px, поля 0 16px, радиус 999px, фон var(--acs), цвет var(--on-acs), шрифт 700 12px/1 Manrope, выравнивание center"></span></div>
+    <div class="spec"><b>Подписка · баннер сверху · 02</b><span data-v="«Доступ только для чтения» — шрифт 700 12px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · баннер сверху · 03</b><span data-v="«Чтобы записывать — напишите в поддержку» — шрифт 500 11px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 2px"></span></div>
+    <div class="spec"><b>Подписка · баннер сверху · 04</b><span data-v="«Подписка» — флекс none, высота от 44px, поля 0 16px, радиус 999px, фон var(--acs), цвет var(--on-acs), шрифт 700 12px/1 Manrope,sans-serif, выравнивание center"></span></div>
     <div class="spec"><b>Подписка · баннер сверху · 05</b><span data-v="отступ сверху 0, высота 120px"></span></div>
     <div class="spec"><b>Подписка · тост на действии · 01</b><span data-v="фон var(--tint), поля 10px 18px, высота от 44px, выравнивание center, распределение space-between, зазор 12px"></span></div>
-    <div class="spec"><b>Подписка · тост на действии · 02</b><span data-v="«Доступ только для чтения» — шрифт 700 12px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · тост на действии · 03</b><span data-v="«Чтобы записывать — напишите в поддержку» — шрифт 500 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 2px"></span></div>
-    <div class="spec"><b>Подписка · тост на действии · 04</b><span data-v="«Подписка» — флекс none, высота от 44px, поля 0 16px, радиус 999px, фон var(--acs), цвет var(--on-acs), шрифт 700 12px/1 Manrope, выравнивание center"></span></div>
+    <div class="spec"><b>Подписка · тост на действии · 02</b><span data-v="«Доступ только для чтения» — шрифт 700 12px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · тост на действии · 03</b><span data-v="«Чтобы записывать — напишите в поддержку» — шрифт 500 11px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 2px"></span></div>
+    <div class="spec"><b>Подписка · тост на действии · 04</b><span data-v="«Подписка» — флекс none, высота от 44px, поля 0 16px, радиус 999px, фон var(--acs), цвет var(--on-acs), шрифт 700 12px/1 Manrope,sans-serif, выравнивание center"></span></div>
     <div class="spec"><b>Подписка · тост на действии · 05</b><span data-v="отступ сверху 0, высота 120px"></span></div>
     <div class="spec"><b>Подписка · тост на действии · 06</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 11px 13px, выравнивание center, зазор 11px, рамка inset 0 0 0 1px rgba(var(--ink),.07)"></span></div>
-    <div class="spec"><b>Подписка · тост на действии · 07</b><span data-v="«Запись недоступна — только чтение» — флекс 1, шрифт 600 12px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · тост на действии · 08</b><span data-v="«Подписка» — шрифт 700 12px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Подписка · тост на действии · 07</b><span data-v="«Запись недоступна — только чтение» — флекс 1, шрифт 600 12px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · тост на действии · 08</b><span data-v="«Подписка» — шрифт 700 12px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · тост на действии · 09</b><span data-v="позиция absolute, высота 64px, фон var(--bg), разделитель сверху 1px solid rgba(var(--ink),.06)"></span></div>
     <div class="spec"><b>Подписка · контакт поддержки · 01</b><span data-v="отступ сверху 0, высота 120px"></span></div>
     <div class="spec"><b>Подписка · контакт поддержки · 02</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
@@ -185,10 +185,10 @@
     <div class="spec"><b>Подписка · тарифы · места есть · 06</b><span data-v="«Оформить Pro · 7 990 ₽» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Подписка · тарифы · места есть · 07</b><span data-v="выравнивание center, зазор 12px, отступы 14px 0 12px"></span></div>
     <div class="spec"><b>Подписка · тарифы · места есть · 08</b><span data-v="флекс 1, высота 1px, фон rgba(var(--ink),.08)"></span></div>
-    <div class="spec"><b>Подписка · тарифы · места есть · 09</b><span data-v="«или» — шрифт 600 11px/1 Manrope, цвет var(--ink-3)"></span></div>
+    <div class="spec"><b>Подписка · тарифы · места есть · 09</b><span data-v="«или» — шрифт 600 11px/1 Manrope,sans-serif, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Подписка · тарифы · места есть · 10</b><span data-v="фон var(--c2), радиус 18px, поля 14px, выключка center"></span></div>
-    <div class="spec"><b>Подписка · тарифы · места есть · 11</b><span data-v="«Пробный период 7 дней — бесплатно» — шрифт 700 13px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · тарифы · места есть · 12</b><span data-v="выравнивание center, распределение center, зазор 7px, отступ сверху 6px, шрифт 600 12px/1 Manrope, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Подписка · тарифы · места есть · 11</b><span data-v="«Пробный период 7 дней — бесплатно» — шрифт 700 13px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · тарифы · места есть · 12</b><span data-v="выравнивание center, распределение center, зазор 7px, отступ сверху 6px, шрифт 600 12px/1 Manrope,sans-serif, цвет var(--gr)"></span></div>
     <div class="spec"><b>Подписка · тарифы · места есть · 13</b><span data-v="ширина 8px, высота 8px, радиус 999px, фон var(--gr)"></span></div>
     <div class="spec"><b>Подписка · тарифы · места есть · 14</b><span data-v="«Начать пробный период» — высота от 44px, отступ сверху 12px, фон var(--bg)"></span></div>
     <div class="spec"><b>Подписка · тарифы · мест нет · 01</b><span data-v="отступ сверху 0, высота 120px"></span></div>
@@ -199,10 +199,10 @@
     <div class="spec"><b>Подписка · тарифы · мест нет · 06</b><span data-v="«Оформить Pro · 7 990 ₽» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Подписка · тарифы · мест нет · 07</b><span data-v="выравнивание center, зазор 12px, отступы 14px 0 12px"></span></div>
     <div class="spec"><b>Подписка · тарифы · мест нет · 08</b><span data-v="флекс 1, высота 1px, фон rgba(var(--ink),.08)"></span></div>
-    <div class="spec"><b>Подписка · тарифы · мест нет · 09</b><span data-v="«или» — шрифт 600 11px/1 Manrope, цвет var(--ink-3)"></span></div>
+    <div class="spec"><b>Подписка · тарифы · мест нет · 09</b><span data-v="«или» — шрифт 600 11px/1 Manrope,sans-serif, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Подписка · тарифы · мест нет · 10</b><span data-v="фон var(--c2), радиус 18px, поля 14px, выключка center"></span></div>
-    <div class="spec"><b>Подписка · тарифы · мест нет · 11</b><span data-v="«Пробный период 7 дней — бесплатно» — шрифт 700 13px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · тарифы · мест нет · 12</b><span data-v="выравнивание center, распределение center, зазор 7px, отступ сверху 6px, шрифт 600 12px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Подписка · тарифы · мест нет · 11</b><span data-v="«Пробный период 7 дней — бесплатно» — шрифт 700 13px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · тарифы · мест нет · 12</b><span data-v="выравнивание center, распределение center, зазор 7px, отступ сверху 6px, шрифт 600 12px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Подписка · тарифы · мест нет · 13</b><span data-v="ширина 8px, высота 8px, радиус 999px, фон var(--red)"></span></div>
     <div class="spec"><b>Подписка · тарифы · мест нет · 14</b><span data-v="«Встать в очередь» — высота от 44px, отступ сверху 12px, фон var(--bg)"></span></div>
     <div class="spec"><b>Подписка · тарифы · Pro Спорт · 01</b><span data-v="отступ сверху 0, высота 120px"></span></div>
@@ -211,53 +211,53 @@
     <div class="spec"><b>Подписка · тарифы · Pro Спорт · 04</b><span data-v="«490 ₽» — моноцифры"></span></div>
     <div class="spec"><b>Подписка · тарифы · Pro Спорт · 05</b><span data-v="отступ сверху 4px"></span></div>
     <div class="spec"><b>Подписка · тарифы · Pro Спорт · 06</b><span data-v="«Написать в поддержку» — главная кнопка: отступ сверху 14px"></span></div>
-    <div class="spec"><b>Подписка · тарифы · Pro Спорт · 07</b><span data-v="«Pro Спорт подключается после согласования — поддер» — шрифт 500 11.5px/1.45 Manrope, цвет var(--ink-2), выключка center, отступ сверху 10px"></span></div>
+    <div class="spec"><b>Подписка · тарифы · Pro Спорт · 07</b><span data-v="«Pro Спорт подключается после согласования — поддер» — шрифт 500 11.5px/1.45 Manrope,sans-serif, цвет var(--ink-2), выключка center, отступ сверху 10px"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 01</b><span data-v="отступ сверху 0, высота 120px"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 02</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 03</b><span data-v="фон var(--c1), радиус 18px, поля 14px, выравнивание center, распределение space-between, зазор 12px, отступ сверху 16px"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 04</b><span data-v="ширина от 0"></span></div>
-    <div class="spec"><b>Подписка · проверьте заказ · 05</b><span data-v="«Pro» — шрифт 700 15px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · проверьте заказ · 05</b><span data-v="«Pro» — шрифт 700 15px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 06</b><span data-v="флекс none, выключка right, перенос nowrap"></span></div>
-    <div class="spec"><b>Подписка · проверьте заказ · 07</b><span data-v="«7 990 ₽» — моноцифры: шрифт 800 17px/1 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · проверьте заказ · 08</b><span data-v="«до 5 октября» — шрифт 500 11px/1 Manrope, цвет var(--ink-2), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Подписка · проверьте заказ · 07</b><span data-v="«7 990 ₽» — моноцифры: шрифт 800 17px/1 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · проверьте заказ · 08</b><span data-v="«до 5 октября» — шрифт 500 11px/1 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 4px"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 09</b><span data-v="выравнивание flex-start, зазор 12px, отступ сверху 16px, поля 0 2px"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 10</b><span data-v="фон var(--acs), цвет var(--on-acs)"></span></div>
-    <div class="spec"><b>Подписка · проверьте заказ · 11</b><span data-v="«Принимаю условия» — шрифт 500 12px/1.45 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · проверьте заказ · 11</b><span data-v="«Принимаю условия» — шрифт 500 12px/1.45 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 12</b><span data-v="«публичной оферты» — цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · проверьте заказ · 13</b><span data-v="«Оплатить 7 990 ₽» — главная кнопка: отступ сверху 18px"></span></div>
-    <div class="spec"><b>Подписка · проверьте заказ · 14</b><span data-v="«Отмена» — выравнивание center, распределение center, высота от 44px, шрифт 600 12px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Подписка · проверьте заказ · 14</b><span data-v="«Отмена» — выравнивание center, распределение center, высота от 44px, шрифт 600 12px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Подписка · оплата прошла · 01</b><span data-v="отступ сверху 0, высота 120px"></span></div>
     <div class="spec"><b>Подписка · оплата прошла · 02</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
     <div class="spec"><b>Подписка · оплата прошла · 03</b><span data-v="ширина 56px, высота 56px, радиус 999px, фон var(--gr-bg), выравнивание center, распределение center, цвет var(--gr)"></span></div>
     <div class="spec"><b>Подписка · оплата прошла · 04</b><span data-v="«Подписка активна» — отступ сверху 14px"></span></div>
-    <div class="spec"><b>Подписка · оплата прошла · 05</b><span data-v="фон var(--c1), радиус 18px, поля 14px, отступ сверху 14px, направление column, зазор 6px, шрифт 500 12.5px/1.4 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · оплата прошла · 05</b><span data-v="фон var(--c1), радиус 18px, поля 14px, отступ сверху 14px, направление column, зазор 6px, шрифт 500 12.5px/1.4 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Подписка · оплата прошла · 06</b><span data-v="«До 5 октября · 7 990 ₽ в месяц» — моноцифры"></span></div>
     <div class="spec"><b>Подписка · оплата прошла · 07</b><span data-v="«Продолжить» — главная кнопка: отступ сверху 18px"></span></div>
     <div class="spec"><b>Подписка · экран · активна · 01</b><span data-v="позиция static"></span></div>
     <div class="spec"><b>Подписка · экран · активна · 02</b><span data-v="фон var(--c1), радиус 20px, поля 16px"></span></div>
-    <div class="spec"><b>Подписка · экран · активна · 03</b><span data-v="«до 3 октября» — моноцифры: шрифт 800 26px/1.1 Manrope, цвет var(--tx), отступ сверху 10px, трекинг -.01em"></span></div>
-    <div class="spec"><b>Подписка · экран · активна · 04</b><span data-v="«7 990 ₽ в месяц · оплачено до этой даты» — моноцифры: шрифт 500 12px/1.4 Manrope, цвет var(--ink-2), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Подписка · экран · активна · 03</b><span data-v="«до 3 октября» — моноцифры: шрифт 800 26px/1.1 Manrope,sans-serif, цвет var(--tx), отступ сверху 10px, трекинг -.01em"></span></div>
+    <div class="spec"><b>Подписка · экран · активна · 04</b><span data-v="«7 990 ₽ в месяц · оплачено до этой даты» — моноцифры: шрифт 500 12px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 6px"></span></div>
     <div class="spec"><b>Подписка · экран · активна · 05</b><span data-v="«Что открыто» — ярус: отступы 18px 0 10px"></span></div>
     <div class="spec"><b>Подписка · экран · активна · 06</b><span data-v="направление column, зазор 10px"></span></div>
     <div class="spec"><b>Подписка · экран · активна · 07</b><span data-v="отступ сверху auto, поля 0 18px 18px"></span></div>
     <div class="spec"><b>Подписка · экран · активна · 08</b><span data-v="фон var(--c1), радиус 16px, поля 12px 14px"></span></div>
-    <div class="spec"><b>Подписка · экран · активна · 09</b><span data-v="«Само ничего не спишется» — шрифт 700 12px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · экран · активна · 10</b><span data-v="«Оплата и продление идут через поддержку — деньги н» — шрифт 500 11.5px/1.45 Manrope, цвет var(--ink-2), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Подписка · экран · активна · 09</b><span data-v="«Само ничего не спишется» — шрифт 700 12px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · экран · активна · 10</b><span data-v="«Оплата и продление идут через поддержку — деньги н» — шрифт 500 11.5px/1.45 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 5px"></span></div>
     <div class="spec"><b>Подписка · экран · активна · 11</b><span data-v="выравнивание center, распределение space-between, высота от 44px, поля 0 3px, отступ сверху 6px"></span></div>
-    <div class="spec"><b>Подписка · экран · активна · 12</b><span data-v="«Написать в поддержку» — шрифт 600 12px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Подписка · экран · активна · 12</b><span data-v="«Написать в поддержку» — шрифт 600 12px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · экран · активна · 13</b><span data-v="цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · экран · только чтение · 01</b><span data-v="позиция static"></span></div>
     <div class="spec"><b>Подписка · экран · только чтение · 02</b><span data-v="фон var(--tint), радиус 20px, поля 16px"></span></div>
     <div class="spec"><b>Подписка · экран · только чтение · 03</b><span data-v="«Только чтение» — цвет var(--red)"></span></div>
-    <div class="spec"><b>Подписка · экран · только чтение · 04</b><span data-v="«Пробный период закончился» — шрифт 700 17px/1.25 Manrope, цвет var(--tx), отступ сверху 10px"></span></div>
-    <div class="spec"><b>Подписка · экран · только чтение · 05</b><span data-v="«День и история открыты для чтения. Чтобы записыват» — шрифт 500 12.5px/1.5 Manrope, цвет var(--ink-2), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Подписка · экран · только чтение · 04</b><span data-v="«Пробный период закончился» — шрифт 700 17px/1.25 Manrope,sans-serif, цвет var(--tx), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Подписка · экран · только чтение · 05</b><span data-v="«День и история открыты для чтения. Чтобы записыват» — шрифт 500 12.5px/1.5 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 6px"></span></div>
     <div class="spec"><b>Подписка · экран · только чтение · 06</b><span data-v="«Написать в поддержку» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Подписка · экран · только чтение · 07</b><span data-v="отступ сверху auto, поля 0 18px 18px"></span></div>
     <div class="spec"><b>Подписка · экран · только чтение · 08</b><span data-v="фон var(--c1), радиус 16px, поля 12px 14px"></span></div>
-    <div class="spec"><b>Подписка · экран · только чтение · 09</b><span data-v="«Само ничего не спишется» — шрифт 700 12px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · экран · только чтение · 10</b><span data-v="«Оплата и продление идут через поддержку — деньги н» — шрифт 500 11.5px/1.45 Manrope, цвет var(--ink-2), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Подписка · экран · только чтение · 09</b><span data-v="«Само ничего не спишется» — шрифт 700 12px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · экран · только чтение · 10</b><span data-v="«Оплата и продление идут через поддержку — деньги н» — шрифт 500 11.5px/1.45 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 5px"></span></div>
     <div class="spec"><b>Подписка · экран · только чтение · 11</b><span data-v="выравнивание center, распределение space-between, высота от 44px, поля 0 3px, отступ сверху 6px"></span></div>
-    <div class="spec"><b>Подписка · экран · только чтение · 12</b><span data-v="«Написать в поддержку» — шрифт 600 12px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Подписка · экран · только чтение · 12</b><span data-v="«Написать в поддержку» — шрифт 600 12px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · экран · только чтение · 13</b><span data-v="цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · очередь · заявка подана · 01</b><span data-v="отступ сверху 0, высота 120px"></span></div>
     <div class="spec"><b>Подписка · очередь · заявка подана · 02</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
@@ -267,11 +267,11 @@
     <div class="spec"><b>Подписка · очередь · заявка подана · 06</b><span data-v="«Оформить Pro · 7 990 ₽» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Подписка · очередь · заявка подана · 07</b><span data-v="выравнивание center, зазор 12px, отступы 14px 0 12px"></span></div>
     <div class="spec"><b>Подписка · очередь · заявка подана · 08</b><span data-v="флекс 1, высота 1px, фон rgba(var(--ink),.08)"></span></div>
-    <div class="spec"><b>Подписка · очередь · заявка подана · 09</b><span data-v="«или» — шрифт 600 11px/1 Manrope, цвет var(--ink-3)"></span></div>
+    <div class="spec"><b>Подписка · очередь · заявка подана · 09</b><span data-v="«или» — шрифт 600 11px/1 Manrope,sans-serif, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Подписка · очередь · заявка подана · 10</b><span data-v="фон var(--c2), радиус 18px, поля 14px, выключка center"></span></div>
-    <div class="spec"><b>Подписка · очередь · заявка подана · 11</b><span data-v="«Заявка подана · вы 3-й в очереди» — шрифт 700 13px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · очередь · заявка подана · 12</b><span data-v="«Сообщим, когда место освободится» — шрифт 500 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 4px"></span></div>
-    <div class="spec"><b>Подписка · очередь · заявка подана · 13</b><span data-v="«Отменить заявку» — выравнивание center, распределение center, высота от 44px, отступ сверху 6px, шрифт 600 12px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Подписка · очередь · заявка подана · 11</b><span data-v="«Заявка подана · вы 3-й в очереди» — шрифт 700 13px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · очередь · заявка подана · 12</b><span data-v="«Сообщим, когда место освободится» — шрифт 500 11px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Подписка · очередь · заявка подана · 13</b><span data-v="«Отменить заявку» — выравнивание center, распределение center, высота от 44px, отступ сверху 6px, шрифт 600 12px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Подписка · очередь · место освободилось · 01</b><span data-v="отступ сверху 0, высота 120px"></span></div>
     <div class="spec"><b>Подписка · очередь · место освободилось · 02</b><span data-v="позиция absolute, вписан 0, фон var(--scrim), размытие blur(2.5px)"></span></div>
     <div class="spec"><b>Подписка · очередь · место освободилось · 03</b><span data-v="направление column, зазор 10px, отступ сверху 14px"></span></div>
@@ -280,11 +280,11 @@
     <div class="spec"><b>Подписка · очередь · место освободилось · 06</b><span data-v="«Оформить Pro · 7 990 ₽» — главная кнопка: отступ сверху 14px"></span></div>
     <div class="spec"><b>Подписка · очередь · место освободилось · 07</b><span data-v="выравнивание center, зазор 12px, отступы 14px 0 12px"></span></div>
     <div class="spec"><b>Подписка · очередь · место освободилось · 08</b><span data-v="флекс 1, высота 1px, фон rgba(var(--ink),.08)"></span></div>
-    <div class="spec"><b>Подписка · очередь · место освободилось · 09</b><span data-v="«или» — шрифт 600 11px/1 Manrope, цвет var(--ink-3)"></span></div>
+    <div class="spec"><b>Подписка · очередь · место освободилось · 09</b><span data-v="«или» — шрифт 600 11px/1 Manrope,sans-serif, цвет var(--ink-3)"></span></div>
     <div class="spec"><b>Подписка · очередь · место освободилось · 10</b><span data-v="фон var(--tint), радиус 18px, поля 14px, выключка center"></span></div>
-    <div class="spec"><b>Подписка · очередь · место освободилось · 11</b><span data-v="«Место освободилось» — шрифт 700 13px/1.3 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Подписка · очередь · место освободилось · 12</b><span data-v="«1:47:12» — моноцифры: шрифт 800 26px/1 Manrope, цвет var(--tx), отступ сверху 8px"></span></div>
-    <div class="spec"><b>Подписка · очередь · место освободилось · 13</b><span data-v="«на подтверждение» — шрифт 500 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Подписка · очередь · место освободилось · 11</b><span data-v="«Место освободилось» — шрифт 700 13px/1.3 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Подписка · очередь · место освободилось · 12</b><span data-v="«1:47:12» — моноцифры: шрифт 800 26px/1 Manrope,sans-serif, цвет var(--tx), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Подписка · очередь · место освободилось · 13</b><span data-v="«на подтверждение» — шрифт 500 11px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 4px"></span></div>
     <div class="spec"><b>Подписка · очередь · место освободилось · 14</b><span data-v="«Начать пробный период» — главная кнопка: отступ сверху 12px"></span></div>
     <div class="ctrH">Разбор графики · SVG в кадрах</div>
     <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
