@@ -2103,15 +2103,41 @@
     return Math.round((getNightSleepHoursFromData(data) + napHours) * 10) / 10;
   }
 
+  // Кадры «Сон этой ночью» крутят минуты по десять: 22:30 / 23:40 / 00:50.
+  // Решение владельца 13 сентября — делаем как в кадре. Шаг в пять минут
+  // давал точность, которой у времени отхода ко сну нет: человек всё равно
+  // называет его округлённо, а колесо заставляло его листать вдвое дольше.
+  const SLEEP_MINUTES = [0, 10, 20, 30, 40, 50];
+
+  // Сохранённое время могло прийти с любыми минутами (прошлые записи, ручной
+  // ввод, импорт). Колесо показывает только свои значения, поэтому чужое
+  // округляем к ближайшему шагу — иначе пикер встал бы на первую строку и
+  // молча подменил время.
+  function snapSleepMinutes(hours, minutes) {
+    const h = Number.isFinite(+hours) ? +hours : 0;
+    const m = Number.isFinite(+minutes) ? +minutes : 0;
+    const snapped = Math.round(m / 10) * 10;
+    if (snapped >= 60) return { hours: (h + 1) % 24, minutes: 0 };
+    return { hours: h, minutes: snapped };
+  }
+
   function SleepTimeStepComponent({ data, onChange }) {
     const lastSleep = useMemo(() => getLastSleepData(), []);
     const latestDataRef = useRef(data);
     latestDataRef.current = data;
 
-    const sleepStartH = data.sleepStartH ?? parseInt(lastSleep.sleepStart.split(':')[0], 10);
-    const sleepStartM = data.sleepStartM ?? parseInt(lastSleep.sleepStart.split(':')[1], 10);
-    const sleepEndH = data.sleepEndH ?? parseInt(lastSleep.sleepEnd.split(':')[0], 10);
-    const sleepEndM = data.sleepEndM ?? parseInt(lastSleep.sleepEnd.split(':')[1], 10);
+    const startSnap = snapSleepMinutes(
+      data.sleepStartH ?? parseInt(lastSleep.sleepStart.split(':')[0], 10),
+      data.sleepStartM ?? parseInt(lastSleep.sleepStart.split(':')[1], 10),
+    );
+    const endSnap = snapSleepMinutes(
+      data.sleepEndH ?? parseInt(lastSleep.sleepEnd.split(':')[0], 10),
+      data.sleepEndM ?? parseInt(lastSleep.sleepEnd.split(':')[1], 10),
+    );
+    const sleepStartH = startSnap.hours;
+    const sleepStartM = startSnap.minutes;
+    const sleepEndH = endSnap.hours;
+    const sleepEndM = endSnap.minutes;
 
     const sleepHours = calcSleepHours(sleepStartH, sleepStartM, sleepEndH, sleepEndM);
 
@@ -2198,6 +2224,7 @@
             onHoursChange: setSleepStartH,
             onMinutesChange: setSleepStartM,
             onTimeChange: setSleepStartTime,
+            minutesValues: SLEEP_MINUTES,
             hoursLabel: '',
             minutesLabel: '',
             display: null,
@@ -2213,6 +2240,7 @@
             onHoursChange: setSleepEndH,
             onMinutesChange: setSleepEndM,
             onTimeChange: setSleepEndTime,
+            minutesValues: SLEEP_MINUTES,
             hoursLabel: '',
             minutesLabel: '',
             display: null,
@@ -2694,10 +2722,18 @@
   function CombinedSleepStepComponent({ data, onChange }) {
     const TimePicker = HEYS.StepModal.TimePicker;
     const lastSleep = useMemo(() => getLastSleepData(), []);
-    const sleepStartH = data.sleepStartH ?? parseInt(String(lastSleep.sleepStart || '23:00').split(':')[0], 10);
-    const sleepStartM = data.sleepStartM ?? parseInt(String(lastSleep.sleepStart || '23:00').split(':')[1], 10);
-    const sleepEndH = data.sleepEndH ?? parseInt(String(lastSleep.sleepEnd || '07:00').split(':')[0], 10);
-    const sleepEndM = data.sleepEndM ?? parseInt(String(lastSleep.sleepEnd || '07:00').split(':')[1], 10);
+    const startSnap = snapSleepMinutes(
+      data.sleepStartH ?? parseInt(String(lastSleep.sleepStart || '23:00').split(':')[0], 10),
+      data.sleepStartM ?? parseInt(String(lastSleep.sleepStart || '23:00').split(':')[1], 10),
+    );
+    const endSnap = snapSleepMinutes(
+      data.sleepEndH ?? parseInt(String(lastSleep.sleepEnd || '07:00').split(':')[0], 10),
+      data.sleepEndM ?? parseInt(String(lastSleep.sleepEnd || '07:00').split(':')[1], 10),
+    );
+    const sleepStartH = startSnap.hours;
+    const sleepStartM = startSnap.minutes;
+    const sleepEndH = endSnap.hours;
+    const sleepEndM = endSnap.minutes;
     const sleepQuality = data.sleepQuality ?? lastSleep.sleepQuality ?? 7;
     const sleepNote = data.sleepNote ?? '';
     const noteOpen = data.noteOpen === true || String(sleepNote).length > 0;
@@ -2766,6 +2802,7 @@
             onHoursChange: (h) => update({ sleepStartH: h }),
             onMinutesChange: (m) => update({ sleepStartM: m }),
             onTimeChange: (h, m) => update({ sleepStartH: h, sleepStartM: m }),
+            minutesValues: SLEEP_MINUTES,
             hoursLabel: '',
             minutesLabel: '',
             display: null,
@@ -2782,6 +2819,7 @@
             onHoursChange: (h) => update({ sleepEndH: h }),
             onMinutesChange: (m) => update({ sleepEndM: m }),
             onTimeChange: (h, m) => update({ sleepEndH: h, sleepEndM: m }),
+            minutesValues: SLEEP_MINUTES,
             hoursLabel: '',
             minutesLabel: '',
             display: null,
