@@ -105,6 +105,11 @@ function heroZone(id, label, eatenKcal) {
   return base(id, label, {
     canvasCrop: '.hero',
     captureSelector: '.nutrition-v4-hero',
+    // Снимок — одна карточка, кадр рисует её внутри целого экрана: шапка,
+    // капсула даты и нижняя навигация к этой паре не относятся и сверяются
+    // своими кадрами.
+    frameTextFrom: 'Осталось на сегодня',
+    frameTextUntilWhy: 'снимок и кадр обрезаны до карточки .hero — остальное экран вокруг неё',
     fixtureDay: day(DAY, [
       meal('nt-hero-1', 'Завтрак', '08:20', [food('Овсянка с ягодами', Math.round(eatenKcal * 0.3), { protein100: 3, fat100: 3 })]),
       meal('nt-hero-2', 'Обед', '13:05', [food('Курица с рисом', Math.round(eatenKcal * 0.4), { protein100: 8, fat100: 2 })]),
@@ -226,6 +231,9 @@ export const NUTRITION_TAB_VISUAL_CASES = Object.freeze([
   // Тот же кадр «перебор», блок «Итоги дня»: разрезанные дорожки калорий и
   // жиров — в кадре они ниже первого экрана вкладки.
   base('nutrition-over-totals', 'Питание · перебор', {
+    // Снимок — блок «Итоги дня», кадр рисует его внутри целого экрана.
+    frameTextFrom: 'Итоги дня',
+    frameTextUntilWhy: 'снимок и кадр обрезаны до блока итогов (.tot) — выше него герой и окно приёмов со своими парами',
     canvasCrop: '.tot',
     captureSelector: '.nutrition-v4-totals',
     // Вечер: пищевое окно дня закрыто, ожидаемое к этому часу равно норме —
@@ -247,6 +255,8 @@ export const NUTRITION_TAB_VISUAL_CASES = Object.freeze([
 
   // Блок «Приёмы за день»: полосы волн и красный сегмент нахлёста.
   base('nutrition-meals-timeline', 'Питание · приёмы полосами', {
+    frameTextFrom: 'Приёмы за день',
+    frameTextUntilWhy: 'снимок и кадр обрезаны до блока «Приёмы за день» (.blk)',
     canvasCrop: '.blk',
     captureSelector: ".nutrition-v4-block[data-block='mealsTimeline']",
     clock: clock(`${DAY}T21:40:00+03:00`),
@@ -265,6 +275,8 @@ export const NUTRITION_TAB_VISUAL_CASES = Object.freeze([
 
   // Лист правки приёма открывается тапом по строке дневника.
   base('nutrition-meal-sheet', 'Питание · лист правки приёма', {
+    frameTextFrom: 'Обед · 13:05',
+    frameTextUntilWhy: 'снимок и кадр обрезаны до листа приёма (.md) — экран под ним сверяется своими парами',
     canvasCrop: '.md',
     captureSelector: '.nutrition-v4-sheet',
     fixtureDay: day(DAY, SHEET_MEALS),
@@ -276,6 +288,8 @@ export const NUTRITION_TAB_VISUAL_CASES = Object.freeze([
 
   // Ряд чипов при выключенных блоках.
   base('nutrition-blocks-off', 'Питание · блоки выключены', {
+    frameTextFrom: 'Что показывать',
+    frameTextUntilWhy: 'снимок и кадр обрезаны до настроек блоков (.cfg)',
     canvasCrop: '.cfg',
     captureSelector: '.nutrition-v4-config',
     fixtureProfile: { ...NUTRITION_PROFILE, ...ALL_CHIPS_OFF },
@@ -308,6 +322,9 @@ export const NUTRITION_TAB_VISUAL_CASES = Object.freeze([
   // в общем capture.mjs, за пределами этой зоны.
   base('nutrition-offline', 'Питание · офлайн без данных', {
     canvasCrop: '.offc',
+    // Снимок — сам слой «нет связи», кадр рисует его поверх экрана.
+    frameTextFrom: 'Данные за сегодня не загрузились',
+    frameTextUntilWhy: 'снимок и кадр обрезаны до слоя офлайна (.offc) — экран под ним сверяется своими парами',
     captureSelector: '.offline-nodata-overlay',
     offline: true,
     fixtureDay: day(PAST, PAST_MEALS),
@@ -316,6 +333,8 @@ export const NUTRITION_TAB_VISUAL_CASES = Object.freeze([
 
   // Вопрос о дате: «Добавить приём» на прошлом дне.
   base('nutrition-date-question', 'Питание · вопрос о дате', {
+    frameTextFrom: 'На какой день записать',
+    frameTextUntilWhy: 'снимок и кадр обрезаны до листа вопроса (.md)',
     canvasCrop: '.md',
     captureSelector: '.nutrition-v4-date-target-sheet',
     fixtureDay: day(PAST, PAST_MEALS.slice(0, 2)),
