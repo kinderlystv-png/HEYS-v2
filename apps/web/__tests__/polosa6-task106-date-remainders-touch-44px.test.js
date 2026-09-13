@@ -55,7 +55,11 @@ function contractRows() {
 
 function ruleBlock(selector) {
   const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = BASE_CSS.match(new RegExp(`${esc}\\s*\\{[^}]+\\}`, 'm'));
+  // Якорь на начало строки: у той же цели бывают правила с предком —
+  // `.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav` держит
+  // тень плавающего ряда. Без якоря тест мерил бы чужой блок и падал на
+  // правке, которая тач-целей не касается.
+  const match = BASE_CSS.match(new RegExp(`^${esc}\\s*\\{[^}]+\\}`, 'm'));
   return match ? match[0] : '';
 }
 
@@ -150,8 +154,10 @@ describe('polosa6 task106 · date-remainders touch 44px visible', () => {
     expect(nav).toMatch(/width:\s*44px/);
     expect(nav).toMatch(/height:\s*44px/);
     expect(BASE_CSS).not.toMatch(/\.date-picker--v4 \.date-picker-day-nav::after/);
+    // Решение владельца 13 сентября: гаснет значок, а не кнопка — сквозь
+    // погашенный кружок плавающего ряда просвечивало содержимое.
     expect(BASE_CSS).toMatch(
-      /\.date-picker--v4 \.date-picker-day-nav--disabled,[\s\S]{0,120}opacity: 0\.4;/,
+      /\.date-picker--v4 \.date-picker-day-nav--disabled > \*,[\s\S]{0,160}opacity: 0\.4;/,
     );
     expect(ruleBlock('.date-picker--v4 .date-picker-trigger')).toMatch(/min-height:\s*44px/);
   });
@@ -221,7 +227,9 @@ describe('polosa6 task106 · date-remainders touch 44px visible', () => {
       expect(table[id].navWidth, `${id} width`).toBeGreaterThanOrEqual(44);
       expect(table[id].nightMinHeight, `${id} ночная капсула`).toBeGreaterThanOrEqual(44);
       expect(table[id].pastMinHeight, `${id} капсула чужого дня`).toBeGreaterThanOrEqual(44);
-      expect(table[id].inlineTodayMinHeight, `${id} пилюля «Сегодня»`).toBeGreaterThanOrEqual(44);
+      // Чип «Сегодня» — 28 по строке «вид чипа „Сегодня“» (56-я сборка):
+      // цель нажатия остаётся всей капсулой, поэтому своих 44 чипу не нужно.
+      expect(table[id].inlineTodayMinHeight, `${id} чип «Сегодня»`).toBe(28);
       expect(table[id].sheetBtnMinHeight, `${id} «Вернуться к сегодня»`).toBeGreaterThanOrEqual(48);
     }
     expect(table.blue.navHeight).toBe(table.sand.navHeight);
