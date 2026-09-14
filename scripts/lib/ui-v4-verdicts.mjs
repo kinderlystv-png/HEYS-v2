@@ -64,6 +64,17 @@ export const ALLOWED_NA_KINDS = Object.freeze([
 // прогресс нельзя ровно по той же причине — дизайнер переписал строки, вердикт
 // снялся в «?», и типизированного долга стало меньше только потому, что самих
 // «≠» больше нет. Строки при этом никто не пересматривал: они ждут сведения.
+// 14 сентября, десять чисел разом: checkin-morning 10→3 и 47→46,
+// date-remainders 10→7 и 260→192, food-meal 42→37, nutrition-tab 209→206,
+// strength-builder 66→53 и 103→76. Прогрессом не читать — причина всё та же,
+// дизайнер переписал строки, вердикты снялись в «?». Но в тот же день с этих
+// снятых строк убрали поля разобранного вердикта (reasonCode, decisionRef,
+// naKind), которые перехеширование оставляло на них лежать: 98 полей в десяти
+// зонах, и каждое означало «строка разобрана», хотя разбор с неё снят. Теперь
+// перехеширование их снимает само.
+// Два числа выросли и это настоящий прогресс: reports-insights 121→122 и
+// subscription 36→37 — последние пять «≠» старой формы получили причину и
+// ссылку на разбор, legacy-долг стал нулевым во всех зонах разом.
 export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'app-splash': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -94,8 +105,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, пакет 43: «Чек-ин · остальное на неделе периода · 23» → «=»;
     // mismatch 8 → 7.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [10, '883f2b62848fe057'],
-    notApplicable: [47, '19522329f4fb6522'],
+    typedMismatch: [3, '4c5fff358c2da0bd'],
+    notApplicable: [46, '1635707013c98b75'],
   }),
   'curator-cabinet': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -153,9 +164,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // typedMismatch 10 → 9.
     // 06.09, пилюля «Сегодня»: «Дата · прошлый день, прокручено · 44» — кадр ·44
     // (--acs) против строки-источника «вид чужого дня» (:149); typedMismatch 9 → 10.
-    typedMismatch: [10, 'f766e34037cd216a'],
+    typedMismatch: [7, '73beff575e1438f7'],
     // 05.09: одна строка «—» получила naKind handoff — долг типизирован: 271 → 270.
-    notApplicable: [260, '7fc4f9975dc981ed'],
+    notApplicable: [192, 'c3eed695f3a356ef'],
   }),
   'food-meal': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -177,7 +188,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // handoff 13, demo-only 68, foreign-zone 4, designer-removed 1;
     // notApplicable 86 → 0.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [42, 'bc5759cbb0faa849'],
+    typedMismatch: [37, '7e0692581d044336'],
     notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   gamification: Object.freeze({
@@ -257,7 +268,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // на undo-bar:83; остальное в строке (текст «Записано в …», 6 с, оба пути
     // записи, капсула на открытом дне) сошлось.
     typedMismatch: [1, '69e78db8bfe74645'],
-    notApplicable: [209, '0b289056f87f3458'],
+    notApplicable: [206, 'c890a5488f80ffbb'],
   }),
   'product-card': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -344,7 +355,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 08.09: 131 legacy «—» получили naKind (scripts/.reports-insights-nakind-apply.mjs)
     // — notApplicable 131 → 0.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [121, '696a07d44347a875'],
+    typedMismatch: [122, '4d03c53974c41550'],
     notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   'service-curator': Object.freeze({
@@ -422,8 +433,8 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // панель, итоги ·58 «Готово»); один новый «≠» итоги ·57 «В шаблоны» нет в коде.
     // typedMismatch 80 → 79. Три designer-removed ключа сняты rehash — notApplicable
     // 105 → 103.
-    typedMismatch: [66, 'bc30eaf7866c4fad'],
-    notApplicable: [103, 'fcfec8ca6a782006'],
+    typedMismatch: [53, 'af2bba2319bbdedb'],
+    notApplicable: [76, '0c5710116f1f3827'],
   }),
   // Зона заведена 05.09 вместе с первым разбором: прежде записи не было, и
   // порог по всем категориям считался нулевым. 24 типизированных «≠» — это
@@ -456,7 +467,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // кадр и код. Долг 52 → 41.
     // 06.09, package 43: «Проверьте заказ · 08» ink-2 = продукт — typed 41 → 40.
     // 07.09, package 47: четыре typed «≠» сведены в «=» — typed 40 → 36.
-    typedMismatch: [36, '53351aa2be9a0f07'],
+    typedMismatch: [37, '9df2657ab01e473e'],
   }),
   'tab-activity': Object.freeze({
     // 06.09, полоса 2/4: 43 legacy «≠» типизированы reasonCode — mismatch 43 → 0,
