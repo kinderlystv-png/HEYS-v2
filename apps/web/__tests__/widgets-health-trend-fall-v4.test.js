@@ -42,11 +42,11 @@ describe('Тренд здоровья · падение — сведённый �
     expect(contractValue(canvas, 'Тренд здоровья · падение · 02'))
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Тренд здоровья · падение · 03'))
-      .toBe('«Тренд · 14 дней» — ключ');
+      .toBe('«Тренд здоровья · 14 дней» — ключ');
     expect(contractValue(canvas, 'Тренд здоровья · падение · 04'))
       .toBe('выравнивание flex-end, распределение space-between, зазор 8px, отступ сверху auto');
     expect(contractValue(canvas, 'Тренд здоровья · падение · 05'))
-      .toBe('«−6» — моноцифры: шрифт 600 26px/1 Manrope, цвет var(--val-bad)');
+      .toBe('«−6» — моноцифры: шрифт 600 26px/1 Manrope,sans-serif, цвет var(--val-bad)');
     expect(contractValue(canvas, 'Тренд здоровья · падение · 06'))
       .toBe('флекс none, отступ снизу 2px, цвет var(--val-bad)');
     expect(contractValue(canvas, 'Тренд здоровья · падение · рисунок 01'))
@@ -56,7 +56,7 @@ describe('Тренд здоровья · падение — сведённый �
     expect(contractValue(canvas, 'Тренд здоровья · падение · рисунок 03'))
       .toBe('точка r 3.5 в (56,20), заливка currentColor');
     expect(contractValue(canvas, 'Тренд здоровья · падение · текст'))
-      .toBe('Тренд · 14 дней › −6');
+      .toBe('Тренд здоровья · 14 дней › −6');
   });
 
   it('держит вид: bad-тон числа и --bad ломаной; порог ±2 не переписывал', () => {

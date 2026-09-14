@@ -41,7 +41,7 @@ function extractRule(css, startSelectorRegex) {
 
 // ── Задача 1: врезки экрана ────────────────────────────────────────────────
 describe('safe-area — врезки экрана', () => {
-  describe('login: карточка центруется между врезками, а не прижата к верху', () => {
+  describe('login: центрируется только там, где нет пришпиленного низа', () => {
     function mountShell(extraClass = '') {
       document.head.innerHTML = '';
       document.body.innerHTML = '';
@@ -55,13 +55,24 @@ describe('safe-area — врезки экрана', () => {
       return el;
     }
 
-    it('клиентский экран: justify-content реально резолвится в center (было flex-start)', () => {
+    // Строка «вид экрана входа», вторая редакция 14 сентября: карточка
+    // центруется НЕ ВЕЗДЕ. Там, где внизу пришпиленный блок — клавиатура,
+    // кнопка с юридической припиской у кодов и блокировок, — колонка идёт от
+    // верхнего поля, иначе текст согласия наезжает на кнопку (замер дизайнера:
+    // 51 px в «Свой код · первый вход», 10 и 4 px в обеих блокировках). Прежняя
+    // редакция обещала центрирование всей зоне, и эта проверка её сторожила.
+    it('клиентский экран идёт от верха — у него пришпиленный низ', () => {
       const el = mountShell();
-      expect(getComputedStyle(el).justifyContent).toBe('center');
+      expect(getComputedStyle(el).justifyContent).toBe('flex-start');
     });
 
-    it('кураторский экран остался центрированным (свой override не задет)', () => {
+    it('кураторский экран — тоже от верха, у него та же клавиатура', () => {
       const el = mountShell('heys-auth-shell--curator');
+      expect(getComputedStyle(el).justifyContent).toBe('flex-start');
+    });
+
+    it('вход с нового устройства возвращает центр — пришпиленного низа нет', () => {
+      const el = mountShell('heys-auth-shell--new-device');
       expect(getComputedStyle(el).justifyContent).toBe('center');
     });
 

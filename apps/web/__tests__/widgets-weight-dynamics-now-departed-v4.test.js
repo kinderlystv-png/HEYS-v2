@@ -41,9 +41,9 @@ describe('Динамика · как сейчас — уходящий кадр'
     expect(contractValue(canvas, 'Динамика · как сейчас · 03'))
       .toBe('«Динамика веса» — ключ');
     expect(contractValue(canvas, 'Динамика · как сейчас · 04'))
-      .toBe('«−1,8» — моноцифры: шрифт 600 12px/1 Manrope');
+      .toBe('«−1,8» — моноцифры: шрифт 600 12px/1 Manrope,sans-serif');
     expect(contractValue(canvas, 'Динамика · как сейчас · 05'))
-      .toBe('моноцифры: зазор 10px, отступ сверху auto, шрифт 700 9.5px/1 Manrope');
+      .toBe('моноцифры: зазор 10px, отступ сверху auto, шрифт 700 9.5px/1 Manrope,sans-serif');
     expect(contractValue(canvas, 'Динамика · как сейчас · 06'))
       .toBe('«7» — цвет var(--ink-2)');
     expect(contractValue(canvas, 'Динамика · как сейчас · 07'))

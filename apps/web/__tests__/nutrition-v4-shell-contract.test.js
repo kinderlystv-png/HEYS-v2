@@ -34,7 +34,10 @@ describe('nutrition v4 · isolated Canvas shell', () => {
     // («иконка календаря … во всех капсулах на всех вкладках») и кадр
     // «Питание · блок · Шапка» этого канваса рисуют её внутри пилюли.
     expect(nutritionCss).not.toMatch(/\.wrap--tab-diary \.date-picker-icon\s*\{[^}]*display:\s*none/);
-    expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-sticky-strip\s*\{[^}]*padding:\s*11px 18px 0/);
+    // Верхнее поле липкого ряда — 16 px везде (ответ дизайнера 14 сентября:
+    // прежние 11 у этой вкладки были расхождением, а не исключением; своя
+    // версия общего ряда дёргала шапку на пять пикселей при переходе).
+    expect(nutritionCss).toMatch(/\.wrap--tab-diary \.hdr-sticky-strip\s*\{[^}]*padding:\s*16px 18px 0/);
     expect(nutritionCss).toMatch(/\.nutrition-v4 \.water-review\s*\{[^}]*margin-top:\s*10px/);
     expect(nutritionCss).toMatch(/\.nutrition-v4\s*\{[^}]*margin-top:\s*0/);
   });

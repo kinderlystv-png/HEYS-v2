@@ -47,7 +47,7 @@ describe('Тепловая карта · Как сейчас — сведённ�
     expect(contractValue(canvas, 'Тепловая карта · Как сейчас · 03'))
       .toBe('«Тепловая карта» — ключ');
     expect(contractValue(canvas, 'Тепловая карта · Как сейчас · 04'))
-      .toBe('«5 из 7» — моноцифры: шрифт 700 9.5px/1 Manrope, цвет var(--gr)');
+      .toBe('«5 из 7» — моноцифры: шрифт 700 9.5px/1 Manrope,sans-serif, цвет var(--gr)');
     expect(contractValue(canvas, 'Тепловая карта · Как сейчас · 05'))
       .toBe('зазор 4px, отступ сверху auto');
     expect(contractValue(canvas, 'Тепловая карта · Как сейчас · 06'))

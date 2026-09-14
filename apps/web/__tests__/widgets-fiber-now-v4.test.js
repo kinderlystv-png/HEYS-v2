@@ -41,7 +41,7 @@ describe('Клетчатка · Как сейчас — сведённый ку�
     expect(contractValue(canvas, 'Клетчатка · Как сейчас · 03'))
       .toBe('выравнивание baseline, зазор 3px, отступ сверху auto');
     expect(contractValue(canvas, 'Клетчатка · Как сейчас · 04'))
-      .toBe('«18» — моноцифры: шрифт 600 21px/1 Manrope, трекинг -.02em, цвет var(--tx)');
+      .toBe('«18» — моноцифры: шрифт 600 21px/1 Manrope,sans-serif, трекинг -.02em, цвет var(--tx)');
     expect(contractValue(canvas, 'Клетчатка · Как сейчас · 05'))
       .toBe('высота 4px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 7px');
     expect(contractValue(canvas, 'Клетчатка · Как сейчас · 06'))

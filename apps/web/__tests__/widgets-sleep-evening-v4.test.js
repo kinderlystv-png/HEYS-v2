@@ -49,11 +49,11 @@ describe('Окно до сна · Вечер — сведённый кусок',
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Окно до сна · Вечер · 03')).toBe('«До сна» — ключ');
     expect(contractValue(canvas, 'Окно до сна · Вечер · 04'))
-      .toBe('«отбой 23:00» — моноцифры: шрифт 600 9px/1 Manrope, цвет var(--ink-2)');
+      .toBe('«отбой 23:00» — моноцифры: шрифт 600 9px/1 Manrope,sans-serif, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Окно до сна · Вечер · 05'))
       .toBe('выравнивание baseline, зазор 4px, отступ сверху auto');
     expect(contractValue(canvas, 'Окно до сна · Вечер · 06'))
-      .toBe('«2:40» — моноцифры: шрифт 600 19px/1 Manrope, трекинг -.02em, цвет var(--gr)');
+      .toBe('«2:40» — моноцифры: шрифт 600 19px/1 Manrope,sans-serif, трекинг -.02em, цвет var(--gr)');
     expect(contractValue(canvas, 'Окно до сна · Вечер · 07'))
       .toBe('выравнивание center, зазор 0, высота 5px, радиус 999px, фон rgba(var(--ink),.08), отступ сверху 6px, обрез hidden');
     expect(contractValue(canvas, 'Окно до сна · Вечер · 08'))

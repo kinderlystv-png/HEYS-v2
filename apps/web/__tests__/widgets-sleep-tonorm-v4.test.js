@@ -42,7 +42,7 @@ describe('Сон · К норме — сведённый кусок', () => {
     expect(contractValue(canvas, 'Сон · К норме · 03'))
       .toBe('выравнивание baseline, зазор 2px, отступ сверху auto');
     expect(contractValue(canvas, 'Сон · К норме · 04'))
-      .toBe('«−1,1» — моноцифры: шрифт 600 21px/1 Manrope, трекинг -.02em');
+      .toBe('«−1,1» — моноцифры: шрифт 600 21px/1 Manrope,sans-serif, трекинг -.02em');
     expect(contractValue(canvas, 'Сон · К норме · текст')).toBe('13 › Сон · к норме › −1,1');
   });
 

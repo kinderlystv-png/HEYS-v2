@@ -52,7 +52,7 @@ describe('Кольца БЖУ · сведённые stop-кадры', () => {
     expect(contractValue(canvas, 'Кольца БЖУ · Как сейчас · 02'))
       .toBe('зазор 6px, отступ сверху auto, отступ снизу auto');
     expect(contractValue(canvas, 'Кольца БЖУ · Как сейчас · 05'))
-      .toBe('«96» — моноцифры: отступ сверху 5px, шрифт 700 13px/1 Manrope, цвет var(--val-bad)');
+      .toBe('«96» — моноцифры: отступ сверху 5px, шрифт 700 13px/1 Manrope,sans-serif, цвет var(--val-bad)');
     expect(contractValue(canvas, 'вид · кольца БЖУ'))
       .toContain('svg 46 × 46, радиус кольца 18, толщина 5');
   });
@@ -175,7 +175,7 @@ describe('Кольца БЖУ · сведённые stop-кадры', () => {
 
   it('пустой день — кольца без дуги и «— / N»', () => {
     expect(contractValue(canvas, 'Кольца БЖУ · пустой день · 05'))
-      .toBe('«—» — моноцифры: отступ сверху 5px, шрифт 700 13px/1 Manrope, цвет var(--ink-3)');
+      .toBe('«—» — моноцифры: отступ сверху 5px, шрифт 700 13px/1 Manrope,sans-serif, цвет var(--ink-3)');
     const body = macrosBody();
     expect(body).toContain('empty: true');
     expect(uiSrc).toContain('widget-v4-macro__fact--empty');

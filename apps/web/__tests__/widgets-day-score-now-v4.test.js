@@ -46,7 +46,7 @@ describe('Оценка дня · Как сейчас — сведённый ку
     expect(contractValue(canvas, 'Оценка дня · Как сейчас · 03'))
       .toBe('выравнивание baseline, зазор 3px, отступ сверху auto');
     expect(contractValue(canvas, 'Оценка дня · Как сейчас · 04'))
-      .toBe('«6,2» — моноцифры: шрифт 600 21px/1 Manrope, цвет var(--ac)');
+      .toBe('«6,2» — моноцифры: шрифт 600 21px/1 Manrope,sans-serif, цвет var(--ac)');
     expect(contractValue(canvas, 'Оценка дня · Как сейчас · текст'))
       .toBe('16 › Оценка › 6,2 › / 10');
   });

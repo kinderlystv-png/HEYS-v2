@@ -49,9 +49,9 @@ describe('Шаги · Месяц — сведённый кусок', () => {
     expect(contractValue(canvas, 'Шаги · Месяц · 03'))
       .toBe('выравнивание baseline, зазор 5px, отступ сверху 8px');
     expect(contractValue(canvas, 'Шаги · Месяц · 04'))
-      .toBe('«8 870» — моноцифры: шрифт 600 26px/.9 Manrope, трекинг -.03em, цвет var(--tx)');
+      .toBe('«8 870» — моноцифры: шрифт 600 26px/.9 Manrope,sans-serif, трекинг -.03em, цвет var(--tx)');
     expect(contractValue(canvas, 'Шаги · Месяц · 05'))
-      .toBe('«цель 10 000» — моноцифры: шрифт 600 9px/1 Manrope, цвет var(--ink-2)');
+      .toBe('«цель 10 000» — моноцифры: шрифт 600 9px/1 Manrope,sans-serif, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Шаги · Месяц · 06'))
       .toBe('позиция relative, выравнивание flex-end, зазор 2px, высота 44px, отступ сверху auto');
     expect(contractValue(canvas, 'Шаги · Месяц · 07'))

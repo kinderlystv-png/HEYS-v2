@@ -52,17 +52,17 @@ describe('Белок · По приёмам — сведённый кусок', 
       .toBe('распределение space-between, выравнивание baseline');
     expect(contractValue(canvas, 'Белок · По приёмам · 03')).toBe('«Белок · по приёмам» — ключ');
     expect(contractValue(canvas, 'Белок · По приёмам · 04'))
-      .toBe('«из 140» — моноцифры: шрифт 600 9px/1 Manrope, цвет var(--ink-2)');
+      .toBe('«из 140» — моноцифры: шрифт 600 9px/1 Manrope,sans-serif, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Белок · По приёмам · 05'))
       .toBe('выравнивание baseline, зазор 5px, отступ сверху 7px');
     expect(contractValue(canvas, 'Белок · По приёмам · 06'))
-      .toBe('«112» — моноцифры: шрифт 600 26px/.9 Manrope, трекинг -.03em, цвет var(--tx)');
+      .toBe('«112» — моноцифры: шрифт 600 26px/.9 Manrope,sans-serif, трекинг -.03em, цвет var(--tx)');
     expect(contractValue(canvas, 'Белок · По приёмам · 07'))
       .toBe('направление column, зазор 6px, отступ сверху auto');
     expect(contractValue(canvas, 'Белок · По приёмам · 08'))
       .toBe('выравнивание center, зазор 7px');
     expect(contractValue(canvas, 'Белок · По приёмам · 09'))
-      .toBe('«8:40» — моноцифры: флекс none, ширина 34px, шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)');
+      .toBe('«8:40» — моноцифры: флекс none, ширина 34px, шрифт 600 8.5px/1 Manrope,sans-serif, цвет var(--ink-2)');
     expect(contractValue(canvas, 'Белок · По приёмам · 11'))
       .toBe('ширина 68%, высота 5px, радиус 999px, фон var(--gr2)');
     expect(contractValue(canvas, 'Белок · По приёмам · 14'))

@@ -50,7 +50,7 @@ describe('Динамика · D до цели — сведённый кусок'
     expect(contractValue(canvas, 'Динамика · D до цели · 03'))
       .toBe('«До цели» — ключ');
     expect(contractValue(canvas, 'Динамика · D до цели · 04'))
-      .toBe('«−1,8 / мес» — моноцифры: шрифт 700 10px/1 Manrope');
+      .toBe('«−1,8 / мес» — моноцифры: шрифт 700 10px/1 Manrope,sans-serif');
     expect(contractValue(canvas, 'Динамика · D до цели · 05'))
       .toBe('отступ сверху auto');
     expect(contractValue(canvas, 'Динамика · D до цели · 06'))

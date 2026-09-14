@@ -40,7 +40,7 @@ describe('Клетчатка · нет данных — сведённый ку�
     expect(contractValue(canvas, 'Клетчатка · нет данных · 02')).toBe('«Клетчатка» — ключ');
     expect(contractValue(canvas, 'Клетчатка · нет данных · 03')).toBe('отступ сверху auto');
     expect(contractValue(canvas, 'Клетчатка · нет данных · 04'))
-      .toBe('«—» — моноцифры: шрифт 600 21px/1 Manrope, цвет var(--ink-3)');
+      .toBe('«—» — моноцифры: шрифт 600 21px/1 Manrope,sans-serif, цвет var(--ink-3)');
     expect(contractValue(canvas, 'Клетчатка · нет данных · текст')).toBe('Клетчатка');
   });
 

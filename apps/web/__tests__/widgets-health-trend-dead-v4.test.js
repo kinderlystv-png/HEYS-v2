@@ -42,11 +42,11 @@ describe('Тренд здоровья · мёртвая зона — сведё�
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · 02'))
       .toBe('распределение space-between, выравнивание baseline, зазор 6px');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · 03'))
-      .toBe('«Тренд · 14 дней» — ключ');
+      .toBe('«Тренд здоровья · 14 дней» — ключ');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · 04'))
       .toBe('выравнивание flex-end, распределение space-between, зазор 8px, отступ сверху auto');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · 05'))
-      .toBe('«−1» — моноцифры: шрифт 600 26px/1 Manrope, цвет var(--tx)');
+      .toBe('«−1» — моноцифры: шрифт 600 26px/1 Manrope,sans-serif, цвет var(--tx)');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · 06'))
       .toBe('флекс none, отступ снизу 2px, цвет var(--ink-30)');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · рисунок 01'))
@@ -56,7 +56,7 @@ describe('Тренд здоровья · мёртвая зона — сведё�
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · рисунок 03'))
       .toBe('точка r 3.5 в (56,13), заливка currentColor');
     expect(contractValue(canvas, 'Тренд здоровья · мёртвая зона · текст'))
-      .toBe('Тренд · 14 дней › −1');
+      .toBe('Тренд здоровья · 14 дней › −1');
   });
 
   it('держит вид: нейтральный тон числа и --flat ломаной; порог ±2 не переписывал', () => {

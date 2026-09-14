@@ -45,14 +45,14 @@ describe('Оценка дня · Из чего сложилась — сведё
       .toBe('распределение space-between, выравнивание baseline');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 03')).toBe('«Оценка дня» — ключ');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 04'))
-      .toBe('«6,2» — моноцифры: шрифт 600 16px/1 Manrope, цвет var(--ac)');
+      .toBe('«6,2» — моноцифры: шрифт 600 16px/1 Manrope,sans-serif, цвет var(--ac)');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 05')).toBe('зазор 5px, отступ сверху auto');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 06'))
       .toBe('флекс 1, ширина от 0, выключка center');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 07'))
       .toBe('высота 5px, радиус 999px, фон var(--gr2)');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 08'))
-      .toBe('«еда» — шрифт 600 8px/1 Manrope, цвет var(--ink-2), отступ сверху 5px');
+      .toBe('«еда» — шрифт 600 8px/1 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 5px');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 09'))
       .toBe('высота 5px, радиус 999px, фон var(--ovl)');
     expect(contractValue(canvas, 'Оценка дня · Из чего сложилась · 10'))
