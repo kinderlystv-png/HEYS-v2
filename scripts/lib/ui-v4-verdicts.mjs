@@ -444,7 +444,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // панель, итоги ·58 «Готово»); один новый «≠» итоги ·57 «В шаблоны» нет в коде.
     // typedMismatch 80 → 79. Три designer-removed ключа сняты rehash — notApplicable
     // 105 → 103.
-    typedMismatch: [52, '7d95bc694da35145'],
+    typedMismatch: [51, '9c870375c2ab5596'],
     notApplicable: [76, '0c5710116f1f3827'],
   }),
   // Зона заведена 05.09 вместе с первым разбором: прежде записи не было, и
