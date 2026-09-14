@@ -3208,6 +3208,7 @@ async function openCase(browser, item, snapshot, options = {}) {
             h: Math.round(r.height), w: Math.round(r.width),
             x: Math.round(r.left), right: Math.round(r.right),
             pad: cs.padding, align: cs.textAlign, font: cs.font, minH: cs.minHeight,
+            radius: cs.borderRadius, bg: cs.backgroundColor, shadow: cs.boxShadow.slice(0, 60),
           };
         });
       }, process.env.HEYS_UI_V4_MEASURE);
