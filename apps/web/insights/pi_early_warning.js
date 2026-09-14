@@ -2069,6 +2069,17 @@
      * @param {object[]} days - Дни в любом порядке.
      * @returns {object[]} Копия массива, отсортированная по дате по возрастанию.
      */
+    /**
+     * Дробное число для текста на экране: одна цифра после запятой.
+     * Целое остаётся целым — «8 ч», а не «8,0 ч».
+     */
+    function sayNumber(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return '';
+        const rounded = Math.round(n * 10) / 10;
+        return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace('.', ',');
+    }
+
     function sortDaysChronologically(days) {
         return days
             .slice()
@@ -2644,7 +2655,7 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: `Третью ночь подряд сон ниже нормы: в среднем ${Math.round(avgSleep * 10) / 10} ч при цели ${targetSleep}`,
+                    humanMessage: `Третью ночь подряд сон ниже нормы: в среднем ${sayNumber(avgSleep)} ч при цели ${sayNumber(targetSleep)}`,
                 detail: 'После таких ночей вечером обычно сильнее тянет на сладкое',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -2810,7 +2821,7 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: `Вес прибавил ${delta.toFixed(1)} кг за два дня — с ${previous.toFixed(1)} до ${current.toFixed(1)}`,
+                    humanMessage: `Вес прибавил ${sayNumber(delta)} кг за два дня — с ${sayNumber(previous)} до ${sayNumber(current)}`,
                 detail: 'Чаще всего это вода после соли или позднего ужина, а не жир',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3599,7 +3610,7 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: `Две недели вес держится в пределах ${variation.toFixed(1)} кг при цели снижения — среднее ${avgWeight.toFixed(1)}`,
+                    humanMessage: `Две недели вес держится в пределах ${sayNumber(variation)} кг при цели снижения — среднее ${sayNumber(avgWeight)}`,
                 detail: 'Замерьте талию: она отличит остановку от смены состава',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -3783,7 +3794,7 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: `Клетчатки меньше нормы в ${pluralDaysRu(lowFiberDays.length)} за месяц — в среднем ${avgFiber.toFixed(1).replace('.', ',')} г при цели ${FIBER_THRESHOLD}`,
+                    humanMessage: `Клетчатки меньше нормы в ${pluralDaysRu(lowFiberDays.length)} за месяц — в среднем ${sayNumber(avgFiber)} г при цели ${FIBER_THRESHOLD}`,
                 detail: 'Проще всего добрать овощами в обед',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
@@ -4339,7 +4350,7 @@
                     // WARNING_HUMAN_MESSAGES, но в объект не попадала — карточка
                     // показывала заголовок с эмодзи. Контракт «стоит внимания»
                     // требует наблюдение голосом куратора, эмодзи в v4 нет.
-                    humanMessage: `Время первого приёма гуляет на ${maxDiff.toFixed(1)} часа между днями`,
+                    humanMessage: `Время первого приёма гуляет на ${sayNumber(maxDiff)} часа между днями`,
                 detail: 'Ровный завтрак обычно выравнивает и аппетит к вечеру',
                 insight: humanMsg.insight,
                 science: humanMsg.science,
