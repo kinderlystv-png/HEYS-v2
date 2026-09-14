@@ -259,7 +259,10 @@
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: var(--v4-c2, #efe3cf);
+  /* Роль канваса --c2 в палитре продукта зовётся --v4-hero; --v4-c2 не
+     объявлена ни в одном наборе, и цвет кнопки не следовал набору — на всех
+     четырёх он оставался песочным запасным значением. */
+  background: var(--v4-hero, #efe3cf);
   font: 700 12.5px/1 Manrope, system-ui, sans-serif;
   color: var(--v4-act, #c67139);
   cursor: pointer;
