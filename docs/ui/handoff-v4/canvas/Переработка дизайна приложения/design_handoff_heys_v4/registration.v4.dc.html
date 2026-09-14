@@ -119,7 +119,7 @@
     <div class="spec"><b>пояснение под заголовком шага</b><span data-v="есть у всех четырёх шагов, одна строка 12 px/500 тоном var(--ink-2) через 9 px под заголовком. Дословно: шаг 1 — «Имя увидит только ваш куратор» · шаг 2 — «Вес будете уточнять каждое утро, здесь только точка отсчёта» · шаг 3 — «Цель можно поменять в любой момент» · шаг 4 — «По этим двум числам считается окно приёмов». Больше пояснений на шаге нет: подписи полей объясняют себя сами"></span><i>текст назван дословно 25 августа — раньше строка требовала пояснение у каждого шага, а копия была только у второго, и дописать её за дизайнера кодер не имеет права. Каждая фраза отвечает на «зачем вы это спрашиваете», а не пересказывает заголовок</i></div>
     <div class="spec"><b>особый период в профиле</b><span data-v="тумблер «Особый период» — пятая строка группы «Нормы», между «Сном» и «Инсулиновой волной»; дорожка 40×24, ползунок 18, включённый — заливка --acs. Строка видна только при поле «Женский»; включение без подтверждения, выключение спрашивает и удаляет отметки"></span><i>он меняет нормы дня, поэтому живёт рядом с ними, а не в «Медицинском»: отдельного согласия у функции больше нет. Вид карточки периода, ряда дней и множителей — cycle.v4.dc.html</i></div>
     <div class="spec" style="border-bottom:none"><b>профиль в настройках</b><span data-v="экран профиля — три группы: «Обо мне» (имя, пол, дата рождения, рост, базовый вес, текущий вес) · «Нормы и цели» со вторым уровнем заголовков (цель, нормы, пульсовые зоны) · «Медицинское» (ограничения, добавки, документы, отзыв согласия). Экран прокручивается: содержимое выше высоты экрана, поэтому на канвасе оно нарисовано двумя кадрами одной прокрутки — «Профиль · верх» и «Профиль · низ»; шапка и полка с «Сохранить» закреплены и стоят в обоих. Раскладку регистрации экран повторяет значением в значение только внутри «Обо мне». Главный для состава групп и адресов вынесенного — settings-system.v4.dc.html, строки «профиль — три группы вместо восьми» и «адреса вынесенного из профиля»; своих чисел для них этот файл не заводит"></span><i>решение владельца 25 августа, вариант А: три группы с названным адресом для каждого вынесенного блока. Прежняя редакция несла вариант Б («остальные аккордеоны остаются как есть») и спорила с решением, а до неё требовала три плоские группы из двенадцати строк, не говоря, куда девать пульсовые зоны, нормы БЖУ и безопасность. Кадров два, потому что 814 px содержимого в экран 706 не укладываются ни при какой обрезке отступов — обрезалась ровно группа «Медицинское», ради которой перерисовка и делалась</i></div>
-                                                                                          <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                                                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Регистрация · согласия · 01</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Регистрация · согласия · 02</b><span data-v="«Согласия и условия» — шрифт 700 20px/1.3 Manrope,sans-serif, цвет var(--tx), отступ сверху 6px"></span></div>
@@ -625,7 +625,7 @@
   <div class="pal" data-mir="m1" style="display:flex;gap:30px;align-items:flex-start;">
 
     <div><div class="lab"><b>0 · Согласия</b><span>до любых персональных данных</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · согласия">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · согласия" data-vid="вид пункта согласия">
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
         <div style="font:500 12.5px/1.55 Manrope,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Оба документа открываются целиком: отметка появится, когда дочитаете до конца.</div>
@@ -654,7 +654,7 @@
     </div></div>
 
     <div><div class="lab"><b>Начало документа</b><span>кнопка ещё не активна</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Документ · начало">
+    <div class="ph" data-demo="stop" data-screen-label="Документ · начало" data-vid="вид прогресса чтения">
       <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;background:var(--bg);">
         <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
         <span style="flex:1;font:700 12.5px/1.55 Manrope,sans-serif;color:var(--ink-2);">Пользовательское соглашение</span>
@@ -681,7 +681,7 @@
     </div></div>
 
     <div><div class="lab"><b>Конец документа</b><span>кнопка ожила</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Документ · конец">
+    <div class="ph" data-demo="stop" data-screen-label="Документ · конец" data-vid="вид прогресса чтения">
       <div style="padding:14px 16px 10px;display:flex;align-items:center;gap:10px;background:var(--bg);">
         <span style="width:34px;height:34px;flex:none;border-radius:999px;background:var(--c1);display:flex;align-items:center;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2.75" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
         <span style="flex:1;font:700 12.5px/1.55 Manrope,sans-serif;color:var(--ink-2);">Пользовательское соглашение</span>
@@ -707,7 +707,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Необязательные</b><span>ниже на том же экране</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · необязательные согласия">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · необязательные согласия" data-vid="вид пункта согласия">
       <div class="sc">
         <div style="font:600 10px/1 Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:16px 0 8px;">Обязательные</div>
         <div style="display:flex;align-items:center;gap:11px;background:var(--c1);border-radius:14px;padding:11px 13px;"><span style="width:22px;height:22px;border-radius:6px;background:var(--acs);display:flex;align-items:center;justify-content:center;flex:none;margin-top:1px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--bg)" stroke-width="3.5" stroke-linecap="round"><path d="M5 13l4 4L19 7"/></svg></span><span style="font:600 12.5px/1.55 Manrope,sans-serif;color:var(--tx);">Пользовательское соглашение</span></div>
@@ -725,7 +725,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Подпись кодом</b><span>шторка поверх экрана</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · подпись кодом">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · подпись кодом" data-vid="вид шага">
       <div class="sc" style="filter:blur(2px);opacity:.5;">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
         <div style="font:500 12px/1.5 Manrope,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Два документа обязательны.</div>
@@ -747,7 +747,7 @@
     </div></div>
 
     <div><div class="lab"><b>0 · Подписано</b><span>сразу после кода</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · подписано">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · подписано" data-vid="вид шага">
       <div class="sc" style="filter:blur(2px);opacity:.5;">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Согласия и условия</div>
         <div style="font:500 12px/1.5 Manrope,sans-serif;color:var(--ink-2);margin-top:8px;text-wrap:pretty;">Два документа обязательны.</div>
@@ -772,7 +772,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Персональные данные</b><span>шаг 1 из 4</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · персональные данные">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · персональные данные" data-vid="вид колеса значений">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -796,7 +796,7 @@
     </div></div>
 
     <div><div class="lab"><b>2 · Рост и вес</b><span>шаг 2 из 4</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · рост и вес">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · рост и вес" data-vid="вид колеса значений">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Рост и вес</div>
@@ -839,7 +839,7 @@
     </div></div>
 
     <div><div class="lab"><b>3 · Цель и активность</b><span>шаг 3 из 4</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · цель и активность">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · цель и активность" data-vid="вид шага профиля">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span class="on"></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Цель и активность</div>
@@ -860,7 +860,7 @@
     </div></div>
 
     <div><div class="lab"><b>4 · Сон и волна</b><span>шаг 4 из 4</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · сон и инсулиновая волна">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · сон и инсулиновая волна" data-vid="вид шага профиля">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span></span><span></span><span class="on"></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Сон и инсулиновая волна</div>
@@ -879,7 +879,7 @@
     </div></div>
 
     <div><div class="lab"><b>Итог · доступ открыт</b><span>куратор уже назначил неделю</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · итог доступ открыт">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · итог доступ открыт" data-vid="вид карточки итогов">
       <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:60px;height:60px;border-radius:999px;background:var(--gr-bg);display:flex;align-items:center;justify-content:center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gr)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:18px;text-align:center;">Профиль готов, Александра</div>
@@ -895,7 +895,7 @@
     </div></div>
 
     <div><div class="lab"><b>Итог · ждём куратора</b><span>доступ ещё не открыт</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ожидание куратора">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ожидание куратора" data-vid="вид карточки итогов">
       <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Профиль сохранён</div>
@@ -910,7 +910,7 @@
     </div></div>
 
     <div><div class="lab"><b>Итог · неделя с даты</b><span>доступ выдан, но начнётся позже</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · неделя начнётся позже">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · неделя начнётся позже" data-vid="вид карточки итогов">
       <div class="sc" style="padding-top:34px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:60px;height:60px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></span>
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Неделя начнётся 21 августа</div>
@@ -957,7 +957,7 @@
   <div class="pal" data-mir="m2" style="display:flex;gap:30px;align-items:flex-start;">
 
     <div><div class="lab"><b>1 · Одно поле пустое</b><span>частый случай</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · одна ошибка">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · одна ошибка" data-vid="вид плашки «Важно»">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -969,7 +969,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Имя не подходит</b><span>цифры или одна буква</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · имя не подходит">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · имя не подходит" data-vid="вид плашки «Важно»">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -979,7 +979,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Возраст меньше 18</b><span>колесо остановлено</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · возраст меньше 18">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · возраст меньше 18" data-vid="вид плашки «Важно»">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -1004,7 +1004,7 @@
     </div></div>
 
     <div><div class="lab"><b>2 · Ниже нормы ИМТ</b><span>шкала едет, но предупреждает</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ниже нормы имт">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ниже нормы имт" data-vid="вид плашки «Важно»">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span></span><span class="on"></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Рост и вес</div>
@@ -1046,7 +1046,7 @@
     </div></div>
 
     <div><div class="lab"><b>1 · Клавиатура</b><span>фокус в поле имени</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · клавиатура">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · клавиатура" data-vid="вид шага">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><div class="dots"><span class="on"></span><span></span><span></span><span></span></div><span style="width:44px;"></span></div>
       <div class="sc" style="flex:none;">
         <div style="font:700 20px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:6px;text-wrap:pretty;">Расскажите о себе</div>
@@ -1064,7 +1064,7 @@
     </div></div>
 
     <div><div class="lab"><b>Сохранение</b><span>после «Готово» на шаге 4</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · сохранение">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · сохранение" data-vid="вид финального экрана">
       <div class="sc" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.75" stroke-linecap="round"><path d="M21 12a9 9 0 11-9-9" opacity=".22"/><path d="M12 3a9 9 0 019 9"/></svg></span>
         <div style="font:700 15px/1.35 Manrope,sans-serif;color:var(--tx);margin-top:18px;">Сохраняем профиль</div>
@@ -1074,7 +1074,7 @@
     </div></div>
 
     <div><div class="lab"><b>Не сохранилось</b><span>облако не подтвердило запись</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ошибка сохранения">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · ошибка сохранения" data-vid="вид финального экрана">
       <div class="sc" style="padding-top:38px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--tint);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ac2)" stroke-width="2.75" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg></span>
         <div style="font:700 18px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Профиль не сохранился</div>
@@ -1088,7 +1088,7 @@
     </div></div>
 
     <div><div class="lab"><b>Возврат</b><span>ушёл на шаге 2, вернулся через неделю</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Регистрация · возврат к незавершённой">
+    <div class="ph" data-demo="stop" data-screen-label="Регистрация · возврат к незавершённой" data-vid="вид шага">
       <div class="sc" style="padding-top:36px;display:flex;flex-direction:column;align-items:center;">
         <span style="width:56px;height:56px;border-radius:999px;background:var(--c2);display:flex;align-items:center;justify-content:center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--ac)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></span>
         <div style="font:700 19px/1.3 Manrope,sans-serif;color:var(--tx);margin-top:18px;text-align:center;text-wrap:pretty;">Продолжим, Александра</div>
@@ -1105,21 +1105,21 @@
     </div></div>
 
     <div><div class="lab"><b>Профиль в настройках · верх</b><span>три группы; экран прокручивается</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Профиль · верх" data-nouni>
+    <div class="ph" data-demo="stop" data-screen-label="Профиль · верх" data-vid="вид шага профиля" data-nouni>
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Профиль</span><span style="width:44px;"></span></div>
       <div class="sc"><div style="font:600 10px/1 Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:6px 0 7px;">Обо мне</div><div style="background:var(--c1);border-radius:18px;padding:0 15px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Имя</span><span style="color:var(--tx);">Александра</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Пол</span><span style="color:var(--tx);">Женский</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Дата рождения</span><span style="color:var(--tx);">14 марта 2000</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Рост</span><span style="color:var(--tx);">168 см</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Базовый вес</span><span style="color:var(--tx);">74 кг</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Текущий вес</span><span style="color:var(--ink-3);font-weight:500;">73,4 кг · из чек-ина</span></div></div><div style="font:600 10px/1 Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:12px 0 7px;">Нормы и цели</div><div style="font:600 9.5px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:10px 0 6px;">Цель</div><div style="background:var(--c1);border-radius:18px;padding:0 15px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Цель и темп</span><span style="color:var(--tx);">Снизить · умеренно</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Желаемый вес</span><span style="color:var(--tx);">64 кг</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Дефицит</span><span style="color:var(--tx);">15 %</span></div></div><div style="height:8px"></div></div>
       <div class="foot"><div class="btn">Сохранить</div></div>
     </div></div>
 
     <div><div class="lab"><b>Профиль в настройках · низ</b><span>продолжение той же прокрутки</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Профиль · низ">
+    <div class="ph" data-demo="stop" data-screen-label="Профиль · низ" data-vid="вид шага профиля">
       <div class="top"><span style="width:44px;height:44px;margin:-8px 0;display:flex;align-items:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="ttl">Профиль</span><span style="width:44px;"></span></div>
       <div class="sc"><div style="font:600 9.5px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:10px 0 6px;">Нормы</div><div style="background:var(--c1);border-radius:18px;padding:0 15px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Калории</span><span style="color:var(--tx);">1 780 ккал</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Белки · жиры · углеводы</span><span style="color:var(--tx);">150 · 62 · 180 г</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Вода</span><span style="color:var(--tx);">2,7 л</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Сон</span><span style="display:flex;align-items:center;gap:7px;color:var(--tx);">7 часов<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-30)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Особый период</span><span style="flex:none;width:40px;height:24px;border-radius:999px;background:var(--v4-track);position:relative;"><span style="position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:999px;background:var(--bg);box-shadow:0 1px 2px rgba(var(--shadow),.25);"></span></span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Инсулиновая волна</span><span style="display:flex;align-items:center;gap:7px;color:var(--tx);">3 часа<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-30)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div></div><div style="font:600 9.5px/1 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2);margin:10px 0 6px;">Пульсовые зоны</div><div style="background:var(--c1);border-radius:18px;padding:0 15px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Расчёт</span><span style="display:flex;align-items:center;gap:7px;color:var(--tx);">по Карвонену<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-30)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Пульс покоя</span><span style="color:var(--tx);">58</span></div></div><div style="font:600 10px/1 Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:12px 0 7px;">Медицинское</div><div style="background:var(--c1);border-radius:18px;padding:0 15px;"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Ограничения</span><span style="color:var(--tx);">нет</span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Добавки</span><span style="display:flex;align-items:center;gap:7px;color:var(--tx);">курс на 3 месяца<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-30)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;border-bottom:1px solid var(--v4-line);font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Документы</span><span style="display:flex;align-items:center;gap:7px;color:var(--tx);">2 подписаны<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-30)" stroke-width="2.75" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></span></div><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font:600 12.5px/1 Manrope,sans-serif;"><span style="color:var(--ink-2);">Согласие на добавки</span><span style="color:var(--red);">отозвать</span></div></div><div style="height:8px"></div></div>
       <div class="foot"><div class="btn">Сохранить</div></div>
     </div></div>
 
     <div><div class="lab"><b>Отзыв согласия на добавки</b><span>второе касание, из группы «Медицинское»</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Профиль · отзыв согласия на добавки">
+    <div class="ph" data-demo="stop" data-screen-label="Профиль · отзыв согласия на добавки" data-vid="вид пункта согласия">
       <div class="sc" style="filter:blur(2px);opacity:.45;">
         <div style="font:600 10px/1 Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--ac);margin:6px 0 7px;">Медицинское</div>
         <div style="background:var(--c1);border-radius:18px;padding:0 15px;">

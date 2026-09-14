@@ -107,7 +107,7 @@
     <div class="spec"><b>safe-area и кнопка назад</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «safe-area · правило продукта» и «аппаратная кнопка назад · правило продукта». Местное отличие: на системном кадре врезки задаёт платформа, наших правил там нет; в загрузчике знак центруется между врезками, аппаратная кнопка выходит из приложения"></span></div>
     <div class="spec" style="border-bottom:none"><b>появление Главной</b><span data-v="один кадр: круг гаснет, экран приезжает целиком"></span><i>скелетонов в продукте нет — причина записана в spinners.v4.dc.html</i></div>
 
-                                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                          <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Сплэш · как сейчас · 01</b><span data-v="фон #ffffff"></span></div>
     <div class="spec"><b>Сплэш · как сейчас · 02</b><span data-v="фон #2563eb, цвет #ffffff"></span></div>
@@ -138,13 +138,13 @@
     <div class="spec"><b>Стык · загрузчик · 02</b><span data-v="ширина 64px, высота 64px"></span></div>
     <div class="spec"><b>Стык · Главная · 01</b><span data-v="поля 18px 18px 0"></span></div>
     <div class="spec"><b>Стык · Главная · 02</b><span data-v="выравнивание center, зазор 9px"></span></div>
-    <div class="spec"><b>Стык · Главная · 03</b><span data-v="«18» — моноцифры: шрифт 800 12px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Стык · Главная · 03</b><span data-v="«18» — моноцифры: шрифт 800 12px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Стык · Главная · 04</b><span data-v="флекс 1, высота 3px, радиус 999px, фон rgba(var(--ink),.09)"></span></div>
     <div class="spec"><b>Стык · Главная · 05</b><span data-v="ширина 34%, высота 3px, радиус 999px, фон var(--acs)"></span></div>
-    <div class="spec"><b>Стык · Главная · 06</b><span data-v="«Эксперт» — шрифт 600 10px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Стык · Главная · 06</b><span data-v="«Эксперт» — шрифт 600 10px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Стык · Главная · 07</b><span data-v="выравнивание center, зазор 8px, отступ сверху 14px"></span></div>
     <div class="spec"><b>Стык · Главная · 08</b><span data-v="ширина 34px, высота 34px, флекс none, радиус 999px, фон var(--c1)"></span></div>
-    <div class="spec"><b>Стык · Главная · 09</b><span data-v="«вс, 9 августа» — флекс 1, высота 36px, радиус 999px, фон var(--c1), выравнивание center, распределение center, шрифт 700 12.5px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Стык · Главная · 09</b><span data-v="«вс, 9 августа» — флекс 1, высота 36px, радиус 999px, фон var(--c1), выравнивание center, распределение center, шрифт 700 12.5px/1 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Стык · Главная · 10</b><span data-v="область прокрутки"></span></div>
     <div class="spec"><b>Стык · Главная · 11</b><span data-v="колонки repeat(4,1fr), зазор 8px"></span></div>
     <div class="spec"><b>Стык · Главная · 12</b><span data-v="радиус 16px, фон var(--c1)"></span></div>
@@ -225,7 +225,7 @@
   <div style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>Сейчас</b><span>синяя H, длинная подпись</span></div>
-    <div class="and" data-demo="stop" data-screen-label="Сплэш · как сейчас" style="background:#ffffff;">
+    <div class="and" data-demo="stop" data-screen-label="Сплэш · как сейчас" data-vid="вид подписи под иконкой" style="background:#ffffff;">
       <div class="asb" style="background:#2563eb;color:#ffffff;"><span>15:29</span><span style="opacity:.85;">LTE ▂▄▆ ▮</span></div>
       <div class="amid"><span class="amk" style="background:#2563eb;color:#ffffff;font-family:Manrope,sans-serif;font-size:30px;font-weight:800;padding:0;">H</span></div>
       <div class="acap" style="color:#201e1d;">HEYS Nutrition Tracker</div>
@@ -234,7 +234,7 @@
     </div>
 
     <div><div class="lab"><b>Знак v4</b><span>диск ожидания, буква терракотой</span></div>
-    <div class="and" data-demo="stop" data-screen-label="Сплэш · знак v4" style="background:#fffaf1;">
+    <div class="and" data-demo="stop" data-screen-label="Сплэш · знак v4" data-vid="вид подписи под иконкой" style="background:#fffaf1;">
       <div class="asb" style="background:#fffaf1;color:rgba(32,30,29,.7);"><span>15:29</span><span style="opacity:.6;">LTE ▂▄▆ ▮</span></div>
       <div class="amid"><span class="amk" style="background:#fffaf1;color:#a1471c;">H</span></div>
       <div class="acap" style="color:rgba(32,30,29,.8);">HEYS</div>
@@ -317,7 +317,7 @@
     </div>
 
     <div><div class="lab"><b>После правки</b><span>только фон, знака по центру нет</span></div>
-    <div class="and" data-demo="stop" data-screen-label="iOS · после правки" style="background:#fffaf1;">
+    <div class="and" data-demo="stop" data-screen-label="iOS · после правки" data-vid="вид кадра iPhone" style="background:#fffaf1;">
       <div class="asb" style="background:transparent;color:rgba(32,30,29,.75);"><span>15:29</span><span style="opacity:.6;">▂▄▆ ▮</span></div>
       <div class="amid"></div>
     </div>
@@ -361,25 +361,25 @@
   <div class="pal" data-mir="s1" style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
 
     <div><div class="lab"><b>1 · кадр системы · Android</b><span>всегда песочный, тему не знает</span></div>
-    <div class="and" data-demo="stop" data-screen-label="Стык · сплэш системы" style="background:#fffaf1;">
+    <div class="and" data-demo="stop" data-screen-label="Стык · сплэш системы" data-vid="вид кадра iPhone" style="background:#fffaf1;">
       <div class="asb" style="background:#fffaf1;color:rgba(32,30,29,.7);"><span>15:29</span><span style="opacity:.6;">LTE ▂▄▆ ▮</span></div>
       <div class="amid"><span class="amk" style="background:#fffaf1;color:#a1471c;">H</span></div>
       <div class="acap" style="color:rgba(32,30,29,.8);">HEYS</div>
     </div></div>
 
     <div><div class="lab"><b>1 · кадр системы · iPhone</b><span>только фон, по центру ничего</span></div>
-    <div class="and" data-demo="stop" data-screen-label="Стык · сплэш системы · iPhone" style="background:#fffaf1;">
+    <div class="and" data-demo="stop" data-screen-label="Стык · сплэш системы · iPhone" data-vid="вид кадра iPhone" style="background:#fffaf1;">
       <div class="asb" style="background:transparent;color:rgba(32,30,29,.75);"><span>15:29</span><span style="opacity:.6;">▂▄▆ ▮</span></div>
       <div class="amid"></div>
     </div></div>
 
     <div><div class="lab"><b>2 · наш загрузчик</b><span>дуга с первого кадра, буквы в загрузчике нет; на iPhone — первое содержимое кадра</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Стык · загрузчик" style="align-items:center;justify-content:center;">
+    <div class="ph" data-demo="stop" data-screen-label="Стык · загрузчик" data-vid="вид загрузчика" style="align-items:center;justify-content:center;">
       <span class="bm" style="width:64px;height:64px;"><svg class="spin" width="58" height="58" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9.2" stroke="var(--ink-30)" stroke-width="2.6"/><path d="M12 2.8a9.2 9.2 0 019.2 9.2" stroke="var(--ac)" stroke-width="2.6" stroke-linecap="round"/></svg></span>
     </div></div>
 
     <div><div class="lab"><b>3 · Главная</b><span>круг гаснет, шапка приезжает</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Стык · Главная">
+    <div class="ph" data-demo="stop" data-screen-label="Стык · Главная" data-vid="вид загрузчика">
       <div style="padding:18px 18px 0;">
         <div style="display:flex;align-items:center;gap:9px;">
           <span class="n" style="font:800 12px/1 Manrope,sans-serif;color:var(--ac);">18</span>

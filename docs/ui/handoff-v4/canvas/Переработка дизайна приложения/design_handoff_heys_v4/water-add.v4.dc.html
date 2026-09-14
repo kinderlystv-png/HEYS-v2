@@ -387,7 +387,7 @@
     <div class="spec"><b>палитры</b><span data-v="канвас подключает v4-canvas.css и красит по ролям — 199 обращений к переменным. Палитровые правила шапки сведены к ролям: где стояли четыре строки .wCard с четырьмя хексами, теперь одна роль --c1, а тёмное значение даёт обёртка .pal.dk"></span><i>переписано 26 августа: строка утверждала, что канвас не подключает файл ролей, при стоящем link — нашла проверка 10</i></div>
     <div class="spec" style="border-bottom:none"><b>тона воды не роли</b><span data-v="глубина заливки — своя шкала канваса, в таблице ролей её нет и заводить не нужно: #7d98a6 и #4e6d7a в песочной, #3f6c7e и #7ba3b4 в тёмной, #2c5f76 и #4a86a4 в синей, #35657d и #6ba3bf в сине-тёмной. Роль --wat — только базовый тон воды, шкала строится от него вниз"></span><i>названы, чтобы отсутствие роли было решением: правка палитры эти тона не двигает</i></div>
                                                               <div class="spec"><b>тач-цели</b><span data-v="ПРИВЕДЕНО 5 сентября, видимым размером: четыре готовых объёма внутри карточки .bChip (30 → 44), чипы ±200/+500 в плашке ряда .chip (30 → 44), пилюля «+200 мл» (38 → 44), круглые кнопки .fab и .fabW (38 → 44), кнопки выбора варианта .abBtn (32 → 44). Расширителя нет ни у одного нажимаемого элемента. Карточка: 269 → 282 после подъёма чипов, затем 282 → 237 после снятия ряда переключателя из живого кадра; итог 300 × 237 px. Не цели и намеренно ниже 44: кольцо нормы 14, капля 10, полоса за сегодня 6, дорожка спарклайна 6, круг всплеска 10, линия ряда 34 — графика и разделители"></span><i>.bChip был ПРОПУЩЕН первым проходом и найден на ревью: фильтр диагностики искал фон по именам общих ролей (--acs/--c1/--c2/--bg/--tint), а карточка воды объявляет свой набор (--w/--wDeep/--wTxt) — под локальными переменными фильтр не видел ничего ни в одном файле. Прогон повторён с условием «любой фон плюс радиус ≥ 8», по всем 28 канвасам: .bChip оказался единственной пропущенной целью, остальные находки нового фильтра — ярлыки и графика (номер подхода 26, чип состояния 24, аватары, точки, полосы)</i>"></span><i>норма 44 pt держится видимым размером: невидимый расширитель проходит замер и проваливается в руке — палец не видит ::after</i></div>
-                                <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                    <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Вода · вариант А · рябь от плитки · 01</b><span data-v="плитка"></span></div>
     <div class="spec"><b>Вода · вариант А · рябь от плитки · 02</b><span data-v="«Калории» — ключ"></span></div>
@@ -596,7 +596,7 @@
   <div class="pal" data-mir="m1" data-demo="protocol" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">
 
     <div><div class="lab"><b>А · Рябь от плитки</b><span>тап — кольцо расходится от «Воды» её же цветом, соседи на миг гаснут, полоса и число едут вместе</span></div>
-    <div class="ph aDim" data-demo="protocol" data-screen-label="Вода · вариант А · рябь от плитки">
+    <div class="ph aDim" data-demo="protocol" data-screen-label="Вода · вариант А · рябь от плитки" data-vid="вид · плитка воды 1×1">
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
@@ -624,7 +624,7 @@
     </div>
 
     <div><div class="lab"><b>Б · Капля долетает</b><span>кнопка «+» на миг сжимается, капля коротким броском долетает до «Воды» — полоса подскакивает в момент попадания</span></div>
-    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант Б · капля долетает">
+    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант Б · капля долетает" data-vid="вид · плитка воды 1×1">
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
@@ -652,7 +652,7 @@
     </div>
 
     <div><div class="lab"><b>В · Волна в размере плитки</b><span>та же метафора стакана, но заперта внутри своей плитки — остальной экран не шевелится</span></div>
-    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант В · волна в плитке">
+    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант В · волна в плитке" data-vid="вид · плитка воды 1×1">
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
@@ -681,7 +681,7 @@
     </div>
 
     <div><div class="lab"><b>Г · Без цвета, только счётчик</b><span>узкая пилюля «+250 мл» всплывает у кнопки и гаснет — язык уже есть в спиннерах</span></div>
-    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант Г · только счётчик">
+    <div class="ph" data-demo="protocol" data-screen-label="Вода · вариант Г · только счётчик" data-vid="вид · плитка воды 1×1">
       <div class="grid">
         <div class="w hero" style="grid-column:span 2;grid-row:span 2;">
           <div class="k">Калории</div>
@@ -719,35 +719,35 @@
 
     <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₁ · Зафиксированная база</b><span>уровень поднимается, у поверхности бегут блики, число переезжает 0,4 → 0,65</span></div></div>
-      <div class="tileV v1" data-demo="protocol" data-screen-label="Вода · В1 база"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
+      <div class="tileV v1" data-demo="protocol" data-screen-label="Вода · В1 база" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v1"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Manrope,sans-serif;color:var(--ink-2);max-width:230px;text-wrap:pretty;">Как есть. Слабое место одно: к концу дня вода доходит до числа и читаемость падает — это решают В₄ и В₅.</div>
     </div>
 
     <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₂ · Плеск</b><span>поверхность качается и выравнивается, как в реальном стакане</span></div></div>
-      <div class="tileV v2" data-demo="protocol" data-screen-label="Вода · В2 плеск"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
+      <div class="tileV v2" data-demo="protocol" data-screen-label="Вода · В2 плеск" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v2"><span class="fillW" style="height:40%;"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Manrope,sans-serif;color:var(--ink-2);max-width:230px;text-wrap:pretty;">Физика вместо анимации: наклон гаснет за три качка. Самый «дорогой» на ощущение и самый требовательный к кадрам в коде.</div>
     </div>
 
     <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₃ · Капля и круг</b><span>в плитку падает капля, от неё расходится круг, и только потом растёт уровень</span></div></div>
-      <div class="tileV v3" data-demo="loop" data-screen-label="Вода · В3 капля и круг"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
+      <div class="tileV v3" data-demo="loop" data-screen-label="Вода · В3 капля и круг" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v3" data-demo="loop"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Manrope,sans-serif;color:var(--ink-2);max-width:230px;text-wrap:pretty;">Единственная ветка, где видна причина, а не только следствие — без выхода за пределы плитки.</div>
     </div>
 
     <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₄ · Метка нормы</b><span>пунктир — норма дня; перешагнули её — поверхность коротко блеснёт шалфеем</span></div></div>
-      <div class="tileV v4" data-demo="protocol" data-screen-label="Вода · В4 метка нормы"><span class="fillW" style="height:40%;"></span><span class="goal"></span><span class="glint"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
+      <div class="tileV v4" data-demo="protocol" data-screen-label="Вода · В4 метка нормы" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:40%;"></span><span class="goal"></span><span class="glint"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v4"><span class="fillW" style="height:40%;"></span><span class="goal"></span><span class="glint"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Manrope,sans-serif;color:var(--ink-2);max-width:230px;text-wrap:pretty;">Анимация начинает что-то сообщать: видно не только «стало больше», но и «норма взята».</div>
     </div>
 
     <div style="display:flex;align-items:center;gap:22px;background:var(--bg);border-radius:20px;padding:14px 18px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>В₅ · Мерный столбик</b><span>вода заливает не фон, а узкую колонку справа — текст всегда на чистом песке</span></div></div>
-      <div class="tileV v5" data-demo="protocol" data-screen-label="Вода · В5 мерный столбик"><span class="colTrack"><span class="colFill" style="height:40%;"></span></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
+      <div class="tileV v5" data-demo="protocol" data-screen-label="Вода · В5 мерный столбик" data-vid="вид · плитка воды 1×1"><span class="colTrack"><span class="colFill" style="height:40%;"></span></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v5"><span class="colTrack"><span class="colFill" style="height:40%;"></span></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="font:500 11px/1.5 Manrope,sans-serif;color:var(--ink-2);max-width:230px;text-wrap:pretty;">Самый читаемый из всех: цифра никогда не оказывается на воде, но и метафора стакана слабее — это уже шкала, а не стакан.</div>
     </div>
@@ -770,7 +770,7 @@
       <div class="tileV v3" data-demo="loop" data-screen-label="Вода · В3 · финал" data-vid="тон по объёму"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV v3" data-demo="loop"><span class="fillW" style="height:40%;"></span><span class="drop"></span><span class="ripple"></span><div class="k">Вода</div><div class="numV"><b class="out">0,4 л</b><b class="in">0,65 л</b></div></div></div></div>
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Уменьшенное движение</b><span>ни капли, ни круга: уровень и число просто меняются за 160 мс</span></div></div>
-      <div class="tileV fz" data-demo="stop" data-screen-label="Вода · В3 · уменьшенное движение"><span class="fillW" style="height:60%;"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:0;">0,4 л</b><b class="in" style="opacity:1;">0,65 л</b></div></div>
+      <div class="tileV fz" data-demo="stop" data-screen-label="Вода · В3 · уменьшенное движение" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:60%;"></span><div class="k">Вода</div><div class="numV"><b class="out" style="opacity:0;">0,4 л</b><b class="in" style="opacity:1;">0,65 л</b></div></div>
     </div>
   </div>
   <div data-mirdst="m3"></div>
@@ -869,19 +869,19 @@
 
   <div class="pal" data-mir="m5">
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;">
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · 0 мс"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">0 мс · вода ниже строки</div></div>
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · подход"><span class="fillW" style="height:66%;background:color-mix(in oklab, var(--w), var(--wDeep) 94%);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">66 % · вода почти у строки, всё на месте</div></div>
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · касание"><span class="fillW" style="height:70%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">70 % · порог: поверхность коснулась строки</div></div>
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · переезд"><span class="fillW" style="height:76%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(38.5px);color:var(--wTxt);">Вода</div><div class="numV"><b style="transform:translateY(37px);color:var(--wTxt);">2,4 л</b></div></div></div></div><div class="frameCap">+220 мс · строка ушла на дно, тон глубже</div></div>
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · покой"><span class="fillW" style="height:84%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(38.5px);color:var(--wTxt);">Вода</div><div class="numV"><b style="transform:translateY(37px);color:var(--wTxt);">2,4 л</b></div></div></div></div><div class="frameCap">покой · строка на дне, 5,3:1</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · 0 мс" data-vid="вид · плитка в увеличении"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">0 мс · вода ниже строки</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · подход" data-vid="вид · плитка в увеличении"><span class="fillW" style="height:66%;background:color-mix(in oklab, var(--w), var(--wDeep) 94%);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">66 % · вода почти у строки, всё на месте</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · касание" data-vid="вид · плитка в увеличении"><span class="fillW" style="height:70%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(0px);color:var(--dimTxt);">Вода</div><div class="numV"><b style="transform:translateY(0px);color:var(--inkTxt);">2,4 л</b></div></div></div></div><div class="frameCap">70 % · порог: поверхность коснулась строки</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · переезд" data-vid="вид · плитка в увеличении"><span class="fillW" style="height:76%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(38.5px);color:var(--wTxt);">Вода</div><div class="numV"><b style="transform:translateY(37px);color:var(--wTxt);">2,4 л</b></div></div></div></div><div class="frameCap">+220 мс · строка ушла на дно, тон глубже</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub" data-demo="protocol" data-screen-label="Вода · погружение · покой" data-vid="вид · плитка в увеличении"><span class="fillW" style="height:84%;background:var(--wDeep);"></span><div class="k" style="transform:translateY(38.5px);color:var(--wTxt);">Вода</div><div class="numV"><b style="transform:translateY(37px);color:var(--wTxt);">2,4 л</b></div></div></div></div><div class="frameCap">покой · строка на дне, 5,3:1</div></div>
     </div>
 
     <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;margin-top:14px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Живая петля</b><span>натуральный размер и увеличение 2,5×</span></div></div>
-      <div class="tileV vSub" data-demo="protocol" data-screen-label="Вода · погружение · петля"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b></div></div>
+      <div class="tileV vSub" data-demo="protocol" data-screen-label="Вода · погружение · петля" data-vid="вид · плитка в увеличении"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b></div></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV vSub"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b><small>из 3,0</small></div></div></div></div>
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Уменьшенное движение</b><span>без переезда: цвет и уровень меняются за 160 мс</span></div></div>
-      <div class="tileV fz vSub vSubStill" data-demo="protocol" data-screen-label="Вода · погружение · уменьшенное движение"><span class="fillW" style="height:84%;background:var(--wDeep);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b></div></div>
+      <div class="tileV fz vSub vSubStill" data-demo="protocol" data-screen-label="Вода · погружение · уменьшенное движение" data-vid="вид · плитка в увеличении"><span class="fillW" style="height:84%;background:var(--wDeep);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b></div></div>
     </div>
   </div>
   <div data-mirdst="m5"></div>
@@ -892,7 +892,7 @@
 
   <div class="pal" data-mir="m9" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">
     <div data-cardvar="a"><div class="lab" style="margin:0 0 9px;"><b>Вид «Полоса» · дефолт</b><span>статус за сегодня полосой, неделя столбиками, ряд объёмов внизу</span></div>
-      <div class="wCard" data-demo="protocol" data-screen-label="Вода · карточка · Полоса">
+      <div class="wCard" data-demo="protocol" data-screen-label="Вода · карточка · Полоса" data-vid="вид карточки">
         <div class="cTop"><span class="k">Вода</span><span class="cNorm">из 3,0 л</span></div>
         <div class="cVal"><b>1,7<i>л</i></b><span class="cLeft">осталось 1,3</span></div>
         <div class="cBar"><i style="width:57%;"></i></div>
@@ -904,7 +904,7 @@
       </div>
     </div>
     <div data-cardvar="a"><div class="lab" style="margin:0 0 9px;"><b>Утро · 0 л</b><span>полоса пуста, сегодняшний столбик нулевой, −200 погашен</span></div>
-      <div class="wCard" data-demo="protocol" data-screen-label="Вода · карточка · Полоса · утро">
+      <div class="wCard" data-demo="protocol" data-screen-label="Вода · карточка · Полоса · утро" data-vid="вид карточки">
         <div class="cTop"><span class="k">Вода</span><span class="cNorm">из 3,0 л</span></div>
         <div class="cVal"><b>0<i>л</i></b><span class="cLeft">осталось 3,0</span></div>
         <div class="cBar"><i style="width:0;"></i></div>
@@ -955,7 +955,7 @@
 
   <div class="pal" data-mir="m10" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">
     <div><div class="lab" style="margin:0 0 9px;"><b>Лист своего объёма</b><span>шаг 50 мл, последнее значение запомнено</span></div>
-      <div class="wCard" data-demo="stop" data-screen-label="Вода · свой объём · лист">
+      <div class="wCard" data-demo="stop" data-screen-label="Вода · свой объём · лист" data-vid="вид · лист своего объёма">
         <div class="cTop"><span class="k">Свой объём</span><span class="cNorm">шаг 50 мл</span></div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;">
           <span class="chip chipSub" style="width:44px;height:44px;padding:0;font-size:15px;">−</span>
@@ -974,7 +974,7 @@
 
   <div class="pal" data-mir="m4" style="display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;">
     <div><div class="lab"><b>Вкладка «Питание»</b><span>плитки нет — работает столбик</span></div>
-      <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Питание">
+      <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Питание" data-vid="вид · столбик на вкладках">
         <div style="font:700 13px/1 Manrope,sans-serif;color:var(--tx);margin-bottom:9px;">Питание</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class=""></span><span class="on"></span><span class=""></span><span class=""></span><span class=""></span></div>
@@ -982,7 +982,7 @@
       </div>
     </div>
     <div><div class="lab"><b>Вкладка «Актив»</b><span>тот же кадр на любой вкладке</span></div>
-      <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Актив">
+      <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Актив" data-vid="вид · столбик на вкладках">
         <div style="font:700 13px/1 Manrope,sans-serif;color:var(--tx);margin-bottom:9px;">Актив</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class=""></span><span class=""></span><span class="on"></span><span class=""></span><span class=""></span></div>
@@ -990,7 +990,7 @@
       </div>
     </div>
     <div><div class="lab"><b>Главная, прокрученная вниз</b><span>плитка есть, но её не видно — тоже столбик</span></div>
-      <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Главная прокручена">
+      <div class="ph tabPh" style="height:250px;display:flex;flex-direction:column;" data-demo="loop" data-screen-label="Вода · столбик · Главная прокручена" data-vid="вид · столбик на вкладках">
         <div style="font:700 13px/1 Manrope,sans-serif;color:var(--tx);margin-bottom:9px;">Отчёт за день</div>
         <div style="display:flex;flex-direction:column;gap:6px;"><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div><div class="rowLine"></div></div>
         <div class="tabs"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
@@ -1074,15 +1074,15 @@
 
   <div class="pal" data-mir="m8">
     <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;">
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 0,4 л"><span class="fillW" style="height:12%;background:color-mix(in oklab, var(--w), var(--wDeep) 17%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--dimTxt);animation:none;">Вода</span><span class="botV" style="color:var(--inkTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">12 % · вода ниже подписей</div></div>
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 0,8 л"><span class="fillW" style="height:25%;background:color-mix(in oklab, var(--w), var(--wDeep) 36%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--dimTxt);animation:none;">Вода</span><span class="botV" style="color:var(--inkTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">25 % · чернила частью на воде, 5,4:1</div></div>
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 1,0 л" data-nocontrast><span class="fillW" style="height:31%;background:color-mix(in oklab, var(--w), var(--wDeep) 44%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">31 % · порог нижних строк — стали кремовыми</div></div>
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 2,1 л" data-nocontrast><span class="fillW" style="height:70%;background:var(--wDeep);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">70 % · тон дошёл до глубокого, норма ещё в чернилах</div></div>
-      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 2,7 л" data-nocontrast><span class="fillW" style="height:89%;background:var(--wDeep);"></span><span class="topNorm" style="color:var(--wTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">89 % · порог нормы — побелела и она</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 0,4 л" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:12%;background:color-mix(in oklab, var(--w), var(--wDeep) 17%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--dimTxt);animation:none;">Вода</span><span class="botV" style="color:var(--inkTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">12 % · вода ниже подписей</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 0,8 л" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:25%;background:color-mix(in oklab, var(--w), var(--wDeep) 36%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--dimTxt);animation:none;">Вода</span><span class="botV" style="color:var(--inkTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">25 % · чернила частью на воде, 5,4:1</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 1,0 л" data-vid="вид · плитка воды 1×1" data-nocontrast><span class="fillW" style="height:31%;background:color-mix(in oklab, var(--w), var(--wDeep) 44%);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">31 % · порог нижних строк — стали кремовыми</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 2,1 л" data-vid="вид · плитка воды 1×1" data-nocontrast><span class="fillW" style="height:70%;background:var(--wDeep);"></span><span class="topNorm" style="color:var(--dimTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">70 % · тон дошёл до глубокого, норма ещё в чернилах</div></div>
+      <div><div class="zoom" style="width:168px;height:134px;"><div class="zoomInner" style="transform:scale(2.1);"><div class="tileV fz vSub nrmB" data-demo="stop" data-screen-label="Вода · норма · 2,7 л" data-vid="вид · плитка воды 1×1" data-nocontrast><span class="fillW" style="height:89%;background:var(--wDeep);"></span><span class="topNorm" style="color:var(--wTxt);">из 3,0</span><span class="botK" style="color:var(--wTxt);animation:none;">Вода</span><span class="botV" style="color:var(--wTxt);animation:none;">2,4</span></div></div></div><div class="frameCap">89 % · порог нормы — побелела и она</div></div>
     </div>
     <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap;background:var(--bg);border-radius:20px;padding:16px 18px;margin-top:14px;">
       <div style="width:250px;flex:none;"><div class="lab" style="margin:0;"><b>Живая петля</b><span>натуральный размер и увеличение 2,5×</span></div></div>
-      <div class="tileV vSub nrmB" data-demo="loop" data-screen-label="Вода · норма · петля"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div>
+      <div class="tileV vSub nrmB" data-demo="loop" data-screen-label="Вода · норма · петля" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div>
       <div class="zoom"><div class="zoomInner"><div class="tileV vSub nrmB"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div></div></div>
     </div>
   </div>
@@ -1095,14 +1095,14 @@
     <div>
       <div class="lab" style="margin:0 0 9px;"><b>А · норма при факте</b><span>«2,4 / 3,0» одним блоком, тонет целиком</span></div>
       <div style="display:flex;gap:22px;align-items:center;background:var(--bg);border-radius:20px;padding:16px 18px;">
-        <div class="tileV vSub nrmA" data-demo="protocol" data-screen-label="Вода · норма А · петля"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b><small>из 3,0</small></div></div>
+        <div class="tileV vSub nrmA" data-demo="protocol" data-screen-label="Вода · норма А · петля" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b><small>из 3,0</small></div></div>
         <div class="zoom" style="width:180px;height:144px;"><div class="zoomInner" style="transform:scale(2.25);"><div class="tileV vSub nrmA"><span class="fillW" style="height:40%;background:color-mix(in oklab, var(--w), var(--wDeep) 57%);"></span><div class="k">Вода</div><div class="numV"><b>2,4 л</b><small>из 3,0</small></div></div></div></div>
       </div>
     </div>
     <div>
       <div class="lab" style="margin:0 0 9px;"><b>Б · норма сверху, подписи снизу</b><span>подписи внизу с самого начала, погружения нет</span></div>
       <div style="display:flex;gap:22px;align-items:center;background:var(--bg);border-radius:20px;padding:16px 18px;">
-        <div class="tileV vSub nrmB" data-demo="protocol" data-screen-label="Вода · норма Б · петля (протокол, канон — Вода · норма · петля)"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div>
+        <div class="tileV vSub nrmB" data-demo="protocol" data-screen-label="Вода · норма Б · петля (протокол, канон — Вода · норма · петля)" data-vid="вид · плитка воды 1×1"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div>
         <div class="zoom" style="width:180px;height:144px;"><div class="zoomInner" style="transform:scale(2.25);"><div class="tileV vSub nrmB"><span class="fillW" style="height:22%;"></span><span class="topNorm">из 3,0</span><span class="botK">Вода</span><span class="botV">2,4</span></div></div></div>
       </div>
     </div>
@@ -1123,7 +1123,7 @@
   <div class="pal" data-mir="m6" style="display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;">
     <div>
         <div class="lab" style="margin:0 0 9px;"><b>Обычный вид</b><span>выпито 1,2 л, есть что убавить</span></div>
-        <div class="chipPlate" data-demo="stop" data-screen-label="Чипы объёма · обычный вид">
+        <div class="chipPlate" data-demo="stop" data-screen-label="Чипы объёма · обычный вид" data-vid="вид · ряд чипов объёма">
           <span class="chipRow">
             <span class="chip chipSub gapMinus">−200</span>
             <span class="chip chipAdd">+200</span>
@@ -1134,7 +1134,7 @@
       </div>
     <div>
         <div class="lab" style="margin:0 0 9px;"><b>Нечего убавлять</b><span>0 мл за день — чип погашен</span></div>
-        <div class="chipPlate" data-demo="stop" data-screen-label="Чипы объёма · нечего убавлять">
+        <div class="chipPlate" data-demo="stop" data-screen-label="Чипы объёма · нечего убавлять" data-vid="вид · ряд чипов объёма">
           <span class="chipRow">
             <span class="chip chipSub gapMinus chipOff">−200</span>
             <span class="chip chipAdd">+200</span>
@@ -1145,7 +1145,7 @@
       </div>
     <div>
         <div class="lab" style="margin:0 0 9px;"><b>Нажатие</b><span>+200 в момент касания</span></div>
-        <div class="chipPlate" data-demo="stop" data-screen-label="Чипы объёма · нажатие">
+        <div class="chipPlate" data-demo="stop" data-screen-label="Чипы объёма · нажатие" data-vid="вид · ряд чипов объёма">
           <span class="chipRow">
             <span class="chip chipSub gapMinus">−200</span>
             <span class="chip chipAdd chipPress">+200</span>

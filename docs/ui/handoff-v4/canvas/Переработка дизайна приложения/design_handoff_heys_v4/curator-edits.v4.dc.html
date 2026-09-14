@@ -78,6 +78,7 @@
     <div class="spec"><b>возврат на экран и прокрутка</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «возврат на экран · правило продукта» и «прокрутка · правило продукта». Местное отличие: лист остаётся открытым после возврата из фона; прокрутка внутри сохраняется"></span></div>
     <div class="spec"><b>safe-area и кнопка назад</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «safe-area · правило продукта» и «аппаратная кнопка назад · правило продукта». Местное отличие: лист прижат к нижней врезке; аппаратная кнопка закрывает его так же, как крестик, и отметка «позже» пишется"></span></div>
     <div class="spec"><b>вид шапки листа</b><span data-v="слева круг 40 px фоном --tint с иконкой документа 19 px тоном --ac, зазор 11; заголовок 15,5 px/700 чернилами, под ним через 4 подпись 11,5 px/500 тоном var(--ink-2); крестик справа — область 44×44, вынесен в поля на −12 px, знак 17 px тоном чернил 28 %"></span><i>иконка в тинте, а не в акценте: лист сообщает, а не требует</i></div>
+    <div class="spec"><b>подпись «задним числом» — условие</b><span data-v="УСЛОВИЕ НАЗВАНО ЗАНОВО 14 сентября — прежняя формулировка была написана наоборот от смысла (находка кодера). Подпись «задним числом» стоит у строки правки тогда, когда КУРАТОР ВНЁС ЕЁ ПОЗЖЕ ТОГО ДНЯ, К КОТОРОМУ ОТНОСИТСЯ ЗАПИСЬ: правка от 16 августа в дне 15 августа — задним числом, правка от 15 августа в том же дне — нет. Сравниваются календарные дни, не часы: правка в 23:50 того же дня подписи не получает, в 00:10 следующего — получает. ГДЕ СТОИТ: у любой строки правки, а не только у воды — кадр рисует её у воды потому, что в нём это единственная запоздалая правка, а не потому, что тип строки особенный. Подпись — 10,5 px/500 тоном var(--ink-3), отдельной строкой под фразой правки"></span><i>смысл подписи в том, что человек видит: запись в дне появилась не в тот день, когда он её прожил. Обратная формулировка («правка раньше дня») описывала бы правку в будущем дне, которой не бывает</i></div>
     <div class="spec"><b>вид шапки даты</b><span data-v="над карточкой правок: дата слева 9,5 px/700 прописными с разрядкой .14em тоном var(--ink-4), справа сводка «1 240 → 1 937 ккал» 11 px/700 тоном --ac табличными цифрами, выравнивание по baseline, отступ сверху 5"></span><i>сводка тоном --ac: это единственное число листа, которое человек сверяет с памятью</i></div>
     <div class="spec"><b>вид карточки правок</b><span data-v="фон --c1, радиус 18, поля 11/13/12 px; строка внутри — название 12,5 px/600 чернилами и под ним через 2 пояснение 11 px/500 тоном var(--ink-2), справа шеврон 15 px тоном чернил 28 %, зазор 10. Разделитель между строками — линия 1 px тоном чернил 7 % с полями 9 по вертикали"></span></div>
     <div class="spec"><b>держатель места</b><span data-v="общее правило — home-widgets.v4.dc.html, строка «держатель места · правило продукта»: заливка --c1 своей высоты, без пульсации и скелетона, проявление за 200 мс на месте. Местных держателей нет: лист не открывается, пока правки не пришли целиком — держатель заменён задержкой открытия"></span></div>
@@ -106,10 +107,10 @@
     <div class="spec"><b>точка на «Питании»</b><span data-v="7 px у иконки вкладки, без числа; гаснет, когда неподтверждённых записей не осталось"></span><i>«43» превращает помощь куратора в долг, который нужно разгрести</i></div>
     <div class="spec" style="border-bottom:none"><b>строка входа</b><span data-v="в шапке дня: «Куратор обновил этот день · N изменений» открывает тот же лист, отфильтрованный датой; если правок на открытой дате нет — называет чужую дату и переключает день вместе с открытием"></span><i>по точке на активной вкладке нажать нельзя; это же единственный способ вернуться к правкам после «Понятно»</i></div>
 
-                                              <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                      <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Куратор · один приём · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · один приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · один приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · один приём · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · один приём · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · один приём · 05</b><span data-v="флекс 1"></span></div>
@@ -119,7 +120,7 @@
     <div class="spec"><b>Куратор · один приём · 09</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · один приём · 10</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · много правок за день · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · много правок за день · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 05</b><span data-v="флекс 1"></span></div>
@@ -128,19 +129,19 @@
     <div class="spec"><b>Куратор · много правок за день · 08</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · много правок за день · 09</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · свёрнуто по типам · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · свёрнуто по типам · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 05</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 06</b><span data-v="«1 240 → 2 148 ккал» — моноцифры"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 07</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 08</b><span data-v="«Приёмы» — перенос nowrap"></span></div>
-    <div class="spec"><b>Куратор · свёрнуто по типам · 09</b><span data-v="«· 12» — шрифт 700 11px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Куратор · свёрнуто по типам · 09</b><span data-v="«· 12» — шрифт 700 11px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 10</b><span data-v="«и ещё девять правок приёмов» — цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 11</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · свёрнуто по типам · 12</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · две даты · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · две даты · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · две даты · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · две даты · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · две даты · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · две даты · 05</b><span data-v="флекс 1"></span></div>
@@ -149,7 +150,7 @@
     <div class="spec"><b>Куратор · две даты · 08</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · две даты · 09</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · длинный приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · длинный приём · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 04</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 05</b><span data-v="«1 240 → 1 937 ккал» — моноцифры"></span></div>
@@ -158,7 +159,7 @@
     <div class="spec"><b>Куратор · длинный приём · 08</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · длинный приём · 09</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · сухие строки · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · сухие строки · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 04</b><span data-v="высота 104px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 05</b><span data-v="флекс 1"></span></div>
@@ -166,7 +167,7 @@
     <div class="spec"><b>Куратор · сухие строки · 07</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · сухие строки · 08</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · много дней · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · много дней · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · много дней · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · много дней · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · много дней · 04</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Куратор · много дней · 05</b><span data-v="«1 240 → 1 937 ккал» — моноцифры"></span></div>
@@ -174,7 +175,7 @@
     <div class="spec"><b>Куратор · много дней · 07</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · много дней · 08</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 01</b><span data-v="область прокрутки"></span></div>
-    <div class="spec"><b>Куратор · повторяющиеся правки · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Куратор · повторяющиеся правки · 02</b><span data-v="«Питание» — шрифт 700 19px/1.2 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 03</b><span data-v="высота 74px, радиус 20px, фон var(--c2), отступ сверху 14px"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 04</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 05</b><span data-v="«888 → 1 958 ккал» — моноцифры"></span></div>
@@ -182,8 +183,8 @@
     <div class="spec"><b>Куратор · повторяющиеся правки · 07</b><span data-v="«и ещё 3 продукта» — отступ сверху 8px"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 08</b><span data-v="строка списка"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 09</b><span data-v="строка списка: выравнивание flex-start, поля 11px 13px 12px"></span></div>
-    <div class="spec"><b>Куратор · повторяющиеся правки · 10</b><span data-v="«×5» — флекс none, ширина от 30px, высота 30px, радиус 10px, фон var(--c2), выравнивание center, распределение center, шрифт 700 11.5px/1 Manrope, цвет var(--ac), трекинг -.02em, отступ сверху 1px"></span></div>
-    <div class="spec"><b>Куратор · повторяющиеся правки · 11</b><span data-v="«+ 290 ккал за все пять» — моноцифры: отступ сверху 6px, шрифт 700 11px/1.3 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Куратор · повторяющиеся правки · 10</b><span data-v="«×5» — флекс none, ширина от 30px, высота 30px, радиус 10px, фон var(--c2), выравнивание center, распределение center, шрифт 700 11.5px/1 Manrope,sans-serif, цвет var(--ac), трекинг -.02em, отступ сверху 1px"></span></div>
+    <div class="spec"><b>Куратор · повторяющиеся правки · 11</b><span data-v="«+ 290 ккал за все пять» — моноцифры: отступ сверху 6px, шрифт 700 11px/1.3 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 12</b><span data-v="отступ сверху 4px"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 13</b><span data-v="«Позже» — вторичная кнопка"></span></div>
     <div class="spec"><b>Куратор · повторяющиеся правки · 14</b><span data-v="«Понятно» — главная кнопка: флекс 1"></span></div>
@@ -287,7 +288,7 @@
   <div class="pal" data-mir="m4" style="display:flex;gap:30px;align-items:flex-start;">
 
     <div><div class="lab"><b>Один приём</b><span>частый случай — куратор внёс ужин</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Куратор · один приём">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · один приём" data-vid="вид карточки правок">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -311,7 +312,7 @@
     </div></div>
 
     <div><div class="lab"><b>День целиком</b><span>шесть правок разного рода</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Куратор · много правок за день">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · много правок за день" data-vid="вид карточки правок">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -333,7 +334,7 @@
     </div></div>
 
     <div><div class="lab"><b>Свёрнуто по типам</b><span>перенос дня целиком: строки собраны в группы, «Приёмы» раскрыты</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Куратор · свёрнуто по типам">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · свёрнуто по типам" data-vid="вид карточки правок">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -355,7 +356,7 @@
       </div></div>
     </div></div>
     <div><div class="lab"><b>Две даты</b><span>прошлые дни свёрнуты</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Куратор · две даты">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · две даты" data-vid="вид шапки двух дат">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -375,7 +376,7 @@
     </div></div>
 
     <div><div class="lab"><b>Длинный приём</b><span>развёрнутый список продуктов</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Куратор · длинный приём">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · длинный приём" data-vid="вид карточки правок">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -403,7 +404,7 @@
     </div></div>
 
     <div><div class="lab"><b>Без еды</b><span>вес, тренировка, нормы</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Куратор · сухие строки">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · сухие строки" data-vid="вид карточки правок">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div><div style="height:104px;border-radius:20px;background:var(--c1);margin-top:10px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -423,7 +424,7 @@
     </div></div>
 
     <div><div class="lab"><b>Долгое отсутствие</b><span>больше сотни записей</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Куратор · много дней">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · много дней" data-vid="вид шапки двух дат">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">
@@ -444,7 +445,7 @@
     </div></div>
 
     <div><div class="lab"><b>Повторы за день</b><span>четырнадцать правок, пять одинаковых</span></div>
-    <div class="ph" data-demo="stop" data-screen-label="Куратор · повторяющиеся правки">
+    <div class="ph" data-demo="stop" data-screen-label="Куратор · повторяющиеся правки" data-vid="вид карточки правок">
       <div class="sc" style="padding-top:20px;"><div style="font:700 19px/1.2 Manrope,sans-serif;color:var(--tx);">Питание</div><div style="height:74px;border-radius:20px;background:var(--c2);margin-top:14px;"></div></div>
       <div class="bd"><div class="md">
         <div class="mdh">

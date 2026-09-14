@@ -74,7 +74,15 @@ body{margin:0;background:#e9dfcd;font-family:Manrope,system-ui,sans-serif;-webki
 *{box-sizing:border-box}
 a{color:#8a4a20;text-decoration:none}
 a:hover{color:#c67139}
-.n{font-variant-numeric:tabular-nums}
+/* Табличные цифры — УТИЛИТА, и она обязана выигрывать у инлайнового шортката.
+   Найдено 14 сентября: шорткат font: в инлайновом стиле сбрасывает font-variant-numeric
+   в normal, поэтому .n молча переставал работать везде, где кадр задаёт шрифт инлайном —
+   2647 мест в 22 зонах, включая новый кадр «Продвинутая аналитика», где он сломался
+   в тот же час, когда я чинил тот же дефект в home-widgets. Лечить разметкой значило бы
+   дописывать font-variant-numeric в 2647 инлайнов и повторять это в каждом новом кадре.
+   Здесь !important уместен: .n говорит «это число», шорткат говорит про шрифт, и роль
+   цифры не должна отменяться тем, кто про неё не знает. */
+.n{font-variant-numeric:tabular-nums!important}
 
 .bar{position:sticky;top:0;z-index:9;display:flex;align-items:center;gap:8px;background:#e9dfcd;padding:14px 0 13px;margin-bottom:6px;box-shadow:0 10px 18px -12px rgba(80,50,20,.35)}
 .barl{font:700 10px/1 Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(0,0,0,.42);margin-right:4px}
