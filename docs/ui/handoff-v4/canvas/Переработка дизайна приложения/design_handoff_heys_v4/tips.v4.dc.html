@@ -91,13 +91,13 @@
     <div class="spec"><b>длинный заголовок совета</b><span data-v="заголовок карточки переносится на любое число строк, карточка растёт по высоте, полоса состояния тянется вместе с ней. Обрезки и многоточия нет; «Детали» всегда стоят под последней строкой заголовка"></span><i>советы приходят из справочника, где длина заголовка не ограничена, а обрезанный совет теряет ровно то условие, из-за которого он показан</i></div>
     <div class="spec"><b>офлайн</b><span data-v="советы считаются на устройстве по уже сохранённым данным, поэтому шторка открывается и в офлайне; отдельного состояния «нет связи» у советов нет. Пропадает только оценка совета — она уходит на сервер и в офлайне копится"></span><i>плашка «нет связи» на списке, который целиком локальный, объясняла бы отсутствие того, что на самом деле есть</i></div>
     <div class="spec"><b>вид заголовка группы</b><span data-v="10 px/700 прописными с разрядкой .16em тоном --ac, поля 18 сверху и 4 снизу; при одной категории заголовков нет вовсе"></span></div>
-    <div class="spec"><b>жесты</b><span data-v="влево — открывается панель оценки (строка «панель оценки» этой зоны), вправо — скрыть до завтра, тап — открыть. Прочтение жестом снято: его входы — кнопка в детали совета и «Прочитать все» в шапке шторки. Строка подсказок внизу называет то же, что делают жесты, дословно из кода, без эмодзи"></span><i>правка 25 августа: строка говорила «влево — прочитано» и спорила с более поздней «панель оценки», реализованной в коде. Один жест не может значить двух вещей, а подсказка внизу уже называла панель — сведено к ней</i></div>
+    <div class="spec"><b>жесты</b><span data-v="влево — открывается панель оценки (строка «панель оценки» этой зоны), вправо — скрыть до завтра, тап — открыть. Прочтение жестом снято: его входы — кнопка в детали совета и «Прочитать все» в шапке шторки. Строка подсказок внизу называет то же, что делают жесты, дословно из кода, без эмодзи. ПРАВКА 14 сентября: прочтение жестом СНЯТО (решение от 11 сентября), и подсказка в кадре переснята под это — она называет два оставшихся жеста, влево и вправо, а про «смахнуть, чтобы прочитать» в ней больше нет ни слова. Прочтение — только тапом по совету и кнопкой «Прочитать все»"></span><i>правка 25 августа: строка говорила «влево — прочитано» и спорила с более поздней «панель оценки», реализованной в коде. Один жест не может значить двух вещей, а подсказка внизу уже называла панель — сведено к ней</i></div>
     <div class="spec"><b>повторный тап и поворот</b><span data-v="общее правило — home-widgets.v4.dc.html, строки «повторный тап · правило продукта» и «ориентация · правило продукта»: 350 мс защиты там, где повтор создаёт лишнюю сущность; интерфейс всегда портретный, ширина окна гибкая. Местное отличие: защита стоит на оценке совета; на «прочитано» и «скрыть» её нет — эти состояния идемпотентны"></span></div>
     <div class="spec"><b>что пишется</b><span data-v="прочтение и скрытие пишутся в профиль как id совета с датой; сам текст совета не копируется — он приходит из справочника по id. Оценка совета пишется отдельным полем и в офлайне копится"></span><i>копия текста в профиле замораживает совет: поправленная формулировка не доедет до тех, кто его уже видел</i></div>
     <div class="spec"><b>отмена с таймером</b><span data-v="вид, длительность и поведение — undo-bar.v4.dc.html, этот файл вторичен Переезд 1 сентября: кадры «Совет · отмена с таймером» и «Совет · оценка после свайпа» переехали сюда из date-remainders — они описывают советы, а не дату, и 122 строки их разбора числились долгом чужой зоны. Кадр «Советы · не сохранено» при переезде не дублировался: он здесь и был."></span><i>бар отмены один на приложение; прежнее локальное описание (3 с, своё слово на кнопке) отменено 21 августа</i></div>
     <div class="spec"><b>откуда данные</b><span data-v="текст и категория совета — из справочника по id; условие показа считает движок советов по данным дня, он же держит пределы: не больше десяти советов за сессию и не больше двух на категорию. Экран решает только, что показать из уже отобранного, и своих порогов не имеет"></span><i>прежняя редакция называла «не больше пяти по правилам движка» — вдвое меньше настоящего предела. Принять её буквально значило бы снизить плотность советов за день, а это продуктовое решение, не сверка числа</i></div>
     <div class="spec"><b>прошлый день и куратор</b><span data-v="советы считаются на сегодня и на прошлых днях не показываются вовсе — ни в шторке, ни лампочкой; куратор советов клиента не видит и оценок за него не ставит"></span><i>совет — это действие «сделай сейчас»; на закрытом дне он превращается в упрёк, а у куратора — в чужую переписку</i></div>
-    <div class="spec"><b>«Прочитать все»</b><span data-v="появляется от двух советов; при одном не рисуется"></span><i>она есть только когда есть что группировать</i></div>
+    <div class="spec"><b>«Прочитать все»</b><span data-v="появляется от двух советов; при одном не рисуется. ПОЛНОЕ УСЛОВИЕ 14 сентября: кнопка видна при ДВУХ и более непрочитанных, при одном её нет — «прочитать все» из одного совета обещает работу там, где её нет. Тап помечает прочитанными все непрочитанные советы списка, включая те, что ниже прокрутки; отмены нет, прочтение данных не теряет"></span><i>она есть только когда есть что группировать</i></div>
     <div class="spec"><b>полоса слева</b><span data-v="несёт только состояние: --acs — требует внимания, --gr2 — идёт хорошо; ширина 4 px, радиус 999, высота по содержимому карточки (минимум 22)"></span></div>
     <div class="spec"><b>панель оценки</b><span data-v="свайп влево сужает карточку на 96 px справа — сама она не сдвигается; в освободившемся месте открывается панель шириной 96 с подписью «Полезно?» 9,5 px/700 прописными тоном var(--ink-3). Полоса состояния и весь текст остаются на своих местах: полоса на 15 px от края, текст после неё с отступом 30, заголовок переносится по словам в новой ширине. Под карточкой ряд из двух кнопок высотой 44 и радиусом 999: «Помогло» заливкой --gr2 с текстом --on-gr (flex 1) и «Не показывать такие» фоном --c2 с текстом --ac (flex 1,5). Ниже строка 11 px/500 тоном var(--ink-2): «Оба ответа меняют, что вы увидите дальше. Совет остаётся в списке». После ответа кнопки исчезают, карточка возвращается на место за 180 мс. Третьей кнопки нет"></span><i>карточка сужается, а не сдвигается: при сдвиге первые 96 px уходят под край и первые слова заголовка становятся нечитаемыми — человек оценивает совет, которого не видит. Полоса не уезжает по той же причине: человек оценивает не «какой-то совет», а совет своего состояния — и если полоса уходит под край, состояние в момент решения пропадает. Две кнопки, а не три: прежняя редакция давала «Да», «Нет» и «Не показывать», и «Нет» оказывалось кнопкой в никуда. Звёзды не подходят — главный полезный ответ здесь не «плохо», а «не советуй мне это»</i></div>
     <div class="spec"><b>«не сохранено»</b><span data-v="облако в шапке становится тоном --red с точкой 6 px рядом; в шторке над списком встаёт плашка --tint радиусом 18 с полями 13/15 px: иконка облака 19 px тоном --red, заголовок «Оценка не ушла — нет связи» 12,5 px/600 и под ним «Она сохранена на телефоне и отправится сама. Ничего делать не нужно» 11 px/500 тоном var(--ink-2). Кнопки «Повторить» у плашки нет"></span><i>кнопки нет намеренно: повтор ничего не ускорит — отправка уже в очереди, — а её наличие заставляет человека решать задачу, которой у него нет. Плашка сообщает и успокаивает, а не просит</i></div>
@@ -133,81 +133,81 @@
                                                                               <div class="ctrH">Тач-цели</div>
     <div class="spec" style="border-bottom:none"><b>тач-цели</b><span data-v="ПРИВЕДЕНО 5 сентября, видимым размером: малые круглые кнопки стопки у ФАБа (40 → 44). Счётчик на кнопке остаётся ярлыком 17 px — он показывает число, а не нажимается отдельно"></span><i>норма 44 pt держится видимым размером: невидимый расширитель проходит замер и проваливается в руке</i></div>
 
-                                                <div class="ctrH">Разбор кадров · элемент за элементом</div>
+                                                    <div class="ctrH">Разбор кадров · элемент за элементом</div>
     <div class="spec"><b>как читать разбор</b><span data-v="каждый нарисованный элемент каждого кадра с его собственными числами, выведенными из разметки канваса. Ключ — метка кадра и номер элемента сверху вниз. Повторы одного вида внутри кадра свёрнуты"></span></div>
     <div class="spec"><b>Совет · панель оценки · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)"></span></div>
     <div class="spec"><b>Совет · панель оценки · 02</b><span data-v="позиция absolute, вписан 0, фон rgba(32,30,29,.34)"></span></div>
     <div class="spec"><b>Совет · панель оценки · 03</b><span data-v="позиция absolute, фон var(--bg), радиус 26px 26px 28px 28px, поля 18px 16px 16px"></span></div>
     <div class="spec"><b>Совет · панель оценки · 04</b><span data-v="ширина 38px, высота 4px, радиус 999px, фон rgba(0,0,0,.14), отступы 0 auto 16px"></span></div>
     <div class="spec"><b>Совет · панель оценки · 05</b><span data-v="выравнивание baseline, распределение space-between, зазор 12px"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 06</b><span data-v="«Советы» — шрифт 700 15px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 06</b><span data-v="«Советы» — шрифт 700 15px/1 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Совет · панель оценки · 07</b><span data-v="«5» — цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 08</b><span data-v="«Прочитать все» — высота от 44px, выравнивание center, шрифт 700 11.5px/1 Manrope, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 09</b><span data-v="«Питание» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 08</b><span data-v="«Прочитать все» — высота от 44px, выравнивание center, шрифт 700 11.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 09</b><span data-v="«Питание» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
     <div class="spec"><b>Совет · панель оценки · 10</b><span data-v="позиция relative, отступ сверху 8px, радиус 18px, обрез hidden, фон var(--c2)"></span></div>
     <div class="spec"><b>Совет · панель оценки · 11</b><span data-v="позиция absolute, ширина 4px, радиус 999px, фон var(--acs)"></span></div>
     <div class="spec"><b>Совет · панель оценки · 12</b><span data-v="позиция absolute, ширина 96px, выравнивание center, распределение center"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 13</b><span data-v="«Полезно?» — шрифт 700 9.5px/1 Manrope, трекинг .08em, регистр uppercase, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 13</b><span data-v="«Полезно?» — шрифт 700 9.5px/1 Manrope,sans-serif, трекинг .08em, регистр uppercase, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Совет · панель оценки · 14</b><span data-v="позиция relative, фон var(--c1), радиус 18px, поля 14px 15px 14px 30px"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 15</b><span data-v="«Вечером сладкое чаще после дня без белка» — шрифт 600 12.5px/1.4 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 16</b><span data-v="«Детали» — шрифт 700 10.5px/1 Manrope, цвет var(--ac), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 15</b><span data-v="«Вечером сладкое чаще после дня без белка» — шрифт 600 12.5px/1.4 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 16</b><span data-v="«Детали» — шрифт 700 10.5px/1 Manrope,sans-serif, цвет var(--ac), отступ сверху 8px"></span></div>
     <div class="spec"><b>Совет · панель оценки · 17</b><span data-v="зазор 8px, отступ сверху 10px"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 18</b><span data-v="«Помогло» — флекс 1, высота от 44px, радиус 999px, фон var(--gr2), цвет var(--on-gr), выравнивание center, распределение center, шрифт 700 11.5px/1 Manrope"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 19</b><span data-v="«Не показывать такие» — флекс 1.5, высота от 44px, радиус 999px, фон var(--c2), цвет var(--ac), выравнивание center, распределение center, шрифт 700 11.5px/1 Manrope"></span></div>
-    <div class="spec"><b>Совет · панель оценки · 20</b><span data-v="«Оба ответа меняют, что вы увидите дальше. Совет ос» — шрифт 500 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 18</b><span data-v="«Помогло» — флекс 1, высота от 44px, радиус 999px, фон var(--gr2), цвет var(--on-gr), выравнивание center, распределение center, шрифт 700 11.5px/1 Manrope,sans-serif"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 19</b><span data-v="«Не показывать такие» — флекс 1.5, высота от 44px, радиус 999px, фон var(--c2), цвет var(--ac), выравнивание center, распределение center, шрифт 700 11.5px/1 Manrope,sans-serif"></span></div>
+    <div class="spec"><b>Совет · панель оценки · 20</b><span data-v="«Оба ответа меняют, что вы увидите дальше. Совет ос» — шрифт 500 11px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 12px"></span></div>
     <div class="spec"><b>Советы · не сохранено · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)"></span></div>
     <div class="spec"><b>Советы · не сохранено · 02</b><span data-v="позиция absolute, вписан 0, фон rgba(32,30,29,.34)"></span></div>
     <div class="spec"><b>Советы · не сохранено · 03</b><span data-v="позиция absolute, поля 16px 16px 0, выравнивание center, распределение space-between, зазор 10px"></span></div>
-    <div class="spec"><b>Советы · не сохранено · 04</b><span data-v="«Питание» — шрифт 700 15px/1 Manrope, цвет var(--bg)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 04</b><span data-v="«Питание» — шрифт 700 15px/1 Manrope,sans-serif, цвет var(--bg)"></span></div>
     <div class="spec"><b>Советы · не сохранено · 05</b><span data-v="выравнивание center, зазор 7px"></span></div>
     <div class="spec"><b>Советы · не сохранено · 06</b><span data-v="ширина 6px, высота 6px, радиус 999px, фон var(--red)"></span></div>
     <div class="spec"><b>Советы · не сохранено · 07</b><span data-v="позиция absolute, фон var(--bg), радиус 26px 26px 28px 28px, поля 18px 16px 16px"></span></div>
     <div class="spec"><b>Советы · не сохранено · 08</b><span data-v="ширина 38px, высота 4px, радиус 999px, фон rgba(0,0,0,.14), отступы 0 auto 16px"></span></div>
     <div class="spec"><b>Советы · не сохранено · 09</b><span data-v="выравнивание center, зазор 11px, фон var(--tint), радиус 18px, поля 13px 15px"></span></div>
     <div class="spec"><b>Советы · не сохранено · 10</b><span data-v="флекс 1"></span></div>
-    <div class="spec"><b>Советы · не сохранено · 11</b><span data-v="«Оценка не ушла — нет связи» — шрифт 600 12.5px/1.35 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Советы · не сохранено · 12</b><span data-v="«Она сохранена на телефоне и отправится сама. Ничег» — шрифт 500 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 4px"></span></div>
-    <div class="spec"><b>Советы · не сохранено · 13</b><span data-v="«Питание» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 11</b><span data-v="«Оценка не ушла — нет связи» — шрифт 600 12.5px/1.35 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 12</b><span data-v="«Она сохранена на телефоне и отправится сама. Ничег» — шрифт 500 11px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 4px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 13</b><span data-v="«Питание» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
     <div class="spec"><b>Советы · не сохранено · 14</b><span data-v="фон var(--c1), радиус 18px, поля 14px 15px, отступ сверху 8px"></span></div>
     <div class="spec"><b>Советы · не сохранено · 15</b><span data-v="выравнивание flex-start, зазор 11px"></span></div>
     <div class="spec"><b>Советы · не сохранено · 16</b><span data-v="ширина 4px, высота от 22px, радиус 999px, фон var(--acs), флекс none"></span></div>
-    <div class="spec"><b>Советы · не сохранено · 17</b><span data-v="«Вечером сладкое чаще после дня без белка» — шрифт 600 12.5px/1.4 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Советы · не сохранено · 18</b><span data-v="«Детали» — шрифт 700 10.5px/1 Manrope, цвет var(--ac), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 17</b><span data-v="«Вечером сладкое чаще после дня без белка» — шрифт 600 12.5px/1.4 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Советы · не сохранено · 18</b><span data-v="«Детали» — шрифт 700 10.5px/1 Manrope,sans-serif, цвет var(--ac), отступ сверху 8px"></span></div>
     <div class="spec"><b>Советы · шторка · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)"></span></div>
     <div class="spec"><b>Советы · шторка · 02</b><span data-v="позиция absolute, вписан 0, фон rgba(32,30,29,.34)"></span></div>
     <div class="spec"><b>Советы · шторка · 03</b><span data-v="позиция absolute, обрез hidden, фон var(--bg), радиус 26px 26px 28px 28px, поля 18px 16px 16px"></span></div>
     <div class="spec"><b>Советы · шторка · 04</b><span data-v="ширина 38px, высота 4px, радиус 999px, фон rgba(0,0,0,.14), отступы 0 auto 16px"></span></div>
     <div class="spec"><b>Советы · шторка · 05</b><span data-v="выравнивание baseline, распределение space-between, зазор 12px"></span></div>
-    <div class="spec"><b>Советы · шторка · 06</b><span data-v="«Советы» — шрифт 700 15px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Советы · шторка · 06</b><span data-v="«Советы» — шрифт 700 15px/1 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Советы · шторка · 07</b><span data-v="«5» — цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Советы · шторка · 08</b><span data-v="«Прочитать все» — шрифт 700 11.5px/1 Manrope, цвет var(--ac), высота от 44px, выравнивание center"></span></div>
-    <div class="spec"><b>Советы · шторка · 09</b><span data-v="«Питание» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
+    <div class="spec"><b>Советы · шторка · 08</b><span data-v="«Прочитать все» — шрифт 700 11.5px/1 Manrope,sans-serif, цвет var(--ac), высота от 44px, выравнивание center"></span></div>
+    <div class="spec"><b>Советы · шторка · 09</b><span data-v="«Питание» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
     <div class="spec"><b>Советы · шторка · 10</b><span data-v="фон var(--c1), радиус 18px, поля 14px 15px, отступ сверху 8px"></span></div>
     <div class="spec"><b>Советы · шторка · 11</b><span data-v="выравнивание flex-start, зазор 11px"></span></div>
     <div class="spec"><b>Советы · шторка · 12</b><span data-v="ширина 4px, высота от 22px, радиус 999px, фон var(--acs), флекс none"></span></div>
     <div class="spec"><b>Советы · шторка · 13</b><span data-v="флекс 1"></span></div>
-    <div class="spec"><b>Советы · шторка · 14</b><span data-v="«Вечером сладкое усваивается хуже» — шрифт 600 12.5px/1.4 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Советы · шторка · 15</b><span data-v="«Детали» — выравнивание center, зазор 6px, отступ сверху 8px, шрифт 700 10.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Советы · шторка · 14</b><span data-v="«Вечером сладкое усваивается хуже» — шрифт 600 12.5px/1.4 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Советы · шторка · 15</b><span data-v="«Детали» — выравнивание center, зазор 6px, отступ сверху 8px, шрифт 700 10.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Советы · шторка · 16</b><span data-v="ширина 4px, высота от 22px, радиус 999px, фон var(--gr2), флекс none"></span></div>
-    <div class="spec"><b>Советы · шторка · 17</b><span data-v="«Не забудьте про восстановление и сон.» — фон var(--c2), радиус 14px, поля 12px 13px, отступ сверху 11px, шрифт 500 11.5px/1.5 Manrope, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Советы · шторка · 18</b><span data-v="выравнивание center, распределение center, зазор 9px, отступ сверху 16px, шрифт 600 10.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Советы · шторка · 17</b><span data-v="«Не забудьте про восстановление и сон.» — фон var(--c2), радиус 14px, поля 12px 13px, отступ сверху 11px, шрифт 500 11.5px/1.5 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Советы · шторка · 18</b><span data-v="выравнивание center, распределение center, зазор 9px, отступ сверху 16px, шрифт 600 10.5px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Советы · шторка · 19</b><span data-v="«·» — прозрачность .5"></span></div>
     <div class="spec"><b>Совет · деталь · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Совет · деталь · 02</b><span data-v="поля 18px 18px 0, выравнивание flex-start, распределение space-between, зазор 12px"></span></div>
-    <div class="spec"><b>Совет · деталь · 03</b><span data-v="«Совет · тренировки» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Совет · деталь · 04</b><span data-v="«После тренировки нужен белок» — шрифт 700 17px/1.3 Manrope, цвет var(--tx), отступ сверху 9px"></span></div>
+    <div class="spec"><b>Совет · деталь · 03</b><span data-v="«Совет · тренировки» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · деталь · 04</b><span data-v="«После тренировки нужен белок» — шрифт 700 17px/1.3 Manrope,sans-serif, цвет var(--tx), отступ сверху 9px"></span></div>
     <div class="spec"><b>Совет · деталь · 05</b><span data-v="ширина 30px, высота 30px, флекс none, радиус 999px, фон var(--c1), выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Совет · деталь · 06</b><span data-v="флекс 1, поля 0 18px, обрез hidden"></span></div>
     <div class="spec"><b>Совет · деталь · 07</b><span data-v="фон var(--c2), радиус 22px, поля 18px, отступ сверху 20px"></span></div>
-    <div class="spec"><b>Совет · деталь · 08</b><span data-v="«Что важно сейчас» — шрифт 600 10px/1 Manrope, трекинг .14em, регистр uppercase, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Совет · деталь · 09</b><span data-v="«Белок в течение двух часов после тренировки ускоря» — шрифт 600 14px/1.45 Manrope, цвет var(--tx), отступ сверху 10px"></span></div>
-    <div class="spec"><b>Совет · деталь · 10</b><span data-v="«Детали» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
-    <div class="spec"><b>Совет · деталь · 11</b><span data-v="«Подойдёт протеиновый коктейль, творог с бананом, к» — шрифт 500 12.5px/1.6 Manrope, цвет var(--ink-2), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Совет · деталь · 08</b><span data-v="«Что важно сейчас» — шрифт 600 10px/1 Manrope,sans-serif, трекинг .14em, регистр uppercase, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Совет · деталь · 09</b><span data-v="«Белок в течение двух часов после тренировки ускоря» — шрифт 600 14px/1.45 Manrope,sans-serif, цвет var(--tx), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Совет · деталь · 10</b><span data-v="«Детали» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
+    <div class="spec"><b>Совет · деталь · 11</b><span data-v="«Подойдёт протеиновый коктейль, творог с бананом, к» — шрифт 500 12.5px/1.6 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 6px"></span></div>
     <div class="spec"><b>Совет · деталь · 12</b><span data-v="фон var(--c1), радиус 18px, поля 14px 15px, отступ сверху 6px"></span></div>
-    <div class="spec"><b>Совет · деталь · 13</b><span data-v="«Синтез мышечного белка повышен 24–48 часов после н» — шрифт 500 11.5px/1.55 Manrope, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Совет · деталь · 14</b><span data-v="«Технические детали» — выравнивание center, зазор 6px, отступ сверху 11px, шрифт 700 10.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · деталь · 13</b><span data-v="«Синтез мышечного белка повышен 24–48 часов после н» — шрифт 500 11.5px/1.55 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Совет · деталь · 14</b><span data-v="«Технические детали» — выравнивание center, зазор 6px, отступ сверху 11px, шрифт 700 10.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Совет · деталь · 15</b><span data-v="поля 16px 18px 20px"></span></div>
-    <div class="spec"><b>Совет · деталь · 16</b><span data-v="«Понятно» — высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), поля 0 15px, шрифт 700 13px/1 Manrope, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Совет · деталь · 16</b><span data-v="«Понятно» — высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), поля 0 15px, шрифт 700 13px/1 Manrope,sans-serif, цвет var(--on-acs)"></span></div>
     <div class="spec"><b>Совет · всплывающий · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Совет · всплывающий · 02</b><span data-v="флекс 1, поля 16px 16px 0, прозрачность .4"></span></div>
     <div class="spec"><b>Совет · всплывающий · 03</b><span data-v="высота 150px, радиус 26px, фон var(--c2)"></span></div>
@@ -217,57 +217,57 @@
     <div class="spec"><b>Совет · всплывающий · 07</b><span data-v="выравнивание flex-start, зазор 11px"></span></div>
     <div class="spec"><b>Совет · всплывающий · 08</b><span data-v="ширина 4px, радиус 999px, фон var(--gr2), флекс none"></span></div>
     <div class="spec"><b>Совет · всплывающий · 09</b><span data-v="флекс 1"></span></div>
-    <div class="spec"><b>Совет · всплывающий · 10</b><span data-v="«После тренировки нужен белок» — шрифт 600 12.5px/1.4 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Совет · всплывающий · 11</b><span data-v="«Тренировки · тап — подробнее» — шрифт 500 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Совет · всплывающий · 10</b><span data-v="«После тренировки нужен белок» — шрифт 600 12.5px/1.4 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · всплывающий · 11</b><span data-v="«Тренировки · тап — подробнее» — шрифт 500 11px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 6px"></span></div>
     <div class="spec"><b>Совет · всплывающий · 12</b><span data-v="ширина 26px, высота 26px, флекс none, радиус 999px, фон var(--c2), выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Совет · всплывающий · 13</b><span data-v="зазор 8px, отступ сверху 14px"></span></div>
-    <div class="spec"><b>Совет · всплывающий · 14</b><span data-v="«Открыть» — флекс 1, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--acs), шрифт 700 11.5px/1 Manrope, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Совет · всплывающий · 14</b><span data-v="«Открыть» — флекс 1, высота от 44px, выравнивание center, распределение center, радиус 999px, фон var(--acs), шрифт 700 11.5px/1 Manrope,sans-serif, цвет var(--on-acs)"></span></div>
     <div class="spec"><b>Совет · всплывающий · 15</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
     <div class="spec"><b>Совет · всплывающий · 16</b><span data-v="флекс 1, выключка center"></span></div>
     <div class="spec"><b>Совет · всплывающий · 17</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
-    <div class="spec"><b>Совет · всплывающий · 18</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Совет · всплывающий · 18</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Совет · всплывающий · 19</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
-    <div class="spec"><b>Совет · всплывающий · 20</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · всплывающий · 20</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Советы · пусто · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Советы · пусто · 02</b><span data-v="флекс 1, поля 16px 16px 0, прозрачность .4"></span></div>
     <div class="spec"><b>Советы · пусто · 03</b><span data-v="высота 150px, радиус 26px, фон var(--c2)"></span></div>
     <div class="spec"><b>Советы · пусто · 04</b><span data-v="высота 86px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Советы · пусто · 05</b><span data-v="высота 120px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Советы · пусто · 06</b><span data-v="позиция absolute, фон var(--gr-bg), радиус 22px, поля 16px 18px, рамка 0 2px 6px rgba(0,0,0,.1),0 14px 30px rgba(0,0,0,.16), выравнивание center, зазор 12px"></span></div>
-    <div class="spec"><b>Советы · пусто · 07</b><span data-v="«Пока всё по плану — советов нет» — флекс 1, шрифт 600 12.5px/1.4 Manrope, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Советы · пусто · 07</b><span data-v="«Пока всё по плану — советов нет» — флекс 1, шрифт 600 12.5px/1.4 Manrope,sans-serif, цвет var(--gr)"></span></div>
     <div class="spec"><b>Советы · пусто · 08</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
     <div class="spec"><b>Советы · пусто · 09</b><span data-v="флекс 1, выключка center"></span></div>
     <div class="spec"><b>Советы · пусто · 10</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
-    <div class="spec"><b>Советы · пусто · 11</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Советы · пусто · 11</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Советы · пусто · 12</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
-    <div class="spec"><b>Советы · пусто · 13</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Советы · пусто · 13</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Настройки · лист · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Настройки · лист · 02</b><span data-v="позиция absolute, фон var(--bg), радиус 22px, поля 6px 16px 10px, рамка 0 2px 8px rgba(0,0,0,.12),0 18px 44px rgba(0,0,0,.18)"></span></div>
-    <div class="spec"><b>Настройки · лист · 03</b><span data-v="выравнивание center, распределение space-between, зазор 12px, поля 13px 0, разделитель 1px solid rgba(0,0,0,.07), шрифт 600 12.5px/1 Manrope"></span></div>
+    <div class="spec"><b>Настройки · лист · 03</b><span data-v="выравнивание center, распределение space-between, зазор 12px, поля 13px 0, разделитель 1px solid rgba(0,0,0,.07), шрифт 600 12.5px/1 Manrope,sans-serif"></span></div>
     <div class="spec"><b>Настройки · лист · 04</b><span data-v="«Профиль и цели» — цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Настройки · лист · 05</b><span data-v="выравнивание center, зазор 8px, флекс none, шрифт 600 11.5px/1 Manrope, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Настройки · лист · 06</b><span data-v="выравнивание center, распределение space-between, поля 13px 0 6px, шрифт 600 12.5px/1 Manrope"></span></div>
+    <div class="spec"><b>Настройки · лист · 05</b><span data-v="выравнивание center, зазор 8px, флекс none, шрифт 600 11.5px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Настройки · лист · 06</b><span data-v="выравнивание center, распределение space-between, поля 13px 0 6px, шрифт 600 12.5px/1 Manrope,sans-serif"></span></div>
     <div class="spec"><b>Настройки · лист · 07</b><span data-v="«Выйти» — цвет var(--ac)"></span></div>
     <div class="spec"><b>Настройки · лист · 08</b><span data-v="флекс 1"></span></div>
     <div class="spec"><b>Настройки · лист · 09</b><span data-v="позиция absolute, направление column, выравнивание center, зазор 9px"></span></div>
     <div class="spec"><b>Настройки · лист · 10</b><span data-v="позиция relative, ширина 44px, высота 44px, радиус 999px, фон var(--bg), рамка 0 1px 2px rgba(0,0,0,.12),0 6px 16px rgba(0,0,0,.16), выравнивание center, распределение center"></span></div>
-    <div class="spec"><b>Настройки · лист · 11</b><span data-v="«3» — позиция absolute, ширина от 17px, высота 17px, поля 0 4px, радиус 999px, фон var(--acs), цвет var(--on-acs), шрифт 800 9.5px/17px Manrope, выключка center"></span></div>
+    <div class="spec"><b>Настройки · лист · 11</b><span data-v="«3» — позиция absolute, ширина от 17px, высота 17px, поля 0 4px, радиус 999px, фон var(--acs), цвет var(--on-acs), шрифт 800 9.5px/17px Manrope,sans-serif, выключка center"></span></div>
     <div class="spec"><b>Настройки · лист · 12</b><span data-v="ширина 44px, высота 44px, радиус 999px, фон var(--bg), рамка 0 1px 2px rgba(0,0,0,.12),0 6px 16px rgba(0,0,0,.16), выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Настройки · лист · 13</b><span data-v="ширина 52px, высота 52px, радиус 999px, фон var(--acs), рамка 0 2px 4px rgba(0,0,0,.16),0 10px 22px rgba(0,0,0,.24), выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Настройки · лист · 14</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
     <div class="spec"><b>Настройки · лист · 15</b><span data-v="флекс 1, выключка center"></span></div>
     <div class="spec"><b>Настройки · лист · 16</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
-    <div class="spec"><b>Настройки · лист · 17</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Настройки · лист · 17</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Настройки · лист · 18</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
-    <div class="spec"><b>Настройки · лист · 19</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Настройки · лист · 19</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Адреса · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12)"></span></div>
     <div class="spec"><b>Адреса · 02</b><span data-v="поля 20px 18px"></span></div>
-    <div class="spec"><b>Адреса · 03</b><span data-v="«Один адрес на все вкладки» — шрифт 700 15px/1 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Адреса · 04</b><span data-v="«Советы и настройки ушли из нижнего меню, но не из» — шрифт 500 11.5px/1.55 Manrope, цвет var(--ink-2), отступ сверху 8px"></span></div>
-    <div class="spec"><b>Адреса · 05</b><span data-v="«Советы» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
+    <div class="spec"><b>Адреса · 03</b><span data-v="«Один адрес на все вкладки» — шрифт 700 15px/1 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Адреса · 04</b><span data-v="«Советы и настройки ушли из нижнего меню, но не из» — шрифт 500 11.5px/1.55 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 8px"></span></div>
+    <div class="spec"><b>Адреса · 05</b><span data-v="«Советы» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
     <div class="spec"><b>Адреса · 06</b><span data-v="фон var(--c1), радиус 18px, поля 14px 15px, отступ сверху 8px"></span></div>
-    <div class="spec"><b>Адреса · 07</b><span data-v="«Лампочка в шапке, справа» — шрифт 700 12px/1.35 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Адреса · 08</b><span data-v="«Со счётчиком непрочитанных, рядом с ползунками. Ша» — шрифт 500 11.5px/1.5 Manrope, цвет var(--ink-2), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Адреса · 07</b><span data-v="«Лампочка в шапке, справа» — шрифт 700 12px/1.35 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Адреса · 08</b><span data-v="«Со счётчиком непрочитанных, рядом с ползунками. Ша» — шрифт 500 11.5px/1.5 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 5px"></span></div>
     <div class="spec"><b>Оговорка · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Оговорка · 02</b><span data-v="флекс 1, поля 16px 16px 0, прозрачность .32"></span></div>
     <div class="spec"><b>Оговорка · 03</b><span data-v="высота 150px, радиус 26px, фон var(--c2)"></span></div>
@@ -275,48 +275,48 @@
     <div class="spec"><b>Оговорка · 05</b><span data-v="позиция absolute, вписан 0, фон rgba(32,30,29,.4)"></span></div>
     <div class="spec"><b>Оговорка · 06</b><span data-v="позиция absolute, фон var(--bg), радиус 26px 26px 28px 28px, поля 20px 18px 20px"></span></div>
     <div class="spec"><b>Оговорка · 07</b><span data-v="ширина 38px, высота 4px, радиус 999px, фон rgba(0,0,0,.14), отступы 0 auto 18px"></span></div>
-    <div class="spec"><b>Оговорка · 08</b><span data-v="«Первый совет» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac)"></span></div>
-    <div class="spec"><b>Оговорка · 09</b><span data-v="«Дальше приложение будет замечать закономерности в» — шрифт 700 17px/1.32 Manrope, цвет var(--tx), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Оговорка · 08</b><span data-v="«Первый совет» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Оговорка · 09</b><span data-v="«Дальше приложение будет замечать закономерности в» — шрифт 700 17px/1.32 Manrope,sans-serif, цвет var(--tx), отступ сверху 10px"></span></div>
     <div class="spec"><b>Оговорка · 10</b><span data-v="фон var(--c1), радиус 20px, поля 16px 17px, отступ сверху 18px"></span></div>
-    <div class="spec"><b>Оговорка · 11</b><span data-v="«Это наблюдения по вашим записям, а не назначение в» — шрифт 500 12.5px/1.6 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Оговорка · 11</b><span data-v="«Это наблюдения по вашим записям, а не назначение в» — шрифт 500 12.5px/1.6 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Оговорка · 12</b><span data-v="выравнивание center, зазор 11px, отступ сверху 16px"></span></div>
     <div class="spec"><b>Оговорка · 13</b><span data-v="ширина 20px, высота 20px, флекс none, радиус 6px, фон var(--acs), выравнивание center, распределение center"></span></div>
-    <div class="spec"><b>Оговорка · 14</b><span data-v="«Больше не показывать» — флекс 1, шрифт 600 12px/1.4 Manrope, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Оговорка · 15</b><span data-v="«Показать совет» — высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), поля 0 15px, шрифт 700 13px/1 Manrope, цвет var(--on-acs), отступ сверху 16px"></span></div>
+    <div class="spec"><b>Оговорка · 14</b><span data-v="«Больше не показывать» — флекс 1, шрифт 600 12px/1.4 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Оговорка · 15</b><span data-v="«Показать совет» — высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), поля 0 15px, шрифт 700 13px/1 Manrope,sans-serif, цвет var(--on-acs), отступ сверху 16px"></span></div>
     <div class="spec"><b>Научное описание · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Научное описание · 02</b><span data-v="поля 18px 18px 14px, выравнивание center, зазор 12px, разделитель 1px solid rgba(0,0,0,.07)"></span></div>
-    <div class="spec"><b>Научное описание · 03</b><span data-v="«Научное описание» — флекс 1, шрифт 700 14px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Научное описание · 03</b><span data-v="«Научное описание» — флекс 1, шрифт 700 14px/1 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Научное описание · 04</b><span data-v="флекс 1, поля 0 18px, обрез hidden"></span></div>
-    <div class="spec"><b>Научное описание · 05</b><span data-v="«После тренировки нужен белок» — шрифт 700 15px/1.35 Manrope, цвет var(--tx), отступ сверху 18px"></span></div>
-    <div class="spec"><b>Научное описание · 06</b><span data-v="«Что за этим стоит» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 16px 0 4px"></span></div>
-    <div class="spec"><b>Научное описание · 07</b><span data-v="«Синтез мышечного белка повышен 24–48 часов после н» — шрифт 500 12.5px/1.6 Manrope, цвет var(--ink-2), отступ сверху 6px"></span></div>
-    <div class="spec"><b>Научное описание · 08</b><span data-v="«Исследования» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
+    <div class="spec"><b>Научное описание · 05</b><span data-v="«После тренировки нужен белок» — шрифт 700 15px/1.35 Manrope,sans-serif, цвет var(--tx), отступ сверху 18px"></span></div>
+    <div class="spec"><b>Научное описание · 06</b><span data-v="«Что за этим стоит» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 16px 0 4px"></span></div>
+    <div class="spec"><b>Научное описание · 07</b><span data-v="«Синтез мышечного белка повышен 24–48 часов после н» — шрифт 500 12.5px/1.6 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 6px"></span></div>
+    <div class="spec"><b>Научное описание · 08</b><span data-v="«Исследования» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
     <div class="spec"><b>Научное описание · 09</b><span data-v="фон var(--c1), радиус 20px, поля 2px 16px, отступ сверху 6px"></span></div>
     <div class="spec"><b>Научное описание · 10</b><span data-v="поля 13px 0, разделитель 1px solid rgba(0,0,0,.07)"></span></div>
-    <div class="spec"><b>Научное описание · 11</b><span data-v="«Morton et al., 2018» — шрифт 600 12px/1.45 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Научное описание · 12</b><span data-v="«Метаанализ · 1 863 участника» — выравнивание center, зазор 7px, отступ сверху 6px, шрифт 500 10.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Научное описание · 11</b><span data-v="«Morton et al., 2018» — шрифт 600 12px/1.45 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Научное описание · 12</b><span data-v="«Метаанализ · 1 863 участника» — выравнивание center, зазор 7px, отступ сверху 6px, шрифт 500 10.5px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Научное описание · 13</b><span data-v="поля 13px 0"></span></div>
     <div class="spec"><b>Научное описание · 14</b><span data-v="выравнивание flex-start, зазор 10px, фон var(--c2), радиус 18px, поля 14px 15px, отступ сверху 16px"></span></div>
-    <div class="spec"><b>Научное описание · 15</b><span data-v="«Общие выводы исследований. Ваш случай может отлича» — флекс 1, шрифт 500 11.5px/1.5 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Научное описание · 15</b><span data-v="«Общие выводы исследований. Ваш случай может отлича» — флекс 1, шрифт 500 11.5px/1.5 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Научное описание · 16</b><span data-v="поля 14px 18px 20px"></span></div>
-    <div class="spec"><b>Научное описание · 17</b><span data-v="«Понятно» — высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), поля 0 15px, шрифт 700 13px/1 Manrope, цвет var(--on-acs)"></span></div>
+    <div class="spec"><b>Научное описание · 17</b><span data-v="«Понятно» — высота от 48px, выравнивание center, распределение center, радиус 999px, фон var(--acs), поля 0 15px, шрифт 700 13px/1 Manrope,sans-serif, цвет var(--on-acs)"></span></div>
     <div class="spec"><b>Настройки советов · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Настройки советов · 02</b><span data-v="поля 18px 18px 14px, выравнивание center, зазор 12px, разделитель 1px solid rgba(0,0,0,.07)"></span></div>
-    <div class="spec"><b>Настройки советов · 03</b><span data-v="«Советы» — флекс 1, шрифт 700 14px/1 Manrope, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Настройки советов · 03</b><span data-v="«Советы» — флекс 1, шрифт 700 14px/1 Manrope,sans-serif, цвет var(--tx)"></span></div>
     <div class="spec"><b>Настройки советов · 04</b><span data-v="флекс 1, поля 0 18px, обрез hidden"></span></div>
-    <div class="spec"><b>Настройки советов · 05</b><span data-v="«Единственное место, где это настраивается. В шторк» — шрифт 500 11.5px/1.55 Manrope, цвет var(--ink-2), отступ сверху 16px"></span></div>
-    <div class="spec"><b>Настройки советов · 06</b><span data-v="«Как приходят» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 16px 0 4px"></span></div>
+    <div class="spec"><b>Настройки советов · 05</b><span data-v="«Единственное место, где это настраивается. В шторк» — шрифт 500 11.5px/1.55 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 16px"></span></div>
+    <div class="spec"><b>Настройки советов · 06</b><span data-v="«Как приходят» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 16px 0 4px"></span></div>
     <div class="spec"><b>Настройки советов · 07</b><span data-v="фон var(--c1), радиус 20px, поля 2px 16px, отступ сверху 6px"></span></div>
     <div class="spec"><b>Настройки советов · 08</b><span data-v="выравнивание flex-start, зазор 12px, поля 13px 0, разделитель 1px solid rgba(0,0,0,.07)"></span></div>
     <div class="spec"><b>Настройки советов · 09</b><span data-v="ширина 40px, высота 24px, радиус 999px, фон rgba(0,0,0,.14), флекс none, выравнивание center, распределение flex-start, поля 3px, отступ сверху 1px"></span></div>
     <div class="spec"><b>Настройки советов · 10</b><span data-v="ширина 18px, высота 18px, радиус 999px, фон var(--bg)"></span></div>
     <div class="spec"><b>Настройки советов · 11</b><span data-v="флекс 1"></span></div>
-    <div class="spec"><b>Настройки советов · 12</b><span data-v="«Показывать советы сами» — шрифт 600 12.5px/1.35 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Настройки советов · 13</b><span data-v="«Всплывают поверх экрана, когда система что-то заме» — шрифт 500 11px/1.45 Manrope, цвет var(--ink-2), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Настройки советов · 12</b><span data-v="«Показывать советы сами» — шрифт 600 12.5px/1.35 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Настройки советов · 13</b><span data-v="«Всплывают поверх экрана, когда система что-то заме» — шрифт 500 11px/1.45 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 5px"></span></div>
     <div class="spec"><b>Настройки советов · 14</b><span data-v="выравнивание flex-start, зазор 12px, поля 13px 0"></span></div>
     <div class="spec"><b>Настройки советов · 15</b><span data-v="ширина 40px, высота 24px, радиус 999px, фон var(--acs), флекс none, выравнивание center, распределение flex-end, поля 3px, отступ сверху 1px"></span></div>
-    <div class="spec"><b>Настройки советов · 16</b><span data-v="«О чём» — шрифт 700 10px/1 Manrope, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
-    <div class="spec"><b>Настройки советов · 17</b><span data-v="«Предупреждения приходят всегда. Наблюдения по ваши» — шрифт 500 11px/1.5 Manrope, цвет var(--ink-2), отступ сверху 12px"></span></div>
+    <div class="spec"><b>Настройки советов · 16</b><span data-v="«О чём» — шрифт 700 10px/1 Manrope,sans-serif, трекинг .16em, регистр uppercase, цвет var(--ac), отступы 18px 0 4px"></span></div>
+    <div class="spec"><b>Настройки советов · 17</b><span data-v="«Предупреждения приходят всегда. Наблюдения по ваши» — шрифт 500 11px/1.5 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 12px"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 02</b><span data-v="флекс 1, поля 16px 16px 0, прозрачность .4"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 03</b><span data-v="высота 150px, радиус 26px, фон var(--c2)"></span></div>
@@ -324,18 +324,18 @@
     <div class="spec"><b>Совет · оценка после свайпа · 05</b><span data-v="высота 120px, радиус 20px, фон var(--c1), отступ сверху 10px"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 06</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 16px, рамка 0 2px 6px rgba(0,0,0,.14),0 16px 36px rgba(0,0,0,.2)"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 07</b><span data-v="выравнивание center, зазор 10px"></span></div>
-    <div class="spec"><b>Совет · оценка после свайпа · 08</b><span data-v="«Прочитано» — флекс 1, шрифт 700 12.5px/1.35 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Совет · оценка после свайпа · 09</b><span data-v="«Ответ влияет на то, какие советы вы увидите дальше» — шрифт 500 11.5px/1.5 Manrope, цвет var(--ink-2), отступ сверху 10px"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 08</b><span data-v="«Прочитано» — флекс 1, шрифт 700 12.5px/1.35 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 09</b><span data-v="«Ответ влияет на то, какие советы вы увидите дальше» — шрифт 500 11.5px/1.5 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 10px"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 10</b><span data-v="зазор 8px, отступ сверху 14px"></span></div>
-    <div class="spec"><b>Совет · оценка после свайпа · 11</b><span data-v="флекс 1, высота от 44px, радиус 14px, фон var(--gr-bg), выравнивание center, распределение center, зазор 8px, шрифт 700 12px/1 Manrope, цвет var(--gr)"></span></div>
-    <div class="spec"><b>Совет · оценка после свайпа · 12</b><span data-v="флекс 1, высота от 44px, радиус 14px, фон var(--c2), выравнивание center, распределение center, зазор 8px, шрифт 700 12px/1 Manrope, цвет var(--ink-2)"></span></div>
-    <div class="spec"><b>Совет · оценка после свайпа · 13</b><span data-v="«Пропустить» — выключка center, отступ сверху 14px, шрифт 700 11.5px/1 Manrope, цвет var(--ink-2), высота от 44px, выравнивание center, распределение center"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 11</b><span data-v="флекс 1, высота от 44px, радиус 14px, фон var(--gr-bg), выравнивание center, распределение center, зазор 8px, шрифт 700 12px/1 Manrope,sans-serif, цвет var(--gr)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 12</b><span data-v="флекс 1, высота от 44px, радиус 14px, фон var(--c2), выравнивание center, распределение center, зазор 8px, шрифт 700 12px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 13</b><span data-v="«Пропустить» — выключка center, отступ сверху 14px, шрифт 700 11.5px/1 Manrope,sans-serif, цвет var(--ink-2), высота от 44px, выравнивание center, распределение center"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 14</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 15</b><span data-v="флекс 1, выключка center"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 16</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
-    <div class="spec"><b>Совет · оценка после свайпа · 17</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 17</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Совет · оценка после свайпа · 18</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
-    <div class="spec"><b>Совет · оценка после свайпа · 19</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · оценка после свайпа · 19</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 01</b><span data-v="ширина 375px, высота 706px, флекс none, позиция relative, обрез hidden, фон var(--bg), радиус 28px, рамка 0 1px 2px rgba(var(--shadow),.09),0 14px 40px rgba(var(--shadow),.12), направление column"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 02</b><span data-v="флекс 1, поля 16px 16px 0, прозрачность .4"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 03</b><span data-v="высота 150px, радиус 26px, фон var(--c2)"></span></div>
@@ -344,17 +344,17 @@
     <div class="spec"><b>Совет · отмена с таймером · 06</b><span data-v="позиция absolute, фон var(--c1), радиус 22px, поля 14px 16px, рамка 0 2px 6px rgba(0,0,0,.14),0 16px 36px rgba(0,0,0,.2)"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 07</b><span data-v="выравнивание center, зазор 12px"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 08</b><span data-v="позиция relative, ширина 30px, высота 30px, флекс none, выравнивание center, распределение center"></span></div>
-    <div class="spec"><b>Совет · отмена с таймером · 09</b><span data-v="«2» — позиция absolute, шрифт 700 11px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 09</b><span data-v="«2» — позиция absolute, шрифт 700 11px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 10</b><span data-v="флекс 1"></span></div>
-    <div class="spec"><b>Совет · отмена с таймером · 11</b><span data-v="«Совет скрыт до завтра» — шрифт 600 12.5px/1.35 Manrope, цвет var(--tx)"></span></div>
-    <div class="spec"><b>Совет · отмена с таймером · 12</b><span data-v="«После тренировки нужен белок» — шрифт 500 11px/1.4 Manrope, цвет var(--ink-2), отступ сверху 5px"></span></div>
-    <div class="spec"><b>Совет · отмена с таймером · 13</b><span data-v="«Вернуть» — флекс none, высота от 44px, выравнивание center, поля 0 15px, радиус 999px, фон var(--c2), шрифт 700 11.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 11</b><span data-v="«Совет скрыт до завтра» — шрифт 600 12.5px/1.35 Manrope,sans-serif, цвет var(--tx)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 12</b><span data-v="«После тренировки нужен белок» — шрифт 500 11px/1.4 Manrope,sans-serif, цвет var(--ink-2), отступ сверху 5px"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 13</b><span data-v="«Вернуть» — флекс none, высота от 44px, выравнивание center, поля 0 15px, радиус 999px, фон var(--c2), шрифт 700 11.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 14</b><span data-v="поля 4px 10px 16px, фон var(--bg)"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 15</b><span data-v="флекс 1, выключка center"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 16</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px"></span></div>
-    <div class="spec"><b>Совет · отмена с таймером · 17</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope, цвет var(--ink-2)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 17</b><span data-v="«Главная» — шрифт 600 8.5px/1 Manrope,sans-serif, цвет var(--ink-2)"></span></div>
     <div class="spec"><b>Совет · отмена с таймером · 18</b><span data-v="направление column, выравнивание center, зазор 6px, поля 8px 10px, радиус 999px, фон var(--c2)"></span></div>
-    <div class="spec"><b>Совет · отмена с таймером · 19</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope, цвет var(--ac)"></span></div>
+    <div class="spec"><b>Совет · отмена с таймером · 19</b><span data-v="«Питание» — шрифт 700 8.5px/1 Manrope,sans-serif, цвет var(--ac)"></span></div>
     <div class="ctrH">Разбор графики · SVG в кадрах</div>
     <div class="spec"><b>как читать графику</b><span data-v="поля рисунков с viewBox, ломаные с точками, пунктиры, точки-маркеры и их радиусы, тона и толщины. Точки приведены как есть: они задают форму, и приблизительная форма это другой рисунок"></span></div>
     <div class="spec"><b>Советы · не сохранено · рисунок 01</b><span data-v="поле рисунка 17×17 (viewBox 0 0 24 24)"></span></div>
