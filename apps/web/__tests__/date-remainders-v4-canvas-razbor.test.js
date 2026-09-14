@@ -145,7 +145,11 @@ describe('«Дата и остатки» · разбор кадров канва
   it('капсула следует кадру «Дата · сегодня» ·18/·19 и строке «вид капсулы»', () => {
     expect(rules.get('.date-picker-row').gap).toBe('9px');
     expect(rules.get(`${V4} .date-picker-trigger`)['min-height']).toBe('44px');
-    expect(rules.get(`${V4} .date-picker-trigger`)['border-radius']).toBe('14px');
+    // Решение владельца 13 сентября: капсула — пилюля в любом дне. Кадры
+    // рисуют три формы у одного элемента (сегодня 14, чужой день 999,
+    // прокрученный экран 999), и ряд с круглыми стрелками разваливался.
+    // Отступление названо в FINDINGS, строка ждёт переписывания.
+    expect(rules.get(`${V4} .date-picker-trigger`)['border-radius']).toBe('999px');
     expect(rules.get(`${V4} .date-picker-lbl-inner`).gap).toBe('6px');
     expect(rules.get(`${V4} .date-picker-day-nav`).width).toBe('44px');
     expect(rules.get(`${V4} > .date-picker-row`).gap).toBe('8px');
