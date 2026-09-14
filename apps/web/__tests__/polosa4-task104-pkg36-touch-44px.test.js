@@ -47,10 +47,20 @@ function readContractLine(canvasPath, key) {
   return match?.[1] || '';
 }
 
+// Селектор ищется от начала строки, а не подстрокой. `.date-picker--v4
+// .date-picker-trigger` целиком лежит внутри `.hdr-sticky-strip.is-pinned
+// .date-picker--v4 .date-picker-trigger`, и поиск по подстроке брал первое
+// совпадение — чужое правило с одной лишь тенью. Проверка падала на пустой
+// строке вместо 44px, то есть указывала не на тот файл и не на ту строку.
+// Ненайденное правило теперь роняет тест с именем селектора: молчаливая
+// пустая строка означала «не смотрели», а выглядела как «не сошлось».
 function ruleBlock(css, selector) {
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = css.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 's'));
-  return match?.[1] || '';
+  const match = css.match(new RegExp(`^[ \\t]*${escaped}\\s*\\{([^}]*)\\}`, 'm'));
+  if (!match) {
+    throw new Error(`правило «${selector}» не найдено — селектор переименован или вынесен`);
+  }
+  return match[1];
 }
 
 function prop(block, name) {

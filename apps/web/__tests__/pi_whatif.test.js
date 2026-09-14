@@ -298,7 +298,11 @@ describe('What-If Scenarios', () => {
             expect(result.practicalTips).toBeDefined();
             expect(Array.isArray(result.practicalTips)).toBe(true);
             expect(result.practicalTips.length).toBeGreaterThan(0);
-            expect(result.practicalTips.join(' ')).toContain('30г белка');
+            // Сторожим правило, а не строку: подсказка называет заданные граммы и
+            // единицу через пробел. Решение 12 сентября (cea88fc65): движок говорит
+            // словами, слипшееся «30г» ушло вместе со значками и формулами, и тест
+            // на прежнем литерале падал на самой починке.
+            expect(result.practicalTips.join(' ')).toMatch(/30\sг белка/);
         });
 
         it('generates practical tips for SKIP_LATE_MEAL', () => {
