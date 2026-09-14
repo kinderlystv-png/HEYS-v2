@@ -49,7 +49,10 @@ describe('Meal planner UI contract', () => {
     it('keeps the protein-catchup explanation aligned with final macros', () => {
         expect(source).toContain("reasonCode === 'PROTEIN_DEFICIT_NEAR_GOAL'");
         expect(source).toContain('без попытки компенсировать весь дневной недобор');
-        expect(source).toContain('Выбрать продукты · ${displayProductCount} вариантов');
+        // Кнопка склоняет «вариант» по числу: «1 вариант», «2 варианта»,
+        // «5 вариантов». Прежняя проверка держала слипшееся «вариантов» при
+        // любом числе и падала на самой починке.
+        expect(source).toContain('Выбрать продукты · ${displayProductCount} ${pluralVariants(displayProductCount)}');
         expect(source).toContain("rawDisplayReasoning.filter((line) => !line.includes('Белок:') && !line.includes('Осталось'))");
         expect(source).toContain('Калории почти закрыты, поэтому план ограничен небольшой белковой порцией.');
     });

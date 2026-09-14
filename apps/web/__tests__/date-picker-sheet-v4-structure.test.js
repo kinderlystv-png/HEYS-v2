@@ -98,14 +98,17 @@ describe('Date picker sheet v4 · вариант А', () => {
     expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-sheet-month-nav[\s\S]*?background:\s*var\(--v4-c1/);
   });
 
-  it('sheet streak banner uses v4 sand chip copy', () => {
-    expect(sheetBlock).toContain('date-picker-streak--v4');
-    expect(sheetBlock).toContain('formatStreakDayLabel(streakInfo.count)');
-    expect(sheetBlock).toContain('Серия ·');
-    expect(sheetBlock).not.toContain('дней подряд в норме');
-    expect(sheetCss).toContain('.date-picker-sheet .date-picker-streak--v4');
-    // Светлое правило обязано жить рядом с [data-theme$="dark"]; роль --sand-tint.
-    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-streak--v4[\s\S]*?background:\s*var\(--v4-sand-tint/);
-    expect(sheetCss).toMatch(/\.date-picker-sheet \.date-picker-streak--v4[\s\S]*?\[data-theme\$="dark"\]/);
+  it('полосы «Серия · N дней» в шторке нет — и не возвращается', () => {
+    // Полоса была выдумкой кода: её не рисует ни один кадр календаря и не
+    // называет ни одна строка контракта. Дизайнер это подтвердил — полосу сняли
+    // вместе с её стилями и подписью дней. Проверка развёрнута на отсутствие,
+    // чтобы полоса не вернулась молча следующей правкой шторки.
+    expect(sheetBlock).not.toContain('date-picker-streak--v4');
+    expect(sheetBlock).not.toContain('formatStreakDayLabel');
+    // Ищем подпись строкой кода, а не любым упоминанием: в самом файле про
+    // снятую полосу написано в комментарии, и поиск по голому «Серия ·» падал
+    // бы на объяснении, почему полосы нет.
+    expect(sheetBlock).not.toMatch(/['"`]Серия ·/);
+    expect(sheetCss).not.toContain('.date-picker-streak--v4');
   });
 });

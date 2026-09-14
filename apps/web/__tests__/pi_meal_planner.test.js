@@ -421,8 +421,11 @@ describe('Meal Planner v1.0', () => {
             expect(result.available).toBe(true);
             expect(result.meals).toHaveLength(0);
             expect(result.summary.totalMeals).toBe(0);
-            // Either budget-done or no-time-before-sleep — both valid for tiny remaining budget
-            expect(result.summary.reason).toMatch(/практически выполнена|Недостаточно времени/);
+            // Either budget-done or no-time-before-sleep — both valid for tiny remaining budget.
+            // Причина «день закрыт» теперь называет процент («Норму дня вы закрыли
+            // на 97 %») вместо прежнего «практически выполнена»: проценту человек
+            // верит, оценке — нет. Сторожим правило, а не прежнюю формулировку.
+            expect(result.summary.reason).toMatch(/Норму дня вы закрыли на \d+ %|практически выполнена|Недостаточно времени/);
         });
 
         it('returns no meals if no time before sleep deadline', () => {

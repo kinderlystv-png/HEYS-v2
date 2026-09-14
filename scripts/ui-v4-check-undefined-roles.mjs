@@ -142,11 +142,27 @@ function collectBareScope(dir = WEB, acc = [], base = '') {
   return acc;
 }
 
+// Блочный комментарий гасится пробелами — длина и переводы строк сохраняются,
+// поэтому номер строки в отчёте остаётся прежним. Объявления так считаются уже
+// давно, а голые var() считались по сырому тексту: 13 сентября правка про
+// кружки стрелок оставила в комментарии строчку «Было: … var(--v4-tint); »,
+// и гейт объявил её голой ролью. Правило про запасное значение к тексту,
+// который браузер не читает, не относится вовсе.
+function stripBlockComments(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, (block) =>
+    block.replace(/[^\n]/g, ' '));
+}
+
 function scanBareRoles() {
   const out = [];
   for (const rel of collectBareScope()) {
     const src = fs.readFileSync(path.join(WEB, rel), 'utf8');
-    for (const m of src.matchAll(BARE_VAR_RE)) {
+    // Ищем по тексту без комментариев, а маркер намеренности — по исходному:
+    // сам маркер `/* v4-intentional */` и есть комментарий, и на гашёном
+    // тексте он бы исчез вместе с оговорками у всех законных голых ролей.
+    // Гашение сохраняет длину, поэтому позиции в обоих текстах совпадают.
+    const код = stripBlockComments(src);
+    for (const m of код.matchAll(BARE_VAR_RE)) {
       if (hasIntentNearby(src, m.index)) continue;
       out.push({ file: rel, line: src.slice(0, m.index).split('\n').length, role: m[1] });
     }
