@@ -22,15 +22,6 @@
     return profile?.gender === 'Женский' && profile?.cycleTrackingEnabled === true;
   }
 
-  function formatStreakDayLabel(count) {
-    const n = Math.abs(Number(count)) || 0;
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return 'день';
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'дня';
-    return 'дней';
-  }
-
   // Компактный DatePicker с dropdown
   // activeDays: Map<dateStr, {kcal, target, ratio}> — данные о заполненных днях (опционально)
   // getActiveDaysForMonth: (year, month) => Map — функция для загрузки данных при смене месяца
@@ -151,31 +142,6 @@
     // снята (вариант А, канвас 2026-08-11) — качество живёт в Отчётах.
     const rz = HEYS.ratioZones;
 
-    // Вычисляем streak (серию хороших дней) — используем ratioZones.isSuccess()
-    const streakInfo = React.useMemo(() => {
-      if (daysDataMap.size === 0) return { count: 0, isActive: false };
-      
-      let count = 0;
-      let checkDate = new Date();
-      checkDate.setHours(12);
-      
-      // Проверяем дни назад от сегодня
-      for (let i = 0; i < 30; i++) {
-        const dateStr = fmtDate(checkDate);
-        const dayData = daysDataMap.get(dateStr);
-        
-        // Хороший день = isSuccess из ratioZones (good или perfect)
-        if (dayData && rz && rz.isSuccess(dayData.ratio)) {
-          count++;
-        } else if (i > 0) { // Первый день (сегодня) может быть без данных
-          break;
-        }
-        
-        checkDate.setDate(checkDate.getDate() - 1);
-      }
-      
-      return { count, isActive: count > 0 };
-    }, [daysDataMap, fmtDate]);
     
     React.useEffect(() => { setCur(parseISO(valueISO || todayISO())); }, [valueISO]);
 
@@ -504,10 +470,11 @@
           });
           })()
         ),
-        // Streak индикатор
-        streakInfo.count > 1 && React.createElement('div', {
-          className: 'date-picker-streak date-picker-streak--v4'
-        }, `Серия · ${streakInfo.count} ${formatStreakDayLabel(streakInfo.count)}`),
+        // Полосы «Серия · N дней» здесь нет. Решение дизайнера 13 сентября:
+        // «серия живёт на Главной, второе место для неё — второй источник
+        // правды». Кадр «Календарь · легенда» её и не рисовал, и строки о ней
+        // в контракте зоны не было: элемент без владельца, которого приёмка
+        // кадра не видит.
         // Легенда: точка = факт записи; цикл/загрузка — форма; сегодня/выбран — навигация
         React.createElement('div', { className: 'date-picker-legend' },
           React.createElement('span', { className: 'legend-item has-data' },

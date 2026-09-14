@@ -9737,38 +9737,6 @@ svg.date-picker-icon {
   position: relative;
 }
 
-/* Streak индикатор — legacy dropdown; v4 sheet ниже */
-.date-picker-streak {
-  padding: 8px 12px;
-  margin: 8px 0;
-  background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, var(--v4-accent-bg, #f0dcc6)) 100%); /* v4-intentional */
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--v4-warn-text, #a1471c);
-  text-align: center;
-}
-
-.date-picker-sheet .date-picker-streak--v4 {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 14px;
-  margin: 10px 0 6px;
-  border-radius: 18px;
-  background: var(--v4-sand-tint, #f3e0d2);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--v4-sand-act-text, #8a4a20);
-  text-align: center;
-}
-
-[data-theme$="dark"] .date-picker-sheet .date-picker-streak--v4 {
-  background: var(--v4-hero, #2f2820); /* v4-intentional */
-  color: var(--v4-sand-act-soft, #e2a468);
-}
-
 /* Легенда цветов */
 .date-picker-legend {
   display: flex;
