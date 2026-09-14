@@ -54,7 +54,7 @@ const BASELINE = {
   '300-modals-and-day.css': 82,
   '310-client-switch-overlay.css': 5,
   '400-water-and-hydration.css': 20,
-  '500-pwa-and-offline.css': 74,
+  '500-pwa-and-offline.css': 71,
   '600-steps-and-aps.css': 44,
   '610-aps-meal-flow.css': 47,
   '611-aps-product-card.css': 29,
