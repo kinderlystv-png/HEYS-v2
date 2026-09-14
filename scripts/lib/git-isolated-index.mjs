@@ -92,8 +92,12 @@ export function stagePathsInIsolatedIndex(repoRoot, indexPath, paths, { env: env
   return { env, paths: normalized };
 }
 
+// Удаление — тоже застейдженное изменение. Фильтр без «D» делал невозможным
+// изолированный коммит, где снимают файл и больше ничего: пути стейджились, а
+// проверка сообщала «в изолированном индексе ничего нет» и коммит падал. Нашлось
+// 14 сентября на снятии архива легаси-пакета.
 export function listStagedInIndex(repoRoot, env) {
-  const out = runGit(repoRoot, ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], { env });
+  const out = runGit(repoRoot, ['diff', '--cached', '--name-only', '--diff-filter=ACMRD'], { env });
   return out ? out.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : [];
 }
 
