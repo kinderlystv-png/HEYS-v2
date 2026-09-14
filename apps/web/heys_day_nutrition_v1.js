@@ -750,7 +750,8 @@
     const waves = history
       .map((wave) => ({
         startMin: Number(wave?.startMin),
-        endMin: Number(wave?.endMin)
+        endMin: Number(wave?.endMin),
+        name: wave?.mealName || 'приём'
       }))
       .filter((wave) => Number.isFinite(wave.startMin) && Number.isFinite(wave.endMin) && wave.endMin > wave.startMin)
       .sort((a, b) => a.startMin - b.startMin);
@@ -766,11 +767,49 @@
 
     // Контракт «нахлёст»: пересечений нет — подписи нет вовсе. «Без пересечений»
     // было своей выдумкой кода.
+    // Кадр «Приёмы за день» объясняет красный отрезок словами: «Обед тянется
+    // шесть часов и накрывает перекус — красным помечено пересечение». Без
+    // подписи человек видит красное и не знает, чьё оно и что с ним делать:
+    // «нахлёст 47 мин» наверху называет длительность, но не участников.
+    const overlapLine = (() => {
+      if (!(totalOverlap > 0)) return null;
+      let widest = null;
+      for (let i = 0; i + 1 < waves.length; i += 1) {
+        const range = overlapRange(waves[i], waves[i + 1]);
+        if (!range) continue;
+        const minutes = range.to - range.from;
+        if (!widest || minutes > widest.minutes) {
+          widest = { minutes, first: waves[i], second: waves[i + 1] };
+        }
+      }
+      if (!widest) return null;
+      // Длительность словами: «1:47» в прозе читается как время суток, а не
+      // как «час сорок семь».
+      const spanMinutes = widest.first.endMin - widest.first.startMin;
+      const hours = Math.floor(spanMinutes / 60);
+      const minutes = spanMinutes % 60;
+      const lasting = hours > 0
+        ? hours + ' ч' + (minutes > 0 ? ' ' + minutes + ' мин' : '')
+        : minutes + ' мин';
+      const nameOf = (wave) => String(wave.name || 'приём').toLowerCase();
+      const first = nameOf(widest.first);
+      const second = nameOf(widest.second);
+      // Два приёма могут называться одинаково («перекус» и «перекус») —
+      // повторять имя дважды нельзя, фраза перестаёт что-либо значить.
+      const covered = second === first ? 'следующий приём' : second;
+      return first.charAt(0).toUpperCase() + first.slice(1)
+        + ' тянется ' + lasting + ' и накрывает ' + covered
+        + ' — красным помечено пересечение.';
+    })();
+
     return blockShell(React, 'mealsTimeline', 'Приёмы за день',
       totalOverlap > 0 ? 'нахлёст ' + formatDurationShort(totalOverlap) : null,
       totalOverlap > 0 ? 'warn' : null,
-      React.createElement('div', { className: 'nutrition-v4-timeline' },
-        waves.map((wave, idx) => timelineRow(React, 'wave-', waves, idx, pos))
+      React.createElement(React.Fragment, null,
+        React.createElement('div', { className: 'nutrition-v4-timeline' },
+          waves.map((wave, idx) => timelineRow(React, 'wave-', waves, idx, pos))
+        ),
+        overlapLine && React.createElement('div', { className: 'nutrition-v4-why' }, overlapLine)
       )
     );
   }
