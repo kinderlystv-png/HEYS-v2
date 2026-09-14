@@ -8,6 +8,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { allDeclarations } from './helpers/css-rule.mjs';
+
 const ROOT = path.resolve(__dirname, '../../..');
 const CSS = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/500-pwa-and-offline.css'), 'utf8');
 const CANVAS = fs.readFileSync(
@@ -18,10 +20,11 @@ const CANVAS = fs.readFileSync(
   'utf8',
 );
 const SCOPE = '.mc-modal[data-heys-step-id="profile-personal"] .profile-personal-wheel-card';
-const rule = (selector) => {
-  const at = CSS.indexOf(`\n${selector} {`);
-  return at < 0 ? '' : CSS.slice(at, CSS.indexOf('}', at));
-};
+// Объявления всех правил селектора разом: `.profile-personal-family` объявлен
+// и в группе, и отдельно, и `margin-top` стоит только во втором. Ненайденное
+// роняет тест с именем селектора: пустая строка читалась как «не сошлось», а
+// означала «не смотрели» (helpers/css-rule).
+const rule = (selector) => allDeclarations(CSS, selector);
 
 describe('регистрация · колесо даты рождения по кадру', () => {
   it('кадр рисует выбранное 26 px/700 акцентом, соседние 12,5 px/600', () => {

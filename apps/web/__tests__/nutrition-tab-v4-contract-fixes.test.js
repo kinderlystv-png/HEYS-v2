@@ -14,6 +14,8 @@ import * as RealReact from 'react';
 import * as ReactDOMClient from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const NUTRITION_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_nutrition_v1.js'), 'utf8');
 const NUTRITION_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/modules/732-ui-v4-nutrition.css'), 'utf8');
 const DIARY_SECTION_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_day_diary_section.js'), 'utf8');
@@ -226,11 +228,7 @@ describe('nutrition-tab · правки зоны', () => {
   // про прошлые дни, ниже через 16 — кнопка «Обновить». Общий gap 6 px давал
   // 6 px и перед кнопкой.
   it('карточка офлайна: 6 px до строки про прошлые дни и 16 до кнопки', () => {
-    const rule = (selector) => {
-      const at = BASE_CSS.indexOf(`\n${selector} {`);
-      expect(at).toBeGreaterThan(-1);
-      return BASE_CSS.slice(at, BASE_CSS.indexOf('}', at));
-    };
+    const rule = (selector) => requireRule(BASE_CSS, selector).body;
     expect(rule('.offline-nodata-overlay')).not.toMatch(/\bgap:/);
     expect(rule('.offline-nodata-text')).toMatch(/margin-top:\s*6px/);
     expect(rule('.offline-nodata-retry')).toMatch(/margin-top:\s*16px/);

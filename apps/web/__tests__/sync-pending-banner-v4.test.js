@@ -4,12 +4,20 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const shellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_v1.js'), 'utf8');
 const cssSrc = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
 
 function bannerCss() {
-    const start = cssSrc.indexOf('.sync-pending-banner--strip {');
+    const start = ruleAt(cssSrc, '.sync-pending-banner--strip');
     const end = cssSrc.indexOf('@keyframes heysPendingSyncBannerIn');
     return cssSrc.slice(start, end);
 }

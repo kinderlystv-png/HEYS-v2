@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { requireRule } from './helpers/css-rule.mjs';
+import { allDeclarations, requireRule } from './helpers/css-rule.mjs';
 
 const WEB_DIR = path.resolve(__dirname, '..');
 const shellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_v1.js'), 'utf8');
@@ -428,9 +428,12 @@ describe('UI v4 chrome paint — рама', () => {
         expect(baseCss).toMatch(
             /\[data-theme\$="dark"\] \.tabs--v4-primary \.tab\.tab-primary-nav\.active \{\s*color:\s*var\(--v4-sand-act-soft,\s*#e2a468\)[\s\S]*?background:\s*var\(--v4-hero/,
         );
-        const start = baseCss.indexOf('.tab-primary-nav-row');
-        expect(start).toBeGreaterThan(-1);
-        expect(baseCss.slice(start, start + 800)).toMatch(/padding:\s*8px 10px/);
+        // Поля 8/10 объявлены у кнопки навигации, а не у ряда: прежнее окно в
+        // 800 символов от `.tab-primary-nav-row` дотягивалось до соседнего
+        // правила, и гейт подтверждал поля у элемента, у которого их нет.
+        expect(requireRule(baseCss, '.tab-primary-nav-row').body).not.toMatch(/padding:/);
+        expect(allDeclarations(baseCss, '.tabs--v4-primary .tab.tab-primary-nav'))
+            .toMatch(/padding:\s*8px 10px/);
         expect(baseCss).toMatch(/\.tabs--v4-primary \.crs-bar-container[\s\S]*?display:\s*none/);
         expect(baseCss).toMatch(/body:has\(\[data-heys-visible-frame="consent"\]\) \.tabs/);
         expect(shellSrc).toContain("root.style.setProperty('--heys-primary-nav-height'");

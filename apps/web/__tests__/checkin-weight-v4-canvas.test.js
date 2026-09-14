@@ -11,6 +11,14 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const STEPS_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_steps_v1.js'), 'utf8');
 const PWA_CSS = fs.readFileSync(
@@ -255,9 +263,7 @@ describe('чек-ин · ряд ответов «Последний кофе»',
   });
 
   it('пилюли ряда делят ширину поровну — строки разбора «· 17» и «· 18»', () => {
-    const start = PWA_CSS.indexOf('.mc-rest-coffee-actions .mc-pill {');
-    const rule = PWA_CSS.slice(start, PWA_CSS.indexOf('}', start));
-    expect(start).toBeGreaterThan(0);
+    const rule = requireRule(PWA_CSS, '.mc-rest-coffee-actions .mc-pill').body;
     expect(rule).toContain('flex: 1');
     expect(rule).toContain('min-width: 64px');
   });
@@ -291,8 +297,8 @@ describe('чек-ин · метка совета на шаге «Цель по �
     // низу ряда она свисала на 27 px вниз, текст совета ложился на заливку
     // дорожки, а стрелка уезжала под неё.
     const rule = PWA_CSS.slice(
-      PWA_CSS.indexOf('.mc-steps-advice-mark {'),
-      PWA_CSS.indexOf('.mc-steps-advice-mark::after'),
+      ruleAt(PWA_CSS, '.mc-steps-advice-mark'),
+      ruleAt(PWA_CSS, '.mc-steps-advice-mark::after'),
     );
     expect(rule).toContain('position: absolute');
     expect(rule).toContain('bottom: 0');
@@ -304,9 +310,7 @@ describe('чек-ин · метка совета на шаге «Цель по �
   it('подпись плашки серии набрана влево, а не по центру', () => {
     // Кадр «Чек-ин · вес», элемент 08. Выключка center наследовалась от
     // приветствия, и двухстрочная подпись вставала лесенкой.
-    const start = PWA_CSS.indexOf('.mc-modal--daily .mc-daily-streak-text {');
-    const rule = PWA_CSS.slice(start, PWA_CSS.indexOf('}', start));
-    expect(start).toBeGreaterThan(0);
+    const rule = requireRule(PWA_CSS, '.mc-modal--daily .mc-daily-streak-text').body;
     expect(rule).toContain('text-align: left');
   });
 });

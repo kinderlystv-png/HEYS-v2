@@ -16,6 +16,13 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { compare, coverage, readRazbor, readRules, siftInkDataDrift } from './canvas-razbor-helpers.js';
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
 
 const CANVAS = path.resolve(
   __dirname,
@@ -298,7 +305,7 @@ describe('«Советы» · разбор кадров канваса', () => {
   });
 
   it('тёмные панели сохраняют те же семантические роли, а не старые локальные тона', () => {
-    const start = css.indexOf('[data-theme$="dark"] .advice-v4-panel {');
+    const start = ruleAt(css, '[data-theme$="dark"] .advice-v4-panel');
     const end = css.indexOf('/* === UI v4: шторка списка', start);
     const darkPanels = css.slice(start, end);
     expect(start).toBeGreaterThan(-1);

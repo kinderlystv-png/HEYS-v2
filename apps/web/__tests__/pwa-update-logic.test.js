@@ -9,7 +9,16 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+
 import { describe, it, expect, afterEach, beforeAll, beforeEach, vi } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
 
 const UPDATE_COOLDOWN_MS = 60000; // 1 минута
 const MAX_UPDATE_ATTEMPTS = 3;
@@ -785,8 +794,8 @@ describe('PWA update protection', () => {
       // говорят обратное — расхождение заведено в UI_V4_FINDINGS.md.
       const { updateCss } = readSources();
       const card = updateCss.slice(
-        updateCss.indexOf('.heys-update-modal__card,'),
-        updateCss.indexOf('.heys-update-modal__icon {'),
+        ruleAt(updateCss, '.heys-update-modal__card'),
+        ruleAt(updateCss, '.heys-update-modal__icon'),
       );
 
       expect(card).toContain('background: var(--v4-surface');
@@ -809,8 +818,8 @@ describe('PWA update protection', () => {
     it('не даёт карточке прыгать между кадрами', () => {
       const { updateCss } = readSources();
       const card = updateCss.slice(
-        updateCss.indexOf('.heys-update-modal__card,'),
-        updateCss.indexOf('.heys-update-modal__icon {')
+        ruleAt(updateCss, '.heys-update-modal__card'),
+        ruleAt(updateCss, '.heys-update-modal__icon'),
       );
 
       expect(card).toContain('min-height: 238px;');
@@ -823,8 +832,8 @@ describe('PWA update protection', () => {
       // врезки нет.
       const { updateCss } = readSources();
       const backdrop = updateCss.slice(
-        updateCss.indexOf('.heys-update-modal__backdrop,'),
-        updateCss.indexOf('animation: heys-update-fade-in')
+        ruleAt(updateCss, '.heys-update-modal__backdrop'),
+        updateCss.indexOf('animation: heys-update-fade-in'),
       );
 
       expect(backdrop).toMatch(/max\(20px,\s*calc\(20px \+ env\(safe-area-inset-top,\s*0px\)\)\)/);
@@ -836,12 +845,12 @@ describe('PWA update protection', () => {
       // номер версии выделяется и копируется, остальной текст слоя нет.
       const { updateCss } = readSources();
       const card = updateCss.slice(
-        updateCss.indexOf('.heys-update-modal__card,'),
-        updateCss.indexOf('.heys-update-modal__icon {')
+        ruleAt(updateCss, '.heys-update-modal__card'),
+        ruleAt(updateCss, '.heys-update-modal__icon'),
       );
       const version = updateCss.slice(
-        updateCss.indexOf('.heys-update-modal__version,'),
-        updateCss.indexOf('.heys-update-modal__version--single')
+        ruleAt(updateCss, '.heys-update-modal__version'),
+        ruleAt(updateCss, '.heys-update-modal__version--single'),
       );
 
       expect(card).toMatch(/user-select:\s*none;/);

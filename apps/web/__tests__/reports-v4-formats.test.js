@@ -8,6 +8,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB = path.resolve(__dirname, '..');
 const STATS = fs.readFileSync(path.join(WEB, 'heys_day_stats_v1.js'), 'utf8');
 const CASCADE = fs.readFileSync(path.join(WEB, 'heys_cascade_card_v1.js'), 'utf8');
@@ -70,12 +72,10 @@ describe('формат · вес и его подпись', () => {
   });
 
   it('значение 21/800 моноцифрами, Δ тоном --gr', () => {
-    const at = CSS.indexOf('.reports-v4-dynamics-card__value {');
-    const v = CSS.slice(at, CSS.indexOf('}', at));
+    const v = requireRule(CSS, '.reports-v4-dynamics-card__value').body;
     expect(v).toContain('font: 800 21px/1');
     expect(v).toContain('tabular-nums');
-    const dt = CSS.indexOf('.reports-v4-dynamics-card__delta {');
-    const d = CSS.slice(dt, CSS.indexOf('}', dt));
+    const d = requireRule(CSS, '.reports-v4-dynamics-card__delta').body;
     expect(d).toContain('var(--v4-ok-text');
     expect(d).toContain('tabular-nums');
   });

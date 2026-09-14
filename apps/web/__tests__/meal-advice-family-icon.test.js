@@ -14,9 +14,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import React from 'react';
-import { createRoot } from 'react-dom/client';
 import { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { beforeAll, describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const read = (f) => fs.readFileSync(path.resolve(__dirname, '..', f), 'utf8');
 
@@ -185,9 +187,7 @@ describe('фон по роли не замирает на прежнем наб�
 describe('цель нажатия креста — 44', () => {
   it('правило продукта задаёт 44 × 44 обоим крестам', () => {
     const css = read('styles/modules/800-meal-optimizer.css').replace(/\r\n/g, '\n');
-    const idx = css.indexOf('.meal-optimizer__dismiss,\n.meal-optimizer__item-dismiss {');
-    expect(idx, 'общее правило крестов не найдено').toBeGreaterThan(-1);
-    const block = css.slice(idx, css.indexOf('}', idx));
+    const block = requireRule(css, '.meal-optimizer__dismiss').body;
     expect(block).toMatch(/width:\s*44px/);
     expect(block).toMatch(/height:\s*44px/);
   });

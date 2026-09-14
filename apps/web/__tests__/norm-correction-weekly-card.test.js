@@ -9,6 +9,14 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
+
 const SRC = fs.readFileSync(
   path.resolve(__dirname, '../heys_weekly_reports_v2.js'),
   'utf8'
@@ -156,8 +164,10 @@ describe('поправка на факт · карточка сверки в ш�
   it('кнопки карточки — пилюли 48, как во всей зоне', () => {
     // Строка «кнопки»: пилюля 48 радиусом 999. Прямоугольник с рамкой делал
     // вторичные кнопки похожими на поля ввода.
-    const btn = CSS.slice(CSS.indexOf('.weekly-wrap-correction__btn {'),
-      CSS.indexOf('.weekly-wrap-correction__btn:focus-visible'));
+    const btn = CSS.slice(
+      ruleAt(CSS, '.weekly-wrap-correction__btn'),
+      ruleAt(CSS, '.weekly-wrap-correction__btn:focus-visible'),
+    );
     expect(btn).toMatch(/min-height: 48px/);
     expect(btn).toMatch(/border-radius: 999px/);
     expect(btn).not.toMatch(/border: 1px/);
@@ -195,8 +205,8 @@ describe('поправка на факт · карточка сверки в ш�
 
   it('карточка одета по контракту: радиус 20, заголовок 16/700, число 30/800', () => {
     const block = CSS.slice(
-      CSS.indexOf('.weekly-wrap-correction {'),
-      CSS.indexOf('.weekly-wrap-correction__footnote') + 200
+      ruleAt(CSS, '.weekly-wrap-correction'),
+      ruleAt(CSS, '.weekly-wrap-correction__footnote') + 200,
     );
     expect(block).toMatch(/\.weekly-wrap-correction \{[^}]*border-radius: 20px/);
     expect(block).toMatch(/__title \{[^}]*font-size: 16px;[^}]*font-weight: 700/);

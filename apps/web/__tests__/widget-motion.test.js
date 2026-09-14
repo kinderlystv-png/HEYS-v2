@@ -6,6 +6,14 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const cssSrc = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
@@ -258,14 +266,20 @@ describe('виджеты подключены к motion', () => {
     });
 
     it('кольца БЖУ — CSS transition синхрон с WIDGET_MOTION_MS', () => {
-        const ringRule = metricsCssSrc.slice(metricsCssSrc.indexOf('.macro-ring-fill {'), metricsCssSrc.indexOf('.macro-ring-marker'));
+        const ringRule = metricsCssSrc.slice(
+            ruleAt(metricsCssSrc, '.macro-ring-fill'),
+            ruleAt(metricsCssSrc, '.macro-ring-marker'),
+        );
         expect(ringRule).toContain('animation: none');
         expect(ringRule).toContain('transition: stroke-dasharray var(--widget-motion-ms');
         expect(ringRule).not.toContain('macroRingFillIn');
     });
 
     it('полосы — CSS transition на ширину', () => {
-        const barRule = cssSrc.slice(cssSrc.indexOf('.widget-calories__hero-bar-fill'), cssSrc.indexOf('.widget-calories__hero-bar-foot'));
+        const barRule = cssSrc.slice(
+            ruleAt(cssSrc, '.widget-calories__hero-bar-fill'),
+            ruleAt(cssSrc, '.widget-calories__hero-bar-foot'),
+        );
         expect(barRule).toContain('transition: width var(--widget-motion-ms');
         expect(uiSrc).toContain("'--widget-motion-ms': `${widgetMotionCssMs}ms`");
     });

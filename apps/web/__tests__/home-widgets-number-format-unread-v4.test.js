@@ -16,6 +16,8 @@ import { act, fireEvent, render } from '@testing-library/react';
 import * as RealReact from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { allDeclarations } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const cssSrc = fs.readFileSync(
@@ -182,9 +184,7 @@ describe('формат чисел · правило продукта', () => {
       '.widget-v4-row__meta {', // строки виджета стоят столбцом
       '.widgets-quick-sheet__meta {', // счётчик воды в карточке
     ]) {
-      const i = cssSrc.indexOf(`\n${sel}`);
-      expect(i, `правило ${sel} не найдено`).toBeGreaterThan(-1);
-      const block = cssSrc.slice(i, cssSrc.indexOf('\n}', i));
+      const block = allDeclarations(cssSrc, sel);
       expect(
         /font-variant-numeric:\s*tabular-nums|font-feature-settings:\s*'tnum'/.test(block),
         `${sel} без табличных цифр`,
@@ -272,9 +272,7 @@ describe('непрочитанные у мессенджера', () => {
     // Пятнадцатая сборка переписала строку: кружок 14 px тоном --acs снят,
     // остался счёт цифрой тоном --ac. Проверяем и то, что появилось, и то,
     // что должно было уйти, — иначе заливка вернулась бы незаметно.
-    const i = cssSrc.indexOf('\n.widgets-quick-sheet__badge {');
-    expect(i).toBeGreaterThan(-1);
-    const block = cssSrc.slice(i, cssSrc.indexOf('\n}', i));
+    const block = allDeclarations(cssSrc, '.widgets-quick-sheet__badge');
     expect(block).toContain('font-size: 10px');
     expect(block).toContain('font-weight: 700');
     expect(block).toContain('font-variant-numeric: tabular-nums');

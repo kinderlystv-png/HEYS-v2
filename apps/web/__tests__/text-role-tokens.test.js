@@ -3,6 +3,8 @@ import path from 'path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 // heys/bcc11c — короткие псевдонимы текстовых ролей.
 //
 // Дефект, который здесь закрыт: --text-primary, --text-secondary и
@@ -22,10 +24,7 @@ const ROLES = ['text-primary', 'text-secondary', 'text-tertiary'];
 
 /** Текст первого :root { ... } блока — того, что действует в любой теме. */
 function rootBlock(css) {
-  const start = css.indexOf(':root {');
-  expect(start).toBeGreaterThan(-1);
-  const end = css.indexOf('\n}', start);
-  return css.slice(start, end);
+  return requireRule(css, ':root').body;
 }
 
 function cssFiles(dir) {

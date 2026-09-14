@@ -82,10 +82,7 @@ describe('Строка приведена к списку .cd только на 
     const base = fs.readFileSync(
       path.join(WEB_DIR, 'styles/modules/000-base-and-gamification.css'), 'utf8',
     );
-    const at = base.indexOf('.program-next-line {');
-    expect(at).toBeGreaterThan(-1);
-    const body = base.slice(at, base.indexOf('}', at));
-    expect(body).toContain('border-radius: 12px');
+    expect(requireRule(base, '.program-next-line').body).toContain('border-radius: 12px');
   });
 
   it('дата не выделена весом: вся строка одного кегля', () => {

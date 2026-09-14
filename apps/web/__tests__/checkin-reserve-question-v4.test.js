@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { findRule } from './helpers/css-rule.mjs';
+import { findRule, requireRule } from './helpers/css-rule.mjs';
 
 const ROOT = path.resolve(__dirname, '../../..');
 const CANVAS = fs.readFileSync(
@@ -148,9 +148,11 @@ describe('резервный вопрос после еды', () => {
   it('«пропуск» в календаре — тон значений --val-bad, как в кадре', () => {
     expect(FRAME).toContain('background:var(--val-bad)');
     const activityCss = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'), 'utf8');
-    for (const sel of ['.ma-habit-cal-cell.is-missed {', '.ma-habit-cal-legend-dot.is-missed {']) {
-      const at = activityCss.indexOf(sel);
-      expect(activityCss.slice(at, activityCss.indexOf('}', at)), sel).toContain('var(--v4-val-bad');
+    for (const sel of [
+      '.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-missed',
+      '.ma-habit-cal--activity-v4 .ma-habit-cal-legend-dot.is-missed',
+    ]) {
+      expect(requireRule(activityCss, sel).body, sel).toContain('var(--v4-val-bad');
     }
   });
 
@@ -159,8 +161,8 @@ describe('резервный вопрос после еды', () => {
     // календаря выходил на 2,1 px выше, и всё ниже него съезжало.
     expect(FRAME).toContain('gap:6px;font:500 10.5px/1 Manrope');
     const activityCss = fs.readFileSync(path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'), 'utf8');
-    const at = activityCss.indexOf('.ma-habit-cal--activity-v4 .ma-habit-cal-legend-item {');
-    expect(activityCss.slice(at, activityCss.indexOf('}', at))).toContain('font: 500 10.5px/1 Manrope');
+    expect(requireRule(activityCss, '.ma-habit-cal--activity-v4 .ma-habit-cal-legend-item').body)
+      .toContain('font: 500 10.5px/1 Manrope');
   });
 
   it('крест тонкий и мелкий, как SVG кадра, тоном --ink-3', () => {
@@ -260,8 +262,8 @@ describe('причина пропуска', () => {
     // Наведение красилось синим прежней палитры, которой в наборах v4 нет.
     // Сторожим только своё правило: тот же литерал остался обводкой фокуса
     // в чужом месте этого файла и к листу причины отношения не имеет.
-    const hover = CSS.slice(CSS.indexOf('.ma-skip-reason-option:hover'));
-    expect(hover.slice(0, hover.indexOf('}'))).toMatch(/background: var\(--v4-chip[,)]/);
+    expect(requireRule(CSS, '.ma-skip-reason-option:hover').body)
+      .toMatch(/background: var\(--v4-chip[,)]/);
   });
   it('«сегодня» в календаре обведено акцентом, а не чернилами', () => {
     // Строка «вид · календарь зарядки», решение 31 августа: «Сегодня» рисуется
@@ -272,9 +274,13 @@ describe('причина пропуска', () => {
       path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'),
       'utf8',
     );
-    const at = activityCss.indexOf('.ma-habit-cal-cell.is-today.is-neutral');
-    expect(at, 'правило «сегодня» найдено').toBeGreaterThan(-1);
-    const todayRule = activityCss.slice(at, activityCss.indexOf('}', at));
+    // Своего правила у `.ma-habit-cal-cell.is-today.is-neutral` нет — оно живёт
+    // только под сеткой точек. Поиск подстрокой находил его молча, то есть гейт
+    // мерил правило, которого не называл; называем адрес целиком.
+    const todayRule = requireRule(
+      activityCss,
+      '.ma-habit-cal--activity-v4 .ma-habit-cal-grid--dot .ma-habit-cal-cell.is-today.is-neutral',
+    ).body;
     expect(todayRule).toContain('inset 0 0 0 1.5px');
     expect(todayRule).toContain('var(--v4-sand-act');
     expect(todayRule).not.toContain('--v4-ink-30');
@@ -289,23 +295,24 @@ describe('причина пропуска', () => {
       path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'),
       'utf8',
     );
-    const card = activityCss.indexOf('.ma-habit-cal-shell.ma-habit-cal--activity-v4.ma-habit-cal--sheet');
-    expect(card, 'правило блока найдено').toBeGreaterThan(-1);
-    const cardRule = activityCss.slice(card, activityCss.indexOf('}', card));
+    const cardRule = requireRule(
+      activityCss,
+      '.ma-habit-cal-shell.ma-habit-cal--activity-v4.ma-habit-cal--sheet',
+    ).body;
     expect(cardRule).toContain('padding: 14px');
     expect(cardRule).toContain('border-radius: 20px');
     expect(cardRule).toContain('var(--v4-c1)');
 
-    const head = activityCss.indexOf('.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-heading');
-    expect(head, 'правило шапки найдено').toBeGreaterThan(-1);
-    const headRule = activityCss.slice(head, activityCss.indexOf('}', head));
+    const headRule = requireRule(
+      activityCss,
+      '.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-heading',
+    ).body;
     expect(headRule).toContain('font-size: 13px');
     expect(headRule).toContain('font-weight: 700');
 
     // Прежняя оболочка держит на чипе режима min-height 44: с полями 4/7 и
     // радиусом 999 пилюля превращалась в круг.
-    const pill = activityCss.indexOf('.ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn {');
-    const pillRule = activityCss.slice(pill, activityCss.indexOf('}', pill));
+    const pillRule = requireRule(activityCss, '.ma-habit-cal--activity-v4 .ma-habit-cal-mode-btn').body;
     expect(pillRule).toContain('min-height: 0');
     // Снятие рамки прежней оболочки не должно снова требовать предка вкладки.
     expect(activityCss).not.toContain('.activity-v4 .ma-habit-cal-shell.ma-habit-cal--activity-v4');
@@ -319,13 +326,10 @@ describe('причина пропуска', () => {
       path.join(ROOT, 'apps/web/styles/modules/731-ui-v4-activity.css'),
       'utf8',
     );
-    const matrix = activityCss.indexOf('.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-matrix');
-    expect(matrix, 'правило ширины сетки найдено').toBeGreaterThan(-1);
-    expect(activityCss.slice(matrix, activityCss.indexOf('}', matrix))).toContain('width: 100%');
-
-    const align = activityCss.indexOf('.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-grid--dot');
-    expect(align, 'правило выравнивания найдено').toBeGreaterThan(-1);
-    expect(activityCss.slice(align, activityCss.indexOf('}', align))).toContain('justify-items: start');
+    expect(requireRule(activityCss, '.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-matrix').body)
+      .toContain('width: 100%');
+    expect(requireRule(activityCss, '.ma-habit-cal--activity-v4.ma-habit-cal--sheet .ma-habit-cal-grid--dot').body)
+      .toContain('justify-items: start');
   });
 
 });

@@ -693,9 +693,7 @@ describe('Отчёты · разбор кадров канваса', () => {
 
     // Строка «графики»: «Сетки, осей и подписей значений нет». Подписи веса и
     // дней уходят тем же списком display:none, что три ряда у калорий.
-    const hideStart = reportsCss.indexOf('.reports-v4-dynamics-card .sparkline-area-animated');
-    expect(hideStart, 'списка display:none у карточки больше нет').toBeGreaterThan(-1);
-    const hideRule = reportsCss.slice(hideStart, reportsCss.indexOf('}', hideStart));
+    const hideRule = requireRule(reportsCss, '.reports-v4-dynamics-card .sparkline-area-animated').text;
     expect(hideRule).toContain('display: none');
     for (const cls of ['weight-sparkline-weight-label', 'weight-sparkline-day-label']) {
       expect(hideRule, cls + ' не скрыт в карточке v4')

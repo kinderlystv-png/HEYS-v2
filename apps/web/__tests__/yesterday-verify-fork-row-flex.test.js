@@ -20,6 +20,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const SRC = fs.readFileSync(path.resolve(__dirname, '../heys_yesterday_verify_v1.js'), 'utf8');
 const CSS = fs.readFileSync(
   path.resolve(__dirname, '../styles/modules/715-yesterday-verify.css'), 'utf8',
@@ -66,10 +68,7 @@ describe('развилка: ряд кнопок отдаёт место длин
   });
 
   it('CSS держит зеркальные раскладки кадров', () => {
-    const grab = (sel) => {
-      const at = CSS.indexOf(sel + ' {');
-      return CSS.slice(at, CSS.indexOf('}', at)).replace(/\s+/g, ' ');
-    };
+    const grab = (sel) => requireRule(CSS, sel).body.replace(/\s+/g, ' ');
     expect(grab('.yv-pack-row .yv-pack-secondary--confirm-empty')).toMatch(/flex: 1\.35/);
     expect(grab('.yv-pack-row .yv-pack-secondary--feelings')).toMatch(/flex: 1\.25/);
     // База — единица: без модификатора кнопки делят ряд поровну.

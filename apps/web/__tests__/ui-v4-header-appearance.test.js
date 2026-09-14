@@ -4,10 +4,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import React from 'react';
 import * as ReactDOM from 'react-dom';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const CANVAS_DIR = path.resolve(
     __dirname,
@@ -75,16 +77,11 @@ describe('UI v4 · значки шапки не режутся строкой у
         'utf8',
     );
     // Одно правило целиком: от селектора до ближайшей закрывающей скобки.
-    const rule = (selector) => {
-        // Селектор ищем от начала строки: '.game-bar {' встречается и хвостом
-        // составного селектора, и это было бы чужое правило.
-        const at = css.indexOf('\n' + selector + ' {');
-        if (at < 0) throw new Error('правило «' + selector + '» не найдено');
-        const open = css.indexOf('{', at);
-        const close = css.indexOf('}', open);
-        // Без комментариев: значение, названное в пояснении, — не декларация.
-        return css.slice(open + 1, close).replace(/\/\*[\s\S]*?\*\//g, '');
-    };
+    // Селектор ищется от начала строки: '.game-bar {' встречается и хвостом
+    // составного селектора, и это было бы чужое правило (helpers/css-rule).
+    // Без комментариев: значение, названное в пояснении, — не декларация.
+    const rule = (selector) =>
+        requireRule(css, selector).body.replace(/\/\*[\s\S]*?\*\//g, '');
 
     it('строка уровня по-прежнему обрезает, а значки по-прежнему выходят за неё', () => {
         // Обе половины дефекта: клип у полосы и отрицательные поля у целей 44 pt.

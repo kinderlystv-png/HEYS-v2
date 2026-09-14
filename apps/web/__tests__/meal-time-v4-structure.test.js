@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { eachRule, requireRule } from './helpers/css-rule.mjs';
+
 const mealStepSource = fs.readFileSync(
   path.resolve(__dirname, '../heys_meal_step_v1.js'),
   'utf8',
@@ -123,15 +125,13 @@ describe('meal time step v4 structure', () => {
     // только замером. Замер 31 августа: карточки шкал и чипы типа приёма
     // рисовались песочными и в синем наборе.
     for (const sel of ['.meal-mood-chip', '.meal-mood-scale', '.meal-type-chip']) {
-      const at = cssSource.indexOf(sel + ' {');
-      expect(at, sel + ' — правила нет').toBeGreaterThan(-1);
-      const block = cssSource.slice(at, cssSource.indexOf('}', at));
+      const block = requireRule(cssSource, sel).body;
       expect(block.includes('var(--v4-sand-'), sel + ' держит роль с именем набора').toBe(false);
     }
     // Решение food-meal 3 сентября: заливка --v4-act, текст --v4-btn-on-act;
     // blue-override в 600 снят — пара идёт из палитры.
-    const cta = cssSource.lastIndexOf('.meal-time-cta {');
-    const ctaBlock = cssSource.slice(cta, cssSource.indexOf('}', cta));
+    // Побеждает последнее правило при равной специфичности — его и берём.
+    const ctaBlock = [...eachRule(cssSource, '.meal-time-cta')].pop().body;
     expect(ctaBlock).toContain('var(--v4-act,');
     expect(ctaBlock).toContain('var(--v4-btn-on-act,');
     expect(cssSource).not.toMatch(

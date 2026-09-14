@@ -13,6 +13,8 @@ import path from 'node:path';
 import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const STYLES = path.join(WEB_DIR, 'styles');
 
@@ -113,9 +115,9 @@ describe('держатель места · правило продукта', () 
     );
     expect(base).toMatch(/\.meal-photo-thumb\.skeleton \{[\s\S]{0,120}?animation: none;/);
     expect(base).not.toContain('animation: shimmer 1.5s infinite;\n    }\n\n    .meal-photo-thumb');
-    const dark = base.slice(base.indexOf('[data-theme$="dark"] .meal-photo-thumb.skeleton'));
-    expect(dark.slice(0, 160)).toContain('var(--v4-c1');
-    expect(dark.slice(0, 160)).not.toContain('linear-gradient');
+    const dark = requireRule(base, '[data-theme$="dark"] .meal-photo-thumb.skeleton').body;
+    expect(dark).toContain('var(--v4-c1');
+    expect(dark).not.toContain('linear-gradient');
   });
 
   it('ни один живой держатель не пульсирует', () => {

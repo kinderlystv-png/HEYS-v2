@@ -13,6 +13,15 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
+
 const WEB_DIR = path.resolve(__dirname, '..');
 
 function loadScript(relPath) {
@@ -157,7 +166,8 @@ describe('кнопка отправки в чате несёт тот же зн�
     expect(messenger).toContain("'messenger-send' + (sending ? ' messenger-send--busy' : '')");
     expect(css).toMatch(/\.messenger-send--busy:disabled \{[\s\S]*?background: var\(--v4-act, #c67139\);[\s\S]*?opacity: 0\.6;/);
     // Правило должно стоять ПОСЛЕ :disabled — специфичность равна, побеждает поздний.
-    expect(css.indexOf('.messenger-send--busy:disabled')).toBeGreaterThan(css.indexOf('.messenger-send:disabled'));
+    expect(ruleAt(css, '.messenger-send--busy:disabled'))
+      .toBeGreaterThan(ruleAt(css, '.messenger-send:disabled'));
   });
 
   it('знак в кнопке — дуга 18 обводкой 2,5 без второй живой области', () => {
@@ -321,8 +331,8 @@ describe('слой обновления PWA взял общий знак ожи�
     const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
     const platform = fs.readFileSync(path.join(WEB_DIR, 'heys_platform_apis_v1.js'), 'utf8');
     const iconRule = components.slice(
-      components.indexOf('.heys-update-modal__icon {'),
-      components.indexOf('.heys-update-modal__icon--done {'),
+      ruleAt(components, '.heys-update-modal__icon'),
+      ruleAt(components, '.heys-update-modal__icon--done'),
     );
     const style = document.createElement('style');
     style.textContent = `${paletteCss}\n${iconRule}`;
@@ -437,14 +447,14 @@ describe('замок синхронизации взял общий знак о�
     // песочный тёмный rgb(207,129,68), синий rgb(29,94,150)).
     const components = fs.readFileSync(path.join(WEB_DIR, 'styles/heys-components.css'), 'utf8');
     const card = components.slice(
-      components.indexOf('.sync-lock-overlay__card {'),
-      components.indexOf('.sync-lock-overlay__spinner {'),
+      ruleAt(components, '.sync-lock-overlay__card'),
+      ruleAt(components, '.sync-lock-overlay__spinner'),
     );
     expect(card).toContain('color-mix(in srgb, var(--v4-act');
     expect(card).not.toContain('rgba(96, 165, 250, 0.18)');
-    const dark = components.slice(components.indexOf('[data-theme$="dark"] .sync-lock-overlay__card {'));
-    expect(dark.slice(0, 400)).toContain('color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent)');
-    expect(dark.slice(0, 400)).not.toContain('rgba(59, 130, 246, 0.2)');
+    const dark = requireRule(components, '[data-theme$="dark"] .sync-lock-overlay__card').body;
+    expect(dark).toContain('color-mix(in srgb, var(--v4-act, #cf8144) 18%, transparent)');
+    expect(dark).not.toContain('rgba(59, 130, 246, 0.2)');
   });
 
   it('знак не выпирает из карточки 320 px и не ждёт лишние 300 мс', () => {

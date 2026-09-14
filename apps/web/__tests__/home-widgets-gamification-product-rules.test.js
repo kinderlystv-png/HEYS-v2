@@ -55,10 +55,8 @@ describe('safe-area · правило продукта', () => {
   });
 
   it('модалки разбора виджетов (Динамика веса / Оценка дня / Риск-радар) прижимаются к нижней врезке', () => {
-    const idx = widgetsCss.indexOf('.widget-relapse-risk__modal-overlay {');
-    expect(idx).toBeGreaterThan(-1);
-    const block = widgetsCss.slice(idx, idx + 700);
-    expect(block).toContain('padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));');
+    expect(requireRule(widgetsCss, '.widget-relapse-risk__modal-overlay').body)
+      .toContain('padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));');
   });
 
   it('тот же отступ учтён и в мобильном брейкпоинте (≤520px)', () => {

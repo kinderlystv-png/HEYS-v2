@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { allDeclarations } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const handlersSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_day_day_handlers.js'), 'utf8');
@@ -295,10 +297,11 @@ describe('добавление воды — канвас water-add v4, ветк�
     // но по общему правилу (home-widgets.v4.dc.html) весь этот текст —
     // служебные подписи и числа, не написанное человеком, поэтому вывод
     // контракта верен: выделения на карточке нет.
-    const idx = waterCss.indexOf('.water-review {\n  display: block;');
-    expect(idx).toBeGreaterThan(-1);
-    const block = waterCss.slice(idx, idx + 400);
-    expect(block).toContain('user-select: none;');
+    // Правил `.water-review` два: первое объявляет переменные карточки, второе
+    // задаёт её вид. Прежний поиск отличал их по первому объявлению в теле, а
+    // окно в 400 символов дотягивалось до соседнего правила — берём оба тела
+    // целиком и спрашиваем, объявлено ли выделение вообще.
+    expect(allDeclarations(waterCss, '.water-review')).toContain('user-select: none;');
   });
 
   it('повторный тап: контракт явно исключает чипы объёмов воды — guard на них не заводим', () => {

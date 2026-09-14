@@ -387,9 +387,7 @@ describe('Геометрия задана только внутри блока �
     const base = fs.readFileSync(
       path.join(WEB_DIR, 'styles/modules/750-strength-builder.css'), 'utf8',
     );
-    const at = base.indexOf('.sb-plan-card {');
-    expect(at).toBeGreaterThan(-1);
-    expect(base.slice(at, base.indexOf('}', at))).toContain('border-radius: 16px');
+    expect(requireRule(base, '.sb-plan-card').body).toContain('border-radius: 16px');
   });
 
   it('кнопка старта перебивает общий .sb-btn.is-accent', () => {

@@ -9,6 +9,14 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
+
 const UNDO_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_undo_v1.js'), 'utf8');
 const UNDO_CSS = fs.readFileSync(path.resolve(__dirname, '../styles/heys-components.css'), 'utf8');
 
@@ -392,7 +400,7 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
     // calc(12px + env(safe-area-inset-bottom, 0px)).
     expect(bar().style.bottom).toBe('');
     const css = fs.readFileSync(path.resolve(__dirname, '../styles/heys-components.css'), 'utf8');
-    const block = css.slice(css.indexOf('.heys-undo-bar {'), css.indexOf('@keyframes heysUndoBarIn'));
+    const block = css.slice(ruleAt(css, '.heys-undo-bar'), css.indexOf('@keyframes heysUndoBarIn'));
     expect(block).toContain('calc(12px + env(safe-area-inset-bottom, 0px))');
   });
 
@@ -469,7 +477,10 @@ describe('бар отмены · контракт undo-bar.v4.dc.html', () => {
     // сверяется текстом объявления — вместе с проверкой выше это и есть
     // «прочитан вычисленный стиль» настолько, насколько это возможно в jsdom/
     // happy-dom без реального движка рендеринга.
-    const block = UNDO_CSS.slice(UNDO_CSS.indexOf('.heys-undo-bar {'), UNDO_CSS.indexOf('@keyframes heysUndoBarIn'));
+    const block = UNDO_CSS.slice(
+      ruleAt(UNDO_CSS, '.heys-undo-bar'),
+      UNDO_CSS.indexOf('@keyframes heysUndoBarIn'),
+    );
     expect(block).toMatch(/bottom:\s*calc\(12px \+ env\(safe-area-inset-bottom, 0px\)\)/);
   });
 

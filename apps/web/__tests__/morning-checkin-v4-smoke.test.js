@@ -3,6 +3,8 @@ import path from 'path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { allDeclarations, requireRule } from './helpers/css-rule.mjs';
+
 const MORNING_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_morning_checkin_v1.js'), 'utf8');
 const STEPS_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_steps_v1.js'), 'utf8');
 const SYNC_MERGE_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_sync_merge_v1.js'), 'utf8');
@@ -230,10 +232,8 @@ describe('checkin-morning · три сквозных правила продук
     // «футер прижат к нижней врезке». Уже реализовано — .mc-daily-footer
     // берёт готовую переменную --safe-area-bottom (000-base-and-gamification.css:135
     // = env(safe-area-inset-bottom, 0px)), своего env() заводить не нужно.
-    const idx = PWA_CSS.indexOf('.mc-daily-footer {');
-    expect(idx).toBeGreaterThan(-1);
-    const block = PWA_CSS.slice(idx, idx + 200);
-    expect(block).toContain('padding: 12px 18px calc(20px + var(--safe-area-bottom));');
+    expect(requireRule(PWA_CSS, '.mc-daily-footer').body)
+      .toContain('padding: 12px 18px calc(20px + var(--safe-area-bottom));');
   });
 
   it('выделение: заметка о сне выделяется, вопрос и подписи оценок — нет', () => {
@@ -243,15 +243,9 @@ describe('checkin-morning · три сквозных правила продук
     const titleMatch = PWA_CSS.match(/\.mc-step-title,\s*\.mc-step-hint\s*\{[^}]*\}/);
     expect(titleMatch).toBeTruthy();
     expect(titleMatch[0]).toContain('user-select: none;');
-    const kickerIdx = PWA_CSS.indexOf('.mc-step-kicker {');
-    expect(kickerIdx).toBeGreaterThan(-1);
-    expect(PWA_CSS.slice(kickerIdx, kickerIdx + 250)).toContain('user-select: none;');
-    const scaleIdx = PWA_CSS.indexOf('.mc-scale-head {');
-    expect(scaleIdx).toBeGreaterThan(-1);
-    expect(PWA_CSS.slice(scaleIdx, scaleIdx + 350)).toContain('user-select: none;');
-    const qualityIdx = PWA_CSS.indexOf('.mc-quality-label {');
-    expect(qualityIdx).toBeGreaterThan(-1);
-    expect(PWA_CSS.slice(qualityIdx, qualityIdx + 250)).toContain('user-select: none;');
+    for (const selector of ['.mc-step-kicker', '.mc-scale-head', '.mc-quality-label']) {
+      expect(allDeclarations(PWA_CSS, selector), selector).toContain('user-select: none;');
+    }
   });
 
   it('повторный тап на «Дальше»: re-entrancy guard в StepModal уже блокирует двойное нажатие', () => {

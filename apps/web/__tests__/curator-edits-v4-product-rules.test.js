@@ -18,6 +18,14 @@ import path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
+
 const modulePath = path.resolve(__dirname, '../heys_curator_actions_banner_v1.js');
 const moduleSource = fs.readFileSync(modulePath, 'utf8');
 const CA_MODAL_CSS = fs.readFileSync(
@@ -131,12 +139,15 @@ describe('лист правок куратора · правила продук�
       // текстом объявления, откуда видно, что нижняя привязана к
       // --safe-area-bottom, а не к литералу и не к краю экрана.
       const backdropBlock = CA_MODAL_CSS.slice(
-        CA_MODAL_CSS.indexOf('.ca-modal-backdrop {'),
-        CA_MODAL_CSS.indexOf('.ca-modal-backdrop--visible {'),
+        ruleAt(CA_MODAL_CSS, '.ca-modal-backdrop'),
+        ruleAt(CA_MODAL_CSS, '.ca-modal-backdrop--visible'),
       );
       expect(backdropBlock).toMatch(/padding:\s*12px 12px calc\(12px \+ var\(--safe-area-bottom\)\) 12px/);
 
-      const modalBlock = CA_MODAL_CSS.slice(CA_MODAL_CSS.indexOf('.ca-modal {'), CA_MODAL_CSS.indexOf('.ca-modal__header {'));
+      const modalBlock = CA_MODAL_CSS.slice(
+        ruleAt(CA_MODAL_CSS, '.ca-modal'),
+        ruleAt(CA_MODAL_CSS, '.ca-modal__header'),
+      );
       expect(modalBlock).toMatch(/max-height:\s*calc\(100dvh - 24px - var\(--safe-area-top\)\)/);
     });
   });

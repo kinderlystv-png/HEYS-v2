@@ -4,7 +4,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
 
 import {
   getPlaywrightBrowser,
@@ -107,14 +116,16 @@ function probeSelector(selector, text = 'Тест') {
   return out;
 }
 
+// Границы срезов — адреса правил целиком: `.msg-row.is-highlighted` своего
+// правила не имеет, оно всегда предок, и поиск подстрокой находил его молча.
 function extractScopedCss() {
   const headerBlock = MESSENGER_CSS.slice(
-    MESSENGER_CSS.indexOf('.messenger-overlay {'),
-    MESSENGER_CSS.indexOf('.messenger-thread {'),
+    ruleAt(MESSENGER_CSS, '.messenger-overlay'),
+    ruleAt(MESSENGER_CSS, '.messenger-thread'),
   );
   const inboxBlock = MESSENGER_CSS.slice(
-    MESSENGER_CSS.indexOf('.messenger-inbox {'),
-    MESSENGER_CSS.indexOf('.msg-row.is-highlighted'),
+    ruleAt(MESSENGER_CSS, '.messenger-inbox'),
+    ruleAt(MESSENGER_CSS, '.msg-row.is-highlighted .msg-bubble-mine'),
   );
   const darkHeader = MESSENGER_CSS.slice(
     MESSENGER_CSS.indexOf('[data-theme$="dark"] .messenger-overlay {'),
@@ -252,12 +263,12 @@ describe('messenger header/inbox · v4 palette (sand + blue)', () => {
 
   it('scope CSS не держит старые системные литералы шапки/инбокса', () => {
     const headerBlock = MESSENGER_CSS.slice(
-      MESSENGER_CSS.indexOf('.messenger-header {'),
-      MESSENGER_CSS.indexOf('.messenger-thread {'),
+      ruleAt(MESSENGER_CSS, '.messenger-header'),
+      ruleAt(MESSENGER_CSS, '.messenger-thread'),
     );
     const inboxBlock = MESSENGER_CSS.slice(
-      MESSENGER_CSS.indexOf('.messenger-inbox {'),
-      MESSENGER_CSS.indexOf('.msg-row.is-highlighted'),
+      ruleAt(MESSENGER_CSS, '.messenger-inbox'),
+      ruleAt(MESSENGER_CSS, '.msg-row.is-highlighted .msg-bubble-mine'),
     );
 
     for (const block of [headerBlock, inboxBlock]) {

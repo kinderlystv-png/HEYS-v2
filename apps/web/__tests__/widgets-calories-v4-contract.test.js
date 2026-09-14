@@ -9,6 +9,13 @@ import path from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { readRules } from './canvas-razbor-helpers.js';
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
 
 const WEB_DIR = path.resolve(__dirname, '..');
 const CANVAS = path.resolve(
@@ -98,10 +105,10 @@ describe('Калории · сведённые stop-кадры', () => {
   });
 
   it('цвет hero — роли, песок ≠ синий на числе; норма через --v4-sand-ok-text', () => {
-    const sand = paletteSrc.slice(0, paletteSrc.indexOf('[data-theme-id="sand-dark"]'));
+    const sand = paletteSrc.slice(0, ruleAt(paletteSrc, '[data-theme-id="sand-dark"]'));
     const blue = paletteSrc.slice(
-      paletteSrc.indexOf('[data-theme-id="blue"]'),
-      paletteSrc.indexOf('[data-theme-id="blue-dark"]'),
+      ruleAt(paletteSrc, '[data-theme-id="blue"]'),
+      ruleAt(paletteSrc, '[data-theme-id="blue-dark"]'),
     );
     const actText = (block) => block.match(/--v4-act-text:\s*(#[0-9a-f]{6})/i)?.[1];
     const sandOkText = (block) => block.match(/--v4-sand-ok-text:\s*(#[0-9a-f]{6})/i)?.[1];

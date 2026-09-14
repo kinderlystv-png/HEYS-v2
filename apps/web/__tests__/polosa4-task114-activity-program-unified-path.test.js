@@ -10,6 +10,8 @@ import { render } from '@testing-library/react';
 import * as RealReact from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB = path.resolve(__dirname, '..');
 const TRAININGS_SRC = fs.readFileSync(path.join(WEB, 'heys_day_trainings_v1.js'), 'utf8');
 const ACTIVITY_SRC = fs.readFileSync(path.join(WEB, 'heys_day_activity_v1.js'), 'utf8');
@@ -207,10 +209,7 @@ describe('polosa4 task114 · программа на «Активе» · оди�
   });
 
   it('базовый .program-next-line дневника не тронут — второй путь только на «Активе»', () => {
-    const at = BASE_CSS.indexOf('.program-next-line {');
-    expect(at).toBeGreaterThan(-1);
-    const body = BASE_CSS.slice(at, BASE_CSS.indexOf('}', at));
-    expect(body).toContain('border-radius: 12px');
+    expect(requireRule(BASE_CSS, '.program-next-line').body).toContain('border-radius: 12px');
     expect(CSS).toContain('.activity-v4-program-line {');
     expect(CSS).not.toContain('.activity-v4-program .program-next-line {');
   });

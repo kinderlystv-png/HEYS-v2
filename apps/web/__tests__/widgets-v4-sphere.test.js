@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const cssSrc = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
@@ -150,8 +152,7 @@ describe('виджеты g1 в сфере палитры', () => {
         // справа и перешагивает границы правил: 27.08 её увёл
         // .widget-bd-sheet__wave-week-seg, появившийся на 1200 строк ниже
         // вместе с листами разбора, и тест покраснел при верном CSS.
-        const optAt = cssSrc.indexOf('.widget-wd-sheet__opt {');
-        const optRule = cssSrc.slice(optAt, cssSrc.indexOf('}', optAt));
+        const optRule = requireRule(cssSrc, '.widget-wd-sheet__opt').body;
         expect(optRule).not.toContain('background: transparent');
         expect(cssSrc).toContain('[data-theme$="dark"] .widget-wd-sheet__opt {');
         expect(cssSrc).toContain('html[data-theme-id="blue"] .widget-wd-sheet__opt {');

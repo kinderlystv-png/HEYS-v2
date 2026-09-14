@@ -9,6 +9,14 @@ import path from 'node:path';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
+// Позиция правила в файле — от начала селектора, а не поиском подстроки:
+// короткий селектор целиком лежит внутри длинного с предком, и `indexOf` брал
+// первое совпадение, то есть чужую границу среза (helpers/css-rule).
+const ruleAt = (css, selector) => requireRule(css, selector).start;
+
+
 const SRC = fs.readFileSync(path.resolve(__dirname, '../heys_curator_panel_v1.js'), 'utf8');
 const GATE = fs.readFileSync(path.resolve(__dirname, '../heys_app_gate_flow_v1.js'), 'utf8');
 const CSS = fs.readFileSync(
@@ -97,9 +105,9 @@ describe('панель куратора · место в кабинете', () =
       expect(code).not.toContain('🔄 Обновить');
     }
     // Главное действие вкладки залито акцентом, второстепенные — подложкой.
-    const primary = CSS.slice(CSS.indexOf('.cdo-primary {'), CSS.indexOf('.cdo-primary.is-active'));
+    const primary = CSS.slice(ruleAt(CSS, '.cdo-primary'), ruleAt(CSS, '.cdo-primary.is-active'));
     expect(primary).toContain('--v4-act');
-    const secondary = CSS.slice(CSS.indexOf('.cdo-secondary,'), CSS.indexOf('.cdo-megalog'));
+    const secondary = CSS.slice(ruleAt(CSS, '.cdo-secondary'), ruleAt(CSS, '.cdo-megalog'));
     expect(secondary).toContain('--v4-hero');
   });
 
@@ -684,8 +692,7 @@ describe('панель куратора · окно', () => {
   it('точка коридора нейтральная, а не зелёная', () => {
     // Зелёный в наборе значит «норма закрыта» — достижение. В коридоре
     // достижения нет: расчёт просто не нашёл, что менять.
-    const dot = CSS.slice(CSS.indexOf('.cur-row__dot--in_corridor'),
-      CSS.indexOf('.cur-row__age'));
+    const dot = CSS.slice(ruleAt(CSS, '.cur-row__dot--in_corridor'), ruleAt(CSS, '.cur-row__age'));
     expect(dot).not.toContain('--v4-good');
     expect(dot).toContain('22%');
   });
@@ -836,15 +843,13 @@ describe('панель куратора · окно', () => {
   it('поле формы отличается заливкой, а не рамкой', () => {
     // В кадре .fld — заливка на грунте без контура: рамка вокруг заливки
     // обводит то, что и так видно.
-    const field = CSS.slice(CSS.indexOf('.cur-field__input {'),
-      CSS.indexOf('.cur-field__input.is-pin'));
+    const field = CSS.slice(ruleAt(CSS, '.cur-field__input'), ruleAt(CSS, '.cur-field__input.is-pin'));
     expect(field).toContain('border: none');
     expect(field).toContain('min-height: 44px');
     expect(field).toContain('border-radius: 14px');
     // Фокус — кольцом внутрь: рамка сдвигала бы текст на пиксель.
     expect(field).toContain('inset 0 0 0 2px');
-    const label = CSS.slice(CSS.indexOf('.cur-field__label {'),
-      CSS.indexOf('.cur-field__input {'));
+    const label = CSS.slice(ruleAt(CSS, '.cur-field__label'), ruleAt(CSS, '.cur-field__input'));
     expect(label).toContain('text-transform: uppercase');
     expect(label).toContain('0.08em');
   });
@@ -867,8 +872,7 @@ describe('панель куратора · окно', () => {
     // Отклонение только вниз: перевыполненная норма не повод для разговора.
     expect(tone).toContain('value < target * 0.8');
     // Тон отклонения тёплый: красный в наборе значит разрушающее действие.
-    const off = CSS.slice(CSS.indexOf('.cur-cab__mch.is-off'),
-      CSS.indexOf('.cur-cab__mch.is-off') + 260);
+    const off = CSS.slice(ruleAt(CSS, '.cur-cab__mch.is-off'), ruleAt(CSS, '.cur-cab__mch.is-off') + 260);
     expect(off).toContain('--v4-warn');
     expect(off).not.toContain('--v4-bad');
   });

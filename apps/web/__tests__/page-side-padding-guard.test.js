@@ -15,6 +15,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { findRule } from './helpers/css-rule.mjs';
+
 const ROOT = path.resolve(__dirname, '../..');
 const BASE_CSS = fs.readFileSync(
   path.join(ROOT, 'web/styles/modules/000-base-and-gamification.css'),
@@ -30,13 +32,10 @@ function ruleBody(rawCss, selector) {
   // Переводы строк нормализуем: на Windows файл лежит в дереве с CRLF,
   // и многострочный селектор не находился — тест краснел на ровном
   // месте, хотя правило на месте.
-  const css = rawCss.replace(/\r\n/g, '\n');
-  const marker = `\n${selector} {`;
-  const at = css.indexOf(marker);
-  if (at === -1) return null;
-  const start = at + marker.length;
-  const end = css.indexOf('\n}', start);
-  return end === -1 ? null : css.slice(start, end);
+  //
+  // `null` здесь осмысленный: каждый вызов ниже проверяет его отдельно и
+  // называет селектор в сообщении (helpers/css-rule).
+  return findRule(rawCss.replace(/\r\n/g, '\n'), selector)?.body ?? null;
 }
 
 describe('боковые поля вкладок · .page не стирает чужие', () => {

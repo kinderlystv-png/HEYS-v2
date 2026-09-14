@@ -25,6 +25,8 @@ import path from 'node:path';
 import postcss from 'postcss';
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const STYLES_DIR = path.join(WEB_DIR, 'styles');
 const CANVAS = path.resolve(
@@ -280,9 +282,7 @@ describe('состояние нажатия · плитка Главной', () 
     // Возврат задаёт базовое правило .widget: без него плитка отскакивала бы
     // пружиной 0.4s, а контракт обещает 120 мс.
     const css = fs.readFileSync(path.join(STYLES_DIR, TILE.file), 'utf8');
-    const idx = css.indexOf('\n.widget {');
-    expect(idx).toBeGreaterThan(-1);
-    const база = css.slice(idx, idx + css.slice(idx).indexOf('\n}'));
+    const база = requireRule(css, '.widget').body;
     expect(база).toContain('transform 120ms ease');
     expect(база).toContain('opacity 120ms ease');
   });
