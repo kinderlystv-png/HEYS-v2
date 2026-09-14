@@ -602,6 +602,7 @@
         deficitMlNow: isClosedDay ? 0 : drunk - waterSchedule.expectedMl,
         checkHourLabel: isClosedDay ? null : waterSchedule.checkLabel,
         rhythmBins: this._buildWaterRhythmBins({
+          day,
           drunk,
           wakeMinutes,
           awakeSpan,
@@ -1400,12 +1401,46 @@
       };
     },
 
-    _buildWaterRhythmBins({ drunk, wakeMinutes, awakeSpan, nowMinutes, hoursSinceWater }) {
-      const BIN_COUNT = 7;
+    /**
+     * Столбики вида «Ритм дня»: сколько выпито в каждой шестой части дня.
+     *
+     * Ритм берётся из журнала воды — тех же почасовых записей, что читает
+     * большой график в разборе. Прежде плитка делила ДНЕВНОЙ ИТОГ поровну, и
+     * все залитые столбики выходили одной высоты: «ритм» не показывал ритма,
+     * видно было только провал в конце. Записи при этом лежали рядом.
+     *
+     * Шесть столбиков, а не семь: строки контракта «Вода · Ритм дня · 06–11»
+     * называют ровно шесть — пять залитых разной высоты и последний низкий
+     * серый, это и есть провал.
+     *
+     * Ровная раскладка осталась запасным путём: у дня без журнала (старые дни,
+     * импорт) времени глотков нет вовсе, и лучше показать объём с провалом, чем
+     * пустую плитку.
+     */
+    _buildWaterRhythmBins({ day, drunk, wakeMinutes, awakeSpan, nowMinutes, hoursSinceWater }) {
+      const BIN_COUNT = 6;
       if (!wakeMinutes || !awakeSpan) {
         return Array(BIN_COUNT).fill(0);
       }
       const binMinutes = awakeSpan / BIN_COUNT;
+
+      const entries = this._waterJournalEntries(day);
+      if (entries.length) {
+        const bins = Array(BIN_COUNT).fill(0);
+        entries.forEach((entry) => {
+          const stamp = new Date(Number(entry.ts));
+          if (!Number.isFinite(stamp.getTime())) return;
+          // Записи дня лежат в его же записи и идут от 00:00 до 23:59, поэтому
+          // переносить время через полночь не нужно: раньше подъёма — самое
+          // начало дня, позже отбоя — самый конец. Прятать такие глотки нельзя,
+          // они тоже вода.
+          const minutes = stamp.getHours() * 60 + stamp.getMinutes() - wakeMinutes;
+          const index = Math.min(BIN_COUNT - 1, Math.max(0, Math.floor(minutes / binMinutes)));
+          bins[index] += Number(entry.ml) || 0;
+        });
+        if (bins.some((ml) => ml > 0)) return bins;
+      }
+
       let elapsed = nowMinutes - wakeMinutes;
       if (elapsed < 0) elapsed += 1440;
       const elapsedBins = Math.min(BIN_COUNT, Math.max(1, Math.ceil(elapsed / binMinutes)));
