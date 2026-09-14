@@ -370,20 +370,12 @@
             // без апострофа», кадр «Календарь · легенда» — «Август 2026».
             // toLocaleString с year добавляет « г.», а text-transform:capitalize
             // делал из него «Г.»: в шапке стояло «Август 2026 Г.».
-            `${cur.toLocaleString('ru-RU', { month: 'long' })} ${cur.getFullYear()}`,
-            (() => {
-              const CycleUI = HEYS.CycleUI;
-              if (!isCycleForecastEnabled()) return null;
-              if (!CycleUI?.findLastCycleMarkDate || !CycleUI.formatForecastMonthLine) return null;
-              const lsGetFn = HEYS.lsGet || HEYS.utils?.lsGet;
-              const lastMark = CycleUI.findLastCycleMarkDate(calendarToday, lsGetFn);
-              if (CycleUI.shouldHideCycleForecast?.(lastMark, calendarToday, lsGetFn)) return null;
-              const forecastDates = CycleUI.computeCycleForecastDates(lastMark, calendarToday);
-              const label = CycleUI.formatForecastMonthLine(forecastDates);
-              return label
-                ? React.createElement('span', { className: 'date-picker-forecast-line' }, label)
-                : null;
-            })()
+            // Подписи прогноза цикла под заголовком месяца больше нет: строка
+            // «вид шторки календаря» сняла её 14 сентября. Она повторяла то,
+            // что клетки уже показывают меткой цикла, и делала это хуже —
+            // меткой видно и дату, и длину, подписью только дату. Сама метка
+            // на клетках остаётся, считается тем же прогнозом.
+            `${cur.toLocaleString('ru-RU', { month: 'long' })} ${cur.getFullYear()}`
           ),
           React.createElement('button', {
             type: 'button',

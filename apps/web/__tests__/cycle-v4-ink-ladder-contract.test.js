@@ -31,7 +31,6 @@ describe('cycle v4 · data ink ladder', () => {
     ['.cycle-card-v4__date-confirm-sub', DAILY_CSS],
     ['.cycle-card-v4__insight-text', DAILY_CSS],
     ['.cycle-date-picker-sheet__live', DAILY_CSS],
-    ['.date-picker-forecast-line', DAILY_CSS],
     ['.date-picker--v4 .date-picker-sub--relative', BASE_CSS],
     ['.date-picker-sheet .date-picker-legend', BASE_CSS],
     ['.reports-v4-dynamics-card__label', REPORTS_CSS],

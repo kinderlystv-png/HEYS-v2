@@ -75,7 +75,11 @@ describe('cycle v4 · calendar ribbon + card', () => {
     expect(PICKERS_SRC).toContain('buildCycleForecastMeta');
     expect(PICKERS_SRC).toContain('weekday:');
     expect(PICKERS_SRC).toContain('CycleDatePickerSheet');
-    expect(PICKERS_SRC).toContain('date-picker-forecast-line');
+    // Подписи прогноза под заголовком месяца больше нет: строка «вид шторки
+    // календаря» сняла её 14 сентября — метка на клетках говорит то же и
+    // больше. Проверка развёрнута на отсутствие, чтобы подпись не вернулась.
+    expect(PICKERS_SRC).not.toContain('date-picker-forecast-line');
+    expect(PICKERS_SRC).toContain('buildCycleForecastMeta');
     expect(PICKERS_SRC).toContain('Когда это было');
   });
 

@@ -158,15 +158,6 @@
     return null;
   }
 
-  function formatForecastMonthLine(forecastDates) {
-    if (!Array.isArray(forecastDates) || forecastDates.length === 0) return null;
-    const first = parseIsoDate(forecastDates[0]);
-    if (!first) return null;
-    const day = first.getDate();
-    const month = first.toLocaleDateString('ru-RU', { month: 'long' });
-    return `следующий — ${day}-го`;
-  }
-
   function pushCycleUndo(label, onUndo, onExpire) {
     if (!HEYS.Undo || typeof HEYS.Undo.push !== 'function') {
       if (typeof onExpire === 'function') onExpire('no-undo');
@@ -746,7 +737,6 @@
     buildCycleForecastMeta,
     computeCycleForecastDates,
     findLastCycleMarkDate,
-    formatForecastMonthLine,
     pushCycleUndo,
     applyCycleDaySelection,
     clearCycleWeek,
