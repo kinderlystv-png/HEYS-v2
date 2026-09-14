@@ -19,7 +19,6 @@
   const ALARM_LAG_SHARE = 0.25;
   const HABIT_HINT_KEY = 'heys_water_habit_hint_week';
   const HABIT_HINT_TEXT = 'Поставьте с утра четыре бутылки по 0,5 л на видное место — вечером не придётся вспоминать, сколько выпили.';
-  const WEEKDAY_LABELS = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
   function formatIsoDate(date) {
     return date.toISOString().slice(0, 10);
@@ -82,8 +81,7 @@
         waterMl,
         goalMl,
         ratio: waterMl / goalMl,
-        isToday,
-        weekday: WEEKDAY_LABELS[date.getDay()]
+        isToday
       });
     }
 
@@ -321,14 +319,6 @@
       }, (kind === 'sub' ? '−' : '+') + ml);
     }
 
-    function CheckIcon() {
-      return React.createElement('svg', {
-        width: 7, height: 7, viewBox: '0 0 24 24', fill: 'none',
-        stroke: 'currentColor', strokeWidth: 4.5, strokeLinecap: 'round', strokeLinejoin: 'round',
-        'aria-hidden': 'true'
-      }, React.createElement('path', { d: 'M5 13l4 4L19 7' }));
-    }
-
     _WaterReviewCard = function WaterReviewCard(props) {
       const {
         day, prof, waterGoal, waterGoalBreakdown, waterLastDrink,
@@ -540,18 +530,14 @@
           )
         ),
 
-        React.createElement('div', { className: 'water-review__days' },
-          points.map((point) => (
-            point.waterMl >= point.goalMl && point.goalMl > 0
-              ? React.createElement('span', {
-                key: point.iso, className: 'water-review__day-done', 'aria-label': point.weekday
-              }, React.createElement(CheckIcon))
-              : React.createElement('span', {
-                key: point.iso,
-                className: 'water-review__day-label' + (point.isToday ? ' is-today' : '')
-              }, point.weekday)
-          ))
-        ),
+        // Ряда под кривой нет. Кадр-владелец карточки — «Вода · карточка ·
+        // Кольцо» файла water-add (владелец назван дизайнером 13 сентября) — под
+        // кривой не рисует ничего: его составная строка это «Вода · 7 дней в
+        // среднем 2,1 л › −200 › 1,7 л › из 3,0 · осталось 1,3 › +100 › +200 ›
+        // +330 › +500». Подписи дней дублировали ось («снимаются: они дублируют
+        // ось»), а галочки — заливку точек на самой кривой: строка «неделя в
+        // «Кольце»» уже говорит «попадание — залитая точка, промах —
+        // контурная». Два способа сказать одно на площади 300 × 237.
 
         showHint ? React.createElement('div', {
           className: 'water-review__hint',

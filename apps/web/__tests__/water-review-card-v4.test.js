@@ -178,15 +178,18 @@ describe('карточка воды в «Разборе дня» — nutrition-t
     }));
   });
 
-  it('неделя: кривая, пунктир нормы и ряд дней', () => {
+  it('неделя: кривая и пунктир нормы, ряда дней под ней нет', () => {
     window.HEYS.utils.lsGet = seedWeek([3200, 2100, 1800, 2600, 1600, 2400]);
     const { container } = renderCard(dayWater);
     const card = container.querySelector('#water-card');
     expect(card.querySelector('.water-review__avg').textContent).toBe('в среднем 2,2 л');
     expect(card.querySelector('.water-review__curve-line').getAttribute('d')).toContain('C');
     expect(card.querySelector('.water-review__curve-goal').getAttribute('d')).toContain('C');
-    expect(card.querySelectorAll('.water-review__day-done').length).toBeGreaterThan(0);
-    expect(card.querySelectorAll('.water-review__day-label').length).toBeGreaterThan(0);
+    // Ряда под кривой нет: кадр-владелец карточки (water-add, «Кольцо») под
+    // кривой не рисует ничего. Подписи дней дублировали ось, галочки —
+    // заливку точек на самой кривой, которую задаёт строка «неделя в „Кольце“».
+    expect(card.querySelectorAll('.water-review__day-done')).toHaveLength(0);
+    expect(card.querySelectorAll('.water-review__day-label')).toHaveLength(0);
   });
 
   it('applyOptimistic двигает кольцо и подпись', () => {

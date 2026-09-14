@@ -369,31 +369,6 @@ html[data-theme-id="blue-dark"] .water-review {
   opacity: 0.45;
 }
 
-.water-review__days {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 3px;
-  margin-top: 1px;
-  font: 600 8px/1 Manrope, system-ui, sans-serif;
-  color: var(--wr-dim);
-}
-
-.water-review__day-label.is-today {
-  color: var(--wr-ink);
-}
-
-.water-review__day-done {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: var(--wr-ok);
-  color: var(--color-white, #fff);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .water-review__hint {
   margin-top: 10px;
   padding: 10px 11px;
