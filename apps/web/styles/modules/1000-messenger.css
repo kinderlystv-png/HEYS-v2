@@ -1368,7 +1368,13 @@ button.messenger-day-checklist__chip:active {
   z-index: 8;
   display: grid;
   place-items: center;
-  padding: 30px;
+  /* Поля 14 и потолок 347 — по кадрам «удаление сообщения» и «согласие на
+     расшифровку»: оба рисуют карточку 347 px с полями 14. Стояли 30 и 320,
+     то есть 315 на экране 375 — на 32 px уже кадра, и текст переносился на
+     строку больше. Числа нигде не были названы строкой контракта: потолок
+     нужен на широких экранах, чтобы карточка не растягивалась, поэтому он
+     поднят до ширины кадра, а не снят. */
+  padding: 14px;
   background: var(--scrim, rgba(42, 26, 12, 0.5));
   -webkit-backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
   backdrop-filter: blur(var(--v4-modal-backdrop-blur, 2.5px));
@@ -1377,7 +1383,7 @@ button.messenger-day-checklist__chip:active {
 .messenger-consent-dialog,
 .messenger-confirm-dialog {
   width: 100%;
-  max-width: 320px;
+  max-width: 347px;
   padding: 22px 18px 18px;
   border-radius: 26px;
   background: var(--v4-bg, #fffaf1);
