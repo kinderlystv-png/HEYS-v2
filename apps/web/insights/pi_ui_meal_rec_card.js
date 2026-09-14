@@ -173,6 +173,15 @@
     // [PLANNER, [MEALREC, [mps, [wave, [chrono, [workout, [HEYS.mealRec.
     const PLANNER_LOG_BUFFER_SIZE = 400;
     const plannerLogBuffer = [];
+    function pluralVariants(count) {
+        const n = Math.abs(Number(count)) || 0;
+        const mod10 = n % 10;
+        const mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return 'вариант';
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'варианта';
+        return 'вариантов';
+    }
+
     function isMealRecDebugEnabled() {
         try {
             return global.__HEYS_MEALREC_DEBUG__ === true
@@ -2698,7 +2707,7 @@
                         setShowProductsModal(true);
                     }
                 }, displayProductCount > 0
-                    ? `Выбрать продукты · ${displayProductCount} вариантов`
+                    ? `Выбрать продукты · ${displayProductCount} ${pluralVariants(displayProductCount)}`
                     : 'Выбрать продукты'),
 
                 h('div', { className: 'meal-rec-card__footer' },
@@ -2919,7 +2928,7 @@
                     onClick: (e) => { e.stopPropagation(); setShowProductsModal(true); }
                 },
                     displayProductCount > 0
-                        ? 'Выбрать продукты · ' + displayProductCount + ' вариантов'
+                        ? 'Выбрать продукты · ' + displayProductCount + ' ' + pluralVariants(displayProductCount)
                         : 'Выбрать продукты',
                     h('span', { className: 'meal-rec-v4__cta-chevron', 'aria-hidden': 'true' }, '›')
                 ),

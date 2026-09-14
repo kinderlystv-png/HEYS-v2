@@ -138,7 +138,20 @@
      * @param {string} time - "HH:MM" format
      * @returns {number} - hours as decimal (e.g., 18.5 = 18:30)
      */
-    function parseTime(time) {
+    // Проза карточки «На сегодня всё»: строка контракта требует ФАКТ закрытой
+  // нормы, а не общее «цель практически выполнена». Кадр зоны пишет «Норму дня
+  // вы закрыли на 96 %»; процент считаем из тех же чисел, которыми считали
+  // остаток дня, и округляем вниз — «закрыли на 100 %» при 99,6 обещает больше,
+  // чем есть.
+  function dayClosedReason(eatenKcal, targetKcal) {
+    const target = Number(targetKcal) || 0;
+    const eaten = Number(eatenKcal) || 0;
+    if (target <= 0) return 'Дневная цель практически выполнена';
+    const pct = Math.floor((eaten / target) * 100);
+    return 'Норму дня вы закрыли на ' + Math.min(pct, 100) + ' %';
+  }
+
+  function parseTime(time) {
         if (!time || typeof time !== 'string') return 0;
         const [h, m] = time.split(':').map(Number);
         if (isNaN(h) || isNaN(m)) return 0;
@@ -1000,7 +1013,7 @@
                     meals: [],
                     summary: {
                         totalMeals: 0,
-                        reason: 'Дневная цель практически выполнена',
+                        reason: dayClosedReason(dayEaten.kcal, dayTarget.kcal),
                         decision: 'FINISH_DAY',
                         reasonCode: 'GOAL_REACHED',
                         topFactors: [`Остаток дня ${Math.round(rawQuickBudgetKcal)} ккал`],
@@ -1231,7 +1244,7 @@
                 meals: [],
                 summary: {
                     totalMeals: 0,
-                    reason: 'Дневная цель практически выполнена',
+                    reason: dayClosedReason(dayEaten.kcal, dayTarget.kcal),
                     decision: 'FINISH_DAY',
                     reasonCode: 'GOAL_REACHED',
                     topFactors: [`Остаток меньше ${Math.round(remainingBudget.kcal)} ккал`],
