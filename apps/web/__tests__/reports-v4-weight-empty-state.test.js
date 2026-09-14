@@ -9,16 +9,18 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB = path.resolve(__dirname, '..');
 const STATS = fs.readFileSync(path.join(WEB, 'heys_day_stats_v1.js'), 'utf8');
 const CSS = fs.readFileSync(
   path.join(WEB, 'styles/modules/733-ui-v4-reports.css'), 'utf8');
 
-const rule = (selector) => {
-  const at = CSS.indexOf(selector + ' {');
-  expect(at, selector + ' — правила нет').toBeGreaterThan(-1);
-  return CSS.slice(at, CSS.indexOf('}', at));
-};
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
+const rule = (selector) => requireRule(CSS, selector).text;
 
 describe('рамка на месте кривой веса', () => {
   it('кривая живёт от трёх настоящих замеров, прогноз не в счёт', () => {

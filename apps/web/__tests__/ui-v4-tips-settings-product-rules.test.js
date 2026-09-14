@@ -6,21 +6,24 @@
 // и tips.v4.dc.html, строка «язык, выделение, часовой пояс».
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, beforeAll } from 'vitest';
+
 import React from 'react';
-import { createRoot } from 'react-dom/client';
 import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it, beforeAll } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const ADVICE_SRC_PATH = path.resolve(__dirname, '..', 'day/_advice.js');
 const WATER_CSS_PATH = path.resolve(__dirname, '..', 'styles/modules/400-water-and-hydration.css');
 const BASE_CSS_PATH = path.resolve(__dirname, '..', 'styles/modules/000-base-and-gamification.css');
 const APP_SHELL_PATH = path.resolve(__dirname, '..', 'heys_app_shell_v1.js');
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function ruleBlock(cssSource, selectorLine) {
-  const idx = cssSource.indexOf(selectorLine);
-  expect(idx, `selector "${selectorLine}" not found`).toBeGreaterThanOrEqual(0);
-  const close = cssSource.indexOf('}', idx);
-  return cssSource.slice(idx, close);
+  return requireRule(cssSource, selectorLine).text;
 }
 
 describe('tips: врезка нижней шторки советов (safe-area · правило продукта)', () => {

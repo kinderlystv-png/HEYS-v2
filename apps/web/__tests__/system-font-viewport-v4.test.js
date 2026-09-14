@@ -3,7 +3,10 @@
 // settings-system «нажатие и крупный шрифт» (местное: значение второй строкой).
 import fs from 'node:fs';
 import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const WEB = path.resolve(__dirname, '..');
 const INDEX = fs.readFileSync(path.join(WEB, 'index.html'), 'utf8');
@@ -17,11 +20,11 @@ const BASE_CSS = fs.readFileSync(
 );
 const CRITICAL_CSS = fs.readFileSync(path.join(WEB, 'styles/critical.css'), 'utf8');
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function ruleBlock(cssSource, selectorLine) {
-  const idx = cssSource.indexOf(selectorLine);
-  expect(idx, `selector "${selectorLine}" not found`).toBeGreaterThanOrEqual(0);
-  const close = cssSource.indexOf('}', idx);
-  return cssSource.slice(idx, close);
+  return requireRule(cssSource, selectorLine).text;
 }
 
 describe('viewport: pinch-zoom не блокируется (index.html)', () => {

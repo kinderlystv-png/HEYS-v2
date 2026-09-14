@@ -4,7 +4,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
+
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = path.resolve(WEB_DIR, '..', '..');
@@ -52,15 +55,10 @@ function readContractLine(canvasPath, key) {
 // .date-picker--v4 .date-picker-trigger`, и поиск по подстроке брал первое
 // совпадение — чужое правило с одной лишь тенью. Проверка падала на пустой
 // строке вместо 44px, то есть указывала не на тот файл и не на ту строку.
-// Ненайденное правило теперь роняет тест с именем селектора: молчаливая
-// пустая строка означала «не смотрели», а выглядела как «не сошлось».
+// Ненайденное правило роняет тест с именем селектора: молчаливая пустая
+// строка означала «не смотрели», а выглядела как «не сошлось».
 function ruleBlock(css, selector) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = css.match(new RegExp(`^[ \\t]*${escaped}\\s*\\{([^}]*)\\}`, 'm'));
-  if (!match) {
-    throw new Error(`правило «${selector}» не найдено — селектор переименован или вынесен`);
-  }
-  return match[1];
+  return requireRule(css, selector).body;
 }
 
 function prop(block, name) {

@@ -8,6 +8,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const ROOT = path.resolve(__dirname, '../../..');
 const CANVAS = fs.readFileSync(
   path.join(
@@ -20,14 +22,16 @@ const TOUR = fs.readFileSync(path.join(ROOT, 'apps/web/heys_ui_onboarding_v1.js'
 const CSS = fs.readFileSync(path.join(ROOT, 'apps/web/styles/heys-components.css'), 'utf8');
 const UNDO = fs.readFileSync(path.join(ROOT, 'apps/web/heys_undo_v1.js'), 'utf8');
 
+// Стиль канваса минифицирован, правила разделены `}`. Класс ищется с начала
+// селектора, а не подстрокой: иначе `.a .tip{` и `.x.tip{` сошли бы за `.tip`.
+// Ненайденное роняет тест с именем класса: пустая строка читалась как «не
+// сошлось», а означала «не смотрели».
 const canvasRule = (cls) => {
-  const m = CANVAS.match(new RegExp(`\\.${cls}\\{([^}]*)\\}`));
-  return m ? m[1] : '';
+  const m = CANVAS.match(new RegExp(`(?:^|[}\\s;,])\\.${cls}\\{([^}]*)\\}`));
+  if (!m) throw new Error(`класса «.${cls}» нет в <style> канваса`);
+  return m[1];
 };
-const productRule = (selector) => {
-  const at = CSS.indexOf(`\n${selector} {`);
-  return at < 0 ? '' : CSS.slice(at, CSS.indexOf('}', at));
-};
+const productRule = (selector) => requireRule(CSS, selector).text;
 const frameText = (label) => {
   const m = CANVAS.match(new RegExp(`<b>${label} · текст</b><span data-v="([^"]*)"`));
   return m ? m[1].split(' › ') : [];

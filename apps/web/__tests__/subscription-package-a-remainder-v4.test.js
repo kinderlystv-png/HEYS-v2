@@ -4,7 +4,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
+
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BASE_CSS = fs.readFileSync(
@@ -33,10 +36,12 @@ function injectCss(cssText) {
   return style;
 }
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function extractRule(cssText, selector) {
-  const re = new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`);
-  const match = cssText.match(re);
-  return match?.[1] || '';
+  return requireRule(cssText, selector).body;
 }
 
 describe('subscription package A remainder · static position', () => {

@@ -9,6 +9,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { findRule } from './helpers/css-rule.mjs';
+
 const ROOT = path.resolve(__dirname, '../../..');
 const CANVAS = fs.readFileSync(
   path.join(
@@ -38,9 +40,12 @@ function followupStep() {
   return from >= 0 && to > from ? STEPS.slice(from, to) : '';
 }
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком (helpers/css-rule). Прежний анкер по
+// переводу строки не видел правил с отступом и молча отдавал null. `null`
+// здесь осмысленный: проверки ниже требуют, чтобы правила не было вовсе.
 function rule(selector) {
-  const at = CSS.indexOf(`\n${selector} {`);
-  return at < 0 ? null : CSS.slice(at, CSS.indexOf('}', at));
+  return findRule(CSS, selector)?.text ?? null;
 }
 
 describe('резервный вопрос после еды', () => {

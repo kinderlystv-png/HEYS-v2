@@ -1,9 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import React from 'react';
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const BUILDER = fs.readFileSync(path.join(WEB_DIR, 'strength/heys_strength_builder_ui_v1.js'), 'utf8');
@@ -32,12 +35,12 @@ function paletteCss(palette) {
     .replaceAll('var(--ink)', '0, 0, 0');
 }
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function cssRule(selector) {
-  const marker = `${selector} {`;
-  const start = CSS.indexOf(marker);
-  expect(start, `missing CSS rule ${selector}`).toBeGreaterThan(-1);
-  const end = CSS.indexOf('}', start);
-  return CSS.slice(start, end + 1);
+  return requireRule(CSS, selector).text;
 }
 
 function loadExerciseCardScreen() {

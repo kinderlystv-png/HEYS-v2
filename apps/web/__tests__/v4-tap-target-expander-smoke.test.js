@@ -7,14 +7,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render } from '@testing-library/react';
 
 import {
   effectiveTouchSize,
   parsePseudoPaddingExpand,
 } from '../../../scripts/ui-v4-check-touch-target-visible.mjs';
+
+import { requireRule } from './helpers/css-rule.mjs';
+
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CSS_730 = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8');
@@ -24,16 +27,16 @@ const PALETTE = fs.readFileSync(path.join(WEB_DIR, 'styles/modules/002-ui-v4-pal
 
 const MIN = 44;
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function ruleBlock(css, selector) {
-  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = css.match(new RegExp(`${esc}\\s*\\{([^}]*)\\}`, 's'));
-  return m?.[1] || '';
+  return requireRule(css, selector).body;
 }
 
 function afterBlock(css, host) {
-  const esc = host.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const m = css.match(new RegExp(`${esc}::after\\s*\\{([^}]*)\\}`, 's'));
-  return m?.[1] || '';
+  return requireRule(css, `${host}::after`).body;
 }
 
 function parsePx(value) {
@@ -140,7 +143,6 @@ describe('v4 tap-target expander smoke', () => {
   it('cal-cell · сетка gap 4 px не даёт 44 без перекрытия соседа', () => {
     const cellBlock = ruleBlock(CSS_BASE, '.cal-cell');
     const visibleH = visibleAxis(cellBlock, 'height') || 24;
-    const visibleW = 42;
     const need = (MIN - visibleH) / 2;
     const gridGap = 4;
     expect(need).toBeGreaterThan(gridGap / 2);

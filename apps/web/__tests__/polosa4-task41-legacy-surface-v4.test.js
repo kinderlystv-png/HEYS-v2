@@ -5,7 +5,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
+
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -47,12 +50,12 @@ const EXPECT = Object.freeze({
   },
 });
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function ruleBlock(css, selector) {
-  const start = css.indexOf(selector);
-  if (start < 0) return '';
-  const brace = css.indexOf('{', start);
-  const end = css.indexOf('}', brace);
-  return css.slice(brace + 1, end);
+  return requireRule(css, selector).body;
 }
 
 function normColor(value) {

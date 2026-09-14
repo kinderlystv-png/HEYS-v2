@@ -14,10 +14,13 @@
 
 import fs from 'fs';
 import path from 'path';
-import React from 'react';
 import { fileURLToPath } from 'url';
-import { afterEach, describe, expect, it } from 'vitest';
+
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,10 +31,11 @@ const CSS = fs.readFileSync(
 );
 const TRAININGS_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_day_trainings_v1.js'), 'utf8');
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function rule(selector) {
-  const at = CSS.indexOf(selector + ' {');
-  expect(at, selector).toBeGreaterThan(-1);
-  return CSS.slice(at, CSS.indexOf('}', at));
+  return requireRule(CSS, selector).text;
 }
 
 const ap = (id, w, r, done) => ({ id, weightKg: String(w), reps: r, done: !!done });

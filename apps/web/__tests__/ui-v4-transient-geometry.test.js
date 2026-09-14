@@ -6,6 +6,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const ROOT = path.resolve(__dirname, '../../..');
 const componentsCss = fs.readFileSync(path.join(ROOT, 'apps/web/styles/heys-components.css'), 'utf8');
 const bootCss = fs.readFileSync(path.join(ROOT, 'apps/web/styles/heys-boot-mark.css'), 'utf8');
@@ -13,17 +15,12 @@ const undoSource = fs.readFileSync(path.join(ROOT, 'apps/web/heys_undo_v1.js'), 
 const waitSource = fs.readFileSync(path.join(ROOT, 'apps/web/heys_loading_progress_v1.js'), 'utf8');
 const indexSource = fs.readFileSync(path.join(ROOT, 'apps/web/index.html'), 'utf8');
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function cssRule(source, selector) {
-  const start = source.indexOf(selector);
-  if (start < 0) throw new Error(`CSS rule not found: ${selector}`);
-  let depth = 0;
-  for (let index = source.indexOf('{', start); index < source.length; index += 1) {
-    if (source[index] === '{') depth += 1;
-    if (source[index] !== '}') continue;
-    depth -= 1;
-    if (depth === 0) return source.slice(start, index + 1);
-  }
-  throw new Error(`Unclosed CSS rule: ${selector}`);
+  return requireRule(source, selector).text;
 }
 
 function installRules(...rules) {

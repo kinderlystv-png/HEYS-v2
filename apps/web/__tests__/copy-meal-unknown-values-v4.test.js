@@ -11,6 +11,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { findRule } from './helpers/css-rule.mjs';
+
 const ROOT = path.resolve(__dirname, '../../..');
 const SRC = fs.readFileSync(
   path.join(ROOT, 'apps/web/heys_day_copy_meal_modal_v1.js'),
@@ -28,9 +30,12 @@ const CANVAS = fs.readFileSync(
   'utf8',
 );
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком (helpers/css-rule). Прежний анкер по
+// переводу строки не видел правил с отступом и молча отдавал null. `null`
+// здесь осмысленный: проверки ниже требуют, чтобы правила не было вовсе.
 function rule(selector) {
-  const at = CSS.indexOf(`\n${selector} {`);
-  return at < 0 ? null : CSS.slice(at, CSS.indexOf('}', at));
+  return findRule(CSS, selector)?.text ?? null;
 }
 
 /** Тело классификатора состояний. */

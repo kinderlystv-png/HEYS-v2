@@ -12,10 +12,13 @@
 
 import fs from 'fs';
 import path from 'path';
-import React from 'react';
 import { fileURLToPath } from 'url';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,10 +61,11 @@ function renderCard(props) {
   }));
 }
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function rule(selector) {
-  const at = CSS.indexOf(selector + ' {');
-  expect(at, selector).toBeGreaterThan(-1);
-  return CSS.slice(at, CSS.indexOf('}', at));
+  return requireRule(CSS, selector).text;
 }
 
 afterEach(() => cleanup());

@@ -17,6 +17,8 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const read = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 const SHELL_SRC = read(path.join(WEB_DIR, 'heys_app_shell_v1.js'));
@@ -25,10 +27,11 @@ const CRON_SRC = read(
     path.resolve(WEB_DIR, '../../yandex-cloud-functions/heys-cron-reminders/index.js'),
 );
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function ruleBlock(css, selectorLine) {
-    const idx = css.indexOf(selectorLine);
-    expect(idx, `selector "${selectorLine}" not found`).toBeGreaterThanOrEqual(0);
-    return css.slice(idx, css.indexOf('}', idx));
+    return requireRule(css, selectorLine).text;
 }
 
 function slice(src, startMarker, endMarker) {

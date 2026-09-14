@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const CANVAS = path.resolve(
   __dirname,
   '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/home-widgets.v4.dc.html',
@@ -17,13 +19,16 @@ function contractValue(html, key) {
   return match?.[1] || '';
 }
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function cssRule(css, selector) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return css.match(new RegExp(`${escaped}\\s*\\{([\\s\\S]*?)\\}`))?.[1] || '';
+  return requireRule(css, selector).body;
 }
 
 function loadGoalBar(uiSource) {
-  const source = uiSource.match(/function v4GoalBar\(pct, tone\) \{[\s\S]*?\n  \}/)?.[0];
+  const source = uiSource.match(/function v4GoalBar\(pct, tone\) \{[\s\S]*?\n {2}\}/)?.[0];
   expect(source).toBeTruthy();
   const React = {
     createElement(type, props, ...children) {

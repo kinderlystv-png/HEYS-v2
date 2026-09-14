@@ -4,18 +4,22 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
+
+import { eachRule } from './helpers/css-rule.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило (helpers/css-rule). `null` здесь осмысленный: три проверки
+// ниже требуют, чтобы правила не было вовсе, — его и возвращаем.
 function rule(css, selector) {
-  const needle = `${selector} {`;
-  let at = 0;
-  while ((at = css.indexOf(needle, at)) >= 0) {
-    const block = css.slice(at, css.indexOf('}', at));
+  for (const hit of eachRule(css, selector)) {
+    const block = `${selector} {${hit.body}`;
     if (!/display:\s*none/.test(block) || block.length > 48) return block;
-    at += needle.length;
   }
   return null;
 }

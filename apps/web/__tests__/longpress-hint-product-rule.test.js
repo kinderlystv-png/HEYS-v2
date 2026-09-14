@@ -11,6 +11,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const UI = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const CSS = fs.readFileSync(
@@ -25,11 +27,11 @@ const CANVAS = fs.readFileSync(
   'utf8',
 );
 
-/** Кусок правила CSS по селектору. */
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function rule(selector) {
-  const at = CSS.indexOf(selector + ' {');
-  expect(at, 'нет правила ' + selector).toBeGreaterThan(-1);
-  return CSS.slice(at, CSS.indexOf('}', at));
+  return requireRule(CSS, selector).text;
 }
 
 describe('обучение · правило продукта — подсказка про долгий тап', () => {

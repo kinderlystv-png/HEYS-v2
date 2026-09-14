@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const ROOT = path.resolve(__dirname, '../../..');
 const CANVAS = path.join(
   ROOT,
@@ -23,14 +25,12 @@ function contractRows() {
   );
 }
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function rule(source, selector) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = source.match(new RegExp(`${escaped}(?=\\s|\\{)`));
-  const start = match?.index ?? -1;
-  expect(start, `CSS selector ${selector}`).toBeGreaterThanOrEqual(0);
-  const end = source.indexOf('}', start);
-  expect(end, `closing brace for ${selector}`).toBeGreaterThan(start);
-  return source.slice(start, end + 1);
+  return requireRule(source, selector).text;
 }
 
 const REVIEWED_DATA_ROWS = [

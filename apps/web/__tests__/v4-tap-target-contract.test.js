@@ -16,7 +16,10 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
 import { describe, expect, it } from 'vitest';
+
+import { findRule } from './helpers/css-rule.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(join(root, rel), 'utf8');
@@ -43,12 +46,11 @@ function rule(css, selector) {
 function afterRule(css, host) {
   const direct = rule(css, `${host}::after`);
   if (direct) return direct;
-  const needle = `${host}::after`;
-  const at = css.indexOf(needle);
-  if (at < 0) return null;
-  const brace = css.indexOf('{', at);
-  if (brace < 0) return null;
-  return css.slice(at, css.indexOf('}', brace));
+  // Запасной путь искал подстрокой и брал первое совпадение — то есть чужое
+  // правило, если тот же `::after` есть у более длинного селектора с предком.
+  // Общий помощник находит член группы по якорю (helpers/css-rule).
+  const hit = findRule(css, `${host}::after`);
+  return hit ? hit.text : null;
 }
 
 const cases = [

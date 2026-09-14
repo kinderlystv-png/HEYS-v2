@@ -9,6 +9,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { compare, coverage, readRazbor, readRules } from './canvas-razbor-helpers.js';
+import { requireRule } from './helpers/css-rule.mjs';
 
 const canvasPath = path.resolve(
   __dirname,
@@ -35,9 +36,14 @@ function canvasRule(className) {
 }
 
 // Значение свойства из продуктового CSS-блока по имени класса.
+// Класс ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем класса: пустой блок читался
+// как «не сошлось», а означал «не смотрели» (helpers/css-rule). Групповое
+// правило находится по любому своему члену, поэтому регулярка в имени класса
+// больше не нужна.
 function cssBlock(css, selector) {
-  const m = css.match(new RegExp('\\.' + selector + '\\s*\\{([^}]*)\\}'));
-  return m ? m[1] : null;
+  return requireRule(css, '.' + selector).body;
 }
 
 function prop(block, name) {
@@ -973,11 +979,11 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
     expect(stats).toContain('HEYS.DisciplineMatrix.hasAnyData');
     expect(stats).toContain("row.filledDays + ' из 7'");
     // вид: колонки 56 / 40 / 26, пилюля, разделители
-    const kcal = cssBlock(reportsCss, 'reports-v4-weeks__head-kcal,\\s*\\n\\.reports-v4-weeks__kcal');
+    const kcal = cssBlock(reportsCss, 'reports-v4-weeks__kcal');
     expect(prop(kcal, 'width')).toBe('56px');
-    const weight = cssBlock(reportsCss, 'reports-v4-weeks__head-weight,\\s*\\n\\.reports-v4-weeks__weight');
+    const weight = cssBlock(reportsCss, 'reports-v4-weeks__weight');
     expect(prop(weight, 'width')).toBe('40px');
-    const score = cssBlock(reportsCss, 'reports-v4-weeks__head-score,\\s*\\n\\.reports-v4-weeks__score');
+    const score = cssBlock(reportsCss, 'reports-v4-weeks__score');
     expect(prop(score, 'width')).toBe('26px');
     const wrap = cssBlock(reportsCss, 'reports-v4-weeks');
     expect(prop(wrap, 'border-radius')).toBe('20px');
@@ -1456,7 +1462,7 @@ describe('Отчёты и Инсайты v4 — сверка с канвасом
     expect(stats).toContain("' плановых'");
     expect(stats).toContain("reports-v4-weeks__score' + (row.score == null ? ' is-empty'");
     expect(stats).toContain('те, что вы сами отметили «не заполнял»');
-    const empty = cssBlock(reportsCss, 'reports-v4-weeks__score\\.is-empty');
+    const empty = cssBlock(reportsCss, 'reports-v4-weeks__score.is-empty');
     expect(prop(empty, 'color')).toContain('v4-ink-30');
   });
 

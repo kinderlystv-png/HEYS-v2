@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const shellSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_app_shell_v1.js'), 'utf8');
 const gamificationSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_gamification_bar_v1.js'), 'utf8');
@@ -193,11 +195,9 @@ describe('UI v4 Prompt 3b — шапка', () => {
     // поверхность: до сведения створка была на второй (#efe3cf) и читалась
     // отдельным блоком, а не продолжением списка.
     it('диагностика: карточка той же поверхности и радиуса, что ярусы', () => {
-        const rule = (css, selector) => {
-            const at = css.indexOf(selector + ' {');
-            expect(at, selector + ' должен существовать').toBeGreaterThan(-1);
-            return css.slice(at, css.indexOf('}', at));
-        };
+        // Селектор ищется от начала строки, а не подстрокой: короткий селектор
+        // целиком лежит внутри длинного с предком (helpers/css-rule).
+        const rule = (css, selector) => requireRule(css, selector).text;
         const tier = rule(baseCss, '.hdr-settings-sheet__group');
         const diag = rule(baseCss, '.hdr-settings-sheet__diag-panel');
         const bg = (block) => block.match(/background:s*([^;]+);/)?.[1]?.trim();

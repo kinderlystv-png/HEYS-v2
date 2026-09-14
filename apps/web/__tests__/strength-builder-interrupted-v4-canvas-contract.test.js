@@ -1,20 +1,22 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.resolve(HERE, '..');
 const source = fs.readFileSync(path.join(WEB, 'strength/heys_strength_builder_ui_v1.js'), 'utf8');
 const css = fs.readFileSync(path.join(WEB, 'styles/modules/750-strength-builder.css'), 'utf8');
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function cssRule(selector) {
-  const marker = `${selector} {`;
-  const start = css.indexOf(marker);
-  expect(start, `missing CSS rule ${selector}`).toBeGreaterThan(-1);
-  const end = css.indexOf('}', start);
-  expect(end, `unterminated CSS rule ${selector}`).toBeGreaterThan(start);
-  return css.slice(start, end + 1);
+  return requireRule(css, selector).text;
 }
 
 describe('strength builder · M7 interrupted-session v4 canvas contract', () => {

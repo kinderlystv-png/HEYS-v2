@@ -21,6 +21,8 @@ import { fireEvent, render } from '@testing-library/react';
 import * as RealReact from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const widgetsCss = fs
   .readFileSync(path.join(WEB_DIR, 'styles/modules/730-widgets-dashboard.css'), 'utf8')
@@ -31,12 +33,11 @@ const gameCss = fs
 const gameBarSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_gamification_bar_v1.js'), 'utf8');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function ruleBlock(cssSource, selectorLine) {
-  const idx = cssSource.indexOf(selectorLine);
-  expect(idx, `selector "${selectorLine}" not found`).toBeGreaterThanOrEqual(0);
-  const close = cssSource.indexOf('}', idx);
-  expect(close, `rule block for "${selectorLine}" not closed`).toBeGreaterThan(idx);
-  return cssSource.slice(idx, close);
+  return requireRule(cssSource, selectorLine).text;
 }
 
 const originalReact = globalThis.React;

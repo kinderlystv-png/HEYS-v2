@@ -12,7 +12,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,10 +33,11 @@ function nextLineBody() {
   return TRAININGS_SRC.slice(start, end > start ? end : start + 3000);
 }
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function rule(selector) {
-  const at = CSS.indexOf(selector + ' {');
-  expect(at, selector).toBeGreaterThan(-1);
-  return CSS.slice(at, CSS.indexOf('}', at));
+  return requireRule(CSS, selector).text;
 }
 
 describe('Строка «Следующая тренировка» говорит и когда, и что', () => {

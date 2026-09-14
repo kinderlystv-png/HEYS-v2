@@ -12,7 +12,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
 import { describe, expect, it } from 'vitest';
+
+import { requireRule } from './helpers/css-rule.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,17 +26,16 @@ const CSS = fs.readFileSync(
 );
 const ACTIVITY_SRC = fs.readFileSync(path.join(WEB_DIR, 'heys_day_activity_v1.js'), 'utf8');
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function rule(selector) {
-  const at = CSS.indexOf(selector + ' {');
-  expect(at, selector).toBeGreaterThan(-1);
-  return CSS.slice(at, CSS.indexOf('}', at));
+  return requireRule(CSS, selector).text;
 }
 
 /** Позиция правила в файле — при равной специфичности выигрывает последнее. */
 function at(selector) {
-  const i = CSS.indexOf(selector + ' {');
-  expect(i, selector).toBeGreaterThan(-1);
-  return i;
+  return requireRule(CSS, selector).start;
 }
 
 describe('Ноль шагов приглушён целиком', () => {

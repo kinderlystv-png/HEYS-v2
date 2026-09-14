@@ -28,6 +28,8 @@ import { act, render } from '@testing-library/react';
 import * as RealReact from 'react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const uiSrc = fs.readFileSync(path.join(WEB_DIR, 'heys_widgets_ui_v1.js'), 'utf8');
 const widgetsCss = fs.readFileSync(
@@ -91,14 +93,14 @@ function stubHeys(state) {
 }
 
 /** Правило CSS по селектору: последнее объявление свойства в блоке. */
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
 function cssProp(selector, prop) {
-  const block = new RegExp(
-    `${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`,
-  ).exec(widgetsCss);
-  if (!block) return null;
   // Комментарии внутри блока убираем: иначе объявление сразу после комментария
   // не опознаётся как начало строки.
-  const body = block[1].replace(/\/\*[\s\S]*?\*\//g, ';');
+  const body = requireRule(widgetsCss, selector).body.replace(/\/\*[\s\S]*?\*\//g, ';');
   const values = [...body.matchAll(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, 'g'))];
   return values.length ? values[values.length - 1][1].trim() : null;
 }

@@ -3,6 +3,8 @@ import path from 'path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const WEB_DIR = path.resolve(__dirname, '..');
 const CASCADE_PATH = path.join(WEB_DIR, 'heys_cascade_card_v1.js');
 const CASCADE_SOURCE = fs.readFileSync(CASCADE_PATH, 'utf8');
@@ -18,10 +20,11 @@ function loadCascadeCard() {
   return window.HEYS.CascadeCard;
 }
 
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора (helpers/css-rule).
 function rule(selector) {
-  const start = CSS.indexOf(selector + ' {');
-  expect(start, selector).toBeGreaterThan(-1);
-  return CSS.slice(start, CSS.indexOf('}', start));
+  return requireRule(CSS, selector).text;
 }
 
 beforeEach(() => {

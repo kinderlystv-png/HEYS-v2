@@ -15,6 +15,7 @@ import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { eachRule, requireRule } from './helpers/css-rule.mjs';
 import { sliceDatePickerProbeCss } from './helpers/date-picker-probe-css.mjs';
 
 const WEB_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -53,14 +54,13 @@ function contractRows() {
   );
 }
 
+// Якорь на начало строки: у той же цели бывают правила с предком —
+// `.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav` держит
+// тень плавающего ряда. Без якоря тест мерил бы чужой блок и падал на правке,
+// которая тач-целей не касается. Ненайденное роняет тест с именем селектора:
+// пустая строка читалась как «не сошлось», а означала «не смотрели».
 function ruleBlock(selector) {
-  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // Якорь на начало строки: у той же цели бывают правила с предком —
-  // `.hdr-sticky-strip.is-pinned .date-picker--v4 .date-picker-day-nav` держит
-  // тень плавающего ряда. Без якоря тест мерил бы чужой блок и падал на
-  // правке, которая тач-целей не касается.
-  const match = BASE_CSS.match(new RegExp(`^${esc}\\s*\\{[^}]+\\}`, 'm'));
-  return match ? match[0] : '';
+  return requireRule(BASE_CSS, selector).text;
 }
 
 function mountPalette(themeId) {
@@ -171,10 +171,9 @@ describe('polosa6 task106 · date-remainders touch 44px visible', () => {
       '.date-picker--v4 .date-picker-trigger--night',
       '.date-picker--v4 .date-picker-trigger--not-today',
     ]) {
-      const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const blocks = [
-        ...BASE_CSS.matchAll(new RegExp(`${esc}\\s*\\{([^}]*)\\}`, 'g')),
-      ].map((m) => m[1]);
+      // Тот же якорь, что и выше: перечень блоков собирался подстрокой и
+      // втягивал правила с предком — их `min-height` считалась своей.
+      const blocks = [...eachRule(BASE_CSS, selector)].map((hit) => hit.body);
       // Блок в @media (max-width: 640px) — тот, что действует на 375 px.
       // Без него правка верхнего блока не доезжает до экрана.
       const withMinHeight = blocks.filter((body) => /min-height:\s*44px/.test(body));

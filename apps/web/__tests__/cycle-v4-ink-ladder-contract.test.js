@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const read = (file) => fs.readFileSync(path.resolve(__dirname, file), 'utf8').replace(/\r\n/g, '\n');
 const DAILY_CSS = read('../styles/modules/500-pwa-and-offline.css');
 const BASE_CSS = read('../styles/modules/000-base-and-gamification.css');
@@ -10,10 +12,11 @@ const REPORTS_CSS = read('../styles/modules/733-ui-v4-reports.css');
 const STATS_UI = read('../heys_day_stats_v1.js');
 const CYCLE_UI = read('../heys_cycle_ui_v1.js');
 
-const rule = (css, selector) => {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return css.match(new RegExp(`${escaped}\\s*\\{([\\s\\S]*?)\\}`))?.[1] || '';
-};
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал первое совпадение —
+// чужое правило. Ненайденное роняет тест с именем селектора: пустая строка
+// читалась как «не сошлось», а означала «не смотрели» (helpers/css-rule).
+const rule = (css, selector) => requireRule(css, selector).body;
 
 describe('cycle v4 · data ink ladder', () => {
   it.each([

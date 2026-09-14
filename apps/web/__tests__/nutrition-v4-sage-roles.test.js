@@ -19,6 +19,8 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { requireRule } from './helpers/css-rule.mjs';
+
 const HANDOFF = path.resolve(
   __dirname,
   '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4',
@@ -73,13 +75,13 @@ function paletteSets() {
 }
 
 // Какую роль правило кладёт в свойство: var(--роль, запасное) → «--роль».
+// Селектор ищется от начала строки, а не подстрокой: короткий селектор целиком
+// лежит внутри длинного с предком, и поиск подстрокой брал чужое правило
+// (helpers/css-rule).
 function roleOf(css, selector, prop) {
   const clean = css.replace(/\/\*[\s\S]*?\*\//g, '');
-  const block = clean.match(
-    new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^{}]*)\\}`),
-  );
-  expect(block, `правило ${selector} не найдено`).not.toBeNull();
-  const decl = new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*var\\(\\s*(--[a-z0-9-]+)`, 'i').exec(block[1]);
+  const block = requireRule(clean, selector).body;
+  const decl = new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*var\\(\\s*(--[a-z0-9-]+)`, 'i').exec(block);
   expect(decl, `${selector} { ${prop} } не берёт роль`).not.toBeNull();
   return decl[1];
 }
