@@ -164,6 +164,23 @@
     return derived;
   }
   /**
+   * Разбор сырой строки из localStorage. Значения длиннее 384 символов Store
+   * кладёт сжатыми, с префиксом ¤Z¤, и голый JSON.parse на них падает —
+   * исключение уходит в catch, наружу возвращается значение по умолчанию, и UI
+   * видит пустой профиль там, где данные есть. Одна и та же ошибка в проекте
+   * всплывала уже не раз (см. Store.readSafe в heys_storage_layer_v1.js).
+   * @param {string} raw
+   * @returns {*}
+   */
+  function parseStoredRaw(raw) {
+    if (typeof raw === 'string' && raw.startsWith('¤Z¤')) {
+      const decompress = window.HEYS?.store?.decompress;
+      if (typeof decompress === 'function') return decompress(raw);
+    }
+    return JSON.parse(raw);
+  }
+
+  /**
    * Получение данных из localStorage с JSON парсингом
    * Использует HEYS.store.get для scoped-ключей (с clientId) если доступен
    * @param {string} key - Ключ для чтения
@@ -212,12 +229,12 @@
           const scopedKey = `heys_${clientId}_${keyPart}`;
           const scopedV = localStorage.getItem(scopedKey);
           if (scopedV) {
-            return JSON.parse(scopedV);
+            return parseStoredRaw(scopedV);
           }
         }
       }
       const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : def;
+      return v ? parseStoredRaw(v) : def;
     } catch (e) {
       return def;
     }

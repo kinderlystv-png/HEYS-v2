@@ -210,6 +210,34 @@
 
   function ns() { return (global.HEYS && global.HEYS.currentClientId) || ''; }
 
+  // Клиент выбран, но HEYS.currentClientId ещё не проставлен — так выглядит окно
+  // загрузки страницы: выбор клиента лежит в heys_client_current, а глобал
+  // выставляет auth-init чуть позже. Обёртка HEYS.utils.lsGet в этом окне клиента
+  // из хранилища берёт, а Store — нет, и два читателя одного и того же профиля
+  // расходятся по разным слотам: обёртка читает heys_<cid>_profile, Store —
+  // heys_profile. Наружу это выходило разной нормой воды на двух экранах: карточка
+  // «Питания» берёт профиль через обёртку, плитка Главной — через Store, и вторая
+  // уезжала на запасные 70 кг.
+  //
+  // Только LS-слот. Выгрузка в облако (saveClientKey ниже) по-прежнему смотрит на
+  // ns(): до авторизации писать в облако нечего, а окно загрузки — не тот момент,
+  // когда стоит заводить новые выгрузки.
+  let selectionCacheRaw = null;
+  let selectionCacheValue = '';
+  function storedClientSelection() {
+    try {
+      const raw = global.localStorage && global.localStorage.getItem('heys_client_current');
+      if (!raw) return '';
+      if (raw === selectionCacheRaw) return selectionCacheValue;
+      const parsed = JSON.parse(raw);
+      selectionCacheRaw = raw;
+      selectionCacheValue = typeof parsed === 'string' ? parsed : '';
+      return selectionCacheValue;
+    } catch (_) {
+      return '';
+    }
+  }
+
   // ────────────────────────────────────────────────────────────────────────
   // 🔍 POLLUTION-TRACE (added 2026-06-01 incident 3): instrument write paths
   // и switchClient lifecycle, чтобы при следующем pollution-incident'е
@@ -262,7 +290,7 @@
     return (global.HEYS.__pollutionTrace || []).slice(-100);
   };
   function scoped(k) {
-    const cid = ns();
+    const cid = ns() || storedClientSelection();
     if (!cid) return k;
     // Non-client-data ключи (curator UI session: theme, widget_layout, whats_new и т.д.)
     // никогда не скоупим под currentClientId — иначе каждый client switch плодит
