@@ -6098,7 +6098,7 @@
 
         const addMeal = React.useCallback(async (options = {}) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Добавление приёма пищи недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Приём пищи не добавить — только чтение');
                 return;
             }
 
@@ -6344,7 +6344,7 @@
 
         const addProductToMeal = React.useCallback(async (mi, p, options = {}) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Добавление продуктов недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Продукты не добавить — только чтение');
                 return false;
             }
 
@@ -6508,7 +6508,7 @@
 
         const addProductsToMeal = React.useCallback(async (mi, entries, options = {}) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Добавление продуктов недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Продукты не добавить — только чтение');
                 return false;
             }
 
@@ -6780,7 +6780,7 @@
         const repeatYesterdayMeal = React.useCallback(async (mealIndex, yMeal) => {
             if (!yMeal || !(yMeal.items || []).length) return;
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Копирование продуктов недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Продукты не скопировать — только чтение');
                 return;
             }
             const cloned = await ensureDiaryItemsReadyForDayWrite(
@@ -6826,7 +6826,7 @@
                 return;
             }
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Добавление приёма недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Приём не добавить — только чтение');
                 return;
             }
             const itemIds = (meal.items || []).map((it) => it.id).filter(Boolean);
@@ -6973,7 +6973,7 @@
 
         const openAddProductForMeal = React.useCallback((target) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Добавление продукта недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Продукт не добавить — только чтение');
                 return;
             }
             const opts = (target && typeof target === 'object') ? target : { mealIndex: target };
@@ -7049,7 +7049,7 @@
 
         const copyItemsToMeal = React.useCallback(async (srcMealIndex, itemIds, dstMealIndex, targetDate, gramsMap) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Копирование продуктов недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Продукты не скопировать — только чтение');
                 return;
             }
             const tgtDate = targetDate || date;
@@ -7432,7 +7432,7 @@
                 getProductFromItem,
                 onPick: async ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
                     if (!HEYS.Paywall?.canWriteSync?.()) {
-                        HEYS.Paywall?.showBlockedToast?.('Перенос недоступен');
+                        HEYS.Paywall?.showBlockedToast?.('Продукт не перенести — только чтение');
                         return;
                     }
                     if (createNewMeal) {
@@ -7540,7 +7540,7 @@
                 getProductFromItem,
                 onPick: async ({ dstDate, dstMealIndex, dstMealId, createNewMeal }) => {
                     if (!HEYS.Paywall?.canWriteSync?.()) {
-                        HEYS.Paywall?.showBlockedToast?.('Копирование недоступно');
+                        HEYS.Paywall?.showBlockedToast?.('Продукт не скопировать — только чтение');
                         return;
                     }
                     if (createNewMeal) {
@@ -7597,7 +7597,7 @@
 
         const moveMealToDate = React.useCallback(async (srcMealId, destination = {}) => {
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Перенос приёма недоступен');
+                HEYS.Paywall?.showBlockedToast?.('Приём не перенести — только чтение');
                 return false;
             }
             const { dstDate, targetMode, dstMealId } = destination;

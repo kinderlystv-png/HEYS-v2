@@ -470,7 +470,7 @@
 
             // 🔒 Read-only gating
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Добавление воды недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Воду не добавить — только чтение');
                 return;
             }
 
@@ -575,7 +575,7 @@
             // 🔒 Read-only gating — тот же гейт, что у addWater: убавление
             // тоже меняет данные дня (контракт nutrition-tab, «убрать воду»).
             if (!HEYS.Paywall?.canWriteSync?.()) {
-                HEYS.Paywall?.showBlockedToast?.('Изменение воды недоступно');
+                HEYS.Paywall?.showBlockedToast?.('Воду не изменить — только чтение');
                 return;
             }
 
