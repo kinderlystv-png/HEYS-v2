@@ -922,13 +922,13 @@
         !isV4 && h('div', { className: 'insights-priority-actions__header' },
           h('span', { className: 'insights-priority-actions__icon' }, '⚡'),
           h('div', { className: 'insights-priority-actions__title' },
-            'Сделай сегодня',
+            'Что сделать сегодня',
             h('span', { className: 'insights-priority-actions__subtitle' },
               ` — топ ${list.length} ${list.length === 1 ? 'действие' : list.length < 5 ? 'действия' : 'действий'}`
             )
           )
         ),
-        isV4 && h('div', { className: 'insights-v4-tier' }, 'Сделай сегодня'),
+        isV4 && h('div', { className: 'insights-v4-tier' }, 'Что сделать сегодня'),
         h('div', { className: 'insights-priority-actions__list' },
           list.map((a, idx) =>
             h('div', {
@@ -2200,7 +2200,7 @@
       // Контракт «сделай сегодня»: пустое состояние блок не скрывает — якорь
       // вкладки не исчезает, одна строка-похвала без кнопок.
       return h('div', { className: 'insights-v4-hero' },
-        h('div', { className: 'insights-v4-tier' }, 'Сделай сегодня'),
+        h('div', { className: 'insights-v4-tier' }, 'Что сделать сегодня'),
         hasActions && phrase && h('p', { className: 'insights-v4-hero__phrase' }, phrase),
         hasActions
           ? h(PriorityActions, { actions: actions, variant: 'v4' })
@@ -3084,7 +3084,7 @@
     // «что откроется». Демо-режим и тур сняты — их работу делает этот экран.
     const INSIGHTS_V4_LADDER = [
       { day: 3, text: 'первые предупреждения — уже работают' },
-      { day: 7, text: 'советы «Сделай сегодня» и наблюдения' },
+      { day: 7, text: 'советы «Что сделать сегодня» и наблюдения' },
       { day: 14, text: 'личные пороги, правила и «Что если»' },
       { day: 30, text: 'метаболический фенотип' }
     ];
