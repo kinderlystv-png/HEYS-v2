@@ -82,9 +82,9 @@
   "postboot-3-ui-lazy": {
     "file": "postboot-3-ui-lazy.bundle.2465f873c9ac.js",
     "hash": "2465f873c9ac",
-    "sourceFingerprint": "7fd746279f2e",
+    "sourceFingerprint": "05dd657c84f5",
     "fileCount": 72,
     "size": 5091791,
-    "builtAt": "2026-09-14T16:04:36.939Z"
+    "builtAt": "2026-09-14T18:13:53.268Z"
   }
 }
