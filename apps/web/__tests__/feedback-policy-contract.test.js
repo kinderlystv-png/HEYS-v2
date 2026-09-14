@@ -457,6 +457,11 @@ describe('политика отклика: вызовы не идут мимо �
       if (name === 'heys_audio_v1.js') continue;
       // Тренировочные таймеры остаются (см. отчёт): здесь только продуктовые экраны.
       if (name === 'heys_day_trainings_v1.js') continue;
+      // Фикстуры визуального стенда — не продуктовый экран. Микрофона у стенда
+      // нет, и поток для записи голосовой заметки он берёт из генератора тона:
+      // человек этого звука не слышит, переключатель звука к нему отношения не
+      // имеет. Правило про «звук мимо HEYS.audio» здесь не о чём.
+      if (/^heys_ui_v4_visual_fixture/.test(name)) continue;
       const src = fs.readFileSync(file, 'utf8');
       if (/createOscillator\s*\(/.test(src)) offenders.push(path.relative(WEB_DIR, file));
     }

@@ -245,7 +245,6 @@ describe('контракт цели касания 44 pt', () => {
 
   const dateRemaindersVisible44 = [
     '.date-picker--v4 .date-picker-trigger',
-    '.date-picker--v4 .date-picker-inline-today',
   ];
 
   it.each(dateRemaindersVisible44)(
@@ -256,6 +255,19 @@ describe('контракт цели касания 44 pt', () => {
       expect(rule(css, host)).toMatch(/min-height:\s*44px/);
     },
   );
+
+  it('date-remainders · «Сегодня» добирает 44 припуском, видимый размер 28', () => {
+    // Пакет 56 сделал «Сегодня» чипом в 28px — это решение по виду. Держать
+    // одновременно 28 видимых и 44 видимых нельзя, поэтому цель касания
+    // добирается припуском, как у соседнего «Вчера» в том же ряду. Прежде эта
+    // кнопка стояла в списке «44 видимым», и после пакета проверка краснела на
+    // сведённом коде.
+    const css = read('styles/modules/000-base-and-gamification.css');
+    const host = rule(css, '.date-picker--v4 .date-picker-inline-today');
+    expect(host).toMatch(/position:\s*relative/);
+    expect(host).toMatch(/min-height:\s*28px/);
+    expect(afterRule(css, '.date-picker--v4 .date-picker-inline-today')).toContain('inset: -8px 0');
+  });
 
   it('date-remainders · «Вчера» добирает 44 припуском, видимый размер 33', () => {
     const css = read('styles/modules/000-base-and-gamification.css');

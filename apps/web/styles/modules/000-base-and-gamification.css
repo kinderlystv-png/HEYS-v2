@@ -8636,6 +8636,17 @@ body:has(.offline-banner) .wrap {
   cursor: pointer;
 }
 
+/* Палец шире чипа. Пакет 56 сделал «Сегодня» чипом в 28px — это решение по
+   виду, и оно остаётся; но цель касания меньше 44 не бывает. Добираем
+   припуском, как уже сделано у соседнего «Вчера» в том же ряду: видимый размер
+   прежний, нажимается вся высота ряда. 28 + 8 + 8 = 44, за край ряда припуск не
+   выходит. */
+.date-picker--v4 .date-picker-inline-today::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
 .hdr-date-group .date-picker--v4 .date-picker-trigger--not-today {
   /* v4-intentional */
   background: var(--v4-tint);
