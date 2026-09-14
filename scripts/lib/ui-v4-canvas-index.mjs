@@ -185,7 +185,16 @@ export function parseCanvasHtml(html, { file = '<inline>' } = {}) {
 
   const malformedContractRows = [];
   const contractRows = [];
-  for (const [index, row] of [...document.querySelectorAll('[data-contract] .spec')].entries()) {
+  // Строки берутся по классу, а не по родителю с [data-contract]. 13 сентября
+  // дизайнер дописал в канвас Конструктора две строки ПОСЛЕ закрывающего
+  // </html>, то есть вне блока контракта. Разбор пакета их не видел и молча
+  // считал 1891 вместо 1893, а сторож дрейфа — свой, на регулярках — видел обе:
+  // два читателя одного файла расходились на две строки, и снимок вердиктов
+  // выглядел как «в нём лишнее», хотя лишнего в нём не было. Потерять строку
+  // контракта хуже, чем прочитать её из неудачного места.
+  // Замер: во всех 28 канвасах пакета `.spec` вне блока встречается только
+  // здесь и только дважды. Место расположения — отдельная запись дизайнеру.
+  for (const [index, row] of [...document.querySelectorAll('.spec')].entries()) {
     const keyNode = row.querySelector('b');
     const valueNode = row.querySelector('span[data-v]');
     if (!keyNode || !valueNode) {
